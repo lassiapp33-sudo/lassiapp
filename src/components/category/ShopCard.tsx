@@ -1,0 +1,172 @@
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
+import { colors, fonts, radius } from '../../theme';
+
+export interface Shop {
+  id:          string;
+  initial:     string;
+  name:        string;
+  isVip:       boolean;
+  rating:      number;
+  status:      'open' | 'closing' | 'closed';
+  statusLabel: string;
+  specialty:   string;
+  distance:    string;
+  isFav:       boolean;
+}
+
+interface Props {
+  shop:    Shop;
+  onPress?: () => void;
+}
+
+const StarFill = ({ filled }: { filled: boolean }) => (
+  <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
+    <Path
+      d="M12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9z"
+      stroke={filled ? colors.accent : colors.muted}
+      fill={filled ? colors.accent : 'none'}
+    />
+  </Svg>
+);
+
+const VipBadge = () => (
+  <View style={styles.vip}>
+    <Svg width={8} height={8} viewBox="0 0 24 24" fill={colors.accent}>
+      <Path d="M12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9z" fill={colors.accent} />
+    </Svg>
+    <Text style={styles.vipTxt}>VIP</Text>
+  </View>
+);
+
+export default function ShopCard({ shop, onPress }: Props) {
+  const [fav, setFav] = useState(shop.isFav);
+
+  const statusColor =
+    shop.status === 'open'    ? colors.success :
+    shop.status === 'closing' ? colors.danger   : colors.muted;
+
+  return (
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+      {/* Thumb initiale */}
+      <View style={styles.thumb}>
+        <Text style={styles.thumbTxt}>{shop.initial}</Text>
+      </View>
+
+      {/* Infos */}
+      <View style={styles.info}>
+        <View style={styles.topRow}>
+          <Text style={styles.name} numberOfLines={1}>{shop.name}</Text>
+          {shop.isVip && <VipBadge />}
+        </View>
+        <View style={styles.meta}>
+          <View style={styles.metaItem}>
+            <StarFill filled />
+            <Text style={styles.metaTxt}>{shop.rating}</Text>
+          </View>
+          <View style={styles.metaItem}>
+            <View style={[styles.dot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.metaTxt, { color: statusColor }]}>{shop.statusLabel}</Text>
+          </View>
+          <Text style={styles.metaTxt} numberOfLines={1}>{shop.specialty}</Text>
+        </View>
+      </View>
+
+      {/* Distance + favori */}
+      <View style={styles.right}>
+        <Text style={styles.dist}>{shop.distance}</Text>
+        <TouchableOpacity
+          style={styles.favBtn}
+          onPress={() => setFav(v => !v)}
+          hitSlop={8}
+          activeOpacity={0.7}
+        >
+          <StarFill filled={fav} />
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 18,
+    padding: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    marginBottom: 11,
+  },
+  thumb: {
+    width: 58,
+    height: 58,
+    borderRadius: 15,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  thumbTxt: {
+    color: colors.accent,
+    fontFamily: fonts.title,
+    fontSize: 20,
+  },
+  info:   { flex: 1, minWidth: 0 },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 5 },
+  name: {
+    color: colors.white,
+    fontFamily: fonts.title,
+    fontSize: 14.5,
+    flexShrink: 1,
+  },
+  vip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(253, 207, 52, 0.15)',
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 6,
+  },
+  vipTxt: {
+    color: colors.accent,
+    fontFamily: fonts.title,
+    fontSize: 8,
+  },
+  meta:     { flexDirection: 'row', alignItems: 'center', gap: 9, flexWrap: 'wrap' },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  metaTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 11,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  right: {
+    alignItems: 'flex-end',
+    gap: 7,
+    flexShrink: 0,
+  },
+  dist: {
+    color: colors.accent,
+    fontFamily: fonts.title,
+    fontSize: 12.5,
+  },
+  favBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
