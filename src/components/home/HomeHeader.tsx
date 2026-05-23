@@ -4,10 +4,11 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 
 interface Props {
-  quartier?: string;
-  initial?:  string;
-  onLocation?: () => void;
-  onAvatar?:   () => void;
+  quartier?:    string;
+  initial?:     string;
+  unreadCount?: number;
+  onLocation?:  () => void;
+  onAvatar?:    () => void;
 }
 
 const IconPin = () => (
@@ -23,7 +24,7 @@ const IconChevron = () => (
   </Svg>
 );
 
-export default function HomeHeader({ quartier = 'Grand Dakar', initial = 'A', onLocation, onAvatar }: Props) {
+export default function HomeHeader({ quartier = 'Grand Dakar', initial = 'A', unreadCount = 0, onLocation, onAvatar }: Props) {
   return (
     <View style={styles.row}>
       <TouchableOpacity onPress={onLocation} activeOpacity={0.7}>
@@ -39,7 +40,7 @@ export default function HomeHeader({ quartier = 'Grand Dakar', initial = 'A', on
 
       <TouchableOpacity style={styles.avatar} onPress={onAvatar} activeOpacity={0.8}>
         <Text style={styles.avatarTxt}>{initial}</Text>
-        <View style={styles.dot} />
+        {unreadCount > 0 && <View style={styles.dot} />}
       </TouchableOpacity>
     </View>
   );

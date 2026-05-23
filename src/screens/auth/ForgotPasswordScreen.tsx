@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, StatusBar, ScrollView,
+  KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import BackButton from '../../components/auth/BackButton';
@@ -33,6 +33,7 @@ const IconMailInput = () => (
 export default function ForgotPasswordScreen({ onBack, onLogin }: Props) {
   const [email, setEmail] = useState('');
   const [sent,  setSent]  = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   const handleSend = () => {
     if (!email.trim()) return;
@@ -45,6 +46,7 @@ export default function ForgotPasswordScreen({ onBack, onLogin }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[styles.scroll, { paddingTop: TOP_INSET }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -72,6 +74,9 @@ export default function ForgotPasswordScreen({ onBack, onLogin }: Props) {
           keyboardType="email-address"
           autoComplete="email"
           textContentType="emailAddress"
+          scrollRef={scrollRef}
+          returnKeyType="done"
+          onSubmitEditing={handleSend}
         />
 
         <AuthButton

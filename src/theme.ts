@@ -15,6 +15,7 @@ export const colors = {
   border:  '#2A2C52',  // bordures subtiles
   success: '#5FD38A',  // statut ouvert
   danger:  '#E07A7A',  // statut fermé / erreur
+  orange:  '#F0A847',  // alertes douces, statut "en cours"
 } as const;
 
 export const radius = {
@@ -22,6 +23,7 @@ export const radius = {
   md:   14,
   lg:   16,
   xl:   20,
+  xxl:  22,
   pill: 999,
 } as const;
 

@@ -134,9 +134,10 @@ const DATA: Record<CatId, {
 interface Props {
   initialCatId: CatId;
   onBack:       () => void;
+  onShopPress?: (shopId: string, shopName: string) => void;
 }
 
-export default function CategoryScreen({ initialCatId, onBack }: Props) {
+export default function CategoryScreen({ initialCatId, onBack, onShopPress }: Props) {
   const [catId,   setCatId]   = useState<CatId>(initialCatId);
   const [subCat,  setSubCat]  = useState<string>(DATA[initialCatId].subcats[0].id);
   const [filter,  setFilter]  = useState<FilterId>('near');
@@ -157,7 +158,7 @@ export default function CategoryScreen({ initialCatId, onBack }: Props) {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={{ paddingBottom: NAV_HEIGHT + 20 }}
+        contentContainerStyle={{ paddingBottom: NAV_HEIGHT + 20, flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
       >
         {/* Barre de navigation inter-catégories (façon Glovo) */}
@@ -170,11 +171,12 @@ export default function CategoryScreen({ initialCatId, onBack }: Props) {
           onChange={setSubCat}
         />
 
-        {/* Podium Top 3 VIP */}
+        {/* Podium Top 3 VIP — chaque entrée navigue vers la vitrine */}
         <VipPodium
           entries={data.vip}
           subLabel={data.subLabel}
           renewIn="3j"
+          onPress={entry => onShopPress?.(entry.rank.toString(), entry.name)}
         />
 
         {/* Filtres */}
@@ -190,13 +192,17 @@ export default function CategoryScreen({ initialCatId, onBack }: Props) {
           {/* Liste avec reco sponsorisée injectée après le 1er item */}
           {data.shops.map((shop, idx) => (
             <React.Fragment key={shop.id}>
-              <ShopCard shop={shop} />
+              <ShopCard
+                  shop={shop}
+                  onPress={() => onShopPress?.(shop.id, shop.name)}
+                />
               {/* Injection de la reco sponsorisée après le 1er commerce */}
               {idx === 0 && (
                 <SponsoredCard
                   initial="T"
                   name="Tic Tac Resto"
                   desc="Petit-déj express · Ouvert 24h/24"
+                  onPress={() => onShopPress?.('sponsored', 'Tic Tac Resto')}
                 />
               )}
             </React.Fragment>

@@ -7,9 +7,10 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 
 interface Props {
-  value:       string;
-  onChangeText:(t: string) => void;
-  onMicPress?: () => void;
+  value:        string;
+  onChangeText: (t: string) => void;
+  onMicPress?:  () => void;
+  onPress?:     () => void;   // si fourni → barre en lecture seule, appui navigue vers SearchScreen
 }
 
 const IconSearch = () => (
@@ -28,7 +29,7 @@ const IconMic = () => (
   </Svg>
 );
 
-export default function SearchBar({ value, onChangeText, onMicPress }: Props) {
+export default function SearchBar({ value, onChangeText, onMicPress, onPress }: Props) {
   const pulseScale   = useRef(new Animated.Value(1)).current;
   const pulseOpacity = useRef(new Animated.Value(0.7)).current;
 
@@ -54,8 +55,12 @@ export default function SearchBar({ value, onChangeText, onMicPress }: Props) {
 
   return (
     <View style={styles.row}>
-      {/* Champ de recherche */}
-      <View style={styles.search}>
+      {/* Champ de recherche — appuyable si onPress est fourni */}
+      <TouchableOpacity
+        style={styles.search}
+        onPress={onPress}
+        activeOpacity={onPress ? 0.75 : 1}
+      >
         <IconSearch />
         <TextInput
           style={styles.input}
@@ -64,8 +69,10 @@ export default function SearchBar({ value, onChangeText, onMicPress }: Props) {
           value={value}
           onChangeText={onChangeText}
           returnKeyType="search"
+          editable={!onPress}
+          pointerEvents={onPress ? 'none' : 'auto'}
         />
-      </View>
+      </TouchableOpacity>
 
       {/* Bouton micro IA avec ring pulsant */}
       <View style={styles.micWrap}>

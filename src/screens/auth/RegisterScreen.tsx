@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, StatusBar,
+  StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import BackButton  from '../../components/auth/BackButton';
@@ -12,10 +12,16 @@ import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 
 type Role = 'client' | 'merchant';
 
+interface UserData {
+  name:  string;
+  phone: string;
+  email: string;
+}
+
 interface Props {
   role:     Role;
   onBack:   () => void;
-  onSuccess:(email: string) => void;
+  onSuccess:(userData: UserData) => void;
   onLogin:  () => void;
 }
 
@@ -93,16 +99,10 @@ export default function RegisterScreen({ role, onBack, onSuccess, onLogin }: Pro
 
   const scrollRef = useRef<ScrollView>(null);
 
-  const onPasswordFocus = () => {
-    setTimeout(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
-    }, 120);
-  };
-
   const handleSubmit = () => {
-    // Validation minimale — le backend valide côté serveur
+    // Validation minimale — le backend valide côté serveur en Phase 3
     if (!nom.trim() || !tel.trim() || !mdp.trim()) return;
-    onSuccess(email.trim());
+    onSuccess({ name: nom.trim(), phone: tel.trim(), email: email.trim() });
   };
 
   return (
@@ -135,6 +135,8 @@ export default function RegisterScreen({ role, onBack, onSuccess, onLogin }: Pro
           autoCapitalize="words"
           autoComplete="name"
           textContentType="name"
+          scrollRef={scrollRef}
+          returnKeyType="next"
         />
         <InputField
           label="Numéro de téléphone"
@@ -145,6 +147,8 @@ export default function RegisterScreen({ role, onBack, onSuccess, onLogin }: Pro
           keyboardType="phone-pad"
           autoComplete="tel"
           textContentType="telephoneNumber"
+          scrollRef={scrollRef}
+          returnKeyType="next"
         />
         <InputField
           label="Email"
@@ -156,6 +160,8 @@ export default function RegisterScreen({ role, onBack, onSuccess, onLogin }: Pro
           keyboardType="email-address"
           autoComplete="email"
           textContentType="emailAddress"
+          scrollRef={scrollRef}
+          returnKeyType="next"
         />
         <InputField
           label="Mot de passe"
@@ -168,7 +174,9 @@ export default function RegisterScreen({ role, onBack, onSuccess, onLogin }: Pro
           secureTextEntry={!showMdp}
           autoComplete="new-password"
           textContentType="newPassword"
-          onFocus={onPasswordFocus}
+          scrollRef={scrollRef}
+          returnKeyType="done"
+          onSubmitEditing={handleSubmit}
         />
 
         <NoteBox

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
+import useFavoritesStore from '../../store/favoritesStore';
 
 export type PlaceStatus = 'open' | 'closing' | 'closed';
 export type PlaceCategory = 'tangana' | 'store' | 'hair' | 'food' | 'sport';
@@ -87,7 +88,8 @@ const VipBadge = () => (
 );
 
 export default function NearbyCard({ place, onPress }: Props) {
-  const [isFav, setIsFav] = useState(place.isFav);
+  const isFav        = useFavoritesStore(s => s.favorites.includes(place.id));
+  const toggleFav    = useFavoritesStore(s => s.toggleFavorite);
 
   const statusColor =
     place.status === 'open'    ? colors.success :
@@ -123,7 +125,7 @@ export default function NearbyCard({ place, onPress }: Props) {
         <Text style={styles.dist}>{place.distance}</Text>
         <TouchableOpacity
           style={styles.starBtn}
-          onPress={() => setIsFav(v => !v)}
+          onPress={() => toggleFav(place.id)}
           hitSlop={8}
           activeOpacity={0.7}
         >

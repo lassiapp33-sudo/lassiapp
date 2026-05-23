@@ -1,127 +1,153 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  Dimensions,
+  View, Text, StyleSheet, Dimensions,
+  Animated, Easing,
 } from 'react-native';
+import Svg, { Circle, Rect, Line, Path } from 'react-native-svg';
 import { colors, fonts } from '../theme';
-import LassiLogo from '../components/LassiLogo';
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_W } = Dimensions.get('window');
+const SIZE = Math.min(SCREEN_W * 0.62, 248);
 
-interface Props {
-  onFinish: () => void;
-}
+// ─── Géométrie (viewBox 200×200, centre 100,100) ──────────────────────────────
+
+const CX = 100, CY = 100;
+const R  = 74;
+const TO_RAD = Math.PI / 180;
+
+// Aiguille : ~10° à droite du nord = –80° depuis l'axe X positif
+const NEEDLE_A = -80 * TO_RAD;
+const NX = +(CX + R * Math.cos(NEEDLE_A)).toFixed(1);   // ≈ 112.8
+const NY = +(CY + R * Math.sin(NEEDLE_A)).toFixed(1);   // ≈  27.1
+
+// Bord arrière du faisceau : –7° depuis +X  (secteur ≈ 73°)
+const TRAIL_A = -7 * TO_RAD;
+const TX = +(CX + R * Math.cos(TRAIL_A)).toFixed(1);    // ≈ 173.4
+const TY = +(CY + R * Math.sin(TRAIL_A)).toFixed(1);    // ≈  90.0
+
+// Chemin SVG du secteur
+const SECTOR = `M ${CX} ${CY} L ${NX} ${NY} A ${R} ${R} 0 0 1 ${TX} ${TY} Z`;
+
+// Blip FIXE : dans le secteur (mi-angle entre aiguille –80° et bord –7°),
+// à 38% du rayon → correspond visuellement à l'icône PDF.
+const BLIP_ANGLE = -43 * TO_RAD;
+const BLIP_FRAC  = 0.38;
+const BX = CX + R * BLIP_FRAC * Math.cos(BLIP_ANGLE);  // ≈ 120.6
+const BY = CY + R * BLIP_FRAC * Math.sin(BLIP_ANGLE);  // ≈  80.3
+const BLIP = 16;
+
+// ─── Composant ────────────────────────────────────────────────────────────────
+
+interface Props { onFinish: () => void; }
 
 export default function SplashScreen({ onFinish }: Props) {
-  // Animations du logo (scale + opacité)
-  const logoScale   = useRef(new Animated.Value(0.92)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-
-  // Slogan fade-up
-  const sloganOpacity = useRef(new Animated.Value(0)).current;
-  const sloganY       = useRef(new Animated.Value(8)).current;
-
-  // 3 points de chargement (bounce indépendants)
-  const dot1Y = useRef(new Animated.Value(0)).current;
-  const dot2Y = useRef(new Animated.Value(0)).current;
-  const dot3Y = useRef(new Animated.Value(0)).current;
-  const dot1O = useRef(new Animated.Value(0.5)).current;
-  const dot2O = useRef(new Animated.Value(0.5)).current;
-  const dot3O = useRef(new Animated.Value(0.5)).current;
+  const rotation  = useRef(new Animated.Value(0)).current;
+  const blipBlink = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Logo apparaît
-    Animated.parallel([
-      Animated.timing(logoOpacity, {
-        toValue: 1, duration: 800,
+    // ① Faisceau radar — rotation continue 360° / 3s
+    const radarAnim = Animated.loop(
+      Animated.timing(rotation, {
+        toValue: 1,
+        duration: 3000,
+        easing: Easing.linear,
         useNativeDriver: true,
-      }),
-      Animated.spring(logoScale, {
-        toValue: 1, friction: 8, tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
+      })
+    );
 
-    // Slogan fade-up après 350ms — fondu à 0.65 (peu claire)
-    Animated.sequence([
-      Animated.delay(350),
-      Animated.parallel([
-        Animated.timing(sloganOpacity, {
-          toValue: 0.65, duration: 700,
-          useNativeDriver: true,
-        }),
-        Animated.timing(sloganY, {
-          toValue: 0, duration: 700,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start();
+    // ② Blip — clignotement (flash rapide → fondu lent, style radar)
+    const blinkAnim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(blipBlink, { toValue: 0.08, duration: 400, useNativeDriver: true }),
+        Animated.timing(blipBlink, { toValue: 1,    duration: 400, useNativeDriver: true }),
+      ])
+    );
 
-    // Dots bounce loop (délais décalés : 0 / 200 / 400ms)
-    const makeBounce = (y: Animated.Value, o: Animated.Value, delay: number) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.parallel([
-            Animated.timing(y, { toValue: -9, duration: 280, useNativeDriver: true }),
-            Animated.timing(o, { toValue: 1,  duration: 280, useNativeDriver: true }),
-          ]),
-          Animated.parallel([
-            Animated.timing(y, { toValue: 0,   duration: 280, useNativeDriver: true }),
-            Animated.timing(o, { toValue: 0.5, duration: 280, useNativeDriver: true }),
-          ]),
-          Animated.delay(440),
-        ])
-      );
+    radarAnim.start();
+    blinkAnim.start();
 
-    const b1 = makeBounce(dot1Y, dot1O, 0);
-    const b2 = makeBounce(dot2Y, dot2O, 200);
-    const b3 = makeBounce(dot3Y, dot3O, 400);
-    b1.start(); b2.start(); b3.start();
-
-    // Transition vers l'onboarding après 2.6s
     const timer = setTimeout(onFinish, 2600);
-    return () => { clearTimeout(timer); b1.stop(); b2.stop(); b3.stop(); };
+    return () => {
+      clearTimeout(timer);
+      radarAnim.stop();
+      blinkAnim.stop();
+    };
   }, [onFinish]);
+
+  const rotate = rotation.interpolate({
+    inputRange:  [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
     <View style={styles.container}>
-      {/* Halo lumineux derrière le logo */}
-      <View style={styles.glow} />
 
-      {/* Logo animé */}
-      <Animated.View
-        style={{ opacity: logoOpacity, transform: [{ scale: logoScale }] }}
-      >
-        <LassiLogo width={width * 0.56} />
-      </Animated.View>
+      {/* ── Icône ────────────────────────────────────────────────────────── */}
+      <View style={{ width: SIZE, height: SIZE }}>
 
-      {/* Slogan */}
-      <Animated.Text
-        style={[
-          styles.slogan,
-          { opacity: sloganOpacity, transform: [{ translateY: sloganY }] },
-        ]}
-      >
-        L'économie de ton quartier, dans ta poche
-      </Animated.Text>
-
-      {/* 3 points de chargement */}
-      <View style={styles.loader}>
-        {[
-          { y: dot1Y, o: dot1O },
-          { y: dot2Y, o: dot2O },
-          { y: dot3Y, o: dot3O },
-        ].map(({ y, o }, i) => (
-          <Animated.View
-            key={i}
-            style={[styles.dot, { transform: [{ translateY: y }], opacity: o }]}
+        {/* ① FIXES : cercle pointillé + lettre L */}
+        <Svg
+          viewBox="0 0 200 200"
+          width={SIZE} height={SIZE}
+          style={StyleSheet.absoluteFill}
+        >
+          <Circle
+            cx={CX} cy={CY} r={R}
+            stroke="#C9A227"
+            strokeWidth={5}
+            strokeDasharray="8 7"
+            strokeLinecap="round"
+            fill="none"
           />
-        ))}
+          {/* L — barre verticale */}
+          <Rect x={68} y={60} width={12} height={64} rx={3} fill="white" />
+          {/* L — pied horizontal (léger espace avec la barre) */}
+          <Rect x={68} y={127} width={58} height={12} rx={3} fill="white" />
+        </Svg>
+
+        {/* ② TOURNANT : secteur sombre + aiguille (SANS le blip) */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            { width: SIZE, height: SIZE, transform: [{ rotate }] },
+          ]}
+        >
+          <Svg viewBox="0 0 200 200" width={SIZE} height={SIZE}>
+            <Path d={SECTOR} fill="rgba(30,32,58,0.85)" />
+            <Line
+              x1={CX} y1={CY}
+              x2={NX} y2={NY}
+              stroke="#FDCF34"
+              strokeWidth={6}
+              strokeLinecap="round"
+            />
+          </Svg>
+        </Animated.View>
+
+        {/* ③ FIXE + CLIGNOTANT : carré signature jaune */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            { width: SIZE, height: SIZE, opacity: blipBlink },
+          ]}
+        >
+          <Svg viewBox="0 0 200 200" width={SIZE} height={SIZE}>
+            <Rect
+              x={BX - BLIP / 2} y={BY - BLIP / 2}
+              width={BLIP} height={BLIP}
+              rx={4}
+              fill="#FDCF34"
+            />
+          </Svg>
+        </Animated.View>
+
       </View>
+
+      {/* ── Slogan ───────────────────────────────────────────────────────── */}
+      <Text style={styles.slogan}>
+        L'économie de ton quartier, dans ta poche
+      </Text>
+
     </View>
   );
 }
@@ -132,37 +158,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  // Cercle centré exactement autour du logo + slogan
-  glow: {
-    position: 'absolute',
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: 'rgba(253, 207, 52, 0.08)',
-    alignSelf: 'center',
-    top: '50%',
-    transform: [{ translateY: -130 }],
+    gap: 28,
   },
   slogan: {
-    marginTop: 18,
     color: colors.muted,
     fontFamily: fonts.title,
-    fontSize: 9,
+    fontSize: 12,
     letterSpacing: 0.2,
     textAlign: 'center',
     paddingHorizontal: 40,
-  },
-  loader: {
-    position: 'absolute',
-    bottom: 60,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.accent,
+    opacity: 0.65,
   },
 });

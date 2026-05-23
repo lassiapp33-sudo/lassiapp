@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardTypeOptions,
+  StyleSheet, KeyboardTypeOptions, ScrollView,
 } from 'react-native';
 import { colors, fonts } from '../../theme';
 
@@ -21,6 +21,9 @@ interface Props {
   autoComplete?: any;
   textContentType?: any;
   onFocus?: () => void;
+  scrollRef?: React.RefObject<ScrollView | null>;
+  returnKeyType?: 'done' | 'next' | 'search' | 'send' | 'go';
+  onSubmitEditing?: () => void;
 }
 
 export default function InputField({
@@ -28,17 +31,30 @@ export default function InputField({
   leftIcon, rightIcon, onRightPress,
   secureTextEntry, keyboardType = 'default',
   autoCapitalize = 'none', phonePrefix,
-  autoComplete, textContentType, onFocus,
+  autoComplete, textContentType, onFocus, scrollRef,
+  returnKeyType, onSubmitEditing,
 }: Props) {
+  const [layoutY, setLayoutY] = useState(0);
+
+  const handleFocus = () => {
+    if (scrollRef?.current) {
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ y: Math.max(0, layoutY - 30), animated: true });
+      }, 50);
+    }
+    onFocus?.();
+  };
+
   return (
-    <View style={styles.wrap}>
-      {/* Label + tag facultatif */}
+    <View
+      style={styles.wrap}
+      onLayout={(e) => setLayoutY(e.nativeEvent.layout.y)}
+    >
       <View style={styles.labelRow}>
         <Text style={styles.label}>{label}</Text>
         {optional && <Text style={styles.optional}>facultatif</Text>}
       </View>
 
-      {/* Champ de saisie */}
       <View style={styles.row}>
         {phonePrefix ? (
           <>
@@ -58,7 +74,10 @@ export default function InputField({
           autoCapitalize={autoCapitalize}
           autoComplete={autoComplete}
           textContentType={textContentType}
-          onFocus={onFocus}
+          onFocus={handleFocus}
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
+          blurOnSubmit={returnKeyType !== 'next'}
         />
 
         {rightIcon && (

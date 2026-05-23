@@ -11,19 +11,26 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { Poppins_300Light } from '@expo-google-fonts/poppins';
 
-import { colors } from './src/theme';
-import SplashScreen       from './src/screens/SplashScreen';
-import OnboardingScreen   from './src/screens/OnboardingScreen';
-import AuthNavigator      from './src/screens/AuthNavigator';
-import HomeNavigator      from './src/screens/home/HomeNavigator';
+import { colors }        from './src/theme';
+import SplashScreen      from './src/screens/SplashScreen';
+import OnboardingScreen  from './src/screens/OnboardingScreen';
+import AuthNavigator     from './src/screens/AuthNavigator';
+import HomeNavigator     from './src/screens/home/HomeNavigator';
+import MerchantNavigator from './src/screens/merchant/MerchantNavigator';
+import useAuthStore      from './src/store/authStore';
 
-// Garde le splash natif visible tant que les polices chargent
 ExpoSplashScreen.preventAutoHideAsync();
 
-type Screen = 'splash' | 'onboarding' | 'auth' | 'home';
+type Screen = 'splash' | 'onboarding' | 'auth' | 'client' | 'merchant';
+
+function getInitialScreen(): Screen {
+  // Zustand persist hydrate AsyncStorage de manière synchrone au premier accès
+  // Le splash (2.6s) laisse le temps à l'hydratation de se terminer
+  return 'splash';
+}
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('splash');
+  const [screen, setScreen] = useState<Screen>(getInitialScreen);
 
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_500Medium,
@@ -39,22 +46,48 @@ export default function App() {
 
   if (!fontsLoaded) return null;
 
+  // Déconnexion : vider authStore + retourner à l'auth
+  const handleLogout = () => {
+    useAuthStore.getState().logout();
+    setScreen('auth');
+  };
+
   return (
     <View style={styles.root} onLayout={onLayout}>
       <StatusBar style="light" />
 
       {screen === 'splash' && (
-        <SplashScreen onFinish={() => setScreen('onboarding')} />
+        <SplashScreen onFinish={() => {
+          // Après le splash, vérifier si l'utilisateur est déjà connecté
+          const { isAuthenticated, hasSeenOnboarding, user } = useAuthStore.getState();
+          if (isAuthenticated && user) {
+            setScreen(user.role === 'merchant' ? 'merchant' : 'client');
+          } else if (hasSeenOnboarding) {
+            setScreen('auth');
+          } else {
+            setScreen('onboarding');
+          }
+        }} />
       )}
+
       {screen === 'onboarding' && (
-        <OnboardingScreen onFinish={() => setScreen('auth')} />
+        <OnboardingScreen onFinish={() => {
+          useAuthStore.getState().setOnboardingSeen();
+          setScreen('auth');
+        }} />
       )}
+
       {screen === 'auth' && (
-        <AuthNavigator onComplete={() => setScreen('home')} />
+        <AuthNavigator onComplete={(role) =>
+          setScreen(role === 'merchant' ? 'merchant' : 'client')
+        } />
       )}
-      {screen === 'home' && (
-        <HomeNavigator />
-      )}
+
+      {/* Parcours client */}
+      {screen === 'client' && <HomeNavigator onLogout={handleLogout} />}
+
+      {/* Cockpit commerçant */}
+      {screen === 'merchant' && <MerchantNavigator onLogout={handleLogout} />}
     </View>
   );
 }

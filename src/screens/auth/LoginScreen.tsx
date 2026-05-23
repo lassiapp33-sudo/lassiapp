@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, StatusBar, ScrollView,
+  KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import BackButton from '../../components/auth/BackButton';
@@ -11,7 +11,7 @@ import { colors, fonts, spacing, radius, TOP_INSET } from '../../theme';
 
 interface Props {
   onBack:           () => void;
-  onSuccess:        () => void;
+  onSuccess:        (phone: string) => void;
   onForgotPassword: () => void;
   onRegister:       () => void;
 }
@@ -50,13 +50,6 @@ export default function LoginScreen({ onBack, onSuccess, onForgotPassword, onReg
 
   const scrollRef = useRef<ScrollView>(null);
 
-  // Scroll automatique vers le bas quand le champ mot de passe est focus
-  const onPasswordFocus = () => {
-    setTimeout(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
-    }, 120);
-  };
-
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: colors.bg }}
@@ -84,6 +77,8 @@ export default function LoginScreen({ onBack, onSuccess, onForgotPassword, onReg
           keyboardType="phone-pad"
           autoComplete="tel"
           textContentType="telephoneNumber"
+          scrollRef={scrollRef}
+          returnKeyType="next"
         />
         <InputField
           label="Mot de passe"
@@ -96,7 +91,9 @@ export default function LoginScreen({ onBack, onSuccess, onForgotPassword, onReg
           secureTextEntry={!showMdp}
           autoComplete="current-password"
           textContentType="password"
-          onFocus={onPasswordFocus}
+          scrollRef={scrollRef}
+          returnKeyType="done"
+          onSubmitEditing={() => onSuccess(tel.trim())}
         />
 
         {/* Lien mot de passe oublié */}
@@ -104,7 +101,7 @@ export default function LoginScreen({ onBack, onSuccess, onForgotPassword, onReg
           <Text style={styles.forgotTxt}>Mot de passe oublié ?</Text>
         </TouchableOpacity>
 
-        <AuthButton label="Se connecter" onPress={onSuccess} />
+        <AuthButton label="Se connecter" onPress={() => onSuccess(tel.trim())} />
 
         {/* Swap vers inscription */}
         <View style={styles.swapRow}>

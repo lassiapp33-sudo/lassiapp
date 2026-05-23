@@ -1,24 +1,27 @@
 import React, { useState } from 'react';
-import RoleSelectScreen    from './auth/RoleSelectScreen';
-import RegisterScreen      from './auth/RegisterScreen';
-import LoginScreen         from './auth/LoginScreen';
-import EmailVerifyScreen   from './auth/EmailVerifyScreen';
+import RoleSelectScreen     from './auth/RoleSelectScreen';
+import RegisterScreen       from './auth/RegisterScreen';
+import LoginScreen          from './auth/LoginScreen';
+import EmailVerifyScreen    from './auth/EmailVerifyScreen';
 import ForgotPasswordScreen from './auth/ForgotPasswordScreen';
+import useAuthStore         from '../store/authStore';
 
-// Chaque entrée du stack porte son écran + ses données
+type Role = 'client' | 'merchant';
+
 type StackItem =
   | { id: 'role' }
-  | { id: 'register';     role: 'client' | 'merchant' }
+  | { id: 'register';      role: Role }
   | { id: 'login' }
-  | { id: 'emailVerify';  email: string }
+  | { id: 'emailVerify';   email: string }
   | { id: 'forgotPassword' };
 
 interface Props {
-  onComplete: () => void;
+  onComplete: (role: Role) => void;
 }
 
 export default function AuthNavigator({ onComplete }: Props) {
-  const [stack, setStack] = useState<StackItem[]>([{ id: 'role' }]);
+  const [stack, setStack]               = useState<StackItem[]>([{ id: 'role' }]);
+  const [selectedRole, setSelectedRole] = useState<Role>('client');
 
   const push = (item: StackItem) => setStack(prev => [...prev, item]);
   const pop  = ()                 => setStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
@@ -30,8 +33,14 @@ export default function AuthNavigator({ onComplete }: Props) {
     case 'role':
       return (
         <RoleSelectScreen
-          onSelectClient={()   => push({ id: 'register', role: 'client' })}
-          onSelectMerchant={()  => push({ id: 'register', role: 'merchant' })}
+          onSelectClient={() => {
+            setSelectedRole('client');
+            push({ id: 'register', role: 'client' });
+          }}
+          onSelectMerchant={() => {
+            setSelectedRole('merchant');
+            push({ id: 'register', role: 'merchant' });
+          }}
         />
       );
 
@@ -40,10 +49,19 @@ export default function AuthNavigator({ onComplete }: Props) {
         <RegisterScreen
           role={current.role}
           onBack={pop}
-          onSuccess={(email) => {
-            // Si email fourni → vérification ; sinon → on va directement dans l'app
-            if (email) push({ id: 'emailVerify', email });
-            else onComplete();
+          onSuccess={(userData) => {
+            // Enregistrer les données dans authStore
+            useAuthStore.getState().login({
+              name:  userData.name,
+              phone: userData.phone,
+              email: userData.email,
+              role:  current.role,
+            });
+            if (userData.email) {
+              push({ id: 'emailVerify', email: userData.email });
+            } else {
+              onComplete(current.role);
+            }
           }}
           onLogin={() => push({ id: 'login' })}
         />
@@ -53,7 +71,24 @@ export default function AuthNavigator({ onComplete }: Props) {
       return (
         <LoginScreen
           onBack={pop}
-          onSuccess={onComplete}
+          onSuccess={(phone) => {
+            // TODO Phase 3 (backend): vérifier les identifiants + récupérer le profil serveur
+            // En local : si un utilisateur existe déjà dans le store on le garde,
+            // sinon on crée un profil minimal avec le numéro de téléphone
+            const existing = useAuthStore.getState().user;
+            if (!existing) {
+              useAuthStore.getState().login({
+                name:  phone,
+                phone: phone,
+                email: '',
+                role:  selectedRole,
+              });
+            } else {
+              // Ré-authentifier l'utilisateur existant
+              useAuthStore.getState().login({ ...existing });
+            }
+            onComplete(selectedRole);
+          }}
           onForgotPassword={() => push({ id: 'forgotPassword' })}
           onRegister={pop}
         />
@@ -64,7 +99,7 @@ export default function AuthNavigator({ onComplete }: Props) {
         <EmailVerifyScreen
           email={current.email}
           onBack={pop}
-          onComplete={onComplete}
+          onComplete={() => onComplete(selectedRole)}
         />
       );
 
