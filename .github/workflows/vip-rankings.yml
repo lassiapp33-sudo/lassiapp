@@ -1,0 +1,20 @@
+name: VIP Rankings Weekly Update
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'  # Chaque lundi à 00h00 UTC
+  workflow_dispatch:       # Permet aussi de lancer manuellement depuis GitHub
+
+jobs:
+  update-vip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call VIP rankings Edge Function
+        run: |
+          curl -X POST \
+            "https://tsdemraszwtbzgtyjzum.supabase.co/functions/v1/update-vip-rankings" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail \
+            --silent \
+            --show-error
