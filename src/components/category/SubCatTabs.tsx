@@ -1,10 +1,12 @@
 import React from 'react';
-import { ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { ScrollView, TouchableOpacity, Text, Image, View, StyleSheet } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 
 export interface SubCat {
-  id:    string;
-  label: string;
+  id:        string;
+  label:     string;
+  imageUri?: number;                              // require('../../../assets/xxx.png')
+  SvgIcon?:  React.FC<{ color: string }>;        // composant SVG inline
 }
 
 interface Props {
@@ -18,6 +20,7 @@ export default function SubCatTabs({ tabs, active, onChange }: Props) {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.bar}
       contentContainerStyle={styles.list}
     >
       {tabs.map(tab => {
@@ -29,9 +32,23 @@ export default function SubCatTabs({ tabs, active, onChange }: Props) {
             onPress={() => onChange(tab.id)}
             activeOpacity={0.8}
           >
-            <Text style={[styles.label, on ? styles.labelOn : styles.labelOff]}>
-              {tab.label}
-            </Text>
+            {tab.imageUri || tab.SvgIcon ? (
+              <View style={styles.row}>
+                {tab.imageUri
+                  ? <Image source={tab.imageUri} style={styles.ico} resizeMode="contain" />
+                  : tab.SvgIcon
+                    ? <tab.SvgIcon color={on ? colors.bg : colors.muted} />
+                    : null
+                }
+                <Text style={[styles.label, on ? styles.labelOn : styles.labelOff]}>
+                  {tab.label}
+                </Text>
+              </View>
+            ) : (
+              <Text style={[styles.label, on ? styles.labelOn : styles.labelOff]}>
+                {tab.label}
+              </Text>
+            )}
           </TouchableOpacity>
         );
       })}
@@ -40,6 +57,7 @@ export default function SubCatTabs({ tabs, active, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
+  bar: { height: 68 },
   list: {
     gap: 9,
     paddingHorizontal: 20,
@@ -47,7 +65,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   tab: {
-    height: 38,
+    height: 48,
     paddingHorizontal: 16,
     borderRadius: radius.sm,
     alignItems: 'center',
@@ -58,6 +76,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  ico: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
   },
   label: {
     fontFamily: fonts.ui,

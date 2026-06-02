@@ -8,24 +8,31 @@ import BackButton  from '../../components/auth/BackButton';
 import InputField  from '../../components/auth/InputField';
 import AuthButton  from '../../components/auth/AuthButton';
 import NoteBox     from '../../components/auth/NoteBox';
+import LassiLogo   from '../../components/LassiLogo';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
+import { formatPhoneSenegal, cleanPhone, isValidPhone, PHONE_ERROR } from '../../utils/phone';
+import { useT } from '../../i18n';
 
 type Role = 'client' | 'merchant';
 
-interface UserData {
-  name:  string;
-  phone: string;
-  email: string;
+export interface RegisterData {
+  name:     string;
+  phone:    string;
+  email:    string;
+  password: string;
 }
 
 interface Props {
-  role:     Role;
-  onBack:   () => void;
-  onSuccess:(userData: UserData) => void;
-  onLogin:  () => void;
+  role:              Role;
+  onBack:            () => void;
+  onSuccess:         (data: RegisterData) => Promise<void>;
+  onLogin:           () => void;
+  onCGU:             () => void;
+  onConfidentialite: () => void;
 }
 
-// Icônes inline
+// ─── Icônes ──────────────────────────────────────────────────────────────────
+
 const IconUser = () => (
   <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.7}>
     <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke={colors.muted} />
@@ -48,8 +55,8 @@ const IconLock = () => (
 );
 
 const IconEye = ({ off }: { off?: boolean }) => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.7}
-    strokeLinecap="round">
+  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none"
+    strokeWidth={1.7} strokeLinecap="round">
     {off ? (
       <>
         <Path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
@@ -67,7 +74,6 @@ const IconEye = ({ off }: { off?: boolean }) => (
   </Svg>
 );
 
-// Puce de rôle
 const RoleChip = ({ role }: { role: Role }) => (
   <View style={styles.chip}>
     <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
@@ -86,23 +92,57 @@ const RoleChip = ({ role }: { role: Role }) => (
         </>
       )}
     </Svg>
-    <Text style={styles.chipTxt}>{role === 'client' ? 'Client' : 'Commerçant'}</Text>
+    <Text style={styles.chipTxt}>{role === 'client' ? 'Client' : 'Prestataire'}</Text>
   </View>
 );
 
-export default function RegisterScreen({ role, onBack, onSuccess, onLogin }: Props) {
-  const [nom,    setNom]    = useState('');
-  const [tel,    setTel]    = useState('');
-  const [email,  setEmail]  = useState('');
-  const [mdp,    setMdp]    = useState('');
-  const [showMdp, setShowMdp] = useState(false);
+// ─── Écran ───────────────────────────────────────────────────────────────────
+
+export default function RegisterScreen({ role, onBack, onSuccess, onLogin, onCGU, onConfidentialite }: Props) {
+  const t = useT();
+
+  const [nom,         setNom]         = useState('');
+  const [tel,         setTel]         = useState('');
+  const [email,       setEmail]       = useState('');
+  const [mdp,         setMdp]         = useState('');
+  const [showMdp,     setShowMdp]     = useState(false);
+  const [cguAccepted, setCguAccepted] = useState(false);
+  const [loading,     setLoading]     = useState(false);
+  const [erreur,      setErreur]      = useState<string | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
 
-  const handleSubmit = () => {
-    // Validation minimale — le backend valide côté serveur en Phase 3
-    if (!nom.trim() || !tel.trim() || !mdp.trim()) return;
-    onSuccess({ name: nom.trim(), phone: tel.trim(), email: email.trim() });
+  const handleSubmit = async () => {
+    if (!nom.trim() || !tel.trim() || !mdp.trim()) {
+      setErreur('Nom, numéro et mot de passe sont obligatoires.');
+      return;
+    }
+    if (!isValidPhone(tel)) {
+      setErreur(PHONE_ERROR);
+      return;
+    }
+    if (mdp.length < 6) {
+      setErreur('Le mot de passe doit contenir au moins 6 caractères.');
+      return;
+    }
+    if (!cguAccepted) {
+      setErreur('Tu dois accepter les CGU et la Politique de confidentialité pour continuer.');
+      return;
+    }
+    setErreur(null);
+    setLoading(true);
+    try {
+      await onSuccess({
+        name:     nom.trim(),
+        phone:    cleanPhone(tel),   // stocké sans espaces : "781376161"
+        email:    email.trim(),
+        password: mdp,
+      });
+    } catch (e: any) {
+      setErreur(e.message ?? 'Une erreur est survenue. Réessaie.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -116,19 +156,22 @@ export default function RegisterScreen({ role, onBack, onSuccess, onLogin }: Pro
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <BackButton onPress={onBack} />
+        <View style={styles.topRow}>
+          <BackButton onPress={onBack} />
+          <LassiLogo width={72} />
+        </View>
         <View style={{ height: 16 }} />
 
         <RoleChip role={role} />
 
-        <Text style={styles.h1}>Créer ton compte</Text>
-        <Text style={styles.sub}>Quelques infos et c'est parti.</Text>
+        <Text style={styles.h1}>{t.auth.registerTitle}</Text>
+        <Text style={styles.sub}>{t.auth.registerSub}</Text>
 
         <View style={{ height: 18 }} />
 
         <InputField
-          label="Nom complet"
-          placeholder="Aïssatou Ndiaye"
+          label={t.auth.nameLabel}
+          placeholder={t.auth.namePlaceholder}
           value={nom}
           onChangeText={setNom}
           leftIcon={<IconUser />}
@@ -139,10 +182,10 @@ export default function RegisterScreen({ role, onBack, onSuccess, onLogin }: Pro
           returnKeyType="next"
         />
         <InputField
-          label="Numéro de téléphone"
-          placeholder="77 123 45 67"
+          label={t.auth.phoneLabel}
+          placeholder={t.auth.phonePlaceholder}
           value={tel}
-          onChangeText={setTel}
+          onChangeText={(v) => setTel(formatPhoneSenegal(v))}
           phonePrefix
           keyboardType="phone-pad"
           autoComplete="tel"
@@ -153,7 +196,7 @@ export default function RegisterScreen({ role, onBack, onSuccess, onLogin }: Pro
         <InputField
           label="Email"
           optional
-          placeholder="ton@email.com"
+          placeholder={t.auth.emailPlaceholder}
           value={email}
           onChangeText={setEmail}
           leftIcon={<IconMail />}
@@ -164,7 +207,7 @@ export default function RegisterScreen({ role, onBack, onSuccess, onLogin }: Pro
           returnKeyType="next"
         />
         <InputField
-          label="Mot de passe"
+          label={t.auth.passwordLabel}
           placeholder="Min. 6 caractères"
           value={mdp}
           onChangeText={setMdp}
@@ -181,16 +224,46 @@ export default function RegisterScreen({ role, onBack, onSuccess, onLogin }: Pro
 
         <NoteBox
           text="Ton email sert uniquement à récupérer ton compte si tu oublies ton mot de passe. Pas de spam, promis."
-          style={{ marginBottom: 20 }}
+          style={{ marginBottom: 16 }}
         />
 
-        <AuthButton label="Créer mon compte" onPress={handleSubmit} />
+        {/* Acceptation CGU */}
+        <View style={styles.cguRow}>
+          <TouchableOpacity
+            onPress={() => setCguAccepted(v => !v)}
+            activeOpacity={0.8}
+            hitSlop={8}
+          >
+            <View style={[styles.cguCheckbox, cguAccepted && styles.cguCheckboxOn]}>
+              {cguAccepted && <Text style={styles.cguCheckmark}>✓</Text>}
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.cguText}>
+            {'J\'ai lu et j\'accepte les '}
+            <Text style={styles.cguLink} onPress={onCGU}>
+              Conditions Générales d'Utilisation
+            </Text>
+            {' et la '}
+            <Text style={styles.cguLink} onPress={onConfidentialite}>
+              Politique de confidentialité
+            </Text>
+            {'.'}
+          </Text>
+        </View>
 
-        {/* Lien vers connexion */}
+        {erreur ? <Text style={styles.erreur}>{erreur}</Text> : null}
+
+        <AuthButton
+          label={t.auth.registerBtn}
+          onPress={handleSubmit}
+          loading={loading}
+          style={!cguAccepted ? { opacity: 0.45 } : undefined}
+        />
+
         <View style={styles.swapRow}>
-          <Text style={styles.swapTxt}>Déjà un compte ? </Text>
+          <Text style={styles.swapTxt}>{t.auth.hasAccount}</Text>
           <TouchableOpacity onPress={onLogin} activeOpacity={0.7}>
-            <Text style={styles.swapLink}>Se connecter</Text>
+            <Text style={styles.swapLink}>{t.auth.signIn}</Text>
           </TouchableOpacity>
         </View>
 
@@ -205,6 +278,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screen,
     paddingBottom: 32,
     flexGrow: 1,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   chip: {
     flexDirection: 'row',
@@ -236,6 +314,52 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     lineHeight: 22,
     marginTop: 10,
+  },
+  cguRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 16,
+  },
+  cguCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  cguCheckboxOn: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  cguCheckmark: {
+    color: colors.bg,
+    fontFamily: fonts.title,
+    fontSize: 13,
+    lineHeight: 17,
+  },
+  cguText: {
+    flex: 1,
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  cguLink: {
+    color: colors.accent,
+    fontFamily: fonts.ui,
+    textDecorationLine: 'underline',
+  },
+  erreur: {
+    color: colors.danger,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   swapRow: {
     flexDirection: 'row',

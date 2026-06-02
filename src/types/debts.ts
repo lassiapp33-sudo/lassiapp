@@ -6,6 +6,7 @@ export interface Debtor {
   id:          string;
   initial:     string;
   name:        string;
+  avatarUrl?:  string | null; // photo de profil (profiles.avatar_url)
   status:      DebtStatus;
   statusLabel: string;   // ex : "Retard critique"
   daysSince:   number;   // ancienneté en jours

@@ -1,19 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
+import Avatar from '../Avatar';
+import useFavoritesStore from '../../store/favoritesStore';
 
 export interface Shop {
   id:          string;
   initial:     string;
   name:        string;
+  logoUrl?:    string | null;
   isVip:       boolean;
   rating:      number;
   status:      'open' | 'closing' | 'closed';
   statusLabel: string;
   specialty:   string;
   distance:    string;
-  isFav:       boolean;
 }
 
 interface Props {
@@ -41,7 +43,8 @@ const VipBadge = () => (
 );
 
 export default function ShopCard({ shop, onPress }: Props) {
-  const [fav, setFav] = useState(shop.isFav);
+  const isFav     = useFavoritesStore(s => s.favorites.includes(shop.id));
+  const toggleFav = useFavoritesStore(s => s.toggleFavorite);
 
   const statusColor =
     shop.status === 'open'    ? colors.success :
@@ -49,10 +52,13 @@ export default function ShopCard({ shop, onPress }: Props) {
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
-      {/* Thumb initiale */}
-      <View style={styles.thumb}>
-        <Text style={styles.thumbTxt}>{shop.initial}</Text>
-      </View>
+      {/* Logo boutique — Avatar unique, source de vérité shops.logo_url */}
+      <Avatar
+        imageUrl={shop.logoUrl}
+        name={shop.name}
+        size={58}
+        variant="shop"
+      />
 
       {/* Infos */}
       <View style={styles.info}>
@@ -78,11 +84,11 @@ export default function ShopCard({ shop, onPress }: Props) {
         <Text style={styles.dist}>{shop.distance}</Text>
         <TouchableOpacity
           style={styles.favBtn}
-          onPress={() => setFav(v => !v)}
+          onPress={() => toggleFav(shop.id)}
           hitSlop={8}
           activeOpacity={0.7}
         >
-          <StarFill filled={fav} />
+          <StarFill filled={isFav} />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -100,22 +106,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 13,
     marginBottom: 11,
-  },
-  thumb: {
-    width: 58,
-    height: 58,
-    borderRadius: 15,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  thumbTxt: {
-    color: colors.accent,
-    fontFamily: fonts.title,
-    fontSize: 20,
   },
   info:   { flex: 1, minWidth: 0 },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 5 },

@@ -1,32 +1,48 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create }           from 'zustand';
+import * as favService      from '../services/favorites';
 
 interface FavoritesState {
-  favorites:      string[];   // liste des shopId mis en favori
+  favorites:      string[];   // shopIds en favori
+  loading:        boolean;
+
+  // Chargement depuis Supabase
+  loadFavorites: () => Promise<void>;
+
+  // Toggle — optimiste + write-through Supabase
   toggleFavorite: (shopId: string) => void;
+
+  setLoading: (v: boolean) => void;
 }
 
-const useFavoritesStore = create<FavoritesState>()(
-  persist(
-    (set) => ({
-      // Prérempli : Tangana Chez Modou (isFav dans NEARBY) + Diallo (VIP ShopScreen)
-      favorites: ['1', 'shop_diallo'],
+const useFavoritesStore = create<FavoritesState>()((set, get) => ({
+  favorites: [],
+  loading:   false,
 
-      toggleFavorite: (shopId) => set((state) => {
-        const isFav = state.favorites.includes(shopId);
-        return {
-          favorites: isFav
-            ? state.favorites.filter(id => id !== shopId)
-            : [...state.favorites, shopId],
-        };
-      }),
-    }),
-    {
-      name:    'lassi-favorites',
-      storage: createJSONStorage(() => AsyncStorage),
+  setLoading: (v) => set({ loading: v }),
+
+  loadFavorites: async () => {
+    set({ loading: true });
+    try {
+      const ids = await favService.getFavoriteIds();
+      set({ favorites: ids, loading: false });
+    } catch {
+      set({ loading: false });
     }
-  )
-);
+  },
+
+  toggleFavorite: (shopId) => {
+    const { favorites } = get();
+    const isFav = favorites.includes(shopId);
+
+    // Mise à jour optimiste
+    set({
+      favorites: isFav
+        ? favorites.filter(id => id !== shopId)
+        : [...favorites, shopId],
+    });
+
+    favService.toggleFavorite(shopId, isFav).catch(console.warn);
+  },
+}));
 
 export default useFavoritesStore;

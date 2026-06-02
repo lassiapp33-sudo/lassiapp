@@ -1,24 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform,
+  View, Text, ScrollView, TextInput, TouchableOpacity,
+  StyleSheet, Platform, ActivityIndicator, Alert,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-
-import DebtHeader   from '../../components/debts/DebtHeader';
-import TotalCard    from '../../components/debts/TotalCard';
-import FilterChips  from '../../components/debts/FilterChips';
-import DebtorCard   from '../../components/debts/DebtorCard';
-import AddDebtSheet from '../../components/debts/AddDebtSheet';
+import Svg, { Circle, Path } from 'react-native-svg';
+import DebtHeader    from '../../components/debts/DebtHeader';
+import TotalCard     from '../../components/debts/TotalCard';
+import FilterChips   from '../../components/debts/FilterChips';
+import DebtorCard    from '../../components/debts/DebtorCard';
+import AddDebtSheet, { ClientOption } from '../../components/debts/AddDebtSheet';
 import { colors, fonts } from '../../theme';
+import LassiScreen from '../../components/LassiScreen';
 import { DebtFilter, DebtStatus } from '../../types/debts';
 import useDebtsStore from '../../store/debtsStore';
+import useShopStore  from '../../store/shopStore';
+import * as chatService  from '../../services/chat';
+import * as debtsService from '../../services/debts';
 
-// Ordre de tri : rouge (urgence max) → orange → vert
 const URGENCY: Record<DebtStatus, number> = { late: 0, watch: 1, good: 2 };
-
 const FAB_BOTTOM = Platform.OS === 'ios' ? 34 : 24;
-
-// ─── FAB ─────────────────────────────────────────────────────────────────────
 
 const IcoPlus = () => (
   <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
@@ -27,62 +27,160 @@ const IcoPlus = () => (
   </Svg>
 );
 
-// ─── Écran ────────────────────────────────────────────────────────────────────
+const IcoX = () => (
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" strokeWidth={2.2} strokeLinecap="round">
+    <Path d="M18 6L6 18M6 6l12 12" stroke={colors.muted} />
+  </Svg>
+);
+
+const IcoSearch = () => (
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
+    <Circle cx={11} cy={11} r={8} stroke={colors.muted} />
+    <Path d="m21 21-4.3-4.3" stroke={colors.muted} />
+  </Svg>
+);
 
 interface Props { onBack: () => void; }
 
 export default function DebtsScreen({ onBack }: Props) {
+  const shopId     = useShopStore(s => s.shopId);
   const debtors    = useDebtsStore(s => s.debtors);
+  const loading    = useDebtsStore(s => s.loading);
   const addToDebt  = useDebtsStore(s => s.addToDebt);
+  const loadDebts  = useDebtsStore(s => s.loadDebts);
 
-  const [filter,    setFilter]    = useState<DebtFilter>('all');
-  const [showSheet, setShowSheet] = useState(false);
+  const [filter,       setFilter]       = useState<DebtFilter>('all');
+  const [showSheet,    setShowSheet]    = useState(false);
+  const [showSearch,   setShowSearch]   = useState(false);
+  const [searchQuery,  setSearchQuery]  = useState('');
+  const [convClients,  setConvClients]  = useState<ClientOption[]>([]);
 
-  // Filtre + tri par urgence
+  useEffect(() => {
+    if (!shopId) return;
+    loadDebts(shopId);
+    // Charge les clients qui ont échangé des messages avec ce prestataire
+    chatService.getMerchantConversations(shopId).then(async convs => {
+      const profiles = await Promise.all(
+        convs.map(c => chatService.getClientProfile(c.clientId).then(p => ({
+          id:   c.clientId,
+          name: p.name || 'Client',
+        })))
+      );
+      setConvClients(
+        profiles
+          .filter(p => p.name && p.name !== 'Client')
+          .map(p => ({
+            id:         p.id,
+            name:       p.name,
+            initial:    p.name.charAt(0).toUpperCase(),
+            isExisting: false,
+          }))
+      );
+    }).catch(() => {});
+  }, [shopId]);
+
+  const q = searchQuery.trim().toLowerCase();
   const displayed = debtors
     .filter(d => filter === 'all' || d.status === filter)
+    .filter(d => !q || d.name.toLowerCase().includes(q))
     .sort((a, b) => URGENCY[a.status] - URGENCY[b.status]);
 
-  // Ajout d'une dette depuis le bottom sheet → persiste dans le store
-  const handleAddDebt = (debtorId: string, amount: number) => addToDebt(debtorId, amount);
+  // Options combinées : débiteurs existants + clients des conversations pas encore débiteurs
+  const existingNames = new Set(debtors.map(d => d.name.toLowerCase()));
+  const existingOptions: ClientOption[] = debtors.map(d => ({
+    id:         d.id,
+    name:       d.name,
+    initial:    d.initial,
+    isExisting: true,
+  }));
+  const newOptions: ClientOption[] = convClients.filter(
+    c => !existingNames.has(c.name.toLowerCase())
+  );
+  const clientOptions: ClientOption[] = [...existingOptions, ...newOptions];
+
+  const handleAddDebt = async (option: ClientOption, amount: number) => {
+    if (!shopId) return;
+    if (option.isExisting) {
+      addToDebt(option.id, amount);
+    } else {
+      // Nouveau client : créer la ligne debt puis ajouter le montant
+      try {
+        const newDebtor = await debtsService.addDebtor(shopId, option.name);
+        await debtsService.addToDebt(newDebtor.id, amount);
+        loadDebts(shopId);  // recharge depuis Supabase
+      } catch {
+        Alert.alert('Erreur', "Impossible d'enregistrer la dette. Réessaie.");
+      }
+    }
+  };
 
   return (
-    <View style={styles.root}>
-      <DebtHeader onBack={onBack} />
+    <LassiScreen
+      header={
+        <>
+          <DebtHeader
+            onBack={onBack}
+            onSearch={() => {
+              setShowSearch(v => !v);
+              setSearchQuery('');
+            }}
+          />
+          {showSearch && (
+            <View style={styles.searchBar}>
+              <IcoSearch />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Chercher un client…"
+                placeholderTextColor={colors.muted}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
+                  <IcoX />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </>
+      }
+    >
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Carte total dû */}
-        <TotalCard debtors={debtors} />
+      {loading ? (
+        <View style={styles.loader}>
+          <ActivityIndicator color={colors.accent} size="large" />
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <TotalCard debtors={debtors} />
+          <FilterChips active={filter} onChange={setFilter} />
 
-        {/* Filtres par statut */}
-        <FilterChips active={filter} onChange={setFilter} />
+          {displayed.length > 0 && (
+            <Text style={styles.sec}>
+              {displayed.length} client{displayed.length > 1 ? 's' : ''} · classé{displayed.length > 1 ? 's' : ''} par urgence
+            </Text>
+          )}
 
-        {/* Label de section */}
-        {displayed.length > 0 && (
-          <Text style={styles.sec}>
-            {displayed.length} client{displayed.length > 1 ? 's' : ''} · classé{displayed.length > 1 ? 's' : ''} par urgence
-          </Text>
-        )}
+          {displayed.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyTxt}>Aucun client dans cette catégorie</Text>
+            </View>
+          ) : (
+            displayed.map(debtor => (
+              <DebtorCard key={debtor.id} debtor={debtor} />
+            ))
+          )}
 
-        {/* Liste des débiteurs ou état vide */}
-        {displayed.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTxt}>Aucun client dans cette catégorie</Text>
-          </View>
-        ) : (
-          displayed.map(debtor => (
-            <DebtorCard key={debtor.id} debtor={debtor} />
-          ))
-        )}
+          <View style={{ height: 100 }} />
+        </ScrollView>
+      )}
 
-        <View style={{ height: 100 }} />
-      </ScrollView>
-
-      {/* FAB — Ajouter une dette (2 taps max) */}
       <TouchableOpacity
         style={[styles.fab, { bottom: FAB_BOTTOM }]}
         onPress={() => setShowSheet(true)}
@@ -92,25 +190,41 @@ export default function DebtsScreen({ onBack }: Props) {
         <Text style={styles.fabTxt}>Ajouter une dette</Text>
       </TouchableOpacity>
 
-      {/* Bottom sheet d'ajout */}
       <AddDebtSheet
         visible={showSheet}
-        debtors={debtors}
+        clients={clientOptions}
         onSave={handleAddDebt}
         onClose={() => setShowSheet(false)}
       />
-    </View>
+    </LassiScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
+  root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
-  content: { paddingTop: 4, flexGrow: 1 },
+  content: { paddingTop: 4 },
+  loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 18,
+    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: colors.white,
+    fontFamily: fonts.body,
+    fontSize: 14,
+  },
   sec: {
     color: colors.muted,
     fontFamily: fonts.ui,
@@ -120,17 +234,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingBottom: 10,
   },
-  empty: {
-    paddingVertical: 48,
-    alignItems: 'center',
-  },
-  emptyTxt: {
-    color: colors.muted,
-    fontFamily: fonts.body,
-    fontSize: 13,
-  },
+  empty: { paddingVertical: 48, alignItems: 'center' },
+  emptyTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 13 },
 
-  // Bouton flottant — accent bien visible en plein soleil
   fab: {
     position: 'absolute',
     right: 20,
@@ -142,9 +248,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  fabTxt: {
-    color: colors.bg,
-    fontFamily: fonts.titleXL,
-    fontSize: 14.5,
-  },
+  fabTxt: { color: colors.bg, fontFamily: fonts.titleXL, fontSize: 14.5 },
 });

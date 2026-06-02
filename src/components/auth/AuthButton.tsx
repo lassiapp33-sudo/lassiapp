@@ -1,25 +1,38 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
+import {
+  TouchableOpacity, Text, StyleSheet, ViewStyle, ActivityIndicator,
+} from 'react-native';
 import { colors, fonts } from '../../theme';
 
 interface Props {
-  label: string;
-  onPress: () => void;
+  label:    string;
+  onPress:  () => void;
   variant?: 'primary' | 'ghost';
-  style?: ViewStyle;
+  loading?: boolean;   // affiche un spinner et désactive le bouton
+  style?:   ViewStyle;
 }
 
-export default function AuthButton({ label, onPress, variant = 'primary', style }: Props) {
+export default function AuthButton({
+  label, onPress, variant = 'primary', loading = false, style,
+}: Props) {
   const isPrimary = variant === 'primary';
   return (
     <TouchableOpacity
       style={[styles.btn, isPrimary ? styles.primary : styles.ghost, style]}
       onPress={onPress}
       activeOpacity={0.85}
+      disabled={loading}
     >
-      <Text style={[styles.label, !isPrimary && styles.ghostLabel]}>
-        {label}
-      </Text>
+      {loading ? (
+        <ActivityIndicator
+          color={isPrimary ? colors.bg : colors.white}
+          size="small"
+        />
+      ) : (
+        <Text style={[styles.label, !isPrimary && styles.ghostLabel]}>
+          {label}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 }

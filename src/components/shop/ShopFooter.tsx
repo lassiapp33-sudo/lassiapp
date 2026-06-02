@@ -23,37 +23,48 @@ const IcoCard = () => (
 const BOTTOM_EXTRA = Platform.OS === 'ios' ? 20 : 0;
 export const FOOTER_HEIGHT = 88 + BOTTOM_EXTRA;
 
+// Labels du bouton principal selon le type de vitrine
+const LABELS: Record<string, { main: string; sub: string }> = {
+  products:    { main: 'Commander',  sub: 'Payer via Wave / OM' },
+  services:    { main: 'Réserver',   sub: 'Confirmer la réservation' },
+  memberships: { main: 'S\'abonner', sub: 'Voir les formules' },
+};
+
 interface Props {
-  total:      number;
-  hasItems:   boolean;
-  onChat?:     () => void;
+  total:     number;
+  hasItems:  boolean;
+  shopType?: 'products' | 'services' | 'memberships';
+  onChat?:   () => void;
   onCheckout?: () => void;
 }
 
-export default function ShopFooter({ total, hasItems, onChat, onCheckout }: Props) {
+export default function ShopFooter({ total, hasItems, shopType = 'products', onChat, onCheckout }: Props) {
+  const { main, sub } = LABELS[shopType] ?? LABELS.products;
+
+  // Pour les produits : le montant s'affiche si panier non vide
+  const mainLabel = (shopType === 'products' && hasItems)
+    ? `${main} · ${total.toLocaleString('fr-FR')} F`
+    : main;
+
   return (
     <View style={styles.footer}>
-      {/* Bouton Chat / Vocal — accès direct à la messagerie commerçant */}
+      {/* Bouton Chat / Vocal */}
       <TouchableOpacity style={styles.btnChat} onPress={onChat} activeOpacity={0.8}>
         <View style={styles.notifDot} />
         <IcoMic />
         <Text style={styles.chatLbl}>Chat / Vocal</Text>
       </TouchableOpacity>
 
-      {/* Bouton Commander · 1 clic — deep-link Wave / Orange Money */}
+      {/* Bouton d'action principal — libellé adapté au type */}
       <TouchableOpacity
-        style={[styles.btnPay, !hasItems && styles.btnPayDim]}
+        style={[styles.btnPay, !hasItems && shopType === 'products' && styles.btnPayDim]}
         onPress={onCheckout}
         activeOpacity={0.85}
       >
         <IcoCard />
         <View>
-          <Text style={styles.payTxt}>
-            {hasItems
-              ? `Commander · ${total.toLocaleString('fr-FR')} F`
-              : 'Commander'}
-          </Text>
-          <Text style={styles.paySubTxt}>Payer via Wave / OM</Text>
+          <Text style={styles.payTxt}>{mainLabel}</Text>
+          <Text style={styles.paySubTxt}>{sub}</Text>
         </View>
       </TouchableOpacity>
     </View>
@@ -89,7 +100,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     position: 'relative',
   },
-  // Point rouge indiquant un message non lu
   notifDot: {
     position: 'absolute',
     top: 7,

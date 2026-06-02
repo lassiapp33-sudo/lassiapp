@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
+import Constants from 'expo-constants';
 import {
   PlusJakartaSans_500Medium,
   PlusJakartaSans_600SemiBold,
@@ -18,19 +19,46 @@ import AuthNavigator     from './src/screens/AuthNavigator';
 import HomeNavigator     from './src/screens/home/HomeNavigator';
 import MerchantNavigator from './src/screens/merchant/MerchantNavigator';
 import useAuthStore      from './src/store/authStore';
+import * as authService  from './src/services/auth';
+import { usePushToken, removeCurrentDeviceToken } from './src/hooks/usePushToken';
+import usePendingNavStore from './src/store/pendingNavStore';
+
+// ─── Détection Expo Go ────────────────────────────────────────────────────────
+// SDK 53+ : les push notifications Android ne fonctionnent plus dans Expo Go.
+// Le simple import de 'expo-notifications' déclenche TokenAutoRegistration
+// au chargement du module → erreur console. On utilise require() LAZY pour
+// que le module ne se charge jamais dans Expo Go.
+const IS_EXPO_GO = Constants.executionEnvironment === 'storeClient';
+
+// Chargement paresseux : le module expo-notifications n'est jamais évalué
+// dans Expo Go, ce qui empêche TokenAutoRegistration de tourner.
+type N = typeof import('expo-notifications');
+const getN = (): N | null => {
+  if (IS_EXPO_GO) return null;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('expo-notifications') as N;
+};
 
 ExpoSplashScreen.preventAutoHideAsync();
 
 type Screen = 'splash' | 'onboarding' | 'auth' | 'client' | 'merchant';
 
-function getInitialScreen(): Screen {
-  // Zustand persist hydrate AsyncStorage de manière synchrone au premier accès
-  // Le splash (2.6s) laisse le temps à l'hydratation de se terminer
-  return 'splash';
+// Décode les données d'une notification push et stocke la navigation en attente
+function handleNotifData(data: Record<string, any> | undefined | null) {
+  if (!data) return;
+  const setPendingNav = usePendingNavStore.getState().setPendingNav;
+  if (data.type === 'message' && data.conversationId) {
+    setPendingNav({ type: 'msg', conversationId: data.conversationId });
+  } else if (data.type === 'commande' && data.orderId) {
+    setPendingNav({ type: 'order', orderId: data.orderId });
+  }
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>(getInitialScreen);
+  const [screen, setScreen] = useState<Screen>('splash');
+
+  // Enregistre le token push dès que l'utilisateur est connecté
+  usePushToken();
 
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_500Medium,
@@ -44,10 +72,76 @@ export default function App() {
     if (fontsLoaded) await ExpoSplashScreen.hideAsync();
   }, [fontsLoaded]);
 
+  // Handler de premier plan + canaux Android
+  // Le require() ici est lazy : expo-notifications ne charge QUE si !IS_EXPO_GO
+  useEffect(() => {
+    const N = getN();
+    if (!N) return;
+
+    // Affiche les notifications quand l'app est au premier plan
+    N.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert:  true,
+        shouldPlaySound:  true,
+        shouldSetBadge:   false,
+        shouldShowBanner: true,
+        shouldShowList:   true,
+      }),
+    });
+
+    // Canaux Android
+    if (Platform.OS === 'android') {
+      N.setNotificationChannelAsync('commandes', {
+        name:             'Commandes',
+        importance:       N.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor:       '#FDCF34',
+        sound:            'default',
+      });
+      N.setNotificationChannelAsync('messages', {
+        name:       'Messages',
+        importance: N.AndroidImportance.DEFAULT,
+        sound:      'default',
+      });
+    }
+  }, []);
+
+  // Écoute les taps sur notification (non disponible dans Expo Go SDK 53+)
+  useEffect(() => {
+    const N = getN();
+    if (!N) return;
+
+    const sub = N.addNotificationResponseReceivedListener((response) => {
+      handleNotifData(response.notification.request.content.data as Record<string, any>);
+    });
+
+    // Cold start : l'app a été ouverte depuis un tap sur une notif
+    N.getLastNotificationResponseAsync().then((response) => {
+      if (response?.notification) {
+        handleNotifData(response.notification.request.content.data as Record<string, any>);
+      }
+    });
+
+    return () => sub.remove();
+  }, []);
+
+  // Écoute les changements Supabase (expiration de token, déconnexion externe…)
+  useEffect(() => {
+    const unsubscribe = authService.onAuthStateChange((user) => {
+      useAuthStore.getState().setUser(user);
+      if (!user && screen !== 'splash' && screen !== 'onboarding' && screen !== 'auth') {
+        setScreen('auth');
+      }
+    });
+    return unsubscribe;
+  }, [screen]);
+
   if (!fontsLoaded) return null;
 
-  // Déconnexion : vider authStore + retourner à l'auth
-  const handleLogout = () => {
+  // Déconnexion : supprime le token push, Supabase + store + retour à l'auth
+  const handleLogout = async () => {
+    await removeCurrentDeviceToken();
+    try { await authService.logout(); } catch (_) {}
     useAuthStore.getState().logout();
     setScreen('auth');
   };
@@ -57,16 +151,19 @@ export default function App() {
       <StatusBar style="light" />
 
       {screen === 'splash' && (
-        <SplashScreen onFinish={() => {
-          // Après le splash, vérifier si l'utilisateur est déjà connecté
-          const { isAuthenticated, hasSeenOnboarding, user } = useAuthStore.getState();
-          if (isAuthenticated && user) {
-            setScreen(user.role === 'merchant' ? 'merchant' : 'client');
-          } else if (hasSeenOnboarding) {
-            setScreen('auth');
-          } else {
-            setScreen('onboarding');
+        <SplashScreen onFinish={async () => {
+          const { hasSeenOnboarding } = useAuthStore.getState();
+
+          const sessionUser = await authService.getSessionUser();
+
+          if (sessionUser) {
+            useAuthStore.getState().setUser(sessionUser);
+            setScreen(sessionUser.role === 'merchant' ? 'merchant' : 'client');
+            return;
           }
+
+          useAuthStore.getState().setLoading(false);
+          setScreen(hasSeenOnboarding ? 'auth' : 'onboarding');
         }} />
       )}
 
@@ -83,10 +180,7 @@ export default function App() {
         } />
       )}
 
-      {/* Parcours client */}
-      {screen === 'client' && <HomeNavigator onLogout={handleLogout} />}
-
-      {/* Cockpit commerçant */}
+      {screen === 'client'   && <HomeNavigator     onLogout={handleLogout} />}
       {screen === 'merchant' && <MerchantNavigator onLogout={handleLogout} />}
     </View>
   );

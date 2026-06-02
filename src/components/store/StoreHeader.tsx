@@ -18,12 +18,21 @@ const IcoEye = () => (
   </Svg>
 );
 
+const IcoTag = () => (
+  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none"
+    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" stroke={colors.bg} />
+    <Path d="M7 7h.01" stroke={colors.bg} />
+  </Svg>
+);
+
 interface Props {
-  onBack:    () => void;
-  onPreview: () => void;
+  onBack:     () => void;
+  onPreview:  () => void;
+  onPromos?:  () => void;
 }
 
-export default function StoreHeader({ onBack, onPreview }: Props) {
+export default function StoreHeader({ onBack, onPreview, onPromos }: Props) {
   return (
     <View style={[styles.row, { paddingTop: TOP_INSET + 4 }]}>
       <TouchableOpacity style={styles.btn} onPress={onBack} activeOpacity={0.8}>
@@ -31,6 +40,14 @@ export default function StoreHeader({ onBack, onPreview }: Props) {
       </TouchableOpacity>
 
       <Text style={styles.title}>Ma vitrine</Text>
+
+      {/* Promotions */}
+      {onPromos && (
+        <TouchableOpacity style={styles.promos} onPress={onPromos} activeOpacity={0.8}>
+          <IcoTag />
+          <Text style={styles.promosTxt}>Promos</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Aperçu — voit la vitrine telle que le client la voit */}
       <TouchableOpacity style={styles.preview} onPress={onPreview} activeOpacity={0.8}>
@@ -66,6 +83,21 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: fonts.titleXL,
     fontSize: 18,
+  },
+  promos: {
+    height: 34,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: colors.accent,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    flexShrink: 0,
+  },
+  promosTxt: {
+    color:      colors.bg,
+    fontFamily: fonts.title,
+    fontSize:   11.5,
   },
   preview: {
     height: 34,

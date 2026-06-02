@@ -12,19 +12,47 @@ const IcoClock = () => (
 );
 
 interface Props {
-  hours:     string;   // ex : "06h00 à 11h30"
-  orderType: string;   // ex : "À emporter ou sur place"
+  /** "Ouvert", "Fermé", "Fermé aujourd'hui", "Exceptionnellement fermé" */
+  statusLabel:  string;
+  /** "Ferme dans 40min", "Ouvre à 7h", ou "" */
+  nextChange:   string;
+  /** Plage du jour "7h – 22h" ou null si horaires non définis */
+  todayHours:   string | null;
+  /** "Sur place", "Sur rendez-vous", "Abonnement" */
+  orderType:    string;
+  isOpen:       boolean;
 }
 
-export default function ShopInfoBar({ hours, orderType }: Props) {
+export default function ShopInfoBar({
+  statusLabel, nextChange, todayHours, orderType, isOpen,
+}: Props) {
+  // Ligne principale
+  const mainText = (() => {
+    if (isOpen && todayHours) return `Ouvert · ${todayHours}`;
+    if (isOpen)               return 'Ouvert';
+    if (nextChange)           return nextChange;   // ex: "Ouverture Demain à 7h"
+    return statusLabel;
+  })();
+
+  // Indication secondaire : heure de fermeture quand ouvert
+  const secondary = isOpen && nextChange ? nextChange : null;
+
   return (
     <View style={styles.bar}>
       <IcoClock />
-      <Text style={styles.txt}>
-        {'Ouvert aujourd\'hui de '}
-        <Text style={styles.bold}>{hours}</Text>
-        {'  ·  '}{orderType}
-      </Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.txt}>
+          <Text style={[styles.status, isOpen ? styles.open : styles.closed]}>
+            {mainText}
+          </Text>
+          {orderType ? (
+            <>{'  ·  '}<Text style={styles.orderTxt}>{orderType}</Text></>
+          ) : null}
+        </Text>
+        {secondary ? (
+          <Text style={styles.secondary}>{secondary}</Text>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -40,18 +68,34 @@ const styles = StyleSheet.create({
     padding: 12,
     paddingHorizontal: 14,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 10,
   },
   txt: {
-    flex: 1,
     color: colors.muted,
     fontFamily: fonts.body,
     fontSize: 11.5,
     lineHeight: 18,
+    flexWrap: 'wrap',
   },
-  bold: {
+  status: {
+    fontFamily: fonts.ui,
+  },
+  open: {
+    color: '#4ade80',  // vert
+  },
+  closed: {
+    color: colors.danger,
+  },
+  orderTxt: {
     color: colors.white,
     fontFamily: fonts.ui,
+    fontSize: 11.5,
+  },
+  secondary: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 10.5,
+    marginTop: 2,
   },
 });

@@ -1,15 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { colors, fonts, radius } from '../../theme';
+import { colors, fonts } from '../../theme';
 
-interface Props {
-  quartier?:    string;
-  initial?:     string;
-  unreadCount?: number;
-  onLocation?:  () => void;
-  onAvatar?:    () => void;
-}
+// ─── Icônes ──────────────────────────────────────────────────────────────────
 
 const IconPin = () => (
   <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
@@ -24,9 +18,43 @@ const IconChevron = () => (
   </Svg>
 );
 
-export default function HomeHeader({ quartier = 'Grand Dakar', initial = 'A', unreadCount = 0, onLocation, onAvatar }: Props) {
+const IconBell = () => (
+  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"
+    strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke={colors.white} />
+    <Path d="M13.73 21a2 2 0 0 1-3.46 0"                   stroke={colors.white} />
+  </Svg>
+);
+
+// ─── Props ───────────────────────────────────────────────────────────────────
+
+interface Props {
+  quartier?:     string;
+  unreadCount?:  number;
+  onLocation?:   () => void;
+  onAvatar?:     () => void;   // ouvre les notifications
+  // Props conservées pour compatibilité (inutilisées visuellement)
+  initial?:      string;
+  name?:         string;
+  avatarUrl?:    string | null;
+}
+
+// ─── Composant ───────────────────────────────────────────────────────────────
+
+export default function HomeHeader({
+  quartier     = 'Grand Dakar',
+  unreadCount  = 0,
+  onLocation,
+  onAvatar,
+}: Props) {
+
+  // Affiche "99+" si le nombre dépasse 99
+  const badgeLabel = unreadCount > 99 ? '99+' : String(unreadCount);
+
   return (
     <View style={styles.row}>
+
+      {/* ── Position ─────────────────────────────────────────────── */}
       <TouchableOpacity onPress={onLocation} activeOpacity={0.7}>
         <View style={styles.locLabel}>
           <IconPin />
@@ -38,66 +66,93 @@ export default function HomeHeader({ quartier = 'Grand Dakar', initial = 'A', un
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.avatar} onPress={onAvatar} activeOpacity={0.8}>
-        <Text style={styles.avatarTxt}>{initial}</Text>
-        {unreadCount > 0 && <View style={styles.dot} />}
+      {/* ── Cloche de notification ────────────────────────────────── */}
+      <TouchableOpacity
+        style={styles.bellWrap}
+        onPress={onAvatar}
+        activeOpacity={0.8}
+      >
+        <IconBell />
+
+        {/* Badge numérique — visible seulement si unreadCount > 0 */}
+        {unreadCount > 0 && (
+          <View style={[styles.badge, unreadCount > 9 && styles.badgeWide]}>
+            <Text style={styles.badgeTxt}>{badgeLabel}</Text>
+          </View>
+        )}
       </TouchableOpacity>
+
     </View>
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection:  'row',
+    alignItems:     'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom:   16,
   },
+
   locLabel: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    alignItems:    'center',
+    gap:           4,
   },
   locLabelTxt: {
-    color: colors.muted,
+    color:      colors.muted,
     fontFamily: fonts.body,
-    fontSize: 11,
+    fontSize:   11,
   },
   locValue: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginTop: 2,
+    alignItems:    'center',
+    gap:           5,
+    marginTop:     2,
   },
   locValueTxt: {
-    color: colors.white,
+    color:      colors.white,
     fontFamily: fonts.title,
-    fontSize: 15,
+    fontSize:   15,
   },
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+
+  // Bouton cloche
+  bellWrap: {
+    width:           44,
+    height:          44,
+    borderRadius:    14,
+    backgroundColor: '#1e2044',
+    borderWidth:     1,
+    borderColor:     colors.border,
+    alignItems:      'center',
+    justifyContent:  'center',
   },
-  avatarTxt: {
-    color: colors.accent,
+
+  // Badge rouge avec le nombre
+  badge: {
+    position:        'absolute',
+    top:             -6,
+    right:           -6,
+    minWidth:        18,
+    height:          18,
+    borderRadius:    9,
+    backgroundColor: '#ff4d4f',
+    borderWidth:     2,
+    borderColor:     colors.bg,
+    alignItems:      'center',
+    justifyContent:  'center',
+    paddingHorizontal: 3,
+  },
+  badgeWide: {
+    borderRadius: 9,
+    paddingHorizontal: 5,
+  },
+  badgeTxt: {
+    color:      '#fff',
     fontFamily: fonts.title,
-    fontSize: 15,
-  },
-  dot: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.accent,
-    borderWidth: 2,
-    borderColor: colors.bg,
+    fontSize:   10,
+    lineHeight: 14,
   },
 });

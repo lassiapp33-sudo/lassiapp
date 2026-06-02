@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 
-export type MenuTabId = 'all' | 'petitdej' | 'boissons' | 'plats';
+export type MenuTabId = string;
 
 export interface MenuTab {
   id:    MenuTabId;

@@ -1,26 +1,35 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, ScrollView, KeyboardAvoidingView,
-  Platform, StyleSheet,
+  Platform, StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 
 import ChatHeader    from '../../components/chat/ChatHeader';
 import DaySeparator  from '../../components/chat/DaySeparator';
 import BubbleText    from '../../components/chat/BubbleText';
 import BubbleVoice   from '../../components/chat/BubbleVoice';
+import BubbleImage   from '../../components/chat/BubbleImage';
 import BubbleTicket, { TicketItem } from '../../components/chat/BubbleTicket';
 import QuickReplies  from '../../components/chat/QuickReplies';
 import ChatComposer  from '../../components/chat/ChatComposer';
+import AttachSheet   from '../../components/chat/AttachSheet';
 import { colors }    from '../../theme';
 import { OrderInfo } from '../../types/payment';
+import useAuthStore  from '../../store/authStore';
+import * as chatService  from '../../services/chat';
+import * as shopsService from '../../services/shops';
+import { openWhatsAppCall } from '../../utils/whatsapp';
+import { ChatMessage }   from '../../services/chat';
+import { useRealtimeMessages } from '../../hooks/useRealtimeMessages';
 
-// ─── Types messages ───────────────────────────────────────────────────────────
+// ─── Types locaux UI ──────────────────────────────────────────────────────────
 
 type Sender = 'me' | 'them';
 
 interface BaseMsg  { id: string; sender: Sender; time: string; }
 interface TextMsg  extends BaseMsg { kind: 'text';   text: string; read?: boolean; }
-interface VoiceMsg extends BaseMsg { kind: 'voice';  duration: string; read?: boolean; }
+interface VoiceMsg extends BaseMsg { kind: 'voice';  duration: string; voiceUrl?: string | null; read?: boolean; }
+interface ImageMsg extends BaseMsg { kind: 'image';  imageUrl: string; read?: boolean; }
 interface TicketMsg extends BaseMsg {
   kind:    'ticket';
   orderId: string;
@@ -29,17 +38,46 @@ interface TicketMsg extends BaseMsg {
   paid:    boolean;
   read?:   boolean;
 }
+type Msg = TextMsg | VoiceMsg | ImageMsg | TicketMsg;
 
-type Msg = TextMsg | VoiceMsg | TicketMsg;
-
-// ─── Utilitaires ─────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function nowTime(): string {
   const d = new Date();
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
-// ─── Suggestions rapides ──────────────────────────────────────────────────────
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// Convertit un ChatMessage Supabase en Msg local
+function toMsg(m: ChatMessage, currentUserId: string): Msg {
+  const sender: Sender = m.senderId === currentUserId ? 'me' : 'them';
+  const time = formatTime(m.createdAt);
+
+  if (m.type === 'ticket' && m.ticketData) {
+    return {
+      id: m.id, kind: 'ticket', sender, time,
+      orderId: m.ticketData.orderId,
+      items:   m.ticketData.items,
+      total:   m.ticketData.total,
+      paid:    m.ticketData.status === 'paid',
+    };
+  }
+  if (m.type === 'voice') {
+    // content stocke la durée en secondes (ex : "15")
+    const sec = parseInt(m.content || '0', 10);
+    const min = Math.floor(sec / 60);
+    const duration = `${min}:${String(sec % 60).padStart(2, '0')}`;
+    return { id: m.id, kind: 'voice', sender, time, duration, voiceUrl: m.voiceUrl };
+  }
+  if (m.type === 'image') {
+    return { id: m.id, kind: 'image', sender, time, imageUrl: m.voiceUrl ?? '' };
+  }
+  return { id: m.id, kind: 'text', sender, time, text: m.content };
+}
 
 const QUICK_CHIPS = [
   "👍 C'est noté",
@@ -48,69 +86,127 @@ const QUICK_CHIPS = [
   'Merci ! 🙏',
 ];
 
-// ─── Mock : conversation initiale (3 messages — le paiement arrive en live) ──
+// ─── Props ────────────────────────────────────────────────────────────────────
 
-const TICKET_ID = 'tk1';
-
-const INITIAL_MSGS: Msg[] = [
-  {
-    id: 'v1', kind: 'voice', sender: 'me',
-    time: '08:12', duration: '0:09', read: true,
-  },
-  {
-    id: 't1', kind: 'text', sender: 'them',
-    time: '08:12',
-    text: 'Waw ! 2 pains-œufs et un café Touba bien sucré. Je te prépare ça 👍',
-  },
-  {
-    id: TICKET_ID, kind: 'ticket', sender: 'them',
-    time: '08:13', orderId: '#A427', paid: false,
-    items: [
-      { qty: 2, name: 'Pain Œuf Mayo', price: 1000 },
-      { qty: 1, name: 'Café Touba',    price: 200  },
-    ],
-    total: 1200,
-  },
-];
+interface Props {
+  shopId?:          string;
+  conversationId?:  string;
+  shopInitial:      string;
+  shopName:         string;
+  shopLogoUrl?:     string | null;
+  isVip?:           boolean;
+  onBack:           () => void;
+  onCheckout?:      (order: OrderInfo) => void;
+  paidTicketId?:    string;
+}
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
-interface Props {
-  shopInitial:  string;
-  shopName:     string;
-  isVip?:       boolean;
-  onBack:       () => void;
-  // Paiement via PaymentScreen
-  onCheckout?:  (order: OrderInfo) => void;
-  // Retour de PaymentScreen avec succès → ticketId à marquer payé
-  paidTicketId?: string;
-}
-
 export default function ChatScreen({
-  shopInitial, shopName, isVip,
-  onBack, onCheckout, paidTicketId,
+  shopId, conversationId: directConvId, shopInitial, shopName, shopLogoUrl,
+  isVip, onBack, onCheckout, paidTicketId,
 }: Props) {
-  const [messages,  setMessages]  = useState<Msg[]>(INITIAL_MSGS);
-  const [inputText, setInputText] = useState('');
-  const scrollRef = useRef<ScrollView>(null);
-  // Évite de re-traiter le même paiement si le composant re-rend
-  const processedPayments = useRef<Set<string>>(new Set());
+  const currentUserId = useAuthStore(s => s.user?.id ?? '');
+  const userRole      = useAuthStore(s => s.user?.role ?? 'client');
 
-  // Scroll vers le bas à chaque nouveau message
+  const [messages,        setMessages]        = useState<Msg[]>([]);
+  const [conversationId,  setConversationId]  = useState<string | null>(directConvId ?? null);
+  const [inputText,       setInputText]       = useState('');
+  const [loading,         setLoading]         = useState(false);
+  const [showAttach,      setShowAttach]      = useState(false);
+
+  // Nom/avatar/initiale/téléphone résolus depuis Supabase — remplacent les props si besoin
+  const [resolvedName,    setResolvedName]    = useState(shopName);
+  const [resolvedLogoUrl, setResolvedLogoUrl] = useState<string | null>(shopLogoUrl ?? null);
+  const [resolvedInitial, setResolvedInitial] = useState(shopInitial);
+  const [otherPhone,      setOtherPhone]      = useState<string | null>(null);
+
+  const scrollRef           = useRef<ScrollView>(null);
+  const processedPayments   = useRef<Set<string>>(new Set());
+  // IDs déjà dans le state — évite les doublons Realtime
+  const knownIds            = useRef<Set<string>>(new Set());
+
+  // ── Auto-scroll ───────────────────────────────────────────────────────────
   useEffect(() => {
     const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
     return () => clearTimeout(t);
   }, [messages]);
 
-  // Retour de PaymentScreen → marquer le ticket comme payé dans le chat
+  // ── Chargement initial ────────────────────────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        let convId = directConvId ?? null;
+        if (!convId) {
+          if (!shopId) return;
+          const conv = await chatService.getOrCreateConversation(shopId);
+          convId = conv.id;
+        }
+        setConversationId(convId);
+
+        // ── Résolution du vrai nom/avatar de l'interlocuteur depuis Supabase ──
+        // Garantit que le header affiche toujours le vrai nom, même si les props
+        // contenaient un placeholder ("...", "", "Client", etc.).
+        try {
+          if (userRole === 'client' && shopId) {
+            // Client avec shopId fourni → fetch la boutique directement
+            const shop = await shopsService.getShopById(shopId);
+            if (shop) {
+              setResolvedName(shop.name);
+              setResolvedLogoUrl(shop.logoUrl ?? null);
+              setResolvedInitial(shop.name.charAt(0).toUpperCase());
+              setOtherPhone(shop.phone ?? null); // numéro du prestataire
+            }
+          } else {
+            // Client sans shopId (navigation via notification) ou marchand → lit la conv
+            const conv = await chatService.getConversationById(convId);
+            if (conv) {
+              if (userRole === 'client') {
+                const shop = await shopsService.getShopById(conv.shopId);
+                if (shop) {
+                  setResolvedName(shop.name);
+                  setResolvedLogoUrl(shop.logoUrl ?? null);
+                  setResolvedInitial(shop.name.charAt(0).toUpperCase());
+                  setOtherPhone(shop.phone ?? null); // numéro du prestataire
+                }
+              } else {
+                // Marchand → l'interlocuteur est le client
+                const profile = await chatService.getClientProfile(conv.clientId);
+                const displayName = profile.name || 'Client';
+                setResolvedName(displayName);
+                setResolvedLogoUrl(profile.avatarUrl);
+                setResolvedInitial(displayName.charAt(0).toUpperCase());
+                setOtherPhone(profile.phone ?? null); // numéro du client
+              }
+            }
+          }
+        } catch {}
+
+        const msgs = await chatService.getMessages(convId);
+        const mapped = msgs.map(m => toMsg(m, currentUserId));
+        mapped.forEach(m => knownIds.current.add(m.id));
+        setMessages(mapped);
+        await chatService.markConversationRead(convId);
+      } catch (err) {
+        console.warn('[ChatScreen] init:', err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [shopId, directConvId, currentUserId]);
+
+  // ── Retour de PaymentScreen → marquer ticket payé ─────────────────────────
   useEffect(() => {
     if (!paidTicketId || processedPayments.current.has(paidTicketId)) return;
     processedPayments.current.add(paidTicketId);
     applyPayment(paidTicketId);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paidTicketId]);
+    if (conversationId) {
+      chatService.updateTicketStatus(paidTicketId).catch(console.warn);
+    }
+  }, [paidTicketId, conversationId]);
 
-  // ── Marquer un ticket payé + ajouter reçu + réponse commerçant ────────────
+  // ── Marquer ticket payé localement + message de confirmation ─────────────
   const applyPayment = (ticketId: string) => {
     setMessages(prev => {
       const ticket = prev.find(m => m.id === ticketId) as TicketMsg | undefined;
@@ -132,53 +228,144 @@ export default function ChatScreen({
     }, 1400);
   };
 
+  // ── Abonnement Realtime ───────────────────────────────────────────────────
+  const handleInsert = useCallback((msg: ChatMessage) => {
+    if (knownIds.current.has(msg.id)) return;  // déjà dans le state
+    knownIds.current.add(msg.id);
+    setMessages(prev => [...prev, toMsg(msg, currentUserId)]);
+  }, [currentUserId]);
+
+  const handleUpdate = useCallback((msg: ChatMessage) => {
+    setMessages(prev => prev.map(m =>
+      m.id === msg.id ? toMsg(msg, currentUserId) : m,
+    ));
+  }, [currentUserId]);
+
+  useRealtimeMessages(conversationId, handleInsert, handleUpdate);
+
   // ── Bouton "Payer" sur un ticket ──────────────────────────────────────────
   const handleTicketPay = (ticketId: string) => {
     const ticket = messages.find(m => m.id === ticketId) as TicketMsg | undefined;
     if (!ticket || ticket.paid) return;
 
     if (onCheckout) {
-      // Ouvre l'écran de paiement complet (PaymentScreen)
-      const order: OrderInfo = {
+      onCheckout({
         ticketId,
         orderId:      ticket.orderId,
-        shopInitial,
-        shopName,
-        shopLocation: '📍 Medina · à emporter',
+        shopInitial:  resolvedInitial,
+        shopName:     resolvedName,
+        shopLocation: '📍',
         items:        ticket.items,
         total:        ticket.total,
-      };
-      onCheckout(order);
+        orderType:    'emporter',
+      });
     } else {
-      // Fallback : paiement local simulé (mode standalone)
       applyPayment(ticketId);
     }
   };
 
-  // ── Envoyer texte / vocal ─────────────────────────────────────────────────
-  const handleSend = () => {
-    const text = inputText.trim();
-    if (!text) {
-      setMessages(prev => [...prev, {
-        id: `voice_${Date.now()}`, kind: 'voice', sender: 'me',
-        time: nowTime(), duration: '0:05', read: false,
-      }]);
-      return;
-    }
-    setMessages(prev => [...prev, {
-      id: `msg_${Date.now()}`, kind: 'text', sender: 'me',
-      time: nowTime(), text, read: false,
-    }]);
+  // ── Envoi d'un message texte ─────────────────────────────────────────────
+  const handleSend = async () => {
+    if (!conversationId) return;
+
+    const text   = inputText.trim();
+    if (!text) return;
+    const tempId = `tmp_${Date.now()}`;
+
+    const textMsg: TextMsg = { id: tempId, kind: 'text', sender: 'me', time: nowTime(), text };
+    knownIds.current.add(tempId);
+    setMessages(prev => [...prev, textMsg]);
     setInputText('');
+
+    try {
+      const saved = await chatService.sendMessage(conversationId, { type: 'text', content: text });
+      knownIds.current.add(saved.id);
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: saved.id } : m));
+    } catch (err) {
+      console.warn('[ChatScreen] sendMessage:', err);
+    }
+  };
+
+  // ── Envoi d'un message vocal réel ────────────────────────────────────────
+  const handleVoiceSend = async (localUri: string, durationSec: number) => {
+    if (!conversationId) return;
+
+    const min      = Math.floor(durationSec / 60);
+    const duration = `${min}:${String(durationSec % 60).padStart(2, '0')}`;
+
+    // Optimiste : bulle affichée immédiatement (sans URL encore)
+    const tempId = `voice_${Date.now()}`;
+    const voiceMsg: VoiceMsg = {
+      id: tempId, kind: 'voice', sender: 'me',
+      time: nowTime(), duration, voiceUrl: null,
+    };
+    knownIds.current.add(tempId);
+    setMessages(prev => [...prev, voiceMsg]);
+
+    try {
+      // 1. Upload vers Supabase Storage
+      const voiceUrl = await chatService.uploadVoiceMessage(localUri, conversationId);
+
+      // 2. Sauvegarder en base — content = durée en secondes
+      const saved = await chatService.sendMessage(conversationId, {
+        type:     'voice',
+        content:  String(durationSec),
+        voiceUrl,
+      });
+
+      // 3. Mettre à jour la bulle avec la vraie URL et l'ID Supabase
+      knownIds.current.add(saved.id);
+      setMessages(prev => prev.map(m =>
+        m.id === tempId
+          ? { ...m, id: saved.id, voiceUrl: saved.voiceUrl }
+          : m,
+      ));
+    } catch (err: any) {
+      console.warn('[ChatScreen] handleVoiceSend:', err?.message ?? err);
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      Alert.alert('Envoi échoué', err?.message ?? 'Erreur inconnue');
+    }
+  };
+
+  // ── Envoi d'une image ────────────────────────────────────────────────────
+  const handleImageSend = async (localUri: string) => {
+    if (!conversationId) return;
+
+    const tempId   = `img_${Date.now()}`;
+    const imageMsg: ImageMsg = {
+      id: tempId, kind: 'image', sender: 'me',
+      time: nowTime(), imageUrl: localUri, // URI local affiché en attendant l'upload
+    };
+    knownIds.current.add(tempId);
+    setMessages(prev => [...prev, imageMsg]);
+
+    try {
+      const imageUrl = await chatService.uploadChatImage(localUri, conversationId);
+      const saved    = await chatService.sendMessage(conversationId, {
+        type:     'image',
+        content:  '📷',
+        voiceUrl: imageUrl,
+      });
+      knownIds.current.add(saved.id);
+      setMessages(prev => prev.map(m =>
+        m.id === tempId ? { ...m, id: saved.id, imageUrl } : m,
+      ));
+    } catch (err: any) {
+      console.warn('[ChatScreen] handleImageSend:', err?.message ?? err);
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      Alert.alert('Envoi échoué', err?.message ?? 'Erreur inconnue');
+    }
   };
 
   // ── Rendu d'un message ────────────────────────────────────────────────────
   const renderMsg = (msg: Msg) => {
     switch (msg.kind) {
       case 'text':
-        return <BubbleText key={msg.id} text={msg.text} sender={msg.sender} time={msg.time} read={msg.read} />;
+        return <BubbleText   key={msg.id} text={msg.text}     sender={msg.sender} time={msg.time} read={msg.read} />;
       case 'voice':
-        return <BubbleVoice key={msg.id} sender={msg.sender} duration={msg.duration} time={msg.time} read={msg.read} />;
+        return <BubbleVoice  key={msg.id} duration={msg.duration} voiceUrl={msg.voiceUrl} sender={msg.sender} time={msg.time} read={msg.read} />;
+      case 'image':
+        return <BubbleImage  key={msg.id} imageUrl={msg.imageUrl} sender={msg.sender} time={msg.time} read={msg.read} />;
       case 'ticket':
         return (
           <BubbleTicket
@@ -202,37 +389,53 @@ export default function ChatScreen({
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ChatHeader
-        initial={shopInitial}
-        name={shopName}
+        initial={resolvedInitial}
+        name={resolvedName}
         isVip={isVip}
         isOnline
         onBack={onBack}
+        logoUrl={resolvedLogoUrl}
+        onCall={() => openWhatsAppCall(otherPhone)}
       />
-      <ScrollView
-        ref={scrollRef}
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <DaySeparator label="Aujourd'hui · 08:12" />
-        {messages.map(renderMsg)}
-      </ScrollView>
+
+      {loading ? (
+        <View style={styles.loader}>
+          <ActivityIndicator color={colors.accent} size="large" />
+        </View>
+      ) : (
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <DaySeparator label="Aujourd'hui" />
+          {messages.map(renderMsg)}
+        </ScrollView>
+      )}
+
       <QuickReplies chips={QUICK_CHIPS} onSelect={setInputText} />
-      <ChatComposer value={inputText} onChange={setInputText} onSend={handleSend} />
+      <ChatComposer
+        value={inputText}
+        onChange={setInputText}
+        onSend={handleSend}
+        onVoiceSend={handleVoiceSend}
+        onAttach={() => setShowAttach(true)}
+      />
+
+      <AttachSheet
+        visible={showAttach}
+        onClose={() => setShowAttach(false)}
+        onImagePicked={handleImageSend}
+      />
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  scroll: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    gap: 12,
-  },
+  root:        { flex: 1, backgroundColor: colors.bg },
+  scroll:      { flex: 1 },
+  scrollContent: { paddingHorizontal: 16, paddingVertical: 18, gap: 12 },
+  loader:      { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

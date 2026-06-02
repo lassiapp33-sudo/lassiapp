@@ -9,6 +9,7 @@ import InputField from '../../components/auth/InputField';
 import AuthButton from '../../components/auth/AuthButton';
 import NoteBox    from '../../components/auth/NoteBox';
 import { colors, fonts, spacing, TOP_INSET } from '../../theme';
+import * as authService from '../../services/auth';
 
 interface Props {
   onBack:  () => void;
@@ -31,13 +32,27 @@ const IconMailInput = () => (
 );
 
 export default function ForgotPasswordScreen({ onBack, onLogin }: Props) {
-  const [email, setEmail] = useState('');
-  const [sent,  setSent]  = useState(false);
+  const [email,   setEmail]   = useState('');
+  const [loading, setLoading] = useState(false);
+  const [sent,    setSent]    = useState(false);
+  const [erreur,  setErreur]  = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
-  const handleSend = () => {
-    if (!email.trim()) return;
-    setSent(true);
+  const handleSend = async () => {
+    if (!email.trim()) {
+      setErreur('Entre ton adresse email.');
+      return;
+    }
+    setErreur(null);
+    setLoading(true);
+    try {
+      await authService.forgotPassword(email.trim());
+      setSent(true);
+    } catch (e: any) {
+      setErreur(e.message ?? 'Une erreur est survenue. Réessaie.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -54,42 +69,54 @@ export default function ForgotPasswordScreen({ onBack, onLogin }: Props) {
         <BackButton onPress={onBack} />
         <View style={{ height: 24 }} />
 
-        {/* Icône email */}
         <View style={styles.bigIco}>
           <IconMail />
         </View>
 
         <Text style={styles.h1}>{'Mot de passe\noublié ?'}</Text>
         <Text style={styles.sub}>
-          Entre ton email, on t'envoie un lien gratuit pour réinitialiser ton mot de passe.
+          {sent
+            ? `Un lien de réinitialisation a été envoyé à ${email}. Vérifie tes mails.`
+            : "Entre ton email, on t'envoie un lien gratuit pour réinitialiser ton mot de passe."}
         </Text>
         <View style={{ height: 28 }} />
 
-        <InputField
-          label="Email du compte"
-          placeholder="ton@email.com"
-          value={email}
-          onChangeText={setEmail}
-          leftIcon={<IconMailInput />}
-          keyboardType="email-address"
-          autoComplete="email"
-          textContentType="emailAddress"
-          scrollRef={scrollRef}
-          returnKeyType="done"
-          onSubmitEditing={handleSend}
-        />
+        {!sent && (
+          <InputField
+            label="Email du compte"
+            placeholder="ton@email.com"
+            value={email}
+            onChangeText={setEmail}
+            leftIcon={<IconMailInput />}
+            keyboardType="email-address"
+            autoComplete="email"
+            textContentType="emailAddress"
+            scrollRef={scrollRef}
+            returnKeyType="done"
+            onSubmitEditing={handleSend}
+          />
+        )}
 
-        <AuthButton
-          label={sent ? 'Lien envoyé ✓' : 'Envoyer le lien'}
-          onPress={handleSend}
-        />
+        {erreur ? <Text style={styles.erreur}>{erreur}</Text> : null}
+
+        {!sent ? (
+          <AuthButton
+            label="Envoyer le lien"
+            onPress={handleSend}
+            loading={loading}
+          />
+        ) : (
+          <AuthButton
+            label="Retour à la connexion"
+            onPress={onLogin}
+          />
+        )}
 
         <NoteBox
           text="Pas d'email enregistré ? Contacte le support LASSİ pour récupérer ton compte."
           style={{ marginTop: 18 }}
         />
 
-        {/* Retour connexion */}
         <View style={styles.swapRow}>
           <Text style={styles.swapTxt}>Je m'en souviens — </Text>
           <TouchableOpacity onPress={onLogin} activeOpacity={0.7}>
@@ -131,6 +158,13 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     lineHeight: 22,
     marginTop: 10,
+  },
+  erreur: {
+    color: colors.danger,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   swapRow: {
     flexDirection: 'row',

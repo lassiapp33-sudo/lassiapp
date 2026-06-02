@@ -32,29 +32,13 @@ const IcoCoin = ({ color }: { color: string }) => (
   </Svg>
 );
 
-// ─── Config stats ─────────────────────────────────────────────────────────────
+// ─── Config ───────────────────────────────────────────────────────────────────
 
 const STATS = [
-  {
-    Icon: IcoEye,   color: colors.accent,
-    value: '3 240', label: 'Vues ce mois',            up: '▲ +18%',
-    iconBg: 'rgba(253,207,52,.12)',
-  },
-  {
-    Icon: IcoClick, color: colors.success,
-    value: '412',   label: 'Clics vers ta boutique', up: '▲ +24%',
-    iconBg: 'rgba(95,211,138,.12)',
-  },
-  {
-    Icon: IcoChat,  color: colors.accent,
-    value: '86',    label: 'Discussions lancées',    up: '▲ +12%',
-    iconBg: 'rgba(253,207,52,.12)',
-  },
-  {
-    Icon: IcoCoin,  color: colors.success,
-    value: '128 K', label: 'Ventes générées (F)',    up: '▲ +31%',
-    iconBg: 'rgba(95,211,138,.12)',
-  },
+  { Icon: IcoEye,   color: colors.accent,  iconBg: 'rgba(253,207,52,.12)', label: 'Vues ce mois'           },
+  { Icon: IcoClick, color: colors.success, iconBg: 'rgba(95,211,138,.12)', label: 'Clics vers ta boutique' },
+  { Icon: IcoChat,  color: colors.accent,  iconBg: 'rgba(253,207,52,.12)', label: 'Discussions lancées'    },
+  { Icon: IcoCoin,  color: colors.success, iconBg: 'rgba(95,211,138,.12)', label: 'Ventes générées (F)'    },
 ];
 
 // ─── Composant ────────────────────────────────────────────────────────────────
@@ -64,19 +48,16 @@ export default function StatsGrid() {
 
   return (
     <View style={styles.wrap}>
+      <Text style={styles.soon}>Statistiques détaillées bientôt disponibles</Text>
       {pairs.map((row, ri) => (
         <View key={ri} style={styles.row}>
           {row.map((stat, si) => (
             <View key={si} style={styles.box}>
-              {/* Icône dans carré coloré */}
               <View style={[styles.iconBox, { backgroundColor: stat.iconBg }]}>
                 <stat.Icon color={stat.color} />
               </View>
-
-              {/* Valeur principale — grand chiffre */}
-              <Text style={styles.value}>{stat.value}</Text>
+              <Text style={styles.value}>—</Text>
               <Text style={styles.label}>{stat.label}</Text>
-              <Text style={styles.up}>{stat.up}</Text>
             </View>
           ))}
         </View>
@@ -90,6 +71,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 18,
     marginBottom: 18,
     gap: 11,
+  },
+  soon: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 11.5,
+    textAlign: 'center',
+    marginBottom: 4,
   },
   row: {
     flexDirection: 'row',
@@ -112,7 +100,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   value: {
-    color: colors.white,
+    color: colors.muted,
     fontFamily: fonts.titleXL,
     fontSize: 24,
   },
@@ -122,11 +110,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
     lineHeight: 15,
-  },
-  up: {
-    color: colors.success,
-    fontFamily: fonts.title,
-    fontSize: 10,
-    marginTop: 5,
   },
 });

@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import useFavoritesStore from '../../store/favoritesStore';
+import Avatar from '../Avatar';
 
-export type PlaceStatus = 'open' | 'closing' | 'closed';
-export type PlaceCategory = 'tangana' | 'store' | 'hair' | 'food' | 'sport';
+export type PlaceStatus   = 'open' | 'closing' | 'closed';
+export type PlaceCategory = string;
 
 export interface NearbyPlace {
   id:         string;
@@ -17,6 +18,7 @@ export interface NearbyPlace {
   statusLabel:string;
   isVip:      boolean;
   isFav:      boolean;
+  logoUrl?:   string | null;
 }
 
 interface Props {
@@ -24,42 +26,6 @@ interface Props {
   onPress?: () => void;
 }
 
-// Miniatures d'icônes pour les thumbs des commerces
-const ThumbIcon = ({ category }: { category: PlaceCategory }) => {
-  const s = colors.accent;
-  switch (category) {
-    case 'tangana':
-      return (
-        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-          <Path d="M18 8h1a4 4 0 0 1 0 8h-1" stroke={s} />
-          <Path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4Z" stroke={s} />
-          <Path d="M6 2v2M10 2v2M14 2v2" stroke={s} />
-        </Svg>
-      );
-    case 'store':
-      return (
-        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-          <Path d="M3 9l1-5h16l1 5" stroke={s} /><Path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9" stroke={s} />
-          <Path d="M3 9h18" stroke={s} /><Path d="M9 22V12h6v10" stroke={s} />
-        </Svg>
-      );
-    case 'hair':
-      return (
-        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-          <Path d="M6 2l1 6M18 2l-1 6" stroke={s} />
-          <Circle cx={12} cy={6} r={3} stroke={s} />
-          <Path d="M6 8c-2 0-3 2-3 4s1 9 1 9M18 8c2 0 3 2 3 4s-1 9-1 9" stroke={s} />
-        </Svg>
-      );
-    default:
-      return (
-        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-          <Path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" stroke={s} />
-          <Circle cx={12} cy={10} r={3} stroke={s} />
-        </Svg>
-      );
-  }
-};
 
 const IconStarFill = ({ filled }: { filled: boolean }) => (
   <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
@@ -97,10 +63,13 @@ export default function NearbyCard({ place, onPress }: Props) {
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
-      {/* Thumb icône catégorie */}
-      <View style={styles.thumb}>
-        <ThumbIcon category={place.category} />
-      </View>
+      {/* Logo commerce — Avatar unique, fallback initiale si pas de photo */}
+      <Avatar
+        imageUrl={place.logoUrl}
+        name={place.name}
+        size={54}
+        variant="shop"
+      />
 
       {/* Infos */}
       <View style={styles.info}>
@@ -147,17 +116,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 13,
     marginBottom: 11,
-  },
-  thumb: {
-    width: 54,
-    height: 54,
-    borderRadius: 14,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
   },
   info:    { flex: 1, minWidth: 0 },
   topRow:  { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 4 },

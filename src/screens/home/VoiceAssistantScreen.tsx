@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, TOP_INSET } from '../../theme';
+import { LassiMascotte, MASCOTTE_NOM } from '../../components/LassiMascotte';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -94,8 +95,14 @@ export default function VoiceAssistantScreen({ onClose }: Props) {
         ✨ Assistant LASSİ
       </Text>
 
-      {/* Espace flexible — pousse le micro vers le centre */}
-      <View style={{ flex: 1 }} />
+      {/* Mascotte + message d'accueil */}
+      <LassiMascotte forme="welcome" taille={90} style={{ marginTop: 18 }} />
+      <Text style={styles.greeting}>
+        {`Salut ! Je suis ${MASCOTTE_NOM} 🐝`}
+      </Text>
+
+      {/* Espace flexible réduit */}
+      <View style={{ flex: 0.4 }} />
 
       {/* Micro + anneaux pulsants */}
       <View style={styles.micWrap}>
@@ -112,11 +119,11 @@ export default function VoiceAssistantScreen({ onClose }: Props) {
       </View>
 
       {/* Titre + indicateur */}
-      <Text style={styles.title}>Je t'écoute…</Text>
+      <Text style={styles.title}>Assistant vocal</Text>
 
       <View style={styles.listeningRow}>
-        <View style={styles.dot} />
-        <Text style={styles.listeningTxt}>Parle en français ou en wolof</Text>
+        <View style={styles.dotSoon} />
+        <Text style={styles.listeningTxtSoon}>Fonctionnalité bientôt disponible</Text>
       </View>
 
       {/* Espace flexible bas */}
@@ -189,6 +196,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
+  greeting: {
+    color: colors.white,
+    fontFamily: fonts.title,
+    fontSize: 16,
+    marginTop: 10,
+    textAlign: 'center',
+  },
 
   // Micro
   micWrap: {
@@ -235,15 +249,18 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: 7, height: 7, borderRadius: 4,
     backgroundColor: colors.success,
   },
+  dotSoon: {
+    width: 7, height: 7, borderRadius: 4,
+    backgroundColor: colors.muted,
+  },
   listeningTxt: {
-    color: colors.success,
-    fontFamily: fonts.body,
-    fontSize: 13,
+    color: colors.success, fontFamily: fonts.body, fontSize: 13,
+  },
+  listeningTxtSoon: {
+    color: colors.muted, fontFamily: fonts.body, fontSize: 13,
   },
 
   // Exemples

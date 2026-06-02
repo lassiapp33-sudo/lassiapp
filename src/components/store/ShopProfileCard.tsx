@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { StoreProfile } from '../../types/store';
+import Avatar from '../Avatar';
 
 // ─── Icône crayon ────────────────────────────────────────────────────────────
 
@@ -44,25 +45,22 @@ function ToggleSwitch({ isOn, onToggle }: { isOn: boolean; onToggle: () => void 
 // ─── Composant principal ─────────────────────────────────────────────────────
 
 interface Props {
-  profile:    StoreProfile;
-  onToggle:   () => void;
-  onEditLogo: () => void;
+  profile:  StoreProfile;
+  onToggle: () => void;
 }
 
-export default function ShopProfileCard({ profile, onToggle, onEditLogo }: Props) {
+export default function ShopProfileCard({ profile, onToggle }: Props) {
   return (
     <View style={styles.card}>
       {/* Logo + infos */}
       <View style={styles.row}>
-        {/* Logo avec badge édition */}
-        <TouchableOpacity style={styles.logoWrap} onPress={onEditLogo} activeOpacity={0.85}>
-          <View style={styles.logo}>
-            <Text style={styles.logoTxt}>{profile.initial}</Text>
-          </View>
-          <View style={styles.editBadge}>
-            <IcoPencil size={11} color={colors.accent} />
-          </View>
-        </TouchableOpacity>
+        {/* Logo boutique — Avatar unique, source de vérité shopStore.profile.logoUrl */}
+        <Avatar
+          imageUrl={profile.logoUrl}
+          name={profile.name}
+          size={60}
+          variant="shop"
+        />
 
         {/* Nom et catégorie */}
         <View style={styles.info}>
@@ -104,34 +102,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 13,
-  },
-
-  logoWrap: { position: 'relative', flexShrink: 0 },
-  logo: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoTxt: {
-    color: colors.bg,
-    fontFamily: fonts.titleXL,
-    fontSize: 24,
-  },
-  editBadge: {
-    position: 'absolute',
-    bottom: -3,
-    right: -3,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 
   info: { flex: 1 },

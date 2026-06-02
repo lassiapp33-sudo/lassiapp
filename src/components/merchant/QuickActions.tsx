@@ -13,17 +13,18 @@ const IcoBook = ({ stroke }: { stroke: string }) => (
   </Svg>
 );
 
-const IcoPlus = ({ stroke }: { stroke: string }) => (
-  <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M5 12h14M12 5v14" stroke={stroke} />
-  </Svg>
-);
-
 const IcoMsg = ({ stroke }: { stroke: string }) => (
   <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
     strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
     <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke={stroke} />
+  </Svg>
+);
+
+const IcoMapPin = ({ stroke }: { stroke: string }) => (
+  <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
+    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z" stroke={stroke} />
+    <Path d="M12 10m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0" stroke={stroke} />
   </Svg>
 );
 
@@ -37,68 +38,29 @@ const IcoGrid = ({ stroke }: { stroke: string }) => (
   </Svg>
 );
 
-// ─── Configuration des 4 actions ─────────────────────────────────────────────
-
-const ACTIONS = [
-  {
-    key: 'debts',
-    Icon: IcoBook,
-    iconBg: 'rgba(253,207,52,.13)',
-    iconStroke: colors.accent,
-    title: 'Cahier de dettes',
-    desc:  '3 relances à faire',
-    badge: 3,
-  },
-  {
-    key: 'sale',
-    Icon: IcoPlus,
-    iconBg: 'rgba(95,211,138,.13)',
-    iconStroke: colors.success,
-    title: 'Nouvelle vente',
-    desc:  'Enregistrer en 2 clics',
-    badge: undefined,
-  },
-  {
-    key: 'orders',
-    Icon: IcoMsg,
-    iconBg: 'rgba(29,200,242,.13)',
-    iconStroke: '#1DC8F2',
-    title: 'Commandes',
-    desc:  '2 nouvelles',
-    badge: 2,
-  },
-  {
-    key: 'store',
-    Icon: IcoGrid,
-    iconBg: 'rgba(240,168,71,.13)',
-    iconStroke: colors.orange,
-    title: 'Ma vitrine',
-    desc:  'Gérer mes produits',
-    badge: undefined,
-  },
-] as const;
-
 // ─── Carte d'action individuelle ──────────────────────────────────────────────
 
 interface ActionCardProps {
-  item:    typeof ACTIONS[number];
-  onPress?: () => void;
+  Icon:      React.FC<{ stroke: string }>;
+  iconBg:    string;
+  iconStroke: string;
+  title:     string;
+  desc:      string;
+  badge?:    number;
+  onPress?:  () => void;
 }
 
-function ActionCard({ item, onPress }: ActionCardProps) {
+function ActionCard({ Icon, iconBg, iconStroke, title, desc, badge, onPress }: ActionCardProps) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
-      {/* Icône dans son carré coloré */}
-      <View style={[styles.iconBox, { backgroundColor: item.iconBg }]}>
-        <item.Icon stroke={item.iconStroke} />
+      <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
+        <Icon stroke={iconStroke} />
       </View>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.desc}>{item.desc}</Text>
-
-      {/* Badge rouge (nombre d'alertes) */}
-      {item.badge !== undefined && (
+      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.desc}>{desc}</Text>
+      {badge !== undefined && badge > 0 && (
         <View style={styles.badge}>
-          <Text style={styles.badgeTxt}>{item.badge}</Text>
+          <Text style={styles.badgeTxt}>{badge > 99 ? '99+' : badge}</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -108,33 +70,59 @@ function ActionCard({ item, onPress }: ActionCardProps) {
 // ─── Grille 2×2 ──────────────────────────────────────────────────────────────
 
 interface Props {
-  onPress?: (key: string) => void;
+  onPress?:   (key: string) => void;
+  debtCount?: number;
+  msgCount?:  number;
 }
 
-export default function QuickActions({ onPress }: Props) {
+export default function QuickActions({ onPress, debtCount = 0, msgCount = 0 }: Props) {
   return (
     <View style={styles.grid}>
       <View style={styles.row}>
-        <ActionCard item={ACTIONS[0]} onPress={() => onPress?.('debts')} />
-        <ActionCard item={ACTIONS[1]} onPress={() => onPress?.('sale')} />
+        <ActionCard
+          Icon={IcoBook}
+          iconBg="rgba(253,207,52,.13)"
+          iconStroke={colors.accent}
+          title="Cahier de dettes"
+          desc={debtCount > 0 ? `${debtCount} client${debtCount > 1 ? 's' : ''} en dette` : 'Aucune dette'}
+          badge={debtCount}
+          onPress={() => onPress?.('debts')}
+        />
+        <ActionCard
+          Icon={IcoMsg}
+          iconBg="rgba(29,200,242,.13)"
+          iconStroke="#1DC8F2"
+          title="Messages clients"
+          desc={msgCount > 0 ? `${msgCount} non lu${msgCount > 1 ? 's' : ''}` : 'Réponds à tes clients'}
+          badge={msgCount}
+          onPress={() => onPress?.('messages')}
+        />
       </View>
       <View style={styles.row}>
-        <ActionCard item={ACTIONS[2]} onPress={() => onPress?.('orders')} />
-        <ActionCard item={ACTIONS[3]} onPress={() => onPress?.('store')} />
+        <ActionCard
+          Icon={IcoMapPin}
+          iconBg="rgba(253,207,52,.13)"
+          iconStroke={colors.accent}
+          title="Autour de moi"
+          desc="Découvre et commande chez d'autres"
+          onPress={() => onPress?.('aroundme')}
+        />
+        <ActionCard
+          Icon={IcoGrid}
+          iconBg="rgba(240,168,71,.13)"
+          iconStroke={colors.orange}
+          title="Ma vitrine"
+          desc="Gérer mes produits"
+          onPress={() => onPress?.('store')}
+        />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  grid: {
-    gap: 11,
-    marginBottom: 24,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 11,
-  },
+  grid: { gap: 11, marginBottom: 24 },
+  row:  { flexDirection: 'row', gap: 11 },
 
   card: {
     flex: 1,
@@ -164,7 +152,6 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     marginTop: 2,
   },
-
   badge: {
     position: 'absolute',
     top: 13,

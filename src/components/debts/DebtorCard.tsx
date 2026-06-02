@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Linking, StyleSheet } from 'react-native'
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { Debtor, DebtStatus } from '../../types/debts';
+import Avatar from '../Avatar';
 
 // Couleur officielle WhatsApp — uniquement pour ce bouton
 const WA_COLOR = '#25D366';
@@ -59,9 +60,14 @@ export default function DebtorCard({ debtor, onPress }: Props) {
       {/* Barre colorée gauche — repérage visuel instantané */}
       <View style={[styles.stripe, { backgroundColor: sc.stripe }]} />
 
-      {/* Avatar + pastille statut */}
+      {/* Avatar débiteur + pastille statut — wrapper relatif pour positionner le dot */}
       <View style={styles.avatarWrap}>
-        <Text style={styles.initial}>{debtor.initial}</Text>
+        <Avatar
+          imageUrl={debtor.avatarUrl}
+          name={debtor.name}
+          size={46}
+          variant="user"
+        />
         <View style={[styles.pdot, { backgroundColor: sc.dot }]} />
       </View>
 
@@ -118,23 +124,10 @@ const styles = StyleSheet.create({
     width: 4,
   },
 
-  // Avatar (initial) avec pastille de statut
+  // Wrapper relatif autour d'Avatar pour positionner la pastille de statut
   avatarWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 13,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    position: 'relative',
-  },
-  initial: {
-    color: colors.white,
-    fontFamily: fonts.titleXL,
-    fontSize: 17,
+    flexShrink:     0,
+    position:       'relative',
   },
   pdot: {
     position: 'absolute',

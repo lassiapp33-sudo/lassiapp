@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity,
+  StyleSheet, ActivityIndicator, Linking, Image,
+} from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 
 import ShopCover                       from '../../components/shop/ShopCover';
+import AvisSection                     from '../../components/avis/AvisSection';
+import useAuthStore                    from '../../store/authStore';
 import ShopIdentity                    from '../../components/shop/ShopIdentity';
 import ShopStats                       from '../../components/shop/ShopStats';
 import ShopInfoBar                     from '../../components/shop/ShopInfoBar';
@@ -10,11 +15,23 @@ import MenuTabs,     { MenuTabId }     from '../../components/shop/MenuTabs';
 import ProductTile,  { Product }       from '../../components/shop/ProductTile';
 import CartFloating                    from '../../components/shop/CartFloating';
 import ShopFooter,   { FOOTER_HEIGHT } from '../../components/shop/ShopFooter';
+import OpeningHoursCard                from '../../components/store/OpeningHoursCard';
 import { colors, fonts, TOP_INSET, radius } from '../../theme';
-import useCartStore                    from '../../store/cartStore';
-import useFavoritesStore               from '../../store/favoritesStore';
+import useCartStore, { OrderType } from '../../store/cartStore';
+import useFavoritesStore from '../../store/favoritesStore';
+import useLocationStore  from '../../store/locationStore';
+import * as shopsService    from '../../services/shops';
+import * as productsService from '../../services/products';
+import * as promosService   from '../../services/promotions';
+import { Shop }             from '../../services/shops';
+import { Promotion, ProductPromoInfo } from '../../types/promotions';
+import { reverseGeocode }   from '../../services/location';
+import { StoreProduct }     from '../../types/store';
+import {
+  computeStatus, WeekHours, formatHour, DayKey, DEFAULT_WEEK_HOURS,
+} from '../../services/hours';
 
-// ─── Icônes des contrôles fixes ──────────────────────────────────────────────
+// ─── Icônes ──────────────────────────────────────────────────────────────────
 
 const IcoBack = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
@@ -32,6 +49,19 @@ const IcoShare = () => (
     <Path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" stroke="#fff" />
   </Svg>
 );
+const IcoPhone = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
+    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.07 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.09 9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z" stroke={colors.accent} />
+  </Svg>
+);
+const IcoPin2 = () => (
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" stroke={colors.muted} />
+    <Path d="M12 10m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0" stroke={colors.muted} />
+  </Svg>
+);
 const IcoFav = ({ on }: { on: boolean }) => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
     strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -43,202 +73,402 @@ const IcoFav = ({ on }: { on: boolean }) => (
   </Svg>
 );
 
-// ─── Données mock : profil du commerçant ─────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-interface ShopDetail {
-  initial: string; name: string; tagline: string;
-  isVip: boolean; isOpen: boolean;
-  rating: number; reviewCount: number;
-  distance: string; zone: string; prepTime: string;
-  hours: string; orderType: string;
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-const SHOP: ShopDetail = {
-  initial:     'D',
-  name:        'Tangana Diallo & Frères',
-  tagline:     'Petit-déj traditionnel · Pain-œuf, café Touba, spaghetti',
-  isVip:       true,
-  isOpen:      true,
-  rating:      4.9,
-  reviewCount: 324,
-  distance:    '220 m',
-  zone:        'Medina',
-  prepTime:    '5-10 min',
-  hours:       '06h00 à 11h30',
-  orderType:   'À emporter ou sur place',
-};
-
-// ─── Catalogue produits ───────────────────────────────────────────────────────
-
-const PRODUCTS: Product[] = [
-  { id: 'p1',  emoji: '🥖', name: 'Pain Œuf Mayo',     desc: 'Pain croustillant, 2 œufs, mayo',  price: 500,  category: 'petitdej' },
-  { id: 'p2',  emoji: '🍳', name: 'Omelette spéciale', desc: '3 œufs, oignons, poivron',         price: 700,  category: 'petitdej' },
-  { id: 'p3',  emoji: '🥪', name: 'Pain Viande',       desc: 'Viande hachée épicée, salade',     price: 800,  category: 'petitdej' },
-  { id: 'p4',  emoji: '🍝', name: 'Spaghetti matin',   desc: 'Sauce tomate maison, épices',      price: 600,  category: 'petitdej' },
-  { id: 'b1',  emoji: '☕', name: 'Café Touba',         desc: 'Bien sucré, épicé, traditionnel', price: 200,  category: 'boissons' },
-  { id: 'b2',  emoji: '🍵', name: 'Thé Lipton',        desc: 'Au lait concentré, bien chaud',   price: 250,  category: 'boissons' },
-  { id: 'b3',  emoji: '🥤', name: 'Jus Bissap',        desc: 'Hibiscus frais, sucre naturel',   price: 300,  category: 'boissons' },
-  { id: 'pl1', emoji: '🍚', name: 'Riz au Poisson',    desc: 'Thiébou djen, légumes, sauce',    price: 1500, category: 'plats'    },
-  { id: 'pl2', emoji: '🥘', name: 'Yassa Poulet',      desc: 'Marinade oignon-citron, riz',     price: 1800, category: 'plats'    },
-];
-
-// ─── Onglets internes + sections catalogue ────────────────────────────────────
-
-const TABS = [
-  { id: 'all'       as MenuTabId, label: 'Tout'         },
-  { id: 'petitdej'  as MenuTabId, label: '🍳 Petit-déj'  },
-  { id: 'boissons'  as MenuTabId, label: '☕ Boissons'   },
-  { id: 'plats'     as MenuTabId, label: '🍽 Plats'      },
-];
-
-const SECTIONS: Array<{ id: Product['category']; label: string; emoji: string }> = [
-  { id: 'petitdej', label: 'Petit-déjeuner', emoji: '🍳' },
-  { id: 'boissons', label: 'Boissons',        emoji: '☕' },
-  { id: 'plats',    label: 'Plats',           emoji: '🍽' },
-];
-
-// Découpe en paires pour la grille 2 colonnes
 function toPairs<T>(arr: T[]): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += 2) out.push(arr.slice(i, i + 2));
   return out;
 }
 
-// ─── Écran ────────────────────────────────────────────────────────────────────
+function storeProductToProduct(p: StoreProduct): Product {
+  return {
+    id:       p.id,
+    emoji:    p.emoji,
+    photoUrl: p.photoUrl,
+    name:     p.name,
+    desc:     p.desc,
+    price:    p.price,
+    category: p.category,
+    stock:    p.stock,
+  };
+}
 
-// ID stable du commerce pour le catalogue et les favoris
-const SHOP_ID = 'shop_diallo';
+// Correspondance JS Date.getDay() (0=Dim) → DayKey
+const JS_DAY_TO_KEY: DayKey[] = ['sun','mon','tue','wed','thu','fri','sat'];
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
   shopId?:     string;
+  shopName?:   string;
   onBack:      () => void;
-  onChat?:     () => void;
+  onChat?:     (logoUrl: string | null) => void;
   onCheckout?: () => void;
 }
 
-export default function ShopScreen({ shopId = SHOP_ID, onBack, onChat, onCheckout }: Props) {
-  const [activeTab, setActiveTab] = useState<MenuTabId>('all');
+// ─── Écran ────────────────────────────────────────────────────────────────────
 
-  // Favoris persistés
-  const isFav     = useFavoritesStore(s => s.favorites.includes(shopId));
-  const toggleFav = useFavoritesStore(s => s.toggleFavorite);
+export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCheckout }: Props) {
+  const [shopData,      setShopData]      = useState<Shop | null>(null);
+  const [realProducts,  setRealProducts]  = useState<StoreProduct[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [activeTab,     setActiveTab]     = useState<MenuTabId>('all');
+  const [resolvedZone,  setResolvedZone]  = useState<string>('');
+  const [activePromos,  setActivePromos]  = useState<Promotion[]>([]);
 
-  // Panier persisté
-  const cartItems = useCartStore(s => s.items);
-  const addItem   = useCartStore(s => s.addItem);
-  const removeItem = useCartStore(s => s.removeItem);
+  // Position utilisateur (déjà chargée dans locationStore par ClientHomeScreen)
+  const userCoords = useLocationStore(s => s.coords);
 
-  // Calculs panier depuis le store
+  // ── Chargement depuis Supabase ────────────────────────────────────────────
+  useEffect(() => {
+    if (!shopId) { setLoading(false); return; }
+    Promise.all([
+      shopsService.getShopById(shopId),
+      productsService.getProducts(shopId),
+      promosService.getActivePromos(shopId),
+    ])
+      .then(([shop, products, promos]) => {
+        setShopData(shop);
+        setActivePromos(promos);
+        // Disponibles d'abord, épuisés en bas (toujours visibles mais marqués)
+        setRealProducts([
+          ...products.filter(p => p.stock === 'in'),
+          ...products.filter(p => p.stock === 'out'),
+        ]);
+        if (shop?.zone) {
+          setResolvedZone(shop.zone);
+        } else if (shop?.latitude && shop?.longitude) {
+          reverseGeocode(shop.latitude, shop.longitude)
+            .then(z => setResolvedZone(z))
+            .catch(() => {});
+        }
+      })
+      .catch(console.warn)
+      .finally(() => setLoading(false));
+  }, [shopId]);
+
+  // ── Type de vitrine ───────────────────────────────────────────────────────
+  const shopType = shopData?.shopType ?? 'products';
+
+  // ── Données dérivées ──────────────────────────────────────────────────────
+  const displayName    = shopData?.name    ?? shopName ?? 'Boutique';
+  const displayInitial = displayName.charAt(0).toUpperCase();
+  const displayLogoUrl = shopData?.logoUrl ?? undefined;
+  const displayZone    = resolvedZone;
+  const isVip            = shopData?.isVip            ?? false;
+  const reviewsCount     = shopData?.reviewsCount     ?? 0;
+  const ordersCount      = shopData?.ordersCount      ?? 0;
+  const rating           = shopData?.rating           ?? 0;
+  const createdAt        = shopData?.createdAt        ?? new Date().toISOString();
+
+  // ── Statut d'ouverture dynamique ─────────────────────────────────────────
+  const shopHours     = shopData?.openingHours as WeekHours | null ?? null;
+  const manuallyClose = shopData?.isManuallyClose ?? false;
+  // Merge DB hours over DEFAULT_WEEK_HOURS so every day key is always present
+  const effectiveHours: WeekHours = { ...DEFAULT_WEEK_HOURS, ...(shopHours ?? {}) };
+  const status        = computeStatus(shopHours ? effectiveHours : null, manuallyClose);
+  const isOpen        = status.isOpen;
+
+  // Plage horaire du jour courant ("7h – 22h") — basée sur les horaires réels du prestataire
+  const todayKey      = JS_DAY_TO_KEY[new Date().getDay()];
+  const todayDay      = shopHours ? effectiveHours[todayKey] : null;
+  const todayHoursStr = todayDay && !todayDay.closed
+    ? `${formatHour(todayDay.open)} – ${formatHour(todayDay.close)}`
+    : null;
+
+  // ── Distance GPS ──────────────────────────────────────────────────────────
+  const shopLat = shopData?.latitude  ?? null;
+  const shopLng = shopData?.longitude ?? null;
+  const shopHasCoords = shopLat !== null && shopLng !== null;
+
+  const distanceText: string | null = (() => {
+    if (!shopHasCoords) return null;
+    if (!userCoords)    return null;  // noGps gère ce cas
+    const meters = shopsService.calcDistanceMeters(
+      userCoords.latitude, userCoords.longitude,
+      shopLat!, shopLng!,
+    );
+    return shopsService.formatDistance(meters);
+  })();
+
+  // true = le commerce a des coords mais l'user n'a pas activé le GPS
+  const noGps = shopHasCoords && !userCoords;
+
+  // ── Options "Sur place / À emporter" — masquées pour bakery et stores ────
+  const shopCategory     = shopData?.category ?? '';
+  const noOrderOptions   = ['bakery', 'stores'].includes(shopCategory);
+  const showOrderOptions = shopType === 'products' && !noOrderOptions;
+  const orderOptions = [
+    { id: 'place',    label: 'Sur place',  emoji: '🍽' },
+    { id: 'emporter', label: 'À emporter', emoji: '🥡' },
+  ];
+  const selectedLabel = orderOptions.find(o => o.id === selectedOrder)?.label ?? 'Sur place';
+
+  // Type de service affiché dans la barre d'infos
+  const infoBarOrderType = shopType === 'services'    ? 'Sur rendez-vous'
+                         : shopType === 'memberships' ? 'Abonnement'
+                         : noOrderOptions             ? ''
+                         : selectedLabel;
+
+  // ── Catalogue ─────────────────────────────────────────────────────────────
+  const catIds   = [...new Set(realProducts.map(p => p.category))];
+  const tabs     = [
+    { id: 'all', label: 'Tout' },
+    ...catIds.map(id => ({ id, label: capitalize(id) })),
+  ];
+  const sections = catIds.map(id => ({ id, label: capitalize(id) }));
+
+  const visibleSections = activeTab === 'all'
+    ? sections
+    : sections.filter(s => s.id === activeTab);
+
+  const emptyLabel = shopType === 'services'    ? 'Aucune prestation disponible pour l\'instant.'
+                   : shopType === 'memberships' ? 'Aucune formule disponible pour l\'instant.'
+                   : 'Aucun produit disponible pour l\'instant.';
+
+  // ── Infos pratiques ───────────────────────────────────────────────────────
+  const shopPhone      = shopData?.phone       ?? null;
+  const shopAddress    = shopData?.addressText ?? null;
+  const galleryUrls    = shopData?.galleryUrls ?? [];
+  const hasGallery     = galleryUrls.length > 0;
+  const hasInfoSection = !!(shopPhone || shopAddress || shopHours);
+
+  // Index du composant sticky MenuTabs
+  const menuTabsStickyIdx = 6 + (hasGallery ? 1 : 0) + (hasInfoSection ? 1 : 0);
+
+  // ── Promos ────────────────────────────────────────────────────────────────
+  const productPromoMap = promosService.buildProductPromoMap(activePromos);
+  const shopWidePromos  = activePromos.filter(p => p.cibleType === 'vitrine' || p.cibleType === 'categorie');
+
+  // ── Utilisateur courant ────────────────────────────────────────────────────
+  const currentUser   = useAuthStore(s => s.user);
+  const currentUserId = currentUser?.id;
+  const isMerchant    = Boolean(shopData?.merchantId && shopData.merchantId === currentUserId);
+
+  // ── Panier ────────────────────────────────────────────────────────────────
+  const stableId      = shopId || shopName || '';
+  const isFav         = useFavoritesStore(s => s.favorites.includes(stableId));
+  const toggleFav     = useFavoritesStore(s => s.toggleFavorite);
+  const cartItems     = useCartStore(s => s.items);
+  const addItem       = useCartStore(s => s.addItem);
+  const removeItem    = useCartStore(s => s.removeItem);
+  const selectedOrder = useCartStore(s => s.orderType);
+  const setCartOrder  = useCartStore(s => s.setOrderType);
+
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
   const cartTotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
 
   const shopInfo = {
-    id:       shopId,
-    initial:  SHOP.initial,
-    name:     SHOP.name,
-    location: `📍 ${SHOP.zone} · ${SHOP.orderType}`,
+    id:       stableId,
+    initial:  displayInitial,
+    name:     displayName,
+    location: `📍 ${displayZone} · ${selectedLabel}`,
   };
 
-  const addToCart = (id: string) => {
-    const p = PRODUCTS.find(p => p.id === id);
-    if (!p) return;
+  const addToCart = (p: StoreProduct) => {
+    if (p.stock === 'out') return; // garde-fou côté app (le serveur vérifie aussi)
     addItem(shopInfo, { id: p.id, name: p.name, emoji: p.emoji, price: p.price });
   };
-  const removeFromCart = (id: string) => removeItem(id);
 
-  const visibleSections = activeTab === 'all'
-    ? SECTIONS
-    : SECTIONS.filter(s => s.id === activeTab);
-
-  // Espace bas du scroll : footer + panier flottant éventuel
-  const CART_BAR_H    = 56;
-  const scrollBotPad  = FOOTER_HEIGHT + (cartCount > 0 ? CART_BAR_H + 16 : 0) + 28;
-  const cartBottom    = FOOTER_HEIGHT + 8;
+  const CART_BAR_H   = 56;
+  const scrollBotPad = FOOTER_HEIGHT + (cartCount > 0 ? CART_BAR_H + 16 : 0) + 28;
+  const cartBottom   = FOOTER_HEIGHT + 8;
 
   return (
     <View style={styles.root}>
-
-      {/*
-       * ── ScrollView du contenu ──────────────────────────────────────────────
-       * stickyHeaderIndices={[5]} : l'enfant à l'index 5 (MenuTabs) colle en haut.
-       * Enfants directs :
-       *   [0] ShopCover  [1] Identity  [2] NameRow  [3] Stats  [4] InfoBar
-       *   [5] MenuTabs ← STICKY
-       *   [6] Catalogue
-       */}
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={{ paddingBottom: scrollBotPad, flexGrow: 1 }}
-        showsVerticalScrollIndicator={false}
-        stickyHeaderIndices={[5]}
-      >
-        {/* 0 — Bannière (sans boutons — ils sont dans l'overlay fixe ci-dessous) */}
-        <ShopCover />
-
-        {/* 1 — Logo chevauchant + badges */}
-        <ShopIdentity
-          initial={SHOP.initial}
-          isVip={SHOP.isVip}
-          isOpen={SHOP.isOpen}
-        />
-
-        {/* 2 — Nom + tagline */}
-        <View style={styles.nameRow}>
-          <Text style={styles.shopName}>{SHOP.name}</Text>
-          <Text style={styles.tagline}>{SHOP.tagline}</Text>
+      {loading ? (
+        <View style={styles.loader}>
+          <ActivityIndicator color={colors.accent} size="large" />
         </View>
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={{ paddingBottom: scrollBotPad, flexGrow: 1 }}
+          showsVerticalScrollIndicator={false}
+          stickyHeaderIndices={tabs.length > 1 ? [menuTabsStickyIdx] : []}
+        >
+          {/* 0 — Bannière */}
+          <ShopCover />
 
-        {/* 3 — Stats : note / distance / temps */}
-        <ShopStats
-          rating={SHOP.rating}
-          reviewCount={SHOP.reviewCount}
-          distance={SHOP.distance}
-          zone={SHOP.zone}
-          prepTime={SHOP.prepTime}
-        />
+          {/* 1 — Logo chevauchant + badges */}
+          <ShopIdentity
+            initial={displayInitial}
+            logoUrl={displayLogoUrl}
+            isVip={isVip}
+            isOpen={isOpen}
+          />
 
-        {/* 4 — Horaires */}
-        <ShopInfoBar hours={SHOP.hours} orderType={SHOP.orderType} />
+          {/* 2 — Nom + tagline */}
+          <View style={styles.nameRow}>
+            <Text style={styles.shopName}>{displayName}</Text>
+            <Text style={styles.tagline}>{shopData?.subtitle ?? displayZone}</Text>
+          </View>
 
-        {/* 5 — Onglets catégories internes (STICKY) */}
-        <MenuTabs tabs={TABS} active={activeTab} onPress={setActiveTab} />
+          {/* Description (si renseignée) */}
+          {shopData?.description ? (
+            <Text style={styles.shopDesc}>{shopData.description}</Text>
+          ) : null}
 
-        {/* 6 — Grille catalogue */}
-        <View>
-          {visibleSections.map(section => {
-            const products = PRODUCTS.filter(p => p.category === section.id);
-            if (products.length === 0) return null;
-            return (
-              <View key={section.id}>
-                <Text style={styles.catTitle}>{section.emoji} {section.label}</Text>
-                <View style={styles.grid}>
-                  {toPairs(products).map((pair, i) => (
-                    <View key={i} style={styles.gridRow}>
-                      {pair.map(product => (
-                        <ProductTile
-                          key={product.id}
-                          product={product}
-                          qty={cartItems.find(i => i.id === product.id)?.qty ?? 0}
-                          onAdd={() => addToCart(product.id)}
-                          onRemove={() => removeFromCart(product.id)}
-                        />
-                      ))}
-                      {pair.length === 1 && <View style={styles.tileSpacer} />}
-                    </View>
-                  ))}
-                </View>
+          {/* 3 — Stats : réputation (Nouveau / Établi / note réelle) + distance */}
+          <ShopStats
+            rating={rating}
+            reviewsCount={reviewsCount}
+            ordersCount={ordersCount}
+            createdAt={createdAt}
+            zone={displayZone}
+            distanceText={distanceText}
+            noGps={noGps}
+          />
+
+          {/* 4 — Galerie photos (si disponible) */}
+          {hasGallery && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.galleryScroll}
+            >
+              {galleryUrls.map((url, i) => (
+                <Image key={i} source={{ uri: url }} style={styles.galleryPhoto} />
+              ))}
+            </ScrollView>
+          )}
+
+          {/* 5 — Barre d'infos : statut horaires + type de service */}
+          <ShopInfoBar
+            statusLabel={status.label}
+            nextChange={status.nextChange}
+            todayHours={todayHoursStr}
+            orderType={infoBarOrderType}
+            isOpen={isOpen}
+          />
+
+          {/* 5b — Bandeau promos actives */}
+          {shopWidePromos.length > 0 && (
+            <View style={styles.promoBanner}>
+              <Text style={styles.promoBannerIco}>🏷️</Text>
+              <View style={{ flex: 1 }}>
+                {shopWidePromos.map(p => (
+                  <Text key={p.id} style={styles.promoBannerTxt} numberOfLines={1}>
+                    {p.titre}{p.type === 'pourcentage' ? ` · −${p.valeur}%` :
+                              p.type === 'montant_fixe' ? ` · −${p.valeur.toLocaleString('fr-FR')} F` : ''}
+                    {p.montantMin > 0 ? ` (dès ${p.montantMin.toLocaleString('fr-FR')} F)` : ''}
+                  </Text>
+                ))}
               </View>
-            );
-          })}
-        </View>
-      </ScrollView>
+            </View>
+          )}
 
-      {/*
-       * ── Overlay de contrôles fixe — HORS du ScrollView ────────────────────
-       * pointerEvents="box-none" : le conteneur lui-même ne capte aucun touch,
-       * seuls les boutons enfants reçoivent les tapotements.
-       * Résultat : scroll normal partout sauf sur les boutons.
-       */}
+          {/* 6 — Mode de commande (nourriture uniquement) */}
+          {showOrderOptions && (
+            <View style={styles.orderRow}>
+              {orderOptions.map(opt => {
+                const on = opt.id === selectedOrder;
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    style={[styles.orderPill, on && styles.orderPillOn]}
+                    onPress={() => setCartOrder(opt.id as OrderType)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={styles.orderEmoji}>{opt.emoji}</Text>
+                    <Text style={[styles.orderLabel, on && styles.orderLabelOn]}>{opt.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          {/* 7 — Infos pratiques : téléphone, adresse, horaires */}
+          {hasInfoSection && (
+            <View style={styles.infoSection}>
+              {shopPhone && (
+                <TouchableOpacity
+                  style={styles.phoneBtn}
+                  onPress={() => Linking.openURL(`tel:${shopPhone}`)}
+                  activeOpacity={0.8}
+                >
+                  <IcoPhone />
+                  <Text style={styles.phoneTxt}>{shopPhone}</Text>
+                </TouchableOpacity>
+              )}
+              {shopAddress && (
+                <View style={styles.addressRow}>
+                  <IcoPin2 />
+                  <Text style={styles.addressTxt}>{shopAddress}</Text>
+                </View>
+              )}
+              {shopHours && (
+                <View style={{ marginTop: 12 }}>
+                  <Text style={styles.hoursTitle}>Horaires</Text>
+                  <OpeningHoursCard
+                    hours={shopHours}
+                    isManuallyClose={manuallyClose}
+                    readOnly
+                  />
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* 8 — Onglets catalogue (STICKY) */}
+          {tabs.length > 1 && (
+            <MenuTabs tabs={tabs} active={activeTab} onPress={setActiveTab} />
+          )}
+
+          {/* 9 — Catalogue */}
+          {realProducts.length === 0 ? (
+            <View style={styles.emptyProducts}>
+              <Text style={styles.emptyTxt}>{emptyLabel}</Text>
+            </View>
+          ) : (
+            <View>
+              {visibleSections.map(section => {
+                const products = realProducts.filter(p => p.category === section.id);
+                if (products.length === 0) return null;
+                return (
+                  <View key={section.id}>
+                    <Text style={styles.catTitle}>{section.label}</Text>
+                    <View style={styles.grid}>
+                      {toPairs(products).map((pair, i) => (
+                        <View key={i} style={styles.gridRow}>
+                          {pair.map(product => (
+                            <ProductTile
+                              key={product.id}
+                              product={storeProductToProduct(product)}
+                              qty={product.stock === 'out' ? 0 : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)}
+                              onAdd={() => addToCart(product)}
+                              onRemove={() => removeItem(product.id)}
+                              promoInfo={productPromoMap[product.id]}
+                            />
+                          ))}
+                          {pair.length === 1 && <View style={styles.tileSpacer} />}
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* 10 — Avis clients */}
+          {stableId && (
+            <AvisSection
+              shopId={stableId}
+              shopName={displayName}
+              currentUserId={currentUserId}
+              isMerchant={isMerchant}
+            />
+          )}
+        </ScrollView>
+      )}
+
+      {/* Overlay de contrôles fixe */}
       <View style={[styles.overlay, { top: TOP_INSET }]} pointerEvents="box-none">
         <TouchableOpacity style={styles.ctrlBtn} onPress={onBack} activeOpacity={0.8}>
           <IcoBack />
@@ -247,13 +477,13 @@ export default function ShopScreen({ shopId = SHOP_ID, onBack, onChat, onCheckou
           <View style={[styles.ctrlBtn, { opacity: 0.45 }]}>
             <IcoShare />
           </View>
-          <TouchableOpacity style={styles.ctrlBtn} onPress={() => toggleFav(shopId)} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.ctrlBtn} onPress={() => toggleFav(stableId)} activeOpacity={0.8}>
             <IcoFav on={isFav} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Panier flottant — au-dessus du footer */}
+      {/* Panier flottant */}
       <CartFloating
         count={cartCount}
         total={cartTotal}
@@ -261,22 +491,23 @@ export default function ShopScreen({ shopId = SHOP_ID, onBack, onChat, onCheckou
         bottom={cartBottom}
       />
 
-      {/* Footer fixe : Chat/Vocal + Commander */}
+      {/* Footer fixe — bouton adapté au type de vitrine */}
       <ShopFooter
         total={cartTotal}
         hasItems={cartCount > 0}
-        onChat={onChat}
-        onCheckout={cartCount > 0 ? () => onCheckout?.() : undefined}
+        shopType={shopType}
+        onChat={onChat ? () => onChat(shopData?.logoUrl ?? null) : undefined}
+        onCheckout={onCheckout}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root:  { flex: 1, backgroundColor: colors.bg },
+  root:   { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
+  loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
-  // ── Overlay boutons (fixe sur l'écran, indépendant du scroll) ────────────
   overlay: {
     position: 'absolute',
     left: 20,
@@ -286,10 +517,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 20,
   },
-  ctrlRight: {
-    flexDirection: 'row',
-    gap: 9,
-  },
+  ctrlRight: { flexDirection: 'row', gap: 9 },
   ctrlBtn: {
     width: 40,
     height: 40,
@@ -299,7 +527,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // ── Contenu ─────────────────────────────────────────────────────────────
   nameRow: {
     paddingHorizontal: 20,
     paddingTop: 14,
@@ -317,6 +544,45 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 20,
   },
+  shopDesc: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 20,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+
+  orderRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 4,
+  },
+  orderPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  orderPillOn: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  orderEmoji: { fontSize: 15 },
+  orderLabel: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 13,
+  },
+  orderLabelOn: { color: colors.bg },
+
   catTitle: {
     color: colors.white,
     fontFamily: fonts.title,
@@ -334,4 +600,89 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tileSpacer: { flex: 1 },
+
+  emptyProducts: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+  },
+
+  galleryScroll: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  galleryPhoto: {
+    width: 200,
+    height: 130,
+    borderRadius: 12,
+    marginRight: 10,
+  },
+
+  infoSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,.05)',
+  },
+  phoneBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(253,207,52,.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(253,207,52,.25)',
+    borderRadius: radius.md,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 10,
+  },
+  phoneTxt: {
+    color: colors.accent,
+    fontFamily: fonts.title,
+    fontSize: 15,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  addressTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    flex: 1,
+  },
+  hoursTitle: {
+    color: colors.white,
+    fontFamily: fonts.title,
+    fontSize: 14,
+    marginBottom: 8,
+  },
+
+  // Bandeau promotions
+  promoBanner: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: `${colors.accent}12`,
+    borderWidth: 1,
+    borderColor: `${colors.accent}40`,
+    borderRadius: radius.md,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  promoBannerIco: { fontSize: 16 },
+  promoBannerTxt: {
+    color:      colors.accent,
+    fontFamily: fonts.body,
+    fontSize:   12,
+    lineHeight: 18,
+  },
 });

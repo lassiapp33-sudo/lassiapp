@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   ScrollView, StyleSheet,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
+import * as shopsService from '../../services/shops';
+import { Shop }          from '../../services/shops';
+import Avatar            from '../../components/Avatar';
+import { useT }          from '../../i18n';
+import { LassiMascotte, MASCOTTE_NOM } from '../../components/LassiMascotte';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -30,31 +35,6 @@ const IcoStar = () => (
   </Svg>
 );
 
-// ─── Résultats mock (priorisés : VIP → Sponso → Proches) ─────────────────────
-
-interface SearchResult {
-  id:       string;
-  initial:  string;
-  name:     string;
-  tag?:     'vip' | 'sponso';
-  meta:     string;       // "4.9 · Medina" ou "Petit-déj express · 24h/24"
-  hasStar:  boolean;
-  distance: string;
-}
-
-const VIP_RESULTS: SearchResult[] = [
-  { id: 'v1', initial: 'D', name: 'Tangana Diallo & Frères', tag: 'vip',    meta: '4.9 · Medina',           hasStar: true,  distance: '220 m' },
-];
-
-const SPONSO_RESULTS: SearchResult[] = [
-  { id: 's1', initial: 'T', name: 'Tic Tac Resto',           tag: 'sponso', meta: 'Petit-déj express · 24h/24', hasStar: false, distance: '1.2 km' },
-];
-
-const NEARBY_RESULTS: SearchResult[] = [
-  { id: 'n1', initial: 'M', name: 'Tangana Chez Modou',       meta: '4.8 · Ouvert',   hasStar: true, distance: '40 m'  },
-  { id: 'n2', initial: 'A', name: 'Café Touba Assane',        meta: '4.5 · Ferme à 11h', hasStar: true, distance: '310 m' },
-];
-
 // ─── Sous-composants ──────────────────────────────────────────────────────────
 
 function GroupLabel({ emoji, label, vip }: { emoji: string; label: string; vip?: boolean }) {
@@ -65,41 +45,37 @@ function GroupLabel({ emoji, label, vip }: { emoji: string; label: string; vip?:
   );
 }
 
-function ResultCard({
-  result, sponsored, onPress,
-}: {
-  result: SearchResult;
-  sponsored?: boolean;
-  onPress: () => void;
-}) {
+function ResultCard({ shop, onPress }: { shop: Shop; onPress: () => void }) {
+  const t = useT();
   return (
-    <TouchableOpacity
-      style={[styles.card, sponsored && styles.cardSponso]}
-      onPress={onPress}
-      activeOpacity={0.75}
-    >
-      {/* Avatar initial */}
-      <View style={[styles.thumb, sponsored && styles.thumbSponso]}>
-        <Text style={[styles.thumbTxt, sponsored && styles.thumbTxtSponso]}>
-          {result.initial}
-        </Text>
-      </View>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
+      {/* Logo boutique — Avatar unique, source de vérité shops.logo_url */}
+      <Avatar
+        imageUrl={shop.logoUrl}
+        name={shop.name}
+        size={46}
+        variant="shop"
+      />
 
-      {/* Infos */}
       <View style={styles.info}>
         <View style={styles.nameRow}>
-          <Text style={styles.name}>{result.name}</Text>
-          {result.tag === 'vip'    && <View style={styles.tagVip}><Text style={styles.tagVipTxt}>VIP</Text></View>}
-          {result.tag === 'sponso' && <View style={styles.tagSponso}><Text style={styles.tagSponsoTxt}>SPONSO</Text></View>}
+          <Text style={styles.name} numberOfLines={1}>{shop.name}</Text>
+          {shop.isVip && (
+            <View style={styles.tagVip}><Text style={styles.tagVipTxt}>VIP</Text></View>
+          )}
         </View>
         <View style={styles.metaRow}>
-          {result.hasStar && <View style={{ marginRight: 3 }}><IcoStar /></View>}
-          <Text style={styles.meta}>{result.meta}</Text>
+          {shop.rating > 0 && <View style={{ marginRight: 3 }}><IcoStar /></View>}
+          <Text style={styles.meta}>
+            {shop.rating > 0 ? `${shop.rating} · ` : ''}
+            {shop.isOpen ? t.common.open : t.common.closed} · {shop.zone}
+          </Text>
         </View>
       </View>
 
-      {/* Distance */}
-      <Text style={styles.dist}>{result.distance}</Text>
+      <Text style={[styles.status, shop.isOpen ? styles.statusOpen : styles.statusClosed]}>
+        {shop.isOpen ? t.common.open : t.common.closed}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -113,15 +89,27 @@ interface Props {
 }
 
 export default function SearchScreen({ initialQuery = '', onBack, onShopPress }: Props) {
-  const [query, setQuery] = useState(initialQuery);
+  const t = useT();
+
+  const [query,   setQuery]   = useState(initialQuery);
+  const [shops,   setShops]   = useState<Shop[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    shopsService.getShops()
+      .then(setShops)
+      .catch(() => setShops([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   const q = query.trim().toLowerCase();
-  const matches = (r: SearchResult) => !q || r.name.toLowerCase().includes(q);
+  const filtered = q
+    ? shops.filter(s => s.name.toLowerCase().includes(q) || s.zone.toLowerCase().includes(q))
+    : shops;
 
-  const vipFiltered    = VIP_RESULTS.filter(matches);
-  const sponsoFiltered = SPONSO_RESULTS.filter(matches);
-  const nearbyFiltered = NEARBY_RESULTS.filter(matches);
-  const hasResults     = vipFiltered.length + sponsoFiltered.length + nearbyFiltered.length > 0;
+  const vipShops   = filtered.filter(s => s.isVip);
+  const otherShops = filtered.filter(s => !s.isVip);
+  const hasResults = filtered.length > 0;
 
   return (
     <View style={styles.root}>
@@ -130,7 +118,7 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.75}>
           <IcoBack />
         </TouchableOpacity>
-        <Text style={styles.headTitle}>Recherche</Text>
+        <Text style={styles.headTitle}>{t.home.searchTitle}</Text>
       </View>
 
       {/* Barre de recherche active */}
@@ -138,7 +126,7 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
         <IcoSearch />
         <TextInput
           style={styles.input}
-          placeholder="Cherche un commerce, un plat…"
+          placeholder={t.home.searchPlaceholder}
           placeholderTextColor="#5a5c80"
           value={query}
           onChangeText={setQuery}
@@ -152,39 +140,41 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}
       >
-        {/* État vide */}
-        {q && !hasResults && (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTxt}>Aucun résultat pour « {query} »</Text>
+        {loading && (
+          <View style={styles.centered}>
+            <LassiMascotte forme="search" taille={100} glow={false} />
+            <Text style={styles.searchingTxt}>
+              {`${MASCOTTE_NOM} cherche pour toi...`}
+            </Text>
           </View>
         )}
 
-        {/* ① Top VIP */}
-        {vipFiltered.length > 0 && (
+        {!loading && q && !hasResults && (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTxt}>{t.home.noResults}</Text>
+          </View>
+        )}
+
+        {!loading && !q && !hasResults && (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTxt}>{t.home.noShops}</Text>
+          </View>
+        )}
+
+        {vipShops.length > 0 && (
           <>
-            <GroupLabel emoji="🏆" label="Top 3 VIP de Dakar" vip />
-            {vipFiltered.map(r => (
-              <ResultCard key={r.id} result={r} onPress={() => onShopPress(r.id, r.name)} />
+            <GroupLabel emoji="🏆" label={`Top VIP`} vip />
+            {vipShops.map(s => (
+              <ResultCard key={s.id} shop={s} onPress={() => onShopPress(s.id, s.name)} />
             ))}
           </>
         )}
 
-        {/* ② Recommandés / Sponsorisés */}
-        {sponsoFiltered.length > 0 && (
+        {otherShops.length > 0 && (
           <>
-            <GroupLabel emoji="✨" label="Recommandé" />
-            {sponsoFiltered.map(r => (
-              <ResultCard key={r.id} result={r} sponsored onPress={() => onShopPress(r.id, r.name)} />
-            ))}
-          </>
-        )}
-
-        {/* ③ Proches */}
-        {nearbyFiltered.length > 0 && (
-          <>
-            <GroupLabel emoji="📍" label="Près de toi" />
-            {nearbyFiltered.map(r => (
-              <ResultCard key={r.id} result={r} onPress={() => onShopPress(r.id, r.name)} />
+            <GroupLabel emoji="📍" label={q ? t.home.allResults.replace('📋 ', '') : t.home.nearby.replace('📍 ', '')} />
+            {otherShops.map(s => (
+              <ResultCard key={s.id} shop={s} onPress={() => onShopPress(s.id, s.name)} />
             ))}
           </>
         )}
@@ -197,7 +187,6 @@ const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
 
-  // Header
   head: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -222,7 +211,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Barre de recherche
   searchBar: {
     marginHorizontal: 18,
     marginBottom: 18,
@@ -243,7 +231,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Labels groupes
   groupLbl: {
     color: colors.muted,
     fontFamily: fonts.ui,
@@ -256,7 +243,6 @@ const styles = StyleSheet.create({
   },
   groupLblVip: { color: colors.accent },
 
-  // Carte résultat
   card: {
     marginHorizontal: 18,
     marginBottom: 10,
@@ -269,24 +255,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 11,
   },
-  cardSponso: { borderColor: colors.accent },
 
-  thumb: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: '#2a2c52',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  thumbSponso: { backgroundColor: colors.accent },
-  thumbTxt: {
-    color: colors.accent,
-    fontFamily: fonts.titleXL,
-    fontSize: 16,
-  },
-  thumbTxtSponso: { color: colors.bg },
 
   info: { flex: 1, minWidth: 0 },
   nameRow: {
@@ -313,17 +282,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.titleXL,
     fontSize: 8,
   },
-  tagSponso: {
-    backgroundColor: colors.accent,
-    borderRadius: 5,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  tagSponsoTxt: {
-    color: colors.bg,
-    fontFamily: fonts.titleXL,
-    fontSize: 8,
-  },
 
   metaRow: {
     flexDirection: 'row',
@@ -336,17 +294,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
 
-  dist: {
-    color: colors.accent,
+  status: {
     fontFamily: fonts.ui,
-    fontSize: 12,
+    fontSize: 11,
     flexShrink: 0,
   },
+  statusOpen:   { color: colors.success },
+  statusClosed: { color: colors.danger  },
 
-  empty: {
-    paddingVertical: 48,
-    alignItems: 'center',
+  centered: { paddingVertical: 32, alignItems: 'center' },
+  searchingTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    marginTop: 8,
   },
+  empty:    { paddingVertical: 48, alignItems: 'center' },
   emptyTxt: {
     color: colors.muted,
     fontFamily: fonts.body,

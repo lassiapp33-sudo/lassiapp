@@ -2,18 +2,23 @@
   "expo": {
     "name": "LassiApp",
     "slug": "LassiApp",
+    "scheme": "lassiapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon/lassi-radar-base.png",
       "resizeMode": "contain",
       "backgroundColor": "#14152A"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "LASSİ utilise ta position pour te montrer les commerces autour de toi.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "LASSİ utilise ta position pour te montrer les commerces autour de toi."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,13 +26,48 @@
         "backgroundColor": "#14152A"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.lassiapp.lassiapp",
+      "googleServicesFile": "./android/app/google-services.json",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
-    ]
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "LASSİ utilise ta position pour te montrer les commerces autour de toi."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "LASSİ accède à ta galerie pour ajouter des photos de produits.",
+          "cameraPermission": "LASSİ accède à ta caméra pour photographier tes produits."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#14152A",
+          "sounds": []
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e9058ef3-df10-43e4-af04-6830a98025e9"
+      }
+    },
+    "owner": "lassiapp"
   }
 }

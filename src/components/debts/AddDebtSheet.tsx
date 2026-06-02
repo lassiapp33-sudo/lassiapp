@@ -5,7 +5,13 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
-import { Debtor } from '../../types/debts';
+
+export interface ClientOption {
+  id:         string;
+  name:       string;
+  initial:    string;
+  isExisting: boolean;  // true = débiteur existant, false = client de messagerie
+}
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -30,17 +36,17 @@ function formatDisplay(str: string): string {
 
 interface Props {
   visible:   boolean;
-  debtors:   Debtor[];            // clients disponibles pour le picker
-  onSave:    (debtorId: string, amount: number) => void;
+  clients:   ClientOption[];
+  onSave:    (option: ClientOption, amount: number) => void;
   onClose:   () => void;
 }
 
-export default function AddDebtSheet({ visible, debtors, onSave, onClose }: Props) {
-  const [selectedId,    setSelectedId]    = useState(debtors[0]?.id ?? '');
+export default function AddDebtSheet({ visible, clients, onSave, onClose }: Props) {
+  const [selectedId,    setSelectedId]    = useState(clients[0]?.id ?? '');
   const [amountStr,     setAmountStr]     = useState('0');
   const [showPicker,    setShowPicker]    = useState(false);
 
-  const selected = debtors.find(d => d.id === selectedId) ?? debtors[0];
+  const selected = clients.find(c => c.id === selectedId) ?? clients[0];
   const amount   = parseInt(amountStr, 10) || 0;
 
   // ── Pavé numérique ──────────────────────────────────────────────────────────
@@ -56,7 +62,7 @@ export default function AddDebtSheet({ visible, debtors, onSave, onClose }: Prop
 
   const handleSave = () => {
     if (!selected || amount <= 0) return;
-    onSave(selected.id, amount);
+    onSave(selected, amount);
     setAmountStr('0');
     onClose();
   };
@@ -135,22 +141,50 @@ export default function AddDebtSheet({ visible, debtors, onSave, onClose }: Prop
           <>
             <Text style={styles.sheetTitle}>Choisir le client</Text>
             <ScrollView style={styles.clientList} showsVerticalScrollIndicator={false}>
-              {debtors.map(d => (
-                <TouchableOpacity
-                  key={d.id}
-                  style={[styles.clientRow, d.id === selectedId && styles.clientRowSel]}
-                  onPress={() => { setSelectedId(d.id); setShowPicker(false); }}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.clientAvatar}>
-                    <Text style={styles.clientAvatarTxt}>{d.initial}</Text>
-                  </View>
-                  <Text style={styles.clientName}>{d.name}</Text>
-                  {d.id === selectedId && (
-                    <Text style={styles.clientCheck}>✓</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
+              {(() => {
+                const existing = clients.filter(c => c.isExisting);
+                const fresh    = clients.filter(c => !c.isExisting);
+                return (
+                  <>
+                    {existing.length > 0 && (
+                      <Text style={styles.sectionLabel}>DÉBITEURS EXISTANTS</Text>
+                    )}
+                    {existing.map(c => (
+                      <TouchableOpacity
+                        key={c.id}
+                        style={[styles.clientRow, c.id === selectedId && styles.clientRowSel]}
+                        onPress={() => { setSelectedId(c.id); setShowPicker(false); }}
+                        activeOpacity={0.8}
+                      >
+                        <View style={styles.clientAvatar}>
+                          <Text style={styles.clientAvatarTxt}>{c.initial}</Text>
+                        </View>
+                        <Text style={styles.clientName}>{c.name}</Text>
+                        {c.id === selectedId && <Text style={styles.clientCheck}>✓</Text>}
+                      </TouchableOpacity>
+                    ))}
+                    {fresh.length > 0 && (
+                      <Text style={[styles.sectionLabel, existing.length > 0 && { marginTop: 12 }]}>
+                        CLIENTS MESSAGERIE
+                      </Text>
+                    )}
+                    {fresh.map(c => (
+                      <TouchableOpacity
+                        key={c.id}
+                        style={[styles.clientRow, c.id === selectedId && styles.clientRowSel]}
+                        onPress={() => { setSelectedId(c.id); setShowPicker(false); }}
+                        activeOpacity={0.8}
+                      >
+                        <View style={styles.clientAvatar}>
+                          <Text style={styles.clientAvatarTxt}>{c.initial}</Text>
+                        </View>
+                        <Text style={styles.clientName}>{c.name}</Text>
+                        {c.id === selectedId && <Text style={styles.clientCheck}>✓</Text>}
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                );
+              })()}
             </ScrollView>
             <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowPicker(false)} activeOpacity={0.8}>
               <Text style={styles.cancelTxt}>Annuler</Text>
@@ -305,6 +339,15 @@ const styles = StyleSheet.create({
     color: colors.bg,
     fontFamily: fonts.titleXL,
     fontSize: 16,
+  },
+
+  sectionLabel: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    paddingHorizontal: 4,
+    paddingBottom: 4,
   },
 
   // Liste clients (picker ouvert)

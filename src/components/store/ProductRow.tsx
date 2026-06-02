@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { StoreProduct, StockStatus } from '../../types/store';
@@ -26,23 +26,39 @@ interface Props {
   product:       StoreProduct;
   onEdit:        () => void;
   onToggleStock: () => void;
+  promoInfo?:    { badge: string };
 }
 
-export default function ProductRow({ product, onEdit, onToggleStock }: Props) {
+export default function ProductRow({ product, onEdit, onToggleStock, promoInfo }: Props) {
   const sc = STOCK_CONFIG[product.stock];
 
   return (
     <View style={styles.card}>
-      {/* Zone emoji / future photo produit */}
+      {/* Zone image : vraie photo, emoji, ou zone vide */}
       <View style={styles.imgZone}>
-        <Text style={styles.emoji}>{product.emoji}</Text>
+        {product.photoUrl ? (
+          <Image
+            source={{ uri: product.photoUrl }}
+            style={styles.photo}
+            onError={() => {}}
+          />
+        ) : product.emoji ? (
+          <Text style={styles.emoji}>{product.emoji}</Text>
+        ) : null}
       </View>
 
       {/* Infos produit */}
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
         <Text style={styles.desc} numberOfLines={1}>{product.desc}</Text>
-        <Text style={styles.price}>{product.price.toLocaleString('fr-FR')} FCFA</Text>
+        <View style={styles.priceRow}>
+          <Text style={styles.price}>{product.price.toLocaleString('fr-FR')} FCFA</Text>
+          {promoInfo && (
+            <View style={styles.promoBadge}>
+              <Text style={styles.promoBadgeTxt}>{promoInfo.badge}</Text>
+            </View>
+          )}
+        </View>
       </View>
 
       {/* Actions : badge stock + bouton éditer */}
@@ -88,6 +104,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    overflow: 'hidden',
+  },
+  photo: {
+    width: 56,
+    height: 56,
+    borderRadius: 13,
   },
   emoji: { fontSize: 26 },
 
@@ -103,11 +125,29 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     marginTop: 2,
   },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
   price: {
     color: colors.accent,
     fontFamily: fonts.titleXL,
     fontSize: 13.5,
-    marginTop: 4,
+  },
+  promoBadge: {
+    backgroundColor: 'rgba(253,207,52,.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(253,207,52,.4)',
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  promoBadgeTxt: {
+    color: colors.accent,
+    fontFamily: fonts.titleXL,
+    fontSize: 9,
   },
 
   actions: {

@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Platform, StatusBar, Linking,
+  Linking,
 } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import BackButton from '../../components/auth/BackButton';
 import AuthButton from '../../components/auth/AuthButton';
 import { colors, fonts, spacing, TOP_INSET } from '../../theme';
+import * as authService from '../../services/auth';
 
 interface Props {
   email:      string;
@@ -23,8 +24,23 @@ const IconMail = () => (
 );
 
 export default function EmailVerifyScreen({ email, onBack, onComplete }: Props) {
-  const openMailApp = () => {
-    Linking.openURL('mailto:').catch(() => null);
+  const [resent,        setResent]        = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+
+  const openMailApp = () => Linking.openURL('mailto:').catch(() => null);
+
+  const handleResend = async () => {
+    if (resendLoading || resent) return;
+    setResendLoading(true);
+    try {
+      await authService.forgotPassword(email);
+      setResent(true);
+    } catch {
+      // silencieux — l'email sera renvoyé de toute façon
+      setResent(true);
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   return (
@@ -50,10 +66,13 @@ export default function EmailVerifyScreen({ email, onBack, onComplete }: Props) 
       <AuthButton label="J'ai déjà confirmé →" onPress={onComplete} variant="ghost" />
 
       {/* Renvoi du lien */}
-      <Text style={styles.resend}>
-        Pas reçu ?{' '}
-        <Text style={styles.resendLink}>Renvoyer le lien</Text>
-      </Text>
+      <TouchableOpacity onPress={handleResend} activeOpacity={0.7} disabled={resent || resendLoading}>
+        <Text style={styles.resend}>
+          {resent ? '✅ Lien renvoyé !' : resendLoading ? 'Envoi…' : (
+            <>Pas reçu ? <Text style={styles.resendLink}>Renvoyer le lien</Text></>
+          )}
+        </Text>
+      </TouchableOpacity>
 
       {/* Passer l'étape */}
       <View style={styles.swapRow}>

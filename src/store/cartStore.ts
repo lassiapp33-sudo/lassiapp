@@ -10,6 +10,8 @@ export interface CartItem {
   qty:   number;
 }
 
+export type OrderType = 'place' | 'emporter';
+
 export interface CartShopInfo {
   id:       string;
   initial:  string;
@@ -18,20 +20,25 @@ export interface CartShopInfo {
 }
 
 interface CartState {
-  shopInfo: CartShopInfo | null;
-  items:    CartItem[];
+  shopInfo:  CartShopInfo | null;
+  items:     CartItem[];
+  orderType: OrderType;
 
-  addItem:    (shopInfo: CartShopInfo, item: Omit<CartItem, 'qty'>) => void;
-  removeItem: (id: string) => void;
-  updateQty:  (id: string, qty: number) => void;
-  clearCart:  () => void;
+  addItem:      (shopInfo: CartShopInfo, item: Omit<CartItem, 'qty'>) => void;
+  removeItem:   (id: string) => void;
+  updateQty:    (id: string, qty: number) => void;
+  clearCart:    () => void;
+  setOrderType: (type: OrderType) => void;
 }
 
 const useCartStore = create<CartState>()(
   persist(
     (set) => ({
-      shopInfo: null,
-      items:    [],
+      shopInfo:  null,
+      items:     [],
+      orderType: 'place' as OrderType,
+
+      setOrderType: (type) => set({ orderType: type }),
 
       addItem: (shopInfo, item) => set((state) => {
         const existing = state.items.find(i => i.id === item.id);
@@ -66,7 +73,7 @@ const useCartStore = create<CartState>()(
         return { items: state.items.map(i => i.id === id ? { ...i, qty } : i) };
       }),
 
-      clearCart: () => set({ items: [], shopInfo: null }),
+      clearCart: () => set({ items: [], shopInfo: null, orderType: 'place' }),
     }),
     {
       name:    'lassi-cart',

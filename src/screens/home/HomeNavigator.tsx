@@ -1,31 +1,44 @@
-import React, { useState } from 'react';
-import ClientHomeScreen     from './ClientHomeScreen';
-import ClientProfileScreen  from './ClientProfileScreen';
-import VoiceAssistantScreen from './VoiceAssistantScreen';
-import SearchScreen         from './SearchScreen';
-import NotificationsScreen  from './NotificationsScreen';
-import FavoritesScreen      from './FavoritesScreen';
-import CartScreen           from './CartScreen';
-import CategoryScreen       from '../category/CategoryScreen';
-import ShopScreen           from '../shop/ShopScreen';
-import ChatScreen           from '../chat/ChatScreen';
-import PaymentScreen        from '../payment/PaymentScreen';
-import { CatId }            from '../../components/category/CatNavBar';
-import { OrderInfo }        from '../../types/payment';
+import React, { useState, useEffect } from 'react';
+import ClientHomeScreen      from './ClientHomeScreen';
+import ClientProfileScreen   from './ClientProfileScreen';
+import ClientOrdersScreen    from './ClientOrdersScreen';
+import ClientMessagesScreen  from './ClientMessagesScreen';
+import LassiAssistantScreen  from './LassiAssistantScreen';
+import SearchScreen          from './SearchScreen';
+import NotificationsScreen   from './NotificationsScreen';
+import FavoritesScreen       from './FavoritesScreen';
+import RecentlyViewedScreen  from './RecentlyViewedScreen';
+import CartScreen            from './CartScreen';
+import MapScreen             from './MapScreen';
+import CategoryScreen        from '../category/CategoryScreen';
+import ShopScreen            from '../shop/ShopScreen';
+import ChatScreen            from '../chat/ChatScreen';
+import PaymentScreen         from '../payment/PaymentScreen';
+import { CatId }             from '../../components/category/CatNavBar';
+import { OrderInfo }         from '../../types/payment';
+import useAuthStore               from '../../store/authStore';
+import useNotificationsStore      from '../../store/notificationsStore';
+import usePendingNavStore         from '../../store/pendingNavStore';
+import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
+import { recordView }        from '../../services/recentlyViewed';
 
 // ─── Stack de navigation client ───────────────────────────────────────────────
 
 type HomeStack =
   | { id: 'main' }
   | { id: 'profile' }
+  | { id: 'orders' }
   | { id: 'voice' }
   | { id: 'search' }
   | { id: 'notifications' }
   | { id: 'favorites' }
+  | { id: 'recent' }
+  | { id: 'messages' }
+  | { id: 'map' }
   | { id: 'cart';     shopId: string; shopName: string }
   | { id: 'category'; catId: CatId;   title: string }
   | { id: 'shop';     shopId: string; shopName: string }
-  | { id: 'chat';     shopInitial: string; shopName: string; isVip: boolean; paidTicketId?: string }
+  | { id: 'chat';     shopId?: string; conversationId?: string; shopInitial: string; shopName: string; shopLogoUrl?: string | null; isVip: boolean; paidTicketId?: string }
   | { id: 'payment';  order: OrderInfo; from: 'chat' | 'shop' | 'cart'; shopId?: string; shopName?: string };
 
 interface Props {
@@ -33,137 +46,232 @@ interface Props {
 }
 
 export default function HomeNavigator({ onLogout }: Props) {
-  const [stack, setStack] = useState<HomeStack>({ id: 'main' });
+  const [history, setHistory] = useState<HomeStack[]>([{ id: 'main' }]);
+
+  const screen = history[history.length - 1];
+  const push   = (s: HomeStack) => setHistory(h => [...h, s]);
+  const pop    = () => setHistory(h => h.length > 1 ? h.slice(0, -1) : h);
+
+  // Enregistre la visite dans recently_viewed puis navigue vers la vitrine
+  const pushShop = (shopId: string, shopName: string) => {
+    recordView(shopId).catch(console.warn);
+    push({ id: 'shop', shopId, shopName });
+  };
+
+  // Abonnement Realtime toujours actif — met à jour le badge cloche en temps réel
+  const userId       = useAuthStore(s => s.user?.id ?? null);
+  const addNotif     = useNotificationsStore(s => s.addNotif);
+  const pendingNav   = usePendingNavStore(s => s.pendingNav);
+  const clearPending = usePendingNavStore(s => s.clearPendingNav);
+  useRealtimeNotifications(userId, addNotif);
+
+  // Deep link depuis notification push (app fermée / arrière-plan)
+  useEffect(() => {
+    if (!pendingNav) return;
+    clearPending();
+    if (pendingNav.type === 'home') {
+      setHistory([{ id: 'main' }]);
+    } else if (pendingNav.type === 'msg') {
+      setHistory([{ id: 'main' }, {
+        id:           'chat',
+        conversationId: pendingNav.conversationId,
+        shopInitial:  '?',
+        shopName:     '…',
+        isVip:        false,
+      }]);
+    } else if (pendingNav.type === 'order') {
+      setHistory([{ id: 'main' }, { id: 'orders' }]);
+    }
+  }, [pendingNav]);
 
   // ── Paiement ──────────────────────────────────────────────────────────────
-  if (stack.id === 'payment') {
+  if (screen.id === 'payment') {
     return (
       <PaymentScreen
-        order={stack.order}
-        onBack={() => {
-          if (stack.from === 'chat') {
-            setStack({ id: 'chat', shopInitial: stack.order.shopInitial, shopName: stack.order.shopName, isVip: true });
-          } else if (stack.from === 'cart') {
-            setStack({ id: 'cart', shopId: stack.shopId ?? '', shopName: stack.shopName ?? stack.order.shopName });
-          } else {
-            setStack({ id: 'shop', shopId: stack.shopId ?? '', shopName: stack.order.shopName });
-          }
-        }}
+        order={screen.order}
+        onBack={pop}
         onSuccess={(ticketId) => {
-          if (stack.from === 'chat') {
-            setStack({ id: 'chat', shopInitial: stack.order.shopInitial, shopName: stack.order.shopName, isVip: true, paidTicketId: ticketId });
+          if (screen.from === 'chat') {
+            setHistory([{ id: 'main' }, {
+              id: 'chat',
+              shopId:       screen.shopId ?? '',
+              shopInitial:  screen.order.shopInitial,
+              shopName:     screen.order.shopName,
+              isVip:        true,
+              paidTicketId: ticketId,
+            }]);
           } else {
-            setStack({ id: 'main' });
+            setHistory([{ id: 'main' }]);
           }
         }}
       />
     );
   }
 
-  // ── Panier — lit cartStore directement ───────────────────────────────────
-  if (stack.id === 'cart') {
+  // ── Panier ───────────────────────────────────────────────────────────────
+  if (screen.id === 'cart') {
     return (
       <CartScreen
-        shopId={stack.shopId}
-        shopName={stack.shopName}
-        onBack={() => setStack({ id: 'shop', shopId: stack.shopId, shopName: stack.shopName })}
+        shopId={screen.shopId}
+        shopName={screen.shopName}
+        onBack={pop}
         onCheckout={(order) =>
-          setStack({ id: 'payment', order, from: 'cart', shopId: stack.shopId, shopName: stack.shopName })
+          push({ id: 'payment', order, from: 'cart', shopId: screen.shopId, shopName: screen.shopName })
         }
       />
     );
   }
 
   // ── Chat ─────────────────────────────────────────────────────────────────
-  if (stack.id === 'chat') {
+  if (screen.id === 'chat') {
     return (
       <ChatScreen
-        shopInitial={stack.shopInitial}
-        shopName={stack.shopName}
-        isVip={stack.isVip}
-        paidTicketId={stack.paidTicketId}
-        onBack={() => setStack({ id: 'main' })}
+        shopId={screen.shopId}
+        conversationId={screen.conversationId}
+        shopInitial={screen.shopInitial}
+        shopName={screen.shopName}
+        shopLogoUrl={screen.shopLogoUrl}
+        isVip={screen.isVip}
+        paidTicketId={screen.paidTicketId}
+        onBack={pop}
         onCheckout={(order) =>
-          setStack({ id: 'payment', order, from: 'chat' })
+          push({ id: 'payment', order, from: 'chat' })
         }
       />
     );
   }
 
-  // ── Vitrine commerçant ────────────────────────────────────────────────────
-  if (stack.id === 'shop') {
+  // ── Vitrine prestataire ───────────────────────────────────────────────────
+  if (screen.id === 'shop') {
     return (
       <ShopScreen
-        shopId={stack.shopId}
-        onBack={() => setStack({ id: 'main' })}
-        onChat={() => setStack({ id: 'chat', shopInitial: 'D', shopName: stack.shopName, isVip: true })}
+        shopId={screen.shopId}
+        shopName={screen.shopName}
+        onBack={pop}
+        onChat={(logoUrl) => push({
+          id:          'chat',
+          shopId:      screen.shopId,
+          shopInitial: screen.shopName.charAt(0).toUpperCase(),
+          shopName:    screen.shopName,
+          shopLogoUrl: logoUrl,
+          isVip:       true,
+        })}
         onCheckout={() =>
-          setStack({ id: 'cart', shopId: stack.shopId, shopName: stack.shopName })
+          push({ id: 'cart', shopId: screen.shopId, shopName: screen.shopName })
         }
       />
     );
   }
 
   // ── Catégorie ─────────────────────────────────────────────────────────────
-  if (stack.id === 'category') {
+  if (screen.id === 'category') {
     return (
       <CategoryScreen
-        initialCatId={stack.catId}
-        onBack={() => setStack({ id: 'main' })}
-        onShopPress={(shopId, shopName) =>
-          setStack({ id: 'shop', shopId, shopName })
-        }
+        initialCatId={screen.catId}
+        onBack={pop}
+        onShopPress={pushShop}
+        onSearch={()    => setHistory([{ id: 'main' }, { id: 'search' }])}
+        onFavorites={()  => setHistory([{ id: 'main' }, { id: 'favorites' }])}
+        onMessages={()   => setHistory([{ id: 'main' }, { id: 'messages' }])}
+        onProfile={()    => setHistory([{ id: 'main' }, { id: 'profile' }])}
+        onVoice={()      => setHistory([{ id: 'main' }, { id: 'voice' }])}
       />
     );
   }
 
+  // ── Messages client ───────────────────────────────────────────────────────
+  if (screen.id === 'messages') {
+    return <ClientMessagesScreen onBack={pop} />;
+  }
+
   // ── Favoris ───────────────────────────────────────────────────────────────
-  if (stack.id === 'favorites') {
+  if (screen.id === 'favorites') {
     return (
       <FavoritesScreen
-        onBack={() => setStack({ id: 'main' })}
-        onShopPress={(shopId, shopName) =>
-          setStack({ id: 'shop', shopId, shopName })
-        }
+        onBack={pop}
+        onShopPress={pushShop}
+      />
+    );
+  }
+
+  // ── Vus récemment ─────────────────────────────────────────────────────────
+  if (screen.id === 'recent') {
+    return (
+      <RecentlyViewedScreen
+        onBack={pop}
+        onShopPress={pushShop}
       />
     );
   }
 
   // ── Recherche ────────────────────────────────────────────────────────────
-  if (stack.id === 'search') {
+  if (screen.id === 'search') {
     return (
       <SearchScreen
-        onBack={() => setStack({ id: 'main' })}
-        onShopPress={(shopId, shopName) =>
-          setStack({ id: 'shop', shopId, shopName })
-        }
+        onBack={pop}
+        onShopPress={pushShop}
+      />
+    );
+  }
+
+  // ── Carte ──────────────────────────────────────────────────────────────
+  if (screen.id === 'map') {
+    return (
+      <MapScreen
+        onBack={pop}
+        onShopPress={pushShop}
       />
     );
   }
 
   // ── Notifications ────────────────────────────────────────────────────────
-  if (stack.id === 'notifications') {
+  if (screen.id === 'notifications') {
     return (
       <NotificationsScreen
-        onBack={() => setStack({ id: 'main' })}
+        onBack={pop}
+        onNavigate={(type, targetId) => {
+          if (type === 'msg' && targetId) {
+            // 1 tap → directement dans la bonne conversation
+            // ChatScreen résoudra le vrai nom depuis Supabase via conversationId
+            setHistory(h => [
+              ...h.slice(0, -1),  // retire l'écran notifications de l'historique
+              { id: 'chat', conversationId: targetId, shopInitial: '?', shopName: '…', isVip: false },
+            ]);
+          }
+          // Les autres types (order, pay, vip) n'ont pas encore d'écran dédié côté client
+        }}
       />
     );
   }
 
-  // ── Assistant Vocal IA ────────────────────────────────────────────────────
-  if (stack.id === 'voice') {
+  // ── Assistant Lassi ───────────────────────────────────────────────────────
+  if (screen.id === 'voice') {
     return (
-      <VoiceAssistantScreen
-        onClose={() => setStack({ id: 'main' })}
+      <LassiAssistantScreen
+        onClose={pop}
+        onShopPress={pushShop}
+      />
+    );
+  }
+
+  // ── Mes commandes client ─────────────────────────────────────────────────────
+  if (screen.id === 'orders') {
+    return (
+      <ClientOrdersScreen
+        onBack={pop}
+        onExplore={() => setHistory([{ id: 'main' }])}
+        onGoToCart={(shopId, shopName) => push({ id: 'cart', shopId, shopName })}
       />
     );
   }
 
   // ── Profil client ─────────────────────────────────────────────────────────
-  if (stack.id === 'profile') {
+  if (screen.id === 'profile') {
     return (
       <ClientProfileScreen
-        onFavorites={() => setStack({ id: 'favorites' })}
+        onBack={pop}
+        onOrders={() => push({ id: 'orders' })}
+        onFavorites={() => push({ id: 'favorites' })}
         onLogout={onLogout}
       />
     );
@@ -173,16 +281,17 @@ export default function HomeNavigator({ onLogout }: Props) {
   return (
     <ClientHomeScreen
       onCategoryPress={(catId, title) =>
-        setStack({ id: 'category', catId, title })
+        push({ id: 'category', catId, title })
       }
-      onShopPress={(shopId, shopName) =>
-        setStack({ id: 'shop', shopId, shopName })
-      }
-      onSearch={() => setStack({ id: 'search' })}
-      onVoice={() => setStack({ id: 'voice' })}
-      onFavorites={() => setStack({ id: 'favorites' })}
-      onNotifications={() => setStack({ id: 'notifications' })}
-      onProfile={() => setStack({ id: 'profile' })}
+      onShopPress={pushShop}
+      onSearch={() => push({ id: 'search' })}
+      onVoice={() => push({ id: 'voice' })}
+      onFavorites={() => push({ id: 'favorites' })}
+      onRecent={() => push({ id: 'recent' })}
+      onMessages={() => push({ id: 'messages' })}
+      onNotifications={() => push({ id: 'notifications' })}
+      onProfile={() => push({ id: 'profile' })}
+      onMap={() => push({ id: 'map' })}
     />
   );
 }

@@ -20,6 +20,7 @@ export default function FilterChips({ active, onChange }: Props) {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.container}
       contentContainerStyle={styles.row}
     >
       {CHIPS.map(chip => {
@@ -42,6 +43,7 @@ export default function FilterChips({ active, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
+  container: { height: 52 },
   row: {
     paddingHorizontal: 18,
     paddingBottom: 14,

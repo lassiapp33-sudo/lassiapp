@@ -3,10 +3,12 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform, StatusBar } from 'r
 import Svg, { Path, Circle } from 'react-native-svg';
 import LassiLogo from '../../components/LassiLogo';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
+import { useT } from '../../i18n';
 
 interface Props {
   onSelectClient:   () => void;
   onSelectMerchant: () => void;
+  onLogin:          () => void;
 }
 
 // Icône panier (Client)
@@ -31,42 +33,45 @@ const IconStore = () => (
   </Svg>
 );
 
-export default function RoleSelectScreen({ onSelectClient, onSelectMerchant }: Props) {
+export default function RoleSelectScreen({ onSelectClient, onSelectMerchant, onLogin }: Props) {
+  const t = useT();
   return (
     <View style={styles.screen}>
-      {/* Logo légèrement descendu */}
       <View style={{ marginTop: 14 }}>
         <LassiLogo width={100} />
       </View>
 
-      {/* Contenu centré dans l'espace restant */}
       <View style={styles.center}>
-        {/* Titre avec icônes royauté + princesse côte à côte */}
-        <Text style={styles.h1}>{'Bienvenue 🤴🏾👸🏾\nTu es ici pour…'}</Text>
-        <Text style={styles.sub}>Choisis ton profil pour commencer.</Text>
+        <Text style={styles.h1}>{t.auth.roleTitle}</Text>
+        <Text style={styles.sub}>{t.auth.roleSub}</Text>
 
-        {/* Carte Client */}
         <TouchableOpacity style={styles.card} onPress={onSelectClient} activeOpacity={0.75}>
           <View style={[styles.ico, styles.icoAccent]}>
             <IconCart />
           </View>
           <View style={styles.cardTxt}>
-            <Text style={styles.cardTitle}>Je suis un Client</Text>
-            <Text style={styles.cardDesc}>Découvrir, commander et payer près de moi</Text>
+            <Text style={styles.cardTitle}>{t.auth.clientRole}</Text>
+            <Text style={styles.cardDesc}>{t.auth.clientRoleDesc}</Text>
           </View>
           <Text style={styles.arrow}>›</Text>
         </TouchableOpacity>
 
-        {/* Carte Commerçant */}
         <TouchableOpacity style={styles.card} onPress={onSelectMerchant} activeOpacity={0.75}>
           <View style={[styles.ico, styles.icoDark]}>
             <IconStore />
           </View>
           <View style={styles.cardTxt}>
-            <Text style={styles.cardTitle}>Je suis un Commerçant</Text>
-            <Text style={styles.cardDesc}>Gérer mon business, mes dettes et mes ventes</Text>
+            <Text style={styles.cardTitle}>{t.auth.merchantRole}</Text>
+            <Text style={styles.cardDesc}>{t.auth.merchantRoleDesc}</Text>
           </View>
           <Text style={styles.arrow}>›</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.loginRow}>
+        <Text style={styles.loginTxt}>{t.auth.alreadyAccount}</Text>
+        <TouchableOpacity onPress={onLogin} activeOpacity={0.7}>
+          <Text style={styles.loginLink}>{t.auth.signIn}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -138,5 +143,21 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 22,
     lineHeight: 26,
+  },
+  loginRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 8,
+  },
+  loginTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13.5,
+  },
+  loginLink: {
+    color: colors.accent,
+    fontFamily: fonts.ui,
+    fontSize: 13.5,
   },
 });

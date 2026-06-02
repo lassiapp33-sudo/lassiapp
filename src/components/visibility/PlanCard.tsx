@@ -23,7 +23,7 @@ export default function PlanCard({ plan, selected, onSelect }: Props) {
 
   return (
     <TouchableOpacity
-      style={[styles.card, pop && styles.cardPop, selected && !pop && styles.cardSel]}
+      style={[styles.card, selected && styles.cardSel]}
       onPress={onSelect}
       activeOpacity={0.82}
     >
@@ -36,8 +36,8 @@ export default function PlanCard({ plan, selected, onSelect }: Props) {
 
       <View style={styles.row}>
         {/* Radio */}
-        <View style={[styles.radio, (pop || selected) && styles.radioSel]}>
-          {(pop || selected) && <View style={styles.radioDot} />}
+        <View style={[styles.radio, selected && styles.radioSel]}>
+          {selected && <View style={styles.radioDot} />}
         </View>
 
         {/* Durée + description */}
@@ -74,13 +74,10 @@ const styles = StyleSheet.create({
     padding: 16,
     position: 'relative',
   },
-  cardPop: {
-    borderColor: colors.accent,
-    backgroundColor: 'rgba(253,207,52,.05)',
-  },
-  // Sélectionné (non populaire)
+  // Sélectionné (tous plans)
   cardSel: {
     borderColor: colors.accent,
+    backgroundColor: 'rgba(253,207,52,.05)',
   },
 
   // Badge flottant "POPULAIRE"

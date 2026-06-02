@@ -13,6 +13,7 @@ import {
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { colors, fonts, radius, spacing } from '../theme';
 import LassiLogo from '../components/LassiLogo';
+import { LassiMascotte } from '../components/LassiMascotte';
 
 // LayoutAnimation Android
 if (Platform.OS === 'android') {
@@ -141,11 +142,19 @@ export default function OnboardingScreen({ onFinish }: Props) {
         showsHorizontalScrollIndicator={false}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig.current}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <View style={styles.slide}>
-            {/* Carte illustration */}
-            <View style={styles.illusCard}>
-              {item.icon}
+            {/* Carte illustration — mascotte sur le premier slide */}
+            <View style={[styles.illusCard, index === 0 && styles.illusCardMascotte]}>
+              {index === 0 ? (
+                <LassiMascotte
+                  forme="welcome"
+                  taille={120}
+                  actif={currentIndex === 0}
+                />
+              ) : (
+                item.icon
+              )}
             </View>
 
             <Text style={styles.slideTitle}>{item.title}</Text>
@@ -226,6 +235,12 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'visible',
+  },
+  // Premier slide : fond transparent pour laisser la mascotte respirer
+  illusCardMascotte: {
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
   },
 
   slideTitle: {

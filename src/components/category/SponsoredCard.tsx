@@ -1,15 +1,17 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts } from '../../theme';
+import Avatar from '../Avatar';
 
 interface Props {
-  initial:  string;
-  name:     string;
-  desc:     string;
-  onPress?: () => void;
+  initial:   string;
+  name:      string;
+  desc:      string;
+  logoUrl?:  string | null;
+  onPress?:  () => void;
 }
 
-export default function SponsoredCard({ initial, name, desc, onPress }: Props) {
+export default function SponsoredCard({ initial, name, desc, logoUrl, onPress }: Props) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       {/* Tag sponsorisé */}
@@ -17,10 +19,13 @@ export default function SponsoredCard({ initial, name, desc, onPress }: Props) {
         <Text style={styles.tagTxt}>SPONSORISÉ</Text>
       </View>
 
-      {/* Thumb */}
-      <View style={styles.thumb}>
-        <Text style={styles.thumbTxt}>{initial}</Text>
-      </View>
+      {/* Logo boutique sponsorisée — Avatar unique */}
+      <Avatar
+        imageUrl={logoUrl}
+        name={name}
+        size={46}
+        variant="shop"
+      />
 
       {/* Infos */}
       <View style={styles.info}>
@@ -61,20 +66,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.title,
     fontSize: 8,
     letterSpacing: 0.3,
-  },
-  thumb: {
-    width: 58,
-    height: 58,
-    borderRadius: 15,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  thumbTxt: {
-    color: colors.bg,
-    fontFamily: fonts.title,
-    fontSize: 20,
   },
   info: { flex: 1 },
   name: {

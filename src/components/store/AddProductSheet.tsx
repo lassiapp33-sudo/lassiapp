@@ -2,10 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, Modal, TextInput, TouchableOpacity,
   ScrollView, StyleSheet, Platform, KeyboardAvoidingView,
+  Image, ActionSheetIOS, Alert, ActivityIndicator,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
-import { StoreProduct, StoreCategory } from '../../types/store';
+import {
+  StoreProduct, StoreCategory,
+  FormulaPeriod, FORMULA_PERIOD_LABELS,
+} from '../../types/store';
+import * as storageService from '../../services/storage';
+import useShopStore from '../../store/shopStore';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -21,6 +27,13 @@ const IcoCheck = () => (
   <Svg width={19} height={19} viewBox="0 0 24 24" fill="none"
     strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
     <Path d="M20 6 9 17l-5-5" stroke={colors.bg} />
+  </Svg>
+);
+
+const IcoTrash = () => (
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="#ff5a5a" />
   </Svg>
 );
 
@@ -41,16 +54,29 @@ interface Props {
   visible:    boolean;
   product:    StoreProduct | null;   // null = nouveau produit
   categories: StoreCategory[];
-  onSave:     (p: StoreProduct) => void;
+  onSave:     (p: StoreProduct) => Promise<void>;
+  onDelete?:  () => void;
   onClose:    () => void;
 }
 
-export default function AddProductSheet({ visible, product, categories, onSave, onClose }: Props) {
-  const [emoji,  setEmoji]  = useState('🥖');
-  const [name,   setName]   = useState('');
-  const [desc,   setDesc]   = useState('');
-  const [price,  setPrice]  = useState('');
-  const [catId,  setCatId]  = useState(categories[0]?.id ?? '');
+export default function AddProductSheet({ visible, product, categories, onSave, onDelete, onClose }: Props) {
+  const shopId   = useShopStore(s => s.shopId);
+  const shopType = useShopStore(s => s.context.shopType);
+
+  // Dériver l'itemType depuis le shopType
+  const itemType = shopType === 'services'    ? 'service'    as const
+                 : shopType === 'memberships' ? 'membership' as const
+                 :                             'product'     as const;
+
+  const [emoji,         setEmoji]         = useState('');
+  const [photoUrl,      setPhotoUrl]      = useState<string | undefined>();
+  const [uploading,     setUploading]     = useState(false);
+  const [name,          setName]          = useState('');
+  const [desc,          setDesc]          = useState('');
+  const [price,         setPrice]         = useState('');
+  const [catId,         setCatId]         = useState(categories[0]?.id ?? '');
+  const [duration,      setDuration]      = useState('');
+  const [formulaPeriod, setFormulaPeriod] = useState<FormulaPeriod>('mois');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const scrollRef  = useRef<ScrollView>(null);
@@ -68,19 +94,71 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
   useEffect(() => {
     if (product) {
       setEmoji(product.emoji);
+      setPhotoUrl(product.photoUrl);
       setName(product.name);
       setDesc(product.desc);
       setPrice(product.price.toString());
       setCatId(product.category);
+      setDuration(product.duration?.toString() ?? '');
+      setFormulaPeriod(product.formulaPeriod ?? 'mois');
     } else {
-      setEmoji('🥖');
+      setEmoji('');
+      setPhotoUrl(undefined);
       setName('');
       setDesc('');
       setPrice('');
       setCatId(categories[0]?.id ?? '');
+      setDuration('');
+      setFormulaPeriod('mois');
     }
     setShowEmojiPicker(false);
+    setUploading(false);
   }, [visible]);
+
+  // ── Sélection et upload de photo ────────────────────────────────────────────
+  const handlePickPhoto = async (source: 'gallery' | 'camera') => {
+    try {
+      const uri = source === 'gallery'
+        ? await storageService.pickImageFromGallery()
+        : await storageService.pickImageFromCamera();
+
+      if (!uri) return;
+      if (!shopId) {
+        Alert.alert('Erreur', 'Boutique non chargée. Ferme et réouvre la page.');
+        return;
+      }
+
+      setUploading(true);
+      const path = storageService.productImagePath(shopId, product?.id ?? `new_${Date.now()}`);
+      const url  = await storageService.uploadImage('products', uri, path);
+      setPhotoUrl(url);
+    } catch (err) {
+      Alert.alert('Erreur', "Impossible d'uploader la photo. Réessaie.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Affiche le choix galerie/caméra selon la plateforme
+  const openPhotoPicker = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: ['Annuler', 'Galerie', 'Caméra', 'Emoji à la place'], cancelButtonIndex: 0 },
+        (idx) => {
+          if (idx === 1) handlePickPhoto('gallery');
+          if (idx === 2) handlePickPhoto('camera');
+          if (idx === 3) { setPhotoUrl(undefined); setShowEmojiPicker(true); }
+        },
+      );
+    } else {
+      Alert.alert('Ajouter une photo', '', [
+        { text: 'Galerie',         onPress: () => handlePickPhoto('gallery') },
+        { text: 'Caméra',          onPress: () => handlePickPhoto('camera')  },
+        { text: 'Emoji à la place', onPress: () => { setPhotoUrl(undefined); setShowEmojiPicker(true); } },
+        { text: 'Annuler', style: 'cancel' },
+      ]);
+    }
+  };
 
   // Catégorie actuelle
   const currentCat = categories.find(c => c.id === catId) ?? categories[0];
@@ -92,19 +170,39 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
     setCatId(next.id);
   };
 
-  const handleSave = () => {
-    if (!name.trim() || !price) return;
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert('Champ requis', 'Saisis le nom avant de continuer.');
+      return;
+    }
+    if (!price) {
+      Alert.alert('Champ requis', 'Saisis un prix avant de continuer.');
+      return;
+    }
     const p: StoreProduct = {
-      id:       product?.id ?? `p_${Date.now()}`,
+      id:           product?.id ?? `p_${Date.now()}`,
       emoji,
-      name:     name.trim(),
-      desc:     desc.trim(),
-      price:    parseInt(price, 10) || 0,
-      category: catId,
-      stock:    product?.stock ?? 'in',
+      photoUrl,
+      name:         name.trim(),
+      desc:         desc.trim(),
+      price:        parseInt(price, 10) || 0,
+      category:     catId,
+      stock:        product?.stock ?? 'in',
+      itemType,
+      duration:     itemType === 'service' && duration ? parseInt(duration, 10) : undefined,
+      formulaPeriod: itemType === 'membership' ? formulaPeriod : undefined,
     };
-    onSave(p);
-    onClose();
+    setSaving(true);
+    try {
+      await onSave(p);
+      onClose();
+    } catch {
+      Alert.alert('Erreur', "Impossible d'enregistrer le produit. Vérifie ta connexion et réessaie.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -128,18 +226,34 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
 
           <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <Text style={styles.title}>
-              {product ? 'Modifier le produit' : 'Nouveau produit'}
+              {product
+                ? (itemType === 'service'    ? 'Modifier la prestation'
+                 : itemType === 'membership' ? 'Modifier la formule'
+                 : 'Modifier le produit')
+                : (itemType === 'service'    ? 'Nouvelle prestation'
+                 : itemType === 'membership' ? 'Nouvelle formule'
+                 : 'Nouveau produit')}
             </Text>
 
             {/* Zone photo / emoji ─────────────────────────────────────────── */}
             <TouchableOpacity
               style={styles.photoZone}
-              onPress={() => setShowEmojiPicker(v => !v)}
+              onPress={showEmojiPicker ? undefined : openPhotoPicker}
               activeOpacity={0.85}
             >
-              {showEmojiPicker ? (
-                // Palette d'emojis rapide
+              {uploading ? (
+                // Chargement pendant l'upload
+                <ActivityIndicator color={colors.accent} size="large" />
+
+              ) : showEmojiPicker ? (
+                // Palette d'emojis rapide + option "Aucun"
                 <View style={styles.emojiGrid}>
+                  <TouchableOpacity
+                    style={[styles.emojiBtn, !emoji && styles.emojiBtnSel]}
+                    onPress={() => { setEmoji(''); setShowEmojiPicker(false); }}
+                  >
+                    <Text style={[styles.emojiTxt, { fontSize: 13, color: colors.muted }]}>✕</Text>
+                  </TouchableOpacity>
                   {QUICK_EMOJIS.map(e => (
                     <TouchableOpacity
                       key={e}
@@ -150,14 +264,23 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
                     </TouchableOpacity>
                   ))}
                 </View>
-              ) : emoji !== '🥖' || product ? (
-                // Emoji sélectionné
-                <Text style={styles.bigEmoji}>{emoji}</Text>
-              ) : (
-                // Invite photo (état initial)
+
+              ) : photoUrl ? (
+                // Vraie photo uploadée
+                <Image source={{ uri: photoUrl }} style={styles.photoPreview} />
+
+              ) : emoji ? (
+                // Emoji choisi — appuie pour changer
                 <>
-                  <View style={styles.camCircle}><IcoCamera /></View>
-                  <Text style={styles.photoHint}>Ajoute une photo du produit</Text>
+                  <Text style={styles.bigEmoji}>{emoji}</Text>
+                  <Text style={styles.photoHint}>Appuie pour changer</Text>
+                </>
+              ) : (
+                // Rien — zone vide, le prestataire choisit s'il veut
+                <>
+                  <IcoCamera />
+                  <Text style={styles.photoHint}>Appuie pour ajouter une photo ou un emoji</Text>
+                  <Text style={styles.photoOptional}>(optionnel)</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -220,13 +343,66 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
               </View>
             </View>
 
+            {/* Durée — uniquement pour les prestations de service */}
+            {itemType === 'service' && (
+              <View style={{ marginTop: 14 }}>
+                <FieldLabel>Durée estimée (minutes)</FieldLabel>
+                <TextInput
+                  style={styles.input}
+                  value={duration}
+                  onChangeText={v => setDuration(v.replace(/\D/g, ''))}
+                  keyboardType="numeric"
+                  placeholder="Ex : 30"
+                  placeholderTextColor="#5a5c80"
+                  returnKeyType="done"
+                />
+              </View>
+            )}
+
+            {/* Période — uniquement pour les formules d'abonnement */}
+            {itemType === 'membership' && (
+              <View style={{ marginTop: 14 }}>
+                <FieldLabel>Période de la formule</FieldLabel>
+                <View style={styles.periodRow}>
+                  {(Object.entries(FORMULA_PERIOD_LABELS) as [FormulaPeriod, string][]).map(([key, label]) => {
+                    const on = formulaPeriod === key;
+                    return (
+                      <TouchableOpacity
+                        key={key}
+                        style={[styles.periodPill, on && styles.periodPillOn]}
+                        onPress={() => setFormulaPeriod(key)}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[styles.periodTxt, on && styles.periodTxtOn]}>{label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
             <View style={{ height: 18 }} />
 
             {/* Bouton sauvegarder ─────────────────────────────────────────── */}
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
-              <IcoCheck />
+            <TouchableOpacity
+              style={[styles.saveBtn, (uploading || saving) && { opacity: 0.5 }]}
+              onPress={(uploading || saving) ? undefined : handleSave}
+              activeOpacity={0.85}
+            >
+              {saving
+                ? <ActivityIndicator color={colors.bg} size="small" />
+                : <IcoCheck />
+              }
               <Text style={styles.saveTxt}>Enregistrer le produit</Text>
             </TouchableOpacity>
+
+            {/* Bouton supprimer — visible uniquement en mode édition */}
+            {product && onDelete && (
+              <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} activeOpacity={0.8}>
+                <IcoTrash />
+                <Text style={styles.deleteTxt}>Supprimer ce produit</Text>
+              </TouchableOpacity>
+            )}
 
             <View style={{ height: 8 }} />
           </ScrollView>
@@ -295,9 +471,20 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontFamily: fonts.body,
     fontSize: 12,
+    marginTop: 6,
+  },
+  photoOptional: {
+    color: '#3a3c5a',
+    fontFamily: fonts.body,
+    fontSize: 10,
+    marginTop: 2,
   },
   bigEmoji: {
     fontSize: 50,
+  },
+  photoPreview: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
   },
   emojiGrid: {
     flexDirection: 'row',
@@ -376,6 +563,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
+  // Sélecteur de période (memberships)
+  periodRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  periodPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  periodPillOn: {
+    backgroundColor: 'rgba(253,207,52,.12)',
+    borderColor: colors.accent,
+  },
+  periodTxt: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 12,
+  },
+  periodTxtOn: {
+    color: colors.accent,
+  },
+
   saveBtn: {
     height: 54,
     borderRadius: radius.lg,
@@ -389,5 +603,23 @@ const styles = StyleSheet.create({
     color: colors.bg,
     fontFamily: fonts.titleXL,
     fontSize: 16,
+  },
+
+  deleteBtn: {
+    height: 48,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,90,90,.35)',
+    backgroundColor: 'rgba(255,90,90,.07)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 10,
+  },
+  deleteTxt: {
+    color: '#ff5a5a',
+    fontFamily: fonts.title,
+    fontSize: 14,
   },
 });

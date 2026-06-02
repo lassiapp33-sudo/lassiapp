@@ -2,17 +2,21 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 import { OrderInfo } from '../../types/payment';
+import Avatar from '../Avatar';
 
 interface Props { order: OrderInfo; }
 
 export default function OrderRecap({ order }: Props) {
   return (
     <View style={styles.card}>
-      {/* Ligne commerçant */}
+      {/* Ligne commerçant — Avatar unique pour le logo boutique */}
       <View style={styles.shopRow}>
-        <View style={styles.logo}>
-          <Text style={styles.logoTxt}>{order.shopInitial}</Text>
-        </View>
+        <Avatar
+          imageUrl={undefined}
+          name={order.shopName}
+          size={40}
+          variant="shop"
+        />
         <View>
           <Text style={styles.shopName}>{order.shopName}</Text>
           <Text style={styles.shopLoc}>{order.shopLocation}</Text>
@@ -58,20 +62,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-  },
-  logo: {
-    width: 40,
-    height: 40,
-    borderRadius: 11,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  logoTxt: {
-    color: colors.bg,
-    fontFamily: fonts.titleXL,
-    fontSize: 16,
   },
   shopName: {
     color: colors.white,

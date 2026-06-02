@@ -1,19 +1,20 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts } from '../../theme';
-import { OrderStatus } from '../../types/orders';
+import { MerchantTab, OrderStatus } from '../../types/orders';
 
-const TABS: Array<{ id: OrderStatus; label: string }> = [
-  { id: 'new',       label: 'Nouvelles'       },
-  { id: 'preparing', label: 'En préparation'  },
-  { id: 'ready',     label: 'Prêtes'          },
-  { id: 'done',      label: 'Terminées'       },
+const TABS: Array<{ id: MerchantTab; label: string }> = [
+  { id: 'all',      label: 'Toutes'    },
+  { id: 'new',      label: 'Nouvelles' },
+  { id: 'preparing',label: 'En cours'  },
+  { id: 'done',     label: 'Terminées' },
+  { id: 'refused',  label: 'Annulées'  },
 ];
 
 interface Props {
-  active:   OrderStatus;
-  counts:   Record<OrderStatus, number>;
-  onChange: (s: OrderStatus) => void;
+  active:   MerchantTab;
+  counts:   Record<MerchantTab, number>;
+  onChange: (s: MerchantTab) => void;
 }
 
 export default function StatusTabs({ active, counts, onChange }: Props) {
@@ -25,9 +26,11 @@ export default function StatusTabs({ active, counts, onChange }: Props) {
       style={styles.strip}
     >
       {TABS.map(tab => {
-        const on    = tab.id === active;
-        const count = counts[tab.id];
+        const on        = tab.id === active;
+        const count     = counts[tab.id];
         const showBadge = count > 0;
+        // Badge rouge uniquement sur "Nouvelles" pour l'urgence
+        const isUrgent  = tab.id === 'new';
 
         return (
           <TouchableOpacity
@@ -40,8 +43,16 @@ export default function StatusTabs({ active, counts, onChange }: Props) {
               {tab.label}
             </Text>
             {showBadge && (
-              <View style={[styles.badge, on ? styles.badgeOn : styles.badgeOff]}>
-                <Text style={[styles.badgeTxt, on ? styles.badgeTxtOn : styles.badgeTxtOff]}>
+              <View style={[
+                styles.badge,
+                on       ? styles.badgeOn    :
+                isUrgent ? styles.badgeUrgent :
+                           styles.badgeOff,
+              ]}>
+                <Text style={[
+                  styles.badgeTxt,
+                  on || isUrgent ? styles.badgeTxtLight : styles.badgeTxtDark,
+                ]}>
                   {count}
                 </Text>
               </View>
@@ -72,11 +83,10 @@ const styles = StyleSheet.create({
   },
   tabOn:  { backgroundColor: colors.accent },
   tabOff: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  tabTxt: { fontFamily: fonts.title, fontSize: 13 },
+  tabTxt:    { fontFamily: fonts.title, fontSize: 13 },
   tabTxtOn:  { color: colors.bg    },
   tabTxtOff: { color: colors.muted },
 
-  // Badge compteur
   badge: {
     minWidth: 18,
     height: 18,
@@ -85,9 +95,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 5,
   },
-  badgeOn:  { backgroundColor: 'rgba(20,21,42,.2)' },
-  badgeOff: { backgroundColor: colors.danger       },
-  badgeTxt: { fontFamily: fonts.titleXL, fontSize: 10 },
-  badgeTxtOn:  { color: colors.bg    },
-  badgeTxtOff: { color: colors.white },
+  badgeOn:     { backgroundColor: 'rgba(20,21,42,.2)' },
+  badgeUrgent: { backgroundColor: colors.danger       },
+  badgeOff:    { backgroundColor: colors.border       },
+  badgeTxt:    { fontFamily: fonts.titleXL, fontSize: 10 },
+  badgeTxtLight: { color: colors.white },
+  badgeTxtDark:  { color: colors.muted },
 });

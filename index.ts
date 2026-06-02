@@ -1,3 +1,6 @@
+// ─── Polyfills (chargés avant tout, Hermes ne fournit pas ces APIs web) ───────
+import './src/polyfills';
+
 import { registerRootComponent } from 'expo';
 
 import App from './App';

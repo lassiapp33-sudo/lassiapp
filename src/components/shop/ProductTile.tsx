@@ -1,15 +1,18 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
+import { ProductPromoInfo } from '../../types/promotions';
 
 export interface Product {
-  id:       string;
-  emoji:    string;
-  name:     string;
-  desc:     string;
-  price:    number;
-  category: 'petitdej' | 'boissons' | 'plats';
+  id:        string;
+  emoji:     string;
+  photoUrl?: string;
+  name:      string;
+  desc:      string;
+  price:     number;
+  category:  string;
+  stock?:    'in' | 'out';
 }
 
 const IcoPlus = () => (
@@ -20,28 +23,48 @@ const IcoPlus = () => (
 );
 
 interface Props {
-  product:  Product;
-  qty:      number;
-  onAdd:    () => void;
-  onRemove: () => void;
-  onPress?: () => void;   // ouverture du détail produit (futur)
+  product:   Product;
+  qty:       number;
+  onAdd:     () => void;
+  onRemove:  () => void;
+  onPress?:  () => void;
+  promoInfo?: ProductPromoInfo;
 }
 
-export default function ProductTile({ product, qty, onAdd, onRemove, onPress }: Props) {
-  return (
-    // Toute la tuile est tappable pour ouvrir le détail produit
-    <TouchableOpacity
-      style={styles.tile}
-      onPress={onPress}
-      activeOpacity={0.88}
-      disabled={!onPress}
-    >
-      {/* Zone visuelle emoji / future photo produit */}
-      <View style={styles.imgZone}>
-        <Text style={styles.emoji}>{product.emoji}</Text>
+export default function ProductTile({ product, qty, onAdd, onRemove, onPress, promoInfo }: Props) {
+  const isOut = product.stock === 'out';
 
-        {qty === 0 ? (
-          // Premier ajout : bouton + simple
+  return (
+    <TouchableOpacity
+      style={[styles.tile, isOut && styles.tileOut]}
+      onPress={isOut ? undefined : onPress}
+      activeOpacity={isOut ? 1 : 0.88}
+      disabled={isOut}
+    >
+      {/* Zone visuelle photo, emoji, ou vide */}
+      <View style={styles.imgZone}>
+        {product.photoUrl ? (
+          <Image source={{ uri: product.photoUrl }} style={styles.photo} />
+        ) : product.emoji ? (
+          <Text style={styles.emoji}>{product.emoji}</Text>
+        ) : null}
+
+        {/* Badge Épuisé */}
+        {isOut && (
+          <View style={styles.epuiseBadge}>
+            <Text style={styles.epuiseTxt}>Épuisé</Text>
+          </View>
+        )}
+
+        {/* Badge Promo (masqué si épuisé) */}
+        {!isOut && promoInfo && (
+          <View style={styles.promoBadge}>
+            <Text style={styles.promoBadgeTxt}>{promoInfo.badge}</Text>
+          </View>
+        )}
+
+        {/* Contrôles panier — masqués si indisponible */}
+        {!isOut && (qty === 0 ? (
           <TouchableOpacity
             style={styles.addBtn}
             onPress={e => { e.stopPropagation?.(); onAdd(); }}
@@ -50,7 +73,6 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress }: 
             <IcoPlus />
           </TouchableOpacity>
         ) : (
-          // Déjà dans le panier : compteur − N +
           <View style={styles.qtyBar}>
             <TouchableOpacity
               style={styles.qtyBtn}
@@ -68,14 +90,24 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress }: 
               <Text style={styles.qtyOp}>+</Text>
             </TouchableOpacity>
           </View>
-        )}
+        ))}
       </View>
 
       {/* Infos produit */}
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         <Text style={styles.desc} numberOfLines={1}>{product.desc}</Text>
-        <Text style={styles.price}>{product.price.toLocaleString('fr-FR')} F</Text>
+        {/* Prix barré + prix promo OU prix normal */}
+        {promoInfo?.promoPrice !== undefined ? (
+          <View style={styles.priceRow}>
+            <Text style={styles.priceOld}>{product.price.toLocaleString('fr-FR')} F</Text>
+            <Text style={styles.pricePromo}>{promoInfo.promoPrice.toLocaleString('fr-FR')} F</Text>
+          </View>
+        ) : (
+          <Text style={[styles.price, isOut && styles.priceOut]}>
+            {product.price.toLocaleString('fr-FR')} F
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -98,6 +130,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   emoji: { fontSize: 38 },
+  photo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
 
   addBtn: {
     position: 'absolute',
@@ -165,5 +198,59 @@ const styles = StyleSheet.create({
     fontFamily: fonts.titleXL,
     fontSize: 14,
     marginTop: 8,
+  },
+
+  // Badge promo
+  promoBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: colors.accent,
+    borderRadius: 6,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+  },
+  promoBadgeTxt: {
+    color:      colors.bg,
+    fontFamily: fonts.titleXL,
+    fontSize:   9,
+    letterSpacing: 0.3,
+  },
+
+  // Prix barré
+  priceRow:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  priceOld: {
+    color:            colors.muted,
+    fontFamily:       fonts.body,
+    fontSize:         11,
+    textDecorationLine: 'line-through',
+  },
+  pricePromo: {
+    color:      colors.accent,
+    fontFamily: fonts.titleXL,
+    fontSize:   14,
+  },
+
+  // État indisponible
+  tileOut: {
+    opacity: 0.58,
+  },
+  epuiseBadge: {
+    position:        'absolute',
+    top:             8,
+    left:            8,
+    backgroundColor: colors.danger,
+    borderRadius:    6,
+    paddingVertical:  3,
+    paddingHorizontal: 7,
+  },
+  epuiseTxt: {
+    color:      '#fff',
+    fontFamily: fonts.titleXL,
+    fontSize:   9,
+    letterSpacing: 0.3,
+  },
+  priceOut: {
+    color: colors.muted,
   },
 });

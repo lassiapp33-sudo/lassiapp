@@ -1,17 +1,19 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
+import Avatar from '../Avatar';
 
 export type OrderStatus = 'new' | 'preparing';
 
 export interface MerchantOrder {
-  id:      string;
-  initial: string;
-  name:    string;
-  items:   string;   // ex : "2× Pain-œuf · 1× Café"
-  timeAgo: string;   // ex : "il y a 2 min" ou "en préparation"
-  status:  OrderStatus;
-  price:   number;
+  id:         string;
+  initial:    string;
+  name:       string;
+  avatarUrl?: string | null;
+  items:      string;   // ex : "2× Pain-œuf · 1× Café"
+  timeAgo:    string;   // ex : "il y a 2 min" ou "en préparation"
+  status:     OrderStatus;
+  price:      number;
 }
 
 // ─── Badge statut ─────────────────────────────────────────────────────────────
@@ -41,10 +43,13 @@ export default function OrderCard({ order, onPress }: Props) {
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
-      {/* Avatar initiale */}
-      <View style={styles.avatar}>
-        <Text style={styles.avatarTxt}>{order.initial}</Text>
-      </View>
+      {/* Avatar client — Avatar unique, source de vérité profiles.avatar_url */}
+      <Avatar
+        imageUrl={order.avatarUrl}
+        name={order.name}
+        size={44}
+        variant="user"
+      />
 
       {/* Infos commande */}
       <View style={styles.info}>
@@ -80,22 +85,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  avatarTxt: {
-    color: colors.accent,
-    fontFamily: fonts.title,
-    fontSize: 16,
-  },
 
   info: {
     flex: 1,

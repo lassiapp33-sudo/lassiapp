@@ -6,21 +6,26 @@ import { getInitials } from '../utils/getInitials';
 export type UserRole = 'client' | 'merchant';
 
 export interface AuthUser {
-  name:    string;
-  phone:   string;
-  email:   string;
-  role:    UserRole;
-  initial: string;  // dérivée du nom
+  id:        string;   // UUID Supabase
+  name:      string;
+  phone:     string;
+  email:     string;
+  role:      UserRole;
+  initial:   string;   // dérivée du nom
+  avatarUrl?: string;  // URL Supabase Storage (optionnel)
 }
 
 interface AuthState {
   user:              AuthUser | null;
   isAuthenticated:   boolean;
+  isLoading:         boolean;   // true pendant la vérification de session au démarrage
   hasSeenOnboarding: boolean;
-  // Actions
-  login:             (data: Omit<AuthUser, 'initial'>) => void;
+
+  // Appelée après login/register réussi ou récupération de session
+  setUser:           (user: AuthUser | null) => void;
+  setLoading:        (v: boolean) => void;
   logout:            () => void;
-  updateProfile:     (updates: Partial<Pick<AuthUser, 'name' | 'phone' | 'email'>>) => void;
+  updateProfile:     (updates: Partial<Pick<AuthUser, 'name' | 'phone' | 'email' | 'avatarUrl'>>) => void;
   setOnboardingSeen: () => void;
 }
 
@@ -29,14 +34,18 @@ const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user:              null,
       isAuthenticated:   false,
+      isLoading:         true,    // démarrage = en attente de la vérif session
       hasSeenOnboarding: false,
 
-      login: (data) => set({
-        isAuthenticated: true,
-        user: { ...data, initial: getInitials(data.name) },
+      setUser: (user) => set({
+        user,
+        isAuthenticated: !!user,
+        isLoading:       false,
       }),
 
-      logout: () => set({ isAuthenticated: false, user: null }),
+      setLoading: (isLoading) => set({ isLoading }),
+
+      logout: () => set({ user: null, isAuthenticated: false }),
 
       updateProfile: (updates) => {
         const user = get().user;
@@ -51,6 +60,9 @@ const useAuthStore = create<AuthState>()(
     {
       name:    'lassi-auth',
       storage: createJSONStorage(() => AsyncStorage),
+      // On ne persiste QUE hasSeenOnboarding.
+      // La session auth est gérée par Supabase via AsyncStorage (lib/supabase.ts).
+      partialize: (state) => ({ hasSeenOnboarding: state.hasSeenOnboarding }),
     }
   )
 );

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import Avatar from '../Avatar';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -32,9 +33,10 @@ interface Props {
   isOnline: boolean;
   onBack:   () => void;
   onCall?:  () => void;
+  logoUrl?: string | null;
 }
 
-export default function ChatHeader({ initial, name, isVip, isOnline, onBack, onCall }: Props) {
+export default function ChatHeader({ initial, name, isVip, isOnline, onBack, onCall, logoUrl }: Props) {
   return (
     <View style={[styles.header, { paddingTop: TOP_INSET + 8 }]}>
       {/* Retour */}
@@ -42,10 +44,13 @@ export default function ChatHeader({ initial, name, isVip, isOnline, onBack, onC
         <IcoBack />
       </TouchableOpacity>
 
-      {/* Logo commerçant */}
-      <View style={styles.logo}>
-        <Text style={styles.logoTxt}>{initial}</Text>
-      </View>
+      {/* Logo commerçant — Avatar unique source de vérité */}
+      <Avatar
+        imageUrl={logoUrl}
+        name={name || initial}
+        size={42}
+        variant="shop"
+      />
 
       {/* Nom + statut */}
       <View style={styles.info}>
@@ -89,20 +94,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-  },
-  logo: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  logoTxt: {
-    color: colors.bg,
-    fontFamily: fonts.titleXL,
-    fontSize: 17,
   },
   info: {
     flex: 1,

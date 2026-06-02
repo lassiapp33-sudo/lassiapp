@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, TextInput,
-  ScrollView, StyleSheet,
+  ScrollView, StyleSheet, Alert, ActivityIndicator,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
+import LassiScreen from '../../components/LassiScreen';
 import { OrderInfo } from '../../types/payment';
-import useCartStore from '../../store/cartStore';
+import useCartStore, { OrderType } from '../../store/cartStore';
+import Avatar from '../../components/Avatar';
+import { validateCartAvailability } from '../../services/products';
+import * as promosService from '../../services/promotions';
+import { AppliedDiscount } from '../../types/promotions';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -46,19 +52,62 @@ interface Props {
 export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Props) {
   const items      = useCartStore(s => s.items);
   const shopInfo   = useCartStore(s => s.shopInfo);
+  const orderType  = useCartStore(s => s.orderType);
   const updateQty  = useCartStore(s => s.updateQty);
   const clearCart  = useCartStore(s => s.clearCart);
 
-  const [note, setNote] = useState('');
+  const [note,       setNote]       = useState('');
+  const [validating, setValidating] = useState(false);
+  const [discounts,  setDiscounts]  = useState<AppliedDiscount[]>([]);
 
   const subtotal    = items.reduce((s, i) => s + i.price * i.qty, 0);
+  const totalDiscount = discounts.reduce((s, d) => s + d.reductionFcfa, 0);
+  const total       = Math.max(subtotal - totalDiscount, 0);
+
+  // Charger les promos actives du shop pour l'affichage (calcul serveur au paiement)
+  useEffect(() => {
+    const sid = shopId || shopInfo?.id || '';
+    if (!sid || items.length === 0) { setDiscounts([]); return; }
+    promosService.getActivePromos(sid).then(promos => {
+      setDiscounts(promosService.calcClientDiscount(promos, items));
+    }).catch(() => {});
+  }, [shopId, shopInfo?.id, items]);
   const hasItems    = items.length > 0;
 
   const displayInitial  = shopInfo?.initial  ?? shopName.charAt(0).toUpperCase();
   const displayName     = shopInfo?.name     ?? shopName;
   const displayLocation = shopInfo?.location ?? '';
+  const removeItem = useCartStore(s => s.removeItem);
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
+    if (!hasItems) return;
+
+    // Vérifier la disponibilité de chaque article avant de commander
+    setValidating(true);
+    const sid = shopId || shopInfo?.id || '';
+    const unavailable = await validateCartAvailability(sid, items.map(i => i.id));
+    setValidating(false);
+
+    if (unavailable.length > 0) {
+      const names = unavailable.map(u => `• ${u.name}`).join('\n');
+      Alert.alert(
+        'Article(s) indisponible(s)',
+        `Ces articles ne sont plus disponibles :\n${names}\n\nRetire-les pour continuer.`,
+        [
+          {
+            text: 'Retirer et continuer',
+            onPress: () => {
+              unavailable.forEach(u => removeItem(u.id));
+              // Re-déclencher après retrait si des articles restent
+              if (items.length - unavailable.length > 0) handleCheckout();
+            },
+          },
+          { text: 'Annuler', style: 'cancel' },
+        ],
+      );
+      return;
+    }
+
     const orderItems = items.map(i => ({ qty: i.qty, name: i.name, price: i.price * i.qty }));
     clearCart();
     onCheckout({
@@ -68,30 +117,41 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
       shopName:     displayName,
       shopLocation: displayLocation,
       items:        orderItems,
-      total:        subtotal,
+      total,
+      orderType,
     });
   };
 
   return (
-    <View style={styles.root}>
-      {/* En-tête */}
-      <View style={[styles.head, { paddingTop: TOP_INSET + 4 }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.75}>
-          <IcoBack />
-        </TouchableOpacity>
-        <Text style={styles.headTitle}>Mon panier</Text>
-      </View>
-
+    <LassiScreen
+      header={
+        <View style={[styles.head, { paddingTop: TOP_INSET + 4 }]}>
+          <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.75}>
+            <IcoBack />
+          </TouchableOpacity>
+          <Text style={styles.headTitle}>Mon panier</Text>
+        </View>
+      }
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100, flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
       >
-        {/* Bandeau commerce */}
+        {/* Bandeau commerce — Avatar unique pour le logo */}
         <View style={styles.shopBand}>
-          <View style={styles.shopLogo}>
-            <Text style={styles.shopLogoTxt}>{displayInitial}</Text>
-          </View>
+          <Avatar
+            imageUrl={undefined}
+            name={displayName}
+            size={44}
+            variant="shop"
+          />
           <View style={styles.shopInfo}>
             <Text style={styles.shopName}>{displayName}</Text>
             <Text style={styles.shopLoc}>{displayLocation}</Text>
@@ -156,31 +216,44 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
           </View>
           <View style={styles.summaryLine}>
             <Text style={styles.summaryKey}>Type</Text>
-            <Text style={styles.summaryVal}>À emporter</Text>
+            <Text style={styles.summaryVal}>
+              {orderType === 'place' ? '🍽 Sur place' : '🥡 À emporter'}
+            </Text>
           </View>
+          {/* Lignes de réduction (display-only, le serveur recalcule) */}
+          {discounts.map(d => (
+            <View key={d.promoId} style={styles.discountLine}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.discountKey}>🏷️ {d.titre}</Text>
+                <Text style={styles.discountSub}>{d.label}</Text>
+              </View>
+              <Text style={styles.discountVal}>−{d.reductionFcfa.toLocaleString('fr-FR')} F</Text>
+            </View>
+          ))}
           {/* Séparateur */}
           <View style={styles.separator} />
           <View style={styles.totalRow}>
             <Text style={styles.totalKey}>Total</Text>
-            <Text style={styles.totalVal}>{subtotal.toLocaleString('fr-FR')} F</Text>
+            <Text style={styles.totalVal}>{total.toLocaleString('fr-FR')} F</Text>
           </View>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Footer fixe — Commander */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.payBtn, !hasItems && styles.payBtnDisabled]}
-          onPress={hasItems ? handleCheckout : undefined}
+          style={[styles.payBtn, (!hasItems || validating) && styles.payBtnDisabled]}
+          onPress={hasItems && !validating ? handleCheckout : undefined}
           activeOpacity={0.85}
         >
-          <IcoPay />
-          <Text style={styles.payBtnTxt}>
-            Commander · {subtotal.toLocaleString('fr-FR')} F
-          </Text>
+          {validating
+            ? <ActivityIndicator color={colors.bg} size="small" />
+            : <><IcoPay /><Text style={styles.payBtnTxt}>Commander · {total.toLocaleString('fr-FR')} F</Text></>
+          }
         </TouchableOpacity>
       </View>
-    </View>
+    </LassiScreen>
   );
 }
 
@@ -225,20 +298,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 11,
-  },
-  shopLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 11,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  shopLogoTxt: {
-    color: colors.bg,
-    fontFamily: fonts.titleXL,
-    fontSize: 16,
   },
   shopInfo: { flex: 1 },
   shopName: {
@@ -373,6 +432,29 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: fonts.ui,
     fontSize: 12.5,
+  },
+  discountLine: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 9,
+    gap: 8,
+  },
+  discountKey: {
+    color: colors.accent,
+    fontFamily: fonts.title,
+    fontSize: 12,
+  },
+  discountSub: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 10.5,
+    marginTop: 1,
+  },
+  discountVal: {
+    color: '#5FD38A',
+    fontFamily: fonts.titleXL,
+    fontSize: 13,
+    marginTop: 1,
   },
   separator: {
     height: 1,

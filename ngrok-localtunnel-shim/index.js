@@ -1,76 +1,59 @@
-const ngrok = require("@ngrok/ngrok");
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
+﻿const { spawn } = require('child_process');
 
-function readToken() {
-  if (process.env.NGROK_AUTHTOKEN) return process.env.NGROK_AUTHTOKEN;
+let cfProcess = null;
 
-  const v2Config = path.join(os.homedir(), ".ngrok2", "ngrok.yml");
-  if (fs.existsSync(v2Config)) {
-    const match = fs.readFileSync(v2Config, "utf8").match(/authtoken:\s*(\S+)/);
-    if (match) return match[1];
+function cleanup() {
+  if (cfProcess) {
+    try { cfProcess.kill(); } catch(e) {}
+    cfProcess = null;
   }
-
-  const v3Config = path.join(os.homedir(), ".config", "ngrok", "ngrok.yml");
-  if (fs.existsSync(v3Config)) {
-    const match = fs.readFileSync(v3Config, "utf8").match(/authtoken:\s*(\S+)/);
-    if (match) return match[1];
-  }
-
-  return null;
 }
+process.on('exit', cleanup);
+process.on('SIGINT', cleanup);
+process.on('SIGTERM', cleanup);
 
-let activeListener = null;
+function startTunnel(port) {
+  return new Promise((resolve, reject) => {
+    cfProcess = spawn('cloudflared', [
+      'tunnel', '--url', `http://localhost:${port}`
+    ], { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
 
-async function connect(opts) {
-  const addr = opts.addr || opts.port || 8081;
-  const port =
-    typeof addr === "string" ? parseInt(addr.split(":").pop(), 10) : addr;
+    cfProcess.on('error', err =>
+      reject(new Error('cloudflared introuvable : ' + err.message))
+    );
 
-  if (activeListener) {
-    await activeListener.close();
-    activeListener = null;
-  }
+    let output = '';
+    let resolved = false;
 
-  const listener = await ngrok.forward({
-    addr: port,
-    authtoken: readToken(),
+    cfProcess.stderr.on('data', (data) => {
+      output += data.toString();
+      const m = output.match(/https:\/\/[a-z0-9\-]+\.trycloudflare\.com/);
+      if (m && !resolved) {
+        resolved = true;
+        console.log('\n\x1b[32m  Tunnel Cloudflare : ' + m[0] + '\x1b[0m');
+        console.log('\x1b[90m  Scanne le QR code avec la camera iPhone -> Expo Go\x1b[0m\n');
+        resolve(m[0]);
+      }
+    });
+
+    setTimeout(() => {
+      if (!resolved) reject(new Error('Timeout : URL cloudflared introuvable apres 60s'));
+    }, 60000);
   });
-
-  activeListener = listener;
-  return listener.url();
 }
 
-async function disconnect() {
-  if (activeListener) {
-    await activeListener.close();
-    activeListener = null;
-  }
+// Expo SDK 54 appelle instance.connect(portOrOptions)
+async function connect(portOrOptions) {
+  const port = typeof portOrOptions === 'object'
+    ? (portOrOptions.port || portOrOptions.addr || 8081)
+    : portOrOptions;
+  return startTunnel(port);
 }
 
-async function kill() {
-  await disconnect();
-  await ngrok.disconnect();
-}
+async function connectAsync(port) { return startTunnel(port); }
+async function disconnect() { cleanup(); }
+async function disconnectAsync() { cleanup(); }
+async function kill() { cleanup(); }
+async function killAsync() { cleanup(); }
 
-class NgrokClientError extends Error {
-  constructor(message, response, body) {
-    super(message);
-    this.name = "NgrokClientError";
-    this.response = response;
-    this.body = body;
-  }
-}
-
-module.exports = {
-  connect,
-  disconnect,
-  authtoken: async () => {},
-  kill,
-  getUrl: () => null,
-  getApi: () => null,
-  getVersion: async () => "4.1.3",
-  getActiveProcess: () => null,
-  NgrokClientError,
-};
+module.exports = { connect, connectAsync, disconnect, disconnectAsync, kill, killAsync };

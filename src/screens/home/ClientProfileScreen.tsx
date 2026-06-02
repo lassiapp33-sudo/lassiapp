@@ -1,10 +1,33 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  Alert, ActionSheetIOS, Platform, Linking,
 } from 'react-native';
-import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import Svg, { Path, Circle, Rect, Polyline } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
-import useAuthStore from '../../store/authStore';
+import useAuthStore      from '../../store/authStore';
+import useFavoritesStore from '../../store/favoritesStore';
+import { formatPhoneSenegal } from '../../utils/phone';
+import DeleteAccountModal from '../../components/common/DeleteAccountModal';
+import LanguageModal      from '../../components/common/LanguageModal';
+import HelpScreen         from './HelpScreen';
+import * as storageService from '../../services/storage';
+import * as authService    from '../../services/auth';
+import Avatar                   from '../../components/Avatar';
+import LassiScreen              from '../../components/LassiScreen';
+import { contacterServiceClient } from '../../config/contact';
+import AProposScreen            from '../common/AProposScreen';
+import SignalerProblemeScreen   from '../common/SignalerProblemeScreen';
+import { useT }            from '../../i18n';
+import useLanguageStore    from '../../store/languageStore';
+
+const IcoBack = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
+    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M19 12H5" stroke={colors.white} />
+    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
+  </Svg>
+);
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -49,10 +72,16 @@ const IcoGlobe = () => (
   </Svg>
 );
 
-const IcoPin = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" stroke={colors.accent} />
-    <Circle cx={12} cy={10} r={3} stroke={colors.accent} />
+const IcoShare = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.07-1.35A9.96 9.96 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"
+      fill={colors.accent}
+    />
+    <Path
+      d="M16.5 14.5c-.28-.14-1.63-.8-1.88-.9-.25-.09-.43-.14-.61.14-.18.28-.7.9-.86 1.08-.16.18-.32.2-.6.07-.28-.14-1.17-.43-2.23-1.37-.82-.73-1.38-1.64-1.54-1.92-.16-.28-.02-.43.12-.57.13-.12.28-.32.42-.48.14-.16.18-.28.28-.46.09-.18.05-.34-.02-.48-.07-.14-.61-1.47-.84-2.01-.22-.53-.45-.46-.61-.47l-.52-.01c-.18 0-.46.07-.7.34-.25.27-.95.93-.95 2.26s.97 2.62 1.11 2.8c.13.18 1.91 2.92 4.64 4.1.65.28 1.16.45 1.55.57.65.21 1.24.18 1.71.11.52-.08 1.6-.66 1.83-1.29.22-.63.22-1.17.15-1.29-.06-.11-.24-.18-.52-.32z"
+      fill={colors.bg}
+    />
   </Svg>
 );
 
@@ -64,9 +93,45 @@ const IcoHelp = () => (
   </Svg>
 );
 
+const IcoInfo = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Circle cx={12} cy={12} r={10} stroke={colors.accent} />
+    <Path d="M12 16v-4M12 8h.01" stroke={colors.accent} />
+  </Svg>
+);
+
+const IcoFlag = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" stroke="#E07A7A" />
+    <Path d="M4 22v-7" stroke="#E07A7A" />
+  </Svg>
+);
+
+const IcoWhatsApp = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.07-1.35A9.96 9.96 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"
+      fill={colors.accent}
+    />
+    <Path
+      d="M16.5 14.5c-.28-.14-1.63-.8-1.88-.9-.25-.09-.43-.14-.61.14-.18.28-.7.9-.86 1.08-.16.18-.32.2-.6.07-.28-.14-1.17-.43-2.23-1.37-.82-.73-1.38-1.64-1.54-1.92-.16-.28-.02-.43.12-.57.13-.12.28-.32.42-.48.14-.16.18-.28.28-.46.09-.18.05-.34-.02-.48-.07-.14-.61-1.47-.84-2.01-.22-.53-.45-.46-.61-.47l-.52-.01c-.18 0-.46.07-.7.34-.25.27-.95.93-.95 2.26s.97 2.62 1.11 2.8c.13.18 1.91 2.92 4.64 4.1.65.28 1.16.45 1.55.57.65.21 1.24.18 1.71.11.52-.08 1.6-.66 1.83-1.29.22-.63.22-1.17.15-1.29-.06-.11-.24-.18-.52-.32z"
+      fill={colors.bg}
+    />
+  </Svg>
+);
+
 const IcoLogout = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
     <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke={colors.danger} />
+  </Svg>
+);
+
+const IcoTrash = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Polyline points="3 6 5 6 21 6" stroke={colors.danger} />
+    <Path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke={colors.danger} />
+    <Path d="M10 11v6M14 11v6" stroke={colors.danger} />
+    <Path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke={colors.danger} />
   </Svg>
 );
 
@@ -119,77 +184,174 @@ function OptionRow({ icon, title, subtitle, danger, end = 'arrow', toggled, onTo
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
 interface Props {
+  onBack?:      () => void;
   onOrders?:    () => void;
   onFavorites?: () => void;
   onLogout?:    () => void;
 }
 
-export default function ClientProfileScreen({ onOrders, onFavorites, onLogout }: Props) {
-  const [notifOn, setNotifOn] = useState(true);
-  const user = useAuthStore(s => s.user);
+export default function ClientProfileScreen({ onBack, onOrders, onFavorites, onLogout }: Props) {
+  const t = useT();
+  const lang = useLanguageStore(s => s.lang);
 
-  const displayName    = user?.name    ?? 'Client';
-  const displayPhone   = user?.phone   ?? '';
-  const displayInitial = user?.initial ?? '?';
+  const [notifOn,         setNotifOn]         = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [uploading,       setUploading]       = useState(false);
+  const [showHelp,        setShowHelp]        = useState(false);
+  const [showLangModal,   setShowLangModal]   = useState(false);
+  const [showAPropos,     setShowAPropos]     = useState(false);
+  const [showSignaler,    setShowSignaler]    = useState(false);
+
+  const user          = useAuthStore(s => s.user);
+  const updateProfile = useAuthStore(s => s.updateProfile);
+  const favCount      = useFavoritesStore(s => s.favorites.length);
+
+  const displayName  = user?.name  ?? 'Client';
+  const displayPhone = user?.phone ? formatPhoneSenegal(user.phone) : '';
+
+  const favSubtitle = favCount > 0
+    ? `${favCount} ${favCount > 1 ? t.profile.favoritesMany : t.profile.favoriteOne}`
+    : t.profile.noFavorites;
+
+  const pickAndUploadAvatar = async (source: 'gallery' | 'camera') => {
+    if (!user?.id) return;
+    const uri = source === 'gallery'
+      ? await storageService.pickImageFromGallery()
+      : await storageService.pickImageFromCamera();
+    if (!uri) return;
+    setUploading(true);
+    try {
+      const path = storageService.avatarPath(user.id);
+      const url  = await storageService.uploadImage('avatars', uri, path);
+      await authService.updateAvatarUrl(user.id, url);
+      updateProfile({ avatarUrl: url });
+    } catch {
+      Alert.alert(t.common.error, t.common.photoUpdateError);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleEditAvatar = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: [t.common.cancel, t.common.gallery, t.common.camera], cancelButtonIndex: 0 },
+        (idx) => {
+          if (idx === 1) pickAndUploadAvatar('gallery');
+          if (idx === 2) pickAndUploadAvatar('camera');
+        },
+      );
+    } else {
+      Alert.alert(t.common.photoProfile, '', [
+        { text: t.common.gallery, onPress: () => pickAndUploadAvatar('gallery') },
+        { text: t.common.camera,  onPress: () => pickAndUploadAvatar('camera')  },
+        { text: t.common.cancel,  style: 'cancel' },
+      ]);
+    }
+  };
+
+  if (showHelp)     return <HelpScreen            onBack={() => setShowHelp(false)}    role="client" />;
+  if (showAPropos)  return <AProposScreen         onBack={() => setShowAPropos(false)} />;
+  if (showSignaler) return <SignalerProblemeScreen onBack={() => setShowSignaler(false)} profil="client" />;
 
   return (
-    <View style={styles.root}>
+    <LassiScreen
+      header={
+        <View style={{ paddingTop: TOP_INSET + 6 }}>
+          <View style={styles.topBar}>
+            <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
+              <IcoBack />
+            </TouchableOpacity>
+            <Text style={styles.pageTitle}>{t.profile.myProfile}</Text>
+          </View>
+          <View style={styles.idCard}>
+            <Avatar
+              imageUrl={user?.avatarUrl}
+              name={displayName}
+              size={66}
+              variant="user"
+              showBorder
+              uploading={uploading}
+              onPress={handleEditAvatar}
+            />
+            <View style={styles.idInfo}>
+              <Text style={styles.idName}>{displayName}</Text>
+              {displayPhone ? (
+                <Text style={styles.idPhone}>🇸🇳 +221 {displayPhone}</Text>
+              ) : null}
+              <View style={styles.chip}>
+                <Text style={styles.chipTxt}>{t.profile.client}</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.editBtn} onPress={handleEditAvatar} activeOpacity={0.7}>
+              <IcoEdit />
+            </TouchableOpacity>
+          </View>
+        </View>
+      }
+    >
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: TOP_INSET + 6, paddingBottom: 36, flexGrow: 1 }}
+        contentContainerStyle={{ paddingBottom: 36, flexGrow: 1 }}
       >
-        {/* Titre */}
-        <Text style={styles.pageTitle}>Mon profil</Text>
-
-        {/* Carte identité */}
-        <View style={styles.idCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarTxt}>{displayInitial}</Text>
-          </View>
-          <View style={styles.idInfo}>
-            <Text style={styles.idName}>{displayName}</Text>
-            {displayPhone ? (
-              <Text style={styles.idPhone}>🇸🇳 +221 {displayPhone}</Text>
-            ) : null}
-            <View style={styles.chip}>
-              <Text style={styles.chipTxt}>👤 Client</Text>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.editBtn} activeOpacity={0.7}>
-            <IcoEdit />
-          </TouchableOpacity>
-        </View>
-
-        {/* Mon activité */}
-        <Text style={styles.secLbl}>Mon activité</Text>
+        <Text style={styles.secLbl}>{t.profile.myActivity}</Text>
         <View style={styles.grp}>
-          <OptionRow icon={<IcoOrder />} title="Mes commandes"  subtitle="Historique & suivi" onPress={onOrders} />
-          <OptionRow icon={<IcoStar />}  title="Mes favoris"    subtitle="12 commerces enregistrés" onPress={onFavorites} />
-          <OptionRow icon={<IcoCard />}  title="Mes paiements"  subtitle="Reçus & historique Wave/OM" last />
+          <OptionRow icon={<IcoOrder />} title={t.profile.myOrders}   subtitle={t.profile.myOrdersSub} onPress={onOrders} />
+          <OptionRow icon={<IcoStar />}  title={t.profile.myFavorites} subtitle={favSubtitle} onPress={onFavorites} />
+          <OptionRow icon={<IcoCard />}  title={t.profile.myPayments}  subtitle={t.profile.myPaymentsSub} last
+            onPress={() => Alert.alert(t.common.comingSoon, t.common.paymentsComingSoon)} />
         </View>
 
-        {/* Préférences */}
-        <Text style={styles.secLbl}>Préférences</Text>
+        <Text style={styles.secLbl}>{t.profile.preferences}</Text>
         <View style={styles.grp}>
           <OptionRow
-            icon={<IcoBell />} title="Notifications"
+            icon={<IcoBell />} title={t.profile.notifications}
             end="toggle" toggled={notifOn} onToggle={() => setNotifOn(v => !v)}
           />
-          <OptionRow icon={<IcoGlobe />} title="Langue"       subtitle="Français" />
-          <OptionRow icon={<IcoPin />}   title="Mes adresses" last />
+          <OptionRow
+            icon={<IcoGlobe />} title={t.profile.language}
+            subtitle={lang === 'fr' ? t.lang.fr : t.lang.en}
+            onPress={() => setShowLangModal(true)}
+          />
+          <OptionRow
+            icon={<IcoShare />}
+            title={t.profile.inviteFriend}
+            subtitle={t.profile.inviteFriendSub}
+            last
+            onPress={() => Linking.openURL(
+              'https://wa.me/?text=H%C3%A9%20!%20Essaie%20Lassi%2C%20l%27app%20pour%20commander%20tes%20services%20facilement.%20T%C3%A9l%C3%A9charge-la%20ici%20%3A%20https%3A%2F%2Fwww.lassi-app.com'
+            )}
+          />
         </View>
 
-        {/* Aide & compte */}
-        <Text style={styles.secLbl}>Aide & compte</Text>
+        <Text style={styles.secLbl}>{t.profile.helpAccount}</Text>
         <View style={styles.grp}>
-          <OptionRow icon={<IcoHelp />}   title="Aide & support" />
-          <OptionRow icon={<IcoLogout />} title="Se déconnecter" danger end="none" onPress={onLogout} last />
+          <OptionRow icon={<IcoHelp />} title={t.profile.helpSupport}    onPress={() => setShowHelp(true)} />
+          <OptionRow icon={<IcoFlag />} title="Signaler un problème"   onPress={() => setShowSignaler(true)} />
+          <OptionRow icon={<IcoInfo />} title="À propos"               onPress={() => setShowAPropos(true)} />
+          <OptionRow
+            icon={<IcoWhatsApp />}
+            title={t.profile.whatsapp}
+            subtitle={t.profile.whatsappSub}
+            end="arrow"
+            onPress={() => contacterServiceClient('Bonjour Lassi, je suis un client et j\'ai besoin d\'aide avec mon compte.')}
+          />
+          <OptionRow icon={<IcoLogout />} title={t.profile.logout}        danger end="none" onPress={onLogout} />
+          <OptionRow icon={<IcoTrash />}  title={t.profile.deleteAccount} danger end="none" onPress={() => setShowDeleteModal(true)} last />
         </View>
 
-        <Text style={styles.version}>LASSİ v1.0.0</Text>
+        <Text style={styles.version}>{t.profile.version}</Text>
       </ScrollView>
-    </View>
+
+      <DeleteAccountModal
+        visible={showDeleteModal}
+        role="client"
+        onClose={() => setShowDeleteModal(false)}
+        onSuccess={() => { setShowDeleteModal(false); onLogout?.(); }}
+      />
+      <LanguageModal visible={showLangModal} onClose={() => setShowLangModal(false)} />
+    </LassiScreen>
   );
 }
 
@@ -199,15 +361,30 @@ const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
 
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
+  },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
   pageTitle: {
     color: colors.white,
     fontFamily: fonts.titleXL,
     fontSize: 22,
-    paddingHorizontal: 18,
-    paddingBottom: 18,
   },
 
-  // Carte identité
   idCard: {
     marginHorizontal: 18,
     marginBottom: 24,
@@ -219,22 +396,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-  },
-  avatar: {
-    width: 66,
-    height: 66,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  avatarTxt: {
-    color: colors.accent,
-    fontFamily: fonts.titleXL,
-    fontSize: 26,
   },
   idInfo: { flex: 1, minWidth: 0 },
   idName: {
@@ -273,7 +434,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
 
-  // Section label
   secLbl: {
     color: colors.muted,
     fontFamily: fonts.ui,
@@ -284,7 +444,6 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
 
-  // Groupe d'options
   grp: {
     marginHorizontal: 18,
     marginBottom: 20,
@@ -295,7 +454,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  // Ligne d'option
   opt: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -337,7 +495,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // Toggle
   sw: {
     width: 42,
     height: 24,

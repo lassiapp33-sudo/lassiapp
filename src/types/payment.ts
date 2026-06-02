@@ -11,9 +11,10 @@ export interface OrderInfo {
   orderId:      string;   // ex : "#A427"
   shopInitial:  string;
   shopName:     string;
-  shopLocation: string;   // ex : "📍 Medina · à emporter"
+  shopLocation: string;   // ex : "📍 Medina"
   items:        OrderItem[];
   total:        number;
+  orderType:    'place' | 'emporter';
 }
 
 export type PayMethod = 'wave' | 'om';

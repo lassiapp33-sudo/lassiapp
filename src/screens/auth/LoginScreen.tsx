@@ -7,11 +7,14 @@ import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import BackButton from '../../components/auth/BackButton';
 import InputField from '../../components/auth/InputField';
 import AuthButton from '../../components/auth/AuthButton';
-import { colors, fonts, spacing, radius, TOP_INSET } from '../../theme';
+import { colors, fonts, spacing, TOP_INSET } from '../../theme';
+import { formatPhoneSenegal, cleanPhone, isValidPhone, PHONE_ERROR } from '../../utils/phone';
+import { useT } from '../../i18n';
 
 interface Props {
   onBack:           () => void;
-  onSuccess:        (phone: string) => void;
+  // Async : peut rejeter avec une Error (message d'erreur en français)
+  onSuccess:        (phone: string, password: string) => Promise<void>;
   onForgotPassword: () => void;
   onRegister:       () => void;
 }
@@ -44,11 +47,35 @@ const IconEye = ({ off }: { off?: boolean }) => (
 );
 
 export default function LoginScreen({ onBack, onSuccess, onForgotPassword, onRegister }: Props) {
+  const t = useT();
+
   const [tel,     setTel]     = useState('');
   const [mdp,     setMdp]     = useState('');
   const [showMdp, setShowMdp] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [erreur,  setErreur]  = useState<string | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
+
+  const handleSubmit = async () => {
+    if (!tel.trim() || !mdp.trim()) {
+      setErreur('Saisis ton numéro et ton mot de passe.');
+      return;
+    }
+    if (!isValidPhone(tel)) {
+      setErreur(PHONE_ERROR);
+      return;
+    }
+    setErreur(null);
+    setLoading(true);
+    try {
+      await onSuccess(cleanPhone(tel), mdp);
+    } catch (e: any) {
+      setErreur(e.message ?? 'Une erreur est survenue. Réessaie.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -64,15 +91,15 @@ export default function LoginScreen({ onBack, onSuccess, onForgotPassword, onReg
         <BackButton onPress={onBack} />
         <View style={{ height: 24 }} />
 
-        <Text style={styles.h1}>{'Content de te\nrevoir 👋'}</Text>
-        <Text style={styles.sub}>Connecte-toi pour retrouver ton quartier.</Text>
+        <Text style={styles.h1}>{t.auth.welcomeBack}</Text>
+        <Text style={styles.sub}>{t.auth.welcomeBackSub}</Text>
         <View style={{ height: 28 }} />
 
         <InputField
-          label="Numéro de téléphone"
-          placeholder="77 123 45 67"
+          label={t.auth.phoneLabel}
+          placeholder={t.auth.phonePlaceholder}
           value={tel}
-          onChangeText={setTel}
+          onChangeText={(v) => setTel(formatPhoneSenegal(v))}
           phonePrefix
           keyboardType="phone-pad"
           autoComplete="tel"
@@ -81,7 +108,7 @@ export default function LoginScreen({ onBack, onSuccess, onForgotPassword, onReg
           returnKeyType="next"
         />
         <InputField
-          label="Mot de passe"
+          label={t.auth.passwordLabel}
           placeholder="········"
           value={mdp}
           onChangeText={setMdp}
@@ -93,21 +120,25 @@ export default function LoginScreen({ onBack, onSuccess, onForgotPassword, onReg
           textContentType="password"
           scrollRef={scrollRef}
           returnKeyType="done"
-          onSubmitEditing={() => onSuccess(tel.trim())}
+          onSubmitEditing={handleSubmit}
         />
 
-        {/* Lien mot de passe oublié */}
         <TouchableOpacity onPress={onForgotPassword} activeOpacity={0.7} style={styles.forgot}>
-          <Text style={styles.forgotTxt}>Mot de passe oublié ?</Text>
+          <Text style={styles.forgotTxt}>{t.auth.forgotPassword}</Text>
         </TouchableOpacity>
 
-        <AuthButton label="Se connecter" onPress={() => onSuccess(tel.trim())} />
+        {erreur ? <Text style={styles.erreur}>{erreur}</Text> : null}
 
-        {/* Swap vers inscription */}
+        <AuthButton
+          label={t.auth.loginBtn}
+          onPress={handleSubmit}
+          loading={loading}
+        />
+
         <View style={styles.swapRow}>
-          <Text style={styles.swapTxt}>Pas encore de compte ? </Text>
+          <Text style={styles.swapTxt}>{t.auth.noAccount}</Text>
           <TouchableOpacity onPress={onRegister} activeOpacity={0.7}>
-            <Text style={styles.swapLink}>Créer un compte</Text>
+            <Text style={styles.swapLink}>{t.auth.createAccount}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -144,6 +175,13 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontFamily: fonts.ui,
     fontSize: 12.5,
+  },
+  erreur: {
+    color: colors.danger,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   swapRow: {
     flexDirection: 'row',

@@ -1,13 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View, Text, TouchableOpacity,
   ScrollView, StyleSheet,
 } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import useNotificationsStore, { NotifType, Notif } from '../../store/notificationsStore';
 
-// ─── Icônes par type de notification ─────────────────────────────────────────
+// ─── Icônes ───────────────────────────────────────────────────────────────────
 
 const IcoBack = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
@@ -42,8 +42,6 @@ const IcoMsg = ({ color }: { color: string }) => (
   </Svg>
 );
 
-// ─── Config icônes/couleurs par type ──────────────────────────────────────────
-
 const TYPE_CONFIG: Record<NotifType, { Icon: React.FC<{ color: string }>; color: string; bg: string }> = {
   order: { Icon: IcoOrder, color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
   pay:   { Icon: IcoPay,   color: colors.success, bg: 'rgba(95,211,138,.13)' },
@@ -51,13 +49,9 @@ const TYPE_CONFIG: Record<NotifType, { Icon: React.FC<{ color: string }>; color:
   msg:   { Icon: IcoMsg,   color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
 };
 
-
-// ─── Sous-composant notification ──────────────────────────────────────────────
-
 function NotifCard({ notif, onPress }: { notif: Notif; onPress: () => void }) {
   const cfg = TYPE_CONFIG[notif.type];
   const { Icon } = cfg;
-
   return (
     <TouchableOpacity
       style={[styles.card, notif.unread && styles.cardUnread]}
@@ -65,13 +59,9 @@ function NotifCard({ notif, onPress }: { notif: Notif; onPress: () => void }) {
       activeOpacity={0.75}
     >
       {notif.unread && <View style={styles.dot} />}
-
-      {/* Icône */}
       <View style={[styles.iconBox, { backgroundColor: cfg.bg }]}>
         <Icon color={cfg.color} />
       </View>
-
-      {/* Contenu */}
       <View style={styles.content}>
         <Text style={styles.title}>{notif.title}</Text>
         <Text style={styles.body}>{notif.body}</Text>
@@ -81,22 +71,28 @@ function NotifCard({ notif, onPress }: { notif: Notif; onPress: () => void }) {
   );
 }
 
-// ─── Écran ────────────────────────────────────────────────────────────────────
-
 interface Props {
-  onBack: () => void;
+  onBack:       () => void;
+  onNavigate?:  (type: NotifType, targetId?: string) => void;
 }
 
-export default function NotificationsScreen({ onBack }: Props) {
-  const notifications = useNotificationsStore(s => s.notifications);
-  const markRead      = useNotificationsStore(s => s.markRead);
+export default function NotificationsScreen({ onBack, onNavigate }: Props) {
+  const notifications     = useNotificationsStore(s => s.notifications);
+  const markRead          = useNotificationsStore(s => s.markRead);
+  const markAllRead       = useNotificationsStore(s => s.markAllRead);
+  const loadNotifications = useNotificationsStore(s => s.loadNotifications);
+
+  // Chargement initial + remise à zéro du badge dès l'ouverture
+  useEffect(() => {
+    loadNotifications();
+    markAllRead();   // toutes les notifs marquées lues → badge retombe à 0
+  }, []);
 
   const todayNotifs = notifications.filter(n => n.group === 'today');
   const weekNotifs  = notifications.filter(n => n.group === 'week');
 
   return (
     <View style={styles.root}>
-      {/* En-tête */}
       <View style={[styles.head, { paddingTop: TOP_INSET + 4 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.75}>
           <IcoBack />
@@ -109,22 +105,40 @@ export default function NotificationsScreen({ onBack }: Props) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}
       >
-        {/* Groupe : Aujourd'hui */}
+        {notifications.length === 0 && (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTxt}>Aucune notification</Text>
+          </View>
+        )}
+
         {todayNotifs.length > 0 && (
           <>
             <Text style={styles.dayLbl}>Aujourd'hui</Text>
             {todayNotifs.map(n => (
-              <NotifCard key={n.id} notif={n} onPress={() => markRead(n.id)} />
+              <NotifCard
+                key={n.id}
+                notif={n}
+                onPress={() => {
+                  markRead(n.id);
+                  onNavigate?.(n.type, n.targetId);
+                }}
+              />
             ))}
           </>
         )}
 
-        {/* Groupe : Cette semaine */}
         {weekNotifs.length > 0 && (
           <>
             <Text style={styles.dayLbl}>Cette semaine</Text>
             {weekNotifs.map(n => (
-              <NotifCard key={n.id} notif={n} onPress={() => markRead(n.id)} />
+              <NotifCard
+                key={n.id}
+                notif={n}
+                onPress={() => {
+                  markRead(n.id);
+                  onNavigate?.(n.type, n.targetId);
+                }}
+              />
             ))}
           </>
         )}
@@ -170,7 +184,6 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
 
-  // Carte notification
   card: {
     marginHorizontal: 18,
     marginBottom: 10,
@@ -186,7 +199,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(253,207,52,.05)',
     borderColor: 'rgba(253,207,52,.2)',
   },
-
   dot: {
     position: 'absolute',
     top: 14,
@@ -196,7 +208,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.accent,
   },
-
   iconBox: {
     width: 40,
     height: 40,
@@ -205,24 +216,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-
   content: { flex: 1 },
-  title: {
-    color: colors.white,
-    fontFamily: fonts.title,
-    fontSize: 13.5,
-  },
-  body: {
-    color: colors.muted,
-    fontFamily: fonts.body,
-    fontSize: 11.5,
-    marginTop: 2,
-    lineHeight: 16,
-  },
-  time: {
-    color: '#5a5c80',
-    fontFamily: fonts.body,
-    fontSize: 10,
-    marginTop: 5,
-  },
+  title:   { color: colors.white, fontFamily: fonts.title,  fontSize: 13.5 },
+  body:    { color: colors.muted, fontFamily: fonts.body,   fontSize: 11.5, marginTop: 2, lineHeight: 16 },
+  time:    { color: '#5a5c80',    fontFamily: fonts.body,   fontSize: 10, marginTop: 5 },
+
+  empty:    { paddingVertical: 60, alignItems: 'center' },
+  emptyTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 13 },
 });

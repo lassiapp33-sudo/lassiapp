@@ -47,4 +47,4 @@ Write-Host ""
 Write-Host "  LASSI - Expo start --tunnel" -ForegroundColor Yellow
 Write-Host ""
 
-npx expo start --tunnel
+npx expo start --tunnel --go

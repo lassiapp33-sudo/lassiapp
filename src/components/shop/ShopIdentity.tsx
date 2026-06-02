@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
+import Avatar from '../Avatar';
 
 const IcoStar = () => (
   <Svg width={10} height={10} viewBox="0 0 24 24">
@@ -10,18 +11,24 @@ const IcoStar = () => (
 );
 
 interface Props {
-  initial: string;
-  isVip:   boolean;
-  isOpen:  boolean;
+  initial:  string;
+  logoUrl?: string;
+  isVip:    boolean;
+  isOpen:   boolean;
 }
 
-export default function ShopIdentity({ initial, isVip, isOpen }: Props) {
+export default function ShopIdentity({ initial, logoUrl, isVip, isOpen }: Props) {
   return (
     // -42 : la moitié du logo (84px) chevauche la bannière du dessus
     <View style={styles.row}>
-      <View style={styles.logo}>
-        <Text style={styles.logoTxt}>{initial}</Text>
-      </View>
+      {/* Logo boutique avec bordure bg pour l'effet flottant sur la bannière */}
+      <Avatar
+        imageUrl={logoUrl}
+        name={initial}
+        size={84}
+        variant="shop"
+        showBorder
+      />
 
       <View style={styles.meta}>
         <View style={styles.badges}>
@@ -55,22 +62,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 14,
-  },
-  logo: {
-    width: 84,
-    height: 84,
-    borderRadius: radius.xxl,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: colors.bg,
-    flexShrink: 0,
-  },
-  logoTxt: {
-    color: colors.bg,
-    fontFamily: fonts.titleXL,
-    fontSize: 32,
   },
   meta: {
     flex: 1,

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet,
+  View, Text, ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
+import { useT } from '../../i18n';
 
 import HomeHeader                     from '../../components/home/HomeHeader';
 import SearchBar                      from '../../components/home/SearchBar';
@@ -12,37 +12,15 @@ import { CatId }                      from '../../components/category/CatNavBar'
 import RecoCarousel, { RecoItem }     from '../../components/home/RecoCarousel';
 import NearbyCard, { NearbyPlace }    from '../../components/home/NearbyCard';
 import BottomNav, { NavTab, NAV_HEIGHT } from '../../components/home/BottomNav';
-import { colors, fonts, TOP_INSET } from '../../theme';
+import { colors, fonts, TOP_INSET }   from '../../theme';
+import LassiScreen                    from '../../components/LassiScreen';
 import useAuthStore                   from '../../store/authStore';
+import useFavoritesStore              from '../../store/favoritesStore';
 import useNotificationsStore          from '../../store/notificationsStore';
-
-// ── Données mock ─────────────────────────────────────────────────────────────
-
-const RECOS: RecoItem[] = [
-  { id: '1', initial: 'K', name: 'KFC Sénégal',    desc: 'Poulet croustillant · Livraison rapide' },
-  { id: '2', initial: 'T', name: 'Tic Tac Resto',  desc: 'Burgers & tacos · Ouvert 24h/24' },
-  { id: '3', initial: 'D', name: 'Dakar Burger',   desc: 'Fast-food local · Livraison 20 min' },
-];
-
-const NEARBY: NearbyPlace[] = [
-  {
-    id: '1', name: 'Tangana Chez Modou', category: 'tangana',
-    rating: 4.8, distance: '40 m', isVip: true, isFav: true,
-    status: 'open', statusLabel: 'Ouvert',
-  },
-  {
-    id: '2', name: 'Boutique Aïda Gaye', category: 'store',
-    rating: 4.6, distance: '85 m', isVip: false, isFav: false,
-    status: 'open', statusLabel: 'Ouvert',
-  },
-  {
-    id: '3', name: 'Salon Khadija Beauté', category: 'hair',
-    rating: 4.9, distance: '120 m', isVip: false, isFav: false,
-    status: 'closing', statusLabel: 'Ferme à 20h',
-  },
-];
-
-// ── Écran ─────────────────────────────────────────────────────────────────────
+import useLocationStore               from '../../store/locationStore';
+import * as shopsService              from '../../services/shops';
+import { haversineMeters, formatDistance } from '../../services/location';
+import { computeStatus, WeekHours }  from '../../services/hours';
 
 interface Props {
   onCategoryPress?:  (catId: CatId, title: string) => void;
@@ -50,8 +28,11 @@ interface Props {
   onSearch?:         () => void;
   onVoice?:          () => void;
   onFavorites?:      () => void;
+  onRecent?:         () => void;
+  onMessages?:       () => void;
   onNotifications?:  () => void;
   onProfile?:        () => void;
+  onMap?:            () => void;
 }
 
 export default function ClientHomeScreen({
@@ -60,97 +41,207 @@ export default function ClientHomeScreen({
   onSearch,
   onVoice,
   onFavorites,
+  onRecent,
+  onMessages,
   onNotifications,
   onProfile,
+  onMap,
 }: Props) {
-  const [tab,    setTab]    = useState<HomeTab>('nearby');
-  const [navTab, setNavTab] = useState<NavTab>('home');
+  const t = useT();
 
-  // Données utilisateur depuis le store
-  const userInitial   = useAuthStore(s => s.user?.initial ?? 'A');
-  const unreadCount   = useNotificationsStore(s => s.notifications.filter(n => n.unread).length);
+  const [tab,     setTab]     = useState<HomeTab>('nearby');
+  const [navTab,  setNavTab]  = useState<NavTab>('home');
+  const [nearby,  setNearby]  = useState<NearbyPlace[]>([]);
+  const [recos,   setRecos]   = useState<RecoItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const userInitial       = useAuthStore(s => s.user?.initial  ?? 'A');
+  const userName          = useAuthStore(s => s.user?.name     ?? '');
+  const userAvatarUrl     = useAuthStore(s => s.user?.avatarUrl);
+  const unreadCount       = useNotificationsStore(s => s.notifications.filter(n => n.unread).length);
+  const favorites         = useFavoritesStore(s => s.favorites);
+  const loadFavorites     = useFavoritesStore(s => s.loadFavorites);
+  const coords            = useLocationStore(s => s.coords);
+  const zoneName          = useLocationStore(s => s.zoneName);
+  const refreshLocation   = useLocationStore(s => s.refreshLocation);
+
+  async function loadShops() {
+    try {
+      const shops = await shopsService.getShops();
+
+      // Recommandations : VIP scoring + vip_manual + featured_manual (tous calculés dans rowToShop)
+      const recoShops: RecoItem[] = shops
+        .filter(s => s.isVip || s.isFeatured)
+        .map(s => ({
+          id:      s.id,
+          initial: s.name.charAt(0).toUpperCase(),
+          name:    s.name,
+          desc:    s.subtitle || `${s.category} · ${s.zone}`,
+          logoUrl: s.logoUrl,
+        }));
+      setRecos(recoShops);
+
+      // Toutes les boutiques → liste "Tout près de toi"
+      const currentCoords = useLocationStore.getState().coords;
+      const places: NearbyPlace[] = shops.map(shop => {
+        const distance = (currentCoords && shop.latitude && shop.longitude)
+          ? formatDistance(haversineMeters(
+              currentCoords.latitude, currentCoords.longitude,
+              shop.latitude, shop.longitude,
+            ))
+          : '';
+        const shopStatus = computeStatus(
+          shop.openingHours as WeekHours | null,
+          shop.isManuallyClose,
+        );
+        return {
+          id:          shop.id,
+          name:        shop.name,
+          category:    shop.category,
+          rating:      shop.rating,
+          distance,
+          isVip:       shop.isVip,
+          isFav:       favorites.includes(shop.id),
+          status:      shopStatus.isOpen ? 'open' : 'closed',
+          statusLabel: shopStatus.label,
+          logoUrl:     shop.logoUrl,
+        } as NearbyPlace;
+      });
+
+      // Tri par distance si la position est disponible
+      if (currentCoords) {
+        places.sort((a, b) => {
+          const toM = (s: string) => {
+            if (!s) return 999999;
+            if (s.includes('km')) return parseFloat(s) * 1000;
+            return parseFloat(s);
+          };
+          return toM(a.distance) - toM(b.distance);
+        });
+      }
+
+      setNearby(places);
+    } catch {
+      setNearby([]);
+      setRecos([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadFavorites();
+    refreshLocation();
+    loadShops();
+  }, []);
 
   const handleNavPress = (t: NavTab) => {
     setNavTab(t);
     if (t === 'favorites') onFavorites?.();
     if (t === 'voice')     onVoice?.();
+    if (t === 'messages')  onMessages?.();
     if (t === 'profile')   onProfile?.();
   };
 
+  // Gestion du grid de catégories : 'map' déclenche l'écran carte
+  const handleCategorySelect = (id: string, label: string) => {
+    if (id === 'map') { onMap?.(); return; }
+    onCategoryPress?.(id as CatId, label);
+  };
+
   return (
-    <View style={styles.root}>
+    <LassiScreen
+      header={
+        <View style={{ paddingTop: TOP_INSET }}>
+          <View style={styles.px}>
+            <HomeHeader
+              quartier={zoneName}
+              initial={userInitial}
+              name={userName}
+              avatarUrl={userAvatarUrl}
+              unreadCount={unreadCount}
+              onAvatar={onNotifications}
+              onLocation={refreshLocation}
+            />
+          </View>
+          <View style={styles.px}>
+            <SearchBar
+              value=""
+              onChangeText={() => {}}
+              onPress={onSearch}
+              onMicPress={onVoice}
+            />
+          </View>
+          <View style={styles.px}>
+            <TabSelector active={tab} onChange={setTab} onNearbyPress={onMap} onRecentPress={onRecent} />
+          </View>
+        </View>
+      }
+      footer={<BottomNav active={navTab} onPress={handleNavPress} />}
+    >
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={{ paddingTop: TOP_INSET, paddingBottom: NAV_HEIGHT + 16, flexGrow: 1 }}
+        contentContainerStyle={{ paddingBottom: NAV_HEIGHT + 16, flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header localisation + avatar (avatar → notifications) */}
-        <View style={styles.px}>
-          <HomeHeader
-            quartier="Grand Dakar"
-            initial={userInitial}
-            unreadCount={unreadCount}
-            onAvatar={onNotifications}
-          />
-        </View>
-
-        {/* Barre de recherche — appui → SearchScreen ; micro → VoiceAssistant */}
-        <View style={styles.px}>
-          <SearchBar
-            value=""
-            onChangeText={() => {}}
-            onPress={onSearch}
-            onMicPress={onVoice}
-          />
-        </View>
-
-        {/* Onglets */}
-        <View style={styles.px}>
-          <TabSelector active={tab} onChange={setTab} />
-        </View>
-
-        {/* Catégories */}
         <View style={styles.sectionHead}>
-          <Text style={styles.secTitle}>Explore ton quartier</Text>
+          <Text style={styles.secTitle}>{t.home.explore}</Text>
         </View>
         <View style={styles.px}>
-          <CategoryGrid onSelect={(id, title) => onCategoryPress?.(id as CatId, title)} />
+          <CategoryGrid onSelect={handleCategorySelect} />
         </View>
 
-        {/* Recommandations premium */}
-        <View style={styles.recoSection}>
-          <View style={[styles.sectionHead, styles.px]}>
-            <Text style={styles.secTitle}>✨ Recommandations LASSI</Text>
-            <Text style={styles.secLink}>Sponsorisé</Text>
+        {/* Recommandations — boutiques VIP réelles */}
+        {recos.length > 0 && (
+          <View style={styles.recoSection}>
+            <View style={[styles.sectionHead, styles.px]}>
+              <Text style={styles.secTitle}>{t.home.recommendations}</Text>
+              <Text style={styles.secLink}>VIP</Text>
+            </View>
+            <RecoCarousel
+              items={recos}
+              onPress={(id) => {
+                const shop = recos.find(r => r.id === id);
+                if (shop) onShopPress?.(id, shop.name);
+              }}
+            />
           </View>
-          <RecoCarousel items={RECOS} />
-        </View>
+        )}
 
-        {/* Radar de proximité */}
+        {/* Boutiques à proximité */}
         <View style={styles.px}>
           <View style={styles.sectionHead}>
-            <Text style={styles.secTitle}>📍 Tout près de toi</Text>
+            <Text style={styles.secTitle}>{t.home.nearby}</Text>
           </View>
-          {NEARBY.map(place => (
-            <NearbyCard
-              key={place.id}
-              place={place}
-              onPress={() => onShopPress?.(place.id, place.name)}
-            />
-          ))}
+
+          {loading ? (
+            <View style={styles.loader}>
+              <ActivityIndicator color={colors.accent} />
+            </View>
+          ) : nearby.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyTxt}>{t.home.noShops}</Text>
+            </View>
+          ) : (
+            nearby.map(place => (
+              <NearbyCard
+                key={place.id}
+                place={{ ...place, isFav: favorites.includes(place.id) }}
+                onPress={() => onShopPress?.(place.id, place.name)}
+              />
+            ))
+          )}
         </View>
       </ScrollView>
 
-      {/* Barre de navigation fixe */}
-      <BottomNav active={navTab} onPress={handleNavPress} />
-    </View>
+    </LassiScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  root:  { flex: 1, backgroundColor: colors.bg },
+  root:   { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
-  px:    { paddingHorizontal: 20 },
+  px:     { paddingHorizontal: 20 },
   sectionHead: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -164,13 +255,13 @@ const styles = StyleSheet.create({
     fontSize: 17,
     letterSpacing: -0.2,
   },
-  secLink: {
-    color: colors.accent,
-    fontFamily: fonts.ui,
-    fontSize: 12,
-  },
-  recoSection: {
-    marginTop: 28,
-    marginBottom: 8,
+  secLink: { color: colors.accent, fontFamily: fonts.ui, fontSize: 12 },
+  recoSection: { marginTop: 28, marginBottom: 8 },
+  loader: { paddingVertical: 32, alignItems: 'center' },
+  empty:  { paddingVertical: 24, alignItems: 'center' },
+  emptyTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
   },
 });

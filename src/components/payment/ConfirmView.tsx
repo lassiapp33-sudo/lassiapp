@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform } from '
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { OrderInfo, PayMethod } from '../../types/payment';
+import { LassiMascotte } from '../LassiMascotte';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -57,6 +58,14 @@ export default function ConfirmView({ order, method, onBackToChat }: Props) {
       contentContainerStyle={[styles.container, { paddingBottom: BOTTOM_PAD }]}
       showsVerticalScrollIndicator={false}
     >
+      {/* ── Mascotte célébration ─────────────────────────────────────────── */}
+      <LassiMascotte
+        forme="welcome"
+        animation="jelly"
+        taille={120}
+        style={{ marginBottom: 8 }}
+      />
+
       {/* ── Cercle de validation ─────────────────────────────────────────── */}
       {/* Anneau externe (border only, transparent fill) */}
       <View style={styles.outerRing}>

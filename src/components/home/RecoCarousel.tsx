@@ -2,12 +2,14 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
+import Avatar from '../Avatar';
 
 export interface RecoItem {
-  id:      string;
-  initial: string;
-  name:    string;
-  desc:    string;
+  id:       string;
+  initial:  string;
+  name:     string;
+  desc:     string;
+  logoUrl?: string | null;
 }
 
 interface Props {
@@ -43,9 +45,14 @@ export default function RecoCarousel({ items, onPress }: Props) {
 
           {/* Contenu bas de carte */}
           <View style={styles.content}>
-            <View style={styles.logo}>
-              <Text style={styles.logoTxt}>{item.initial}</Text>
-            </View>
+            {/* Logo boutique recommandée — Avatar unique */}
+            <Avatar
+              imageUrl={item.logoUrl}
+              name={item.name}
+              size={38}
+              variant="shop"
+              style={{ marginBottom: 8 }}
+            />
             <Text style={styles.name}>{item.name}</Text>
             <Text style={styles.desc}>{item.desc}</Text>
           </View>
@@ -97,20 +104,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 14,
-  },
-  logo: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  logoTxt: {
-    color: colors.bg,
-    fontFamily: fonts.title,
-    fontSize: 16,
   },
   name: {
     color: colors.white,

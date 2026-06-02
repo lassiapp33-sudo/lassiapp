@@ -1,71 +1,63 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { IncomingOrder, OrderStatus } from '../types/orders';
-
-// Données initiales — remplacées par le flux temps-réel Supabase en Phase 3
-const INITIAL_ORDERS: IncomingOrder[] = [
-  {
-    id: 'o1', orderId: '#A427', initial: 'A', clientName: 'Aïssatou Ndiaye',
-    status: 'new', payMethod: 'wave', total: 1200, timeLabel: 'il y a 2 min',
-    items: [
-      { qty: 2, name: 'Pain Œuf Mayo', price: 1000 },
-      { qty: 1, name: 'Café Touba',    price: 200  },
-    ],
-  },
-  {
-    id: 'o2', orderId: '#A428', initial: 'O', clientName: 'Omar Diène',
-    status: 'new', payMethod: 'om', total: 1050, timeLabel: 'il y a 5 min',
-    items: [
-      { qty: 1, name: 'Pain Viande', price: 800 },
-      { qty: 1, name: 'Thé Lipton',  price: 250 },
-    ],
-  },
-  {
-    id: 'o3', orderId: '#A425', initial: 'M', clientName: 'Moussa Sow',
-    status: 'preparing', payMethod: 'wave', total: 800,
-    timeLabel: 'acceptée à 08:09', prepTime: '10-15 min',
-    items: [
-      { qty: 1, name: 'Spaghetti',  price: 600 },
-      { qty: 1, name: 'Café Touba', price: 200 },
-    ],
-  },
-];
+import { create }                      from 'zustand';
+import { IncomingOrder, OrderStatus }  from '../types/orders';
+import * as ordersService              from '../services/orders';
 
 interface OrdersState {
-  orders: IncomingOrder[];
+  orders:   IncomingOrder[];
+  shopId:   string | null;
+  loading:  boolean;
 
+  // Chargement depuis Supabase (appelé par OrdersScreen au mount)
+  loadOrders: (shopId: string) => Promise<void>;
+
+  // Mutations — optimistes + write-through Supabase
   setOrderStatus: (id: string, status: OrderStatus, prepTime?: string) => void;
   removeOrder:    (id: string) => void;
   addOrder:       (order: IncomingOrder) => void;
+
+  setLoading: (v: boolean) => void;
 }
 
-const useOrdersStore = create<OrdersState>()(
-  persist(
-    (set) => ({
-      orders: INITIAL_ORDERS,
+const useOrdersStore = create<OrdersState>()((set) => ({
+  orders:  [],
+  shopId:  null,
+  loading: false,
 
-      setOrderStatus: (id, status, prepTime) => set((state) => ({
-        orders: state.orders.map(o =>
-          o.id === id
-            ? { ...o, status, ...(prepTime ? { prepTime } : {}) }
-            : o
-        ),
-      })),
+  setLoading: (v) => set({ loading: v }),
 
-      removeOrder: (id) => set((state) => ({
-        orders: state.orders.filter(o => o.id !== id),
-      })),
-
-      addOrder: (order) => set((state) => ({
-        orders: [...state.orders, order],
-      })),
-    }),
-    {
-      name:    'lassi-orders',
-      storage: createJSONStorage(() => AsyncStorage),
+  loadOrders: async (shopId) => {
+    set({ loading: true, shopId });
+    try {
+      const orders = await ordersService.getShopOrders(shopId);
+      set({ orders, loading: false });
+    } catch (err) {
+      console.warn('[ordersStore] loadOrders:', err);
+      set({ loading: false });
     }
-  )
-);
+  },
+
+  setOrderStatus: (id, status, prepTime) => {
+    set(state => ({
+      orders: state.orders.map(o =>
+        o.id === id
+          ? { ...o, status, ...(prepTime ? { prepTime } : {}) }
+          : o,
+      ),
+    }));
+    ordersService.updateOrderStatus(id, status, prepTime).catch(console.warn);
+  },
+
+  // Refuse la commande — la garde dans la liste (visible dans l'onglet Annulées)
+  removeOrder: (id) => {
+    set(state => ({
+      orders: state.orders.map(o =>
+        o.id === id ? { ...o, status: 'refused' as const } : o
+      ),
+    }));
+    ordersService.updateOrderStatus(id, 'refused').catch(console.warn);
+  },
+
+  addOrder: (order) => set(state => ({ orders: [order, ...state.orders] })),
+}));
 
 export default useOrdersStore;

@@ -1,21 +1,21 @@
 import React from 'react';
-import { ScrollView, TouchableOpacity, Text, View, StyleSheet } from 'react-native';
+import { ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
+import { useT } from '../../i18n';
 
 export type FilterId = 'near' | 'top' | 'open';
 
 interface Filter {
   id:    FilterId;
-  label: string;
   icon:  (active: boolean) => React.ReactNode;
 }
 
 const c = (on: boolean) => on ? colors.accent : colors.muted;
 
-const FILTERS: Filter[] = [
+const FILTER_DEFS: Filter[] = [
   {
-    id: 'near', label: 'Plus proche',
+    id: 'near',
     icon: on => (
       <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
         <Path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" stroke={c(on)} />
@@ -24,7 +24,7 @@ const FILTERS: Filter[] = [
     ),
   },
   {
-    id: 'top', label: 'Mieux notés',
+    id: 'top',
     icon: on => (
       <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
         <Path d="M12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9z" stroke={c(on)} fill={on ? colors.accent : 'none'} />
@@ -32,7 +32,7 @@ const FILTERS: Filter[] = [
     ),
   },
   {
-    id: 'open', label: 'Ouvert',
+    id: 'open',
     icon: on => (
       <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
         <Circle cx={12} cy={12} r={10} stroke={c(on)} />
@@ -48,13 +48,21 @@ interface Props {
 }
 
 export default function FilterBar({ active, onChange }: Props) {
+  const t = useT();
+  const labels: Record<FilterId, string> = {
+    near: t.category.nearFilter,
+    top:  t.category.topFilter,
+    open: t.category.openFilter,
+  };
+
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.bar}
       contentContainerStyle={styles.list}
     >
-      {FILTERS.map(f => {
+      {FILTER_DEFS.map(f => {
         const on = f.id === active;
         return (
           <TouchableOpacity
@@ -64,7 +72,7 @@ export default function FilterBar({ active, onChange }: Props) {
             activeOpacity={0.8}
           >
             {f.icon(on)}
-            <Text style={[styles.label, on && styles.labelOn]}>{f.label}</Text>
+            <Text style={[styles.label, on && styles.labelOn]}>{labels[f.id]}</Text>
           </TouchableOpacity>
         );
       })}
@@ -73,6 +81,7 @@ export default function FilterBar({ active, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
+  bar: { height: 62 },
   list: {
     gap: 8,
     paddingHorizontal: 20,
