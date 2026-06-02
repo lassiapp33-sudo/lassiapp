@@ -1,0 +1,290 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// ─── Calcul réduction serveur ────────────────────────────────────────────────
+
+interface PromoRow {
+  id:         string;
+  titre:      string;
+  type:       string;
+  valeur:     number;
+  cible_type: string;
+  cible_id:   string | null;
+  montant_min: number;
+}
+
+interface OrderItemInput {
+  productId: string;
+  qty:       number;
+}
+
+interface ProductRow {
+  id:       string;
+  price:    number;
+  name:     string;
+  stock:    string;
+  category: string;
+}
+
+function applyBestPromo(
+  promos:     PromoRow[],
+  products:   ProductRow[],
+  items:      OrderItemInput[],
+  subtotal:   number,
+): { discountAmount: number; promoLabel: string | null } {
+  let best: { discountAmount: number; promoLabel: string } | null = null;
+
+  for (const promo of promos) {
+    if (promo.montant_min > 0 && subtotal < promo.montant_min) continue;
+
+    let reduction   = 0;
+    let label       = '';
+    const val       = Number(promo.valeur);
+
+    switch (promo.type) {
+      case 'pourcentage': {
+        let base = 0;
+        if (promo.cible_type === 'vitrine') {
+          base  = subtotal;
+          label = `${promo.titre} −${val}%`;
+        } else if (promo.cible_type === 'produit' && promo.cible_id) {
+          const targets = items.filter(i => i.productId === promo.cible_id);
+          const prod    = products.find(p => p.id === promo.cible_id);
+          base  = targets.reduce((s, i) => s + (prod?.price ?? 0) * i.qty, 0);
+          label = `${promo.titre} −${val}%`;
+        } else if (promo.cible_type === 'categorie' && promo.cible_id) {
+          const catProds = products.filter(p => p.category === promo.cible_id).map(p => p.id);
+          const targets  = items.filter(i => catProds.includes(i.productId));
+          base  = targets.reduce((s, i) => {
+            const p = products.find(x => x.id === i.productId);
+            return s + (p?.price ?? 0) * i.qty;
+          }, 0);
+          label = `${promo.titre} −${val}%`;
+        }
+        reduction = Math.round(base * val / 100);
+        break;
+      }
+
+      case 'montant_fixe': {
+        if (promo.cible_type === 'vitrine') {
+          reduction = Math.min(val, subtotal - 1);
+          label     = `${promo.titre} −${val} F`;
+        }
+        break;
+      }
+
+      case 'quantite_offerte': {
+        // valeur = X (buy X get 1 free)
+        if (promo.cible_type === 'produit' && promo.cible_id) {
+          const targets  = items.filter(i => i.productId === promo.cible_id);
+          const prod     = products.find(p => p.id === promo.cible_id);
+          const totalQty = targets.reduce((s, i) => s + i.qty, 0);
+          const freeQty  = Math.floor(totalQty / (val + 1));
+          if (freeQty > 0 && prod) {
+            reduction = prod.price * freeQty;
+            label     = `${promo.titre} ${val}+1 offert`;
+          }
+        }
+        break;
+      }
+
+      case 'prix_barre': {
+        // valeur = nouveau prix du produit
+        if (promo.cible_type === 'produit' && promo.cible_id) {
+          const targets = items.filter(i => i.productId === promo.cible_id);
+          const prod    = products.find(p => p.id === promo.cible_id);
+          if (prod) {
+            const orig  = targets.reduce((s, i) => s + prod.price * i.qty, 0);
+            const promo_ = targets.reduce((s, i) => s + val * i.qty, 0);
+            reduction   = orig - promo_;
+            label       = `${promo.titre} prix promo`;
+          }
+        }
+        break;
+      }
+    }
+
+    // Garder la réduction la plus avantageuse pour le client
+    if (reduction > 0 && (!best || reduction > best.discountAmount)) {
+      best = { discountAmount: reduction, promoLabel: label };
+    }
+  }
+
+  return best
+    ? { discountAmount: best.discountAmount, promoLabel: best.promoLabel }
+    : { discountAmount: 0, promoLabel: null };
+}
+
+// ─── Handler principal ───────────────────────────────────────────────────────
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+
+  try {
+    const supabaseUser = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } },
+    )
+
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser()
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Non autorisé' }), {
+        status: 401, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { shopId, items, note } = await req.json()
+    if (!shopId || !Array.isArray(items) || items.length === 0) {
+      return new Response(JSON.stringify({ error: 'shopId et items requis' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    )
+
+    // ① Recharger les produits depuis la DB (prix officiels)
+    const productIds = items.map((i: any) => i.productId)
+    const { data: products, error: prodError } = await admin
+      .from('products')
+      .select('id, price, name, stock, category')
+      .in('id', productIds)
+      .eq('shop_id', shopId)
+
+    if (prodError || !products?.length) throw new Error('Produits introuvables')
+
+    const productMap: Record<string, ProductRow> =
+      Object.fromEntries(products.map((p: any) => [p.id, p]))
+
+    // ② Calculer le sous-total aux prix réels (ignorer tout montant client)
+    let subtotal = 0
+    const orderItems = items.map((item: any) => {
+      const product = productMap[item.productId]
+      if (!product) throw new Error(`Produit ${item.productId} introuvable`)
+      if (product.stock === 'out') throw new Error(`"${product.name}" est en rupture de stock`)
+      subtotal += product.price * item.qty
+      return { product_name: product.name, qty: item.qty, unit_price: product.price }
+    })
+
+    // ③ Recharger les promos actives et valides côté serveur
+    const now = new Date().toISOString()
+    const { data: promos } = await admin
+      .from('promotions')
+      .select('id, titre, type, valeur, cible_type, cible_id, montant_min')
+      .eq('shop_id', shopId)
+      .eq('actif', true)
+      .or(`date_debut.is.null,date_debut.lte.${now}`)
+      .or(`date_fin.is.null,date_fin.gte.${now}`)
+
+    // ④ Appliquer la meilleure réduction (jamais confiance au client)
+    const { discountAmount, promoLabel } = applyBestPromo(
+      promos ?? [],
+      products as ProductRow[],
+      items as OrderItemInput[],
+      subtotal,
+    )
+
+    const total = Math.max(subtotal - discountAmount, 1) // jamais ≤ 0
+
+    // ⑤ Commission LASSİ 0,5% calculée sur le montant APRÈS réduction
+    const commission = Math.round(total * 0.005)
+
+    // ⑥ Créer la commande avec les montants recalculés
+    const { data: profile } = await admin
+      .from('profiles').select('name').eq('id', user.id).maybeSingle()
+
+    const { data: order, error: orderError } = await admin
+      .from('orders')
+      .insert({
+        shop_id:         shopId,
+        client_id:       user.id,
+        client_name:     profile?.name ?? 'Client',
+        total,
+        discount_amount: discountAmount,
+        promo_label:     promoLabel,
+        status:          'pending',
+        pay_method:      'wave',
+        order_type:      'takeaway',
+        note:            note ?? null,
+      })
+      .select()
+      .single()
+
+    if (orderError) throw orderError
+
+    const { error: itemsError } = await admin
+      .from('order_items')
+      .insert(orderItems.map((i: any) => ({ ...i, order_id: order.id })))
+
+    if (itemsError) throw itemsError
+
+    // ⑦ Push au prestataire — best-effort, ne bloque pas la réponse au client
+    try {
+      const { data: shop } = await admin
+        .from('shops')
+        .select('merchant_id')
+        .eq('id', shopId)
+        .single()
+
+      if (shop?.merchant_id) {
+        const { data: tokenRows } = await admin
+          .from('push_tokens')
+          .select('token')
+          .eq('user_id', shop.merchant_id)
+
+        const tokens: string[] = (tokenRows ?? []).map((r: any) => r.token)
+        const clientName = profile?.name ?? 'Un client'
+        const totalFr    = `${Number(total).toLocaleString('fr-FR')} FCFA`
+        const notifBody  = `${clientName} vient de passer une commande de ${totalFr}.`
+
+        if (tokens.length > 0) {
+          await fetch('https://exp.host/--/api/v2/push/send', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(tokens.map(to => ({
+              to,
+              title:     'Nouvelle commande 🛎️',
+              body:      notifBody,
+              data:      { type: 'commande', orderId: order.id },
+              sound:     'default',
+              channelId: 'commandes',
+            }))),
+          })
+        }
+
+        // Notification in-app (écran cloche)
+        await admin.from('notifications').insert({
+          user_id: shop.merchant_id,
+          type:    'order',
+          title:   'Nouvelle commande 🛎️',
+          body:    notifBody,
+          data:    { order_id: order.id },
+        })
+      }
+    } catch {
+      // best-effort : la commande est déjà créée, on ignore l'erreur de notif
+    }
+
+    return new Response(JSON.stringify({
+      orderId:        order.id,
+      total,
+      subtotal,
+      discountAmount,
+      promoLabel,
+      commission,
+    }), {
+      status: 200, headers: { ...CORS, 'Content-Type': 'application/json' },
+    })
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err.message ?? 'Erreur interne' }), {
+      status: 500, headers: { ...CORS, 'Content-Type': 'application/json' },
+    })
+  }
+})
