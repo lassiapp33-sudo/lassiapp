@@ -240,13 +240,41 @@ Deno.serve(async (req) => {
       .select()
       .single()
 
-    if (orderError) throw orderError
+    if (orderError) {
+      // Double-tap concurrent : la contrainte UNIQUE (client_id, idempotency_key) a rejeté
+      // le doublon → récupérer la commande déjà créée et la retourner comme si c'était un
+      // cache hit normal. Code 23505 = unique_violation PostgreSQL.
+      if (orderError.code === '23505' && idempotencyKey) {
+        const { data: dup } = await admin
+          .from('orders')
+          .select('id, total, discount_amount, promo_label')
+          .eq('idempotency_key', idempotencyKey)
+          .eq('client_id', user.id)
+          .maybeSingle()
+        if (dup) {
+          const commission = Math.round(dup.total * 0.005)
+          return new Response(JSON.stringify({
+            orderId:        dup.id,
+            total:          dup.total,
+            subtotal:       dup.total + (dup.discount_amount ?? 0),
+            discountAmount: dup.discount_amount ?? 0,
+            promoLabel:     dup.promo_label,
+            commission,
+          }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } })
+        }
+      }
+      throw orderError
+    }
 
     const { error: itemsError } = await admin
       .from('order_items')
       .insert(orderItems.map((i: any) => ({ ...i, order_id: order.id })))
 
-    if (itemsError) throw itemsError
+    if (itemsError) {
+      // Rollback manuel : supprimer la commande orpheline pour libérer la clé d'idempotence
+      await admin.from('orders').delete().eq('id', order.id)
+      throw itemsError
+    }
 
     // ⑧ Push au prestataire — best-effort, ne bloque pas la réponse au client
     try {
