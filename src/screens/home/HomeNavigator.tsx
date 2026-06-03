@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import logger from '../../utils/logger';
 import ClientHomeScreen      from './ClientHomeScreen';
 import ClientProfileScreen   from './ClientProfileScreen';
 import ClientOrdersScreen    from './ClientOrdersScreen';
@@ -56,7 +57,7 @@ export default function HomeNavigator({ onLogout }: Props) {
 
   // Enregistre la visite dans recently_viewed puis navigue vers la vitrine
   const pushShop = (shopId: string, shopName: string) => {
-    recordView(shopId).catch(console.warn);
+    recordView(shopId).catch(err => logger.warn('[HomeNavigator] recordView:', err));
     push({ id: 'shop', shopId, shopName });
   };
 
@@ -84,7 +85,7 @@ export default function HomeNavigator({ onLogout }: Props) {
     } else if (pendingNav.type === 'order') {
       setHistory([{ id: 'main' }, { id: 'orders' }]);
     }
-  }, [pendingNav]);
+  }, [pendingNav, clearPending]);
 
   // ── Paiement ──────────────────────────────────────────────────────────────
   if (screen.id === 'payment') {

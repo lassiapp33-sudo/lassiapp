@@ -1,5 +1,6 @@
 import { create }           from 'zustand';
 import * as favService      from '../services/favorites';
+import logger               from '../utils/logger';
 
 interface FavoritesState {
   favorites:      string[];   // shopIds en favori
@@ -41,7 +42,7 @@ const useFavoritesStore = create<FavoritesState>()((set, get) => ({
         : [...favorites, shopId],
     });
 
-    favService.toggleFavorite(shopId, isFav).catch(console.warn);
+    favService.toggleFavorite(shopId, isFav).catch(err => logger.warn('[favoritesStore] toggleFavorite:', err));
   },
 }));
 

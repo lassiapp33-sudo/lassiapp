@@ -1,5 +1,6 @@
 import { create }           from 'zustand';
 import * as notifsService   from '../services/notifications';
+import logger               from '../utils/logger';
 
 export type NotifType = 'order' | 'pay' | 'vip' | 'msg';
 
@@ -51,14 +52,14 @@ const useNotificationsStore = create<NotifState>()((set) => ({
         n.id === id ? { ...n, unread: false } : n,
       ),
     }));
-    notifsService.markAsRead(id).catch(console.warn);
+    notifsService.markAsRead(id).catch(err => logger.warn('[notificationsStore] markRead:', err));
   },
 
   markAllRead: () => {
     set(state => ({
       notifications: state.notifications.map(n => ({ ...n, unread: false })),
     }));
-    notifsService.markAllRead().catch(console.warn);
+    notifsService.markAllRead().catch(err => logger.warn('[notificationsStore] markAllRead:', err));
   },
 
   // Utilisé par le hook Realtime pour injecter une nouvelle notif en live

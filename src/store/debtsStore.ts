@@ -1,6 +1,7 @@
 import { create }              from 'zustand';
 import { Debtor }             from '../types/debts';
 import * as debtsService      from '../services/debts';
+import logger                 from '../utils/logger';
 
 interface DebtsState {
   debtors: Debtor[];
@@ -32,7 +33,7 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
       const debtors = await debtsService.getDebts(shopId);
       set({ debtors, loading: false });
     } catch (err) {
-      console.warn('[debtsStore] loadDebts:', err);
+      logger.warn('[debtsStore] loadDebts:', err);
       set({ loading: false });
     }
   },
@@ -46,7 +47,7 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
           : d,
       ),
     }));
-    debtsService.addToDebt(debtorId, amount).catch(console.warn);
+    debtsService.addToDebt(debtorId, amount).catch(logger.warn);
   },
 
   addDebtor: async (debtor) => {
@@ -56,7 +57,7 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
       const saved = await debtsService.addDebtor(shopId, debtor.name, debtor.phone);
       set(state => ({ debtors: [...state.debtors, saved] }));
     } catch (err) {
-      console.warn('[debtsStore] addDebtor:', err);
+      logger.warn('[debtsStore] addDebtor:', err);
     }
   },
 
@@ -68,12 +69,12 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
           : d,
       ),
     }));
-    debtsService.markPaid(debtorId).catch(console.warn);
+    debtsService.markPaid(debtorId).catch(logger.warn);
   },
 
   removeDebtor: (debtorId) => {
     set(state => ({ debtors: state.debtors.filter(d => d.id !== debtorId) }));
-    debtsService.removeDebtor(debtorId).catch(console.warn);
+    debtsService.removeDebtor(debtorId).catch(logger.warn);
   },
 }));
 

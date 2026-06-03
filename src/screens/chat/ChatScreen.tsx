@@ -21,6 +21,7 @@ import * as shopsService from '../../services/shops';
 import { openWhatsAppCall } from '../../utils/whatsapp';
 import { ChatMessage }   from '../../services/chat';
 import { useRealtimeMessages } from '../../hooks/useRealtimeMessages';
+import logger from '../../utils/logger';
 
 // ─── Types locaux UI ──────────────────────────────────────────────────────────
 
@@ -208,13 +209,13 @@ export default function ChatScreen({
           await chatService.markConversationRead(convId);
         }
       } catch (err) {
-        console.warn('[ChatScreen] init:', err);
+        logger.warn('[ChatScreen] init:', err);
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [shopId, directConvId, currentUserId]);
+  }, [shopId, directConvId, currentUserId, userRole]);
 
   // ── Retour de PaymentScreen → marquer ticket payé ─────────────────────────
   useEffect(() => {
@@ -222,12 +223,13 @@ export default function ChatScreen({
     processedPayments.current.add(paidTicketId);
     applyPayment(paidTicketId);
     if (conversationId) {
-      chatService.updateTicketStatus(paidTicketId).catch(console.warn);
+      chatService.updateTicketStatus(paidTicketId).catch(err => logger.warn('[ChatScreen] updateTicketStatus:', err));
     }
-  }, [paidTicketId, conversationId]);
+  }, [paidTicketId, conversationId, applyPayment]);
 
   // ── Marquer ticket payé localement + message de confirmation ─────────────
-  const applyPayment = (ticketId: string) => {
+  // useCallback([]) : setMessages et les refs sont stables, pas de dépendances réactives
+  const applyPayment = useCallback((ticketId: string) => {
     if (!isMounted.current) return;
     setMessages(prev => {
       const ticket = prev.find(m => m.id === ticketId) as TicketMsg | undefined;
@@ -249,7 +251,7 @@ export default function ChatScreen({
       }]);
     }, 1400);
     pendingTimers.current.push(t);
-  };
+  }, []);
 
   // ── Abonnement Realtime ───────────────────────────────────────────────────
   const handleInsert = useCallback((msg: ChatMessage) => {
@@ -306,7 +308,7 @@ export default function ChatScreen({
       knownIds.current.add(saved.id);
       setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: saved.id } : m));
     } catch (err) {
-      console.warn('[ChatScreen] sendMessage:', err);
+      logger.warn('[ChatScreen] sendMessage:', err);
     }
   };
 
@@ -346,7 +348,7 @@ export default function ChatScreen({
           : m,
       ));
     } catch (err: any) {
-      console.warn('[ChatScreen] handleVoiceSend:', err?.message ?? err);
+      logger.warn('[ChatScreen] handleVoiceSend:', err?.message ?? err);
       if (!isMounted.current) return;
       setMessages(prev => prev.filter(m => m.id !== tempId));
       Alert.alert('Envoi échoué', err?.message ?? 'Erreur inconnue');
@@ -378,7 +380,7 @@ export default function ChatScreen({
         m.id === tempId ? { ...m, id: saved.id, imageUrl } : m,
       ));
     } catch (err: any) {
-      console.warn('[ChatScreen] handleImageSend:', err?.message ?? err);
+      logger.warn('[ChatScreen] handleImageSend:', err?.message ?? err);
       if (!isMounted.current) return;
       setMessages(prev => prev.filter(m => m.id !== tempId));
       Alert.alert('Envoi échoué', err?.message ?? 'Erreur inconnue');

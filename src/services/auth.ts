@@ -17,6 +17,7 @@ import { AuthUser, UserRole }         from '../store/authStore';
 import { getInitials }                from '../utils/getInitials';
 import { uploadImage, logoPath }      from './storage';
 import { saveConsent }               from './consents';
+import logger                       from '../utils/logger';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -109,12 +110,12 @@ export async function register(params: RegisterParams): Promise<AuthUser> {
 
   // Erreur non bloquante : le trigger a déjà créé la ligne de base
   if (profileError) {
-    console.warn('[auth] Upsert profil échoué (trigger couvre):', profileError.message);
+    logger.warn('[auth] Upsert profil échoué (trigger couvre):', profileError.message);
   }
 
   // Enregistre la preuve de consentement CGU (non bloquant)
   saveConsent(signUpData.user.id, params.role === 'merchant' ? 'prestataire' : 'client')
-    .catch(e => console.warn('[auth] saveConsent échoué (non bloquant):', e));
+    .catch(e => logger.warn('[auth] saveConsent échoué (non bloquant):', e));
 
   return {
     id:      signUpData.user.id,
@@ -188,7 +189,7 @@ export async function registerMerchant(params: RegisterMerchantParams): Promise<
       const logoUrl = await uploadImage('logos', params.logoLocalUri, path);
       await supabase.from('shops').update({ logo_url: logoUrl }).eq('id', shopRow.id);
     } catch (e) {
-      console.warn('[auth] Upload logo échoué (non bloquant):', e);
+      logger.warn('[auth] Upload logo échoué (non bloquant):', e);
     }
   }
 

@@ -11,6 +11,7 @@ import ConfirmView   from '../../components/payment/ConfirmView';
 import { colors, fonts, radius } from '../../theme';
 import { OrderInfo, PayMethod } from '../../types/payment';
 import * as payService from '../../services/payment';
+import logger          from '../../utils/logger';
 
 // ─── Label de section ────────────────────────────────────────────────────────
 
@@ -95,7 +96,7 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
       await Linking.openURL(session.paymentUrl);
       setStage('waiting');
     } catch (err) {
-      console.warn('[PaymentScreen] handlePay:', err);
+      logger.warn('[PaymentScreen] handlePay:', err);
       Alert.alert('Erreur', "Impossible d'initier le paiement. Réessaie dans un instant.");
     } finally {
       setProcessing(false);
@@ -117,7 +118,7 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
         Alert.alert('Paiement non trouvé', "Le paiement n'est pas encore confirmé. Attends quelques secondes et réessaie.");
       }
     } catch (err) {
-      console.warn('[PaymentScreen] handleVerify:', err);
+      logger.warn('[PaymentScreen] handleVerify:', err);
       Alert.alert('Erreur', 'Impossible de vérifier le paiement. Réessaie.');
     } finally {
       setVerifying(false);

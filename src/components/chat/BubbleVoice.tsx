@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Audio, AVPlaybackStatus } from 'expo-av';
 import { colors, fonts } from '../../theme';
+import logger from '../../utils/logger';
 
 // Hauteurs des barres de la waveform (dp) — forme naturelle
 const WAVE_HEIGHTS = [
@@ -83,7 +84,7 @@ export default function BubbleVoice({ sender, duration, voiceUrl, time, read }: 
 
       setPlaying(true);
     } catch (err) {
-      console.warn('[BubbleVoice] togglePlay:', err);
+      logger.warn('[BubbleVoice] togglePlay:', err);
     }
   }, [playing, voiceUrl, onPlaybackStatus]);
 

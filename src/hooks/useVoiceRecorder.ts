@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { Audio } from 'expo-av';
+import logger from '../utils/logger';
 
 // Options d'enregistrement cross-platform — produit toujours un .m4a
 const RECORDING_OPTIONS: Audio.RecordingOptions = {
@@ -76,7 +77,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
         setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
       }, 1000);
     } catch (err) {
-      console.warn('[VoiceRecorder] startRecording:', err);
+      logger.warn('[VoiceRecorder] startRecording:', err);
     }
   }, []);
 
@@ -97,7 +98,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
       if (!uri || durationSec < 1) return null; // trop court
       return { uri, duration: durationSec };
     } catch (err) {
-      console.warn('[VoiceRecorder] stopRecording:', err);
+      logger.warn('[VoiceRecorder] stopRecording:', err);
       recordingRef.current = null;
       setIsRecording(false);
       return null;

@@ -3,6 +3,7 @@ import { StoreProduct, StoreCategory, StoreProfile, ShopContext } from '../types
 import { WeekHours }    from '../services/hours';
 import * as shopsService    from '../services/shops';
 import * as productsService from '../services/products';
+import logger               from '../utils/logger';
 
 const DEFAULT_CATS: StoreCategory[] = [
   { id: 'petitdej', label: 'Petit-déj', emoji: '🍳' },
@@ -131,7 +132,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
         loading: false,
       });
     } catch (err) {
-      console.warn('[shopStore] loadMyShop:', err);
+      logger.warn('[shopStore] loadMyShop:', err);
       set({ loading: false });
     }
   },
@@ -140,14 +141,14 @@ const useShopStore = create<ShopState>()((set, get) => ({
     set(state => ({ profile: { ...state.profile, ...updates } }));
     const { shopId } = get();
     if (shopId && updates.isOpen !== undefined) {
-      shopsService.updateShopStatus(shopId, updates.isOpen).catch(console.warn);
+      shopsService.updateShopStatus(shopId, updates.isOpen).catch(logger.warn);
     }
   },
 
   updateLogo: (logoUrl) => {
     set(state => ({ profile: { ...state.profile, logoUrl } }));
     const { shopId } = get();
-    if (shopId) shopsService.updateShopLogo(shopId, logoUrl).catch(console.warn);
+    if (shopId) shopsService.updateShopLogo(shopId, logoUrl).catch(logger.warn);
   },
 
   saveShopDetails: async (description, addressText, phone) => {
@@ -198,7 +199,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
       set(state => ({
         products: state.products.map(p => p.id === product.id ? product : p),
       }));
-      productsService.updateProduct(product.id, product).catch(console.warn);
+      productsService.updateProduct(product.id, product).catch(logger.warn);
     } else {
       // Nouveau produit → insérer dans Supabase pour obtenir l'UUID réel
       const saved = await productsService.addProduct(shopId, product);
@@ -237,12 +238,12 @@ const useShopStore = create<ShopState>()((set, get) => ({
         p.id === id ? { ...p, stock: p.stock === 'in' ? 'out' : 'in' } : p,
       ),
     }));
-    productsService.toggleStock(id, product.stock).catch(console.warn);
+    productsService.toggleStock(id, product.stock).catch(logger.warn);
   },
 
   removeProduct: async (id) => {
     set(state => ({ products: state.products.filter(p => p.id !== id) }));
-    productsService.deleteProduct(id).catch(console.warn);
+    productsService.deleteProduct(id).catch(logger.warn);
   },
 
   addCategory: (label) => {
@@ -268,7 +269,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
       products:   products.map(p => p.category === catId ? { ...p, category: fallback } : p),
     });
     toUpdate.forEach(p =>
-      productsService.updateProduct(p.id, { ...p, category: fallback }).catch(console.warn)
+      productsService.updateProduct(p.id, { ...p, category: fallback }).catch(logger.warn)
     );
   },
 }));

@@ -1,6 +1,7 @@
 import { create }                      from 'zustand';
 import { IncomingOrder, OrderStatus }  from '../types/orders';
 import * as ordersService              from '../services/orders';
+import logger                         from '../utils/logger';
 
 interface OrdersState {
   orders:   IncomingOrder[];
@@ -27,7 +28,7 @@ const useOrdersStore = create<OrdersState>()((set, get) => ({
       const orders = await ordersService.getShopOrders(shopId);
       set({ orders, loading: false });
     } catch (err) {
-      console.warn('[ordersStore] loadOrders:', err);
+      logger.warn('[ordersStore] loadOrders:', err);
       set({ loading: false });
     }
   },
@@ -40,7 +41,7 @@ const useOrdersStore = create<OrdersState>()((set, get) => ({
           : o,
       ),
     }));
-    ordersService.updateOrderStatus(id, status, prepTime).catch(console.warn);
+    ordersService.updateOrderStatus(id, status, prepTime).catch(err => logger.warn('[ordersStore] setOrderStatus:', err));
   },
 
   refuseOrder: async (id, reason) => {

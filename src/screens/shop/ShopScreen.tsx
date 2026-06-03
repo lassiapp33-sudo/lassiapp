@@ -27,6 +27,7 @@ import { Shop }             from '../../services/shops';
 import { Promotion, ProductPromoInfo } from '../../types/promotions';
 import { reverseGeocode }   from '../../services/location';
 import { StoreProduct }     from '../../types/store';
+import logger               from '../../utils/logger';
 import {
   computeStatus, WeekHours, formatHour, DayKey, DEFAULT_WEEK_HOURS,
 } from '../../services/hours';
@@ -139,7 +140,7 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
             .catch(() => {});
         }
       })
-      .catch(console.warn)
+      .catch(err => logger.warn('[ShopScreen] load:', err))
       .finally(() => setLoading(false));
   }, [shopId]);
 

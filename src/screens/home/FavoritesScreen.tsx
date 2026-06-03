@@ -11,6 +11,7 @@ import * as shopsService from '../../services/shops';
 import { Shop }          from '../../services/shops';
 import Avatar            from '../../components/Avatar';
 import { useT }          from '../../i18n';
+import logger            from '../../utils/logger';
 
 const IcoBack = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
@@ -133,7 +134,7 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
     if (favorites.length === 0) { setFavShops([]); return; }
     Promise.all(favorites.map(id => shopsService.getShopById(id)))
       .then(results => setFavShops(results.filter(Boolean) as Shop[]))
-      .catch(console.warn);
+      .catch(err => logger.warn('[FavoritesScreen] load shops:', err));
   }, [favorites]);
 
   const visible = filter === 'all'

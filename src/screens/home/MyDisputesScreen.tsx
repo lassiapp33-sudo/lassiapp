@@ -11,6 +11,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import * as disputeService from '../../services/disputes';
 import type { Dispute, DisputeMessage } from '../../services/disputes';
+import logger from '../../utils/logger';
 
 const IcoBack = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
@@ -42,14 +43,14 @@ export default function MyDisputesScreen({ onBack }: Props) {
   useEffect(() => {
     disputeService.getMyDisputes()
       .then(setDisputes)
-      .catch(console.warn)
+      .catch(err => logger.warn('[MyDisputesScreen] getMyDisputes:', err))
       .finally(() => setLoading(false));
   }, []);
 
   const loadMessages = useCallback((id: string) => {
     disputeService.getDisputeMessages(id)
       .then(setMessages)
-      .catch(console.warn);
+      .catch(err => logger.warn('[MyDisputesScreen] getDisputeMessages:', err));
   }, []);
 
   function openDispute(d: Dispute) {

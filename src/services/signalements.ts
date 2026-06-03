@@ -1,5 +1,6 @@
 import { supabase }           from '../lib/supabase';
 import * as ImageManipulator from 'expo-image-manipulator';
+import logger                from '../utils/logger';
 
 export type SignalementType =
   | 'bug'
@@ -104,7 +105,7 @@ export async function envoyerSignalement(params: EnvoyerParams): Promise<void> {
     });
   } catch (emailErr) {
     // L'email est une notification secondaire — on log mais on ne rejette pas
-    console.warn('[signalements] Email non envoyé :', emailErr);
+    logger.warn('[signalements] Email non envoyé :', emailErr);
   }
 }
 

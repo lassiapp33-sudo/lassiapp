@@ -8,6 +8,7 @@ import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import * as rvService from '../../services/recentlyViewed';
 import { RecentShop } from '../../services/recentlyViewed';
 import MascoHomeBtn   from '../../components/MascoHomeBtn';
+import logger         from '../../utils/logger';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -101,7 +102,7 @@ export default function RecentlyViewedScreen({ onBack, onShopPress }: Props) {
       const fresh = await rvService.getRecentlyViewed();
       setShops(fresh);
     } catch (err) {
-      console.warn('[RecentlyViewed] erreur fetch:', err);
+      logger.warn('[RecentlyViewed] erreur fetch:', err);
       // on conserve les données en cache en cas d'erreur réseau
     } finally {
       setLoading(false);

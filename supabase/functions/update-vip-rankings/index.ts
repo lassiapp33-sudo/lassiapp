@@ -63,7 +63,6 @@ Deno.serve(async (req: Request) => {
     })
   }
 
-  console.log('VIP rankings result:', data)
   return new Response(
     JSON.stringify({ success: true, updatedAt: new Date().toISOString(), result: data }),
     { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } },
