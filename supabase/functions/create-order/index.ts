@@ -145,6 +145,13 @@ Deno.serve(async (req) => {
       })
     }
 
+    const ALLOWED_ORDER_TYPES = ['place', 'emporter']
+    if (orderType !== undefined && orderType !== null && !ALLOWED_ORDER_TYPES.includes(orderType)) {
+      return new Response(JSON.stringify({ error: 'Type de commande invalide.' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+
     const admin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -321,7 +328,15 @@ Deno.serve(async (req) => {
       status: 200, headers: { ...CORS, 'Content-Type': 'application/json' },
     })
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message ?? 'Erreur interne' }), {
+    // Log serveur complet pour debug — jamais exposé au client
+    console.error('[create-order]', err?.code ?? '', err?.message ?? err)
+    // Les erreurs métier (rupture de stock, produit introuvable…) sont jetées
+    // via new Error('...') sans .code. Les erreurs Postgres ont toujours un .code.
+    const isBusinessError = !err?.code
+    const clientMsg = isBusinessError
+      ? (err?.message ?? 'Une erreur est survenue.')
+      : 'Une erreur est survenue. Réessaie dans quelques instants.'
+    return new Response(JSON.stringify({ error: clientMsg }), {
       status: 500, headers: { ...CORS, 'Content-Type': 'application/json' },
     })
   }
