@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator,
+  StyleSheet,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import QRCode from 'react-native-qrcode-svg';
@@ -10,6 +10,7 @@ import { getReceipt, ReceiptInfo, ReceiptStatus } from '../../services/receipts'
 import { contacterServiceClient } from '../../config/contact';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -152,7 +153,7 @@ export default function ReceiptScreen({ orderId, onBack }: Props) {
   if (loading) return (
     <View style={s.root}>
       <Header />
-      <View style={s.center}><ActivityIndicator color={colors.accent} size="large" /></View>
+      <LoadingSpinner />
     </View>
   );
 

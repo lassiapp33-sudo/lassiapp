@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  StyleSheet, Platform, ActivityIndicator, Alert,
+  StyleSheet, Platform, Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import DebtHeader    from '../../components/debts/DebtHeader';
@@ -17,6 +17,7 @@ import useShopStore  from '../../store/shopStore';
 import * as chatService  from '../../services/chat';
 import * as debtsService from '../../services/debts';
 import { IcoPlus, IcoClose, IcoSearch } from '../../components/icons';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 const URGENCY: Record<DebtStatus, number> = { late: 0, watch: 1, good: 2 };
 const FAB_BOTTOM = Platform.OS === 'ios' ? 34 : 24;
@@ -132,9 +133,7 @@ export default function DebtsScreen({ onBack }: Props) {
     >
 
       {loading ? (
-        <View style={styles.loader}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+        <LoadingSpinner />
       ) : (
         <ScrollView
           style={styles.scroll}

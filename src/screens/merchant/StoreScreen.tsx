@@ -23,6 +23,7 @@ import { getCurrentLocation, reverseGeocode } from '../../services/location';
 import * as storageService from '../../services/storage';
 import * as promoService   from '../../services/promotions';
 import { getErrorMessage }  from '../../utils/errorUtils';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -272,7 +273,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
     <LassiScreen header={<StoreHeader onBack={onBack} onPreview={onPreview ?? (() => {})} onPromos={onPromos} />}>
 
       {loading ? (
-        <View style={styles.loader}><ActivityIndicator color={colors.accent} size="large" /></View>
+        <LoadingSpinner />
       ) : (
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

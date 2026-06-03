@@ -19,6 +19,7 @@ import { Avis }                  from '../../types/avis';
 import MascoHomeBtn              from '../../components/MascoHomeBtn';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -439,9 +440,7 @@ export default function ClientOrdersScreen({ onBack, onExplore, onGoToCart, onVi
     >
       {/* ── Contenu ── */}
       {loading ? (
-        <View style={s.center}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+        <LoadingSpinner />
       ) : error ? (
         <View style={s.center}>
           <Text style={s.errorTxt}>{error}</Text>

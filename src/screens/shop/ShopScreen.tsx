@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Linking, Image,
+  StyleSheet, Linking, Image,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -33,6 +33,7 @@ import {
 } from '../../services/hours';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -270,9 +271,7 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
   return (
     <View style={styles.root}>
       {loading ? (
-        <View style={styles.loader}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+        <LoadingSpinner />
       ) : (
         <ScrollView
           style={styles.scroll}

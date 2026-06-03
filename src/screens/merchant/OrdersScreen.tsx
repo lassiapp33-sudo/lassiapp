@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Vibration, RefreshControl, Alert,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Vibration, RefreshControl, Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -16,6 +15,7 @@ import { IncomingOrder, MerchantTab, OrderStatus } from '../../types/orders';
 import useOrdersStore      from '../../store/ordersStore';
 import useShopStore        from '../../store/shopStore';
 import { useRealtimeOrders } from '../../hooks/useRealtimeOrders';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── État vide par onglet ──────────────────────────────────────────────────────
 
@@ -155,9 +155,7 @@ export default function OrdersScreen({ onBack }: Props) {
       </TouchableOpacity>
 
       {loading ? (
-        <View style={styles.loader}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+        <LoadingSpinner />
       ) : (
         <ScrollView
           style={styles.scroll}

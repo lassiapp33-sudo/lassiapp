@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, ScrollView, KeyboardAvoidingView,
-  Platform, StyleSheet, ActivityIndicator, Alert,
+  Platform, StyleSheet, Alert,
 } from 'react-native';
 
 import ChatHeader    from '../../components/chat/ChatHeader';
@@ -24,6 +24,7 @@ import { useRealtimeMessages } from '../../hooks/useRealtimeMessages';
 import logger from '../../utils/logger';
 import { formatTime } from '../../utils/format';
 import { getErrorMessage } from '../../utils/errorUtils';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── Types locaux UI ──────────────────────────────────────────────────────────
 
@@ -427,9 +428,7 @@ export default function ChatScreen({
       />
 
       {loading ? (
-        <View style={styles.loader}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+        <LoadingSpinner />
       ) : (
         <ScrollView
           ref={scrollRef}

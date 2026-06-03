@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, ActivityIndicator,
+  StyleSheet,
 } from 'react-native';
 import { colors, fonts, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
@@ -12,6 +12,7 @@ import ChatScreen  from '../chat/ChatScreen';
 import useShopStore from '../../store/shopStore';
 import Avatar        from '../../components/Avatar';
 import MascoHomeBtn  from '../../components/MascoHomeBtn';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -119,9 +120,7 @@ export default function MerchantMessagesScreen({ onBack }: Props) {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+        <LoadingSpinner />
       ) : conversations.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.emptyTitle}>Aucun message pour l'instant</Text>

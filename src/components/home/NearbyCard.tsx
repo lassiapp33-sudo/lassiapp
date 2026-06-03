@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fonts, radius } from '../../theme';
+import { colors, fonts } from '../../theme';
 import useFavoritesStore from '../../store/favoritesStore';
 import Avatar from '../Avatar';
+import VipBadge from '../VipBadge';
 
 export type PlaceStatus   = 'open' | 'closing' | 'closed';
 export type PlaceCategory = string;
@@ -44,14 +45,6 @@ const IconStarSmall = () => (
   </Svg>
 );
 
-const VipBadge = () => (
-  <View style={styles.vip}>
-    <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" strokeWidth={2.5}>
-      <Path d="M12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9z" stroke={colors.accent} fill={colors.accent} />
-    </Svg>
-    <Text style={styles.vipTxt}>VIP</Text>
-  </View>
-);
 
 export default function NearbyCard({ place, onPress }: Props) {
   const isFav        = useFavoritesStore(s => s.favorites.includes(place.id));

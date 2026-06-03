@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fonts, radius } from '../../theme';
+import { colors, fonts } from '../../theme';
 import Avatar from '../Avatar';
 import useFavoritesStore from '../../store/favoritesStore';
+import VipBadge from '../VipBadge';
 
 export interface Shop {
   id:          string;
@@ -33,14 +34,6 @@ const StarFill = ({ filled }: { filled: boolean }) => (
   </Svg>
 );
 
-const VipBadge = () => (
-  <View style={styles.vip}>
-    <Svg width={8} height={8} viewBox="0 0 24 24" fill={colors.accent}>
-      <Path d="M12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9z" fill={colors.accent} />
-    </Svg>
-    <Text style={styles.vipTxt}>VIP</Text>
-  </View>
-);
 
 export default function ShopCard({ shop, onPress }: Props) {
   const isFav     = useFavoritesStore(s => s.favorites.includes(shop.id));

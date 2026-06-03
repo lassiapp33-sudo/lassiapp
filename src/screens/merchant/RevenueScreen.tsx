@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl,
+  StyleSheet, RefreshControl,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -12,6 +12,7 @@ import { RevenueOrder }   from '../../services/orders';
 import { Debtor }         from '../../types/debts';
 import { getErrorMessage } from '../../utils/errorUtils';
 import { IcoBack } from '../../components/icons';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -244,9 +245,7 @@ export default function RevenueScreen({ onBack }: Props) {
       </View>
 
       {loading ? (
-        <View style={s.center}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+        <LoadingSpinner />
       ) : error ? (
         <View style={s.center}>
           <Text style={s.errorTxt}>Impossible de charger les revenus.{'\n'}Vérifie ta connexion.</Text>

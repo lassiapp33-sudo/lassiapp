@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, RefreshControl, Image,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Image,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -10,6 +9,7 @@ import { RecentShop } from '../../services/recentlyViewed';
 import MascoHomeBtn   from '../../components/MascoHomeBtn';
 import logger         from '../../utils/logger';
 import { IcoBack } from '../../components/icons';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -139,9 +139,7 @@ export default function RecentlyViewedScreen({ onBack, onShopPress }: Props) {
 
       {/* ── Contenu ── */}
       {loading ? (
-        <View style={s.center}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+        <LoadingSpinner />
       ) : (
         <ScrollView
           style={s.scroll}

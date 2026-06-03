@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Modal,
-  StyleSheet, ActivityIndicator, RefreshControl, AppState,
+  StyleSheet, RefreshControl, AppState,
 } from 'react-native';
 import Svg, { Path, Circle, Polyline } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -14,6 +14,7 @@ import { supabase }   from '../../lib/supabase';
 import MascoHomeBtn   from '../../components/MascoHomeBtn';
 import { IcoBack, IcoClose } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -387,9 +388,7 @@ export default function MerchantPaymentsScreen({ onBack }: Props) {
       </View>
 
       {loading ? (
-        <View style={s.center}>
-          <ActivityIndicator color={colors.accent} size="large" />
-        </View>
+        <LoadingSpinner />
       ) : error ? (
         <View style={s.center}>
           <Text style={s.errorTxt}>{error}</Text>
