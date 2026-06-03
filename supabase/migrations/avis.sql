@@ -1,6 +1,6 @@
 -- ===========================================================================
 -- LASSİ — Système d'avis clients
--- Un avis = une vraie commande terminée (anti-faux-avis)
+-- 1 avis par client par prestataire (pas de commande obligatoire)
 -- SAFE à re-exécuter
 -- ===========================================================================
 
@@ -8,8 +8,8 @@
 
 CREATE TABLE IF NOT EXISTS avis (
   id                 UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id           UUID        NOT NULL REFERENCES orders(id)    ON DELETE CASCADE,
-  shop_id            UUID        NOT NULL REFERENCES shops(id)     ON DELETE CASCADE,
+  order_id           UUID        REFERENCES orders(id) ON DELETE SET NULL,
+  shop_id            UUID        NOT NULL REFERENCES shops(id)      ON DELETE CASCADE,
   author_id          UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   author_name        TEXT        NOT NULL DEFAULT '',
   note               INTEGER     NOT NULL CHECK (note BETWEEN 1 AND 5),
@@ -19,12 +19,11 @@ CREATE TABLE IF NOT EXISTS avis (
   masque             BOOLEAN     NOT NULL DEFAULT false,
   created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (order_id)
+  UNIQUE (shop_id, author_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_avis_shop_id  ON avis (shop_id)   WHERE NOT masque;
-CREATE INDEX IF NOT EXISTS idx_avis_author   ON avis (author_id);
-CREATE INDEX IF NOT EXISTS idx_avis_order_id ON avis (order_id);
+CREATE INDEX IF NOT EXISTS idx_avis_shop_id ON avis (shop_id) WHERE NOT masque;
+CREATE INDEX IF NOT EXISTS idx_avis_author  ON avis (author_id);
 
 -- ─── 2. BUCKET STORAGE ───────────────────────────────────────────────────────
 
@@ -59,7 +58,7 @@ DROP POLICY IF EXISTS "avis_update_merchant" ON avis;
 DROP POLICY IF EXISTS "avis_update_admin"    ON avis;
 DROP POLICY IF EXISTS "avis_delete"          ON avis;
 
--- SELECT : avis non masqués + les propres avis (masqués ou non) + admin voit tout
+-- SELECT : avis non masqués + les propres avis + admin voit tout
 CREATE POLICY "avis_select"
   ON avis FOR SELECT
   USING (
@@ -68,18 +67,10 @@ CREATE POLICY "avis_select"
     OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE)
   );
 
--- INSERT : auteur = utilisateur connecté, commande lui appartient et est 'done'
+-- INSERT : tout client connecté peut laisser un avis (1 par prestataire via UNIQUE)
 CREATE POLICY "avis_insert"
   ON avis FOR INSERT TO authenticated
-  WITH CHECK (
-    auth.uid() = author_id
-    AND EXISTS (
-      SELECT 1 FROM orders
-      WHERE id = order_id
-        AND client_id = auth.uid()
-        AND status = 'done'
-    )
-  );
+  WITH CHECK (auth.uid() = author_id);
 
 -- UPDATE auteur : modifier son propre avis (note / commentaire / photo)
 CREATE POLICY "avis_update_author"
@@ -128,9 +119,6 @@ CREATE TRIGGER trg_avis_updated_at
   EXECUTE FUNCTION fn_avis_updated_at();
 
 -- ─── 5. TRIGGER : recalcul note + reviews_count du shop ──────────────────────
---
--- Appelle compute_shop_rating() déjà définie dans shop_rating_system.sql
--- Formule : 40% activité commandes + 60% note moyenne réelle
 
 CREATE OR REPLACE FUNCTION fn_update_shop_rating_from_avis()
 RETURNS TRIGGER

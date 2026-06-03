@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { shopId, items, note } = await req.json()
+    const { shopId, items, note, orderType, idempotencyKey } = await req.json()
     if (!shopId || !Array.isArray(items) || items.length === 0) {
       return new Response(JSON.stringify({ error: 'shopId et items requis' }), {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
@@ -150,7 +150,29 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
-    // ① Recharger les produits depuis la DB (prix officiels)
+    // ① Idempotence : si une commande avec cette clé existe déjà → retourner la même
+    if (idempotencyKey) {
+      const { data: existing } = await admin
+        .from('orders')
+        .select('id, total, discount_amount, promo_label')
+        .eq('idempotency_key', idempotencyKey)
+        .eq('client_id', user.id)
+        .maybeSingle()
+
+      if (existing) {
+        const commission = Math.round(existing.total * 0.005)
+        return new Response(JSON.stringify({
+          orderId:        existing.id,
+          total:          existing.total,
+          subtotal:       existing.total + (existing.discount_amount ?? 0),
+          discountAmount: existing.discount_amount ?? 0,
+          promoLabel:     existing.promo_label,
+          commission,
+        }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } })
+      }
+    }
+
+    // ② Recharger les produits depuis la DB (prix officiels)
     const productIds = items.map((i: any) => i.productId)
     const { data: products, error: prodError } = await admin
       .from('products')
@@ -163,7 +185,7 @@ Deno.serve(async (req) => {
     const productMap: Record<string, ProductRow> =
       Object.fromEntries(products.map((p: any) => [p.id, p]))
 
-    // ② Calculer le sous-total aux prix réels (ignorer tout montant client)
+    // ③ Calculer le sous-total aux prix réels (ignorer tout montant client)
     let subtotal = 0
     const orderItems = items.map((item: any) => {
       const product = productMap[item.productId]
@@ -173,7 +195,7 @@ Deno.serve(async (req) => {
       return { product_name: product.name, qty: item.qty, unit_price: product.price }
     })
 
-    // ③ Recharger les promos actives et valides côté serveur
+    // ④ Recharger les promos actives et valides côté serveur
     const now = new Date().toISOString()
     const { data: promos } = await admin
       .from('promotions')
@@ -183,7 +205,7 @@ Deno.serve(async (req) => {
       .or(`date_debut.is.null,date_debut.lte.${now}`)
       .or(`date_fin.is.null,date_fin.gte.${now}`)
 
-    // ④ Appliquer la meilleure réduction (jamais confiance au client)
+    // ⑤ Appliquer la meilleure réduction (jamais confiance au client)
     const { discountAmount, promoLabel } = applyBestPromo(
       promos ?? [],
       products as ProductRow[],
@@ -193,26 +215,27 @@ Deno.serve(async (req) => {
 
     const total = Math.max(subtotal - discountAmount, 1) // jamais ≤ 0
 
-    // ⑤ Commission LASSİ 0,5% calculée sur le montant APRÈS réduction
+    // ⑥ Commission LASSİ 0,5% calculée sur le montant APRÈS réduction
     const commission = Math.round(total * 0.005)
 
-    // ⑥ Créer la commande avec les montants recalculés
+    // ⑦ Créer la commande avec les montants recalculés
     const { data: profile } = await admin
       .from('profiles').select('name').eq('id', user.id).maybeSingle()
 
     const { data: order, error: orderError } = await admin
       .from('orders')
       .insert({
-        shop_id:         shopId,
-        client_id:       user.id,
-        client_name:     profile?.name ?? 'Client',
+        shop_id:          shopId,
+        client_id:        user.id,
+        client_name:      profile?.name ?? 'Client',
         total,
-        discount_amount: discountAmount,
-        promo_label:     promoLabel,
-        status:          'pending',
-        pay_method:      'wave',
-        order_type:      'takeaway',
-        note:            note ?? null,
+        discount_amount:  discountAmount,
+        promo_label:      promoLabel,
+        status:           'pending',
+        pay_method:       'wave',
+        order_type:       orderType ?? 'place',
+        note:             note ?? null,
+        idempotency_key:  idempotencyKey ?? null,
       })
       .select()
       .single()
@@ -225,7 +248,7 @@ Deno.serve(async (req) => {
 
     if (itemsError) throw itemsError
 
-    // ⑦ Push au prestataire — best-effort, ne bloque pas la réponse au client
+    // ⑧ Push au prestataire — best-effort, ne bloque pas la réponse au client
     try {
       const { data: shop } = await admin
         .from('shops')
