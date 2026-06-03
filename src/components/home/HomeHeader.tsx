@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
+import { IcoChevron } from '../icons';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -12,11 +13,6 @@ const IconPin = () => (
   </Svg>
 );
 
-const IconChevron = () => (
-  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" strokeWidth={2.5}>
-    <Path d="m6 9 6 6 6-6" stroke={colors.muted} />
-  </Svg>
-);
 
 const IconBell = () => (
   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"
@@ -62,7 +58,7 @@ export default function HomeHeader({
         </View>
         <View style={styles.locValue}>
           <Text style={styles.locValueTxt}>{quartier}</Text>
-          <IconChevron />
+          <IcoChevron />
         </View>
       </TouchableOpacity>
 

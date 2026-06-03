@@ -1,23 +1,16 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Linking,
+  StyleSheet,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { contacterServiceClient } from '../../config/contact';
 import { useT } from '../../i18n';
 import { FaqItem, FaqSection, StepItem } from '../../i18n/types';
+import { IcoBack } from '../../components/icons';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
-
-const IcoBack = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
 
 const IcoChevron = ({ open }: { open: boolean }) => (
   <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" strokeWidth={2.5}

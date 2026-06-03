@@ -3,30 +3,17 @@ import {
   View, Text, TextInput, TouchableOpacity,
   ScrollView, StyleSheet,
 } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import * as shopsService from '../../services/shops';
 import { Shop }          from '../../services/shops';
 import Avatar            from '../../components/Avatar';
 import { useT }          from '../../i18n';
 import { LassiMascotte, MASCOTTE_NOM } from '../../components/LassiMascotte';
+import Svg, { Path } from 'react-native-svg';
+import { IcoBack, IcoSearch } from '../../components/icons';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
-const IcoBack = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
-
-const IcoSearch = () => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
-    <Circle cx={11} cy={11} r={8} stroke={colors.muted} />
-    <Path d="m21 21-4.3-4.3" stroke={colors.muted} />
-  </Svg>
-);
 
 const IcoStar = () => (
   <Svg width={10} height={10} viewBox="0 0 24 24"
@@ -255,7 +242,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 11,
   },
-
 
   info: { flex: 1, minWidth: 0 },
   nameRow: {

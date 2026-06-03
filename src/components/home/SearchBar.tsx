@@ -3,8 +3,9 @@ import {
   View, TextInput, TouchableOpacity,
   StyleSheet, Animated, Easing,
 } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
+import { IcoSearch } from '../icons';
 
 interface Props {
   value:        string;
@@ -13,12 +14,6 @@ interface Props {
   onPress?:     () => void;   // si fourni → barre en lecture seule, appui navigue vers SearchScreen
 }
 
-const IconSearch = () => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
-    <Circle cx={11} cy={11} r={8} stroke={colors.muted} />
-    <Path d="m21 21-4.3-4.3" stroke={colors.muted} />
-  </Svg>
-);
 
 const IconMic = () => (
   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"
@@ -61,7 +56,7 @@ export default function SearchBar({ value, onChangeText, onMicPress, onPress }: 
         onPress={onPress}
         activeOpacity={onPress ? 0.75 : 1}
       >
-        <IconSearch />
+        <IcoSearch />
         <TextInput
           style={styles.input}
           placeholder="Cherche un commerce, un plat…"

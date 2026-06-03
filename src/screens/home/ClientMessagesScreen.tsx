@@ -3,8 +3,8 @@ import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, ActivityIndicator,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, TOP_INSET } from '../../theme';
+import { IcoBack } from '../../components/icons';
 import { Conversation } from '../../services/chat';
 import * as chatService  from '../../services/chat';
 import * as shopsService from '../../services/shops';
@@ -13,12 +13,6 @@ import ChatScreen        from '../chat/ChatScreen';
 import Avatar            from '../../components/Avatar';
 import MascoHomeBtn      from '../../components/MascoHomeBtn';
 
-const IcoBack = () => (
-  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5M12 5l-7 7 7 7" stroke={colors.white} />
-  </Svg>
-);
 
 function timeLabel(iso: string): string {
   const d      = new Date(iso);

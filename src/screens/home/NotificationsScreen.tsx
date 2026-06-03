@@ -6,16 +6,9 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import useNotificationsStore, { NotifType, Notif } from '../../store/notificationsStore';
+import { IcoBack } from '../../components/icons';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
-
-const IcoBack = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
 
 const IcoOrder = ({ color }: { color: string }) => (
   <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>

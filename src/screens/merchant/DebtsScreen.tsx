@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, Platform, ActivityIndicator, Alert,
 } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import DebtHeader    from '../../components/debts/DebtHeader';
 import TotalCard     from '../../components/debts/TotalCard';
 import FilterChips   from '../../components/debts/FilterChips';
@@ -16,29 +16,12 @@ import useDebtsStore from '../../store/debtsStore';
 import useShopStore  from '../../store/shopStore';
 import * as chatService  from '../../services/chat';
 import * as debtsService from '../../services/debts';
+import { IcoPlus, IcoClose, IcoSearch } from '../../components/icons';
 
 const URGENCY: Record<DebtStatus, number> = { late: 0, watch: 1, good: 2 };
 const FAB_BOTTOM = Platform.OS === 'ios' ? 34 : 24;
 
-const IcoPlus = () => (
-  <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.4} strokeLinecap="round">
-    <Path d="M12 5v14M5 12h14" stroke={colors.bg} />
-  </Svg>
-);
-
-const IcoX = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" strokeWidth={2.2} strokeLinecap="round">
-    <Path d="M18 6L6 18M6 6l12 12" stroke={colors.muted} />
-  </Svg>
-);
-
-const IcoSearch = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
-    <Circle cx={11} cy={11} r={8} stroke={colors.muted} />
-    <Path d="m21 21-4.3-4.3" stroke={colors.muted} />
-  </Svg>
-);
+const IcoX = () => <IcoClose size={16} color={colors.muted} />;
 
 interface Props { onBack: () => void; }
 

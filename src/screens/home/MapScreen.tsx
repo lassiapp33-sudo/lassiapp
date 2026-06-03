@@ -9,6 +9,7 @@ import { LassiMascotte, MASCOTTE_NOM } from '../../components/LassiMascotte';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
 import { colors, fonts, TOP_INSET } from '../../theme';
+import { IcoBack, IcoSearch } from '../../components/icons';
 import Avatar from '../../components/Avatar';
 import useLocationStore       from '../../store/locationStore';
 import * as shopsService      from '../../services/shops';
@@ -146,18 +147,6 @@ const SUBCAT_FILTERS = [
 
 const W = colors.white;
 
-const IcoBack = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={W} /><Path d="M12 19l-7-7 7-7" stroke={W} />
-  </Svg>
-);
-const IcoSearch = () => (
-  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
-    <SvgCircle cx={11} cy={11} r={8} stroke={colors.muted} />
-    <Path d="m21 21-4.3-4.3" stroke={colors.muted} />
-  </Svg>
-);
 const IcoRecenter = () => (
   <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
     strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

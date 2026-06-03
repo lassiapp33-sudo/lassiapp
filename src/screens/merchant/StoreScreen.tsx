@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { IcoPlus } from '../../components/icons';
 
 import StoreHeader      from '../../components/store/StoreHeader';
 import ShopProfileCard  from '../../components/store/ShopProfileCard';
@@ -25,11 +26,6 @@ import { getErrorMessage }  from '../../utils/errorUtils';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
-const IcoPlus = () => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={2.2} strokeLinecap="round">
-    <Path d="M12 5v14M5 12h14" stroke={colors.accent} />
-  </Svg>
-);
 
 const IcoPin = () => (
   <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

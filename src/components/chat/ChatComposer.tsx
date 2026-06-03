@@ -6,14 +6,9 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { useVoiceRecorder } from '../../hooks/useVoiceRecorder';
+import { IcoClose, IcoPlus } from '../icons';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
-
-const IcoPlus = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round">
-    <Path d="M12 5v14M5 12h14" stroke={colors.muted} />
-  </Svg>
-);
 
 const IcoMic = ({ color = colors.bg }: { color?: string }) => (
   <Svg width={21} height={21} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -27,12 +22,6 @@ const IcoSend = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <Path d="M22 2 11 13" stroke={colors.bg} />
     <Path d="M22 2 15 22l-4-9-9-4 20-7Z" stroke={colors.bg} />
-  </Svg>
-);
-
-const IcoX = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={2.5} strokeLinecap="round">
-    <Path d="M18 6 6 18M6 6l12 12" stroke="#ff4d4f" />
   </Svg>
 );
 
@@ -142,7 +131,7 @@ export default function ChatComposer({
           onPress={cancelRecording}
           activeOpacity={0.7}
         >
-          <IcoX />
+          <IcoClose color={colors.muted} />
         </TouchableOpacity>
 
         {/* Indicateur enregistrement */}

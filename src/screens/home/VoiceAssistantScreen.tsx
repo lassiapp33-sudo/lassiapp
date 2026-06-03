@@ -6,15 +6,9 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, TOP_INSET } from '../../theme';
 import { LassiMascotte, MASCOTTE_NOM } from '../../components/LassiMascotte';
+import { IcoClose } from '../../components/icons';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
-
-const IcoClose = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round">
-    <Path d="M18 6 6 18M6 6l12 12" stroke={colors.white} />
-  </Svg>
-);
 
 const IcoMic = () => (
   <Svg width={36} height={36} viewBox="0 0 24 24" fill="none"

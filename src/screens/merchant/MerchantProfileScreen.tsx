@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Alert, ActionSheetIOS, Platform, Linking,
+  Alert, ActionSheetIOS, Platform,
 } from 'react-native';
 import Svg, { Path, Rect, Circle, Polyline, Line } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -19,16 +19,9 @@ import SignalerProblemeScreen     from '../common/SignalerProblemeScreen';
 import { contacterServiceClient } from '../../config/contact';
 import { useT }            from '../../i18n';
 import useLanguageStore    from '../../store/languageStore';
+import { IcoBack } from '../../components/icons';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
-
-const IcoBack = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
 
 const IcoEdit = () => (
   <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

@@ -4,6 +4,7 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { IncomingOrder } from '../../types/orders';
 import Avatar from '../Avatar';
+import { IcoClose } from '../icons';
 
 // Couleurs spécifiques aux boutons d'action
 const WAVE_COLOR = '#1DC8F2';
@@ -16,13 +17,6 @@ const IcoCheck = ({ color }: { color: string }) => (
   <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
     strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
     <Path d="M20 6 9 17l-5-5" stroke={color} />
-  </Svg>
-);
-
-const IcoX = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.2} strokeLinecap="round">
-    <Path d="M18 6 6 18M6 6l12 12" stroke={colors.muted} />
   </Svg>
 );
 
@@ -157,7 +151,7 @@ export default function OrderCard({ order, onAccept, onRefuse, onChat, onReady, 
           {order.status === 'new' && (
             <>
               <TouchableOpacity style={styles.btnSquare} onPress={onRefuse} activeOpacity={0.8}>
-                <IcoX />
+                <IcoClose color={colors.muted} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.btnChat} onPress={onChat} activeOpacity={0.8}>
                 <IcoChat />

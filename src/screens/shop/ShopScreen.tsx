@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, ActivityIndicator, Linking, Image,
 } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 
 import ShopCover                       from '../../components/shop/ShopCover';
 import AvisSection                     from '../../components/avis/AvisSection';
@@ -24,23 +24,17 @@ import * as shopsService    from '../../services/shops';
 import * as productsService from '../../services/products';
 import * as promosService   from '../../services/promotions';
 import { Shop }             from '../../services/shops';
-import { Promotion, ProductPromoInfo } from '../../types/promotions';
+import { Promotion } from '../../types/promotions';
 import { reverseGeocode }   from '../../services/location';
 import { StoreProduct }     from '../../types/store';
 import logger               from '../../utils/logger';
 import {
   computeStatus, WeekHours, formatHour, DayKey, DEFAULT_WEEK_HOURS,
 } from '../../services/hours';
+import { IcoBack } from '../../components/icons';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
-const IcoBack = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke="#fff" />
-    <Path d="M12 19l-7-7 7-7" stroke="#fff" />
-  </Svg>
-);
 const IcoPhone = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
     strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

@@ -9,14 +9,9 @@ import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem   from 'expo-file-system/legacy';
 import { colors, fonts } from '../../theme';
 import { getErrorMessage } from '../../utils/errorUtils';
+import { IcoClose } from '../icons';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
-
-const IcoX = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" strokeWidth={2.5} strokeLinecap="round">
-    <Path d="M18 6 6 18M6 6l12 12" stroke="#fff" />
-  </Svg>
-);
 
 const IcoDownload = () => (
   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -159,7 +154,7 @@ export default function BubbleImage({ sender, imageUrl, time, read }: Props) {
             onPress={() => setFullscreen(false)}
             activeOpacity={0.8}
           >
-            <IcoX />
+            <IcoClose color={colors.muted} />
           </TouchableOpacity>
 
           {/* Télécharger */}

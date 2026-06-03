@@ -7,14 +7,7 @@ import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import MascoHomeBtn from '../../components/MascoHomeBtn';
 import { CONFIDENTIALITE_SECTIONS, VERSION, DATE_MAJ } from '../../legal/confidentialite';
-
-const IcoBack = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
+import { IcoBack } from '../../components/icons';
 
 interface Props {
   onBack: () => void;

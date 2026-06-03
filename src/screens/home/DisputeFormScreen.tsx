@@ -13,21 +13,7 @@ import * as disputeService from '../../services/disputes';
 import * as storageService from '../../services/storage';
 import type { DisputeReason } from '../../services/disputes';
 import { getErrorMessage } from '../../utils/errorUtils';
-
-const IcoBack = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
-
-const IcoPlus = () => (
-  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round">
-    <Path d="M12 5v14M5 12h14" stroke={colors.accent} />
-  </Svg>
-);
+import { IcoBack, IcoPlus } from '../../components/icons';
 
 interface Props {
   againstId:  string;

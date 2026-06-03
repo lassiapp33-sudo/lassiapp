@@ -7,14 +7,7 @@ import { colors, fonts, TOP_INSET } from '../../theme';
 import AvisSection from '../../components/avis/AvisSection';
 import useShopStore from '../../store/shopStore';
 import useAuthStore from '../../store/authStore';
-
-const IcoBack = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
+import { IcoBack } from '../../components/icons';
 
 interface Props {
   onBack: () => void;

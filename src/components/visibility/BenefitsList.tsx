@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
+import { IcoSearch } from '../icons';
 
 // ─── Icônes bénéfices ─────────────────────────────────────────────────────────
 
@@ -12,12 +13,6 @@ const IcoStore = () => (
   </Svg>
 );
 
-const IcoSearch = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>
-    <Circle cx={11} cy={11} r={8} stroke={colors.accent} />
-    <Path d="m21 21-4.3-4.3" stroke={colors.accent} />
-  </Svg>
-);
 
 const IcoPulse = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>
@@ -34,7 +29,7 @@ const BENEFITS = [
     desc:  'Ta carte apparaît dès l\'ouverture de l\'app',
   },
   {
-    Icon: IcoSearch,
+    Icon: () => <IcoSearch color={colors.accent} />,
     title: 'Visible dans toutes les catégories',
     desc:  'Même quand le client cherche autre chose',
   },

@@ -6,16 +6,13 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
+import { IcoClose } from '../../components/icons';
 import { verifyReceiptMerchant, VerifyResult } from '../../services/receipts';
 import { getErrorMessage } from '../../utils/errorUtils';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
-const IcoClose = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={2.2} strokeLinecap="round">
-    <Path d="M18 6 6 18M6 6l12 12" stroke={colors.muted} />
-  </Svg>
-);
+const IcoCloseBtn = () => <IcoClose color={colors.muted} />;
 
 const IcoCheck = () => (
   <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" strokeWidth={2.5} strokeLinecap="round">
@@ -23,11 +20,7 @@ const IcoCheck = () => (
   </Svg>
 );
 
-const IcoX = () => (
-  <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" strokeWidth={2.5} strokeLinecap="round">
-    <Path d="M18 6 6 18M6 6l12 12" stroke={colors.danger} />
-  </Svg>
-);
+const IcoX = () => <IcoClose size={28} color={colors.danger} />;
 
 // ─── Messages d'erreur lisibles ───────────────────────────────────────────────
 
@@ -115,7 +108,7 @@ export default function VerifyReceiptSheet({ visible, onClose, onVerified }: Pro
               <View style={s.titleRow}>
                 <Text style={s.title}>Vérifier un reçu</Text>
                 <TouchableOpacity style={s.closeBtn} onPress={handleClose} activeOpacity={0.7}>
-                  <IcoClose />
+                  <IcoCloseBtn />
                 </TouchableOpacity>
               </View>
               <Text style={s.subtitle}>

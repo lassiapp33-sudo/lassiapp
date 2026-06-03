@@ -9,6 +9,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, TOP_INSET, radius } from '../../theme';
+import { IcoClose } from '../../components/icons';
 import { contacterServiceClient } from '../../config/contact';
 import { LassiMascotte }           from '../../components/LassiMascotte';
 import {
@@ -64,11 +65,6 @@ function makeInitialMsgs(): ChatMsg[] {
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
-const IcoClose = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" strokeWidth={2.2} strokeLinecap="round">
-    <Path d="M18 6 6 18M6 6l12 12" stroke={colors.white} />
-  </Svg>
-);
 
 const IcoSend = ({ active }: { active: boolean }) => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

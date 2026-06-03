@@ -13,6 +13,7 @@ import MascoHomeBtn          from '../../components/MascoHomeBtn';
 import { contacterServiceClient } from '../../config/contact';
 import CGUScreen             from './CGUScreen';
 import ConfidentialiteScreen from './ConfidentialiteScreen';
+import { IcoBack } from '../../components/icons';
 
 // ─── Version dynamique depuis app.json ───────────────────────────────────────
 
@@ -27,14 +28,6 @@ const versionLabel = buildNumber
   : `Version ${appVersion}`;
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
-
-const IcoBack = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
 
 const IcoChevron = () => (
   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none"

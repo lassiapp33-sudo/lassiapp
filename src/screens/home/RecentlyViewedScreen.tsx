@@ -9,16 +9,9 @@ import * as rvService from '../../services/recentlyViewed';
 import { RecentShop } from '../../services/recentlyViewed';
 import MascoHomeBtn   from '../../components/MascoHomeBtn';
 import logger         from '../../utils/logger';
+import { IcoBack } from '../../components/icons';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
-
-const IcoBack = () => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
 
 const IcoClockEmpty = () => (
   <Svg width={52} height={52} viewBox="0 0 24 24" fill="none"

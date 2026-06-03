@@ -1,22 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
-import { colors, fonts, radius, TOP_INSET } from '../../theme';
-
-const IcoBack = () => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
-
-const IcoSearch = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
-    <Circle cx={11} cy={11} r={8} stroke={colors.muted} />
-    <Path d="m21 21-4.3-4.3" stroke={colors.muted} />
-  </Svg>
-);
+import { colors, fonts, TOP_INSET } from '../../theme';
+import { IcoBack, IcoSearch } from '../icons';
 
 interface Props {
   onBack:    () => void;

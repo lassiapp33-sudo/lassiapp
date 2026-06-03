@@ -2,14 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, TOP_INSET } from '../../theme';
-
-const IcoBack = () => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
+import { IcoBack } from '../icons';
 
 const IcoEye = () => (
   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2}>

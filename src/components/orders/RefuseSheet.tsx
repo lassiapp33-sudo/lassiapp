@@ -6,6 +6,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { IncomingOrder } from '../../types/orders';
+import { IcoClose } from '../icons';
 
 const BOTTOM_PAD = Platform.OS === 'ios' ? 28 : 14;
 
@@ -15,13 +16,6 @@ const REASONS = [
   'Article indisponible',
   'Délai trop long',
 ];
-
-const IcoX = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.2} strokeLinecap="round">
-    <Path d="M18 6 6 18M6 6l12 12" stroke={colors.danger} />
-  </Svg>
-);
 
 interface Props {
   visible:  boolean;
@@ -90,7 +84,7 @@ export default function RefuseSheet({ visible, order, onRefuse, onClose }: Props
             onPress={() => onRefuse(selected)}
             activeOpacity={0.85}
           >
-            <IcoX />
+            <IcoClose color={colors.muted} />
             <Text style={styles.refuseTxt}>Refuser</Text>
           </TouchableOpacity>
         </View>

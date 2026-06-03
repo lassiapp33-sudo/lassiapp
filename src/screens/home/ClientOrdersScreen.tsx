@@ -16,18 +16,10 @@ import useAuthStore              from '../../store/authStore';
 import useCartStore              from '../../store/cartStore';
 import AvisForm                  from '../../components/avis/AvisForm';
 import { Avis }                  from '../../types/avis';
-import * as avisService          from '../../services/avis';
 import MascoHomeBtn              from '../../components/MascoHomeBtn';
+import { IcoBack } from '../../components/icons';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
-
-const IcoBack = () => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
 
 const IcoFood = () => (
   <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round">

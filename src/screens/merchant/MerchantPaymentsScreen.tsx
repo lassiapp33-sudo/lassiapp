@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, Modal,
   StyleSheet, ActivityIndicator, RefreshControl, AppState,
 } from 'react-native';
-import Svg, { Path, Circle, Rect, Polyline } from 'react-native-svg';
+import Svg, { Path, Circle, Polyline } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import {
   MerchantPayment, PaymentFilter, PaymentStatus, DayRevenue,
@@ -12,22 +12,9 @@ import * as paymentsService from '../../services/merchantPayments';
 import useAuthStore  from '../../store/authStore';
 import { supabase }   from '../../lib/supabase';
 import MascoHomeBtn   from '../../components/MascoHomeBtn';
+import { IcoBack, IcoClose } from '../../components/icons';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
-
-const IcoBack = () => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
-
-const IcoClose = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round">
-    <Path d="M18 6 6 18M6 6l12 12" stroke={colors.muted} />
-  </Svg>
-);
 
 const IcoCheck = () => (
   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2.5} strokeLinecap="round">

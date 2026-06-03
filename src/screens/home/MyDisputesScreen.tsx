@@ -12,14 +12,7 @@ import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import * as disputeService from '../../services/disputes';
 import type { Dispute, DisputeMessage } from '../../services/disputes';
 import logger from '../../utils/logger';
-
-const IcoBack = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
+import { IcoBack } from '../../components/icons';
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> = {
   open:      { bg: 'rgba(224,122,122,0.15)', text: '#E07A7A', label: 'Ouvert' },

@@ -8,21 +8,14 @@ import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import { OrderInfo } from '../../types/payment';
-import useCartStore, { OrderType } from '../../store/cartStore';
+import useCartStore from '../../store/cartStore';
 import Avatar from '../../components/Avatar';
 import { validateCartAvailability } from '../../services/products';
 import * as promosService from '../../services/promotions';
 import { AppliedDiscount } from '../../types/promotions';
+import { IcoBack } from '../../components/icons';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
-
-const IcoBack = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
 
 const IcoNote = () => (
   <Svg width={17} height={17} viewBox="0 0 24 24" fill="none"
@@ -78,7 +71,6 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
 
   const hasItems = items.length > 0;
 
-  const displayInitial  = shopInfo?.initial  ?? shopName.charAt(0).toUpperCase();
   const displayName     = shopInfo?.name     ?? shopName;
   const displayLocation = shopInfo?.location ?? '';
 

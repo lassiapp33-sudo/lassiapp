@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { ProductPromoInfo } from '../../types/promotions';
+import { IcoPlus } from '../icons';
 
 export interface Product {
   id:        string;
@@ -14,13 +15,6 @@ export interface Product {
   category:  string;
   stock?:    'in' | 'out';
 }
-
-const IcoPlus = () => (
-  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.5} strokeLinecap="round">
-    <Path d="M12 5v14M5 12h14" stroke={colors.bg} />
-  </Svg>
-);
 
 interface Props {
   product:   Product;

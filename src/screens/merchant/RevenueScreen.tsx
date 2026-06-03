@@ -11,16 +11,9 @@ import * as debtsService  from '../../services/debts';
 import { RevenueOrder }   from '../../services/orders';
 import { Debtor }         from '../../types/debts';
 import { getErrorMessage } from '../../utils/errorUtils';
+import { IcoBack } from '../../components/icons';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
-
-const IcoBack = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
 
 const IcoChevL = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"

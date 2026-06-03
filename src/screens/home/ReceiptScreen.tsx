@@ -1,23 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, ActivityIndicator,
 } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import QRCode from 'react-native-qrcode-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { getReceipt, ReceiptInfo, ReceiptStatus } from '../../services/receipts';
 import { contacterServiceClient } from '../../config/contact';
+import { IcoBack } from '../../components/icons';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
-
-const IcoBack = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M19 12H5" stroke={colors.white} />
-    <Path d="M12 19l-7-7 7-7" stroke={colors.white} />
-  </Svg>
-);
 
 const IcoRefresh = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
@@ -107,7 +100,7 @@ export default function ReceiptScreen({ orderId, onBack }: Props) {
   const [error,    setError]    = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<ReceiptStatus>('aucun');
 
-  const { remaining, mm, ss, expired } = useCountdown(
+  const { mm, ss, expired } = useCountdown(
     liveStatus === 'valide' ? receipt?.receiptValidUntil : undefined
   );
 
