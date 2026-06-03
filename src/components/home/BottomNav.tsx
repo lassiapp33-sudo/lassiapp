@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { colors, fonts, radius } from '../../theme';
+import { colors, fonts } from '../../theme';
 import { useT } from '../../i18n';
 import { LassiMascotte } from '../LassiMascotte';
 

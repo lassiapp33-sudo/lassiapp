@@ -11,7 +11,7 @@ interface Props {
   onPress?:  () => void;
 }
 
-export default function SponsoredCard({ initial, name, desc, logoUrl, onPress }: Props) {
+export default function SponsoredCard({ name, desc, logoUrl, onPress }: Props) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       {/* Tag sponsorisé */}

@@ -10,7 +10,7 @@ interface Props {
   progressLabel: string; // ex : "78% vers le maintien"
 }
 
-export default function VipScoring({ rank, subtitle, renewIn, progress, progressLabel }: Props) {
+export default function VipScoring({ rank, subtitle, renewIn, progress }: Props) {
   return (
     <View style={styles.card}>
       {/* En-tête : trophée + titre */}

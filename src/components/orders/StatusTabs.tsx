@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts } from '../../theme';
-import { MerchantTab, OrderStatus } from '../../types/orders';
+import { MerchantTab } from '../../types/orders';
 
 const TABS: Array<{ id: MerchantTab; label: string }> = [
   { id: 'all',      label: 'Toutes'    },

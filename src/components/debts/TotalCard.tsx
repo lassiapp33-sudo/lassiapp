@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fonts, radius } from '../../theme';
+import { colors, fonts } from '../../theme';
 import { Debtor } from '../../types/debts';
 
 const IcoCoin = () => (

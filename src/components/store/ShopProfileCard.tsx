@@ -1,18 +1,8 @@
 import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { StoreProfile } from '../../types/store';
 import Avatar from '../Avatar';
-
-// ─── Icône crayon ────────────────────────────────────────────────────────────
-
-const IcoPencil = ({ size = 11, color = colors.accent }: { size?: number; color?: string }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
-    <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke={color} />
-    <Path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" stroke={color} />
-  </Svg>
-);
 
 // ─── Interrupteur animé ───────────────────────────────────────────────────────
 

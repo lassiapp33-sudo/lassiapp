@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, fonts, radius } from '../../theme';
+import { colors, fonts } from '../../theme';
 import { CatId, CATEGORIES } from '../../config/categories';
 
 // Re-export pour compatibilité des imports existants

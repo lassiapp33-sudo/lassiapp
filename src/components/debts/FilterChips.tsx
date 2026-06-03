@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts } from '../../theme';
 import { DebtFilter } from '../../types/debts';
 

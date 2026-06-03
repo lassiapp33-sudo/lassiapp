@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { colors, fonts, radius } from '../../theme';
+import { colors, fonts } from '../../theme';
 
 export type HomeTab = 'nearby' | 'recent';
 

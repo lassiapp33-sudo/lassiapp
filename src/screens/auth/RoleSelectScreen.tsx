@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import LassiLogo from '../../components/LassiLogo';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';

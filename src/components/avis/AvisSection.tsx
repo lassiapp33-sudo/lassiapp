@@ -106,7 +106,7 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
     setAvisTarget({ existing: undefined });
   };
 
-  const handleReport = (avisId: string) => {
+  const handleReport = (_avisId: string) => {
     Alert.alert(
       'Signaler cet avis',
       'Un avis abusif, insultant ou faux sera masqué après vérification par l\'équipe LASSI.',

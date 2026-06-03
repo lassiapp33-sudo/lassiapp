@@ -33,6 +33,14 @@ export function formatConvTime(iso: string): string {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 }
 
+/** Formate une date+heure ISO : "3 juin 2025 · 14:30" */
+export function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+    + ' · '
+    + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
 /** Temps écoulé depuis un ISO : "à l'instant" / "il y a 5 min" / "il y a 2 h" / "il y a 3 j" */
 export function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();

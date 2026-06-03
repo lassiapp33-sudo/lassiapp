@@ -21,6 +21,38 @@ export function normalizePhoneSN(raw: string | null | undefined): string | null 
 }
 
 /**
+ * Ouvre directement le composeur téléphonique du téléphone.
+ * Quitte l'app et lance l'appel natif sans passer par WhatsApp.
+ * Essaie d'abord la normalisation sénégalaise, puis tente le numéro brut
+ * si suffisamment de chiffres sont présents.
+ */
+export async function openDirectPhoneCall(rawPhone: string | null | undefined): Promise<void> {
+  if (!rawPhone) {
+    Alert.alert('Appel impossible', 'Numéro de contact indisponible.');
+    return;
+  }
+
+  const normalized = normalizePhoneSN(rawPhone);
+  const digits = String(rawPhone).replace(/[^\d+]/g, '');
+  // Utilise le numéro normalisé si possible, sinon le brut (au moins 8 chiffres)
+  const dialStr = normalized
+    ? `+${normalized}`
+    : digits.length >= 8 ? (digits.startsWith('+') ? digits : `+${digits}`) : null;
+
+  if (!dialStr) {
+    Alert.alert('Appel impossible', 'Numéro de contact indisponible.');
+    return;
+  }
+
+  const tel = `tel:${dialStr}`;
+  try {
+    await Linking.openURL(tel);
+  } catch {
+    Alert.alert('Appel impossible', "Impossible d'ouvrir le composeur téléphonique.");
+  }
+}
+
+/**
  * Ouvre WhatsApp sur le numéro donné, prêt à appeler (1 tap dans WhatsApp).
  * Si WhatsApp n'est pas installé → propose l'appel téléphonique classique.
  */
@@ -41,7 +73,6 @@ export async function openWhatsAppCall(rawPhone: string | null | undefined): Pro
       await Linking.openURL(waScheme);
       return;
     }
-    // WhatsApp non installé → propose l'appel normal
     Alert.alert(
       'Appel impossible',
       "WhatsApp n'est pas installé sur ton téléphone.",
@@ -51,7 +82,6 @@ export async function openWhatsAppCall(rawPhone: string | null | undefined): Pro
       ],
     );
   } catch {
-    // Dernier recours : wa.me dans le navigateur
     Linking.openURL(waWeb).catch(() =>
       Alert.alert('Appel impossible', "Impossible d'ouvrir WhatsApp."),
     );

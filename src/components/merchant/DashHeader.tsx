@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { colors, fonts, radius } from '../../theme';
+import { colors, fonts } from '../../theme';
 
 const IcoBell = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"

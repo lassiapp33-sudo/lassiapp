@@ -61,7 +61,6 @@ export default function ClientHomeScreen({
   const unreadCount       = useNotificationsStore(s => s.notifications.filter(n => n.unread).length);
   const favorites         = useFavoritesStore(s => s.favorites);
   const loadFavorites     = useFavoritesStore(s => s.loadFavorites);
-  const coords            = useLocationStore(s => s.coords);
   const zoneName          = useLocationStore(s => s.zoneName);
   const refreshLocation   = useLocationStore(s => s.refreshLocation);
 
