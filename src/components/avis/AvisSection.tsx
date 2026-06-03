@@ -64,10 +64,11 @@ interface Props {
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 export default function AvisSection({ shopId, shopName, currentUserId, isMerchant }: Props) {
-  const [avisList,     setAvisList]     = useState<Avis[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [canLeave,     setCanLeave]     = useState(false);
-  const [avisTarget,   setAvisTarget]   = useState<{
+  const [avisList,       setAvisList]       = useState<Avis[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [canLeave,       setCanLeave]       = useState(false);
+  const [myExistingAvis, setMyExistingAvis] = useState<Avis | null>(null);
+  const [avisTarget,     setAvisTarget]     = useState<{
     existing?: Avis;
   } | null>(null);
 
@@ -88,8 +89,10 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
     try {
       const result = await avisService.canLeaveAvis(shopId, currentUserId);
       setCanLeave(result.canLeave);
+      setMyExistingAvis(result.existingAvis ?? null);
     } catch {
       setCanLeave(false);
+      setMyExistingAvis(null);
     }
   }, [shopId, currentUserId, isMerchant]);
 
@@ -98,11 +101,9 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
     checkCanLeave();
   }, [load, checkCanLeave]);
 
-  const handleOpenAvisForm = async () => {
-    if (!currentUserId) return;
-    const result = await avisService.canLeaveAvis(shopId, currentUserId);
-    if (!result.canLeave) return;
-    setAvisTarget({ existing: result.existingAvis });
+  const handleOpenAvisForm = () => {
+    if (!currentUserId || !canLeave) return;
+    setAvisTarget({ existing: undefined });
   };
 
   const handleReport = (avisId: string) => {
@@ -136,6 +137,16 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
           <TouchableOpacity style={styles.writeBtn} onPress={handleOpenAvisForm} activeOpacity={0.8}>
             <IcoWrite />
             <Text style={styles.writeTxt}>Laisser un avis</Text>
+          </TouchableOpacity>
+        )}
+        {!canLeave && myExistingAvis && (
+          <TouchableOpacity
+            style={[styles.writeBtn, styles.editBtn]}
+            onPress={() => setAvisTarget({ existing: myExistingAvis })}
+            activeOpacity={0.8}
+          >
+            <IcoWrite />
+            <Text style={styles.writeTxt}>Mon avis</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -235,6 +246,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: 13,
     paddingVertical: 8,
+  },
+  editBtn: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.accent,
   },
   writeTxt: {
     color: colors.bg,

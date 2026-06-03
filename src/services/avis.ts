@@ -43,28 +43,38 @@ export async function getAvisById(avisId: string): Promise<Avis | null> {
   return rowToAvis(data);
 }
 
-// ─── Vérification éligibilité ─────────────────────────────────────────────────
+// ─── Vérification éligibilité (RPC serveur — source de vérité) ───────────────
 
 export async function canLeaveAvis(
   shopId: string,
   userId: string,
 ): Promise<CanLeaveAvisResult> {
-  const { data: existing } = await supabase
-    .from('avis')
-    .select('*')
-    .eq('shop_id', shopId)
-    .eq('author_id', userId)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('can_leave_avis', { p_shop_id: shopId });
 
-  if (existing) {
+  if (error || !data) return { canLeave: false };
+
+  if (!data.can_leave && data.reason === 'already_reviewed') {
     return {
-      canLeave:       true,
-      existingAvisId: existing.id,
-      existingAvis:   rowToAvis(existing),
+      canLeave:       false,
+      existingAvisId: data.existing_id,
+      existingAvis:   {
+        id:                data.existing_id,
+        orderId:           null,
+        shopId,
+        authorId:          userId,
+        authorName:        data.existing_author_name ?? '',
+        note:              data.existing_note,
+        commentaire:       data.existing_commentaire ?? null,
+        photoUrl:          data.existing_photo_url   ?? null,
+        reponseCommercant: null,
+        masque:            data.existing_masque ?? false,
+        createdAt:         data.existing_created_at,
+        updatedAt:         data.existing_updated_at,
+      },
     };
   }
 
-  return { canLeave: true };
+  return { canLeave: Boolean(data.can_leave) };
 }
 
 // ─── Écriture ─────────────────────────────────────────────────────────────────
