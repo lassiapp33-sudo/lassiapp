@@ -22,6 +22,7 @@ import { openWhatsAppCall } from '../../utils/whatsapp';
 import { ChatMessage }   from '../../services/chat';
 import { useRealtimeMessages } from '../../hooks/useRealtimeMessages';
 import logger from '../../utils/logger';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 // ─── Types locaux UI ──────────────────────────────────────────────────────────
 
@@ -347,8 +348,8 @@ export default function ChatScreen({
           ? { ...m, id: saved.id, voiceUrl: saved.voiceUrl }
           : m,
       ));
-    } catch (err: any) {
-      logger.warn('[ChatScreen] handleVoiceSend:', err?.message ?? err);
+    } catch (err: unknown) {
+      logger.warn('[ChatScreen] handleVoiceSend:', getErrorMessage(err));
       if (!isMounted.current) return;
       setMessages(prev => prev.filter(m => m.id !== tempId));
       Alert.alert('Envoi échoué', err?.message ?? 'Erreur inconnue');
@@ -379,8 +380,8 @@ export default function ChatScreen({
       setMessages(prev => prev.map(m =>
         m.id === tempId ? { ...m, id: saved.id, imageUrl } : m,
       ));
-    } catch (err: any) {
-      logger.warn('[ChatScreen] handleImageSend:', err?.message ?? err);
+    } catch (err: unknown) {
+      logger.warn('[ChatScreen] handleImageSend:', getErrorMessage(err));
       if (!isMounted.current) return;
       setMessages(prev => prev.filter(m => m.id !== tempId));
       Alert.alert('Envoi échoué', err?.message ?? 'Erreur inconnue');

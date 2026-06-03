@@ -116,7 +116,8 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
   const galleryUrls     = context.galleryUrls;
   const [galLoading, setGalLoading] = useState(false);
 
-  useEffect(() => { loadMyShop(); }, []);
+  // Montage seul — loadMyShop est stable (Zustand)
+  useEffect(() => { loadMyShop(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!shopId) return;

@@ -72,7 +72,7 @@ export default function OrdersScreen({ onBack }: Props) {
 
   useEffect(() => {
     if (shopId) loadOrders(shopId);
-  }, [shopId]);
+  }, [shopId, loadOrders]);
 
   const handleRefresh = useCallback(async () => {
     if (!shopId) return;

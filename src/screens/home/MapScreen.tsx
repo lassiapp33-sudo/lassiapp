@@ -6,7 +6,7 @@ import {
   StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator,
 } from 'react-native';
 import { LassiMascotte, MASCOTTE_NOM } from '../../components/LassiMascotte';
-import { WebView } from 'react-native-webview';
+import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
 import { colors, fonts, TOP_INSET } from '../../theme';
 import Avatar from '../../components/Avatar';
@@ -131,7 +131,7 @@ sendRN({type:'ready'});
 // ─── Filtres de catégories ────────────────────────────────────────────────────
 
 const SUBCAT_FILTERS = [
-  { id: 'all', label: 'Tout', emoji: null as string | null, imageUri: null as any },
+  { id: 'all', label: 'Tout', emoji: null as string | null, imageUri: null as number | null },
   ...CATEGORIES.flatMap(cat =>
     cat.subcats.map(sub => ({
       id:       sub.id,
@@ -278,11 +278,11 @@ export default function MapScreen({ onBack, onShopPress, excludeShopId }: Props)
     }
   }, []);
 
-  // Charge tous les commerces au montage
+  // Montage seul — chargement initial unique ; loadAllShops est useCallback([]), refreshLocation est stable (Zustand)
   useEffect(() => {
     if (!coords) refreshLocation();
     loadAllShops();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Recentre la carte quand la position GPS devient disponible
   useEffect(() => {
@@ -310,7 +310,7 @@ export default function MapScreen({ onBack, onShopPress, excludeShopId }: Props)
   }, [allShops, activeFilter, mapReady, searchQuery, excludeShopId]);
 
   // ── Messages de la WebView → React Native ────────────────────────────────
-  const handleWebViewMessage = (event: any) => {
+  const handleWebViewMessage = (event: WebViewMessageEvent) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
 

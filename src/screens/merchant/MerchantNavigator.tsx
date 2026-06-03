@@ -61,7 +61,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
     } else if (pendingNav.type === 'order') {
       setScreen('orders');
     }
-  }, [pendingNav]);
+  }, [pendingNav, clearPending]);
 
   // ── Mes achats (prestataire en mode acheteur) ─────────────────────────────
   if (screen === 'myorders') {

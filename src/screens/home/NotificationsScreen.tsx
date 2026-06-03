@@ -82,11 +82,11 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
   const markAllRead       = useNotificationsStore(s => s.markAllRead);
   const loadNotifications = useNotificationsStore(s => s.loadNotifications);
 
-  // Chargement initial + remise à zéro du badge dès l'ouverture
+  // Montage seul — chargement + marquage lu une seule fois à l'ouverture de l'écran
   useEffect(() => {
     loadNotifications();
     markAllRead();   // toutes les notifs marquées lues → badge retombe à 0
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const todayNotifs = notifications.filter(n => n.group === 'today');
   const weekNotifs  = notifications.filter(n => n.group === 'week');

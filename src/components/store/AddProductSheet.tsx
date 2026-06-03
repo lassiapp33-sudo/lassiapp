@@ -113,7 +113,7 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
     }
     setShowEmojiPicker(false);
     setUploading(false);
-  }, [visible]);
+  }, [visible, product]);
 
   // ── Sélection et upload de photo ────────────────────────────────────────────
   const handlePickPhoto = async (source: 'gallery' | 'camera') => {

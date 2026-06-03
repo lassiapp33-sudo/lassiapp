@@ -66,18 +66,18 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
   const debtors   = useDebtsStore(s => s.debtors);
   const loadDebts = useDebtsStore(s => s.loadDebts);
 
-  // Chargement initial
+  // Montage seul — initialisation unique au démarrage du dashboard
   useEffect(() => {
     loadMyShop();
     loadNotifications();
     refreshLocation();   // vraie position GPS dès le montage
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!shopId) return;
     loadOrders(shopId);
     loadDebts(shopId);
-  }, [shopId]);
+  }, [shopId, loadOrders, loadDebts]);
 
   // ── Calculs réels ──────────────────────────────────────────────────────────
   const activeOrders  = orders.filter(o => o.status === 'new' || o.status === 'preparing');

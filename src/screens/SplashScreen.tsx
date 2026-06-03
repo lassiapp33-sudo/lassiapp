@@ -10,7 +10,11 @@ export default function SplashScreen({ onFinish }: Props) {
   const rotation   = useRef(new Animated.Value(0)).current;
   const tagOpacity = useRef(new Animated.Value(0)).current;
   const tagY       = useRef(new Animated.Value(14)).current;
+  // Ref pour onFinish : évite de redémarrer l'animation si le parent recrée la fonction
+  const onFinishRef = useRef(onFinish);
+  useEffect(() => { onFinishRef.current = onFinish; });
 
+  // Montage seul — animations lancées une fois, timer unique
   useEffect(() => {
     // Rotation continue 360° linéaire — seule l'aiguille tourne
     Animated.loop(
@@ -36,9 +40,9 @@ export default function SplashScreen({ onFinish }: Props) {
       }),
     ]).start();
 
-    const timer = setTimeout(onFinish, 2600);
+    const timer = setTimeout(() => onFinishRef.current(), 2600);
     return () => clearTimeout(timer);
-  }, [onFinish]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rotate = rotation.interpolate({
     inputRange:  [0, 1],

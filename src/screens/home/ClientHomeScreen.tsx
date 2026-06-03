@@ -129,11 +129,12 @@ export default function ClientHomeScreen({
     }
   }
 
+  // Montage seul — loadShops est une fonction locale (non memoized), l'ajouter créerait une boucle infinie
   useEffect(() => {
     loadFavorites();
     refreshLocation();
     loadShops();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleNavPress = (t: NavTab) => {
     setNavTab(t);
