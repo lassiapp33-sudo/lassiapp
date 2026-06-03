@@ -67,10 +67,18 @@ CREATE POLICY "avis_select"
     OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE)
   );
 
--- INSERT : tout client connecté peut laisser un avis (1 par prestataire via UNIQUE)
+-- INSERT : client connecté ayant une commande 'done' chez ce prestataire (anti-fraude)
 CREATE POLICY "avis_insert"
   ON avis FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = author_id);
+  WITH CHECK (
+    auth.uid() = author_id
+    AND EXISTS (
+      SELECT 1 FROM orders
+      WHERE orders.client_id = auth.uid()
+        AND orders.shop_id   = avis.shop_id
+        AND orders.status    = 'done'
+    )
+  );
 
 -- UPDATE auteur : modifier son propre avis (note / commentaire / photo)
 CREATE POLICY "avis_update_author"
