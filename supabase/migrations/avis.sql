@@ -1,7 +1,8 @@
 -- ===========================================================================
 -- LASSİ — Système d'avis clients
--- 1 avis par client par prestataire (pas de commande obligatoire)
--- SAFE à re-exécuter
+-- 1 avis par client par prestataire, commande done requise (anti-fraude)
+-- SAFE pour création initiale. Pour une DB existante : exécuter d'abord
+-- avis_schema_fix.sql puis avis_antifraude.sql.
 -- ===========================================================================
 
 -- ─── 1. TABLE ────────────────────────────────────────────────────────────────
