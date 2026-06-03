@@ -21,6 +21,7 @@ import useAuthStore     from '../../store/authStore';
 import { getCurrentLocation, reverseGeocode } from '../../services/location';
 import * as storageService from '../../services/storage';
 import * as promoService   from '../../services/promotions';
+import { getErrorMessage }  from '../../utils/errorUtils';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -220,8 +221,8 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
       const path = storageService.galleryImagePath(shopId);
       const url  = await storageService.uploadImage('gallery', uri, path);
       await updateGalleryUrls([...galleryUrls, url]);
-    } catch (err: any) {
-      const msg = err?.message ?? '';
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err, '');
       if (msg.includes('Bucket not found') || msg.includes('not found')) {
         Alert.alert(
           'Configuration manquante',

@@ -12,6 +12,7 @@ import LassiLogo   from '../../components/LassiLogo';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import { formatPhoneSenegal, cleanPhone, isValidPhone, PHONE_ERROR } from '../../utils/phone';
 import { useT } from '../../i18n';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 type Role = 'client' | 'merchant';
 
@@ -138,8 +139,8 @@ export default function RegisterScreen({ role, onBack, onSuccess, onLogin, onCGU
         email:    email.trim(),
         password: mdp,
       });
-    } catch (e: any) {
-      setErreur(e.message ?? 'Une erreur est survenue. Réessaie.');
+    } catch (e: unknown) {
+      setErreur(getErrorMessage(e));
     } finally {
       setLoading(false);
     }

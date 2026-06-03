@@ -1,13 +1,13 @@
 import React, {
-  useState, useRef, useCallback, useEffect, useLayoutEffect,
+  useState, useRef, useEffect, useLayoutEffect,
 } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, KeyboardAvoidingView, Platform, Linking,
+  StyleSheet, KeyboardAvoidingView, Platform,
   ScrollView, Image, ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, TOP_INSET, radius } from '../../theme';
 import { contacterServiceClient } from '../../config/contact';
 import { LassiMascotte }           from '../../components/LassiMascotte';
@@ -41,7 +41,7 @@ function chatKey(userId: string) {
   return `lassi_chat_${userId}`;
 }
 
-const SEARCH_CHIPS: { id: string; label: string; emoji: string; imageUri?: any; cat: CatMatch }[] =
+const SEARCH_CHIPS: { id: string; label: string; emoji: string; imageUri?: number; cat: CatMatch }[] =
   CATEGORIES.flatMap(cat =>
     cat.subcats.map(sub => ({
       id:       `${cat.id}_${sub.id}`,

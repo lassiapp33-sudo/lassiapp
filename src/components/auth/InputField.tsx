@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardTypeOptions, ScrollView,
+  type TextInputProps,
 } from 'react-native';
 import { colors, fonts } from '../../theme';
 
@@ -18,8 +19,8 @@ interface Props {
   keyboardType?: KeyboardTypeOptions;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   phonePrefix?: boolean;
-  autoComplete?: any;
-  textContentType?: any;
+  autoComplete?: TextInputProps['autoComplete'];
+  textContentType?: TextInputProps['textContentType'];
   onFocus?: () => void;
   scrollRef?: React.RefObject<ScrollView | null>;
   returnKeyType?: 'done' | 'next' | 'search' | 'send' | 'go';

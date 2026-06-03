@@ -4,7 +4,7 @@ import {
   StyleSheet, Alert, ActivityIndicator, Switch, Modal,
   KeyboardAvoidingView, Platform, Image,
 } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 
 import LassiScreen              from '../../components/LassiScreen';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -12,6 +12,7 @@ import useShopStore              from '../../store/shopStore';
 import { Promotion, PromoType, PromoCibleType, getPromoStatus } from '../../types/promotions';
 import { StoreProduct }          from '../../types/store';
 import * as promoService         from '../../services/promotions';
+import { getErrorMessage }       from '../../utils/errorUtils';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -289,8 +290,8 @@ export default function PromotionsScreen({ onBack }: Props) {
       }
       setShowForm(false);
       await load();
-    } catch (e: any) {
-      Alert.alert('Erreur', e.message ?? 'Impossible de sauvegarder.');
+    } catch (e: unknown) {
+      Alert.alert('Erreur', getErrorMessage(e, 'Impossible de sauvegarder.'));
     } finally {
       setSaving(false);
     }
@@ -306,8 +307,8 @@ export default function PromotionsScreen({ onBack }: Props) {
           try {
             await promoService.deletePromo(promo.id);
             setPromos(ps => ps.filter(p => p.id !== promo.id));
-          } catch (e: any) {
-            Alert.alert('Erreur', e.message);
+          } catch (e: unknown) {
+            Alert.alert('Erreur', getErrorMessage(e));
           }
         },
       },
@@ -324,12 +325,10 @@ export default function PromotionsScreen({ onBack }: Props) {
   };
 
   // ── Setter form helper ────────────────────────────────────────────────────────
-  const set = (key: keyof FormState, val: any) =>
+  const set = <K extends keyof FormState,>(key: K, val: FormState[K]) =>
     setForm(f => ({ ...f, [key]: val }));
 
-  // ── Catégories disponibles ────────────────────────────────────────────────────
   const storeCategories = useShopStore(s => s.categories);
-  const categories = storeCategories.map(c => c.id);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (

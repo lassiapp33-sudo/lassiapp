@@ -9,7 +9,7 @@ export async function getFavoriteIds(): Promise<string[]> {
     .select('shop_id')
     .eq('user_id', userId);
   if (error) return [];
-  return (data ?? []).map((r: any) => r.shop_id as string);
+  return (data ?? []).map(r => r.shop_id as string);
 }
 
 export async function addFavorite(shopId: string): Promise<void> {

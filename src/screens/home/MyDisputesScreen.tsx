@@ -65,7 +65,7 @@ export default function MyDisputesScreen({ onBack }: Props) {
       await disputeService.sendDisputeMessage(selected.id, newMsg.trim());
       setNewMsg('');
       loadMessages(selected.id);
-    } catch (e: any) {
+    } catch {
       // Erreur silencieuse — l'input reste rempli
     } finally {
       setSendingMsg(false);

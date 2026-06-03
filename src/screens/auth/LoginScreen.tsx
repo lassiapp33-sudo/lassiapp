@@ -10,6 +10,7 @@ import AuthButton from '../../components/auth/AuthButton';
 import { colors, fonts, spacing, TOP_INSET } from '../../theme';
 import { formatPhoneSenegal, cleanPhone, isValidPhone, PHONE_ERROR } from '../../utils/phone';
 import { useT } from '../../i18n';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 interface Props {
   onBack:           () => void;
@@ -70,8 +71,8 @@ export default function LoginScreen({ onBack, onSuccess, onForgotPassword, onReg
     setLoading(true);
     try {
       await onSuccess(cleanPhone(tel), mdp);
-    } catch (e: any) {
-      setErreur(e.message ?? 'Une erreur est survenue. Réessaie.');
+    } catch (e: unknown) {
+      setErreur(getErrorMessage(e));
     } finally {
       setLoading(false);
     }

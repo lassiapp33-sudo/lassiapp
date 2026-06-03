@@ -120,7 +120,8 @@ export async function validateCartAvailability(
     .in('id', itemIds)
     .eq('shop_id', shopId);
   if (error) return []; // en cas d'erreur réseau, la validation serveur prendra le relais
-  return (data ?? [])
-    .filter((p: any) => p.stock === 'out')
-    .map((p: any) => ({ id: p.id, name: p.name }));
+  type CartRow = { id: string; name: string; stock: string };
+  return (data as CartRow[] ?? [])
+    .filter(p => p.stock === 'out')
+    .map(p => ({ id: p.id, name: p.name }));
 }

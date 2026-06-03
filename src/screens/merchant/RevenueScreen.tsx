@@ -10,6 +10,7 @@ import * as ordersService from '../../services/orders';
 import * as debtsService  from '../../services/debts';
 import { RevenueOrder }   from '../../services/orders';
 import { Debtor }         from '../../types/debts';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -199,8 +200,8 @@ export default function RevenueScreen({ onBack }: Props) {
       ]);
       setOrders(rev);
       setDebtors(dbt);
-    } catch (e: any) {
-      setError(e?.message ?? 'Erreur');
+    } catch (e: unknown) {
+      setError(getErrorMessage(e, 'Erreur'));
     } finally {
       setLoading(false);
       setRefreshing(false);

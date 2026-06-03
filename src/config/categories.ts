@@ -23,7 +23,7 @@ export interface SubcatOption {
   emoji:     string;
   label:     string;
   desc:      string;
-  imageUri?: any;
+  imageUri?: number;
 }
 
 export interface CatConfig {

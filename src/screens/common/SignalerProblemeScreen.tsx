@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, TextInput,
   ScrollView, StyleSheet, Image, Platform,
-  ActionSheetIOS, Alert, ActivityIndicator, Linking,
+  ActionSheetIOS, Alert, ActivityIndicator,
   KeyboardAvoidingView,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -17,6 +17,7 @@ import {
 import * as storage from '../../services/storage';
 import useAuthStore from '../../store/authStore';
 import MascoHomeBtn from '../../components/MascoHomeBtn';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -140,8 +141,8 @@ export default function SignalerProblemeScreen({
       });
 
       setDone(true);
-    } catch (e: any) {
-      setError(e.message ?? 'Une erreur est survenue. Réessaie.');
+    } catch (e: unknown) {
+      setError(getErrorMessage(e));
     } finally {
       setSubmitting(false);
       setUploading(false);

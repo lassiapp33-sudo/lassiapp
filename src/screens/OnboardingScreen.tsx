@@ -9,6 +9,7 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  type ViewToken,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { colors, fonts, radius, spacing } from '../theme';
@@ -92,7 +93,7 @@ export default function OnboardingScreen({ onFinish }: Props) {
   const flatListRef = useRef<FlatList>(null);
 
   const onViewableItemsChanged = useCallback(
-    ({ viewableItems }: any) => {
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0) {
         const idx = viewableItems[0].index ?? 0;
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);

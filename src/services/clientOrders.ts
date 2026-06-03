@@ -1,6 +1,10 @@
 import { supabase }      from '../lib/supabase';
 import { ClientOrder, ClientOrderStatus, CommerceType } from '../types/clientOrders';
 
+interface OrderItemRow { product_name?: string; name?: string; qty?: number; unit_price?: number }
+interface AvisRow      { id: string }
+interface ShopRow      { name?: string; category?: string }
+
 // ─── Mappage statuts DB → affichage client ───────────────────────────────────
 // Statuts DB existants : 'new' | 'preparing' | 'ready' | 'done' | 'refused'
 
@@ -22,14 +26,14 @@ function mapCategory(cat?: string): CommerceType {
 }
 
 function rowToOrder(row: Record<string, any>): ClientOrder {
-  const shop  = (row.shops as Record<string, any> | null) ?? {};
-  const items = (row.order_items ?? []).map((i: any) => ({
+  const shop     = (row.shops as ShopRow | null) ?? {};
+  const items    = (row.order_items as OrderItemRow[] ?? []).map(i => ({
     name:  i.product_name ?? i.name ?? '—',
     qty:   i.qty   ?? 1,
     price: i.unit_price ?? 0,
   }));
 
-  const avisRows = (row.avis as any[]) ?? [];
+  const avisRows = (row.avis as AvisRow[]) ?? [];
   const avisId   = avisRows.length > 0 ? avisRows[0].id : undefined;
 
   return {

@@ -10,6 +10,7 @@ import AuthButton from '../../components/auth/AuthButton';
 import NoteBox    from '../../components/auth/NoteBox';
 import { colors, fonts, spacing, TOP_INSET } from '../../theme';
 import * as authService from '../../services/auth';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 interface Props {
   onBack:  () => void;
@@ -48,8 +49,8 @@ export default function ForgotPasswordScreen({ onBack, onLogin }: Props) {
     try {
       await authService.forgotPassword(email.trim());
       setSent(true);
-    } catch (e: any) {
-      setErreur(e.message ?? 'Une erreur est survenue. Réessaie.');
+    } catch (e: unknown) {
+      setErreur(getErrorMessage(e));
     } finally {
       setLoading(false);
     }

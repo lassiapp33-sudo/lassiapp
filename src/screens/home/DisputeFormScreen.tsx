@@ -12,6 +12,7 @@ import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import * as disputeService from '../../services/disputes';
 import * as storageService from '../../services/storage';
 import type { DisputeReason } from '../../services/disputes';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 const IcoBack = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
@@ -84,8 +85,8 @@ export default function DisputeFormScreen({
         'Ton signalement a été transmis. Nous l\'examinerons dans les plus brefs délais.',
         [{ text: 'OK', onPress: onSuccess }],
       );
-    } catch (e: any) {
-      setErreur(e.message ?? 'Une erreur est survenue. Réessaie.');
+    } catch (e: unknown) {
+      setErreur(getErrorMessage(e));
     } finally {
       setLoading(false);
     }

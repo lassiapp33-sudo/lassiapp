@@ -4,6 +4,14 @@ import { IncomingOrder, OrderStatus }  from '../types/orders';
 const SUPABASE_URL  = process.env.EXPO_PUBLIC_SUPABASE_URL      ?? '';
 const ANON_KEY      = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
+// ─── Row types (Supabase response) ───────────────────────────────────────────
+
+interface OrderItemRow {
+  qty:        number;
+  product_name: string;
+  unit_price: number;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function timeLabel(iso: string): string {
@@ -21,7 +29,7 @@ function shortId(uuid: string): string {
 // ─── Mapping ─────────────────────────────────────────────────────────────────
 
 function rowToOrder(row: Record<string, any>): IncomingOrder {
-  const items = (row.order_items ?? []).map((i: any) => ({
+  const items = ((row.order_items as OrderItemRow[]) ?? []).map(i => ({
     qty:   i.qty,
     name:  i.product_name,
     price: i.unit_price * i.qty,
@@ -59,7 +67,7 @@ export async function updateOrderStatus(
   status:   OrderStatus | 'refused',
   prepTime?: string,
 ): Promise<void> {
-  const updates: Record<string, any> = { status };
+  const updates: Partial<{ status: string; prep_time: string }> = { status };
   if (prepTime) updates.prep_time = prepTime;
   const { error } = await supabase.from('orders').update(updates).eq('id', orderId);
   if (error) throw new Error(error.message);

@@ -218,16 +218,6 @@ export default function ChatScreen({
     return () => { cancelled = true; };
   }, [shopId, directConvId, currentUserId, userRole]);
 
-  // ── Retour de PaymentScreen → marquer ticket payé ─────────────────────────
-  useEffect(() => {
-    if (!paidTicketId || processedPayments.current.has(paidTicketId)) return;
-    processedPayments.current.add(paidTicketId);
-    applyPayment(paidTicketId);
-    if (conversationId) {
-      chatService.updateTicketStatus(paidTicketId).catch(err => logger.warn('[ChatScreen] updateTicketStatus:', err));
-    }
-  }, [paidTicketId, conversationId, applyPayment]);
-
   // ── Marquer ticket payé localement + message de confirmation ─────────────
   // useCallback([]) : setMessages et les refs sont stables, pas de dépendances réactives
   const applyPayment = useCallback((ticketId: string) => {
@@ -253,6 +243,16 @@ export default function ChatScreen({
     }, 1400);
     pendingTimers.current.push(t);
   }, []);
+
+  // ── Retour de PaymentScreen → marquer ticket payé ─────────────────────────
+  useEffect(() => {
+    if (!paidTicketId || processedPayments.current.has(paidTicketId)) return;
+    processedPayments.current.add(paidTicketId);
+    applyPayment(paidTicketId);
+    if (conversationId) {
+      chatService.updateTicketStatus(paidTicketId).catch(err => logger.warn('[ChatScreen] updateTicketStatus:', err));
+    }
+  }, [paidTicketId, conversationId, applyPayment]);
 
   // ── Abonnement Realtime ───────────────────────────────────────────────────
   const handleInsert = useCallback((msg: ChatMessage) => {
@@ -352,7 +352,7 @@ export default function ChatScreen({
       logger.warn('[ChatScreen] handleVoiceSend:', getErrorMessage(err));
       if (!isMounted.current) return;
       setMessages(prev => prev.filter(m => m.id !== tempId));
-      Alert.alert('Envoi échoué', err?.message ?? 'Erreur inconnue');
+      Alert.alert('Envoi échoué', getErrorMessage(err, 'Erreur inconnue'));
     }
   };
 
@@ -384,7 +384,7 @@ export default function ChatScreen({
       logger.warn('[ChatScreen] handleImageSend:', getErrorMessage(err));
       if (!isMounted.current) return;
       setMessages(prev => prev.filter(m => m.id !== tempId));
-      Alert.alert('Envoi échoué', err?.message ?? 'Erreur inconnue');
+      Alert.alert('Envoi échoué', getErrorMessage(err, 'Erreur inconnue'));
     }
   };
 

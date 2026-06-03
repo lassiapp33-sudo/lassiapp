@@ -4,9 +4,10 @@ import {
   StyleSheet, Modal, KeyboardAvoidingView, Platform,
   ActivityIndicator,
 } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { verifyReceiptMerchant, VerifyResult } from '../../services/receipts';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -80,8 +81,8 @@ export default function VerifyReceiptSheet({ visible, onClose, onVerified }: Pro
       const res = await verifyReceiptMerchant(rawCode);
       setResult(res);
       if (res.success) onVerified?.(res);
-    } catch (e: any) {
-      setResult({ success: false, reason: e.message ?? 'erreur_reseau' });
+    } catch (e: unknown) {
+      setResult({ success: false, reason: getErrorMessage(e, 'erreur_reseau') });
     } finally {
       setLoading(false);
     }

@@ -25,6 +25,7 @@ import { DEFAULT_WEEK_HOURS, WeekHours } from '../../services/hours';
 import * as storageService from '../../services/storage';
 import * as authService    from '../../services/auth';
 import useAuthStore        from '../../store/authStore';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -129,8 +130,8 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete, 
       });
       useAuthStore.getState().setUser(user);
       onComplete('merchant');
-    } catch (e: any) {
-      setErreur(e.message ?? 'Une erreur est survenue. Réessaie.');
+    } catch (e: unknown) {
+      setErreur(getErrorMessage(e));
       setStep(3);
     } finally {
       setLoading(false);

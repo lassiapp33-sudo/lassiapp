@@ -110,7 +110,7 @@ export async function getRecentlyViewed(limit = 20): Promise<RecentShop[]> {
 
   if (error) throw new Error(error.message);
 
-  const shops = (data ?? []).flatMap((row: any) => {
+  const shops = (data ?? []).flatMap(row => {
     const shop = (row.shops as Record<string, any> | null) ?? null;
     if (!shop || !shop.name) return []; // commerce supprimé ou désactivé → ignoré
     const status = computeStatus(

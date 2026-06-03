@@ -8,6 +8,7 @@ import Svg, { Path } from 'react-native-svg';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem   from 'expo-file-system/legacy';
 import { colors, fonts } from '../../theme';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -78,8 +79,8 @@ export default function BubbleImage({ sender, imageUrl, time, read }: Props) {
     setSaving(true);
     try {
       await saveToGallery(imageUrl);
-    } catch (err: any) {
-      Alert.alert('Erreur', err?.message ?? 'Impossible d\'enregistrer l\'image.');
+    } catch (err: unknown) {
+      Alert.alert('Erreur', getErrorMessage(err, 'Impossible d\'enregistrer l\'image.'));
     } finally {
       setSaving(false);
     }

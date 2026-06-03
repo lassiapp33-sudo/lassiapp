@@ -11,9 +11,10 @@ import {
   Modal, View, Text, TouchableOpacity,
   ActivityIndicator, StyleSheet, Platform,
 } from 'react-native';
-import Svg, { Path, Rect, Polyline } from 'react-native-svg';
+import Svg, { Path, Polyline } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { deleteAccount } from '../../services/account';
+import { getErrorMessage } from '../../utils/errorUtils';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -73,8 +74,8 @@ export default function DeleteAccountModal({ visible, role, onClose, onSuccess }
     try {
       await deleteAccount();
       onSuccess();
-    } catch (e: any) {
-      setErreur(e.message ?? 'Une erreur est survenue. Réessaie.');
+    } catch (e: unknown) {
+      setErreur(getErrorMessage(e));
     } finally {
       setLoading(false);
     }
