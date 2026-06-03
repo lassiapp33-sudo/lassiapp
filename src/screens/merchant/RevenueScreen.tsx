@@ -13,6 +13,7 @@ import { Debtor }         from '../../types/debts';
 import { getErrorMessage } from '../../utils/errorUtils';
 import { IcoBack } from '../../components/icons';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { RevenueMonthBarItem, MonthBar6 } from '../../components/merchant/RevenueMonthBarItem';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -110,12 +111,6 @@ function buildDayStats(orders: RevenueOrder[], offset: number): DayStat[] {
 }
 
 /** Stats globales sur les 6 mois pour le graphique. */
-interface MonthBar6 {
-  offset: number;
-  short:  string;
-  total:  number;
-  confirmed: number;
-}
 
 function build6MonthBars(orders: RevenueOrder[]): MonthBar6[] {
   return [-5,-4,-3,-2,-1,0].map(offset => {
@@ -128,45 +123,6 @@ function build6MonthBars(orders: RevenueOrder[]): MonthBar6[] {
     };
   });
 }
-
-// ─── Composant barre 6 mois ───────────────────────────────────────────────────
-
-function MonthBarItem({
-  bar, max, selected, onPress,
-}: {
-  bar: MonthBar6; max: number; selected: boolean; onPress: () => void;
-}) {
-  const H    = 80;
-  const pct  = max > 0 ? bar.total / max : 0;
-  const barH = Math.max(3, Math.round(pct * H));
-  const confH = bar.total > 0 ? Math.round(barH * (bar.confirmed / bar.total)) : 0;
-
-  return (
-    <TouchableOpacity style={mb.col} onPress={onPress} activeOpacity={0.75}>
-      <View style={[mb.track, { height: H }]}>
-        <View style={[mb.fillBg, { height: barH },
-          selected && { backgroundColor: 'rgba(253,207,52,.4)' }]}>
-          {confH > 0 && (
-            <View style={[mb.fillConf, { height: confH },
-              selected && { backgroundColor: colors.accent }]} />
-          )}
-        </View>
-      </View>
-      <Text style={[mb.label, selected && mb.labelSel]}>{bar.short}</Text>
-      {selected && <View style={mb.dot} />}
-    </TouchableOpacity>
-  );
-}
-
-const mb = StyleSheet.create({
-  col:      { flex: 1, alignItems: 'center', gap: 4 },
-  track:    { width: 30, justifyContent: 'flex-end' },
-  fillBg:   { width: 30, borderRadius: 7, backgroundColor: 'rgba(253,207,52,.15)', justifyContent: 'flex-end' },
-  fillConf: { width: 30, borderRadius: 7, backgroundColor: 'rgba(253,207,52,.6)' },
-  label:    { color: colors.muted, fontFamily: fonts.body, fontSize: 10 },
-  labelSel: { color: colors.accent, fontFamily: fonts.ui },
-  dot:      { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.accent },
-});
 
 // ─── Écran principal ─────────────────────────────────────────────────────────
 
@@ -344,7 +300,7 @@ export default function RevenueScreen({ onBack }: Props) {
             <View style={s.chartBox}>
               <View style={s.chart}>
                 {bars6.map(bar => (
-                  <MonthBarItem
+                  <RevenueMonthBarItem
                     key={bar.offset}
                     bar={bar}
                     max={maxBar}
