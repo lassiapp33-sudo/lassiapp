@@ -218,32 +218,27 @@ Deno.serve(async (req) => {
     // ⑥ Commission LASSİ 0,5% calculée sur le montant APRÈS réduction
     const commission = Math.round(total * 0.005)
 
-    // ⑦ Créer la commande avec les montants recalculés
+    // ⑦ Créer la commande + articles en une seule transaction atomique (RPC)
     const { data: profile } = await admin
       .from('profiles').select('name').eq('id', user.id).maybeSingle()
 
-    const { data: order, error: orderError } = await admin
-      .from('orders')
-      .insert({
-        shop_id:          shopId,
-        client_id:        user.id,
-        client_name:      profile?.name ?? 'Client',
-        total,
-        discount_amount:  discountAmount,
-        promo_label:      promoLabel,
-        status:           'pending',
-        pay_method:       'wave',
-        order_type:       orderType ?? 'place',
-        note:             note ?? null,
-        idempotency_key:  idempotencyKey ?? null,
+    const { data: orderResult, error: orderError } = await admin
+      .rpc('create_order_atomic', {
+        p_shop_id:         shopId,
+        p_client_id:       user.id,
+        p_client_name:     profile?.name ?? 'Client',
+        p_total:           total,
+        p_discount_amount: discountAmount,
+        p_promo_label:     promoLabel ?? null,
+        p_order_type:      orderType ?? 'place',
+        p_note:            note ?? null,
+        p_idempotency_key: idempotencyKey ?? null,
+        p_items:           orderItems,
       })
-      .select()
-      .single()
 
     if (orderError) {
-      // Double-tap concurrent : la contrainte UNIQUE (client_id, idempotency_key) a rejeté
-      // le doublon → récupérer la commande déjà créée et la retourner comme si c'était un
-      // cache hit normal. Code 23505 = unique_violation PostgreSQL.
+      // Double-tap concurrent : UNIQUE (client_id, idempotency_key) violé →
+      // la transaction a été rollbackée, récupérer la commande existante et la retourner.
       if (orderError.code === '23505' && idempotencyKey) {
         const { data: dup } = await admin
           .from('orders')
@@ -266,15 +261,7 @@ Deno.serve(async (req) => {
       throw orderError
     }
 
-    const { error: itemsError } = await admin
-      .from('order_items')
-      .insert(orderItems.map((i: any) => ({ ...i, order_id: order.id })))
-
-    if (itemsError) {
-      // Rollback manuel : supprimer la commande orpheline pour libérer la clé d'idempotence
-      await admin.from('orders').delete().eq('id', order.id)
-      throw itemsError
-    }
+    const orderId = (orderResult as any).id as string
 
     // ⑧ Push au prestataire — best-effort, ne bloque pas la réponse au client
     try {
@@ -303,7 +290,7 @@ Deno.serve(async (req) => {
               to,
               title:     'Nouvelle commande 🛎️',
               body:      notifBody,
-              data:      { type: 'commande', orderId: order.id },
+              data:      { type: 'commande', orderId },
               sound:     'default',
               channelId: 'commandes',
             }))),
@@ -316,7 +303,7 @@ Deno.serve(async (req) => {
           type:    'order',
           title:   'Nouvelle commande 🛎️',
           body:    notifBody,
-          data:    { order_id: order.id },
+          data:    { order_id: orderId },
         })
       }
     } catch {
@@ -324,7 +311,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({
-      orderId:        order.id,
+      orderId,
       total,
       subtotal,
       discountAmount,
