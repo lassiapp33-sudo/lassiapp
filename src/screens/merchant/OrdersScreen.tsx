@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet,
-  ActivityIndicator, Vibration, RefreshControl,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity,
+  ActivityIndicator, Vibration, RefreshControl, Alert,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
-import OrdersHeader  from '../../components/orders/OrdersHeader';
-import StatusTabs    from '../../components/orders/StatusTabs';
-import OrderCard     from '../../components/orders/OrderCard';
-import PrepTimeSheet from '../../components/orders/PrepTimeSheet';
+import OrdersHeader       from '../../components/orders/OrdersHeader';
+import StatusTabs         from '../../components/orders/StatusTabs';
+import OrderCard          from '../../components/orders/OrderCard';
+import PrepTimeSheet      from '../../components/orders/PrepTimeSheet';
+import RefuseSheet        from '../../components/orders/RefuseSheet';
+import VerifyReceiptSheet from './VerifyReceiptSheet';
 import { colors, fonts } from '../../theme';
 import { IncomingOrder, MerchantTab, OrderStatus } from '../../types/orders';
 import useOrdersStore      from '../../store/ordersStore';
@@ -56,14 +59,16 @@ export default function OrdersScreen({ onBack }: Props) {
   const orders         = useOrdersStore(s => s.orders);
   const loading        = useOrdersStore(s => s.loading);
   const setOrderStatus = useOrdersStore(s => s.setOrderStatus);
-  const removeOrder    = useOrdersStore(s => s.removeOrder);
+  const refuseOrder    = useOrdersStore(s => s.refuseOrder);
   const addOrder       = useOrdersStore(s => s.addOrder);
   const loadOrders     = useOrdersStore(s => s.loadOrders);
 
-  const [activeTab,    setActiveTab]    = useState<MerchantTab>('new');
-  const [acceptTarget, setAcceptTarget] = useState<IncomingOrder | null>(null);
-  const [showPrep,     setShowPrep]     = useState(false);
-  const [refreshing,   setRefreshing]   = useState(false);
+  const [activeTab,     setActiveTab]     = useState<MerchantTab>('new');
+  const [acceptTarget,  setAcceptTarget]  = useState<IncomingOrder | null>(null);
+  const [refuseTarget,  setRefuseTarget]  = useState<IncomingOrder | null>(null);
+  const [showPrep,      setShowPrep]      = useState(false);
+  const [showVerify,    setShowVerify]    = useState(false);
+  const [refreshing,    setRefreshing]    = useState(false);
 
   useEffect(() => {
     if (shopId) loadOrders(shopId);
@@ -120,10 +125,34 @@ export default function OrdersScreen({ onBack }: Props) {
     setAcceptTarget(null);
   };
 
+  const handleRefuseConfirm = async (reason: string) => {
+    if (!refuseTarget) return;
+    const id = refuseTarget.id;
+    setRefuseTarget(null);
+    try {
+      await refuseOrder(id, reason);
+    } catch {
+      Alert.alert('Erreur', 'Le refus n\'a pas pu être enregistré. Réessaie.');
+    }
+  };
+
   return (
     <View style={styles.root}>
       <OrdersHeader newCount={counts.new} onBack={onBack} />
       <StatusTabs active={activeTab} counts={counts} onChange={setActiveTab} />
+
+      {/* Bouton vérification reçu */}
+      <TouchableOpacity
+        style={styles.verifyBtn}
+        onPress={() => setShowVerify(true)}
+        activeOpacity={0.85}
+      >
+        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round">
+          <Path d="M9 11l3 3L22 4" stroke={colors.bg} />
+          <Path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke={colors.bg} />
+        </Svg>
+        <Text style={styles.verifyBtnTxt}>Vérifier un reçu client</Text>
+      </TouchableOpacity>
 
       {loading ? (
         <View style={styles.loader}>
@@ -151,7 +180,7 @@ export default function OrdersScreen({ onBack }: Props) {
                 key={order.id}
                 order={order}
                 onAccept={() => openPrepSheet(order)}
-                onRefuse={() => removeOrder(order.id)}
+                onRefuse={() => setRefuseTarget(order)}
                 onChat={() => { /* TODO : ouvrir chat avec le client */ }}
                 onReady={() => { advance(order.id, 'ready'); setActiveTab('preparing'); }}
                 onDone={() => {  advance(order.id, 'done');  setActiveTab('done');      }}
@@ -168,6 +197,22 @@ export default function OrdersScreen({ onBack }: Props) {
         onAccept={handleAccept}
         onClose={() => setShowPrep(false)}
       />
+
+      <RefuseSheet
+        visible={refuseTarget !== null}
+        order={refuseTarget}
+        onRefuse={handleRefuseConfirm}
+        onClose={() => setRefuseTarget(null)}
+      />
+
+      <VerifyReceiptSheet
+        visible={showVerify}
+        onClose={() => setShowVerify(false)}
+        onVerified={() => {
+          // Recharge les commandes pour refléter le statut 'done'
+          if (shopId) loadOrders(shopId).catch(() => {});
+        }}
+      />
     </View>
   );
 }
@@ -177,6 +222,23 @@ const styles = StyleSheet.create({
   scroll:  { flex: 1 },
   content: { paddingTop: 4 },
   loader:  { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  verifyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginHorizontal: 18,
+    marginBottom: 12,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.accent,
+  },
+  verifyBtnTxt: {
+    color: colors.bg,
+    fontFamily: fonts.title,
+    fontSize: 13,
+  },
 
   empty: {
     alignItems: 'center',

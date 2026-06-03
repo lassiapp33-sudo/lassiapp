@@ -143,6 +143,13 @@ export default function OrderCard({ order, onAccept, onRefuse, onChat, onReady, 
         </View>
       </View>
 
+      {/* ── Raison de refus ─────────────────────────────────────────────────── */}
+      {order.status === 'refused' && order.refusalReason && (
+        <View style={styles.refusalBanner}>
+          <Text style={styles.refusalTxt}>Motif : {order.refusalReason}</Text>
+        </View>
+      )}
+
       {/* ── Boutons d'action selon le statut ────────────────────────────────── */}
       {order.status !== 'done' && order.status !== 'refused' && (
         <View style={styles.acts}>
@@ -345,6 +352,21 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontFamily: fonts.titleXL,
     fontSize: 16,
+  },
+  refusalBanner: {
+    marginHorizontal: 14,
+    marginBottom: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 9,
+    backgroundColor: 'rgba(224,122,122,.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(224,122,122,.2)',
+  },
+  refusalTxt: {
+    color: colors.danger,
+    fontFamily: fonts.body,
+    fontSize: 11.5,
   },
 
   // Zone actions

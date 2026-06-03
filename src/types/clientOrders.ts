@@ -12,16 +12,23 @@ export interface OrderItem {
   price?: number;
 }
 
+export type ReceiptStatus = 'aucun' | 'valide' | 'utilise' | 'expire';
+
 export interface ClientOrder {
-  id:            string;
-  shopId:        string;
-  commerceName:  string;
-  commerceType:  CommerceType;
-  items:         OrderItem[];
-  totalAmount:   number;
-  paymentMethod: PaymentMethod;
-  status:        ClientOrderStatus;
-  notes?:        string;
-  createdAt:     string;
-  avisId?:       string;
+  id:                  string;
+  shopId:              string;
+  commerceName:        string;
+  commerceType:        CommerceType;
+  items:               OrderItem[];
+  totalAmount:         number;
+  paymentMethod:       PaymentMethod;
+  status:              ClientOrderStatus;
+  notes?:              string;
+  createdAt:           string;
+  avisId?:             string;
+  // Reçu
+  receiptCode?:        string;
+  receiptStatus?:      ReceiptStatus;
+  receiptValidUntil?:  string;
+  validatedAt?:        string;
 }

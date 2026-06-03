@@ -115,16 +115,27 @@ export default function ChatScreen({
   const [loading,         setLoading]         = useState(false);
   const [showAttach,      setShowAttach]      = useState(false);
 
-  // Nom/avatar/initiale/téléphone résolus depuis Supabase — remplacent les props si besoin
+  // Nom/avatar/initiale/téléphone/vip résolus depuis Supabase — remplacent les props si besoin
   const [resolvedName,    setResolvedName]    = useState(shopName);
   const [resolvedLogoUrl, setResolvedLogoUrl] = useState<string | null>(shopLogoUrl ?? null);
   const [resolvedInitial, setResolvedInitial] = useState(shopInitial);
+  const [resolvedIsVip,   setResolvedIsVip]   = useState<boolean>(isVip ?? false);
   const [otherPhone,      setOtherPhone]      = useState<string | null>(null);
 
   const scrollRef           = useRef<ScrollView>(null);
   const processedPayments   = useRef<Set<string>>(new Set());
   // IDs déjà dans le state — évite les doublons Realtime
   const knownIds            = useRef<Set<string>>(new Set());
+  const isMounted           = useRef(true);
+  const pendingTimers       = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Annule toutes les mises à jour async en vol au démontage
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+      pendingTimers.current.forEach(clearTimeout);
+    };
+  }, []);
 
   // ── Auto-scroll ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -134,6 +145,7 @@ export default function ChatScreen({
 
   // ── Chargement initial ────────────────────────────────────────────────────
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       setLoading(true);
       try {
@@ -143,6 +155,7 @@ export default function ChatScreen({
           const conv = await chatService.getOrCreateConversation(shopId);
           convId = conv.id;
         }
+        if (cancelled) return;
         setConversationId(convId);
 
         // ── Résolution du vrai nom/avatar de l'interlocuteur depuis Supabase ──
@@ -152,11 +165,12 @@ export default function ChatScreen({
           if (userRole === 'client' && shopId) {
             // Client avec shopId fourni → fetch la boutique directement
             const shop = await shopsService.getShopById(shopId);
-            if (shop) {
+            if (shop && !cancelled) {
               setResolvedName(shop.name);
               setResolvedLogoUrl(shop.logoUrl ?? null);
               setResolvedInitial(shop.name.charAt(0).toUpperCase());
-              setOtherPhone(shop.phone ?? null); // numéro du prestataire
+              setResolvedIsVip(shop.isVip);
+              setOtherPhone(shop.phone ?? null);
             }
           } else {
             // Client sans shopId (navigation via notification) ou marchand → lit la conv
@@ -164,20 +178,23 @@ export default function ChatScreen({
             if (conv) {
               if (userRole === 'client') {
                 const shop = await shopsService.getShopById(conv.shopId);
-                if (shop) {
+                if (shop && !cancelled) {
                   setResolvedName(shop.name);
                   setResolvedLogoUrl(shop.logoUrl ?? null);
                   setResolvedInitial(shop.name.charAt(0).toUpperCase());
-                  setOtherPhone(shop.phone ?? null); // numéro du prestataire
+                  setResolvedIsVip(shop.isVip);
+                  setOtherPhone(shop.phone ?? null);
                 }
               } else {
                 // Marchand → l'interlocuteur est le client
                 const profile = await chatService.getClientProfile(conv.clientId);
-                const displayName = profile.name || 'Client';
-                setResolvedName(displayName);
-                setResolvedLogoUrl(profile.avatarUrl);
-                setResolvedInitial(displayName.charAt(0).toUpperCase());
-                setOtherPhone(profile.phone ?? null); // numéro du client
+                if (!cancelled) {
+                  const displayName = profile.name || 'Client';
+                  setResolvedName(displayName);
+                  setResolvedLogoUrl(profile.avatarUrl);
+                  setResolvedInitial(displayName.charAt(0).toUpperCase());
+                  setOtherPhone(profile.phone ?? null);
+                }
               }
             }
           }
@@ -186,14 +203,17 @@ export default function ChatScreen({
         const msgs = await chatService.getMessages(convId);
         const mapped = msgs.map(m => toMsg(m, currentUserId));
         mapped.forEach(m => knownIds.current.add(m.id));
-        setMessages(mapped);
-        await chatService.markConversationRead(convId);
+        if (!cancelled) {
+          setMessages(mapped);
+          await chatService.markConversationRead(convId);
+        }
       } catch (err) {
         console.warn('[ChatScreen] init:', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+    return () => { cancelled = true; };
   }, [shopId, directConvId, currentUserId]);
 
   // ── Retour de PaymentScreen → marquer ticket payé ─────────────────────────
@@ -208,6 +228,7 @@ export default function ChatScreen({
 
   // ── Marquer ticket payé localement + message de confirmation ─────────────
   const applyPayment = (ticketId: string) => {
+    if (!isMounted.current) return;
     setMessages(prev => {
       const ticket = prev.find(m => m.id === ticketId) as TicketMsg | undefined;
       if (!ticket) return prev;
@@ -219,13 +240,15 @@ export default function ChatScreen({
       };
       return [...updated, receipt];
     });
-    setTimeout(() => {
+    const t = setTimeout(() => {
+      if (!isMounted.current) return;
       setMessages(prev => [...prev, {
         id: `confirm_${ticketId}`, kind: 'text', sender: 'them',
         time: nowTime(),
         text: 'Reçu ✅ Ta commande sera prête dans 5 min. À tout de suite !',
       }]);
     }, 1400);
+    pendingTimers.current.push(t);
   };
 
   // ── Abonnement Realtime ───────────────────────────────────────────────────
@@ -279,6 +302,7 @@ export default function ChatScreen({
 
     try {
       const saved = await chatService.sendMessage(conversationId, { type: 'text', content: text });
+      if (!isMounted.current) return;
       knownIds.current.add(saved.id);
       setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: saved.id } : m));
     } catch (err) {
@@ -314,6 +338,7 @@ export default function ChatScreen({
       });
 
       // 3. Mettre à jour la bulle avec la vraie URL et l'ID Supabase
+      if (!isMounted.current) return;
       knownIds.current.add(saved.id);
       setMessages(prev => prev.map(m =>
         m.id === tempId
@@ -322,6 +347,7 @@ export default function ChatScreen({
       ));
     } catch (err: any) {
       console.warn('[ChatScreen] handleVoiceSend:', err?.message ?? err);
+      if (!isMounted.current) return;
       setMessages(prev => prev.filter(m => m.id !== tempId));
       Alert.alert('Envoi échoué', err?.message ?? 'Erreur inconnue');
     }
@@ -346,12 +372,14 @@ export default function ChatScreen({
         content:  '📷',
         voiceUrl: imageUrl,
       });
+      if (!isMounted.current) return;
       knownIds.current.add(saved.id);
       setMessages(prev => prev.map(m =>
         m.id === tempId ? { ...m, id: saved.id, imageUrl } : m,
       ));
     } catch (err: any) {
       console.warn('[ChatScreen] handleImageSend:', err?.message ?? err);
+      if (!isMounted.current) return;
       setMessages(prev => prev.filter(m => m.id !== tempId));
       Alert.alert('Envoi échoué', err?.message ?? 'Erreur inconnue');
     }
@@ -391,7 +419,7 @@ export default function ChatScreen({
       <ChatHeader
         initial={resolvedInitial}
         name={resolvedName}
-        isVip={isVip}
+        isVip={resolvedIsVip}
         isOnline
         onBack={onBack}
         logoUrl={resolvedLogoUrl}

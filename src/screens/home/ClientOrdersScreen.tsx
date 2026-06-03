@@ -148,19 +148,28 @@ function summarizeItems(items: { name: string; qty?: number }[]): string {
 
 // ─── Carte commande ───────────────────────────────────────────────────────────
 
+const IcoReceipt = () => (
+  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round">
+    <Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke={colors.accent} />
+    <Path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke={colors.accent} />
+  </Svg>
+);
+
 interface OrderCardProps {
   order:          ClientOrder;
   onCancel:       (id: string) => void;
   onReorder:      (order: ClientOrder) => void;
   isReordering:   boolean;
   onLeaveAvis?:   () => void;
+  onViewReceipt?: (orderId: string) => void;
 }
 
-function OrderCard({ order, onCancel, onReorder, isReordering, onLeaveAvis }: OrderCardProps) {
+function OrderCard({ order, onCancel, onReorder, isReordering, onLeaveAvis, onViewReceipt }: OrderCardProps) {
   const cfg        = STATUS_CFG[order.status];
   const isPending  = order.status === 'pending';
   const canReorder = order.status === 'completed' || order.status === 'cancelled';
   const canAvis    = order.status === 'completed' && !order.avisId;
+  const hasReceipt = !!order.receiptCode && order.receiptStatus !== 'aucun';
 
   return (
     <View style={card.wrap}>
@@ -200,6 +209,32 @@ function OrderCard({ order, onCancel, onReorder, isReordering, onLeaveAvis }: Or
         </View>
         <Text style={card.date}>{formatDate(order.createdAt)}</Text>
       </View>
+
+      {/* Bouton reçu */}
+      {hasReceipt && (
+        <TouchableOpacity
+          style={[
+            card.receiptBtn,
+            order.receiptStatus === 'utilise' && card.receiptBtnUsed,
+            order.receiptStatus === 'expire'  && card.receiptBtnExpired,
+          ]}
+          onPress={() => onViewReceipt?.(order.id)}
+          activeOpacity={0.85}
+        >
+          <IcoReceipt />
+          <Text style={[
+            card.receiptTxt,
+            order.receiptStatus === 'utilise' && { color: colors.muted },
+            order.receiptStatus === 'expire'  && { color: colors.danger },
+          ]}>
+            {order.receiptStatus === 'utilise'
+              ? '✓ Reçu utilisé'
+              : order.receiptStatus === 'expire'
+                ? 'Reçu expiré'
+                : 'Voir le reçu'}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Bouton annulation (pending uniquement) */}
       {isPending && (
@@ -251,12 +286,13 @@ function OrderCard({ order, onCancel, onReorder, isReordering, onLeaveAvis }: Or
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  onBack:      () => void;
-  onExplore:   () => void;
-  onGoToCart?: (shopId: string, shopName: string) => void;
+  onBack:          () => void;
+  onExplore:       () => void;
+  onGoToCart?:     (shopId: string, shopName: string) => void;
+  onViewReceipt?:  (orderId: string) => void;
 }
 
-export default function ClientOrdersScreen({ onBack, onExplore, onGoToCart }: Props) {
+export default function ClientOrdersScreen({ onBack, onExplore, onGoToCart, onViewReceipt }: Props) {
   const user = useAuthStore(s => s.user);
 
   const [orders,       setOrders]       = useState<ClientOrder[]>([]);
@@ -465,6 +501,7 @@ export default function ClientOrdersScreen({ onBack, onExplore, onGoToCart }: Pr
                 onCancel={handleCancel}
                 onReorder={handleReorder}
                 isReordering={reorderingId === order.id}
+                onViewReceipt={onViewReceipt}
                 onLeaveAvis={order.status === 'completed' && !order.avisId ? () => {
                   setAvisTarget({
                     orderId:  order.id,
@@ -594,6 +631,31 @@ const card = StyleSheet.create({
     color: colors.muted,
     fontFamily: fonts.body,
     fontSize: 11,
+  },
+  receiptBtn: {
+    marginTop: 10,
+    height: 40,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(253,207,52,.4)',
+    backgroundColor: 'rgba(253,207,52,.08)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  receiptBtnUsed: {
+    borderColor: colors.border,
+    backgroundColor: 'transparent',
+  },
+  receiptBtnExpired: {
+    borderColor: 'rgba(224,122,122,.35)',
+    backgroundColor: 'rgba(224,122,122,.07)',
+  },
+  receiptTxt: {
+    color: colors.accent,
+    fontFamily: fonts.ui,
+    fontSize: 13,
   },
   cancelBtn: {
     marginTop: 12,

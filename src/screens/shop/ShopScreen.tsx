@@ -40,15 +40,6 @@ const IcoBack = () => (
     <Path d="M12 19l-7-7 7-7" stroke="#fff" />
   </Svg>
 );
-const IcoShare = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Circle cx={18} cy={5} r={3} stroke="#fff" />
-    <Circle cx={6} cy={12} r={3} stroke="#fff" />
-    <Circle cx={18} cy={19} r={3} stroke="#fff" />
-    <Path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" stroke="#fff" />
-  </Svg>
-);
 const IcoPhone = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
     strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -107,7 +98,7 @@ interface Props {
   shopId?:     string;
   shopName?:   string;
   onBack:      () => void;
-  onChat?:     (logoUrl: string | null) => void;
+  onChat?:     (logoUrl: string | null, isVip: boolean) => void;
   onCheckout?: () => void;
 }
 
@@ -268,6 +259,7 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
     initial:  displayInitial,
     name:     displayName,
     location: `📍 ${displayZone} · ${selectedLabel}`,
+    logoUrl:  displayLogoUrl,
   };
 
   const addToCart = (p: StoreProduct) => {
@@ -474,10 +466,7 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
           <IcoBack />
         </TouchableOpacity>
         <View style={styles.ctrlRight} pointerEvents="box-none">
-          <View style={[styles.ctrlBtn, { opacity: 0.45 }]}>
-            <IcoShare />
-          </View>
-          <TouchableOpacity style={styles.ctrlBtn} onPress={() => toggleFav(stableId)} activeOpacity={0.8}>
+<TouchableOpacity style={styles.ctrlBtn} onPress={() => toggleFav(stableId)} activeOpacity={0.8}>
             <IcoFav on={isFav} />
           </TouchableOpacity>
         </View>
@@ -496,7 +485,7 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
         total={cartTotal}
         hasItems={cartCount > 0}
         shopType={shopType}
-        onChat={onChat ? () => onChat(shopData?.logoUrl ?? null) : undefined}
+        onChat={onChat ? () => onChat(shopData?.logoUrl ?? null, isVip) : undefined}
         onCheckout={onCheckout}
       />
     </View>

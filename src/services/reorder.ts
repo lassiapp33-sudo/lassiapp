@@ -124,6 +124,7 @@ export async function prepareReorder(
     initial:  shopName.charAt(0).toUpperCase(),
     name:     shopName,
     location: `📍 ${shop.zone ?? ''}`,
+    logoUrl:  shop.logoUrl ?? undefined,
   };
 
   return {

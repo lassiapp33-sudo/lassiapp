@@ -14,16 +14,17 @@ export interface IncomingOrderItem {
 }
 
 export interface IncomingOrder {
-  id:          string;
-  orderId:     string;        // ex : "#A427"
-  initial:     string;
-  clientName:  string;
-  avatarUrl?:  string | null; // photo de profil du client (profiles.avatar_url)
-  status:      OrderStatus;
-  items:       IncomingOrderItem[];
-  total:       number;
-  payMethod:   PayMethodOrder;
-  timeLabel:   string;        // "il y a 2 min" / "acceptée à 08:09"
-  prepTime?:   string;        // "5-10 min" — défini à l'acceptation
-  orderType:   'place' | 'emporter';
+  id:             string;
+  orderId:        string;        // ex : "#A427"
+  initial:        string;
+  clientName:     string;
+  avatarUrl?:     string | null; // photo de profil du client (profiles.avatar_url)
+  status:         OrderStatus;
+  items:          IncomingOrderItem[];
+  total:          number;
+  payMethod:      PayMethodOrder;
+  timeLabel:      string;        // "il y a 2 min" / "acceptée à 08:09"
+  prepTime?:      string;        // "5-10 min" — défini à l'acceptation
+  orderType:      'place' | 'emporter';
+  refusalReason?: string | null;
 }

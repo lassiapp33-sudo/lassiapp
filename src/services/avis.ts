@@ -49,47 +49,22 @@ export async function canLeaveAvis(
   shopId: string,
   userId: string,
 ): Promise<CanLeaveAvisResult> {
-  // 1. Commandes terminées de cet utilisateur pour ce shop
-  const { data: orders } = await supabase
-    .from('orders')
-    .select('id')
-    .eq('shop_id', shopId)
-    .eq('client_id', userId)
-    .eq('status', 'done')
-    .order('created_at', { ascending: false });
-
-  if (!orders || orders.length === 0) return { canLeave: false };
-
-  const orderIds = orders.map(o => o.id);
-
-  // 2. Avis déjà existants pour ces commandes
-  const { data: existingList } = await supabase
+  const { data: existing } = await supabase
     .from('avis')
-    .select('id, order_id, note, commentaire, photo_url, reponse_commercant, masque, created_at, updated_at, author_id, author_name, shop_id')
-    .in('order_id', orderIds)
-    .eq('author_id', userId);
+    .select('*')
+    .eq('shop_id', shopId)
+    .eq('author_id', userId)
+    .maybeSingle();
 
-  const avisMap = new Map((existingList ?? []).map(a => [a.order_id as string, a]));
-
-  // 3. Commande sans avis → création
-  const freeOrder = orders.find(o => !avisMap.has(o.id));
-  if (freeOrder) {
-    return { canLeave: true, orderId: freeOrder.id };
-  }
-
-  // 4. Toutes les commandes ont un avis → proposer édition du plus récent
-  const latestOrderId = orders[0].id;
-  const existing = avisMap.get(latestOrderId);
   if (existing) {
     return {
-      canLeave:        true,
-      orderId:         latestOrderId,
-      existingAvisId:  existing.id,
-      existingAvis:    rowToAvis(existing),
+      canLeave:       true,
+      existingAvisId: existing.id,
+      existingAvis:   rowToAvis(existing),
     };
   }
 
-  return { canLeave: false };
+  return { canLeave: true };
 }
 
 // ─── Écriture ─────────────────────────────────────────────────────────────────
@@ -98,8 +73,9 @@ export async function createAvis(input: AvisInput): Promise<Avis> {
   const { data, error } = await supabase
     .from('avis')
     .insert({
-      order_id:    input.orderId,
+      order_id:    input.orderId ?? null,
       shop_id:     input.shopId,
+      author_id:   input.authorId,
       author_name: input.authorName,
       note:        input.note,
       commentaire: input.commentaire ?? null,

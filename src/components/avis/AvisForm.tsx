@@ -42,7 +42,7 @@ interface Props {
   visible:       boolean;
   shopId:        string;
   shopName:      string;
-  orderId:       string;
+  orderId?:      string;
   existingAvis?: Avis;
   onClose:       () => void;
   onSaved:       () => void;
@@ -96,6 +96,7 @@ export default function AvisForm({
         await avisService.createAvis({
           orderId,
           shopId,
+          authorId:   user!.id,
           authorName: user?.name ?? 'Anonyme',
           note,
           commentaire: commentaire.trim() || undefined,

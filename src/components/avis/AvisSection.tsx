@@ -68,7 +68,6 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
   const [loading,      setLoading]      = useState(true);
   const [canLeave,     setCanLeave]     = useState(false);
   const [avisTarget,   setAvisTarget]   = useState<{
-    orderId: string;
     existing?: Avis;
   } | null>(null);
 
@@ -102,8 +101,8 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
   const handleOpenAvisForm = async () => {
     if (!currentUserId) return;
     const result = await avisService.canLeaveAvis(shopId, currentUserId);
-    if (!result.canLeave || !result.orderId) return;
-    setAvisTarget({ orderId: result.orderId, existing: result.existingAvis });
+    if (!result.canLeave) return;
+    setAvisTarget({ existing: result.existingAvis });
   };
 
   const handleReport = (avisId: string) => {
@@ -176,7 +175,7 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
               avis={a}
               isOwn={a.authorId === currentUserId}
               isMerchant={isMerchant}
-              onEdit={() => setAvisTarget({ orderId: a.orderId, existing: a })}
+              onEdit={() => setAvisTarget({ existing: a })}
               onDelete={async () => {
                 try {
                   await avisService.deleteAvis(a.id);
@@ -199,7 +198,6 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
           visible
           shopId={shopId}
           shopName={shopName}
-          orderId={avisTarget.orderId}
           existingAvis={avisTarget.existing}
           onClose={() => setAvisTarget(null)}
           onSaved={() => { load(); checkCanLeave(); }}

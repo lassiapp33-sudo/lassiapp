@@ -4,11 +4,11 @@ import { colors, fonts } from '../../theme';
 
 export interface Plan {
   id:        string;
-  label:     string;   // "3 mois"
-  desc:      string;   // "Économise 6 000 F" / success color
+  label:     string;          // "3 mois"
+  desc?:     string;          // "Économise 6 000 F" — optionnel
   price:     number;
-  perLabel:  string;   // "8 000 F/mois"
-  oldPrice?: number;
+  perLabel:  string;          // "8 000 F/mois"
+  oldPrice?: number | null;
   popular?:  boolean;
 }
 
@@ -43,7 +43,7 @@ export default function PlanCard({ plan, selected, onSelect }: Props) {
         {/* Durée + description */}
         <View style={styles.dur}>
           <Text style={styles.durLabel}>{plan.label}</Text>
-          <Text style={styles.durDesc}>{plan.desc}</Text>
+          {!!plan.desc && <Text style={styles.durDesc}>{plan.desc}</Text>}
         </View>
 
         {/* Prix */}

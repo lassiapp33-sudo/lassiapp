@@ -17,6 +17,7 @@ export interface CartShopInfo {
   initial:  string;
   name:     string;
   location: string;
+  logoUrl?: string;
 }
 
 interface CartState {

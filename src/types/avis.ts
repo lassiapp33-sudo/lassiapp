@@ -1,6 +1,6 @@
 export interface Avis {
   id:                 string;
-  orderId:            string;
+  orderId:            string | null;
   shopId:             string;
   authorId:           string;
   authorName:         string;
@@ -14,8 +14,9 @@ export interface Avis {
 }
 
 export interface AvisInput {
-  orderId:     string;
+  orderId?:    string;
   shopId:      string;
+  authorId:    string;
   authorName:  string;
   note:        number;
   commentaire?: string;
@@ -24,7 +25,6 @@ export interface AvisInput {
 
 export interface CanLeaveAvisResult {
   canLeave:        boolean;
-  orderId?:        string;   // order éligible (done, sans avis)
-  existingAvisId?: string;   // si toutes les commandes ont déjà un avis → édition
+  existingAvisId?: string;
   existingAvis?:   Avis;
 }

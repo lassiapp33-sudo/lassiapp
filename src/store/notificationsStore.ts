@@ -62,9 +62,10 @@ const useNotificationsStore = create<NotifState>()((set) => ({
   },
 
   // Utilisé par le hook Realtime pour injecter une nouvelle notif en live
-  addNotif: (notif) => set(state => ({
-    notifications: [notif, ...state.notifications],
-  })),
+  addNotif: (notif) => set(state => {
+    if (state.notifications.some(n => n.id === notif.id)) return state;
+    return { notifications: [notif, ...state.notifications] };
+  }),
 }));
 
 export default useNotificationsStore;

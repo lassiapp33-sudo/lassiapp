@@ -51,7 +51,6 @@ const buildMapHTML = (lat: number, lng: number): string => `
 <div id="map"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
-const EMOJI={alimentation:'🛒',quincaillerie:'🔧',tangana:'☕',ndeki:'🍲',soupe:'🥣',boulangerie:'🥖',patisserie:'🍰',restaurant:'🍽️',fastfood:'🍔',dibiterie:'🥩',seras:'🔥',jus:'🧃',snack:'🍩',hommes:'✂️',femmes:'💇',esthetique:'💅',musculation:'🏋',arts_martiaux:'🥊',collectifs:'🤸',fruits:'🍎',fruits_marines:'🍓'};
 const IMG_STYLE='width:26px;height:26px;border-radius:8px;object-fit:cover;';
 const FB_LAT=${lat};const FB_LNG=${lng};
 const map=L.map('map',{center:[${lat},${lng}],zoom:15,zoomControl:false});
@@ -69,16 +68,28 @@ const mkrs={};
 let selId=null;
 let lastShops=[];
 
+function escapeHtml(s){
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#039;');
+}
+
 function renderShops(shops){
   lastShops=shops;
   Object.values(mkrs).forEach(m=>map.removeLayer(m));
   Object.keys(mkrs).forEach(k=>delete mkrs[k]);
   shops.forEach(s=>{
     const slat=s.latitude||FB_LAT;const slng=s.longitude||FB_LNG;
-    const e=EMOJI[s.subcategories&&s.subcategories[0]]||'📍';
     const v=s.isVip;
     const sel=s.id===selId;
-    const content=s.logoUrl?'<img src="'+s.logoUrl+'" style="'+IMG_STYLE+'">':e;
+    const initial=escapeHtml((s.name||'?').charAt(0).toUpperCase());
+    const txtColor=v?'#14152A':'#FDCF34';
+    const content=s.logoUrl
+      ?'<img src="'+escapeHtml(s.logoUrl)+'" style="'+IMG_STYLE+'">'
+      :'<span style="color:'+txtColor+';font-weight:700;font-size:18px;font-family:sans-serif;line-height:1;">'+initial+'</span>';
     const html='<div class="lp">'
       +(v?'<div class="lp-crown">👑</div>':'')
       +'<div class="lp-b '+(v?'vip':'std')+(sel?' sel':'')+'">'+content+'</div>'
@@ -281,8 +292,7 @@ export default function MapScreen({ onBack, onShopPress, excludeShopId }: Props)
 
   // ── Envoi vers la WebView ────────────────────────────────────────────────
   const sendToWebView = (data: object) => {
-    const json = JSON.stringify(data).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    wvRef.current?.injectJavaScript(`dispatchCmd('${json}');true`);
+    wvRef.current?.postMessage(JSON.stringify(data));
   };
 
   // ── Shops filtrés envoyés à la WebView à chaque changement ──────────────

@@ -10,15 +10,16 @@ const IcoCheck = () => (
 );
 
 interface Props {
-  planLabel:    string;   // "3 mois"
-  daysLeft:     number;   // 47
-  expiryDate:   string;   // "21 juillet 2026"
-  progress:     number;   // 0–1 (fraction du forfait écoulée)
+  planLabel:  string;   // ex: "3 mois"
+  daysLeft:   number;   // jours restants
+  expiryDate: string;   // ex: "21 juillet 2026"
+  progress:   number;   // 0–1 : fraction du temps ÉCOULÉ
 }
 
 export default function ActiveSubCard({ planLabel, daysLeft, expiryDate, progress }: Props) {
+  const clampedProgress = Math.min(1, Math.max(0, progress));
+
   return (
-    // Fond accent plein — pas de dégradé (lisible, premium)
     <View style={styles.card}>
       {/* Statut */}
       <View style={styles.statusRow}>
@@ -33,15 +34,37 @@ export default function ActiveSubCard({ planLabel, daysLeft, expiryDate, progres
 
       {/* Expiration */}
       <Text style={styles.left}>
-        Expire dans {daysLeft} jours · {expiryDate}
+        Expire dans {daysLeft} jour{daysLeft > 1 ? 's' : ''} · {expiryDate}
       </Text>
 
       {/* Barre de progression (temps écoulé) */}
       <View style={styles.progressBg}>
-        <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
+        <View style={[styles.progressFill, { width: `${Math.round(clampedProgress * 100)}%` }]} />
       </View>
     </View>
   );
+}
+
+export function computeSubCardProps(sub: {
+  planLabel: string;
+  startedAt: string;
+  expiresAt: string;
+}): { planLabel: string; daysLeft: number; expiryDate: string; progress: number } {
+  const now     = Date.now();
+  const start   = new Date(sub.startedAt).getTime();
+  const end     = new Date(sub.expiresAt).getTime();
+  const total   = Math.max(end - start, 1);
+  const elapsed = now - start;
+  const remaining = Math.max(end - now, 0);
+
+  return {
+    planLabel:  sub.planLabel,
+    daysLeft:   Math.ceil(remaining / 86_400_000),
+    expiryDate: new Date(sub.expiresAt).toLocaleDateString('fr-FR', {
+      day: 'numeric', month: 'long', year: 'numeric',
+    }),
+    progress: Math.min(1, Math.max(0, elapsed / total)),
+  };
 }
 
 const styles = StyleSheet.create({

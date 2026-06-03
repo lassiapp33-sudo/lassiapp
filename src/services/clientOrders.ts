@@ -29,22 +29,25 @@ function rowToOrder(row: Record<string, any>): ClientOrder {
     price: i.unit_price ?? 0,
   }));
 
-  // avis joint : tableau d'un élément ou vide
   const avisRows = (row.avis as any[]) ?? [];
   const avisId   = avisRows.length > 0 ? avisRows[0].id : undefined;
 
   return {
-    id:            row.id,
-    shopId:        row.shop_id ?? '',
-    commerceName:  shop.name ?? '—',
-    commerceType:  mapCategory(shop.category),
+    id:                 row.id,
+    shopId:             row.shop_id ?? '',
+    commerceName:       shop.name ?? '—',
+    commerceType:       mapCategory(shop.category),
     items,
-    totalAmount:   Number(row.total ?? 0),
-    paymentMethod: row.pay_method === 'om' ? 'orange_money' : 'wave',
-    status:        STATUS_MAP[row.status] ?? 'pending',
-    notes:         row.note ?? undefined,
-    createdAt:     row.created_at,
+    totalAmount:        Number(row.total ?? 0),
+    paymentMethod:      row.pay_method === 'om' ? 'orange_money' : 'wave',
+    status:             STATUS_MAP[row.status] ?? 'pending',
+    notes:              row.note ?? undefined,
+    createdAt:          row.created_at,
     avisId,
+    receiptCode:        row.receipt_code        ?? undefined,
+    receiptStatus:      row.receipt_status      ?? 'aucun',
+    receiptValidUntil:  row.receipt_valid_until ?? undefined,
+    validatedAt:        row.validated_at        ?? undefined,
   };
 }
 
@@ -53,7 +56,7 @@ function rowToOrder(row: Record<string, any>): ClientOrder {
 export async function getClientOrders(clientId: string): Promise<ClientOrder[]> {
   const { data, error } = await supabase
     .from('orders')
-    .select('*, order_items(*), shops(name, category), avis(id)')
+    .select('*, order_items(*), shops(name, category), avis(id), receipt_code, receipt_status, receipt_valid_until, validated_at')
     .eq('client_id', clientId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);

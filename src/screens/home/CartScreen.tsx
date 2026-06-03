@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, TextInput,
   ScrollView, StyleSheet, Alert, ActivityIndicator,
@@ -54,15 +54,18 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
   const shopInfo   = useCartStore(s => s.shopInfo);
   const orderType  = useCartStore(s => s.orderType);
   const updateQty  = useCartStore(s => s.updateQty);
-  const clearCart  = useCartStore(s => s.clearCart);
 
-  const [note,       setNote]       = useState('');
-  const [validating, setValidating] = useState(false);
-  const [discounts,  setDiscounts]  = useState<AppliedDiscount[]>([]);
+  const [note,        setNote]        = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [discounts,   setDiscounts]   = useState<AppliedDiscount[]>([]);
 
-  const subtotal    = items.reduce((s, i) => s + i.price * i.qty, 0);
+  // Garde synchrone anti-double-clic — la ref se met à jour immédiatement,
+  // sans attendre un cycle de rendu React.
+  const isSubmittingRef = useRef(false);
+
+  const subtotal      = items.reduce((s, i) => s + i.price * i.qty, 0);
   const totalDiscount = discounts.reduce((s, d) => s + d.reductionFcfa, 0);
-  const total       = Math.max(subtotal - totalDiscount, 0);
+  const total         = Math.max(subtotal - totalDiscount, 0);
 
   // Charger les promos actives du shop pour l'affichage (calcul serveur au paiement)
   useEffect(() => {
@@ -72,54 +75,104 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
       setDiscounts(promosService.calcClientDiscount(promos, items));
     }).catch(() => {});
   }, [shopId, shopInfo?.id, items]);
-  const hasItems    = items.length > 0;
+
+  const hasItems = items.length > 0;
 
   const displayInitial  = shopInfo?.initial  ?? shopName.charAt(0).toUpperCase();
   const displayName     = shopInfo?.name     ?? shopName;
   const displayLocation = shopInfo?.location ?? '';
-  const removeItem = useCartStore(s => s.removeItem);
 
+  // ── Checkout ────────────────────────────────────────────────────────────────
   const handleCheckout = async () => {
-    if (!hasItems) return;
+    // ① Garde synchrone : bloque tout appel concurrent avant le prochain rendu
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
 
-    // Vérifier la disponibilité de chaque article avant de commander
-    setValidating(true);
-    const sid = shopId || shopInfo?.id || '';
-    const unavailable = await validateCartAvailability(sid, items.map(i => i.id));
-    setValidating(false);
+    // Quand l'alerte "article indisponible" est affichée, on ne libère pas
+    // le verrou dans le bloc finally — les boutons de l'alerte s'en chargent.
+    let releaseInFinally = true;
 
-    if (unavailable.length > 0) {
-      const names = unavailable.map(u => `• ${u.name}`).join('\n');
-      Alert.alert(
-        'Article(s) indisponible(s)',
-        `Ces articles ne sont plus disponibles :\n${names}\n\nRetire-les pour continuer.`,
-        [
-          {
-            text: 'Retirer et continuer',
-            onPress: () => {
-              unavailable.forEach(u => removeItem(u.id));
-              // Re-déclencher après retrait si des articles restent
-              if (items.length - unavailable.length > 0) handleCheckout();
+    try {
+      // ② Lire l'état FRAIS du store (évite la closure périmée)
+      const store     = useCartStore.getState();
+      const freshItems = store.items;
+
+      if (freshItems.length === 0) return;
+
+      const sid = shopId || store.shopInfo?.id || '';
+      const unavailable = await validateCartAvailability(sid, freshItems.map(i => i.id));
+
+      if (unavailable.length > 0) {
+        // ③ Retirer complètement (qty→0) les articles indisponibles
+        const { updateQty: storeUpdateQty } = useCartStore.getState();
+        unavailable.forEach(u => storeUpdateQty(u.id, 0));
+
+        const names = unavailable.map(u => `• ${u.name}`).join('\n');
+        releaseInFinally = false; // Les boutons de l'alerte libèrent le verrou
+
+        Alert.alert(
+          'Article(s) indisponible(s)',
+          `Ces articles ne sont plus disponibles :\n${names}\n\nRetire-les pour continuer.`,
+          [
+            {
+              text: 'Retirer et continuer',
+              onPress: () => {
+                isSubmittingRef.current = false;
+                setIsSubmitting(false);
+                // Relancer avec l'état frais (stale closure corrigée)
+                if (useCartStore.getState().items.length > 0) handleCheckout();
+              },
             },
-          },
-          { text: 'Annuler', style: 'cancel' },
-        ],
-      );
-      return;
-    }
+            {
+              text: 'Annuler',
+              style: 'cancel',
+              onPress: () => {
+                isSubmittingRef.current = false;
+                setIsSubmitting(false);
+              },
+            },
+          ],
+        );
+        return;
+      }
 
-    const orderItems = items.map(i => ({ qty: i.qty, name: i.name, price: i.price * i.qty }));
-    clearCart();
-    onCheckout({
-      ticketId:     'cart',
-      orderId:      '#' + Math.random().toString(36).substr(2, 4).toUpperCase(),
-      shopInitial:  displayInitial,
-      shopName:     displayName,
-      shopLocation: displayLocation,
-      items:        orderItems,
-      total,
-      orderType,
-    });
+      // ④ Recalculer le total depuis l'état frais (pas depuis la closure)
+      const freshStore    = useCartStore.getState();
+      const freshSubtotal = freshStore.items.reduce((s, i) => s + i.price * i.qty, 0);
+      // Les discounts locaux (state React) sont cohérents avec l'état frais si les
+      // items n'ont pas changé ; le serveur recalcule de toute façon.
+      const freshTotal    = Math.max(freshSubtotal - totalDiscount, 0);
+
+      const orderItems    = freshStore.items.map(i => ({
+        qty:   i.qty,
+        name:  i.name,
+        price: i.price * i.qty,
+      }));
+      const freshShopInfo  = freshStore.shopInfo;
+      const freshOrderType = freshStore.orderType;
+
+      freshStore.clearCart();
+      onCheckout({
+        ticketId:     'cart',
+        orderId:      '#' + Math.random().toString(36).substr(2, 4).toUpperCase(),
+        shopInitial:  freshShopInfo?.initial  ?? shopName.charAt(0).toUpperCase(),
+        shopName:     freshShopInfo?.name     ?? shopName,
+        shopLocation: freshShopInfo?.location ?? '',
+        items:        orderItems,
+        total:        freshTotal,
+        orderType:    freshOrderType,
+      });
+
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur inattendue';
+      Alert.alert('Erreur', msg);
+    } finally {
+      if (releaseInFinally) {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
+      }
+    }
   };
 
   return (
@@ -147,7 +200,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         {/* Bandeau commerce — Avatar unique pour le logo */}
         <View style={styles.shopBand}>
           <Avatar
-            imageUrl={undefined}
+            imageUrl={shopInfo?.logoUrl ?? undefined}
             name={displayName}
             size={44}
             variant="shop"
@@ -243,11 +296,12 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
       {/* Footer fixe — Commander */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.payBtn, (!hasItems || validating) && styles.payBtnDisabled]}
-          onPress={hasItems && !validating ? handleCheckout : undefined}
+          style={[styles.payBtn, (!hasItems || isSubmitting) && styles.payBtnDisabled]}
+          onPress={handleCheckout}
           activeOpacity={0.85}
+          disabled={!hasItems || isSubmitting}
         >
-          {validating
+          {isSubmitting
             ? <ActivityIndicator color={colors.bg} size="small" />
             : <><IcoPay /><Text style={styles.payBtnTxt}>Commander · {total.toLocaleString('fr-FR')} F</Text></>
           }

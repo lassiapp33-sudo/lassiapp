@@ -10,6 +10,7 @@ import FavoritesScreen       from './FavoritesScreen';
 import RecentlyViewedScreen  from './RecentlyViewedScreen';
 import CartScreen            from './CartScreen';
 import MapScreen             from './MapScreen';
+import ReceiptScreen         from './ReceiptScreen';
 import CategoryScreen        from '../category/CategoryScreen';
 import ShopScreen            from '../shop/ShopScreen';
 import ChatScreen            from '../chat/ChatScreen';
@@ -39,7 +40,8 @@ type HomeStack =
   | { id: 'category'; catId: CatId;   title: string }
   | { id: 'shop';     shopId: string; shopName: string }
   | { id: 'chat';     shopId?: string; conversationId?: string; shopInitial: string; shopName: string; shopLogoUrl?: string | null; isVip: boolean; paidTicketId?: string }
-  | { id: 'payment';  order: OrderInfo; from: 'chat' | 'shop' | 'cart'; shopId?: string; shopName?: string };
+  | { id: 'payment';  order: OrderInfo; from: 'chat' | 'shop' | 'cart'; shopId?: string; shopName?: string }
+  | { id: 'receipt';  orderId: string };
 
 interface Props {
   onLogout: () => void;
@@ -97,7 +99,7 @@ export default function HomeNavigator({ onLogout }: Props) {
               shopId:       screen.shopId ?? '',
               shopInitial:  screen.order.shopInitial,
               shopName:     screen.order.shopName,
-              isVip:        true,
+              isVip:        false,
               paidTicketId: ticketId,
             }]);
           } else {
@@ -148,13 +150,13 @@ export default function HomeNavigator({ onLogout }: Props) {
         shopId={screen.shopId}
         shopName={screen.shopName}
         onBack={pop}
-        onChat={(logoUrl) => push({
+        onChat={(logoUrl, isVip) => push({
           id:          'chat',
           shopId:      screen.shopId,
           shopInitial: screen.shopName.charAt(0).toUpperCase(),
           shopName:    screen.shopName,
           shopLogoUrl: logoUrl,
-          isVip:       true,
+          isVip,
         })}
         onCheckout={() =>
           push({ id: 'cart', shopId: screen.shopId, shopName: screen.shopName })
@@ -261,8 +263,14 @@ export default function HomeNavigator({ onLogout }: Props) {
         onBack={pop}
         onExplore={() => setHistory([{ id: 'main' }])}
         onGoToCart={(shopId, shopName) => push({ id: 'cart', shopId, shopName })}
+        onViewReceipt={(orderId) => push({ id: 'receipt', orderId })}
       />
     );
+  }
+
+  // ── Reçu client ───────────────────────────────────────────────────────────────
+  if (screen.id === 'receipt') {
+    return <ReceiptScreen orderId={screen.orderId} onBack={pop} />;
   }
 
   // ── Profil client ─────────────────────────────────────────────────────────

@@ -1,8 +1,12 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import Svg, { Path, Rect } from 'react-native-svg';
+import {
+  View, Text, TouchableOpacity, ActivityIndicator,
+  StyleSheet, Platform,
+} from 'react-native';
+import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
-import { Plan } from './PlanCard';
+import { VisibilityPlan } from '../../services/visibilityPayment';
+import type { PayMethod } from '../../services/visibilityPayment';
 
 const IcoCard = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
@@ -12,14 +16,30 @@ const IcoCard = () => (
   </Svg>
 );
 
+const IcoClock = () => (
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Circle cx={12} cy={12} r={10} stroke={colors.muted} />
+    <Path d="M12 6v6l4 2" stroke={colors.muted} />
+  </Svg>
+);
+
 const BOTTOM_PAD = Platform.OS === 'ios' ? 20 : 4;
 
+const METHOD_LABELS: Record<PayMethod, string> = {
+  wave:         'Wave',
+  orange_money: 'Orange Money',
+};
+
 interface Props {
-  plan:   Plan;
-  onPay:  () => void;
+  plan:           VisibilityPlan;
+  payMethod:      PayMethod;
+  onMethodChange: (m: PayMethod) => void;
+  onPay:          () => void;
+  loading?:       boolean;
 }
 
-export default function PayFooter({ plan, onPay }: Props) {
+export default function PayFooter({ plan, payMethod, onMethodChange, onPay, loading }: Props) {
   return (
     <View style={[styles.footer, { paddingBottom: BOTTOM_PAD }]}>
       {/* Résumé sélection */}
@@ -32,11 +52,64 @@ export default function PayFooter({ plan, onPay }: Props) {
         </Text>
       </View>
 
+      {/* Sélecteur de méthode de paiement */}
+      <View style={styles.methods}>
+        {(['wave', 'orange_money'] as PayMethod[]).map((m) => (
+          <TouchableOpacity
+            key={m}
+            style={[styles.method, payMethod === m && styles.methodSel]}
+            onPress={() => onMethodChange(m)}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.methodTxt, payMethod === m && styles.methodTxtSel]}>
+              {METHOD_LABELS[m]}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {/* Bouton paiement */}
-      <TouchableOpacity style={styles.btn} onPress={onPay} activeOpacity={0.85}>
-        <IcoCard />
-        <Text style={styles.btnTxt}>Activer · payer via Wave</Text>
+      <TouchableOpacity
+        style={[styles.btn, loading && styles.btnLoading]}
+        onPress={onPay}
+        activeOpacity={0.85}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color={colors.bg} size="small" />
+        ) : (
+          <>
+            <IcoCard />
+            <Text style={styles.btnTxt}>
+              Payer via {METHOD_LABELS[payMethod]}
+            </Text>
+          </>
+        )}
       </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─── Variante "Bientôt disponible" ────────────────────────────────────────────
+
+export function PayFooterUnavailable({ plan }: { plan: VisibilityPlan }) {
+  return (
+    <View style={[styles.footer, { paddingBottom: BOTTOM_PAD }]}>
+      <View style={styles.summary}>
+        <Text style={styles.sumLabel}>
+          Forfait <Text style={styles.sumBold}>{plan.label}</Text>
+        </Text>
+        <Text style={styles.sumPrice}>
+          {plan.price.toLocaleString('fr-FR')} F
+        </Text>
+      </View>
+      <View style={styles.btnUnavail}>
+        <IcoClock />
+        <Text style={styles.btnUnavailTxt}>Paiement bientôt disponible</Text>
+      </View>
+      <Text style={styles.unavailDesc}>
+        Nous intégrons Wave et Orange Money. Revenez très bientôt !
+      </Text>
     </View>
   );
 }
@@ -69,6 +142,37 @@ const styles = StyleSheet.create({
     fontFamily: fonts.titleXL,
     fontSize: 22,
   },
+
+  // Sélecteur méthode
+  methods: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  method: {
+    flex: 1,
+    height: 38,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  methodSel: {
+    borderColor: colors.accent,
+    backgroundColor: 'rgba(253,207,52,.08)',
+  },
+  methodTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+  },
+  methodTxtSel: {
+    color: colors.accent,
+    fontFamily: fonts.title,
+  },
+
+  // Bouton payer
   btn: {
     height: 55,
     borderRadius: radius.lg,
@@ -78,9 +182,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 9,
   },
+  btnLoading: {
+    opacity: 0.7,
+  },
   btnTxt: {
     color: colors.bg,
     fontFamily: fonts.titleXL,
     fontSize: 16,
+  },
+
+  // État indisponible
+  btnUnavail: {
+    height: 55,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  btnUnavailTxt: {
+    color: colors.muted,
+    fontFamily: fonts.title,
+    fontSize: 15,
+  },
+  unavailDesc: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 11,
+    textAlign: 'center',
+    paddingBottom: 4,
   },
 });

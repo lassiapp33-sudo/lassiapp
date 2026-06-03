@@ -55,6 +55,7 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
 
   // Shop
   const shopId     = useShopStore(s => s.shopId);
+  const shopIsVip  = useShopStore(s => s.profile?.isVip ?? false);
   const loadMyShop = useShopStore(s => s.loadMyShop);
 
   // Commandes
@@ -119,7 +120,7 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
         {/* ① Salutation + cloche + zone réelle */}
         <DashHeader
           name={merchantName}
-          isVip={false}
+          isVip={shopIsVip}
           notifCount={notifCount}
           zoneName={zoneName}
           onNotifPress={onNotifPress}
