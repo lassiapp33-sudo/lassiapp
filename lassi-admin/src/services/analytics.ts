@@ -2,7 +2,8 @@
  * services/analytics.ts — Requêtes agrégées pour le dashboard.
  * Toutes les données viennent de Supabase en direct. Aucune donnée fictive.
  */
-import { supabase } from '../lib/supabase'
+import { supabase }        from '../lib/supabase'
+import { COMMISSION_RATE } from './commission'
 
 export interface GtvSummary {
   gtv:          number  // Gross Transaction Value en FCFA
@@ -58,7 +59,7 @@ export async function getGtvSummary(
 
   return {
     gtv,
-    commission:  gtv * 0.005,
+    commission:  gtv * COMMISSION_RATE,
     ordersCount: (orders ?? []).length,
     shopsActive,
   }

@@ -5,6 +5,9 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Taux de commission LASSİ (0,5 %). Un seul endroit à modifier.
+const COMMISSION_RATE = 0.005
+
 // ─── Calcul réduction serveur ────────────────────────────────────────────────
 
 interface PromoRow {
@@ -167,7 +170,7 @@ Deno.serve(async (req) => {
         .maybeSingle()
 
       if (existing) {
-        const commission = Math.round(existing.total * 0.005)
+        const commission = Math.round(existing.total * COMMISSION_RATE)
         return new Response(JSON.stringify({
           orderId:        existing.id,
           total:          existing.total,
@@ -223,7 +226,7 @@ Deno.serve(async (req) => {
     const total = Math.max(subtotal - discountAmount, 1) // jamais ≤ 0
 
     // ⑥ Commission LASSİ 0,5% calculée sur le montant APRÈS réduction
-    const commission = Math.round(total * 0.005)
+    const commission = Math.round(total * COMMISSION_RATE)
 
     // ⑦ Créer la commande + articles en une seule transaction atomique (RPC)
     const { data: profile } = await admin
@@ -254,7 +257,7 @@ Deno.serve(async (req) => {
           .eq('client_id', user.id)
           .maybeSingle()
         if (dup) {
-          const commission = Math.round(dup.total * 0.005)
+          const commission = Math.round(dup.total * COMMISSION_RATE)
           return new Response(JSON.stringify({
             orderId:        dup.id,
             total:          dup.total,
