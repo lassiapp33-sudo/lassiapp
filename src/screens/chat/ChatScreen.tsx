@@ -18,10 +18,11 @@ import { OrderInfo } from '../../types/payment';
 import useAuthStore  from '../../store/authStore';
 import * as chatService  from '../../services/chat';
 import * as shopsService from '../../services/shops';
-import { openWhatsAppCall } from '../../utils/whatsapp';
+import { openDirectPhoneCall } from '../../utils/whatsapp';
 import { ChatMessage }   from '../../services/chat';
 import { useRealtimeMessages } from '../../hooks/useRealtimeMessages';
 import logger from '../../utils/logger';
+import { formatTime } from '../../utils/format';
 import { getErrorMessage } from '../../utils/errorUtils';
 
 // ─── Types locaux UI ──────────────────────────────────────────────────────────
@@ -49,10 +50,6 @@ function nowTime(): string {
   return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-}
 
 // Convertit un ChatMessage Supabase en Msg local
 function toMsg(m: ChatMessage, currentUserId: string): Msg {
@@ -426,7 +423,7 @@ export default function ChatScreen({
         isOnline
         onBack={onBack}
         logoUrl={resolvedLogoUrl}
-        onCall={() => openWhatsAppCall(otherPhone)}
+        onCall={() => openDirectPhoneCall(otherPhone)}
       />
 
       {loading ? (

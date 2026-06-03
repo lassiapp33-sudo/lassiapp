@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, ActivityIndicator, Linking, Image,
@@ -32,6 +32,7 @@ import {
   computeStatus, WeekHours, formatHour, DayKey, DEFAULT_WEEK_HOURS,
 } from '../../services/hours';
 import { IcoBack } from '../../components/icons';
+import { formatPrice } from '../../utils/format';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -342,8 +343,8 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
                 {shopWidePromos.map(p => (
                   <Text key={p.id} style={styles.promoBannerTxt} numberOfLines={1}>
                     {p.titre}{p.type === 'pourcentage' ? ` · −${p.valeur}%` :
-                              p.type === 'montant_fixe' ? ` · −${p.valeur.toLocaleString('fr-FR')} F` : ''}
-                    {p.montantMin > 0 ? ` (dès ${p.montantMin.toLocaleString('fr-FR')} F)` : ''}
+                              p.type === 'montant_fixe' ? ` · −${formatPrice(p.valeur)}` : ''}
+                    {p.montantMin > 0 ? ` (dès ${formatPrice(p.montantMin)})` : ''}
                   </Text>
                 ))}
               </View>

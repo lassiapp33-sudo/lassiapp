@@ -4,6 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { ProductPromoInfo } from '../../types/promotions';
 import { IcoPlus } from '../icons';
+import { formatPrice } from '../../utils/format';
 
 export interface Product {
   id:        string;
@@ -94,12 +95,12 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
         {/* Prix barré + prix promo OU prix normal */}
         {promoInfo?.promoPrice !== undefined ? (
           <View style={styles.priceRow}>
-            <Text style={styles.priceOld}>{product.price.toLocaleString('fr-FR')} F</Text>
-            <Text style={styles.pricePromo}>{promoInfo.promoPrice.toLocaleString('fr-FR')} F</Text>
+            <Text style={styles.priceOld}>{formatPrice(product.price)}</Text>
+            <Text style={styles.pricePromo}>{formatPrice(promoInfo.promoPrice)}</Text>
           </View>
         ) : (
           <Text style={[styles.price, isOut && styles.priceOut]}>
-            {product.price.toLocaleString('fr-FR')} F
+            {formatPrice(product.price)}
           </Text>
         )}
       </View>

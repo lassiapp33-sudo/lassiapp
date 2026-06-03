@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 import Avatar from '../Avatar';
+import { formatPrice } from '../../utils/format';
 
 export type OrderStatus = 'new' | 'preparing';
 
@@ -66,7 +67,7 @@ export default function OrderCard({ order, onPress }: Props) {
         <View style={[styles.tag, { backgroundColor: status.bg }]}>
           <Text style={[styles.tagTxt, { color: status.color }]}>{status.label}</Text>
         </View>
-        <Text style={styles.price}>{order.price.toLocaleString('fr-FR')} F</Text>
+        <Text style={styles.price}>{formatPrice(order.price)}</Text>
       </View>
     </TouchableOpacity>
   );

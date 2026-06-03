@@ -14,6 +14,7 @@ import { StoreProduct }          from '../../types/store';
 import * as promoService         from '../../services/promotions';
 import { getErrorMessage }       from '../../utils/errorUtils';
 import { IcoBack, IcoPlus } from '../../components/icons';
+import { formatPrice } from '../../utils/format';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -147,9 +148,9 @@ function PromoCard({
 
   const valeurLabel =
     promo.type === 'pourcentage'      ? `−${promo.valeur}%` :
-    promo.type === 'montant_fixe'     ? `−${promo.valeur.toLocaleString('fr-FR')} F` :
+    promo.type === 'montant_fixe'     ? `−${formatPrice(promo.valeur)}` :
     promo.type === 'quantite_offerte' ? `${promo.valeur}+1 offert` :
-    `→ ${promo.valeur.toLocaleString('fr-FR')} F`;
+    `→ ${formatPrice(promo.valeur)}`;
 
   return (
     <View style={styles.promoCard}>
@@ -181,7 +182,7 @@ function PromoCard({
         )}
         {promo.montantMin > 0 && (
           <Text style={styles.promoDate}>
-            Min. {promo.montantMin.toLocaleString('fr-FR')} F
+            Min. {formatPrice(promo.montantMin)}
           </Text>
         )}
         <View style={{ flex: 1 }} />

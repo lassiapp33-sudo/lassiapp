@@ -13,6 +13,7 @@ import useAuthStore  from '../../store/authStore';
 import { supabase }   from '../../lib/supabase';
 import MascoHomeBtn   from '../../components/MascoHomeBtn';
 import { IcoBack, IcoClose } from '../../components/icons';
+import { formatPrice } from '../../utils/format';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -67,10 +68,6 @@ const FILTER_TABS: Array<{ id: PaymentFilter; label: string }> = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatAmount(n: number): string {
-  return n.toLocaleString('fr-FR') + ' F';
-}
-
 function shortAmount(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace('.0','') + 'M';
   if (n >= 1_000)     return (n / 1_000).toFixed(0) + 'k';
@@ -103,7 +100,7 @@ function WeekChart({ data }: { data: DayRevenue[] }) {
         <Text style={chart.title}>Revenus — 7 derniers jours</Text>
         {selected !== null && data[selected].amount > 0 && (
           <Text style={chart.tooltip}>
-            {data[selected].label} · {formatAmount(data[selected].amount)}
+            {data[selected].label} · {formatPrice(data[selected].amount)}
           </Text>
         )}
       </View>
@@ -197,7 +194,7 @@ function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
                     {item.qty && item.qty > 1 ? `${item.qty}× ` : ''}{item.name}
                   </Text>
                   {item.price != null && (
-                    <Text style={modal.itemPrice}>{formatAmount(item.price)}</Text>
+                    <Text style={modal.itemPrice}>{formatPrice(item.price)}</Text>
                   )}
                 </View>
               ))}
@@ -209,7 +206,7 @@ function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
           {/* Montant */}
           <View style={modal.row}>
             <Text style={modal.rowLabel}>Montant reçu</Text>
-            <Text style={modal.amountValue}>{formatAmount(payment.amount)}</Text>
+            <Text style={modal.amountValue}>{formatPrice(payment.amount)}</Text>
           </View>
 
           {/* Méthode */}
@@ -282,7 +279,7 @@ function PaymentCard({ payment, onReceipt }: PaymentCardProps) {
 
       {/* Pied : montant + méthode + bouton reçu */}
       <View style={pc.footer}>
-        <Text style={pc.amount}>{formatAmount(payment.amount)}</Text>
+        <Text style={pc.amount}>{formatPrice(payment.amount)}</Text>
 
         <View style={pc.method}>
           {payment.method === 'wave' ? <IcoWave /> : <IcoOM />}
@@ -422,7 +419,7 @@ export default function MerchantPaymentsScreen({ onBack }: Props) {
                   <IcoTrend />
                   <Text style={s.statLabel}>Total reçu</Text>
                 </View>
-                <Text style={s.statBig}>{formatAmount(stats.totalRevenue)}</Text>
+                <Text style={s.statBig}>{formatPrice(stats.totalRevenue)}</Text>
               </View>
               <View style={s.statDivider} />
               <View style={s.statCell}>
@@ -434,7 +431,7 @@ export default function MerchantPaymentsScreen({ onBack }: Props) {
             <View style={s.statsRow2}>
               <View style={s.statCell2}>
                 <Text style={s.statLabel}>Ce mois</Text>
-                <Text style={s.statMed}>{formatAmount(stats.monthRevenue)}</Text>
+                <Text style={s.statMed}>{formatPrice(stats.monthRevenue)}</Text>
               </View>
               <View style={s.statDivider} />
               <View style={s.statCell2}>

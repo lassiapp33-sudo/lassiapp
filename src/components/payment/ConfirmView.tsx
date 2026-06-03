@@ -4,6 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { OrderInfo, PayMethod } from '../../types/payment';
 import { LassiMascotte } from '../LassiMascotte';
+import { formatPrice } from '../../utils/format';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -80,7 +81,7 @@ export default function ConfirmView({ order, method, onBackToChat }: Props) {
 
       {/* ── Titre + montant ──────────────────────────────────────────────── */}
       <Text style={styles.title}>Paiement réussi !</Text>
-      <Text style={styles.amount}>{order.total.toLocaleString('fr-FR')} F</Text>
+      <Text style={styles.amount}>{formatPrice(order.total)}</Text>
       <Text style={styles.desc}>
         {'Ta commande chez '}
         <Text style={styles.descBold}>{order.shopName}</Text>

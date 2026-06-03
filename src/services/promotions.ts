@@ -1,6 +1,7 @@
 import { supabase }         from '../lib/supabase';
 import { Promotion, AppliedDiscount, ProductPromoInfo } from '../types/promotions';
 import { CartItem }          from '../store/cartStore';
+import { formatPrice }       from '../utils/format';
 
 // ─── Mapping DB → TS ─────────────────────────────────────────────────────────
 
@@ -147,7 +148,7 @@ export function calcClientDiscount(
       case 'montant_fixe': {
         if (promo.cibleType === 'vitrine') {
           reduction = Math.min(promo.valeur, subtotal - 1);
-          label     = `-${promo.valeur.toLocaleString('fr-FR')} F`;
+          label     = `-${formatPrice(promo.valeur)}`;
         }
         break;
       }
@@ -210,7 +211,7 @@ export function buildProductPromoMap(
     if (promo.type === 'pourcentage') {
       map[promo.cibleId] = { badge: `-${promo.valeur}%` };
     } else if (promo.type === 'montant_fixe') {
-      map[promo.cibleId] = { badge: `-${promo.valeur.toLocaleString('fr-FR')} F` };
+      map[promo.cibleId] = { badge: `-${formatPrice(promo.valeur)}` };
     } else if (promo.type === 'quantite_offerte') {
       map[promo.cibleId] = { badge: `${promo.valeur}+1` };
     } else if (promo.type === 'prix_barre') {

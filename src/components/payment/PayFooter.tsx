@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Platform }
 import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { PayMethod } from '../../types/payment';
+import { formatPrice } from '../../utils/format';
 
 const IcoCard = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
@@ -49,7 +50,7 @@ export default function PayFooter({ method, total, loading, onPay }: Props) {
           <>
             <IcoCard />
             <Text style={styles.btnTxt}>
-              Payer {total.toLocaleString('fr-FR')} F via {METHOD_LABEL[method]}
+              Payer {formatPrice(total)} via {METHOD_LABEL[method]}
             </Text>
           </>
         )}

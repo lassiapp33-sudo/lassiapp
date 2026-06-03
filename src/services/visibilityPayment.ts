@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { formatPrice } from '../utils/format';
 
 const SUPABASE_URL   = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;
@@ -154,7 +155,7 @@ export async function verifyVisibilityPayment(subscriptionId: string): Promise<V
 function computePlanDesc(price: number, oldPrice: number | null): string {
   if (oldPrice && oldPrice > price) {
     const savings = oldPrice - price;
-    return `Économise ${savings.toLocaleString('fr-FR')} F`;
+    return `Économise ${formatPrice(savings)}`;
   }
   return 'Paiement mensuel';
 }

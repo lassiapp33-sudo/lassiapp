@@ -18,6 +18,7 @@ import AvisForm                  from '../../components/avis/AvisForm';
 import { Avis }                  from '../../types/avis';
 import MascoHomeBtn              from '../../components/MascoHomeBtn';
 import { IcoBack } from '../../components/icons';
+import { formatPrice } from '../../utils/format';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -192,7 +193,7 @@ function OrderCard({ order, onCancel, onReorder, isReordering, onLeaveAvis, onVi
 
       {/* Pied : montant + paiement + date */}
       <View style={card.footer}>
-        <Text style={card.amount}>{order.totalAmount.toLocaleString('fr-FR')} FCFA</Text>
+        <Text style={card.amount}>{formatPrice(order.totalAmount)}</Text>
         <View style={card.payRow}>
           {order.paymentMethod === 'wave' ? <IcoWave /> : <IcoOM />}
           <Text style={card.payLabel}>

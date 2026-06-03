@@ -4,6 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { Debtor, DebtStatus } from '../../types/debts';
 import Avatar from '../Avatar';
+import { formatPrice } from '../../utils/format';
 
 // Couleur officielle WhatsApp — uniquement pour ce bouton
 const WA_COLOR = '#25D366';
@@ -28,7 +29,7 @@ const IcoWA = () => (
 function buildWaUrl(debtor: Debtor): string {
   const msg =
     `Bonjour ${debtor.name} 👋\n\n` +
-    `Tu as une dette de *${debtor.amount.toLocaleString('fr-FR')} FCFA*.\n\n` +
+    `Tu as une dette de *${formatPrice(debtor.amount)}*.\n\n` +
     `Merci de régulariser dès que possible 🙏\n` +
     `— LASSİ`;
   const phone = debtor.phone ?? '';
@@ -84,7 +85,7 @@ export default function DebtorCard({ debtor, onPress }: Props) {
 
       {/* Montant + bouton relance */}
       <View style={styles.right}>
-        <Text style={styles.due}>{debtor.amount.toLocaleString('fr-FR')} F</Text>
+        <Text style={styles.due}>{formatPrice(debtor.amount)}</Text>
         <TouchableOpacity
           style={styles.waBtn}
           onPress={handleRelance}

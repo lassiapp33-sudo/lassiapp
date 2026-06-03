@@ -9,6 +9,7 @@ import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { getReceipt, ReceiptInfo, ReceiptStatus } from '../../services/receipts';
 import { contacterServiceClient } from '../../config/contact';
 import { IcoBack } from '../../components/icons';
+import { formatPrice } from '../../utils/format';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -251,12 +252,12 @@ export default function ReceiptScreen({ orderId, onBack }: Props) {
             <View key={i} style={s.itemRow}>
               <Text style={s.itemQty}>{item.qty}×</Text>
               <Text style={s.itemName} numberOfLines={1}>{item.name}</Text>
-              <Text style={s.itemPrice}>{item.price.toLocaleString('fr-FR')} F</Text>
+              <Text style={s.itemPrice}>{formatPrice(item.price)}</Text>
             </View>
           ))}
           <View style={s.totalRow}>
             <Text style={s.totalLabel}>Total</Text>
-            <Text style={s.totalAmount}>{receipt.total.toLocaleString('fr-FR')} F</Text>
+            <Text style={s.totalAmount}>{formatPrice(receipt.total)}</Text>
           </View>
         </View>
 

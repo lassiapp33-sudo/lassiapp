@@ -7,6 +7,7 @@ import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { VisibilityPlan } from '../../services/visibilityPayment';
 import type { PayMethod } from '../../services/visibilityPayment';
+import { formatPrice } from '../../utils/format';
 
 const IcoCard = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
@@ -48,7 +49,7 @@ export default function PayFooter({ plan, payMethod, onMethodChange, onPay, load
           Forfait <Text style={styles.sumBold}>{plan.label}</Text>
         </Text>
         <Text style={styles.sumPrice}>
-          {plan.price.toLocaleString('fr-FR')} F
+          {formatPrice(plan.price)}
         </Text>
       </View>
 
@@ -100,7 +101,7 @@ export function PayFooterUnavailable({ plan }: { plan: VisibilityPlan }) {
           Forfait <Text style={styles.sumBold}>{plan.label}</Text>
         </Text>
         <Text style={styles.sumPrice}>
-          {plan.price.toLocaleString('fr-FR')} F
+          {formatPrice(plan.price)}
         </Text>
       </View>
       <View style={styles.btnUnavail}>

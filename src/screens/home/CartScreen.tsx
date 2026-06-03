@@ -14,6 +14,7 @@ import { validateCartAvailability } from '../../services/products';
 import * as promosService from '../../services/promotions';
 import { AppliedDiscount } from '../../types/promotions';
 import { IcoBack } from '../../components/icons';
+import { formatPrice } from '../../utils/format';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -215,7 +216,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
             <View style={styles.itemInfo}>
               <Text style={styles.itemName}>{item.name}</Text>
               <Text style={styles.itemPrice}>
-                {item.price.toLocaleString('fr-FR')} F
+                {formatPrice(item.price)}
               </Text>
             </View>
 
@@ -257,7 +258,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         <View style={styles.summary}>
           <View style={styles.summaryLine}>
             <Text style={styles.summaryKey}>Sous-total</Text>
-            <Text style={styles.summaryVal}>{subtotal.toLocaleString('fr-FR')} F</Text>
+            <Text style={styles.summaryVal}>{formatPrice(subtotal)}</Text>
           </View>
           <View style={styles.summaryLine}>
             <Text style={styles.summaryKey}>Type</Text>
@@ -272,14 +273,14 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
                 <Text style={styles.discountKey}>🏷️ {d.titre}</Text>
                 <Text style={styles.discountSub}>{d.label}</Text>
               </View>
-              <Text style={styles.discountVal}>−{d.reductionFcfa.toLocaleString('fr-FR')} F</Text>
+              <Text style={styles.discountVal}>−{formatPrice(d.reductionFcfa)}</Text>
             </View>
           ))}
           {/* Séparateur */}
           <View style={styles.separator} />
           <View style={styles.totalRow}>
             <Text style={styles.totalKey}>Total</Text>
-            <Text style={styles.totalVal}>{total.toLocaleString('fr-FR')} F</Text>
+            <Text style={styles.totalVal}>{formatPrice(total)}</Text>
           </View>
         </View>
       </ScrollView>
@@ -295,7 +296,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         >
           {isSubmitting
             ? <ActivityIndicator color={colors.bg} size="small" />
-            : <><IcoPay /><Text style={styles.payBtnTxt}>Commander · {total.toLocaleString('fr-FR')} F</Text></>
+            : <><IcoPay /><Text style={styles.payBtnTxt}>Commander · {formatPrice(total)}</Text></>
           }
         </TouchableOpacity>
       </View>

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
+import { formatPrice } from '../../utils/format';
 
 const IcoMic = () => (
   <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
@@ -43,7 +44,7 @@ export default function ShopFooter({ total, hasItems, shopType = 'products', onC
 
   // Pour les produits : le montant s'affiche si panier non vide
   const mainLabel = (shopType === 'products' && hasItems)
-    ? `${main} · ${total.toLocaleString('fr-FR')} F`
+    ? `${main} · ${formatPrice(total)}`
     : main;
 
   return (

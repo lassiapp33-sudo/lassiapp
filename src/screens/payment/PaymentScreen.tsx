@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, Linking, Alert, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 
@@ -12,6 +12,7 @@ import { colors, fonts, radius } from '../../theme';
 import { OrderInfo, PayMethod } from '../../types/payment';
 import * as payService from '../../services/payment';
 import logger          from '../../utils/logger';
+import { formatPrice } from '../../utils/format';
 
 // ─── Label de section ────────────────────────────────────────────────────────
 
@@ -41,7 +42,7 @@ function WaitingView({
         <Text style={styles.waitTitle}>En attente de paiement</Text>
         <Text style={styles.waitBody}>
           {'Complète le paiement de '}
-          <Text style={styles.waitAmount}>{total.toLocaleString('fr-FR')} FCFA</Text>
+          <Text style={styles.waitAmount}>{formatPrice(total)}</Text>
           {` dans ${methodLabel}, puis reviens ici et appuie sur le bouton ci-dessous.`}
         </Text>
       </View>

@@ -7,6 +7,7 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { IncomingOrder } from '../../types/orders';
 import { IcoClose } from '../icons';
+import { formatPrice } from '../../utils/format';
 
 const BOTTOM_PAD = Platform.OS === 'ios' ? 28 : 14;
 
@@ -49,7 +50,7 @@ export default function RefuseSheet({ visible, order, onRefuse, onClose }: Props
           <View style={styles.clientInfo}>
             <Text style={styles.clientName}>{order.clientName}</Text>
             <Text style={styles.clientSub} numberOfLines={1}>
-              {order.orderId} · {order.total.toLocaleString('fr-FR')} F
+              {order.orderId} · {formatPrice(order.total)}
             </Text>
           </View>
         </View>

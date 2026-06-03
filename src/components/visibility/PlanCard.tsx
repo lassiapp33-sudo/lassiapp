@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts } from '../../theme';
+import { formatPrice } from '../../utils/format';
 
 export interface Plan {
   id:        string;
@@ -50,11 +51,11 @@ export default function PlanCard({ plan, selected, onSelect }: Props) {
         <View style={styles.priceBlock}>
           {plan.oldPrice != null && (
             <Text style={styles.oldPrice}>
-              {plan.oldPrice.toLocaleString('fr-FR')} F
+              {formatPrice(plan.oldPrice)}
             </Text>
           )}
           <Text style={styles.price}>
-            {plan.price.toLocaleString('fr-FR')} F
+            {formatPrice(plan.price)}
           </Text>
           <Text style={styles.perLabel}>{plan.perLabel}</Text>
         </View>

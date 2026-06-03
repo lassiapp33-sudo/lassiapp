@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { StoreProduct, StockStatus } from '../../types/store';
+import { formatPrice } from '../../utils/format';
 
 // ─── Icône crayon ────────────────────────────────────────────────────────────
 
@@ -52,7 +53,7 @@ export default function ProductRow({ product, onEdit, onToggleStock, promoInfo }
         <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
         <Text style={styles.desc} numberOfLines={1}>{product.desc}</Text>
         <View style={styles.priceRow}>
-          <Text style={styles.price}>{product.price.toLocaleString('fr-FR')} FCFA</Text>
+          <Text style={styles.price}>{formatPrice(product.price)}</Text>
           {promoInfo && (
             <View style={styles.promoBadge}>
               <Text style={styles.promoBadgeTxt}>{promoInfo.badge}</Text>

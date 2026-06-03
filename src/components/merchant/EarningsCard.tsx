@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
+import { formatPrice } from '../../utils/format';
 
 // ─── Icônes (tracé sombre sur fond jaune) ────────────────────────────────────
 
@@ -63,7 +64,7 @@ export default function EarningsCard({ amount, changeLabel, orders, viaLassi, de
 
       {/* Montant principal — gros chiffre lisible en plein soleil */}
       <Text style={styles.amount}>
-        {visible ? amount.toLocaleString('fr-FR') + ' F' : '••••• F'}
+        {visible ? formatPrice(amount) : '••••• F'}
       </Text>
 
       {/* Évolution vs hier */}
@@ -73,7 +74,7 @@ export default function EarningsCard({ amount, changeLabel, orders, viaLassi, de
       <View style={styles.mini}>
         <MiniStat value={String(orders)}                            label="Commandes"     />
         <MiniStat value={String(viaLassi)}                          label="Via LASSİ"     />
-        <MiniStat value={debts.toLocaleString('fr-FR') + ' F'}     label="Dettes en cours" />
+        <MiniStat value={formatPrice(debts)}     label="Dettes en cours" />
       </View>
     </View>
   );

@@ -6,6 +6,7 @@ import {
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { IncomingOrder } from '../../types/orders';
+import { formatPrice } from '../../utils/format';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -177,7 +178,7 @@ export default function PrepTimeSheet({ visible, order, onAccept, onClose }: Pro
               </Text>
             </View>
             <Text style={styles.clientTotal}>
-              {order.total.toLocaleString('fr-FR')} F
+              {formatPrice(order.total)}
             </Text>
           </View>
 

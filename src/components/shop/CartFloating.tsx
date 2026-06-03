@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
+import { formatPrice } from '../../utils/format';
 
 interface Props {
   count:   number;
@@ -23,7 +24,7 @@ export default function CartFloating({ count, total, onPress, bottom }: Props) {
         <Text style={styles.badgeTxt}>{count}</Text>
       </View>
       <Text style={styles.label}>Voir mon panier</Text>
-      <Text style={styles.price}>{total.toLocaleString('fr-FR')} FCFA</Text>
+      <Text style={styles.price}>{formatPrice(total)}</Text>
     </TouchableOpacity>
   );
 }

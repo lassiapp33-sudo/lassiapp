@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { colors, fonts, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
+import { formatConvTime } from '../../utils/format';
 import { Conversation } from '../../services/chat';
 import * as chatService from '../../services/chat';
 import ChatScreen  from '../chat/ChatScreen';
@@ -17,15 +18,6 @@ import MascoHomeBtn  from '../../components/MascoHomeBtn';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function timeLabel(iso: string): string {
-  const d   = new Date(iso);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffH  = diffMs / 3_600_000;
-  if (diffH < 24) return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
-  if (diffH < 48) return 'Hier';
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
-}
 
 // ─── Carte conversation ───────────────────────────────────────────────────────
 
@@ -53,7 +45,7 @@ function ConvCard({ conv, clientName, clientAvatar, onPress }: ConvCardProps) {
       <View style={styles.cardBody}>
         <View style={styles.cardTop}>
           <Text style={styles.cardName} numberOfLines={1}>{clientName}</Text>
-          <Text style={styles.cardTime}>{timeLabel(conv.lastMessageAt)}</Text>
+          <Text style={styles.cardTime}>{formatConvTime(conv.lastMessageAt)}</Text>
         </View>
         <Text style={[styles.cardLast, unread > 0 && styles.cardLastUnread]} numberOfLines={1}>
           {conv.lastMessage ?? 'Nouvelle conversation'}

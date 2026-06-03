@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 import { OrderInfo } from '../../types/payment';
 import Avatar from '../Avatar';
+import { formatPrice } from '../../utils/format';
 
 interface Props { order: OrderInfo; }
 
@@ -31,7 +32,7 @@ export default function OrderRecap({ order }: Props) {
             {item.name}
           </Text>
           <Text style={styles.linePrice}>
-            {item.price.toLocaleString('fr-FR')} F
+            {formatPrice(item.price)}
           </Text>
         </View>
       ))}
@@ -40,7 +41,7 @@ export default function OrderRecap({ order }: Props) {
       <View style={styles.separator} />
       <View style={styles.totalRow}>
         <Text style={styles.totalLabel}>Total</Text>
-        <Text style={styles.totalValue}>{order.total.toLocaleString('fr-FR')} F</Text>
+        <Text style={styles.totalValue}>{formatPrice(order.total)}</Text>
       </View>
     </View>
   );

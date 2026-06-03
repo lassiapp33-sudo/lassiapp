@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
+import { formatPrice } from '../../utils/format';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -80,7 +81,7 @@ export default function BubbleTicket({ sender, orderId, items, total, paid, time
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Montant réglé</Text>
               <Text style={[styles.totalValue, { color: colors.success }]}>
-                {total.toLocaleString('fr-FR')} F
+                {formatPrice(total)}
               </Text>
             </View>
           ) : (
@@ -93,7 +94,7 @@ export default function BubbleTicket({ sender, orderId, items, total, paid, time
                     {item.name}
                   </Text>
                   <Text style={styles.linePrice}>
-                    {item.price.toLocaleString('fr-FR')} F
+                    {formatPrice(item.price)}
                   </Text>
                 </View>
               ))}
@@ -101,7 +102,7 @@ export default function BubbleTicket({ sender, orderId, items, total, paid, time
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Total à payer</Text>
                 <Text style={[styles.totalValue, { color: colors.accent }]}>
-                  {total.toLocaleString('fr-FR')} F
+                  {formatPrice(total)}
                 </Text>
               </View>
             </>

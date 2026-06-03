@@ -5,6 +5,7 @@ import { colors, fonts } from '../../theme';
 import { IncomingOrder } from '../../types/orders';
 import Avatar from '../Avatar';
 import { IcoClose } from '../icons';
+import { formatPrice } from '../../utils/format';
 
 // Couleurs spécifiques aux boutons d'action
 const WAVE_COLOR = '#1DC8F2';
@@ -105,7 +106,7 @@ export default function OrderCard({ order, onAccept, onRefuse, onChat, onReady, 
               <Text style={styles.itemQty}>{item.qty}×  </Text>
               {item.name}
             </Text>
-            <Text style={styles.itemPrice}>{item.price.toLocaleString('fr-FR')} F</Text>
+            <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
           </View>
         ))}
 
@@ -132,7 +133,7 @@ export default function OrderCard({ order, onAccept, onRefuse, onChat, onReady, 
                 {order.orderType === 'place' ? '🍽 Sur place' : '🥡 À emporter'}
               </Text>
             </View>
-            <Text style={styles.total}>{order.total.toLocaleString('fr-FR')} F</Text>
+            <Text style={styles.total}>{formatPrice(order.total)}</Text>
           </View>
         </View>
       </View>

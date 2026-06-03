@@ -9,6 +9,7 @@ import { colors, fonts, radius } from '../../theme';
 import { IcoClose } from '../../components/icons';
 import { verifyReceiptMerchant, VerifyResult } from '../../services/receipts';
 import { getErrorMessage } from '../../utils/errorUtils';
+import { formatPrice } from '../../utils/format';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -127,7 +128,7 @@ export default function VerifyReceiptSheet({ visible, onClose, onVerified }: Pro
                   )}
                   {result.total !== undefined && (
                     <Text style={s.resultSuccessSub}>
-                      Total : {result.total.toLocaleString('fr-FR')} F
+                      Total : {formatPrice(result.total)}
                     </Text>
                   )}
                 </View>
