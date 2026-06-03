@@ -71,7 +71,7 @@ export default function AvisCard({
   avis, isOwn, isMerchant, onEdit, onDelete, onReport, onRefresh,
 }: Props) {
   const [showReplyBox, setShowReplyBox] = useState(false);
-  const [replyText,    setReplyText]    = useState(avis.reponseCommercant ?? '');
+  const [replyText,    setReplyText]    = useState('');
   const [saving,       setSaving]       = useState(false);
 
   const handleDelete = () => {
@@ -142,16 +142,14 @@ export default function AvisCard({
             <Text style={styles.actionTxt}>Signaler</Text>
           </TouchableOpacity>
         )}
-        {isMerchant && !isOwn && (
+        {isMerchant && !isOwn && !avis.reponseCommercant && (
           <TouchableOpacity
             style={[styles.actionBtn, { marginLeft: 'auto' }]}
             onPress={() => setShowReplyBox(v => !v)}
             activeOpacity={0.7}
           >
             <IcoReply />
-            <Text style={[styles.actionTxt, { color: colors.accent }]}>
-              {avis.reponseCommercant ? 'Modifier réponse' : 'Répondre'}
-            </Text>
+            <Text style={[styles.actionTxt, { color: colors.accent }]}>Répondre</Text>
           </TouchableOpacity>
         )}
       </View>

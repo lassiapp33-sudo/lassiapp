@@ -38,6 +38,16 @@ const IcoGrid = ({ stroke }: { stroke: string }) => (
   </Svg>
 );
 
+const IcoStar = ({ stroke }: { stroke: string }) => (
+  <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
+    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path
+      d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+      stroke={stroke}
+    />
+  </Svg>
+);
+
 // ─── Carte d'action individuelle ──────────────────────────────────────────────
 
 interface ActionCardProps {
@@ -73,9 +83,10 @@ interface Props {
   onPress?:   (key: string) => void;
   debtCount?: number;
   msgCount?:  number;
+  avisCount?: number;
 }
 
-export default function QuickActions({ onPress, debtCount = 0, msgCount = 0 }: Props) {
+export default function QuickActions({ onPress, debtCount = 0, msgCount = 0, avisCount = 0 }: Props) {
   return (
     <View style={styles.grid}>
       <View style={styles.row}>
@@ -114,6 +125,17 @@ export default function QuickActions({ onPress, debtCount = 0, msgCount = 0 }: P
           title="Ma vitrine"
           desc="Gérer mes produits"
           onPress={() => onPress?.('store')}
+        />
+      </View>
+      <View style={styles.row}>
+        <ActionCard
+          Icon={IcoStar}
+          iconBg="rgba(95,211,138,.13)"
+          iconStroke={colors.success}
+          title="Mes avis"
+          desc={avisCount > 0 ? `${avisCount} avis client${avisCount > 1 ? 's' : ''}` : 'Voir et répondre aux avis'}
+          badge={undefined}
+          onPress={() => onPress?.('avis')}
         />
       </View>
     </View>

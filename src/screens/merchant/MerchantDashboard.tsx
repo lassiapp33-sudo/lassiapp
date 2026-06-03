@@ -34,7 +34,7 @@ function SectionHeader({ title, linkLabel, onLink }: {
 }
 
 // Destinations possibles depuis le dashboard
-type NavDest = 'debts' | 'orders' | 'store' | 'messages' | 'visibility' | 'profile' | 'notifications' | 'assistant' | 'aroundme';
+type NavDest = 'debts' | 'orders' | 'store' | 'messages' | 'visibility' | 'profile' | 'notifications' | 'assistant' | 'aroundme' | 'avis';
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 

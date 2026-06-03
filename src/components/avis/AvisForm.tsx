@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Modal, View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Alert, ActivityIndicator, Platform,
-  KeyboardAvoidingView,
+  KeyboardAvoidingView, Image,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
@@ -12,7 +12,7 @@ import * as avisService from '../../services/avis';
 import * as storageService from '../../services/storage';
 import useAuthStore from '../../store/authStore';
 
-// ─── Icône X ──────────────────────────────────────────────────────────────────
+// ─── Icônes ───────────────────────────────────────────────────────────────────
 
 const IcoX = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
@@ -36,6 +36,16 @@ const IcoTrash = () => (
   </Svg>
 );
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+// Extrait le chemin relatif depuis une URL publique Supabase Storage.
+// Exemple : https://xxx.supabase.co/storage/v1/object/public/avis/userId/file.jpg
+//        → userId/file.jpg
+function avisStoragePath(publicUrl: string): string | null {
+  const match = publicUrl.match(/\/storage\/v1\/object\/public\/avis\/(.+)/);
+  return match ? match[1] : null;
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -55,58 +65,97 @@ export default function AvisForm({
 }: Props) {
   const user = useAuthStore(s => s.user);
 
-  const [note,        setNote]        = useState(existingAvis?.note        ?? 0);
-  const [commentaire, setCommentaire] = useState(existingAvis?.commentaire ?? '');
-  const [photoUrl,    setPhotoUrl]    = useState<string | null>(existingAvis?.photoUrl ?? null);
-  const [uploading,   setUploading]   = useState(false);
-  const [saving,      setSaving]      = useState(false);
+  const [note,         setNote]         = useState(existingAvis?.note        ?? 0);
+  const [commentaire,  setCommentaire]  = useState(existingAvis?.commentaire ?? '');
+  // URL distante : photo déjà enregistrée côté serveur (mode édition)
+  const [photoUrl,     setPhotoUrl]     = useState<string | null>(existingAvis?.photoUrl ?? null);
+  // URI locale : photo sélectionnée dans la galerie, pas encore uploadée
+  const [photoLocalUri, setPhotoLocalUri] = useState<string | null>(null);
+  const [saving,       setSaving]       = useState(false);
 
-  const isEdit = Boolean(existingAvis);
+  const isEdit        = Boolean(existingAvis);
+  // URI affichée dans le preview : locale en priorité, sinon distante
+  const previewUri    = photoLocalUri ?? photoUrl;
+  const hasPhoto      = previewUri !== null;
 
+  // ── Sélection photo (preview local uniquement — pas d'upload ici) ──────────
   const handlePickPhoto = async () => {
-    if (!user?.id) return;
     const uri = await storageService.pickImageFromGallery();
     if (!uri) return;
-    setUploading(true);
-    try {
-      const path = `${user.id}/${Date.now()}.jpg`;
-      const url  = await storageService.uploadImage('avis', uri, path);
-      setPhotoUrl(url);
-    } catch {
-      Alert.alert('Erreur', "Impossible d'uploader la photo.");
-    } finally {
-      setUploading(false);
-    }
+    setPhotoLocalUri(uri);
   };
 
+  const handleRemovePhoto = () => {
+    setPhotoLocalUri(null);
+    setPhotoUrl(null);
+  };
+
+  // ── Soumission ────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (note === 0) {
       Alert.alert('Note manquante', 'Choisis une note entre 1 et 5 étoiles.');
       return;
     }
+    if (!user?.id) {
+      Alert.alert('Session expirée', 'Reconnecte-toi pour publier ton avis.');
+      return;
+    }
+    const authorId = user.id; // narrowé : user non-null après le guard ci-dessus
+
     setSaving(true);
+
+    // ① Upload de la photo UNIQUEMENT à la soumission (jamais avant)
+    let finalPhotoUrl = photoUrl;   // null ou URL existante (mode édition)
+    let uploadedPath: string | null = null;
+
+    if (photoLocalUri) {
+      const path = `${authorId}/${Date.now()}.jpg`;
+      try {
+        finalPhotoUrl = await storageService.uploadImage('avis', photoLocalUri, path);
+        uploadedPath = path;
+      } catch {
+        Alert.alert('Erreur photo', "Impossible d'envoyer la photo. Réessaie.");
+        setSaving(false);
+        return;
+      }
+    }
+
+    // ② Appel RPC — si ça échoue, la photo uploadée est supprimée immédiatement
     try {
       if (isEdit && existingAvis) {
         await avisService.updateAvis(existingAvis.id, {
           note,
           commentaire: commentaire.trim() || null,
-          photoUrl,
+          photoUrl:    finalPhotoUrl,
         });
+
+        // Supprimer l'ancienne photo si elle a changé (remplacée OU supprimée)
+        if (existingAvis.photoUrl && existingAvis.photoUrl !== finalPhotoUrl) {
+          const oldPath = avisStoragePath(existingAvis.photoUrl);
+          if (oldPath) storageService.deleteImage('avis', oldPath).catch(() => {});
+        }
       } else {
         await avisService.createAvis({
           orderId,
           shopId,
-          authorId:   user!.id,
-          authorName: user?.name ?? 'Anonyme',
+          authorId,
+          authorName: user.name ?? 'Anonyme',
           note,
           commentaire: commentaire.trim() || undefined,
-          photoUrl:    photoUrl ?? undefined,
+          photoUrl:    finalPhotoUrl ?? undefined,
         });
       }
+
       onSaved();
       onClose();
-    } catch (e: any) {
-      const raw = e?.message ?? '';
+
+    } catch (e: unknown) {
+      // ③ Échec RPC → supprimer la photo qu'on venait d'uploader (évite la fuite)
+      if (uploadedPath) {
+        storageService.deleteImage('avis', uploadedPath).catch(() => {});
+      }
+
+      const raw = e instanceof Error ? e.message : '';
       const msg = raw.includes('row-level security')
         ? 'Tu dois avoir effectué une commande chez ce prestataire pour laisser un avis.'
         : raw || 'Impossible de publier ton avis. Réessaie.';
@@ -196,27 +245,24 @@ export default function AvisForm({
 
             {/* ── Photo ── */}
             <Text style={styles.label}>Photo <Text style={styles.optional}>(optionnel)</Text></Text>
-            {photoUrl ? (
+            {hasPhoto ? (
               <View style={styles.photoPreviewRow}>
-                <Text style={styles.photoUrlTxt} numberOfLines={1}>{photoUrl.split('/').pop()}</Text>
-                <TouchableOpacity onPress={() => setPhotoUrl(null)} activeOpacity={0.7}>
+                <Image source={{ uri: previewUri! }} style={styles.photoThumb} />
+                <Text style={styles.photoCaption} numberOfLines={1}>
+                  {photoLocalUri ? 'Photo sélectionnée' : (photoUrl!.split('/').pop() ?? 'Photo')}
+                </Text>
+                <TouchableOpacity onPress={handleRemovePhoto} activeOpacity={0.7}>
                   <IcoTrash />
                 </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity
-                style={[styles.photoBtn, uploading && { opacity: 0.6 }]}
+                style={styles.photoBtn}
                 onPress={handlePickPhoto}
-                disabled={uploading}
                 activeOpacity={0.8}
               >
-                {uploading
-                  ? <ActivityIndicator size="small" color={colors.muted} />
-                  : <IcoPhoto />
-                }
-                <Text style={styles.photoBtnTxt}>
-                  {uploading ? 'Envoi en cours…' : 'Ajouter une photo'}
-                </Text>
+                <IcoPhoto />
+                <Text style={styles.photoBtnTxt}>Ajouter une photo</Text>
               </TouchableOpacity>
             )}
 
@@ -357,6 +403,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 13,
   },
+
   photoPreviewRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -365,10 +412,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
-    padding: 12,
+    padding: 10,
     marginBottom: 18,
   },
-  photoUrlTxt: {
+  photoThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    flexShrink: 0,
+  },
+  photoCaption: {
     flex: 1,
     color: colors.success,
     fontFamily: fonts.body,

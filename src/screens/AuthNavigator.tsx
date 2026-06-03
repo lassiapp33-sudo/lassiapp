@@ -1,4 +1,5 @@
 import React, { useState }        from 'react';
+import { Modal }                   from 'react-native';
 import RoleSelectScreen            from './auth/RoleSelectScreen';
 import RegisterScreen, { RegisterData } from './auth/RegisterScreen';
 import LoginScreen                 from './auth/LoginScreen';
@@ -18,9 +19,7 @@ type StackItem =
   | { id: 'shopSetup';     userData: RegisterData }
   | { id: 'login' }
   | { id: 'emailVerify';   email: string }
-  | { id: 'forgotPassword' }
-  | { id: 'cgu' }
-  | { id: 'confidentialite' };
+  | { id: 'forgotPassword' };
 
 interface Props {
   onComplete: (role: Role) => void;
@@ -28,32 +27,41 @@ interface Props {
 
 export default function AuthNavigator({ onComplete }: Props) {
   const [stack, setStack] = useState<StackItem[]>([{ id: 'role' }]);
+  // CGU et Confidentialité s'ouvrent en modal pour ne pas démonter l'écran
+  // d'inscription (ce qui remettrait tous les champs à zéro).
+  const [legalModal, setLegalModal] = useState<null | 'cgu' | 'confidentialite'>(null);
 
   const push = (item: StackItem) => setStack(prev => [...prev, item]);
   const pop  = ()                 => setStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
+  const openCGU             = () => setLegalModal('cgu');
+  const openConfidentialite = () => setLegalModal('confidentialite');
+  const closeLegal          = () => setLegalModal(null);
 
   const current = stack[stack.length - 1];
+
+  let screen: React.ReactNode;
 
   switch (current.id) {
 
     // ── Choix du rôle ─────────────────────────────────────────────────────────
     case 'role':
-      return (
+      screen = (
         <RoleSelectScreen
           onSelectClient={()   => push({ id: 'register', role: 'client'   })}
           onSelectMerchant={() => push({ id: 'register', role: 'merchant' })}
           onLogin={()          => push({ id: 'login' })}
         />
       );
+      break;
 
     // ── Inscription ───────────────────────────────────────────────────────────
     case 'register':
-      return (
+      screen = (
         <RegisterScreen
           role={current.role}
           onBack={pop}
-          onCGU={() => push({ id: 'cgu' })}
-          onConfidentialite={() => push({ id: 'confidentialite' })}
+          onCGU={openCGU}
+          onConfidentialite={openConfidentialite}
           onSuccess={async (userData) => {
             if (current.role === 'merchant') {
               // Marchand → étape 2 (configuration boutique) avant création Supabase
@@ -80,22 +88,24 @@ export default function AuthNavigator({ onComplete }: Props) {
           onLogin={() => push({ id: 'login' })}
         />
       );
+      break;
 
     // ── Configuration boutique (marchand uniquement) ───────────────────────
     case 'shopSetup':
-      return (
+      screen = (
         <MerchantShopSetupScreen
           userData={current.userData}
           onBack={pop}
           onComplete={onComplete}
-          onCGU={() => push({ id: 'cgu' })}
-          onConfidentialite={() => push({ id: 'confidentialite' })}
+          onCGU={openCGU}
+          onConfidentialite={openConfidentialite}
         />
       );
+      break;
 
     // ── Connexion ─────────────────────────────────────────────────────────────
     case 'login':
-      return (
+      screen = (
         <LoginScreen
           onBack={pop}
           onSuccess={async (phone, password) => {
@@ -109,39 +119,52 @@ export default function AuthNavigator({ onComplete }: Props) {
           onRegister={pop}
         />
       );
+      break;
 
     // ── Vérification email ────────────────────────────────────────────────────
     case 'emailVerify': {
       const role = useAuthStore.getState().user?.role ?? 'client';
-      return (
+      screen = (
         <EmailVerifyScreen
           email={current.email}
           onBack={pop}
           onComplete={() => onComplete(role)}
         />
       );
+      break;
     }
 
     // ── Mot de passe oublié ───────────────────────────────────────────────────
     case 'forgotPassword':
-      return (
+      screen = (
         <ForgotPasswordScreen
           onBack={pop}
           onLogin={pop}
         />
       );
-
-    // ── CGU ───────────────────────────────────────────────────────────────────
-    case 'cgu':
-      return <CGUScreen onBack={pop} />;
-
-    // ── Politique de confidentialité ──────────────────────────────────────────
-    case 'confidentialite':
-      return <ConfidentialiteScreen onBack={pop} />;
+      break;
 
     default: {
       const _exhaustive: never = current;
-      return null;
+      screen = null;
     }
   }
+
+  return (
+    <>
+      {screen}
+
+      {/* CGU / Confidentialité en modal — l'écran en dessous reste monté */}
+      <Modal
+        visible={legalModal !== null}
+        animationType="slide"
+        onRequestClose={closeLegal}
+      >
+        {legalModal === 'cgu'
+          ? <CGUScreen onBack={closeLegal} />
+          : <ConfidentialiteScreen onBack={closeLegal} />
+        }
+      </Modal>
+    </>
+  );
 }

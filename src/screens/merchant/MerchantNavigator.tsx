@@ -3,6 +3,7 @@ import MerchantDashboard      from './MerchantDashboard';
 import MerchantProfileScreen  from './MerchantProfileScreen';
 import MerchantMessagesScreen from './MerchantMessagesScreen';
 import MerchantPaymentsScreen from './MerchantPaymentsScreen';
+import MerchantAvisScreen     from './MerchantAvisScreen';
 import DebtsScreen            from './DebtsScreen';
 import StoreScreen            from './StoreScreen';
 import OrdersScreen           from './OrdersScreen';
@@ -28,7 +29,7 @@ import { OrderInfo }             from '../../types/payment';
 type MerchantScreen =
   | 'dashboard' | 'debts' | 'store' | 'orders' | 'messages'
   | 'visibility' | 'profile' | 'notifications' | 'revenue' | 'preview' | 'payments'
-  | 'promotions' | 'assistant' | 'aroundme' | 'myorders'
+  | 'promotions' | 'assistant' | 'aroundme' | 'myorders' | 'avis'
   | { id: 'chat';         conversationId: string }
   | { id: 'buyerShop';    shopId: string; shopName: string; backTo?: 'aroundme' | 'assistant' }
   | { id: 'buyerCart';    shopId: string; shopName: string; backTo?: 'aroundme' | 'assistant' }
@@ -178,6 +179,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
       onBack={() => setScreen('store')}
     />
   );
+  if (screen === 'avis')          return <MerchantAvisScreen     onBack={() => setScreen('dashboard')} />;
   if (screen === 'debts')         return <DebtsScreen            onBack={() => setScreen('dashboard')} />;
   if (screen === 'promotions')    return <PromotionsScreen       onBack={() => setScreen('store')} />;
   if (screen === 'store')         return <StoreScreen            onBack={() => setScreen('dashboard')} onPreview={() => setScreen('preview')} onPromos={() => setScreen('promotions')} />;
@@ -210,6 +212,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
         if (dest === 'notifications') setScreen('notifications');
         if (dest === 'assistant')     setScreen('assistant');
         if (dest === 'aroundme')      setScreen('aroundme');
+        if (dest === 'avis')          setScreen('avis');
       }}
       onNotifPress={() => setScreen('notifications')}
     />
