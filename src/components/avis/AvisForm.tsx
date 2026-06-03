@@ -106,7 +106,11 @@ export default function AvisForm({
       onSaved();
       onClose();
     } catch (e: any) {
-      Alert.alert('Erreur', e?.message ?? 'Impossible de publier ton avis. Réessaie.');
+      const raw = e?.message ?? '';
+      const msg = raw.includes('row-level security')
+        ? 'Tu dois avoir effectué une commande chez ce prestataire pour laisser un avis.'
+        : raw || 'Impossible de publier ton avis. Réessaie.';
+      Alert.alert('Avis non autorisé', msg);
     } finally {
       setSaving(false);
     }
