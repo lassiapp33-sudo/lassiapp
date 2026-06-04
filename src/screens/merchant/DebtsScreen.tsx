@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, Platform, Alert,
@@ -64,10 +64,12 @@ export default function DebtsScreen({ onBack }: Props) {
   }, [shopId]);
 
   const q = searchQuery.trim().toLowerCase();
-  const displayed = debtors
-    .filter(d => filter === 'all' || d.status === filter)
-    .filter(d => !q || d.name.toLowerCase().includes(q))
-    .sort((a, b) => URGENCY[a.status] - URGENCY[b.status]);
+  const displayed = useMemo(() =>
+    debtors
+      .filter(d => filter === 'all' || d.status === filter)
+      .filter(d => !q || d.name.toLowerCase().includes(q))
+      .sort((a, b) => URGENCY[a.status] - URGENCY[b.status]),
+  [debtors, filter, q]);
 
   // Options combinées : débiteurs existants + clients des conversations pas encore débiteurs
   const existingNames = new Set(debtors.map(d => d.name.toLowerCase()));

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import TopBar                         from '../../components/category/TopBar';
 import CatNavBar                       from '../../components/category/CatNavBar';
@@ -143,50 +143,61 @@ export default function CategoryScreen({ initialCatId, onBack, onShopPress, onSe
     if (t === 'profile')   onProfile?.();
   };
 
-  // Top 3 VIP : triés par vipRank (rang du classement serveur) puis par rating
-  const vipShops = shops
-    .filter(s => s.isVip)
-    .sort((a, b) => {
-      if (a.vipRank !== null && b.vipRank !== null) return a.vipRank - b.vipRank;
-      if (a.vipRank !== null) return -1;
-      if (b.vipRank !== null) return 1;
-      return b.rating - a.rating;
-    })
-    .slice(0, 3);
+  // Top 3 VIP — mémorisé : filter+sort coûteux sur grande liste
+  const vipShops = useMemo(() =>
+    shops
+      .filter(s => s.isVip)
+      .sort((a, b) => {
+        if (a.vipRank !== null && b.vipRank !== null) return a.vipRank - b.vipRank;
+        if (a.vipRank !== null) return -1;
+        if (b.vipRank !== null) return 1;
+        return b.rating - a.rating;
+      })
+      .slice(0, 3),
+  [shops]);
 
-  const vipEntries: VipEntry[] = ([1, 2, 3] as const).map(rank => {
-    const s = vipShops[rank - 1];
-    if (s) {
+  const vipEntries: VipEntry[] = useMemo(() =>
+    ([1, 2, 3] as const).map(rank => {
+      const s = vipShops[rank - 1];
+      if (s) {
+        return {
+          rank,
+          id:            s.id,
+          initial:       s.name.charAt(0).toUpperCase(),
+          name:          s.name,
+          zone:          s.zone,
+          rating:        s.rating,
+          logoUrl:       s.logoUrl,
+          isPlaceholder: false,
+        };
+      }
       return {
         rank,
-        id:            s.id,
-        initial:       s.name.charAt(0).toUpperCase(),
-        name:          s.name,
-        zone:          s.zone,
-        rating:        s.rating,
-        logoUrl:       s.logoUrl,
-        isPlaceholder: false,
+        id:            '',
+        initial:       ['A', 'B', 'C'][rank - 1],
+        name:          t.category.availableSlot,
+        zone:          '',
+        rating:        0,
+        logoUrl:       null,
+        isPlaceholder: true,
       };
-    }
-    return {
-      rank,
-      id:            '',
-      initial:       ['A', 'B', 'C'][rank - 1],
-      name:          t.category.availableSlot,
-      zone:          '',
-      rating:        0,
-      logoUrl:       null,
-      isPlaceholder: true,
-    };
-  });
+    }),
+  [vipShops, t]);
 
-  // Filtrer par sous-catégorie, puis appliquer le tri/filtre actif
-  const bySubCat = meta.subcats.length <= 1
-    ? shops
-    : shops.filter(s => s.subcategories.includes(subCat));
+  // Filtrer + trier — mémorisé : applyFilter('near') = O(n log n) × calcDistanceMeters
+  const bySubCat = useMemo(() =>
+    meta.subcats.length <= 1
+      ? shops
+      : shops.filter(s => s.subcategories.includes(subCat)),
+  [shops, subCat, meta.subcats.length]);
 
-  const filteredShops = applyFilter(bySubCat, filter, userLoc);
-  const shopCards = filteredShops.map(s => toShopCard(s, userLoc));
+  const filteredShops = useMemo(() =>
+    applyFilter(bySubCat, filter, userLoc),
+  [bySubCat, filter, userLoc]);
+
+  const shopCards = useMemo(() =>
+    filteredShops.map(s => toShopCard(s, userLoc)),
+  [filteredShops, userLoc]);
 
   return (
     <LassiScreen

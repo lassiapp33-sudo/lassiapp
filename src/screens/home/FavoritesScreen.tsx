@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity,
   ScrollView, StyleSheet, ActivityIndicator,
@@ -137,9 +137,9 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
 
   useEffect(() => { loadFavShops(); }, [loadFavShops]);
 
-  const visible = filter === 'all'
-    ? favShops
-    : favShops.filter(s => toFavFilter(s.category) === filter);
+  const visible = useMemo(() =>
+    filter === 'all' ? favShops : favShops.filter(s => toFavFilter(s.category) === filter),
+  [favShops, filter]);
 
   return (
     <LassiScreen

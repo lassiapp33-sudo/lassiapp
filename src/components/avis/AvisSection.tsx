@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
@@ -121,12 +121,13 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
     );
   };
 
-  // ── Statistiques ──────────────────────────────────────────────────────────
-  const total = avisList.length;
-  const avg   = total > 0
-    ? avisList.reduce((s, a) => s + a.note, 0) / total
-    : 0;
-  const dist5 = [5, 4, 3, 2, 1].map(n => avisList.filter(a => a.note === n).length);
+  // ── Statistiques — mémorisées : reduce + 5× filter évités à chaque render ──
+  const { total, avg, dist5 } = useMemo(() => {
+    const total = avisList.length;
+    const avg   = total > 0 ? avisList.reduce((s, a) => s + a.note, 0) / total : 0;
+    const dist5 = [5, 4, 3, 2, 1].map(n => avisList.filter(a => a.note === n).length);
+    return { total, avg, dist5 };
+  }, [avisList]);
 
   return (
     <View style={styles.root}>
