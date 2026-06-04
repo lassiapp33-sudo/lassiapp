@@ -41,7 +41,7 @@ interface Props {
   onPress?: () => void;
 }
 
-export default function DebtorCard({ debtor, onPress }: Props) {
+function DebtorCard({ debtor, onPress }: Props) {
   const sc = STATUS[debtor.status];
 
   const handleRelance = () => {
@@ -99,6 +99,8 @@ export default function DebtorCard({ debtor, onPress }: Props) {
     </TouchableOpacity>
   );
 }
+
+export default React.memo(DebtorCard);
 
 const styles = StyleSheet.create({
   card: {

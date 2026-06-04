@@ -57,7 +57,7 @@ interface Props {
   onDone:   () => void;   // "Prête" → "Terminée"
 }
 
-export default function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props) {
+function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props) {
   const badge = BADGE_CFG[order.status];
   const isNew = order.status === 'new';
 
@@ -202,6 +202,8 @@ export default function OrderCard({ order, onAccept, onRefuse, onChat, onReady, 
     </View>
   );
 }
+
+export default React.memo(OrderCard);
 
 const styles = StyleSheet.create({
   card: {

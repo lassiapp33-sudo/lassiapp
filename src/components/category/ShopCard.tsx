@@ -35,7 +35,7 @@ const StarFill = ({ filled }: { filled: boolean }) => (
 );
 
 
-export default function ShopCard({ shop, onPress }: Props) {
+function ShopCard({ shop, onPress }: Props) {
   const isFav     = useFavoritesStore(s => s.favorites.includes(shop.id));
   const toggleFav = useFavoritesStore(s => s.toggleFavorite);
 
@@ -87,6 +87,8 @@ export default function ShopCard({ shop, onPress }: Props) {
     </TouchableOpacity>
   );
 }
+
+export default React.memo(ShopCard);
 
 const styles = StyleSheet.create({
   card: {

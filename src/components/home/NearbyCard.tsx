@@ -46,7 +46,7 @@ const IconStarSmall = () => (
 );
 
 
-export default function NearbyCard({ place, onPress }: Props) {
+function NearbyCard({ place, onPress }: Props) {
   const isFav        = useFavoritesStore(s => s.favorites.includes(place.id));
   const toggleFav    = useFavoritesStore(s => s.toggleFavorite);
 
@@ -97,6 +97,8 @@ export default function NearbyCard({ place, onPress }: Props) {
     </TouchableOpacity>
   );
 }
+
+export default React.memo(NearbyCard);
 
 const styles = StyleSheet.create({
   card: {

@@ -67,7 +67,7 @@ interface Props {
   onRefresh?:  () => void;
 }
 
-export default function AvisCard({
+function AvisCard({
   avis, isOwn, isMerchant, onEdit, onDelete, onReport, onRefresh,
 }: Props) {
   const [showReplyBox, setShowReplyBox] = useState(false);
@@ -198,6 +198,8 @@ export default function AvisCard({
     </View>
   );
 }
+
+export default React.memo(AvisCard);
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
