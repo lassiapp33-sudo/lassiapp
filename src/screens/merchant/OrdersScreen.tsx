@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Vibration, RefreshControl, Alert,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Vibration, RefreshControl,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -16,6 +16,7 @@ import useOrdersStore      from '../../store/ordersStore';
 import useShopStore        from '../../store/shopStore';
 import { useRealtimeOrders } from '../../hooks/useRealtimeOrders';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { notifyError } from '../../utils/errorUtils';
 
 // ─── État vide par onglet ──────────────────────────────────────────────────────
 
@@ -115,7 +116,7 @@ export default function OrdersScreen({ onBack }: Props) {
     if (processingId) return;
     setProcessingId(id);
     try { await setOrderStatus(id, to, prepTime); }
-    catch { Alert.alert('Erreur', 'Impossible de mettre à jour la commande. Réessaie.'); }
+    catch { notifyError('Impossible de mettre à jour la commande. Réessaie.'); }
     finally { setProcessingId(null); }
   };
 
@@ -139,7 +140,7 @@ export default function OrdersScreen({ onBack }: Props) {
     try {
       await refuseOrder(id, reason);
     } catch {
-      Alert.alert('Erreur', 'Le refus n\'a pas pu être enregistré. Réessaie.');
+      notifyError('Le refus n\'a pas pu être enregistré. Réessaie.');
     }
   };
 

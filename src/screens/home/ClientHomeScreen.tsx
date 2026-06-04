@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity,
 } from 'react-native';
 import { useT } from '../../i18n';
 
@@ -66,6 +66,8 @@ export default function ClientHomeScreen({
   const refreshLocation   = useLocationStore(s => s.refreshLocation);
 
   async function loadShops() {
+    setLoading(true);
+    setLoadError(false);
     try {
       const shops = await shopsService.getShops();
 
@@ -223,7 +225,10 @@ export default function ClientHomeScreen({
             </View>
           ) : loadError ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyTxt}>Connexion impossible. Vérifie ta connexion et réessaie.</Text>
+              <Text style={styles.emptyTxt}>Connexion impossible, vérifie ta connexion et réessaie.</Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={loadShops} activeOpacity={0.8}>
+                <Text style={styles.retryTxt}>Réessayer</Text>
+              </TouchableOpacity>
             </View>
           ) : nearby.length === 0 ? (
             <View style={styles.empty}>
@@ -269,6 +274,19 @@ const styles = StyleSheet.create({
   emptyTxt: {
     color: colors.muted,
     fontFamily: fonts.body,
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  retryBtn: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: 24,
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+  retryTxt: {
+    color: colors.bg,
+    fontFamily: fonts.title,
     fontSize: 13,
   },
 });

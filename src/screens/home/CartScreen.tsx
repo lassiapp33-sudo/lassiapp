@@ -15,6 +15,7 @@ import * as promosService from '../../services/promotions';
 import { AppliedDiscount } from '../../types/promotions';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
+import { notifyError } from '../../utils/errorUtils';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -158,7 +159,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
       });
 
     } catch {
-      Alert.alert('Erreur', 'Une erreur est survenue. Réessaie dans un instant.');
+      notifyError('Une erreur est survenue. Réessaie dans un instant.');
     } finally {
       if (releaseInFinally) {
         isSubmittingRef.current = false;

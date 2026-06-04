@@ -5,8 +5,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, TextInput, KeyboardAvoidingView, Platform, Alert,
+  StyleSheet, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { notifyError } from '../../utils/errorUtils';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import * as disputeService from '../../services/disputes';
@@ -59,7 +60,7 @@ export default function MyDisputesScreen({ onBack }: Props) {
       setNewMsg('');
       loadMessages(selected.id);
     } catch {
-      Alert.alert('Erreur', "Impossible d'envoyer le message. Vérifie ta connexion et réessaie.");
+      notifyError("Impossible d'envoyer le message. Vérifie ta connexion et réessaie.");
     } finally {
       setSendingMsg(false);
     }

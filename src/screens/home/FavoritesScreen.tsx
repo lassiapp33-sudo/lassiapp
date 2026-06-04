@@ -112,9 +112,10 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
     { id: 'hair',    label: t.favorites.hair     },
   ];
 
-  const [filter,      setFilter]      = useState<FavFilter>('all');
-  const [favShops,    setFavShops]    = useState<Shop[]>([]);
+  const [filter,       setFilter]       = useState<FavFilter>('all');
+  const [favShops,     setFavShops]     = useState<Shop[]>([]);
   const [shopsLoading, setShopsLoading] = useState(false);
+  const [shopsError,   setShopsError]   = useState(false);
 
   const favorites     = useFavoritesStore(s => s.favorites);
   const loadFavorites = useFavoritesStore(s => s.loadFavorites);
@@ -124,14 +125,17 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
   }, []);
 
   // Charger les boutiques favorisées depuis Supabase
-  useEffect(() => {
+  const loadFavShops = React.useCallback(() => {
     if (favorites.length === 0) { setFavShops([]); return; }
     setShopsLoading(true);
+    setShopsError(false);
     Promise.all(favorites.map(id => shopsService.getShopById(id)))
       .then(results => setFavShops(results.filter(Boolean) as Shop[]))
-      .catch(err => logger.warn('[FavoritesScreen] load shops:', err))
+      .catch(err => { logger.warn('[FavoritesScreen] load shops:', err); setShopsError(true); })
       .finally(() => setShopsLoading(false));
   }, [favorites]);
+
+  useEffect(() => { loadFavShops(); }, [loadFavShops]);
 
   const visible = filter === 'all'
     ? favShops
@@ -180,6 +184,13 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
         {shopsLoading ? (
           <View style={styles.loader}>
             <ActivityIndicator color={colors.accent} />
+          </View>
+        ) : shopsError ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTxt}>Connexion impossible, vérifie ta connexion et réessaie.</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={loadFavShops} activeOpacity={0.8}>
+              <Text style={styles.retryTxt}>Réessayer</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <>
@@ -286,6 +297,8 @@ const styles = StyleSheet.create({
 
   loader:   { paddingVertical: 48, alignItems: 'center' },
   empty:    { paddingVertical: 40, alignItems: 'center', paddingHorizontal: 24 },
-  emptyTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 13, textAlign: 'center' },
+  emptyTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 13, textAlign: 'center', marginBottom: 14 },
   emptySub: { color: '#3a3c5c', fontFamily: fonts.body, fontSize: 11.5, textAlign: 'center', marginTop: 6 },
+  retryBtn: { backgroundColor: colors.accent, paddingHorizontal: 24, paddingVertical: 11, borderRadius: 12 },
+  retryTxt: { color: colors.bg, fontFamily: fonts.title, fontSize: 13 },
 });
