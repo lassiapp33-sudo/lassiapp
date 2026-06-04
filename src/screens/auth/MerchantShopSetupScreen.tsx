@@ -33,22 +33,50 @@ interface Props {
   userData:          RegisterData;
   onBack:            () => void;
   onComplete:        (role: 'merchant') => void;
-  onCGU:             () => void;
-  onConfidentialite: () => void;
 }
 
 type Step = 1 | 2 | 3 | 4;
 
+// ─── En-tête commun (défini hors du composant pour éviter le remontage) ───────
+
+const STEP_LABELS = ['Catégorie', 'Spécialité', 'Identité', 'Horaires'];
+
+interface HeaderProps { step: Step; onBack: () => void; }
+
+const Header = React.memo(function Header({ step, onBack }: HeaderProps) {
+  return (
+    <>
+      <View style={styles.topRow}>
+        <BackButton onPress={onBack} />
+        <LassiLogo width={72} />
+      </View>
+      <View style={styles.progressRow}>
+        {([1, 2, 3, 4] as Step[]).map(s => (
+          <View
+            key={s}
+            style={[
+              styles.progressSeg,
+              s <= step ? styles.progressSegDone : styles.progressSegEmpty,
+            ]}
+          />
+        ))}
+      </View>
+      <Text style={styles.stepLabel}>
+        Étape {step} sur 4 — {STEP_LABELS[step - 1]}
+      </Text>
+    </>
+  );
+});
+
 // ─── Écran principal ──────────────────────────────────────────────────────────
 
-export default function MerchantShopSetupScreen({ userData, onBack, onComplete, onCGU, onConfidentialite }: Props) {
+export default function MerchantShopSetupScreen({ userData, onBack, onComplete }: Props) {
   const [step,        setStep]        = useState<Step>(1);
   const [catId,       setCatId]       = useState<CatId | null>(null);
   const [subcats,     setSubcats]     = useState<string[]>([]);
   const [shopName,    setShopName]    = useState('');
   const [logoUri,     setLogoUri]     = useState<string | null>(null);
   const [hours,       setHours]       = useState<WeekHours>(DEFAULT_WEEK_HOURS);
-  const [cguAccepted, setCguAccepted] = useState(false);
   const [loading,     setLoading]     = useState(false);
   const [erreur,      setErreur]      = useState<string | null>(null);
 
@@ -104,10 +132,6 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete, 
   // ── Soumission finale ─────────────────────────────────────────────────────
 
   const handleSubmit = async (skipHours: boolean) => {
-    if (!cguAccepted) {
-      setErreur('Tu dois accepter les CGU et la Politique de confidentialité pour continuer.');
-      return;
-    }
     setLoading(true);
     try {
       // Tagline auto-générée depuis les sous-catégories choisies
@@ -138,40 +162,6 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete, 
     }
   };
 
-  // ── En-tête commun ────────────────────────────────────────────────────────
-
-  const STEP_LABELS = [
-    'Catégorie',
-    'Spécialité',
-    'Identité',
-    'Horaires',
-  ];
-
-  const Header = () => (
-    <>
-      <View style={styles.topRow}>
-        <BackButton onPress={handleBack} />
-        <LassiLogo width={72} />
-      </View>
-
-      {/* Barre de progression */}
-      <View style={styles.progressRow}>
-        {([1,2,3,4] as Step[]).map(s => (
-          <View
-            key={s}
-            style={[
-              styles.progressSeg,
-              s <= step ? styles.progressSegDone : styles.progressSegEmpty,
-            ]}
-          />
-        ))}
-      </View>
-      <Text style={styles.stepLabel}>
-        Étape {step} sur 4 — {STEP_LABELS[step - 1]}
-      </Text>
-    </>
-  );
-
   // ── Étape 1 : Catégorie ───────────────────────────────────────────────────
 
   if (step === 1) {
@@ -182,7 +172,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete, 
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Header />
+          <Header step={step} onBack={handleBack} />
           <Text style={styles.h1}>Quel type de commerce ?</Text>
           <Text style={styles.sub}>Choisis la catégorie qui correspond le mieux à ton activité.</Text>
           <View style={{ height: 20 }} />
@@ -232,7 +222,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete, 
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Header />
+          <Header step={step} onBack={handleBack} />
           <Text style={styles.h1}>
             {isMultiple ? 'Tes spécialités' : 'Ton activité principale'}
           </Text>
@@ -297,7 +287,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete, 
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Header />
+          <Header step={step} onBack={handleBack} />
           <Text style={styles.h1}>Présente ton commerce</Text>
           <Text style={styles.sub}>Le nom et le logo apparaîtront sur ta fiche boutique. Tu pourras ajouter une description depuis ta vitrine.</Text>
           <View style={{ height: 24 }} />
@@ -354,7 +344,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete, 
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Header />
+        <Header step={step} onBack={handleBack} />
         <Text style={styles.h1}>Tes horaires d'ouverture</Text>
         <Text style={styles.sub}>
           Définir tes horaires permet aux clients de savoir si tu es ouvert en temps réel.
@@ -372,46 +362,18 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete, 
         {erreur ? <Text style={[styles.erreur, { marginTop: 12 }]}>{erreur}</Text> : null}
         <View style={{ height: 20 }} />
 
-        {/* Acceptation CGU — obligatoire avant de terminer */}
-        <View style={styles.cguRow}>
-          <TouchableOpacity
-            onPress={() => setCguAccepted(v => !v)}
-            activeOpacity={0.8}
-            hitSlop={8}
-          >
-            <View style={[styles.cguCheckbox, cguAccepted && styles.cguCheckboxOn]}>
-              {cguAccepted && <Text style={styles.cguCheckmark}>✓</Text>}
-            </View>
-          </TouchableOpacity>
-          <Text style={styles.cguText}>
-            {'J\'ai lu et j\'accepte les '}
-            <Text style={styles.cguLink} onPress={onCGU}>
-              Conditions Générales d'Utilisation
-            </Text>
-            {' et la '}
-            <Text style={styles.cguLink} onPress={onConfidentialite}>
-              Politique de confidentialité
-            </Text>
-            {'.'}
-          </Text>
-        </View>
-
         <AuthButton
           label="Terminer et ouvrir ma boutique"
           onPress={() => handleSubmit(false)}
           loading={loading}
-          style={!cguAccepted ? { opacity: 0.45 } : undefined}
         />
 
-        {/* Option de passer cette étape */}
         <TouchableOpacity
           style={styles.skipBtn}
           onPress={() => handleSubmit(true)}
           activeOpacity={0.7}
         >
-          <Text style={[styles.skipTxt, !cguAccepted && { opacity: 0.4 }]}>
-            Passer cette étape
-          </Text>
+          <Text style={styles.skipTxt}>Passer cette étape</Text>
         </TouchableOpacity>
 
         <View style={{ height: 28 }} />
@@ -638,47 +600,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 12,
     textAlign: 'center',
-  },
-
-  // CGU
-  cguRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 16,
-  },
-  cguCheckbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    marginTop: 1,
-  },
-  cguCheckboxOn: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  cguCheckmark: {
-    color: colors.bg,
-    fontFamily: fonts.title,
-    fontSize: 13,
-    lineHeight: 17,
-  },
-  cguText: {
-    flex: 1,
-    color: colors.muted,
-    fontFamily: fonts.body,
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  cguLink: {
-    color: colors.accent,
-    fontFamily: fonts.ui,
-    textDecorationLine: 'underline',
   },
 
   // Étape 4 — bouton passer

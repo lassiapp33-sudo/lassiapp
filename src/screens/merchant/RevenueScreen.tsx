@@ -264,7 +264,7 @@ export default function RevenueScreen({ onBack }: Props) {
             {monthTotal > 0 && (
               <View style={s.progTrack}>
                 <View style={[s.progFill, {
-                  width: `${Math.round((monthConf / monthTotal) * 100)}%` as any,
+                  width: `${Math.round((monthConf / monthTotal) * 100)}%`,
                 }]} />
               </View>
             )}

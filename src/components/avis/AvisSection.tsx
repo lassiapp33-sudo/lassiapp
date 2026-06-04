@@ -37,7 +37,7 @@ function DistBar({ label, count, total }: { label: string; count: number; total:
     <View style={dist.row}>
       <Text style={dist.lbl}>{label}</Text>
       <View style={dist.track}>
-        <View style={[dist.fill, { width: `${pct}%` as any }]} />
+        <View style={[dist.fill, { width: `${pct}%` }]} />
       </View>
       <Text style={dist.count}>{count}</Text>
     </View>
