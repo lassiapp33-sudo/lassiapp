@@ -1,12 +1,11 @@
+import { OrderLineItem } from './orders';
+
 export type PaymentStatus    = 'pending' | 'success' | 'failed' | 'refunded';
 export type MerchantPayMethod = 'wave' | 'om';
 export type PaymentFilter     = 'all' | 'wave' | 'om';
 
-export interface MerchantPaymentItem {
-  name:   string;
-  qty?:   number;
-  price?: number;
-}
+/** Alias de OrderLineItem — conservé pour rétrocompatibilité avec les écrans paiements. */
+export type MerchantPaymentItem = OrderLineItem;
 
 export interface MerchantPayment {
   id:           string;

@@ -1,10 +1,8 @@
 // Types partagés pour le module Paiement
+import { OrderLineItem } from './orders';
 
-export interface OrderItem {
-  qty:   number;
-  name:  string;
-  price: number;
-}
+/** Alias de OrderLineItem — conservé pour rétrocompatibilité avec les écrans de paiement. */
+export type OrderItem = OrderLineItem;
 
 export interface OrderInfo {
   ticketId:     string;   // ID du message ticket dans le chat (pour le retour)

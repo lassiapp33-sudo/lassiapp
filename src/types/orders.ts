@@ -7,11 +7,15 @@ export type PayMethodOrder = 'wave' | 'om';
 // 'preparing' couvre les statuts DB 'preparing' + 'ready' (commande acceptée, en cours)
 export type MerchantTab = 'all' | 'new' | 'preparing' | 'done' | 'refused';
 
-export interface IncomingOrderItem {
-  qty:   number;
+/** Type canonique partagé pour une ligne de commande — source unique de vérité. */
+export interface OrderLineItem {
   name:  string;
-  price: number;   // total de la ligne (qty × prix unitaire)
+  qty:   number;
+  price: number;  // total de la ligne (qty × prix unitaire)
 }
+
+/** Alias conservé pour rétrocompatibilité avec le module commandes prestataire. */
+export type IncomingOrderItem = OrderLineItem;
 
 export interface IncomingOrder {
   id:             string;
