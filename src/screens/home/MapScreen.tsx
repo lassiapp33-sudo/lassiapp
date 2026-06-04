@@ -231,15 +231,23 @@ function MapShopSheet({ shop, distanceM, zone, onView, onRoute }: SheetProps) {
 // ─── Écran principal ──────────────────────────────────────────────────────────
 
 interface Props {
-  onBack:          () => void;
-  onShopPress?:    (shopId: string, shopName: string) => void;
-  excludeShopId?:  string;
+  onBack:               () => void;
+  onShopPress?:         (shopId: string, shopName: string) => void;
+  excludeShopId?:       string;
+  initialFilter?:       string;
+  initialSearchQuery?:  string;
+  onFilterChange?:      (filter: string) => void;
+  onSearchChange?:      (query: string) => void;
 }
 
 // Position de secours : Dakar centre
 const DAKAR = { latitude: 14.7167, longitude: -17.4677 };
 
-export default function MapScreen({ onBack, onShopPress, excludeShopId }: Props) {
+export default function MapScreen({
+  onBack, onShopPress, excludeShopId,
+  initialFilter, initialSearchQuery,
+  onFilterChange, onSearchChange,
+}: Props) {
   const wvRef     = useRef<WebView>(null);
   const sheetAnim = useRef(new Animated.Value(300)).current;
 
@@ -249,8 +257,8 @@ export default function MapScreen({ onBack, onShopPress, excludeShopId }: Props)
   const [allShops,     setAllShops]     = useState<Shop[]>([]);
   const [selected,     setSelected]     = useState<Shop | null>(null);
   const [selectedZone, setSelectedZone] = useState<string>('');
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [searchQuery,  setSearchQuery]  = useState('');
+  const [activeFilter, setActiveFilter] = useState(initialFilter ?? 'all');
+  const [searchQuery,  setSearchQuery]  = useState(initialSearchQuery ?? '');
   const [loading,      setLoading]      = useState(false);
   const [mapReady,     setMapReady]     = useState(false);
 
@@ -410,7 +418,7 @@ export default function MapScreen({ onBack, onShopPress, excludeShopId }: Props)
             placeholder="Chercher sur la carte…"
             placeholderTextColor={colors.muted}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(t) => { setSearchQuery(t); onSearchChange?.(t); }}
             returnKeyType="search"
             autoCorrect={false}
           />
@@ -432,7 +440,7 @@ export default function MapScreen({ onBack, onShopPress, excludeShopId }: Props)
             <TouchableOpacity
               key={f.id}
               style={[styles.filterChip, on && styles.filterChipOn]}
-              onPress={() => setActiveFilter(f.id)}
+              onPress={() => { setActiveFilter(f.id); onFilterChange?.(f.id); }}
               activeOpacity={0.8}
             >
               {f.imageUri

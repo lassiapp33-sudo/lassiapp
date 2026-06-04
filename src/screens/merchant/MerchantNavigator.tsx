@@ -41,6 +41,10 @@ interface Props { onLogout: () => void; }
 export default function MerchantNavigator({ onLogout }: Props) {
   const [screen, setScreen] = useState<MerchantScreen>('dashboard');
   const shopId   = useShopStore(s => s.shopId);
+
+  // Persiste le filtre/recherche de la carte entre navigations
+  const [mapFilter, setMapFilter] = useState('all');
+  const [mapSearch, setMapSearch] = useState('');
   const userId   = useAuthStore(s => s.user?.id ?? null);
   const addNotif = useNotificationsStore(s => s.addNotif);
 
@@ -81,6 +85,10 @@ export default function MerchantNavigator({ onLogout }: Props) {
         onBack={() => setScreen('dashboard')}
         excludeShopId={shopId ?? undefined}
         onShopPress={(sid, sname) => setScreen({ id: 'buyerShop', shopId: sid, shopName: sname })}
+        initialFilter={mapFilter}
+        initialSearchQuery={mapSearch}
+        onFilterChange={setMapFilter}
+        onSearchChange={setMapSearch}
       />
     );
   }

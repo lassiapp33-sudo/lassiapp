@@ -55,6 +55,10 @@ export default function HomeNavigator({ onLogout }: Props) {
   const push   = (s: HomeStack) => setHistory(h => [...h, s]);
   const pop    = () => setHistory(h => h.length > 1 ? h.slice(0, -1) : h);
 
+  // Persiste le filtre/recherche de la carte entre navigations
+  const [mapFilter, setMapFilter] = useState('all');
+  const [mapSearch, setMapSearch] = useState('');
+
   // Enregistre la visite dans recently_viewed puis navigue vers la vitrine
   const pushShop = (shopId: string, shopName: string) => {
     recordView(shopId).catch(err => logger.warn('[HomeNavigator] recordView:', err));
@@ -223,6 +227,10 @@ export default function HomeNavigator({ onLogout }: Props) {
       <MapScreen
         onBack={pop}
         onShopPress={pushShop}
+        initialFilter={mapFilter}
+        initialSearchQuery={mapSearch}
+        onFilterChange={setMapFilter}
+        onSearchChange={setMapSearch}
       />
     );
   }
