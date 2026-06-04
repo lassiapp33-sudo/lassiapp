@@ -5,19 +5,19 @@ import { create } from 'zustand';
 // Les navigateurs (Home / Merchant) consomment cette valeur au montage ou
 // dès qu'elle change, puis la vident.
 export type PendingNav =
-  | { type: 'msg';   conversationId: string }
+  | { type: 'msg'; conversationId: string }
   | { type: 'order'; orderId: string }
   | { type: 'home' };
 
 interface PendingNavState {
-  pendingNav:      PendingNav | null;
-  setPendingNav:   (nav: PendingNav) => void;
+  pendingNav: PendingNav | null;
+  setPendingNav: (nav: PendingNav) => void;
   clearPendingNav: () => void;
 }
 
-const usePendingNavStore = create<PendingNavState>()((set) => ({
-  pendingNav:      null,
-  setPendingNav:   (nav) => set({ pendingNav: nav }),
+const usePendingNavStore = create<PendingNavState>()(set => ({
+  pendingNav: null,
+  setPendingNav: nav => set({ pendingNav: nav }),
   clearPendingNav: () => set({ pendingNav: null }),
 }));
 

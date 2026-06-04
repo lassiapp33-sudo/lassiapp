@@ -9,15 +9,29 @@ import { formatPrice } from '../../utils/format';
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
 const IcoCheck = () => (
-  <Svg width={28} height={28} viewBox="0 0 24 24" fill="none"
-    strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={28}
+    height={28}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={3}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M20 6 9 17l-5-5" stroke="#fff" />
   </Svg>
 );
 
 const IcoDownload = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={16}
+    height={16}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke={colors.white} />
     <Path d="M7 10l5 5 5-5" stroke={colors.white} />
     <Path d="M12 15V3" stroke={colors.white} />
@@ -26,8 +40,20 @@ const IcoDownload = () => (
 
 // ─── Formatage de la date ─────────────────────────────────────────────────────
 
-const MONTHS = ['jan', 'fév', 'mars', 'avr', 'mai', 'juin',
-                'juil', 'août', 'sep', 'oct', 'nov', 'déc'];
+const MONTHS = [
+  'jan',
+  'fév',
+  'mars',
+  'avr',
+  'mai',
+  'juin',
+  'juil',
+  'août',
+  'sep',
+  'oct',
+  'nov',
+  'déc',
+];
 
 function formatDate(): string {
   const d = new Date();
@@ -43,15 +69,16 @@ const METHOD_LABEL: Record<PayMethod, string> = { wave: 'Wave', om: 'Orange Mone
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 interface Props {
-  order:         OrderInfo;
-  method:        PayMethod;
-  onBackToChat:  () => void;
+  order: OrderInfo;
+  method: PayMethod;
+  onBackToChat: () => void;
 }
 
 export default function ConfirmView({ order, method, onBackToChat }: Props) {
   // Stable à chaque render — généré une seule fois à l'affichage de la confirmation
-  const [receiptId] = useState(() =>
-    `${order.orderId.replace('#', '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`
+  const [receiptId] = useState(
+    () =>
+      `${order.orderId.replace('#', '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
   );
 
   return (
@@ -60,12 +87,7 @@ export default function ConfirmView({ order, method, onBackToChat }: Props) {
       showsVerticalScrollIndicator={false}
     >
       {/* ── Mascotte célébration ─────────────────────────────────────────── */}
-      <LassiMascotte
-        forme="welcome"
-        animation="jelly"
-        taille={120}
-        style={{ marginBottom: 8 }}
-      />
+      <LassiMascotte forme="welcome" animation="jelly" taille={120} style={{ marginBottom: 8 }} />
 
       {/* ── Cercle de validation ─────────────────────────────────────────── */}
       {/* Anneau externe (border only, transparent fill) */}
@@ -90,10 +112,10 @@ export default function ConfirmView({ order, method, onBackToChat }: Props) {
 
       {/* ── Reçu ────────────────────────────────────────────────────────── */}
       <View style={styles.receipt}>
-        <ReceiptRow label="Reçu N°"  value={`#${receiptId}`} />
-        <ReceiptRow label="Méthode"  value={METHOD_LABEL[method]} />
-        <ReceiptRow label="Date"     value={formatDate()} />
-        <ReceiptRow label="Statut"   value="✓ Confirmé" valueColor={colors.success} last />
+        <ReceiptRow label="Reçu N°" value={`#${receiptId}`} />
+        <ReceiptRow label="Méthode" value={METHOD_LABEL[method]} />
+        <ReceiptRow label="Date" value={formatDate()} />
+        <ReceiptRow label="Statut" value="✓ Confirmé" valueColor={colors.success} last />
       </View>
 
       {/* ── Boutons ──────────────────────────────────────────────────────── */}
@@ -112,8 +134,16 @@ export default function ConfirmView({ order, method, onBackToChat }: Props) {
 
 // ─── Ligne de reçu ────────────────────────────────────────────────────────────
 
-function ReceiptRow({ label, value, valueColor, last }: {
-  label: string; value: string; valueColor?: string; last?: boolean;
+function ReceiptRow({
+  label,
+  value,
+  valueColor,
+  last,
+}: {
+  label: string;
+  value: string;
+  valueColor?: string;
+  last?: boolean;
 }) {
   return (
     <View style={[styles.rl, !last && styles.rlBorder]}>

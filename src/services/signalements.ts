@@ -1,22 +1,16 @@
-import { supabase }           from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import * as ImageManipulator from 'expo-image-manipulator';
-import logger                from '../utils/logger';
+import logger from '../utils/logger';
 
-export type SignalementType =
-  | 'bug'
-  | 'paiement'
-  | 'commande'
-  | 'commerce'
-  | 'arnaque'
-  | 'autre';
+export type SignalementType = 'bug' | 'paiement' | 'commande' | 'commerce' | 'arnaque' | 'autre';
 
 export const TYPE_LABELS: Record<SignalementType, string> = {
-  bug:      "Bug / l'app ne marche pas",
+  bug: "Bug / l'app ne marche pas",
   paiement: 'Problème de paiement',
   commande: 'Problème avec une commande',
   commerce: 'Problème avec un commerçant',
-  arnaque:  'Contenu inapproprié / arnaque',
-  autre:    'Autre',
+  arnaque: 'Contenu inapproprié / arnaque',
+  autre: 'Autre',
 };
 
 export const TYPE_LABELS_PRO: Record<SignalementType, string> = {
@@ -25,11 +19,11 @@ export const TYPE_LABELS_PRO: Record<SignalementType, string> = {
 };
 
 export interface EnvoyerParams {
-  profil:        'client' | 'prestataire';
-  type:          SignalementType;
-  description:   string;
-  orderId?:      string;
-  shopId?:       string;
+  profil: 'client' | 'prestataire';
+  type: SignalementType;
+  description: string;
+  orderId?: string;
+  shopId?: string;
   screenshotUrl?: string;
 }
 
@@ -52,20 +46,22 @@ async function checkRateLimit(userId: string): Promise<void> {
 // ─── Envoi du signalement ────────────────────────────────────────────────────
 
 export async function envoyerSignalement(params: EnvoyerParams): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error('Tu dois être connecté pour signaler un problème.');
 
   await checkRateLimit(user.id);
 
   // 1. Insertion en base
   const { error } = await supabase.from('signalements').insert({
-    user_id:          user.id,
-    profil:           params.profil,
-    type:             params.type,
-    description:      params.description.trim(),
-    related_order_id: params.orderId       ?? null,
-    related_shop_id:  params.shopId        ?? null,
-    screenshot_url:   params.screenshotUrl ?? null,
+    user_id: user.id,
+    profil: params.profil,
+    type: params.type,
+    description: params.description.trim(),
+    related_order_id: params.orderId ?? null,
+    related_shop_id: params.shopId ?? null,
+    screenshot_url: params.screenshotUrl ?? null,
   });
 
   if (error) throw new Error(error.message);
@@ -92,13 +88,13 @@ export async function envoyerSignalement(params: EnvoyerParams): Promise<void> {
 
     await supabase.functions.invoke('send-report-email', {
       body: {
-        typeLabel:    TYPE_LABELS[params.type],
-        profil:       params.profil,
-        description:  params.description.trim(),
-        userName:     profile?.name  ?? '—',
-        userPhone:    profile?.phone ?? '—',
-        orderId:      params.orderId  ?? null,
-        shopId:       params.shopId   ?? null,
+        typeLabel: TYPE_LABELS[params.type],
+        profil: params.profil,
+        description: params.description.trim(),
+        userName: profile?.name ?? '—',
+        userPhone: profile?.phone ?? '—',
+        orderId: params.orderId ?? null,
+        shopId: params.shopId ?? null,
         screenshotUrl,
         timestamp,
       },
@@ -123,7 +119,7 @@ export async function uploadScreenshot(localUri: string, userId: string): Promis
     { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG },
   );
 
-  const response    = await fetch(compressed.uri);
+  const response = await fetch(compressed.uri);
   const arrayBuffer = await response.arrayBuffer();
 
   const { error } = await supabase.storage

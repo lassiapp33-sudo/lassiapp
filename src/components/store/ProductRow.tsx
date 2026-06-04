@@ -18,17 +18,17 @@ const IcoPencil = () => (
 // ─── Badge stock ──────────────────────────────────────────────────────────────
 
 const STOCK_CONFIG: Record<StockStatus, { label: string; bg: string; color: string }> = {
-  in:  { label: 'EN STOCK', bg: 'rgba(95,211,138,.13)',  color: colors.success },
-  out: { label: 'ÉPUISÉ',   bg: 'rgba(224,122,122,.13)', color: colors.danger  },
+  in: { label: 'EN STOCK', bg: 'rgba(95,211,138,.13)', color: colors.success },
+  out: { label: 'ÉPUISÉ', bg: 'rgba(224,122,122,.13)', color: colors.danger },
 };
 
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 interface Props {
-  product:       StoreProduct;
-  onEdit:        () => void;
+  product: StoreProduct;
+  onEdit: () => void;
   onToggleStock: () => void;
-  promoInfo?:    { badge: string };
+  promoInfo?: { badge: string };
 }
 
 export default function ProductRow({ product, onEdit, onToggleStock, promoInfo }: Props) {
@@ -52,8 +52,12 @@ export default function ProductRow({ product, onEdit, onToggleStock, promoInfo }
 
       {/* Infos produit */}
       <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
-        <Text style={styles.desc} numberOfLines={1}>{product.desc}</Text>
+        <Text style={styles.name} numberOfLines={1}>
+          {product.name}
+        </Text>
+        <Text style={styles.desc} numberOfLines={1}>
+          {product.desc}
+        </Text>
         <View style={styles.priceRow}>
           <Text style={styles.price}>{formatPrice(product.price)}</Text>
           {promoInfo && (

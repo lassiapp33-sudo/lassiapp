@@ -12,13 +12,13 @@
  *     (get_auth_email_by_phone) pour retrouver quel email a été utilisé.
  */
 
-import { supabase }                   from '../lib/supabase';
-import { AuthUser, UserRole }         from '../store/authStore';
-import { getInitials }                from '../utils/getInitials';
-import { uploadImage, logoPath }      from './storage';
-import { saveConsent }               from './consents';
-import type { WeekHours }            from './hours';
-import logger                       from '../utils/logger';
+import { supabase } from '../lib/supabase';
+import { AuthUser, UserRole } from '../store/authStore';
+import { getInitials } from '../utils/getInitials';
+import { uploadImage, logoPath } from './storage';
+import { saveConsent } from './consents';
+import type { WeekHours } from './hours';
+import logger from '../utils/logger';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -31,18 +31,17 @@ function phoneToTechEmail(phone: string): string {
 
 // Traduit les messages d'erreur Supabase en français clair.
 function traduireErreur(message: string): string {
-  if (message.includes('User already registered') ||
-      message.includes('already been registered') ||
-      message.includes('already registered'))
+  if (
+    message.includes('User already registered') ||
+    message.includes('already been registered') ||
+    message.includes('already registered')
+  )
     return 'Ce numéro est déjà associé à un compte. Connecte-toi.';
-  if (message.includes('Invalid login credentials'))
-    return 'Numéro ou mot de passe incorrect.';
-  if (message.includes('Email not confirmed'))
-    return 'Compte non confirmé. Vérifie tes emails.';
+  if (message.includes('Invalid login credentials')) return 'Numéro ou mot de passe incorrect.';
+  if (message.includes('Email not confirmed')) return 'Compte non confirmé. Vérifie tes emails.';
   if (message.includes('Password should be at least'))
     return 'Le mot de passe doit contenir au moins 6 caractères.';
-  if (message.includes('Unable to validate email address'))
-    return 'Adresse email invalide.';
+  if (message.includes('Unable to validate email address')) return 'Adresse email invalide.';
   if (message.includes('Network request failed') || message.includes('fetch'))
     return 'Pas de connexion Internet. Vérifie ton réseau.';
   return 'Une erreur est survenue. Réessaie.';
@@ -51,12 +50,12 @@ function traduireErreur(message: string): string {
 // Construit un AuthUser depuis un enregistrement profiles Supabase.
 function profileToAuthUser(row: Record<string, any>): AuthUser {
   return {
-    id:        row.id,
-    name:      row.name,
-    phone:     row.phone,
-    email:     row.email ?? '',
-    role:      row.role as UserRole,
-    initial:   getInitials(row.name),
+    id: row.id,
+    name: row.name,
+    phone: row.phone,
+    email: row.email ?? '',
+    role: row.role as UserRole,
+    initial: getInitials(row.name),
     avatarUrl: row.avatar_url ?? undefined,
   };
 }
@@ -64,11 +63,11 @@ function profileToAuthUser(row: Record<string, any>): AuthUser {
 // ─── Inscription ────────────────────────────────────────────────────────────
 
 export interface RegisterParams {
-  name:     string;
-  phone:    string;
-  email:    string;    // email réel — peut être '' si non fourni
+  name: string;
+  phone: string;
+  email: string; // email réel — peut être '' si non fourni
   password: string;
-  role:     UserRole;
+  role: UserRole;
 }
 
 export async function register(params: RegisterParams): Promise<AuthUser> {
@@ -79,15 +78,15 @@ export async function register(params: RegisterParams): Promise<AuthUser> {
 
   // 1 — Créer le compte dans Supabase Auth
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-    email:    authEmail,
+    email: authEmail,
     password: params.password,
     options: {
       // raw_user_meta_data : récupéré par le trigger SQL pour créer le profil
       data: {
-        name:       params.name,
-        phone:      params.phone,
-        role:       params.role,
-        real_email: realEmail,  // email réel optionnel ('' si absent)
+        name: params.name,
+        phone: params.phone,
+        role: params.role,
+        real_email: realEmail, // email réel optionnel ('' si absent)
       },
     },
   });
@@ -99,14 +98,14 @@ export async function register(params: RegisterParams): Promise<AuthUser> {
   //     (le trigger SQL crée aussi la ligne ; l'upsert garantit les données complètes)
   const { error: profileError } = await supabase.from('profiles').upsert(
     {
-      id:         signUpData.user.id,
-      name:       params.name,
-      phone:      params.phone,
+      id: signUpData.user.id,
+      name: params.name,
+      phone: params.phone,
       auth_email: authEmail,
-      email:      realEmail || null,
-      role:       params.role,
+      email: realEmail || null,
+      role: params.role,
     },
-    { onConflict: 'id' }
+    { onConflict: 'id' },
   );
 
   // Erreur non bloquante : le trigger a déjà créé la ligne de base
@@ -115,15 +114,16 @@ export async function register(params: RegisterParams): Promise<AuthUser> {
   }
 
   // Enregistre la preuve de consentement CGU (non bloquant)
-  saveConsent(signUpData.user.id, params.role === 'merchant' ? 'prestataire' : 'client')
-    .catch(e => logger.warn('[auth] saveConsent échoué (non bloquant):', e));
+  saveConsent(signUpData.user.id, params.role === 'merchant' ? 'prestataire' : 'client').catch(e =>
+    logger.warn('[auth] saveConsent échoué (non bloquant):', e),
+  );
 
   return {
-    id:      signUpData.user.id,
-    name:    params.name,
-    phone:   params.phone,
-    email:   realEmail,
-    role:    params.role,
+    id: signUpData.user.id,
+    name: params.name,
+    phone: params.phone,
+    email: realEmail,
+    role: params.role,
     initial: getInitials(params.name),
   };
 }
@@ -132,46 +132,46 @@ export async function register(params: RegisterParams): Promise<AuthUser> {
 
 export interface RegisterMerchantParams {
   // Données utilisateur
-  name:             string;
-  phone:            string;
-  email:            string;
-  password:         string;
+  name: string;
+  phone: string;
+  email: string;
+  password: string;
   // Données boutique
-  shopName:         string;
-  shopSubtitle?:    string;   // tagline auto-généré depuis les sous-catégories
-  shopCategory:     string;
+  shopName: string;
+  shopSubtitle?: string; // tagline auto-généré depuis les sous-catégories
+  shopCategory: string;
   shopSubcategories?: string[];
-  shopType?:        'products' | 'services' | 'memberships';
-  shopAddress?:     string;
-  openingHours?:    WeekHours | null;
-  logoLocalUri?:    string | null;
+  shopType?: 'products' | 'services' | 'memberships';
+  shopAddress?: string;
+  openingHours?: WeekHours | null;
+  logoLocalUri?: string | null;
 }
 
 export async function registerMerchant(params: RegisterMerchantParams): Promise<AuthUser> {
   // 1. Créer le compte auth + ligne profiles
   const user = await register({
-    name:     params.name,
-    phone:    params.phone,
-    email:    params.email,
+    name: params.name,
+    phone: params.phone,
+    email: params.email,
     password: params.password,
-    role:     'merchant',
+    role: 'merchant',
   });
 
   // 2. Créer la ligne shops liée au nouveau marchand
   const { data: shopRow, error: shopError } = await supabase
     .from('shops')
     .insert({
-      merchant_id:    user.id,
-      name:           params.shopName,
-      subtitle:       params.shopSubtitle ?? '',
-      description:    null,
-      category:       params.shopCategory,
-      subcategories:  params.shopSubcategories ?? [],
-      shop_type:      params.shopType          ?? 'products',
-      address_text:   params.shopAddress       ?? null,
-      zone:           '',
-      is_open:        false,
-      opening_hours:  params.openingHours      ?? null,
+      merchant_id: user.id,
+      name: params.shopName,
+      subtitle: params.shopSubtitle ?? '',
+      description: null,
+      category: params.shopCategory,
+      subcategories: params.shopSubcategories ?? [],
+      shop_type: params.shopType ?? 'products',
+      address_text: params.shopAddress ?? null,
+      zone: '',
+      is_open: false,
+      opening_hours: params.openingHours ?? null,
     })
     .select('id')
     .single();
@@ -179,14 +179,18 @@ export async function registerMerchant(params: RegisterMerchantParams): Promise<
   if (shopError) {
     // Nettoyage : supprimer le compte auth pour éviter un état bloqué
     // (merchant avec profil mais sans boutique)
-    try { await supabase.auth.signOut(); } catch { /* ignore */ }
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      /* ignore */
+    }
     throw new Error(`Impossible de créer ta vitrine : ${shopError.message}`);
   }
 
   // 3. Upload du logo si l'utilisateur en a fourni un (non bloquant)
   if (params.logoLocalUri && shopRow?.id) {
     try {
-      const path    = logoPath(shopRow.id);
+      const path = logoPath(shopRow.id);
       const logoUrl = await uploadImage('logos', params.logoLocalUri, path);
       await supabase.from('shops').update({ logo_url: logoUrl }).eq('id', shopRow.id);
     } catch (e) {
@@ -200,7 +204,7 @@ export async function registerMerchant(params: RegisterMerchantParams): Promise<
 // ─── Connexion ──────────────────────────────────────────────────────────────
 
 export interface LoginParams {
-  phone:    string;
+  phone: string;
   password: string;
 }
 
@@ -209,8 +213,9 @@ export async function login(params: LoginParams): Promise<AuthUser> {
 
   // 1 — Retrouver l'email auth (réel ou technique) via la RPC Supabase
   //     La fonction SQL get_auth_email_by_phone est accessible aux utilisateurs anonymes
-  const { data: authEmail, error: rpcError } = await supabase
-    .rpc('get_auth_email_by_phone', { p_phone: cleanPhone });
+  const { data: authEmail, error: rpcError } = await supabase.rpc('get_auth_email_by_phone', {
+    p_phone: cleanPhone,
+  });
 
   if (rpcError || !authEmail) {
     throw new Error('Numéro introuvable. Vérifie ton numéro ou crée un compte.');
@@ -218,12 +223,12 @@ export async function login(params: LoginParams): Promise<AuthUser> {
 
   // 2 — Connexion Supabase avec l'email auth retrouvé
   const { data, error: loginError } = await supabase.auth.signInWithPassword({
-    email:    authEmail,
+    email: authEmail,
     password: params.password,
   });
 
   if (loginError) throw new Error(traduireErreur(loginError.message));
-  if (!data.user)  throw new Error('Connexion impossible. Réessaie.');
+  if (!data.user) throw new Error('Connexion impossible. Réessaie.');
 
   // 3 — Récupérer le profil complet
   const profile = await getProfileById(data.user.id);
@@ -254,7 +259,10 @@ export async function forgotPassword(email: string): Promise<void> {
 
 export async function getSessionUser(): Promise<AuthUser | null> {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
 
     // Token expiré ou révoqué : on nettoie la session stockée pour éviter
     // que Supabase rejoue le refresh à chaque démarrage et logue une erreur.
@@ -275,19 +283,20 @@ export async function getSessionUser(): Promise<AuthUser | null> {
 // ─── Écoute des changements d'état d'auth ───────────────────────────────────
 
 // Retourne une fonction de désinscription (cleanup dans useEffect).
-export function onAuthStateChange(
-  callback: (user: AuthUser | null) => void
-): () => void {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (event, session) => {
-      // TOKEN_REFRESHED_FAILED ou SIGNED_OUT : session terminée
-      if (!session?.user) { callback(null); return; }
-      // Ignore INITIAL_SESSION — géré par getSessionUser au démarrage
-      if (event === 'INITIAL_SESSION') return;
-      const profile = await getProfileById(session.user.id).catch(() => null);
-      callback(profile);
+export function onAuthStateChange(callback: (user: AuthUser | null) => void): () => void {
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // TOKEN_REFRESHED_FAILED ou SIGNED_OUT : session terminée
+    if (!session?.user) {
+      callback(null);
+      return;
     }
-  );
+    // Ignore INITIAL_SESSION — géré par getSessionUser au démarrage
+    if (event === 'INITIAL_SESSION') return;
+    const profile = await getProfileById(session.user.id).catch(() => null);
+    callback(profile);
+  });
   return () => subscription.unsubscribe();
 }
 

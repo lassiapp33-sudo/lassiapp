@@ -5,8 +5,15 @@ import { colors, fonts } from '../../theme';
 
 // Icône tendance haussière
 const IcoTrend = () => (
-  <Svg width={30} height={30} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={30}
+    height={30}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M3 17l6-6 4 4 8-8" stroke={colors.bg} />
     <Path d="M17 7h4v4" stroke={colors.bg} />
   </Svg>
@@ -27,7 +34,7 @@ export default function HeroCard() {
       <Text style={styles.body}>
         {'Apparais dans les '}
         <Text style={styles.accent}>Recommandations LASSİ</Text>
-        {' sur l\'accueil et dans toutes les catégories. Attire jusqu\'à '}
+        {" sur l'accueil et dans toutes les catégories. Attire jusqu'à "}
         <Text style={styles.accent}>5× plus de clients</Text>
         {'.'}
       </Text>

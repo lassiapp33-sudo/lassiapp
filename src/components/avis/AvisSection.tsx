@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import StarRating from './StarRating';
@@ -22,8 +20,15 @@ const IcoStar = () => (
 );
 
 const IcoWrite = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={16}
+    height={16}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M12 20h9" stroke={colors.bg} />
     <Path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" stroke={colors.bg} />
   </Svg>
@@ -45,30 +50,42 @@ function DistBar({ label, count, total }: { label: string; count: number; total:
 }
 
 const dist = StyleSheet.create({
-  row:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  lbl:   { color: colors.muted, fontFamily: fonts.body, fontSize: 11, width: 18 },
-  track: { flex: 1, height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden' },
-  fill:  { height: '100%', backgroundColor: colors.accent, borderRadius: 3 },
-  count: { color: colors.muted, fontFamily: fonts.body, fontSize: 11, width: 18, textAlign: 'right' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  lbl: { color: colors.muted, fontFamily: fonts.body, fontSize: 11, width: 18 },
+  track: {
+    flex: 1,
+    height: 6,
+    backgroundColor: colors.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  fill: { height: '100%', backgroundColor: colors.accent, borderRadius: 3 },
+  count: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 11,
+    width: 18,
+    textAlign: 'right',
+  },
 });
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  shopId:         string;
-  shopName:       string;
+  shopId: string;
+  shopName: string;
   currentUserId?: string;
-  isMerchant?:    boolean;
+  isMerchant?: boolean;
 }
 
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 export default function AvisSection({ shopId, shopName, currentUserId, isMerchant }: Props) {
-  const [avisList,       setAvisList]       = useState<Avis[]>([]);
-  const [loading,        setLoading]        = useState(true);
-  const [canLeave,       setCanLeave]       = useState(false);
+  const [avisList, setAvisList] = useState<Avis[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [canLeave, setCanLeave] = useState(false);
   const [myExistingAvis, setMyExistingAvis] = useState<Avis | null>(null);
-  const [avisTarget,     setAvisTarget]     = useState<{
+  const [avisTarget, setAvisTarget] = useState<{
     existing?: Avis;
   } | null>(null);
 
@@ -109,14 +126,17 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
   const handleReport = (_avisId: string) => {
     Alert.alert(
       'Signaler cet avis',
-      'Un avis abusif, insultant ou faux sera masqué après vérification par l\'équipe LASSI.',
+      "Un avis abusif, insultant ou faux sera masqué après vérification par l'équipe LASSI.",
       [
         { text: 'Annuler', style: 'cancel' },
-        { text: 'Signaler', onPress: () => {
-          // Création d'un signalement via le système existant
-          // Pour l'instant on affiche une confirmation simple
-          Alert.alert('Signalé', 'Merci. L\'équipe LASSI examinera cet avis.');
-        }},
+        {
+          text: 'Signaler',
+          onPress: () => {
+            // Création d'un signalement via le système existant
+            // Pour l'instant on affiche une confirmation simple
+            Alert.alert('Signalé', "Merci. L'équipe LASSI examinera cet avis.");
+          },
+        },
       ],
     );
   };
@@ -124,7 +144,7 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
   // ── Statistiques — mémorisées : reduce + 5× filter évités à chaque render ──
   const { total, avg, dist5 } = useMemo(() => {
     const total = avisList.length;
-    const avg   = total > 0 ? avisList.reduce((s, a) => s + a.note, 0) / total : 0;
+    const avg = total > 0 ? avisList.reduce((s, a) => s + a.note, 0) / total : 0;
     const dist5 = [5, 4, 3, 2, 1].map(n => avisList.filter(a => a.note === n).length);
     return { total, avg, dist5 };
   }, [avisList]);
@@ -135,7 +155,11 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Avis clients</Text>
         {canLeave && (
-          <TouchableOpacity style={styles.writeBtn} onPress={handleOpenAvisForm} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.writeBtn}
+            onPress={handleOpenAvisForm}
+            activeOpacity={0.8}
+          >
             <IcoWrite />
             <Text style={styles.writeTxt}>Laisser un avis</Text>
           </TouchableOpacity>
@@ -157,9 +181,7 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
       ) : total === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyTxt}>Aucun avis pour l'instant.</Text>
-          {canLeave && (
-            <Text style={styles.emptySub}>Sois le premier à noter ce commerce !</Text>
-          )}
+          {canLeave && <Text style={styles.emptySub}>Sois le premier à noter ce commerce !</Text>}
         </View>
       ) : (
         <>
@@ -198,7 +220,10 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
                 }
               }}
               onReport={() => handleReport(a.id)}
-              onRefresh={() => { load(); checkCanLeave(); }}
+              onRefresh={() => {
+                load();
+                checkCanLeave();
+              }}
             />
           ))}
         </>
@@ -212,7 +237,10 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
           shopName={shopName}
           existingAvis={avisTarget.existing}
           onClose={() => setAvisTarget(null)}
-          onSaved={() => { load(); checkCanLeave(); }}
+          onSaved={() => {
+            load();
+            checkCanLeave();
+          }}
         />
       )}
     </View>

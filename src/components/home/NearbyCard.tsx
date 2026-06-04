@@ -6,27 +6,26 @@ import useFavoritesStore from '../../store/favoritesStore';
 import Avatar from '../Avatar';
 import VipBadge from '../VipBadge';
 
-export type PlaceStatus   = 'open' | 'closing' | 'closed';
+export type PlaceStatus = 'open' | 'closing' | 'closed';
 export type PlaceCategory = string;
 
 export interface NearbyPlace {
-  id:         string;
-  name:       string;
-  category:   PlaceCategory;
-  rating:     number;
-  distance:   string;
-  status:     PlaceStatus;
-  statusLabel:string;
-  isVip:      boolean;
-  isFav:      boolean;
-  logoUrl?:   string | null;
+  id: string;
+  name: string;
+  category: PlaceCategory;
+  rating: number;
+  distance: string;
+  status: PlaceStatus;
+  statusLabel: string;
+  isVip: boolean;
+  isFav: boolean;
+  logoUrl?: string | null;
 }
 
 interface Props {
-  place:    NearbyPlace;
+  place: NearbyPlace;
   onPress?: () => void;
 }
-
 
 const IconStarFill = ({ filled }: { filled: boolean }) => (
   <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
@@ -40,34 +39,36 @@ const IconStarFill = ({ filled }: { filled: boolean }) => (
 
 const IconStarSmall = () => (
   <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
-    <Path d="M12 17.8 5.8 21 7 14.1 2 9.3l7-1L12 2l3 6.3 7 1-5 4.8 1.2 6.9z"
-      stroke={colors.accent} fill={colors.accent} />
+    <Path
+      d="M12 17.8 5.8 21 7 14.1 2 9.3l7-1L12 2l3 6.3 7 1-5 4.8 1.2 6.9z"
+      stroke={colors.accent}
+      fill={colors.accent}
+    />
   </Svg>
 );
 
-
 function NearbyCard({ place, onPress }: Props) {
-  const isFav        = useFavoritesStore(s => s.favorites.includes(place.id));
-  const toggleFav    = useFavoritesStore(s => s.toggleFavorite);
+  const isFav = useFavoritesStore(s => s.favorites.includes(place.id));
+  const toggleFav = useFavoritesStore(s => s.toggleFavorite);
 
   const statusColor =
-    place.status === 'open'    ? colors.success :
-    place.status === 'closing' ? colors.danger  : colors.muted;
+    place.status === 'open'
+      ? colors.success
+      : place.status === 'closing'
+        ? colors.danger
+        : colors.muted;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       {/* Logo commerce — Avatar unique, fallback initiale si pas de photo */}
-      <Avatar
-        imageUrl={place.logoUrl}
-        name={place.name}
-        size={54}
-        variant="shop"
-      />
+      <Avatar imageUrl={place.logoUrl} name={place.name} size={54} variant="shop" />
 
       {/* Infos */}
       <View style={styles.info}>
         <View style={styles.topRow}>
-          <Text style={styles.name} numberOfLines={1}>{place.name}</Text>
+          <Text style={styles.name} numberOfLines={1}>
+            {place.name}
+          </Text>
           {place.isVip && <VipBadge />}
         </View>
         <View style={styles.meta}>
@@ -112,8 +113,8 @@ const styles = StyleSheet.create({
     gap: 13,
     marginBottom: 11,
   },
-  info:    { flex: 1, minWidth: 0 },
-  topRow:  { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 4 },
+  info: { flex: 1, minWidth: 0 },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 4 },
   name: {
     color: colors.white,
     fontFamily: fonts.title,

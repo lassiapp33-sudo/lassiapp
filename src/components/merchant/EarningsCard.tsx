@@ -17,7 +17,11 @@ const IcoCoin = () => (
 const IcoEye = ({ hidden }: { hidden: boolean }) => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
     {hidden ? (
-      <Path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22" stroke="rgba(20,21,42,.5)" strokeLinecap="round" />
+      <Path
+        d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22"
+        stroke="rgba(20,21,42,.5)"
+        strokeLinecap="round"
+      />
     ) : (
       <>
         <Path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" stroke="rgba(20,21,42,.5)" />
@@ -39,11 +43,11 @@ const MiniStat = ({ value, label }: { value: string; label: string }) => (
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  amount:      number;
-  changeLabel: string;   // ex : "▲ +12% par rapport à hier"
-  orders:      number;
-  viaLassi:    number;
-  debts:       number;
+  amount: number;
+  changeLabel: string; // ex : "▲ +12% par rapport à hier"
+  orders: number;
+  viaLassi: number;
+  debts: number;
 }
 
 export default function EarningsCard({ amount, changeLabel, orders, viaLassi, debts }: Props) {
@@ -52,7 +56,11 @@ export default function EarningsCard({ amount, changeLabel, orders, viaLassi, de
   return (
     <View style={styles.card}>
       {/* Bouton œil — masquer / afficher le montant */}
-      <TouchableOpacity style={styles.eyeBtn} onPress={() => setVisible(v => !v)} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={styles.eyeBtn}
+        onPress={() => setVisible(v => !v)}
+        activeOpacity={0.7}
+      >
         <IcoEye hidden={!visible} />
       </TouchableOpacity>
 
@@ -63,18 +71,16 @@ export default function EarningsCard({ amount, changeLabel, orders, viaLassi, de
       </View>
 
       {/* Montant principal — gros chiffre lisible en plein soleil */}
-      <Text style={styles.amount}>
-        {visible ? formatPrice(amount) : '••••• F'}
-      </Text>
+      <Text style={styles.amount}>{visible ? formatPrice(amount) : '••••• F'}</Text>
 
       {/* Évolution vs hier */}
       <Text style={styles.cmp}>{changeLabel}</Text>
 
       {/* Mini stats séparées par une bordure */}
       <View style={styles.mini}>
-        <MiniStat value={String(orders)}                            label="Commandes"     />
-        <MiniStat value={String(viaLassi)}                          label="Via LASSİ"     />
-        <MiniStat value={formatPrice(debts)}     label="Dettes en cours" />
+        <MiniStat value={String(orders)} label="Commandes" />
+        <MiniStat value={String(viaLassi)} label="Via LASSİ" />
+        <MiniStat value={formatPrice(debts)} label="Dettes en cours" />
       </View>
     </View>
   );

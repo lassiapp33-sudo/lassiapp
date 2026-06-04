@@ -1,7 +1,5 @@
 import React from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, TOP_INSET } from '../../theme';
 import AvisSection from '../../components/avis/AvisSection';
@@ -14,9 +12,9 @@ interface Props {
 }
 
 export default function MerchantAvisScreen({ onBack }: Props) {
-  const shopId   = useShopStore(s => s.shopId);
+  const shopId = useShopStore(s => s.shopId);
   const shopName = useShopStore(s => s.profile.name);
-  const userId   = useAuthStore(s => s.user?.id);
+  const userId = useAuthStore(s => s.user?.id);
 
   if (!shopId) return null;
 
@@ -29,16 +27,8 @@ export default function MerchantAvisScreen({ onBack }: Props) {
         <Text style={styles.title}>Avis de ma boutique</Text>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-      >
-        <AvisSection
-          shopId={shopId}
-          shopName={shopName}
-          currentUserId={userId}
-          isMerchant
-        />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <AvisSection shopId={shopId} shopName={shopName} currentUserId={userId} isMerchant />
       </ScrollView>
     </View>
   );

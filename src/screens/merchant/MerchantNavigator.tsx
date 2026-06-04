@@ -1,54 +1,82 @@
 import React, { useState, useEffect } from 'react';
-import MerchantDashboard      from './MerchantDashboard';
-import MerchantProfileScreen  from './MerchantProfileScreen';
+import MerchantDashboard from './MerchantDashboard';
+import MerchantProfileScreen from './MerchantProfileScreen';
 import MerchantMessagesScreen from './MerchantMessagesScreen';
 import MerchantPaymentsScreen from './MerchantPaymentsScreen';
-import MerchantAvisScreen     from './MerchantAvisScreen';
-import DebtsScreen            from './DebtsScreen';
-import StoreScreen            from './StoreScreen';
-import OrdersScreen           from './OrdersScreen';
-import VisibilityScreen       from './VisibilityScreen';
-import RevenueScreen          from './RevenueScreen';
-import PromotionsScreen       from './PromotionsScreen';
-import NotificationsScreen    from '../home/NotificationsScreen';
-import ChatScreen             from '../chat/ChatScreen';
-import ShopScreen             from '../shop/ShopScreen';
-import MapScreen              from '../home/MapScreen';
-import CartScreen             from '../home/CartScreen';
-import PaymentScreen          from '../payment/PaymentScreen';
-import ClientOrdersScreen     from '../home/ClientOrdersScreen';
-import LassiAssistantScreen   from '../home/LassiAssistantScreen';
-import useShopStore              from '../../store/shopStore';
-import useAuthStore              from '../../store/authStore';
-import useNotificationsStore     from '../../store/notificationsStore';
-import usePendingNavStore        from '../../store/pendingNavStore';
+import MerchantAvisScreen from './MerchantAvisScreen';
+import DebtsScreen from './DebtsScreen';
+import StoreScreen from './StoreScreen';
+import OrdersScreen from './OrdersScreen';
+import VisibilityScreen from './VisibilityScreen';
+import RevenueScreen from './RevenueScreen';
+import PromotionsScreen from './PromotionsScreen';
+import NotificationsScreen from '../home/NotificationsScreen';
+import ChatScreen from '../chat/ChatScreen';
+import ShopScreen from '../shop/ShopScreen';
+import MapScreen from '../home/MapScreen';
+import CartScreen from '../home/CartScreen';
+import PaymentScreen from '../payment/PaymentScreen';
+import ClientOrdersScreen from '../home/ClientOrdersScreen';
+import LassiAssistantScreen from '../home/LassiAssistantScreen';
+import useShopStore from '../../store/shopStore';
+import useAuthStore from '../../store/authStore';
+import useNotificationsStore from '../../store/notificationsStore';
+import usePendingNavStore from '../../store/pendingNavStore';
 import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
-import { OrderInfo }             from '../../types/payment';
+import { OrderInfo } from '../../types/payment';
 
 // Navigateur du cockpit prestataire — tous les modules sont câblés ici.
 type MerchantScreen =
-  | 'dashboard' | 'debts' | 'store' | 'orders' | 'messages'
-  | 'visibility' | 'profile' | 'notifications' | 'revenue' | 'preview' | 'payments'
-  | 'promotions' | 'assistant' | 'aroundme' | 'myorders' | 'avis'
-  | { id: 'chat';         conversationId: string }
-  | { id: 'buyerShop';    shopId: string; shopName: string; backTo?: 'aroundme' | 'assistant' }
-  | { id: 'buyerCart';    shopId: string; shopName: string; backTo?: 'aroundme' | 'assistant' }
-  | { id: 'buyerChat';    shopId: string; shopName: string; shopLogoUrl?: string | null; backTo?: 'aroundme' | 'assistant' }
-  | { id: 'buyerPayment'; order: OrderInfo; shopId: string; shopName: string; from: 'cart' | 'chat'; backTo?: 'aroundme' | 'assistant' };
+  | 'dashboard'
+  | 'debts'
+  | 'store'
+  | 'orders'
+  | 'messages'
+  | 'visibility'
+  | 'profile'
+  | 'notifications'
+  | 'revenue'
+  | 'preview'
+  | 'payments'
+  | 'promotions'
+  | 'assistant'
+  | 'aroundme'
+  | 'myorders'
+  | 'avis'
+  | { id: 'chat'; conversationId: string }
+  | { id: 'buyerShop'; shopId: string; shopName: string; backTo?: 'aroundme' | 'assistant' }
+  | { id: 'buyerCart'; shopId: string; shopName: string; backTo?: 'aroundme' | 'assistant' }
+  | {
+      id: 'buyerChat';
+      shopId: string;
+      shopName: string;
+      shopLogoUrl?: string | null;
+      backTo?: 'aroundme' | 'assistant';
+    }
+  | {
+      id: 'buyerPayment';
+      order: OrderInfo;
+      shopId: string;
+      shopName: string;
+      from: 'cart' | 'chat';
+      backTo?: 'aroundme' | 'assistant';
+    };
 
-interface Props { onLogout: () => void; }
+interface Props {
+  onLogout: () => void;
+}
 
 export default function MerchantNavigator({ onLogout }: Props) {
   const [screen, setScreen] = useState<MerchantScreen>('dashboard');
-  const shopId   = useShopStore(s => s.shopId);
+  const shopId = useShopStore(s => s.shopId);
 
   // Persiste le filtre/recherche de la carte entre navigations
   const [mapFilter, setMapFilter] = useState('all');
   const [mapSearch, setMapSearch] = useState('');
-  const userId   = useAuthStore(s => s.user?.id ?? null);
+  const userId = useAuthStore(s => s.user?.id ?? null);
   const addNotif = useNotificationsStore(s => s.addNotif);
 
-  const pendingNav   = usePendingNavStore(s => s.pendingNav);
+  const pendingNav = usePendingNavStore(s => s.pendingNav);
   const clearPending = usePendingNavStore(s => s.clearPendingNav);
 
   // Abonnement Realtime toujours actif — met à jour le badge immédiatement
@@ -101,8 +129,23 @@ export default function MerchantNavigator({ onLogout }: Props) {
         shopId={screen.shopId}
         shopName={screen.shopName}
         onBack={() => setScreen(backDest)}
-        onChat={(logoUrl) => setScreen({ id: 'buyerChat', shopId: screen.shopId, shopName: screen.shopName, shopLogoUrl: logoUrl, backTo: screen.backTo })}
-        onCheckout={() => setScreen({ id: 'buyerCart', shopId: screen.shopId, shopName: screen.shopName, backTo: screen.backTo })}
+        onChat={logoUrl =>
+          setScreen({
+            id: 'buyerChat',
+            shopId: screen.shopId,
+            shopName: screen.shopName,
+            shopLogoUrl: logoUrl,
+            backTo: screen.backTo,
+          })
+        }
+        onCheckout={() =>
+          setScreen({
+            id: 'buyerCart',
+            shopId: screen.shopId,
+            shopName: screen.shopName,
+            backTo: screen.backTo,
+          })
+        }
       />
     );
   }
@@ -113,8 +156,24 @@ export default function MerchantNavigator({ onLogout }: Props) {
       <CartScreen
         shopId={screen.shopId}
         shopName={screen.shopName}
-        onBack={() => setScreen({ id: 'buyerShop', shopId: screen.shopId, shopName: screen.shopName, backTo: screen.backTo })}
-        onCheckout={(order) => setScreen({ id: 'buyerPayment', order, shopId: screen.shopId, shopName: screen.shopName, from: 'cart', backTo: screen.backTo })}
+        onBack={() =>
+          setScreen({
+            id: 'buyerShop',
+            shopId: screen.shopId,
+            shopName: screen.shopName,
+            backTo: screen.backTo,
+          })
+        }
+        onCheckout={order =>
+          setScreen({
+            id: 'buyerPayment',
+            order,
+            shopId: screen.shopId,
+            shopName: screen.shopName,
+            from: 'cart',
+            backTo: screen.backTo,
+          })
+        }
       />
     );
   }
@@ -128,8 +187,24 @@ export default function MerchantNavigator({ onLogout }: Props) {
         shopName={screen.shopName}
         shopLogoUrl={screen.shopLogoUrl}
         isVip={false}
-        onBack={() => setScreen({ id: 'buyerShop', shopId: screen.shopId, shopName: screen.shopName, backTo: screen.backTo })}
-        onCheckout={(order) => setScreen({ id: 'buyerPayment', order, shopId: screen.shopId, shopName: screen.shopName, from: 'chat', backTo: screen.backTo })}
+        onBack={() =>
+          setScreen({
+            id: 'buyerShop',
+            shopId: screen.shopId,
+            shopName: screen.shopName,
+            backTo: screen.backTo,
+          })
+        }
+        onCheckout={order =>
+          setScreen({
+            id: 'buyerPayment',
+            order,
+            shopId: screen.shopId,
+            shopName: screen.shopName,
+            from: 'chat',
+            backTo: screen.backTo,
+          })
+        }
       />
     );
   }
@@ -139,7 +214,14 @@ export default function MerchantNavigator({ onLogout }: Props) {
     return (
       <PaymentScreen
         order={screen.order}
-        onBack={() => setScreen({ id: 'buyerCart', shopId: screen.shopId, shopName: screen.shopName, backTo: screen.backTo })}
+        onBack={() =>
+          setScreen({
+            id: 'buyerCart',
+            shopId: screen.shopId,
+            shopName: screen.shopName,
+            backTo: screen.backTo,
+          })
+        }
         onSuccess={() => setScreen('myorders')}
       />
     );
@@ -150,7 +232,9 @@ export default function MerchantNavigator({ onLogout }: Props) {
     return (
       <LassiAssistantScreen
         onClose={() => setScreen('dashboard')}
-        onShopPress={(sid, sname) => setScreen({ id: 'buyerShop', shopId: sid, shopName: sname, backTo: 'assistant' })}
+        onShopPress={(sid, sname) =>
+          setScreen({ id: 'buyerShop', shopId: sid, shopName: sname, backTo: 'assistant' })
+        }
       />
     );
   }
@@ -167,60 +251,66 @@ export default function MerchantNavigator({ onLogout }: Props) {
     );
   }
 
-  if (screen === 'notifications') return (
-    <NotificationsScreen
-      onBack={() => setScreen('dashboard')}
-      onNavigate={(type, targetId) => {
-        if (type === 'msg' && targetId) {
-          // 1 tap → directement dans la bonne conversation
-          setScreen({ id: 'chat', conversationId: targetId });
-          return;
-        }
-        if (type === 'order' || type === 'pay') setScreen('orders');
-        if (type === 'vip') setScreen('messages');
-      }}
-    />
-  );
-  if (screen === 'preview')       return (
-    <ShopScreen
-      shopId={shopId ?? ''}
-      onBack={() => setScreen('store')}
-    />
-  );
-  if (screen === 'avis')          return <MerchantAvisScreen     onBack={() => setScreen('dashboard')} />;
-  if (screen === 'debts')         return <DebtsScreen            onBack={() => setScreen('dashboard')} />;
-  if (screen === 'promotions')    return <PromotionsScreen       onBack={() => setScreen('store')} />;
-  if (screen === 'store')         return <StoreScreen            onBack={() => setScreen('dashboard')} onPreview={() => setScreen('preview')} onPromos={() => setScreen('promotions')} />;
-  if (screen === 'orders')        return <OrdersScreen           onBack={() => setScreen('dashboard')} />;
-  if (screen === 'messages')      return <MerchantMessagesScreen onBack={() => setScreen('dashboard')} />;
-  if (screen === 'visibility')    return <VisibilityScreen       onBack={() => setScreen('dashboard')} />;
-  if (screen === 'revenue')       return <RevenueScreen          onBack={() => setScreen('profile')} />;
-  if (screen === 'payments')      return <MerchantPaymentsScreen onBack={() => setScreen('profile')} />;
-  if (screen === 'profile')       return (
-    <MerchantProfileScreen
-      onBack={()        => setScreen('dashboard')}
-      onStore={()       => setScreen('store')}
-      onVisibility={()  => setScreen('visibility')}
-      onRevenue={()     => setScreen('revenue')}
-      onPayments={()    => setScreen('payments')}
-      onMyOrders={()    => setScreen('myorders')}
-      onLogout={onLogout}
-    />
-  );
+  if (screen === 'notifications')
+    return (
+      <NotificationsScreen
+        onBack={() => setScreen('dashboard')}
+        onNavigate={(type, targetId) => {
+          if (type === 'msg' && targetId) {
+            // 1 tap → directement dans la bonne conversation
+            setScreen({ id: 'chat', conversationId: targetId });
+            return;
+          }
+          if (type === 'order' || type === 'pay') setScreen('orders');
+          if (type === 'vip') setScreen('messages');
+        }}
+      />
+    );
+  if (screen === 'preview')
+    return <ShopScreen shopId={shopId ?? ''} onBack={() => setScreen('store')} />;
+  if (screen === 'avis') return <MerchantAvisScreen onBack={() => setScreen('dashboard')} />;
+  if (screen === 'debts') return <DebtsScreen onBack={() => setScreen('dashboard')} />;
+  if (screen === 'promotions') return <PromotionsScreen onBack={() => setScreen('store')} />;
+  if (screen === 'store')
+    return (
+      <StoreScreen
+        onBack={() => setScreen('dashboard')}
+        onPreview={() => setScreen('preview')}
+        onPromos={() => setScreen('promotions')}
+      />
+    );
+  if (screen === 'orders') return <OrdersScreen onBack={() => setScreen('dashboard')} />;
+  if (screen === 'messages')
+    return <MerchantMessagesScreen onBack={() => setScreen('dashboard')} />;
+  if (screen === 'visibility') return <VisibilityScreen onBack={() => setScreen('dashboard')} />;
+  if (screen === 'revenue') return <RevenueScreen onBack={() => setScreen('profile')} />;
+  if (screen === 'payments') return <MerchantPaymentsScreen onBack={() => setScreen('profile')} />;
+  if (screen === 'profile')
+    return (
+      <MerchantProfileScreen
+        onBack={() => setScreen('dashboard')}
+        onStore={() => setScreen('store')}
+        onVisibility={() => setScreen('visibility')}
+        onRevenue={() => setScreen('revenue')}
+        onPayments={() => setScreen('payments')}
+        onMyOrders={() => setScreen('myorders')}
+        onLogout={onLogout}
+      />
+    );
 
   return (
     <MerchantDashboard
-      onNavigate={(dest) => {
-        if (dest === 'debts')         setScreen('debts');
-        if (dest === 'store')         setScreen('store');
-        if (dest === 'orders')        setScreen('orders');
-        if (dest === 'messages')      setScreen('messages');
-        if (dest === 'visibility')    setScreen('visibility');
-        if (dest === 'profile')       setScreen('profile');
+      onNavigate={dest => {
+        if (dest === 'debts') setScreen('debts');
+        if (dest === 'store') setScreen('store');
+        if (dest === 'orders') setScreen('orders');
+        if (dest === 'messages') setScreen('messages');
+        if (dest === 'visibility') setScreen('visibility');
+        if (dest === 'profile') setScreen('profile');
         if (dest === 'notifications') setScreen('notifications');
-        if (dest === 'assistant')     setScreen('assistant');
-        if (dest === 'aroundme')      setScreen('aroundme');
-        if (dest === 'avis')          setScreen('avis');
+        if (dest === 'assistant') setScreen('assistant');
+        if (dest === 'aroundme') setScreen('aroundme');
+        if (dest === 'avis') setScreen('avis');
       }}
       onNotifPress={() => setScreen('notifications')}
     />

@@ -6,30 +6,27 @@ import { colors, fonts } from '../../theme';
 import logger from '../../utils/logger';
 
 // Hauteurs des barres de la waveform (dp) — forme naturelle
-const WAVE_HEIGHTS = [
-  8, 15, 22, 12, 18, 9, 20, 14, 7, 16,
-  11, 19, 6, 13, 21, 10, 17, 8, 14, 20,
-];
+const WAVE_HEIGHTS = [8, 15, 22, 12, 18, 9, 20, 14, 7, 16, 11, 19, 6, 13, 21, 10, 17, 8, 14, 20];
 
 interface Props {
-  sender:    'me' | 'them';
-  duration:  string;         // ex : "0:09"
-  voiceUrl?: string | null;  // URL Supabase Storage
-  time:      string;
-  read?:     boolean;
+  sender: 'me' | 'them';
+  duration: string; // ex : "0:09"
+  voiceUrl?: string | null; // URL Supabase Storage
+  time: string;
+  read?: boolean;
 }
 
 export default function BubbleVoice({ sender, duration, voiceUrl, time, read }: Props) {
-  const [playing,  setPlaying]  = useState(false);
-  const [progress, setProgress] = useState(0);  // 0→1
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0); // 0→1
   const soundRef = useRef<Audio.Sound | null>(null);
 
   const isMe = sender === 'me';
-  const bgColor      = isMe ? '#FDCF34' : '#222447';
-  const playBg       = isMe ? 'rgba(20,21,42,.18)' : 'rgba(255,255,255,.12)';
-  const playColor    = isMe ? colors.bg : colors.white;
-  const barActive    = isMe ? 'rgba(20,21,42,.75)' : 'rgba(255,255,255,.9)';
-  const barInactive  = isMe ? 'rgba(20,21,42,.28)' : 'rgba(255,255,255,.25)';
+  const bgColor = isMe ? '#FDCF34' : '#222447';
+  const playBg = isMe ? 'rgba(20,21,42,.18)' : 'rgba(255,255,255,.12)';
+  const playColor = isMe ? colors.bg : colors.white;
+  const barActive = isMe ? 'rgba(20,21,42,.75)' : 'rgba(255,255,255,.9)';
+  const barInactive = isMe ? 'rgba(20,21,42,.28)' : 'rgba(255,255,255,.25)';
   const durationColor = isMe ? colors.bg : colors.white;
 
   // ── Nettoyage du son à la destruction du composant ───────────────────────
@@ -66,7 +63,7 @@ export default function BubbleVoice({ sender, duration, voiceUrl, time, read }: 
 
       if (!soundRef.current) {
         await Audio.setAudioModeAsync({
-          allowsRecordingIOS:   false,
+          allowsRecordingIOS: false,
           playsInSilentModeIOS: true,
           staysActiveInBackground: false,
         });
@@ -91,14 +88,15 @@ export default function BubbleVoice({ sender, duration, voiceUrl, time, read }: 
   // ── Rendu ────────────────────────────────────────────────────────────────
   return (
     <View style={[styles.row, isMe ? styles.rowMe : styles.rowThem]}>
-      <View style={[
-        styles.bubble,
-        { backgroundColor: bgColor },
-        isMe
-          ? { borderBottomRightRadius: 5 }
-          : { borderBottomLeftRadius: 5, borderWidth: 1, borderColor: colors.border },
-      ]}>
-
+      <View
+        style={[
+          styles.bubble,
+          { backgroundColor: bgColor },
+          isMe
+            ? { borderBottomRightRadius: 5 }
+            : { borderBottomLeftRadius: 5, borderWidth: 1, borderColor: colors.border },
+        ]}
+      >
         {/* Bouton play/pause */}
         <TouchableOpacity
           style={[styles.playBtn, { backgroundColor: playBg }]}
@@ -121,7 +119,7 @@ export default function BubbleVoice({ sender, duration, voiceUrl, time, read }: 
         <View style={styles.wave}>
           {WAVE_HEIGHTS.map((h, i) => {
             const barRatio = i / (WAVE_HEIGHTS.length - 1);
-            const played   = barRatio <= progress;
+            const played = barRatio <= progress;
             return (
               <View
                 key={i}
@@ -139,61 +137,62 @@ export default function BubbleVoice({ sender, duration, voiceUrl, time, read }: 
       </View>
 
       <Text style={[styles.time, isMe ? styles.timeMe : styles.timeThem]}>
-        {time}{isMe && read ? ' ✓✓' : isMe ? ' ✓' : ''}
+        {time}
+        {isMe && read ? ' ✓✓' : isMe ? ' ✓' : ''}
       </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row:      { maxWidth: '85%' },
-  rowMe:    { alignSelf: 'flex-end',   alignItems: 'flex-end'   },
-  rowThem:  { alignSelf: 'flex-start', alignItems: 'flex-start' },
+  row: { maxWidth: '85%' },
+  rowMe: { alignSelf: 'flex-end', alignItems: 'flex-end' },
+  rowThem: { alignSelf: 'flex-start', alignItems: 'flex-start' },
 
   bubble: {
-    flexDirection:    'row',
-    alignItems:       'center',
-    gap:              10,
-    paddingVertical:  9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 9,
     paddingHorizontal: 13,
-    borderRadius:     18,
-    minWidth:         190,
+    borderRadius: 18,
+    minWidth: 190,
   },
 
   playBtn: {
-    width:           30,
-    height:          30,
-    borderRadius:    15,
-    alignItems:      'center',
-    justifyContent:  'center',
-    flexShrink:      0,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
 
   wave: {
-    flex:          1,
+    flex: 1,
     flexDirection: 'row',
-    alignItems:    'center',
-    gap:           2.5,
-    height:        24,
+    alignItems: 'center',
+    gap: 2.5,
+    height: 24,
   },
 
   bar: {
-    width:        2.5,
+    width: 2.5,
     borderRadius: 2,
   },
 
   duration: {
     fontFamily: fonts.title,
-    fontSize:   11,
+    fontSize: 11,
     flexShrink: 0,
   },
 
   time: {
-    color:      '#5a5c80',
+    color: '#5a5c80',
     fontFamily: fonts.body,
-    fontSize:   9.5,
-    marginTop:  4,
+    fontSize: 9.5,
+    marginTop: 4,
   },
-  timeMe:   { marginRight: 3 },
-  timeThem: { marginLeft:  3 },
+  timeMe: { marginRight: 3 },
+  timeThem: { marginLeft: 3 },
 });

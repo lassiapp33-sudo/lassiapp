@@ -27,11 +27,7 @@ if (typeof global.TextEncoder === 'undefined') {
         } else if (code < 0x800) {
           bytes.push(0xc0 | (code >> 6), 0x80 | (code & 0x3f));
         } else {
-          bytes.push(
-            0xe0 | (code >> 12),
-            0x80 | ((code >> 6) & 0x3f),
-            0x80 | (code & 0x3f),
-          );
+          bytes.push(0xe0 | (code >> 12), 0x80 | ((code >> 6) & 0x3f), 0x80 | (code & 0x3f));
         }
       }
       return new Uint8Array(bytes);

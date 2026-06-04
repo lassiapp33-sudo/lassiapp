@@ -1,38 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity,
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { useT } from '../../i18n';
 
-import HomeHeader                     from '../../components/home/HomeHeader';
-import SearchBar                      from '../../components/home/SearchBar';
-import TabSelector, { HomeTab }       from '../../components/home/TabSelector';
-import CategoryGrid                   from '../../components/home/CategoryGrid';
-import { CatId }                      from '../../components/category/CatNavBar';
-import RecoCarousel, { RecoItem }     from '../../components/home/RecoCarousel';
-import NearbyCard, { NearbyPlace }    from '../../components/home/NearbyCard';
+import HomeHeader from '../../components/home/HomeHeader';
+import SearchBar from '../../components/home/SearchBar';
+import TabSelector, { HomeTab } from '../../components/home/TabSelector';
+import CategoryGrid from '../../components/home/CategoryGrid';
+import { CatId } from '../../components/category/CatNavBar';
+import RecoCarousel, { RecoItem } from '../../components/home/RecoCarousel';
+import NearbyCard, { NearbyPlace } from '../../components/home/NearbyCard';
 import BottomNav, { NavTab, NAV_HEIGHT } from '../../components/home/BottomNav';
-import { colors, fonts, TOP_INSET }   from '../../theme';
-import LassiScreen                    from '../../components/LassiScreen';
-import useAuthStore                   from '../../store/authStore';
-import useFavoritesStore              from '../../store/favoritesStore';
-import useNotificationsStore          from '../../store/notificationsStore';
-import useLocationStore               from '../../store/locationStore';
-import * as shopsService              from '../../services/shops';
+import { colors, fonts, TOP_INSET } from '../../theme';
+import LassiScreen from '../../components/LassiScreen';
+import useAuthStore from '../../store/authStore';
+import useFavoritesStore from '../../store/favoritesStore';
+import useNotificationsStore from '../../store/notificationsStore';
+import useLocationStore from '../../store/locationStore';
+import * as shopsService from '../../services/shops';
 import { haversineMeters, formatDistance } from '../../services/location';
-import { computeStatus, WeekHours }  from '../../services/hours';
+import { computeStatus, WeekHours } from '../../services/hours';
 
 interface Props {
-  onCategoryPress?:  (catId: CatId, title: string) => void;
-  onShopPress?:      (shopId: string, shopName: string) => void;
-  onSearch?:         () => void;
-  onVoice?:          () => void;
-  onFavorites?:      () => void;
-  onRecent?:         () => void;
-  onMessages?:       () => void;
-  onNotifications?:  () => void;
-  onProfile?:        () => void;
-  onMap?:            () => void;
+  onCategoryPress?: (catId: CatId, title: string) => void;
+  onShopPress?: (shopId: string, shopName: string) => void;
+  onSearch?: () => void;
+  onVoice?: () => void;
+  onFavorites?: () => void;
+  onRecent?: () => void;
+  onMessages?: () => void;
+  onNotifications?: () => void;
+  onProfile?: () => void;
+  onMap?: () => void;
 }
 
 export default function ClientHomeScreen({
@@ -49,21 +54,21 @@ export default function ClientHomeScreen({
 }: Props) {
   const t = useT();
 
-  const [tab,       setTab]       = useState<HomeTab>('nearby');
-  const [navTab,    setNavTab]    = useState<NavTab>('home');
-  const [nearby,    setNearby]    = useState<NearbyPlace[]>([]);
-  const [recos,     setRecos]     = useState<RecoItem[]>([]);
-  const [loading,   setLoading]   = useState(true);
+  const [tab, setTab] = useState<HomeTab>('nearby');
+  const [navTab, setNavTab] = useState<NavTab>('home');
+  const [nearby, setNearby] = useState<NearbyPlace[]>([]);
+  const [recos, setRecos] = useState<RecoItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
-  const userInitial       = useAuthStore(s => s.user?.initial  ?? 'A');
-  const userName          = useAuthStore(s => s.user?.name     ?? '');
-  const userAvatarUrl     = useAuthStore(s => s.user?.avatarUrl);
-  const unreadCount       = useNotificationsStore(s => s.notifications.filter(n => n.unread).length);
-  const favorites         = useFavoritesStore(s => s.favorites);
-  const loadFavorites     = useFavoritesStore(s => s.loadFavorites);
-  const zoneName          = useLocationStore(s => s.zoneName);
-  const refreshLocation   = useLocationStore(s => s.refreshLocation);
+  const userInitial = useAuthStore(s => s.user?.initial ?? 'A');
+  const userName = useAuthStore(s => s.user?.name ?? '');
+  const userAvatarUrl = useAuthStore(s => s.user?.avatarUrl);
+  const unreadCount = useNotificationsStore(s => s.notifications.filter(n => n.unread).length);
+  const favorites = useFavoritesStore(s => s.favorites);
+  const loadFavorites = useFavoritesStore(s => s.loadFavorites);
+  const zoneName = useLocationStore(s => s.zoneName);
+  const refreshLocation = useLocationStore(s => s.refreshLocation);
 
   async function loadShops() {
     setLoading(true);
@@ -75,10 +80,10 @@ export default function ClientHomeScreen({
       const recoShops: RecoItem[] = shops
         .filter(s => s.isVip || s.isFeatured)
         .map(s => ({
-          id:      s.id,
+          id: s.id,
           initial: s.name.charAt(0).toUpperCase(),
-          name:    s.name,
-          desc:    s.subtitle || `${s.category} · ${s.zone}`,
+          name: s.name,
+          desc: s.subtitle || `${s.category} · ${s.zone}`,
           logoUrl: s.logoUrl,
         }));
       setRecos(recoShops);
@@ -86,27 +91,32 @@ export default function ClientHomeScreen({
       // Toutes les boutiques → liste "Tout près de toi"
       const currentCoords = useLocationStore.getState().coords;
       const places: NearbyPlace[] = shops.map(shop => {
-        const distance = (currentCoords && shop.latitude && shop.longitude)
-          ? formatDistance(haversineMeters(
-              currentCoords.latitude, currentCoords.longitude,
-              shop.latitude, shop.longitude,
-            ))
-          : '';
+        const distance =
+          currentCoords && shop.latitude && shop.longitude
+            ? formatDistance(
+                haversineMeters(
+                  currentCoords.latitude,
+                  currentCoords.longitude,
+                  shop.latitude,
+                  shop.longitude,
+                ),
+              )
+            : '';
         const shopStatus = computeStatus(
           shop.openingHours as WeekHours | null,
           shop.isManuallyClose,
         );
         return {
-          id:          shop.id,
-          name:        shop.name,
-          category:    shop.category,
-          rating:      shop.rating,
+          id: shop.id,
+          name: shop.name,
+          category: shop.category,
+          rating: shop.rating,
           distance,
-          isVip:       shop.isVip,
-          isFav:       favorites.includes(shop.id),
-          status:      shopStatus.isOpen ? 'open' : 'closed',
+          isVip: shop.isVip,
+          isFav: favorites.includes(shop.id),
+          status: shopStatus.isOpen ? 'open' : 'closed',
           statusLabel: shopStatus.label,
-          logoUrl:     shop.logoUrl,
+          logoUrl: shop.logoUrl,
         } as NearbyPlace;
       });
 
@@ -143,14 +153,17 @@ export default function ClientHomeScreen({
   const handleNavPress = (t: NavTab) => {
     setNavTab(t);
     if (t === 'favorites') onFavorites?.();
-    if (t === 'voice')     onVoice?.();
-    if (t === 'messages')  onMessages?.();
-    if (t === 'profile')   onProfile?.();
+    if (t === 'voice') onVoice?.();
+    if (t === 'messages') onMessages?.();
+    if (t === 'profile') onProfile?.();
   };
 
   // Gestion du grid de catégories : 'map' déclenche l'écran carte
   const handleCategorySelect = (id: string, label: string) => {
-    if (id === 'map') { onMap?.(); return; }
+    if (id === 'map') {
+      onMap?.();
+      return;
+    }
     onCategoryPress?.(id as CatId, label);
   };
 
@@ -170,15 +183,15 @@ export default function ClientHomeScreen({
             />
           </View>
           <View style={styles.px}>
-            <SearchBar
-              value=""
-              onChangeText={() => {}}
-              onPress={onSearch}
-              onMicPress={onVoice}
-            />
+            <SearchBar value="" onChangeText={() => {}} onPress={onSearch} onMicPress={onVoice} />
           </View>
           <View style={styles.px}>
-            <TabSelector active={tab} onChange={setTab} onNearbyPress={onMap} onRecentPress={onRecent} />
+            <TabSelector
+              active={tab}
+              onChange={setTab}
+              onNearbyPress={onMap}
+              onRecentPress={onRecent}
+            />
           </View>
         </View>
       }
@@ -205,7 +218,7 @@ export default function ClientHomeScreen({
             </View>
             <RecoCarousel
               items={recos}
-              onPress={(id) => {
+              onPress={id => {
                 const shop = recos.find(r => r.id === id);
                 if (shop) onShopPress?.(id, shop.name);
               }}
@@ -225,7 +238,9 @@ export default function ClientHomeScreen({
             </View>
           ) : loadError ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyTxt}>Connexion impossible, vérifie ta connexion et réessaie.</Text>
+              <Text style={styles.emptyTxt}>
+                Connexion impossible, vérifie ta connexion et réessaie.
+              </Text>
               <TouchableOpacity style={styles.retryBtn} onPress={loadShops} activeOpacity={0.8}>
                 <Text style={styles.retryTxt}>Réessayer</Text>
               </TouchableOpacity>
@@ -245,15 +260,14 @@ export default function ClientHomeScreen({
           )}
         </View>
       </ScrollView>
-
     </LassiScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
-  px:     { paddingHorizontal: 20 },
+  px: { paddingHorizontal: 20 },
   sectionHead: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -270,7 +284,7 @@ const styles = StyleSheet.create({
   secLink: { color: colors.accent, fontFamily: fonts.ui, fontSize: 12 },
   recoSection: { marginTop: 28, marginBottom: 8 },
   loader: { paddingVertical: 32, alignItems: 'center' },
-  empty:  { paddingVertical: 24, alignItems: 'center' },
+  empty: { paddingVertical: 24, alignItems: 'center' },
   emptyTxt: {
     color: colors.muted,
     fontFamily: fonts.body,

@@ -5,8 +5,15 @@ import { colors, fonts, radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
 
 const IcoMic = () => (
-  <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={21}
+    height={21}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" stroke={colors.accent} />
     <Path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke={colors.accent} />
     <Path d="M12 19v3" stroke={colors.accent} />
@@ -14,8 +21,15 @@ const IcoMic = () => (
 );
 
 const IcoCard = () => (
-  <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={21}
+    height={21}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Rect x={2} y={5} width={20} height={14} rx={2} stroke={colors.bg} />
     <Path d="M2 10h20" stroke={colors.bg} />
   </Svg>
@@ -26,26 +40,30 @@ export const FOOTER_HEIGHT = 88 + BOTTOM_EXTRA;
 
 // Labels du bouton principal selon le type de vitrine
 const LABELS: Record<string, { main: string; sub: string }> = {
-  products:    { main: 'Commander',  sub: 'Payer via Wave / OM' },
-  services:    { main: 'Réserver',   sub: 'Confirmer la réservation' },
-  memberships: { main: 'S\'abonner', sub: 'Voir les formules' },
+  products: { main: 'Commander', sub: 'Payer via Wave / OM' },
+  services: { main: 'Réserver', sub: 'Confirmer la réservation' },
+  memberships: { main: "S'abonner", sub: 'Voir les formules' },
 };
 
 interface Props {
-  total:     number;
-  hasItems:  boolean;
+  total: number;
+  hasItems: boolean;
   shopType?: 'products' | 'services' | 'memberships';
-  onChat?:   () => void;
+  onChat?: () => void;
   onCheckout?: () => void;
 }
 
-export default function ShopFooter({ total, hasItems, shopType = 'products', onChat, onCheckout }: Props) {
+export default function ShopFooter({
+  total,
+  hasItems,
+  shopType = 'products',
+  onChat,
+  onCheckout,
+}: Props) {
   const { main, sub } = LABELS[shopType] ?? LABELS.products;
 
   // Pour les produits : le montant s'affiche si panier non vide
-  const mainLabel = (shopType === 'products' && hasItems)
-    ? `${main} · ${formatPrice(total)}`
-    : main;
+  const mainLabel = shopType === 'products' && hasItems ? `${main} · ${formatPrice(total)}` : main;
 
   return (
     <View style={styles.footer}>

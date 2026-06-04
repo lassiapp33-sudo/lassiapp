@@ -1,10 +1,10 @@
-import { create }           from 'zustand';
-import * as favService      from '../services/favorites';
-import logger               from '../utils/logger';
+import { create } from 'zustand';
+import * as favService from '../services/favorites';
+import logger from '../utils/logger';
 
 interface FavoritesState {
-  favorites:      string[];   // shopIds en favori
-  loading:        boolean;
+  favorites: string[]; // shopIds en favori
+  loading: boolean;
 
   // Chargement depuis Supabase
   loadFavorites: () => Promise<void>;
@@ -17,9 +17,9 @@ interface FavoritesState {
 
 const useFavoritesStore = create<FavoritesState>()((set, get) => ({
   favorites: [],
-  loading:   false,
+  loading: false,
 
-  setLoading: (v) => set({ loading: v }),
+  setLoading: v => set({ loading: v }),
 
   loadFavorites: async () => {
     set({ loading: true });
@@ -31,13 +31,11 @@ const useFavoritesStore = create<FavoritesState>()((set, get) => ({
     }
   },
 
-  toggleFavorite: async (shopId) => {
+  toggleFavorite: async shopId => {
     const { favorites } = get();
     const isFav = favorites.includes(shopId);
     set({
-      favorites: isFav
-        ? favorites.filter(id => id !== shopId)
-        : [...favorites, shopId],
+      favorites: isFav ? favorites.filter(id => id !== shopId) : [...favorites, shopId],
     });
     try {
       await favService.toggleFavorite(shopId, isFav);

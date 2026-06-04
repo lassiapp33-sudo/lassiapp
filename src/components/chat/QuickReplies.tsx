@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-nati
 import { colors, fonts } from '../../theme';
 
 interface Props {
-  chips:    string[];
+  chips: string[];
   onSelect: (text: string) => void;
 }
 

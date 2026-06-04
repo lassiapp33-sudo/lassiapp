@@ -11,10 +11,10 @@ const IcoStar = () => (
 );
 
 interface Props {
-  initial:  string;
+  initial: string;
   logoUrl?: string;
-  isVip:    boolean;
-  isOpen:   boolean;
+  isVip: boolean;
+  isOpen: boolean;
 }
 
 export default function ShopIdentity({ initial, logoUrl, isVip, isOpen }: Props) {
@@ -22,13 +22,7 @@ export default function ShopIdentity({ initial, logoUrl, isVip, isOpen }: Props)
     // -42 : la moitié du logo (84px) chevauche la bannière du dessus
     <View style={styles.row}>
       {/* Logo boutique avec bordure bg pour l'effet flottant sur la bannière */}
-      <Avatar
-        imageUrl={logoUrl}
-        name={initial}
-        size={84}
-        variant="shop"
-        showBorder
-      />
+      <Avatar imageUrl={logoUrl} name={initial} size={84} variant="shop" showBorder />
 
       <View style={styles.meta}>
         <View style={styles.badges}>
@@ -38,14 +32,15 @@ export default function ShopIdentity({ initial, logoUrl, isVip, isOpen }: Props)
               <Text style={styles.badgeVipTxt}>TOP 3 VIP</Text>
             </View>
           )}
-          <View style={[
-            styles.badgeStatus,
-            { backgroundColor: isOpen ? 'rgba(95,211,138,.15)' : 'rgba(224,122,122,.12)' },
-          ]}>
-            <Text style={[
-              styles.badgeStatusTxt,
-              { color: isOpen ? colors.success : colors.danger },
-            ]}>
+          <View
+            style={[
+              styles.badgeStatus,
+              { backgroundColor: isOpen ? 'rgba(95,211,138,.15)' : 'rgba(224,122,122,.12)' },
+            ]}
+          >
+            <Text
+              style={[styles.badgeStatusTxt, { color: isOpen ? colors.success : colors.danger }]}
+            >
               {isOpen ? '● Ouvert' : '● Fermé'}
             </Text>
           </View>

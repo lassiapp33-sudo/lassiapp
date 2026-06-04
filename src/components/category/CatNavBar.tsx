@@ -6,10 +6,10 @@ import { CatId, CATEGORIES } from '../../config/categories';
 // Re-export pour compatibilité des imports existants
 export type { CatId } from '../../config/categories';
 
-const mk = (active: boolean) => active ? colors.accent : colors.muted;
+const mk = (active: boolean) => (active ? colors.accent : colors.muted);
 
 interface Props {
-  active:   CatId;
+  active: CatId;
   onSelect: (id: CatId) => void;
 }
 
@@ -30,9 +30,7 @@ export default function CatNavBar({ active, onSelect }: Props) {
             onPress={() => onSelect(cat.id)}
             activeOpacity={0.75}
           >
-            <View style={[styles.ico, on && styles.icoOn]}>
-              {cat.renderIcon(mk(on), 24)}
-            </View>
+            <View style={[styles.ico, on && styles.icoOn]}>{cat.renderIcon(mk(on), 24)}</View>
             <Text style={[styles.label, on && styles.labelOn]} numberOfLines={1}>
               {cat.label}
             </Text>

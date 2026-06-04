@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, Image,
-  StyleSheet, Alert, TextInput, ActivityIndicator,
-  KeyboardAvoidingView, Platform,
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+  Alert,
+  TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
@@ -13,31 +20,59 @@ import * as avisService from '../../services/avis';
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
 const IcoEdit = () => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={14}
+    height={14}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke={colors.muted} />
     <Path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" stroke={colors.muted} />
   </Svg>
 );
 
 const IcoTrash = () => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={14}
+    height={14}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke={colors.danger} />
   </Svg>
 );
 
 const IcoFlag = () => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={14}
+    height={14}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" stroke={colors.muted} />
     <Path d="M4 22v-7" stroke={colors.muted} />
   </Svg>
 );
 
 const IcoReply = () => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={14}
+    height={14}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M9 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3" stroke={colors.accent} />
     <Path d="m15 11 4 4-4 4M11 17h8" stroke={colors.accent} />
   </Svg>
@@ -47,7 +82,9 @@ const IcoReply = () => (
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR', {
-    day: 'numeric', month: 'short', year: 'numeric',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   });
 }
 
@@ -58,31 +95,25 @@ function initial(name: string) {
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 interface Props {
-  avis:        Avis;
-  isOwn?:      boolean;
+  avis: Avis;
+  isOwn?: boolean;
   isMerchant?: boolean;
-  onEdit?:     () => void;
-  onDelete?:   () => void;
-  onReport?:   () => void;
-  onRefresh?:  () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onReport?: () => void;
+  onRefresh?: () => void;
 }
 
-function AvisCard({
-  avis, isOwn, isMerchant, onEdit, onDelete, onReport, onRefresh,
-}: Props) {
+function AvisCard({ avis, isOwn, isMerchant, onEdit, onDelete, onReport, onRefresh }: Props) {
   const [showReplyBox, setShowReplyBox] = useState(false);
-  const [replyText,    setReplyText]    = useState('');
-  const [saving,       setSaving]       = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleDelete = () => {
-    Alert.alert(
-      'Supprimer cet avis',
-      'Cette action est irréversible.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Supprimer', style: 'destructive', onPress: onDelete },
-      ],
-    );
+    Alert.alert('Supprimer cet avis', 'Cette action est irréversible.', [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Supprimer', style: 'destructive', onPress: onDelete },
+    ]);
   };
 
   const handleSaveReply = async () => {
@@ -113,9 +144,7 @@ function AvisCard({
       </View>
 
       {/* ── Commentaire ── */}
-      {!!avis.commentaire && (
-        <Text style={styles.comment}>{avis.commentaire}</Text>
-      )}
+      {!!avis.commentaire && <Text style={styles.comment}>{avis.commentaire}</Text>}
 
       {/* ── Photo ── */}
       {!!avis.photoUrl && (
@@ -187,10 +216,11 @@ function AvisCard({
               disabled={saving}
               activeOpacity={0.8}
             >
-              {saving
-                ? <ActivityIndicator size="small" color={colors.bg} />
-                : <Text style={styles.publishTxt}>Publier</Text>
-              }
+              {saving ? (
+                <ActivityIndicator size="small" color={colors.bg} />
+              ) : (
+                <Text style={styles.publishTxt}>Publier</Text>
+              )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>

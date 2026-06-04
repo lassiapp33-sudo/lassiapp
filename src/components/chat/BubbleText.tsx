@@ -3,10 +3,10 @@ import { View, Text, StyleSheet } from 'react-native';
 import { colors, fonts } from '../../theme';
 
 interface Props {
-  text:   string;
+  text: string;
   sender: 'me' | 'them';
-  time:   string;
-  read?:  boolean;  // accusé de lecture (me only)
+  time: string;
+  read?: boolean; // accusé de lecture (me only)
 }
 
 const BUBBLE_RADIUS = 18;
@@ -16,20 +16,19 @@ export default function BubbleText({ text, sender, time, read }: Props) {
 
   return (
     <View style={[styles.row, isMe ? styles.rowMe : styles.rowThem]}>
-      <View style={[
-        styles.bubble,
-        isMe ? styles.bubbleMe : styles.bubbleThem,
-        // coin inférieur aplati côté émetteur (style iMessage)
-        isMe
-          ? { borderBottomRightRadius: 5 }
-          : { borderBottomLeftRadius: 5 },
-      ]}>
-        <Text style={[styles.text, isMe ? styles.textMe : styles.textThem]}>
-          {text}
-        </Text>
+      <View
+        style={[
+          styles.bubble,
+          isMe ? styles.bubbleMe : styles.bubbleThem,
+          // coin inférieur aplati côté émetteur (style iMessage)
+          isMe ? { borderBottomRightRadius: 5 } : { borderBottomLeftRadius: 5 },
+        ]}
+      >
+        <Text style={[styles.text, isMe ? styles.textMe : styles.textThem]}>{text}</Text>
       </View>
       <Text style={[styles.time, isMe ? styles.timeMe : styles.timeThem]}>
-        {time}{isMe && read ? ' ✓✓' : isMe ? ' ✓' : ''}
+        {time}
+        {isMe && read ? ' ✓✓' : isMe ? ' ✓' : ''}
       </Text>
     </View>
   );
@@ -54,7 +53,7 @@ const styles = StyleSheet.create({
     borderRadius: BUBBLE_RADIUS,
   },
   bubbleMe: {
-    backgroundColor: '#FDCF34',  // accent
+    backgroundColor: '#FDCF34', // accent
   },
   bubbleThem: {
     backgroundColor: '#222447',
@@ -67,7 +66,7 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     lineHeight: 19.5,
   },
-  textMe:   { color: colors.bg,    fontFamily: fonts.body },
+  textMe: { color: colors.bg, fontFamily: fonts.body },
   textThem: { color: colors.white },
 
   time: {
@@ -76,6 +75,6 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     marginTop: 4,
   },
-  timeMe:   { marginRight: 3 },
+  timeMe: { marginRight: 3 },
   timeThem: { marginLeft: 3 },
 });

@@ -1,26 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View, Text, TextInput, TouchableOpacity,
-  ScrollView, StyleSheet,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import * as shopsService from '../../services/shops';
-import { Shop }          from '../../services/shops';
-import { computeStatus }   from '../../services/hours';
-import type { WeekHours }   from '../../services/hours';
+import { Shop } from '../../services/shops';
+import { computeStatus } from '../../services/hours';
+import type { WeekHours } from '../../services/hours';
 import { useRealtimeShops } from '../../hooks/useRealtimeShops';
-import Avatar            from '../../components/Avatar';
-import { useT }          from '../../i18n';
+import Avatar from '../../components/Avatar';
+import { useT } from '../../i18n';
 import { LassiMascotte, MASCOTTE_NOM } from '../../components/LassiMascotte';
 import Svg, { Path } from 'react-native-svg';
 import { IcoBack, IcoSearch } from '../../components/icons';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
-
 const IcoStar = () => (
-  <Svg width={10} height={10} viewBox="0 0 24 24"
-    fill={colors.accent} stroke={colors.accent} strokeWidth={1}>
+  <Svg
+    width={10}
+    height={10}
+    viewBox="0 0 24 24"
+    fill={colors.accent}
+    stroke={colors.accent}
+    strokeWidth={1}
+  >
     <Path d="M12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9z" />
   </Svg>
 );
@@ -37,26 +39,32 @@ function GroupLabel({ emoji, label, vip }: { emoji: string; label: string; vip?:
 
 function ResultCard({ shop, onPress }: { shop: Shop; onPress: () => void }) {
   const t = useT();
-  const { isOpen } = computeStatus(shop.openingHours as WeekHours | null, shop.isManuallyClose ?? false);
+  const { isOpen } = computeStatus(
+    shop.openingHours as WeekHours | null,
+    shop.isManuallyClose ?? false,
+  );
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       {/* Logo boutique — Avatar unique, source de vérité shops.logo_url */}
-      <Avatar
-        imageUrl={shop.logoUrl}
-        name={shop.name}
-        size={46}
-        variant="shop"
-      />
+      <Avatar imageUrl={shop.logoUrl} name={shop.name} size={46} variant="shop" />
 
       <View style={styles.info}>
         <View style={styles.nameRow}>
-          <Text style={styles.name} numberOfLines={1}>{shop.name}</Text>
+          <Text style={styles.name} numberOfLines={1}>
+            {shop.name}
+          </Text>
           {shop.isVip && (
-            <View style={styles.tagVip}><Text style={styles.tagVipTxt}>VIP</Text></View>
+            <View style={styles.tagVip}>
+              <Text style={styles.tagVipTxt}>VIP</Text>
+            </View>
           )}
         </View>
         <View style={styles.metaRow}>
-          {shop.rating > 0 && <View style={{ marginRight: 3 }}><IcoStar /></View>}
+          {shop.rating > 0 && (
+            <View style={{ marginRight: 3 }}>
+              <IcoStar />
+            </View>
+          )}
           <Text style={styles.meta}>
             {shop.rating > 0 ? `${shop.rating} · ` : ''}
             {isOpen ? t.common.open : t.common.closed} · {shop.zone}
@@ -75,27 +83,28 @@ function ResultCard({ shop, onPress }: { shop: Shop; onPress: () => void }) {
 
 interface Props {
   initialQuery?: string;
-  onBack:        () => void;
-  onShopPress:   (shopId: string, shopName: string) => void;
+  onBack: () => void;
+  onShopPress: (shopId: string, shopName: string) => void;
 }
 
 export default function SearchScreen({ initialQuery = '', onBack, onShopPress }: Props) {
   const t = useT();
 
-  const [query,   setQuery]   = useState(initialQuery);
-  const [shops,   setShops]   = useState<Shop[]>([]);
+  const [query, setQuery] = useState(initialQuery);
+  const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    shopsService.getShops()
+    shopsService
+      .getShops()
       .then(setShops)
       .catch(() => setShops([]))
       .finally(() => setLoading(false));
   }, []);
 
   // Mise à jour temps réel quand un commerce change ses horaires ou son statut
-  useRealtimeShops((updated) => {
-    setShops(prev => prev.map(s => s.id === updated.id ? updated : s));
+  useRealtimeShops(updated => {
+    setShops(prev => prev.map(s => (s.id === updated.id ? updated : s)));
   });
 
   const q = query.trim().toLowerCase();
@@ -103,7 +112,7 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
     ? shops.filter(s => s.name.toLowerCase().includes(q) || s.zone.toLowerCase().includes(q))
     : shops;
 
-  const vipShops   = filtered.filter(s => s.isVip);
+  const vipShops = filtered.filter(s => s.isVip);
   const otherShops = filtered.filter(s => !s.isVip);
   const hasResults = filtered.length > 0;
 
@@ -139,9 +148,7 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
         {loading && (
           <View style={styles.centered}>
             <LassiMascotte forme="search" taille={100} glow={false} />
-            <Text style={styles.searchingTxt}>
-              {`${MASCOTTE_NOM} cherche pour toi...`}
-            </Text>
+            <Text style={styles.searchingTxt}>{`${MASCOTTE_NOM} cherche pour toi...`}</Text>
           </View>
         )}
 
@@ -168,7 +175,10 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
 
         {otherShops.length > 0 && (
           <>
-            <GroupLabel emoji="📍" label={q ? t.home.allResults.replace('📋 ', '') : t.home.nearby.replace('📍 ', '')} />
+            <GroupLabel
+              emoji="📍"
+              label={q ? t.home.allResults.replace('📋 ', '') : t.home.nearby.replace('📍 ', '')}
+            />
             {otherShops.map(s => (
               <ResultCard key={s.id} shop={s} onPress={() => onShopPress(s.id, s.name)} />
             ))}
@@ -180,7 +190,7 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
 
   head: {
@@ -294,8 +304,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     flexShrink: 0,
   },
-  statusOpen:   { color: colors.success },
-  statusClosed: { color: colors.danger  },
+  statusOpen: { color: colors.success },
+  statusClosed: { color: colors.danger },
 
   centered: { paddingVertical: 32, alignItems: 'center' },
   searchingTxt: {
@@ -304,7 +314,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 8,
   },
-  empty:    { paddingVertical: 48, alignItems: 'center' },
+  empty: { paddingVertical: 48, alignItems: 'center' },
   emptyTxt: {
     color: colors.muted,
     fontFamily: fonts.body,

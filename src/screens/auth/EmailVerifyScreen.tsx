@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet,
-  Linking,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import BackButton from '../../components/auth/BackButton';
 import AuthButton from '../../components/auth/AuthButton';
@@ -10,21 +7,28 @@ import { colors, fonts, spacing, TOP_INSET } from '../../theme';
 import * as authService from '../../services/auth';
 
 interface Props {
-  email:      string;
-  onBack:     () => void;
+  email: string;
+  onBack: () => void;
   onComplete: () => void;
 }
 
 const IconMail = () => (
-  <Svg width={32} height={32} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={32}
+    height={32}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Rect x={2} y={4} width={20} height={16} rx={2} stroke={colors.accent} />
     <Path d="m22 7-10 5L2 7" stroke={colors.accent} />
   </Svg>
 );
 
 export default function EmailVerifyScreen({ email, onBack, onComplete }: Props) {
-  const [resent,        setResent]        = useState(false);
+  const [resent, setResent] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
 
   const openMailApp = () => Linking.openURL('mailto:').catch(() => null);
@@ -66,10 +70,20 @@ export default function EmailVerifyScreen({ email, onBack, onComplete }: Props) 
       <AuthButton label="J'ai déjà confirmé →" onPress={onComplete} variant="ghost" />
 
       {/* Renvoi du lien */}
-      <TouchableOpacity onPress={handleResend} activeOpacity={0.7} disabled={resent || resendLoading}>
+      <TouchableOpacity
+        onPress={handleResend}
+        activeOpacity={0.7}
+        disabled={resent || resendLoading}
+      >
         <Text style={styles.resend}>
-          {resent ? '✅ Lien renvoyé !' : resendLoading ? 'Envoi…' : (
-            <>Pas reçu ? <Text style={styles.resendLink}>Renvoyer le lien</Text></>
+          {resent ? (
+            '✅ Lien renvoyé !'
+          ) : resendLoading ? (
+            'Envoi…'
+          ) : (
+            <>
+              Pas reçu ? <Text style={styles.resendLink}>Renvoyer le lien</Text>
+            </>
           )}
         </Text>
       </TouchableOpacity>

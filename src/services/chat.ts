@@ -5,30 +5,30 @@ import useAuthStore from '../store/authStore';
 
 export interface TicketData {
   orderId: string;
-  items:   Array<{ qty: number; name: string; price: number }>;
-  total:   number;
-  status:  'pending' | 'paid';
+  items: { qty: number; name: string; price: number }[];
+  total: number;
+  status: 'pending' | 'paid';
 }
 
 export interface ChatMessage {
-  id:             string;
+  id: string;
   conversationId: string;
-  senderId:       string;
-  senderRole:     'client' | 'merchant';
-  type:           'text' | 'voice' | 'ticket' | 'image';
-  content:        string;
-  voiceUrl:       string | null;
-  ticketData:     TicketData | null;
-  createdAt:      string;
+  senderId: string;
+  senderRole: 'client' | 'merchant';
+  type: 'text' | 'voice' | 'ticket' | 'image';
+  content: string;
+  voiceUrl: string | null;
+  ticketData: TicketData | null;
+  createdAt: string;
 }
 
 export interface Conversation {
-  id:             string;
-  clientId:       string;
-  shopId:         string;
-  lastMessage:    string | null;
-  lastMessageAt:  string;
-  clientUnread:   number;
+  id: string;
+  clientId: string;
+  shopId: string;
+  lastMessage: string | null;
+  lastMessageAt: string;
+  clientUnread: number;
   merchantUnread: number;
 }
 
@@ -36,26 +36,26 @@ export interface Conversation {
 
 export function rowToMessage(row: Record<string, any>): ChatMessage {
   return {
-    id:             row.id,
+    id: row.id,
     conversationId: row.conversation_id,
-    senderId:       row.sender_id,
-    senderRole:     row.sender_role,
-    type:           row.type,
-    content:        row.content,
-    voiceUrl:       row.voice_url ?? null,
-    ticketData:     row.ticket_data ?? null,
-    createdAt:      row.created_at,
+    senderId: row.sender_id,
+    senderRole: row.sender_role,
+    type: row.type,
+    content: row.content,
+    voiceUrl: row.voice_url ?? null,
+    ticketData: row.ticket_data ?? null,
+    createdAt: row.created_at,
   };
 }
 
 function rowToConversation(row: Record<string, any>): Conversation {
   return {
-    id:             row.id,
-    clientId:       row.client_id,
-    shopId:         row.shop_id,
-    lastMessage:    row.last_message ?? null,
-    lastMessageAt:  row.last_message_at,
-    clientUnread:   row.client_unread ?? 0,
+    id: row.id,
+    clientId: row.client_id,
+    shopId: row.shop_id,
+    lastMessage: row.last_message ?? null,
+    lastMessageAt: row.last_message_at,
+    clientUnread: row.client_unread ?? 0,
     merchantUnread: row.merchant_unread ?? 0,
   };
 }
@@ -125,18 +125,20 @@ export async function getMessages(conversationId: string): Promise<ChatMessage[]
 // fetch().blob() / arrayBuffer() retournent souvent un buffer vide sur device réel.
 
 async function uploadToStorage(
-  localUri:    string,
+  localUri: string,
   storagePath: string,
-  mimeType:    string,
+  mimeType: string,
 ): Promise<string> {
   // Récupérer le token JWT de la session courante
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const token = session?.access_token ?? SUPABASE_ANON;
 
   // FormData avec le fichier local — React Native gère le streaming nativement
   const formData = new FormData();
   formData.append('file', {
-    uri:  localUri,
+    uri: localUri,
     name: storagePath.split('/').pop() ?? 'file',
     type: mimeType,
   } as any);
@@ -146,10 +148,10 @@ async function uploadToStorage(
   // automatiquement avec le bon boundary multipart
   const endpoint = `${SUPABASE_URL}/storage/v1/object/chat-media/${storagePath}`;
   const response = await fetch(endpoint, {
-    method:  'POST',
+    method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
-      apikey:        SUPABASE_ANON,
+      apikey: SUPABASE_ANON,
     },
     body: formData,
   });
@@ -172,18 +174,15 @@ export async function uploadVoiceMessage(
   const user = useAuthStore.getState().user;
   if (!user) throw new Error('Non connecté');
 
-  const ext      = localUri.split('.').pop()?.toLowerCase() ?? 'm4a';
-  const mime     = ext === 'webm' ? 'audio/webm' : 'audio/mp4';
-  const path     = `${conversationId}/voice/${Date.now()}_${user.id}.${ext}`;
+  const ext = localUri.split('.').pop()?.toLowerCase() ?? 'm4a';
+  const mime = ext === 'webm' ? 'audio/webm' : 'audio/mp4';
+  const path = `${conversationId}/voice/${Date.now()}_${user.id}.${ext}`;
 
   return uploadToStorage(localUri, path, mime);
 }
 
 // Upload une image et retourne l'URL publique
-export async function uploadChatImage(
-  localUri: string,
-  conversationId: string,
-): Promise<string> {
+export async function uploadChatImage(localUri: string, conversationId: string): Promise<string> {
   const user = useAuthStore.getState().user;
   if (!user) throw new Error('Non connecté');
 
@@ -192,19 +191,23 @@ export async function uploadChatImage(
 }
 
 export interface SendMessageParams {
-  type:        'text' | 'voice' | 'ticket' | 'image';
-  content:     string;
-  voiceUrl?:   string;
+  type: 'text' | 'voice' | 'ticket' | 'image';
+  content: string;
+  voiceUrl?: string;
   ticketData?: TicketData;
 }
 
 // Aperçu du message pour la notification push
 function pushPreview(type: SendMessageParams['type'], content: string): string {
   switch (type) {
-    case 'voice':  return '🎤 Message vocal';
-    case 'image':  return '🖼️ Photo';
-    case 'ticket': return '🧾 Ticket de commande';
-    default:       return content.length > 100 ? content.substring(0, 100) + '…' : content;
+    case 'voice':
+      return '🎤 Message vocal';
+    case 'image':
+      return '🖼️ Photo';
+    case 'ticket':
+      return '🧾 Ticket de commande';
+    default:
+      return content.length > 100 ? content.substring(0, 100) + '…' : content;
   }
 }
 
@@ -219,12 +222,12 @@ export async function sendMessage(
     .from('messages')
     .insert({
       conversation_id: conversationId,
-      sender_id:       user.id,
-      sender_role:     user.role,
-      type:            params.type,
-      content:         params.content,
-      voice_url:       params.voiceUrl ?? null,
-      ticket_data:     params.ticketData ?? null,
+      sender_id: user.id,
+      sender_role: user.role,
+      type: params.type,
+      content: params.content,
+      voice_url: params.voiceUrl ?? null,
+      ticket_data: params.ticketData ?? null,
     })
     .select()
     .single();
@@ -232,12 +235,14 @@ export async function sendMessage(
   if (error) throw new Error(error.message);
 
   // Notifier le destinataire (best-effort — ne bloque pas l'envoi)
-  supabase.functions.invoke('notify-new-message', {
-    body: {
-      conversationId,
-      preview: pushPreview(params.type, params.content),
-    },
-  }).catch(() => {});
+  supabase.functions
+    .invoke('notify-new-message', {
+      body: {
+        conversationId,
+        preview: pushPreview(params.type, params.content),
+      },
+    })
+    .catch(() => {});
 
   return rowToMessage(data);
 }
@@ -259,7 +264,7 @@ export async function updateTicketStatus(messageId: string): Promise<void> {
 
 // Réinitialise le compteur non-lus de la conversation pour le rôle actuel
 export async function markConversationRead(conversationId: string): Promise<void> {
-  const role  = useAuthStore.getState().user?.role ?? 'client';
+  const role = useAuthStore.getState().user?.role ?? 'client';
   const field = role === 'client' ? 'client_unread' : 'merchant_unread';
   await supabase
     .from('conversations')
@@ -270,9 +275,9 @@ export async function markConversationRead(conversationId: string): Promise<void
 // ─── Profil client ────────────────────────────────────────────────────────────
 
 export interface ClientProfile {
-  name:      string;
+  name: string;
   avatarUrl: string | null;
-  phone:     string | null;
+  phone: string | null;
 }
 
 // Récupère le profil complet d'un client (nom + avatar + téléphone) depuis la table profiles.
@@ -280,22 +285,25 @@ export interface ClientProfile {
 // indispensable quand un marchand lit le profil d'un client (rows appartenant à l'autre).
 export async function getClientProfile(userId: string): Promise<ClientProfile> {
   // Tentative 1 : RPC SECURITY DEFINER (contourne RLS, renvoie name + avatar_url + phone)
-  const { data: rpcData, error: rpcErr } = await supabase
-    .rpc('get_profile_by_id', { p_user_id: userId });
+  const { data: rpcData, error: rpcErr } = await supabase.rpc('get_profile_by_id', {
+    p_user_id: userId,
+  });
 
   if (!rpcErr && rpcData) {
     const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-    if (row) {
+    // Si la RPC a retourné phone (nouvelle version), on s'arrête ici.
+    // Si row.phone === undefined, la RPC est l'ancienne version (sans phone) → on continue.
+    if (row && row.phone !== undefined) {
       return {
-        name:      (row.full_name  as string | null) ?? '',
+        name: (row.full_name as string | null) ?? '',
         avatarUrl: (row.avatar_url as string | null) ?? null,
-        phone:     (row.phone      as string | null) ?? null,
+        phone: (row.phone as string | null) ?? null,
       };
     }
   }
 
-  // Tentative 2 : lecture directe (fonctionne si la politique RLS profiles_read_authenticated
-  // est active, ou si c'est l'utilisateur qui lit son propre profil)
+  // Tentative 2 : lecture directe (contourne l'ancienne RPC sans phone,
+  // ou si la RPC a échoué)
   const { data } = await supabase
     .from('profiles')
     .select('name, avatar_url, phone')
@@ -303,9 +311,9 @@ export async function getClientProfile(userId: string): Promise<ClientProfile> {
     .maybeSingle();
 
   return {
-    name:      data?.name       ?? '',
+    name: data?.name ?? '',
     avatarUrl: data?.avatar_url ?? null,
-    phone:     data?.phone      ?? null,
+    phone: data?.phone ?? null,
   };
 }
 

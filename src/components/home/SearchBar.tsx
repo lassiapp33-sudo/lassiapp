@@ -1,23 +1,26 @@
 import React, { useRef, useEffect } from 'react';
-import {
-  View, TextInput, TouchableOpacity,
-  StyleSheet, Animated, Easing,
-} from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { IcoSearch } from '../icons';
 
 interface Props {
-  value:        string;
+  value: string;
   onChangeText: (t: string) => void;
-  onMicPress?:  () => void;
-  onPress?:     () => void;   // si fourni → barre en lecture seule, appui navigue vers SearchScreen
+  onMicPress?: () => void;
+  onPress?: () => void; // si fourni → barre en lecture seule, appui navigue vers SearchScreen
 }
 
-
 const IconMic = () => (
-  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={22}
+    height={22}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" stroke={colors.bg} />
     <Path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke={colors.bg} />
     <Path d="M12 19v3" stroke={colors.bg} />
@@ -25,7 +28,7 @@ const IconMic = () => (
 );
 
 export default function SearchBar({ value, onChangeText, onMicPress, onPress }: Props) {
-  const pulseScale   = useRef(new Animated.Value(1)).current;
+  const pulseScale = useRef(new Animated.Value(1)).current;
   const pulseOpacity = useRef(new Animated.Value(0.7)).current;
 
   useEffect(() => {
@@ -33,16 +36,26 @@ export default function SearchBar({ value, onChangeText, onMicPress, onPress }: 
       Animated.sequence([
         // Phase 1 : expansion + fondu
         Animated.parallel([
-          Animated.timing(pulseScale,   { toValue: 1.4, duration: 900, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-          Animated.timing(pulseOpacity, { toValue: 0,   duration: 900, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(pulseScale, {
+            toValue: 1.4,
+            duration: 900,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseOpacity, {
+            toValue: 0,
+            duration: 900,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
         ]),
         // Phase 2 : reset instantané pour la prochaine boucle
         Animated.parallel([
-          Animated.timing(pulseScale,   { toValue: 1,   duration: 0, useNativeDriver: true }),
+          Animated.timing(pulseScale, { toValue: 1, duration: 0, useNativeDriver: true }),
           Animated.timing(pulseOpacity, { toValue: 0.7, duration: 0, useNativeDriver: true }),
         ]),
         Animated.delay(600),
-      ])
+      ]),
     );
     anim.start();
     return () => anim.stop();
@@ -51,11 +64,7 @@ export default function SearchBar({ value, onChangeText, onMicPress, onPress }: 
   return (
     <View style={styles.row}>
       {/* Champ de recherche — appuyable si onPress est fourni */}
-      <TouchableOpacity
-        style={styles.search}
-        onPress={onPress}
-        activeOpacity={onPress ? 0.75 : 1}
-      >
+      <TouchableOpacity style={styles.search} onPress={onPress} activeOpacity={onPress ? 0.75 : 1}>
         <IcoSearch />
         <TextInput
           style={styles.input}
@@ -71,10 +80,9 @@ export default function SearchBar({ value, onChangeText, onMicPress, onPress }: 
 
       {/* Bouton micro IA avec ring pulsant */}
       <View style={styles.micWrap}>
-        <Animated.View style={[
-          styles.ring,
-          { transform: [{ scale: pulseScale }], opacity: pulseOpacity },
-        ]} />
+        <Animated.View
+          style={[styles.ring, { transform: [{ scale: pulseScale }], opacity: pulseOpacity }]}
+        />
         <TouchableOpacity style={styles.mic} onPress={onMicPress} activeOpacity={0.85}>
           <IconMic />
         </TouchableOpacity>

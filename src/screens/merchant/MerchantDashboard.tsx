@@ -1,25 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 
-import DashHeader      from '../../components/merchant/DashHeader';
-import EarningsCard    from '../../components/merchant/EarningsCard';
-import QuickActions    from '../../components/merchant/QuickActions';
+import DashHeader from '../../components/merchant/DashHeader';
+import EarningsCard from '../../components/merchant/EarningsCard';
+import QuickActions from '../../components/merchant/QuickActions';
 import OrderCard, { MerchantOrder } from '../../components/merchant/OrderCard';
-import MerchantBottomNav,
-  { MerchantTab, MERCHANT_NAV_HEIGHT }
-                       from '../../components/merchant/MerchantBottomNav';
+import MerchantBottomNav, {
+  MerchantTab,
+  MERCHANT_NAV_HEIGHT,
+} from '../../components/merchant/MerchantBottomNav';
 import { colors, fonts, TOP_INSET } from '../../theme';
-import useAuthStore          from '../../store/authStore';
-import useShopStore          from '../../store/shopStore';
-import useOrdersStore        from '../../store/ordersStore';
-import useDebtsStore         from '../../store/debtsStore';
+import useAuthStore from '../../store/authStore';
+import useShopStore from '../../store/shopStore';
+import useOrdersStore from '../../store/ordersStore';
+import useDebtsStore from '../../store/debtsStore';
 import useNotificationsStore from '../../store/notificationsStore';
-import useLocationStore      from '../../store/locationStore';
+import useLocationStore from '../../store/locationStore';
 
 // ─── Sous-composant section header ────────────────────────────────────────────
 
-function SectionHeader({ title, linkLabel, onLink }: {
-  title: string; linkLabel?: string; onLink?: () => void;
+function SectionHeader({
+  title,
+  linkLabel,
+  onLink,
+}: {
+  title: string;
+  linkLabel?: string;
+  onLink?: () => void;
 }) {
   return (
     <View style={styles.sec}>
@@ -34,43 +41,53 @@ function SectionHeader({ title, linkLabel, onLink }: {
 }
 
 // Destinations possibles depuis le dashboard
-type NavDest = 'debts' | 'orders' | 'store' | 'messages' | 'visibility' | 'profile' | 'notifications' | 'assistant' | 'aroundme' | 'avis';
+type NavDest =
+  | 'debts'
+  | 'orders'
+  | 'store'
+  | 'messages'
+  | 'visibility'
+  | 'profile'
+  | 'notifications'
+  | 'assistant'
+  | 'aroundme'
+  | 'avis';
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  onNavigate?:    (dest: NavDest) => void;
-  onNotifPress?:  () => void;
+  onNavigate?: (dest: NavDest) => void;
+  onNotifPress?: () => void;
 }
 
 export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
   const [activeTab, setActiveTab] = useState<MerchantTab>('dashboard');
 
   // Auth
-  const merchantName      = useAuthStore(s => s.user?.name ?? 'Commerçant');
-  const notifCount        = useNotificationsStore(s => s.notifications.filter(n => n.unread).length);
+  const merchantName = useAuthStore(s => s.user?.name ?? 'Commerçant');
+  const notifCount = useNotificationsStore(s => s.notifications.filter(n => n.unread).length);
   const loadNotifications = useNotificationsStore(s => s.loadNotifications);
-  const zoneName          = useLocationStore(s => s.zoneName);
-  const refreshLocation   = useLocationStore(s => s.refreshLocation);
+  const zoneName = useLocationStore(s => s.zoneName);
+  const refreshLocation = useLocationStore(s => s.refreshLocation);
 
   // Shop
-  const shopId     = useShopStore(s => s.shopId);
-  const shopIsVip  = useShopStore(s => s.profile?.isVip ?? false);
+  const shopId = useShopStore(s => s.shopId);
+  const shopIsVip = useShopStore(s => s.profile?.isVip ?? false);
   const loadMyShop = useShopStore(s => s.loadMyShop);
 
   // Commandes
-  const orders     = useOrdersStore(s => s.orders);
+  const orders = useOrdersStore(s => s.orders);
   const loadOrders = useOrdersStore(s => s.loadOrders);
 
   // Dettes
-  const debtors   = useDebtsStore(s => s.debtors);
+  const debtors = useDebtsStore(s => s.debtors);
   const loadDebts = useDebtsStore(s => s.loadDebts);
 
   // Montage seul — initialisation unique au démarrage du dashboard
   useEffect(() => {
     loadMyShop();
     loadNotifications();
-    refreshLocation();   // vraie position GPS dès le montage
+    refreshLocation(); // vraie position GPS dès le montage
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -80,30 +97,30 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
   }, [shopId, loadOrders, loadDebts]);
 
   // ── Calculs réels ──────────────────────────────────────────────────────────
-  const activeOrders  = orders.filter(o => o.status === 'new' || o.status === 'preparing');
-  const doneOrders    = orders.filter(o => o.status === 'done');
+  const activeOrders = orders.filter(o => o.status === 'new' || o.status === 'preparing');
+  const doneOrders = orders.filter(o => o.status === 'done');
   const totalEarnings = doneOrders.reduce((sum, o) => sum + o.total, 0);
-  const totalDebt     = debtors.reduce((sum, d) => sum + d.amount, 0);
+  const totalDebt = debtors.reduce((sum, d) => sum + d.amount, 0);
   const debtorsWithDebt = debtors.filter(d => d.amount > 0).length;
 
   // Commandes à afficher sur le dashboard (actives, max 3)
   const dashOrders: MerchantOrder[] = activeOrders.slice(0, 3).map(o => ({
-    id:      o.id,
+    id: o.id,
     initial: o.initial,
-    name:    o.clientName,
-    items:   o.items.map(i => `${i.qty}× ${i.name}`).join(' · '),
+    name: o.clientName,
+    items: o.items.map(i => `${i.qty}× ${i.name}`).join(' · '),
     timeAgo: o.timeLabel,
-    status:  o.status as 'new' | 'preparing',
-    price:   o.total,
+    status: o.status as 'new' | 'preparing',
+    price: o.total,
   }));
 
   // Câblage du BottomNav → navigation externe
   const handleNavPress = (tab: MerchantTab) => {
     setActiveTab(tab);
-    if (tab === 'debts')     onNavigate?.('debts');
-    if (tab === 'orders')    onNavigate?.('orders');
-    if (tab === 'messages')  onNavigate?.('messages');
-    if (tab === 'profile')   onNavigate?.('profile');
+    if (tab === 'debts') onNavigate?.('debts');
+    if (tab === 'orders') onNavigate?.('orders');
+    if (tab === 'messages') onNavigate?.('messages');
+    if (tab === 'profile') onNavigate?.('profile');
     if (tab === 'assistant') onNavigate?.('assistant');
   };
 
@@ -130,19 +147,18 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
         {/* ② Recette du jour — données réelles */}
         <EarningsCard
           amount={totalEarnings}
-          changeLabel={doneOrders.length > 0
-            ? `${doneOrders.length} commande${doneOrders.length > 1 ? 's' : ''} finalisée${doneOrders.length > 1 ? 's' : ''}`
-            : 'Aucune commande finalisée'}
+          changeLabel={
+            doneOrders.length > 0
+              ? `${doneOrders.length} commande${doneOrders.length > 1 ? 's' : ''} finalisée${doneOrders.length > 1 ? 's' : ''}`
+              : 'Aucune commande finalisée'
+          }
           orders={orders.length}
           viaLassi={orders.length}
           debts={totalDebt}
         />
 
         {/* ③ 4 actions rapides — compteurs réels */}
-        <QuickActions
-          onPress={(key) => onNavigate?.(key as NavDest)}
-          debtCount={debtorsWithDebt}
-        />
+        <QuickActions onPress={key => onNavigate?.(key as NavDest)} debtCount={debtorsWithDebt} />
 
         {/* ④ Commandes en cours */}
         <SectionHeader
@@ -155,9 +171,7 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
             <Text style={styles.emptyOrdersTxt}>Aucune commande en cours</Text>
           </View>
         ) : (
-          dashOrders.map(order => (
-            <OrderCard key={order.id} order={order} />
-          ))
+          dashOrders.map(order => <OrderCard key={order.id} order={order} />)
         )}
       </ScrollView>
 
@@ -167,8 +181,8 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
 }
 
 const styles = StyleSheet.create({
-  root:    { flex: 1, backgroundColor: colors.bg },
-  scroll:  { flex: 1 },
+  root: { flex: 1, backgroundColor: colors.bg },
+  scroll: { flex: 1 },
   content: { paddingHorizontal: 20, flexGrow: 1 },
   emptyOrders: {
     paddingVertical: 20,

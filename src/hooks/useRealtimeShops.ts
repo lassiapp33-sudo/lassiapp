@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { AppState }          from 'react-native';
-import { supabase }          from '../lib/supabase';
-import * as shopsService     from '../services/shops';
-import type { Shop }         from '../services/shops';
+import { AppState } from 'react-native';
+import { supabase } from '../lib/supabase';
+import * as shopsService from '../services/shops';
+import type { Shop } from '../services/shops';
 
 /**
  * Abonnement Realtime sur la table shops.
@@ -20,7 +20,7 @@ export function useRealtimeShops(onUpdate: (shop: Shop) => void) {
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'shops' },
-          async (payload) => {
+          async payload => {
             const shopId = (payload.new as { id: string }).id;
             const shop = await shopsService.getShopById(shopId);
             if (shop) cbRef.current(shop);
@@ -32,7 +32,7 @@ export function useRealtimeShops(onUpdate: (shop: Shop) => void) {
 
     let channel = subscribe();
 
-    const sub = AppState.addEventListener('change', (state) => {
+    const sub = AppState.addEventListener('change', state => {
       if (state === 'active') {
         supabase.removeChannel(channel);
         channel = subscribe();

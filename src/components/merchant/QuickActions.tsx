@@ -6,31 +6,59 @@ import { colors, fonts, radius } from '../../theme';
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
 const IcoBook = ({ stroke }: { stroke: string }) => (
-  <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={21}
+    height={21}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" stroke={stroke} />
     <Path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" stroke={stroke} />
   </Svg>
 );
 
 const IcoMsg = ({ stroke }: { stroke: string }) => (
-  <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={21}
+    height={21}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke={stroke} />
   </Svg>
 );
 
 const IcoMapPin = ({ stroke }: { stroke: string }) => (
-  <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={21}
+    height={21}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z" stroke={stroke} />
     <Path d="M12 10m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0" stroke={stroke} />
   </Svg>
 );
 
 const IcoGrid = ({ stroke }: { stroke: string }) => (
-  <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={21}
+    height={21}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Rect x={3} y={3} width={7} height={7} rx={1} stroke={stroke} />
     <Rect x={14} y={3} width={7} height={7} rx={1} stroke={stroke} />
     <Rect x={3} y={14} width={7} height={7} rx={1} stroke={stroke} />
@@ -39,8 +67,15 @@ const IcoGrid = ({ stroke }: { stroke: string }) => (
 );
 
 const IcoStar = ({ stroke }: { stroke: string }) => (
-  <Svg width={21} height={21} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={21}
+    height={21}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path
       d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
       stroke={stroke}
@@ -51,13 +86,13 @@ const IcoStar = ({ stroke }: { stroke: string }) => (
 // ─── Carte d'action individuelle ──────────────────────────────────────────────
 
 interface ActionCardProps {
-  Icon:      React.FC<{ stroke: string }>;
-  iconBg:    string;
+  Icon: React.FC<{ stroke: string }>;
+  iconBg: string;
   iconStroke: string;
-  title:     string;
-  desc:      string;
-  badge?:    number;
-  onPress?:  () => void;
+  title: string;
+  desc: string;
+  badge?: number;
+  onPress?: () => void;
 }
 
 function ActionCard({ Icon, iconBg, iconStroke, title, desc, badge, onPress }: ActionCardProps) {
@@ -80,13 +115,18 @@ function ActionCard({ Icon, iconBg, iconStroke, title, desc, badge, onPress }: A
 // ─── Grille 2×2 ──────────────────────────────────────────────────────────────
 
 interface Props {
-  onPress?:   (key: string) => void;
+  onPress?: (key: string) => void;
   debtCount?: number;
-  msgCount?:  number;
+  msgCount?: number;
   avisCount?: number;
 }
 
-export default function QuickActions({ onPress, debtCount = 0, msgCount = 0, avisCount = 0 }: Props) {
+export default function QuickActions({
+  onPress,
+  debtCount = 0,
+  msgCount = 0,
+  avisCount = 0,
+}: Props) {
   return (
     <View style={styles.grid}>
       <View style={styles.row}>
@@ -95,7 +135,11 @@ export default function QuickActions({ onPress, debtCount = 0, msgCount = 0, avi
           iconBg="rgba(253,207,52,.13)"
           iconStroke={colors.accent}
           title="Cahier de dettes"
-          desc={debtCount > 0 ? `${debtCount} client${debtCount > 1 ? 's' : ''} en dette` : 'Aucune dette'}
+          desc={
+            debtCount > 0
+              ? `${debtCount} client${debtCount > 1 ? 's' : ''} en dette`
+              : 'Aucune dette'
+          }
           badge={debtCount}
           onPress={() => onPress?.('debts')}
         />
@@ -104,7 +148,9 @@ export default function QuickActions({ onPress, debtCount = 0, msgCount = 0, avi
           iconBg="rgba(29,200,242,.13)"
           iconStroke="#1DC8F2"
           title="Messages clients"
-          desc={msgCount > 0 ? `${msgCount} non lu${msgCount > 1 ? 's' : ''}` : 'Réponds à tes clients'}
+          desc={
+            msgCount > 0 ? `${msgCount} non lu${msgCount > 1 ? 's' : ''}` : 'Réponds à tes clients'
+          }
           badge={msgCount}
           onPress={() => onPress?.('messages')}
         />
@@ -133,7 +179,11 @@ export default function QuickActions({ onPress, debtCount = 0, msgCount = 0, avi
           iconBg="rgba(95,211,138,.13)"
           iconStroke={colors.success}
           title="Mes avis"
-          desc={avisCount > 0 ? `${avisCount} avis client${avisCount > 1 ? 's' : ''}` : 'Voir et répondre aux avis'}
+          desc={
+            avisCount > 0
+              ? `${avisCount} avis client${avisCount > 1 ? 's' : ''}`
+              : 'Voir et répondre aux avis'
+          }
           badge={undefined}
           onPress={() => onPress?.('avis')}
         />
@@ -144,7 +194,7 @@ export default function QuickActions({ onPress, debtCount = 0, msgCount = 0, avi
 
 const styles = StyleSheet.create({
   grid: { gap: 11, marginBottom: 24 },
-  row:  { flexDirection: 'row', gap: 11 },
+  row: { flexDirection: 'row', gap: 11 },
 
   card: {
     flex: 1,

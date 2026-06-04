@@ -5,21 +5,25 @@ import { colors, fonts, radius } from '../../theme';
 import Avatar from '../Avatar';
 
 export interface RecoItem {
-  id:       string;
-  initial:  string;
-  name:     string;
-  desc:     string;
+  id: string;
+  initial: string;
+  name: string;
+  desc: string;
   logoUrl?: string | null;
 }
 
 interface Props {
-  items:     RecoItem[];
-  onPress?:  (id: string) => void;
+  items: RecoItem[];
+  onPress?: (id: string) => void;
 }
 
 const IconStar = () => (
   <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" strokeWidth={2.5}>
-    <Path d="M12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9z" stroke={colors.bg} fill={colors.bg} />
+    <Path
+      d="M12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9z"
+      stroke={colors.bg}
+      fill={colors.bg}
+    />
   </Svg>
 );
 

@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import {
-  View, Text, Modal, TouchableOpacity,
-  ScrollView, StyleSheet, Platform,
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  Platform,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
@@ -31,16 +36,23 @@ const IcoBell = () => (
 );
 
 const IcoCheck = () => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={19}
+    height={19}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.4}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M20 6 9 17l-5-5" stroke={colors.bg} />
   </Svg>
 );
 
 // ─── Slots de temps ───────────────────────────────────────────────────────────
 
-const FAST_SLOTS  = ['5-10 min', '10-15 min', '15-20 min', '20-30 min', '30-45 min', '45-60 min'];
-const SLOW_SLOTS  = ['1h - 2h', '2h - 3h', "Aujourd'hui", 'Demain'];
+const FAST_SLOTS = ['5-10 min', '10-15 min', '15-20 min', '20-30 min', '30-45 min', '45-60 min'];
+const SLOW_SLOTS = ['1h - 2h', '2h - 3h', "Aujourd'hui", 'Demain'];
 const CUSTOM_SLOT = '+ Perso';
 
 const BOTTOM_PAD = Platform.OS === 'ios' ? 28 : 14;
@@ -55,9 +67,9 @@ function rows<T>(arr: T[]): T[][] {
 // ─── Grille de créneaux ───────────────────────────────────────────────────────
 
 interface GridProps {
-  slots:    string[];
+  slots: string[];
   selected: string;
-  custom?:  boolean;   // ajoute le bouton "+ Perso" en fin de grille
+  custom?: boolean; // ajoute le bouton "+ Perso" en fin de grille
   onSelect: (s: string) => void;
 }
 
@@ -67,25 +79,17 @@ function TimeGrid({ slots, selected, custom, onSelect }: GridProps) {
     <View style={sg.grid}>
       {rows(all).map((row, ri) => (
         <View key={ri} style={sg.row}>
-          {row.map((slot) => {
+          {row.map(slot => {
             const isCustom = slot === CUSTOM_SLOT;
-            const isSel    = slot === selected && !isCustom;
+            const isSel = slot === selected && !isCustom;
             return (
               <TouchableOpacity
                 key={slot}
-                style={[
-                  sg.slot,
-                  isSel    && sg.slotSel,
-                  isCustom && sg.slotCustom,
-                ]}
+                style={[sg.slot, isSel && sg.slotSel, isCustom && sg.slotCustom]}
                 onPress={() => !isCustom && onSelect(slot)}
                 activeOpacity={isCustom ? 0.5 : 0.75}
               >
-                <Text style={[
-                  sg.slotTxt,
-                  isSel    && sg.slotTxtSel,
-                  isCustom && sg.slotTxtCustom,
-                ]}>
+                <Text style={[sg.slotTxt, isSel && sg.slotTxtSel, isCustom && sg.slotTxtCustom]}>
                   {slot}
                 </Text>
               </TouchableOpacity>
@@ -103,7 +107,7 @@ function TimeGrid({ slots, selected, custom, onSelect }: GridProps) {
 
 const sg = StyleSheet.create({
   grid: { gap: 9, marginBottom: 4 },
-  row:  { flexDirection: 'row', gap: 9 },
+  row: { flexDirection: 'row', gap: 9 },
   spacer: { flex: 1 },
   slot: {
     flex: 1,
@@ -129,17 +133,17 @@ const sg = StyleSheet.create({
     fontFamily: fonts.title,
     fontSize: 13.5,
   },
-  slotTxtSel:    { color: colors.accent },
-  slotTxtCustom: { color: colors.muted  },
+  slotTxtSel: { color: colors.accent },
+  slotTxtCustom: { color: colors.muted },
 });
 
 // ─── Sheet principale ─────────────────────────────────────────────────────────
 
 interface Props {
-  visible:  boolean;
-  order:    IncomingOrder | null;
+  visible: boolean;
+  order: IncomingOrder | null;
   onAccept: (prepTime: string) => void;
-  onClose:  () => void;
+  onClose: () => void;
 }
 
 export default function PrepTimeSheet({ visible, order, onAccept, onClose }: Props) {
@@ -147,17 +151,10 @@ export default function PrepTimeSheet({ visible, order, onAccept, onClose }: Pro
 
   if (!order) return null;
 
-  const summaryItems = order.items
-    .map(i => `${i.qty}× ${i.name}`)
-    .join(', ');
+  const summaryItems = order.items.map(i => `${i.qty}× ${i.name}`).join(', ');
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       {/* Fond sombre */}
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} />
 
@@ -177,9 +174,7 @@ export default function PrepTimeSheet({ visible, order, onAccept, onClose }: Pro
                 {order.orderId} · {summaryItems}
               </Text>
             </View>
-            <Text style={styles.clientTotal}>
-              {formatPrice(order.total)}
-            </Text>
+            <Text style={styles.clientTotal}>{formatPrice(order.total)}</Text>
           </View>
 
           {/* Titre */}

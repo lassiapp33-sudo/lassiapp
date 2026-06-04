@@ -1,7 +1,7 @@
 import * as Location from 'expo-location';
 
 export interface Coords {
-  latitude:  number;
+  latitude: number;
   longitude: number;
 }
 
@@ -43,25 +43,19 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string> 
 // ─── Calculs de distance ─────────────────────────────────────────────────────
 
 /** Distance haversine en mètres entre deux points GPS */
-export function haversineMeters(
-  lat1: number, lng1: number,
-  lat2: number, lng2: number,
-): number {
-  const R    = 6371000;
+export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLng = (lng2 - lng1) * (Math.PI / 180);
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) ** 2;
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 /** Formate une distance en mètres en chaîne lisible ("250 m" ou "1.2 km") */
 export function formatDistance(meters: number): string {
-  return meters < 1000
-    ? `${Math.round(meters)} m`
-    : `${(meters / 1000).toFixed(1)} km`;
+  return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`;
 }
 
 /** Estimation du temps à pied (~12 min/km = 5 km/h) */

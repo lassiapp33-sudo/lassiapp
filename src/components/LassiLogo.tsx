@@ -4,7 +4,7 @@ import { Image, StyleProp, ImageStyle } from 'react-native';
 // Logo officiel LASSI — PNG transparent (658×211px)
 // Ne pas modifier ce fichier ni l'image source
 const SOURCE = require('../../assets/logo.png');
-const RATIO  = 658 / 211;
+const RATIO = 658 / 211;
 
 interface Props {
   width?: number;

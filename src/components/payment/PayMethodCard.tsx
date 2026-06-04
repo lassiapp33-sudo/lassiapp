@@ -5,30 +5,36 @@ import { PayMethod } from '../../types/payment';
 
 // Logos partenaires intégrés tels quels — ne pas modifier les images
 const WAVE_LOGO = require('../../../assets/wave.jpg');
-const OM_LOGO   = require('../../../assets/om.png');
+const OM_LOGO = require('../../../assets/om.png');
 
 const WAVE_COLOR = '#1DC8F2';
-const OM_COLOR   = '#FF7900';
+const OM_COLOR = '#FF7900';
 
-const CONFIG: Record<PayMethod, {
-  label: string; desc: string; color: string; logo: ReturnType<typeof require>;
-}> = {
+const CONFIG: Record<
+  PayMethod,
+  {
+    label: string;
+    desc: string;
+    color: string;
+    logo: ReturnType<typeof require>;
+  }
+> = {
   wave: {
     label: 'Wave',
-    desc:  'Paiement instantané sécurisé',
+    desc: 'Paiement instantané sécurisé',
     color: WAVE_COLOR,
-    logo:  WAVE_LOGO,
+    logo: WAVE_LOGO,
   },
   om: {
     label: 'Orange Money',
-    desc:  'Paiement instantané sécurisé',
+    desc: 'Paiement instantané sécurisé',
     color: OM_COLOR,
-    logo:  OM_LOGO,
+    logo: OM_LOGO,
   },
 };
 
 interface Props {
-  method:   PayMethod;
+  method: PayMethod;
   selected: boolean;
   onSelect: () => void;
 }

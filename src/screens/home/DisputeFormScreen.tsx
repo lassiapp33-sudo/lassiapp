@@ -4,8 +4,16 @@
  */
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput,
-  StyleSheet, KeyboardAvoidingView, Platform, Image, Alert,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
+  Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
@@ -16,27 +24,31 @@ import { getErrorMessage } from '../../utils/errorUtils';
 import { IcoBack, IcoPlus } from '../../components/icons';
 
 interface Props {
-  againstId:  string;
-  shopId?:    string;
-  type:       'order' | 'debt';
-  orderId?:   string;
-  debtId?:    string;
-  onBack:     () => void;
-  onSuccess:  () => void;
+  againstId: string;
+  shopId?: string;
+  type: 'order' | 'debt';
+  orderId?: string;
+  debtId?: string;
+  onBack: () => void;
+  onSuccess: () => void;
 }
 
 export default function DisputeFormScreen({
-  againstId, shopId, type, orderId, debtId, onBack, onSuccess,
+  againstId,
+  shopId,
+  type,
+  orderId,
+  debtId,
+  onBack,
+  onSuccess,
 }: Props) {
-  const reasons = type === 'order'
-    ? disputeService.ORDER_REASONS
-    : disputeService.DEBT_REASONS;
+  const reasons = type === 'order' ? disputeService.ORDER_REASONS : disputeService.DEBT_REASONS;
 
-  const [reason,      setReason]      = useState<DisputeReason | null>(null);
+  const [reason, setReason] = useState<DisputeReason | null>(null);
   const [description, setDescription] = useState('');
-  const [photos,      setPhotos]      = useState<string[]>([]);
-  const [loading,     setLoading]     = useState(false);
-  const [erreur,      setErreur]      = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   async function handlePickPhoto() {
     if (photos.length >= 3) return;
@@ -68,7 +80,7 @@ export default function DisputeFormScreen({
       });
       Alert.alert(
         'Signalement envoyé',
-        'Ton signalement a été transmis. Nous l\'examinerons dans les plus brefs délais.',
+        "Ton signalement a été transmis. Nous l'examinerons dans les plus brefs délais.",
         [{ text: 'OK', onPress: onSuccess }],
       );
     } catch (e: unknown) {
@@ -156,7 +168,11 @@ export default function DisputeFormScreen({
             </View>
           ))}
           {photos.length < 3 && (
-            <TouchableOpacity style={styles.photoAdd} onPress={handlePickPhoto} activeOpacity={0.75}>
+            <TouchableOpacity
+              style={styles.photoAdd}
+              onPress={handlePickPhoto}
+              activeOpacity={0.75}
+            >
               <IcoPlus />
             </TouchableOpacity>
           )}
@@ -169,7 +185,8 @@ export default function DisputeFormScreen({
         {/* Note */}
         <View style={styles.noteBox}>
           <Text style={styles.noteTxt}>
-            ⚖️ Ton signalement sera examiné par l'équipe LASSİ. La partie concernée sera notifiée et pourra donner sa version.
+            ⚖️ Ton signalement sera examiné par l'équipe LASSİ. La partie concernée sera notifiée et
+            pourra donner sa version.
           </Text>
         </View>
 

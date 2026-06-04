@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
 import {
-  Modal, View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, Alert, ActivityIndicator, Platform,
-  KeyboardAvoidingView, Image,
+  Modal,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  Platform,
+  KeyboardAvoidingView,
+  Image,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
@@ -16,16 +25,33 @@ import { IcoClose } from '../icons';
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
 const IcoPhoto = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" stroke={colors.muted} />
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path
+      d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"
+      stroke={colors.muted}
+    />
     <Path d="M12 17a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke={colors.muted} />
   </Svg>
 );
 
 const IcoTrash = () => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={14}
+    height={14}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke={colors.danger} />
   </Svg>
 );
@@ -43,34 +69,40 @@ function avisStoragePath(publicUrl: string): string | null {
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  visible:       boolean;
-  shopId:        string;
-  shopName:      string;
-  orderId?:      string;
+  visible: boolean;
+  shopId: string;
+  shopName: string;
+  orderId?: string;
   existingAvis?: Avis;
-  onClose:       () => void;
-  onSaved:       () => void;
+  onClose: () => void;
+  onSaved: () => void;
 }
 
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 export default function AvisForm({
-  visible, shopId, shopName, orderId, existingAvis, onClose, onSaved,
+  visible,
+  shopId,
+  shopName,
+  orderId,
+  existingAvis,
+  onClose,
+  onSaved,
 }: Props) {
   const user = useAuthStore(s => s.user);
 
-  const [note,         setNote]         = useState(existingAvis?.note        ?? 0);
-  const [commentaire,  setCommentaire]  = useState(existingAvis?.commentaire ?? '');
+  const [note, setNote] = useState(existingAvis?.note ?? 0);
+  const [commentaire, setCommentaire] = useState(existingAvis?.commentaire ?? '');
   // URL distante : photo déjà enregistrée côté serveur (mode édition)
-  const [photoUrl,     setPhotoUrl]     = useState<string | null>(existingAvis?.photoUrl ?? null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(existingAvis?.photoUrl ?? null);
   // URI locale : photo sélectionnée dans la galerie, pas encore uploadée
   const [photoLocalUri, setPhotoLocalUri] = useState<string | null>(null);
-  const [saving,       setSaving]       = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const isEdit        = Boolean(existingAvis);
+  const isEdit = Boolean(existingAvis);
   // URI affichée dans le preview : locale en priorité, sinon distante
-  const previewUri    = photoLocalUri ?? photoUrl;
-  const hasPhoto      = previewUri !== null;
+  const previewUri = photoLocalUri ?? photoUrl;
+  const hasPhoto = previewUri !== null;
 
   // ── Sélection photo (preview local uniquement — pas d'upload ici) ──────────
   const handlePickPhoto = async () => {
@@ -99,7 +131,7 @@ export default function AvisForm({
     setSaving(true);
 
     // ① Upload de la photo UNIQUEMENT à la soumission (jamais avant)
-    let finalPhotoUrl = photoUrl;   // null ou URL existante (mode édition)
+    let finalPhotoUrl = photoUrl; // null ou URL existante (mode édition)
     let uploadedPath: string | null = null;
 
     if (photoLocalUri) {
@@ -120,7 +152,7 @@ export default function AvisForm({
         await avisService.updateAvis(existingAvis.id, {
           note,
           commentaire: commentaire.trim() || null,
-          photoUrl:    finalPhotoUrl,
+          photoUrl: finalPhotoUrl,
         });
 
         // Supprimer l'ancienne photo si elle a changé (remplacée OU supprimée)
@@ -136,13 +168,12 @@ export default function AvisForm({
           authorName: user.name ?? 'Anonyme',
           note,
           commentaire: commentaire.trim() || undefined,
-          photoUrl:    finalPhotoUrl ?? undefined,
+          photoUrl: finalPhotoUrl ?? undefined,
         });
       }
 
       onSaved();
       onClose();
-
     } catch (e: unknown) {
       // ③ Échec RPC → supprimer la photo qu'on venait d'uploader (évite la fuite)
       if (uploadedPath) {
@@ -161,35 +192,26 @@ export default function AvisForm({
 
   const handleDelete = () => {
     if (!existingAvis) return;
-    Alert.alert(
-      'Supprimer mon avis',
-      'Cette action est irréversible.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await avisService.deleteAvis(existingAvis.id);
-              onSaved();
-              onClose();
-            } catch {
-              Alert.alert('Erreur', 'Impossible de supprimer.');
-            }
-          },
+    Alert.alert('Supprimer mon avis', 'Cette action est irréversible.', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await avisService.deleteAvis(existingAvis.id);
+            onSaved();
+            onClose();
+          } catch {
+            Alert.alert('Erreur', 'Impossible de supprimer.');
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={styles.backdrop}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -224,7 +246,9 @@ export default function AvisForm({
             </View>
 
             {/* ── Commentaire ── */}
-            <Text style={styles.label}>Commentaire <Text style={styles.optional}>(optionnel)</Text></Text>
+            <Text style={styles.label}>
+              Commentaire <Text style={styles.optional}>(optionnel)</Text>
+            </Text>
             <TextInput
               style={styles.textInput}
               value={commentaire}
@@ -238,7 +262,9 @@ export default function AvisForm({
             <Text style={styles.charCount}>{commentaire.length}/500</Text>
 
             {/* ── Photo ── */}
-            <Text style={styles.label}>Photo <Text style={styles.optional}>(optionnel)</Text></Text>
+            <Text style={styles.label}>
+              Photo <Text style={styles.optional}>(optionnel)</Text>
+            </Text>
             {hasPhoto ? (
               <View style={styles.photoPreviewRow}>
                 <Image source={{ uri: previewUri! }} style={styles.photoThumb} />
@@ -267,16 +293,21 @@ export default function AvisForm({
               disabled={saving || note === 0}
               activeOpacity={0.85}
             >
-              {saving
-                ? <ActivityIndicator size="small" color={colors.bg} />
-                : <Text style={styles.submitTxt}>
-                    {isEdit ? 'Mettre à jour' : 'Publier mon avis'}
-                  </Text>
-              }
+              {saving ? (
+                <ActivityIndicator size="small" color={colors.bg} />
+              ) : (
+                <Text style={styles.submitTxt}>
+                  {isEdit ? 'Mettre à jour' : 'Publier mon avis'}
+                </Text>
+              )}
             </TouchableOpacity>
 
             {isEdit && (
-              <TouchableOpacity style={styles.deleteLink} onPress={handleDelete} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={styles.deleteLink}
+                onPress={handleDelete}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.deleteLinkTxt}>Supprimer mon avis</Text>
               </TouchableOpacity>
             )}

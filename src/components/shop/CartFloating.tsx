@@ -4,10 +4,10 @@ import { colors, fonts, radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
 
 interface Props {
-  count:   number;
-  total:   number;
+  count: number;
+  total: number;
   onPress: () => void;
-  bottom:  number;   // positionné dynamiquement au-dessus du footer
+  bottom: number; // positionné dynamiquement au-dessus du footer
 }
 
 // Apparaît uniquement quand le panier contient au moins un article
@@ -15,11 +15,7 @@ export default function CartFloating({ count, total, onPress, bottom }: Props) {
   if (count === 0) return null;
 
   return (
-    <TouchableOpacity
-      style={[styles.bar, { bottom }]}
-      onPress={onPress}
-      activeOpacity={0.88}
-    >
+    <TouchableOpacity style={[styles.bar, { bottom }]} onPress={onPress} activeOpacity={0.88}>
       <View style={styles.badge}>
         <Text style={styles.badgeTxt}>{count}</Text>
       </View>

@@ -1,31 +1,31 @@
-import { create }                      from 'zustand';
-import { IncomingOrder, OrderStatus }  from '../types/orders';
-import * as ordersService              from '../services/orders';
-import logger                         from '../utils/logger';
+import { create } from 'zustand';
+import { IncomingOrder, OrderStatus } from '../types/orders';
+import * as ordersService from '../services/orders';
+import logger from '../utils/logger';
 
 interface OrdersState {
-  orders:   IncomingOrder[];
-  shopId:   string | null;
-  loading:  boolean;
+  orders: IncomingOrder[];
+  shopId: string | null;
+  loading: boolean;
 
-  loadOrders:    (shopId: string) => Promise<void>;
+  loadOrders: (shopId: string) => Promise<void>;
   // Action utilisateur (optimiste + DB + rollback)
-  setOrderStatus:(id: string, status: OrderStatus, prepTime?: string) => Promise<void>;
+  setOrderStatus: (id: string, status: OrderStatus, prepTime?: string) => Promise<void>;
   // Sync realtime : état déjà confirmé côté serveur, pas d'appel DB
-  syncOrderStatus:(id: string, status: OrderStatus, prepTime?: string) => void;
-  refuseOrder:   (id: string, reason?: string) => Promise<void>;
-  addOrder:      (order: IncomingOrder) => void;
-  setLoading:    (v: boolean) => void;
+  syncOrderStatus: (id: string, status: OrderStatus, prepTime?: string) => void;
+  refuseOrder: (id: string, reason?: string) => Promise<void>;
+  addOrder: (order: IncomingOrder) => void;
+  setLoading: (v: boolean) => void;
 }
 
 const useOrdersStore = create<OrdersState>()((set, get) => ({
-  orders:  [],
-  shopId:  null,
+  orders: [],
+  shopId: null,
   loading: false,
 
-  setLoading: (v) => set({ loading: v }),
+  setLoading: v => set({ loading: v }),
 
-  loadOrders: async (shopId) => {
+  loadOrders: async shopId => {
     set({ loading: true, shopId });
     try {
       const orders = await ordersService.getShopOrders(shopId);
@@ -40,9 +40,7 @@ const useOrdersStore = create<OrdersState>()((set, get) => ({
     const prev = get().orders;
     set(state => ({
       orders: state.orders.map(o =>
-        o.id === id
-          ? { ...o, status, ...(prepTime ? { prepTime } : {}) }
-          : o,
+        o.id === id ? { ...o, status, ...(prepTime ? { prepTime } : {}) } : o,
       ),
     }));
     try {
@@ -56,9 +54,7 @@ const useOrdersStore = create<OrdersState>()((set, get) => ({
   syncOrderStatus: (id, status, prepTime) => {
     set(state => ({
       orders: state.orders.map(o =>
-        o.id === id
-          ? { ...o, status, ...(prepTime ? { prepTime } : {}) }
-          : o,
+        o.id === id ? { ...o, status, ...(prepTime ? { prepTime } : {}) } : o,
       ),
     }));
   },
@@ -68,9 +64,7 @@ const useOrdersStore = create<OrdersState>()((set, get) => ({
     // Mise à jour optimiste
     set(state => ({
       orders: state.orders.map(o =>
-        o.id === id
-          ? { ...o, status: 'refused' as const, refusalReason: reason ?? null }
-          : o,
+        o.id === id ? { ...o, status: 'refused' as const, refusalReason: reason ?? null } : o,
       ),
     }));
     try {
@@ -82,7 +76,7 @@ const useOrdersStore = create<OrdersState>()((set, get) => ({
     }
   },
 
-  addOrder: (order) => set(state => ({ orders: [order, ...state.orders] })),
+  addOrder: order => set(state => ({ orders: [order, ...state.orders] })),
 }));
 
 export default useOrdersStore;

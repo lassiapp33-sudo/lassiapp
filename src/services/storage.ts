@@ -5,8 +5,8 @@
  * Crucial pour Dakar : images compressées = chargement rapide même sur réseau lent.
  */
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as ImagePicker      from 'expo-image-picker';
-import { supabase }          from '../lib/supabase';
+import * as ImagePicker from 'expo-image-picker';
+import { supabase } from '../lib/supabase';
 
 // ─── Compression ──────────────────────────────────────────────────────────────
 
@@ -17,10 +17,10 @@ import { supabase }          from '../lib/supabase';
 async function compressImage(localUri: string): Promise<string> {
   const result = await ImageManipulator.manipulateAsync(
     localUri,
-    [{ resize: { width: 1080 } }],        // max 1080px de large
+    [{ resize: { width: 1080 } }], // max 1080px de large
     {
-      compress: 0.75,                       // 75% qualité (bon compromis taille/qualité)
-      format:   ImageManipulator.SaveFormat.JPEG,
+      compress: 0.75, // 75% qualité (bon compromis taille/qualité)
+      format: ImageManipulator.SaveFormat.JPEG,
     },
   );
   return result.uri;
@@ -40,7 +40,7 @@ export async function pickImageFromGallery(): Promise<string | null> {
     mediaTypes: ['images'],
     allowsEditing: true,
     aspect: [1, 1],
-    quality: 1,                             // compression faite par compressImage()
+    quality: 1, // compression faite par compressImage()
   });
 
   if (result.canceled || !result.assets[0]) return null;
@@ -76,24 +76,30 @@ export async function pickImageFromCamera(): Promise<string | null> {
  * @param path    - chemin dans le bucket, ex : "shop123/logo.jpg"
  */
 export async function uploadImage(
-  bucket:   'logos' | 'products' | 'covers' | 'avatars' | 'gallery' | 'signalements' | 'avis' | 'disputes',
+  bucket:
+    | 'logos'
+    | 'products'
+    | 'covers'
+    | 'avatars'
+    | 'gallery'
+    | 'signalements'
+    | 'avis'
+    | 'disputes',
   localUri: string,
-  path:     string,
+  path: string,
 ): Promise<string> {
   // 1. Compression avant envoi
   const compressedUri = await compressImage(localUri);
 
   // 2. Fetch en ArrayBuffer (fiable sur React Native, contrairement à blob)
-  const response    = await fetch(compressedUri);
+  const response = await fetch(compressedUri);
   const arrayBuffer = await response.arrayBuffer();
 
   // 3. Upload vers Supabase Storage
-  const { error } = await supabase.storage
-    .from(bucket)
-    .upload(path, arrayBuffer, {
-      contentType: 'image/jpeg',
-      upsert:      true,             // écrase si le fichier existe déjà
-    });
+  const { error } = await supabase.storage.from(bucket).upload(path, arrayBuffer, {
+    contentType: 'image/jpeg',
+    upsert: true, // écrase si le fichier existe déjà
+  });
 
   if (error) throw new Error(`Upload échoué : ${error.message}`);
 
@@ -107,7 +113,7 @@ export async function uploadImage(
  */
 export async function deleteImage(
   bucket: 'logos' | 'products' | 'covers' | 'avatars' | 'gallery' | 'signalements' | 'avis',
-  path:   string,
+  path: string,
 ): Promise<void> {
   await supabase.storage.from(bucket).remove([path]);
 }

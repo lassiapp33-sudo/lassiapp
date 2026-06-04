@@ -32,16 +32,30 @@ interface Slide {
 
 // Icones SVG de chaque slide (taille 74×74, trait jaune)
 const IconLocation = () => (
-  <Svg width={74} height={74} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={74}
+    height={74}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" stroke={colors.accent} />
     <Circle cx={12} cy={10} r={3} stroke={colors.accent} />
   </Svg>
 );
 
 const IconChat = () => (
-  <Svg width={74} height={74} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={74}
+    height={74}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path
       d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"
       stroke={colors.accent}
@@ -52,10 +66,20 @@ const IconChat = () => (
 );
 
 const IconBook = () => (
-  <Svg width={74} height={74} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"   stroke={colors.accent} />
-    <Path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" stroke={colors.accent} />
+  <Svg
+    width={74}
+    height={74}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke={colors.accent} />
+    <Path
+      d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"
+      stroke={colors.accent}
+    />
     <Path
       d="M12 6.1l1 2.1 2.3.3-1.7 1.6.4 2.3-2-1.1-2 1.1.4-2.3-1.7-1.6 2.3-.3 1-2.1Z"
       fill={colors.accent}
@@ -100,7 +124,7 @@ export default function OnboardingScreen({ onFinish }: Props) {
         setCurrentIndex(idx);
       }
     },
-    []
+    [],
   );
 
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 });
@@ -137,7 +161,7 @@ export default function OnboardingScreen({ onFinish }: Props) {
       <FlatList
         ref={flatListRef}
         data={SLIDES}
-        keyExtractor={(item) => item.key}
+        keyExtractor={item => item.key}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -148,11 +172,7 @@ export default function OnboardingScreen({ onFinish }: Props) {
             {/* Carte illustration — mascotte sur le premier slide */}
             <View style={[styles.illusCard, index === 0 && styles.illusCardMascotte]}>
               {index === 0 ? (
-                <LassiMascotte
-                  forme="welcome"
-                  taille={120}
-                  actif={currentIndex === 0}
-                />
+                <LassiMascotte forme="welcome" taille={120} actif={currentIndex === 0} />
               ) : (
                 item.icon
               )}
@@ -168,24 +188,12 @@ export default function OnboardingScreen({ onFinish }: Props) {
       <View style={styles.bottom}>
         <View style={styles.dotsRow}>
           {SLIDES.map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.dot,
-                i === currentIndex && styles.dotActive,
-              ]}
-            />
+            <View key={i} style={[styles.dot, i === currentIndex && styles.dotActive]} />
           ))}
         </View>
 
-        <TouchableOpacity
-          style={styles.cta}
-          onPress={goNext}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.ctaText}>
-            {isLast ? 'Commencer' : 'Suivant'}
-          </Text>
+        <TouchableOpacity style={styles.cta} onPress={goNext} activeOpacity={0.85}>
+          <Text style={styles.ctaText}>{isLast ? 'Commencer' : 'Suivant'}</Text>
         </TouchableOpacity>
       </View>
     </View>

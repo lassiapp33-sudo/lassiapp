@@ -35,7 +35,7 @@ function ToggleSwitch({ isOn, onToggle }: { isOn: boolean; onToggle: () => void 
 // ─── Composant principal ─────────────────────────────────────────────────────
 
 interface Props {
-  profile:  StoreProfile;
+  profile: StoreProfile;
   onToggle: () => void;
 }
 
@@ -45,12 +45,7 @@ export default function ShopProfileCard({ profile, onToggle }: Props) {
       {/* Logo + infos */}
       <View style={styles.row}>
         {/* Logo boutique — Avatar unique, source de vérité shopStore.profile.logoUrl */}
-        <Avatar
-          imageUrl={profile.logoUrl}
-          name={profile.name}
-          size={60}
-          variant="shop"
-        />
+        <Avatar imageUrl={profile.logoUrl} name={profile.name} size={60} variant="shop" />
 
         {/* Nom et catégorie */}
         <View style={styles.info}>
@@ -69,7 +64,9 @@ export default function ShopProfileCard({ profile, onToggle }: Props) {
           <Text style={styles.toggleLabel}>
             {profile.isOpen ? 'Boutique ouverte' : 'Boutique fermée'}
           </Text>
-          <Text style={[styles.toggleStatus, { color: profile.isOpen ? colors.success : colors.muted }]}>
+          <Text
+            style={[styles.toggleStatus, { color: profile.isOpen ? colors.success : colors.muted }]}
+          >
             ● {profile.isOpen ? 'Visible par les clients' : 'Non visible par les clients'}
           </Text>
         </View>

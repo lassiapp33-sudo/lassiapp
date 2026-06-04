@@ -5,18 +5,18 @@ import { Avis, AvisInput, CanLeaveAvisResult } from '../types/avis';
 
 function rowToAvis(row: Record<string, any>): Avis {
   return {
-    id:                row.id,
-    orderId:           row.order_id,
-    shopId:            row.shop_id,
-    authorId:          row.author_id,
-    authorName:        row.author_name ?? '—',
-    note:              Number(row.note),
-    commentaire:       row.commentaire ?? null,
-    photoUrl:          row.photo_url ?? null,
+    id: row.id,
+    orderId: row.order_id,
+    shopId: row.shop_id,
+    authorId: row.author_id,
+    authorName: row.author_name ?? '—',
+    note: Number(row.note),
+    commentaire: row.commentaire ?? null,
+    photoUrl: row.photo_url ?? null,
     reponseCommercant: row.reponse_commercant ?? null,
-    masque:            Boolean(row.masque),
-    createdAt:         row.created_at,
-    updatedAt:         row.updated_at,
+    masque: Boolean(row.masque),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -34,42 +34,35 @@ export async function getShopAvis(shopId: string): Promise<Avis[]> {
 }
 
 export async function getAvisById(avisId: string): Promise<Avis | null> {
-  const { data, error } = await supabase
-    .from('avis')
-    .select('*')
-    .eq('id', avisId)
-    .single();
+  const { data, error } = await supabase.from('avis').select('*').eq('id', avisId).single();
   if (error) return null;
   return rowToAvis(data);
 }
 
 // ─── Vérification éligibilité (RPC serveur — source de vérité) ───────────────
 
-export async function canLeaveAvis(
-  shopId: string,
-  userId: string,
-): Promise<CanLeaveAvisResult> {
+export async function canLeaveAvis(shopId: string, userId: string): Promise<CanLeaveAvisResult> {
   const { data, error } = await supabase.rpc('can_leave_avis', { p_shop_id: shopId });
 
   if (error || !data) return { canLeave: false };
 
   if (!data.can_leave && data.reason === 'already_reviewed') {
     return {
-      canLeave:       false,
+      canLeave: false,
       existingAvisId: data.existing_id,
-      existingAvis:   {
-        id:                data.existing_id,
-        orderId:           null,
+      existingAvis: {
+        id: data.existing_id,
+        orderId: null,
         shopId,
-        authorId:          userId,
-        authorName:        data.existing_author_name ?? '',
-        note:              data.existing_note,
-        commentaire:       data.existing_commentaire ?? null,
-        photoUrl:          data.existing_photo_url   ?? null,
+        authorId: userId,
+        authorName: data.existing_author_name ?? '',
+        note: data.existing_note,
+        commentaire: data.existing_commentaire ?? null,
+        photoUrl: data.existing_photo_url ?? null,
         reponseCommercant: null,
-        masque:            data.existing_masque ?? false,
-        createdAt:         data.existing_created_at,
-        updatedAt:         data.existing_updated_at,
+        masque: data.existing_masque ?? false,
+        createdAt: data.existing_created_at,
+        updatedAt: data.existing_updated_at,
       },
     };
   }
@@ -83,13 +76,13 @@ export async function createAvis(input: AvisInput): Promise<Avis> {
   const { data, error } = await supabase
     .from('avis')
     .insert({
-      order_id:    input.orderId ?? null,
-      shop_id:     input.shopId,
-      author_id:   input.authorId,
+      order_id: input.orderId ?? null,
+      shop_id: input.shopId,
+      author_id: input.authorId,
       author_name: input.authorName,
-      note:        input.note,
+      note: input.note,
       commentaire: input.commentaire ?? null,
-      photo_url:   input.photoUrl   ?? null,
+      photo_url: input.photoUrl ?? null,
     })
     .select()
     .single();
@@ -102,9 +95,9 @@ export async function updateAvis(
   changes: { note?: number; commentaire?: string | null; photoUrl?: string | null },
 ): Promise<void> {
   const patch: Record<string, any> = {};
-  if (changes.note        !== undefined) patch.note        = changes.note;
+  if (changes.note !== undefined) patch.note = changes.note;
   if (changes.commentaire !== undefined) patch.commentaire = changes.commentaire;
-  if (changes.photoUrl    !== undefined) patch.photo_url   = changes.photoUrl;
+  if (changes.photoUrl !== undefined) patch.photo_url = changes.photoUrl;
 
   const { error } = await supabase.from('avis').update(patch).eq('id', avisId);
   if (error) throw new Error(error.message);
@@ -142,7 +135,7 @@ export async function adminGetAllAvis(opts?: {
 }): Promise<Avis[]> {
   let q = supabase.from('avis').select('*').order('created_at', { ascending: false });
   if (opts?.masque !== undefined) q = q.eq('masque', opts.masque);
-  if (opts?.limit)  q = q.limit(opts.limit);
+  if (opts?.limit) q = q.limit(opts.limit);
   if (opts?.offset) q = q.range(opts.offset, opts.offset + (opts.limit ?? 50) - 1);
   const { data, error } = await q;
   if (error) throw new Error(error.message);

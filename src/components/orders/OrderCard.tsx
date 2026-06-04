@@ -9,23 +9,39 @@ import { formatPrice } from '../../utils/format';
 
 // Couleurs spécifiques aux boutons d'action
 const WAVE_COLOR = '#1DC8F2';
-const WAVE_TEXT  = '#062a33';
+const WAVE_TEXT = '#062a33';
 const GREEN_TEXT = '#06301a';
 
 // ─── Icônes inline ────────────────────────────────────────────────────────────
 
 const IcoCheck = ({ color }: { color: string }) => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={16}
+    height={16}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.4}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M20 6 9 17l-5-5" stroke={color} />
   </Svg>
 );
 
 const IcoChat = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-      stroke={colors.accent} />
+  <Svg
+    width={16}
+    height={16}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path
+      d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+      stroke={colors.accent}
+    />
   </Svg>
 );
 
@@ -39,22 +55,22 @@ const IcoClock = () => (
 // ─── Config badge de statut ───────────────────────────────────────────────────
 
 const BADGE_CFG = {
-  new:       { label: 'NOUVELLE',  bg: 'rgba(95,211,138,.15)',  color: colors.success },
-  preparing: { label: 'CONFIRMÉE', bg: 'rgba(240,168,71,.15)',  color: colors.orange  },
-  ready:     { label: 'EN COURS',  bg: `rgba(29,200,242,.15)`,  color: WAVE_COLOR     },
-  done:      { label: 'TERMINÉE',  bg: 'rgba(95,211,138,.08)',  color: colors.muted   },
-  refused:   { label: 'ANNULÉE',   bg: 'rgba(224,122,122,.15)', color: colors.danger  },
+  new: { label: 'NOUVELLE', bg: 'rgba(95,211,138,.15)', color: colors.success },
+  preparing: { label: 'CONFIRMÉE', bg: 'rgba(240,168,71,.15)', color: colors.orange },
+  ready: { label: 'EN COURS', bg: `rgba(29,200,242,.15)`, color: WAVE_COLOR },
+  done: { label: 'TERMINÉE', bg: 'rgba(95,211,138,.08)', color: colors.muted },
+  refused: { label: 'ANNULÉE', bg: 'rgba(224,122,122,.15)', color: colors.danger },
 };
 
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 interface Props {
-  order:    IncomingOrder;
-  onAccept: () => void;   // ouvre le choix du temps de préparation
+  order: IncomingOrder;
+  onAccept: () => void; // ouvre le choix du temps de préparation
   onRefuse: () => void;
-  onChat:   () => void;
-  onReady:  () => void;   // "En prép" → "Prête"
-  onDone:   () => void;   // "Prête" → "Terminée"
+  onChat: () => void;
+  onReady: () => void; // "En prép" → "Prête"
+  onDone: () => void; // "Prête" → "Terminée"
 }
 
 function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props) {
@@ -63,16 +79,10 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
 
   return (
     <View style={[styles.card, isNew && styles.cardNew]}>
-
       {/* ── En-tête : client + n° commande + badge statut ──────────────────── */}
       <View style={styles.top}>
         {/* Avatar client — Avatar unique, source de vérité profiles.avatar_url */}
-        <Avatar
-          imageUrl={order.avatarUrl}
-          name={order.clientName}
-          size={42}
-          variant="user"
-        />
+        <Avatar imageUrl={order.avatarUrl} name={order.clientName} size={42} variant="user" />
 
         {/* Infos client */}
         <View style={styles.who}>
@@ -103,7 +113,7 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
         {order.items.map((item, i) => (
           <View key={i} style={styles.itemRow}>
             <Text style={styles.itemName}>
-              <Text style={styles.itemQty}>{item.qty}×  </Text>
+              <Text style={styles.itemQty}>{item.qty}× </Text>
               {item.name}
             </Text>
             <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
@@ -120,16 +130,18 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
             </Text>
           </View>
           <View style={styles.rightCol}>
-            <View style={[
-              styles.orderTypeTag,
-              order.orderType === 'place'
-                ? styles.orderTypePlace
-                : styles.orderTypeEmporter,
-            ]}>
-              <Text style={[
-                styles.orderTypeTxt,
-                { color: order.orderType === 'place' ? '#5FD38A' : colors.accent },
-              ]}>
+            <View
+              style={[
+                styles.orderTypeTag,
+                order.orderType === 'place' ? styles.orderTypePlace : styles.orderTypeEmporter,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.orderTypeTxt,
+                  { color: order.orderType === 'place' ? '#5FD38A' : colors.accent },
+                ]}
+              >
                 {order.orderType === 'place' ? '🍽 Sur place' : '🥡 À emporter'}
               </Text>
             </View>
@@ -157,7 +169,11 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
               <TouchableOpacity style={styles.btnChat} onPress={onChat} activeOpacity={0.8}>
                 <IcoChat />
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.btnWide, styles.btnAccept]} onPress={onAccept} activeOpacity={0.85}>
+              <TouchableOpacity
+                style={[styles.btnWide, styles.btnAccept]}
+                onPress={onAccept}
+                activeOpacity={0.85}
+              >
                 <IcoCheck color={colors.bg} />
                 <Text style={[styles.btnWideTxt, { color: colors.bg }]}>Confirmer</Text>
               </TouchableOpacity>

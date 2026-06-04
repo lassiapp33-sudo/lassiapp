@@ -6,30 +6,43 @@ import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import { useT } from '../../i18n';
 
 interface Props {
-  onSelectClient:   () => void;
+  onSelectClient: () => void;
   onSelectMerchant: () => void;
-  onLogin:          () => void;
+  onLogin: () => void;
 }
 
 // Icône panier (Client)
 const IconCart = () => (
-  <Svg width={28} height={28} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-    <Circle cx={9}  cy={21} r={1} stroke={colors.accent} />
+  <Svg
+    width={28}
+    height={28}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.7}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Circle cx={9} cy={21} r={1} stroke={colors.accent} />
     <Circle cx={20} cy={21} r={1} stroke={colors.accent} />
-    <Path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"
-      stroke={colors.accent} />
+    <Path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" stroke={colors.accent} />
   </Svg>
 );
 
 // Icône boutique (Commerçant)
 const IconStore = () => (
-  <Svg width={28} height={28} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M3 9l1-5h16l1 5"        stroke={colors.white} />
+  <Svg
+    width={28}
+    height={28}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.7}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path d="M3 9l1-5h16l1 5" stroke={colors.white} />
     <Path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9" stroke={colors.white} />
-    <Path d="M3 9h18"                stroke={colors.white} />
-    <Path d="M9 22V12h6v10"          stroke={colors.white} />
+    <Path d="M3 9h18" stroke={colors.white} />
+    <Path d="M9 22V12h6v10" stroke={colors.white} />
   </Svg>
 );
 
@@ -125,8 +138,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   icoAccent: { backgroundColor: 'rgba(253, 207, 52, 0.12)' },
-  icoDark:   { backgroundColor: 'rgba(255, 255, 255, 0.07)' },
-  cardTxt:   { flex: 1 },
+  icoDark: { backgroundColor: 'rgba(255, 255, 255, 0.07)' },
+  cardTxt: { flex: 1 },
   cardTitle: {
     color: colors.white,
     fontFamily: fonts.ui,

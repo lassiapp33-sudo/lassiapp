@@ -6,12 +6,15 @@ import { Debtor } from '../../types/debts';
 
 const IcoCoin = () => (
   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
-    <Path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"
-      stroke={colors.danger} />
+    <Path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke={colors.danger} />
   </Svg>
 );
 
-interface LegendDotProps { color: string; count: number; label: string; }
+interface LegendDotProps {
+  color: string;
+  count: number;
+  label: string;
+}
 
 function LegendDot({ color, count, label }: LegendDotProps) {
   return (
@@ -24,13 +27,15 @@ function LegendDot({ color, count, label }: LegendDotProps) {
   );
 }
 
-interface Props { debtors: Debtor[]; }
+interface Props {
+  debtors: Debtor[];
+}
 
 export default function TotalCard({ debtors }: Props) {
   const total = debtors.reduce((s, d) => s + d.amount, 0);
-  const lateCount  = debtors.filter(d => d.status === 'late').length;
+  const lateCount = debtors.filter(d => d.status === 'late').length;
   const watchCount = debtors.filter(d => d.status === 'watch').length;
-  const goodCount  = debtors.filter(d => d.status === 'good').length;
+  const goodCount = debtors.filter(d => d.status === 'good').length;
 
   return (
     <View style={styles.card}>
@@ -42,15 +47,14 @@ export default function TotalCard({ debtors }: Props) {
 
       {/* Montant — gros chiffre lisible en plein soleil */}
       <Text style={styles.amount}>
-        {total.toLocaleString('fr-FR')}{' '}
-        <Text style={styles.fcfa}>FCFA</Text>
+        {total.toLocaleString('fr-FR')} <Text style={styles.fcfa}>FCFA</Text>
       </Text>
 
       {/* Légende pastilles */}
       <View style={styles.legend}>
-        <LegendDot color={colors.success} count={goodCount}  label="bons payeurs"  />
-        <LegendDot color={colors.orange}  count={watchCount} label="à surveiller"  />
-        <LegendDot color={colors.danger}  count={lateCount}  label="en retard"     />
+        <LegendDot color={colors.success} count={goodCount} label="bons payeurs" />
+        <LegendDot color={colors.orange} count={watchCount} label="à surveiller" />
+        <LegendDot color={colors.danger} count={lateCount} label="en retard" />
       </View>
     </View>
   );

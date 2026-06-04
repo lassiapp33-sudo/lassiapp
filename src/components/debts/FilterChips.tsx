@@ -3,15 +3,15 @@ import { Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts } from '../../theme';
 import { DebtFilter } from '../../types/debts';
 
-const CHIPS: Array<{ id: DebtFilter; label: string }> = [
-  { id: 'all',   label: 'Tous'           },
-  { id: 'late',  label: '🔴 En retard'   },
+const CHIPS: { id: DebtFilter; label: string }[] = [
+  { id: 'all', label: 'Tous' },
+  { id: 'late', label: '🔴 En retard' },
   { id: 'watch', label: '🟠 À surveiller' },
-  { id: 'good',  label: '🟢 Bons payeurs' },
+  { id: 'good', label: '🟢 Bons payeurs' },
 ];
 
 interface Props {
-  active:   DebtFilter;
+  active: DebtFilter;
   onChange: (id: DebtFilter) => void;
 }
 
@@ -72,6 +72,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.title,
     fontSize: 12,
   },
-  chipTxtOn:  { color: colors.bg    },
+  chipTxtOn: { color: colors.bg },
   chipTxtOff: { color: colors.muted },
 });

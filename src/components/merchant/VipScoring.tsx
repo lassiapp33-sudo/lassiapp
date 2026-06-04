@@ -3,10 +3,10 @@ import { View, Text, StyleSheet } from 'react-native';
 import { colors, fonts } from '../../theme';
 
 interface Props {
-  rank:      string;   // ex : "N°1 Tangana de Dakar"
-  subtitle:  string;   // ex : "Tu es champion de la semaine"
-  renewIn:   string;   // ex : "3j"
-  progress:  number;   // 0 à 1 (ex : 0.78 = 78%)
+  rank: string; // ex : "N°1 Tangana de Dakar"
+  subtitle: string; // ex : "Tu es champion de la semaine"
+  renewIn: string; // ex : "3j"
+  progress: number; // 0 à 1 (ex : 0.78 = 78%)
   progressLabel: string; // ex : "78% vers le maintien"
 }
 

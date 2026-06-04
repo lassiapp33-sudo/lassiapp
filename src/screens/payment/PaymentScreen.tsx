@@ -1,35 +1,47 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, Linking, Alert, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Linking,
+  Alert,
+  TouchableOpacity,
+  ActivityIndicator,
+  Platform,
+} from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 
 import PaymentHeader from '../../components/payment/PaymentHeader';
-import OrderRecap    from '../../components/payment/OrderRecap';
+import OrderRecap from '../../components/payment/OrderRecap';
 import PayMethodCard from '../../components/payment/PayMethodCard';
-import DeepLinkNote  from '../../components/payment/DeepLinkNote';
-import PayFooter     from '../../components/payment/PayFooter';
-import ConfirmView   from '../../components/payment/ConfirmView';
+import DeepLinkNote from '../../components/payment/DeepLinkNote';
+import PayFooter from '../../components/payment/PayFooter';
+import ConfirmView from '../../components/payment/ConfirmView';
 import { colors, fonts, radius } from '../../theme';
 import { OrderInfo, PayMethod } from '../../types/payment';
 import * as payService from '../../services/payment';
-import logger          from '../../utils/logger';
+import logger from '../../utils/logger';
 import { formatPrice } from '../../utils/format';
 
 // ─── Label de section ────────────────────────────────────────────────────────
 
-const SectionLabel = ({ label }: { label: string }) => (
-  <Text style={styles.secLabel}>{label}</Text>
-);
+const SectionLabel = ({ label }: { label: string }) => <Text style={styles.secLabel}>{label}</Text>;
 
 // ─── Écran d'attente après ouverture SenePay ─────────────────────────────────
 
 function WaitingView({
-  method, total, verifying, onVerify, onBack,
+  method,
+  total,
+  verifying,
+  onVerify,
+  onBack,
 }: {
-  method:    PayMethod;
-  total:     number;
+  method: PayMethod;
+  total: number;
   verifying: boolean;
-  onVerify:  () => void;
-  onBack:    () => void;
+  onVerify: () => void;
+  onBack: () => void;
 }) {
   const methodLabel = method === 'wave' ? 'Wave' : 'Orange Money';
   return (
@@ -53,10 +65,11 @@ function WaitingView({
         activeOpacity={0.85}
         disabled={verifying}
       >
-        {verifying
-          ? <ActivityIndicator color={colors.bg} />
-          : <Text style={styles.verifyTxt}>J'ai payé — Vérifier ✓</Text>
-        }
+        {verifying ? (
+          <ActivityIndicator color={colors.bg} />
+        ) : (
+          <Text style={styles.verifyTxt}>J'ai payé — Vérifier ✓</Text>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={onBack} activeOpacity={0.7}>
@@ -71,16 +84,16 @@ function WaitingView({
 type Stage = 'checkout' | 'waiting' | 'confirm';
 
 interface Props {
-  order:     OrderInfo;
-  onBack:    () => void;
+  order: OrderInfo;
+  onBack: () => void;
   onSuccess: (ticketId: string) => void;
 }
 
 export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
-  const [stage,      setStage]      = useState<Stage>('checkout');
-  const [method,     setMethod]     = useState<PayMethod>('wave');
+  const [stage, setStage] = useState<Stage>('checkout');
+  const [method, setMethod] = useState<PayMethod>('wave');
   const [processing, setProcessing] = useState(false);
-  const [verifying,  setVerifying]  = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const referenceRef = useRef<string>('');
 
   const handlePay = async () => {
@@ -88,8 +101,8 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
     setProcessing(true);
     try {
       const session = await payService.createPayment({
-        ticketId:     order.ticketId,
-        amount:       order.total,
+        ticketId: order.ticketId,
+        amount: order.total,
         method,
         merchantName: order.shopName,
       });
@@ -110,13 +123,16 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
     try {
       const paid = await payService.verifyPayment({
         reference: referenceRef.current,
-        ticketId:  order.ticketId,
+        ticketId: order.ticketId,
         method,
       });
       if (paid) {
         setStage('confirm');
       } else {
-        Alert.alert('Paiement non trouvé', "Le paiement n'est pas encore confirmé. Attends quelques secondes et réessaie.");
+        Alert.alert(
+          'Paiement non trouvé',
+          "Le paiement n'est pas encore confirmé. Attends quelques secondes et réessaie.",
+        );
       }
     } catch (err) {
       logger.warn('[PaymentScreen] handleVerify:', err);
@@ -130,11 +146,7 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
   if (stage === 'confirm') {
     return (
       <View style={styles.root}>
-        <ConfirmView
-          order={order}
-          method={method}
-          onBackToChat={() => onSuccess(order.ticketId)}
-        />
+        <ConfirmView order={order} method={method} onBackToChat={() => onSuccess(order.ticketId)} />
       </View>
     );
   }
@@ -169,19 +181,18 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
         <OrderRecap order={order} />
 
         <SectionLabel label="Mode de paiement" />
-        <PayMethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />
-        <PayMethodCard method="om"   selected={method === 'om'}   onSelect={() => setMethod('om')} />
+        <PayMethodCard
+          method="wave"
+          selected={method === 'wave'}
+          onSelect={() => setMethod('wave')}
+        />
+        <PayMethodCard method="om" selected={method === 'om'} onSelect={() => setMethod('om')} />
 
         <DeepLinkNote method={method} />
         <View style={{ height: 14 }} />
       </ScrollView>
 
-      <PayFooter
-        method={method}
-        total={order.total}
-        loading={processing}
-        onPay={handlePay}
-      />
+      <PayFooter method={method} total={order.total} loading={processing} onPay={handlePay} />
     </View>
   );
 }
@@ -189,7 +200,7 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
 const BOTTOM_PAD = Platform.OS === 'ios' ? 34 : 16;
 
 const styles = StyleSheet.create({
-  root:  { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
   content: {
     paddingHorizontal: 20,

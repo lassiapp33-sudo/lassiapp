@@ -8,8 +8,13 @@
  */
 import React, { useState } from 'react';
 import {
-  Modal, View, Text, TouchableOpacity,
-  ActivityIndicator, StyleSheet, Platform,
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
+  Platform,
 } from 'react-native';
 import Svg, { Path, Polyline } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
@@ -19,8 +24,15 @@ import { getErrorMessage } from '../../utils/errorUtils';
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
 const IcoTrash = ({ color }: { color: string }) => (
-  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={22}
+    height={22}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Polyline points="3 6 5 6 21 6" stroke={color} />
     <Path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke={color} />
     <Path d="M10 11v6M14 11v6" stroke={color} />
@@ -29,15 +41,29 @@ const IcoTrash = ({ color }: { color: string }) => (
 );
 
 const IcoCheck = () => (
-  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none"
-    strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={13}
+    height={13}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={3}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M20 6L9 17l-5-5" stroke={colors.bg} />
   </Svg>
 );
 
 const IcoWarning = () => (
-  <Svg width={28} height={28} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={28}
+    height={28}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M10.3 3.4L2 19h20L13.7 3.4a2 2 0 0 0-3.4 0Z" stroke={colors.danger} />
     <Path d="M12 9v5M12 17h.01" stroke={colors.danger} />
   </Svg>
@@ -46,18 +72,18 @@ const IcoWarning = () => (
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  visible:     boolean;
-  role:        'client' | 'merchant';
-  onClose:     () => void;
-  onSuccess:   () => void;    // appelée après suppression → navigue vers Welcome
+  visible: boolean;
+  role: 'client' | 'merchant';
+  onClose: () => void;
+  onSuccess: () => void; // appelée après suppression → navigue vers Welcome
 }
 
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 export default function DeleteAccountModal({ visible, role, onClose, onSuccess }: Props) {
   const [confirmed, setConfirmed] = useState(false);
-  const [loading,   setLoading]   = useState(false);
-  const [erreur,    setErreur]    = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   // Réinitialiser l'état à chaque ouverture
   const handleClose = () => {
@@ -82,9 +108,10 @@ export default function DeleteAccountModal({ visible, role, onClose, onSuccess }
   };
 
   // Texte des conséquences selon le rôle
-  const consequences = role === 'merchant'
-    ? 'Tes données seront supprimées : commandes, cahier de dettes, conversations. Ta vitrine et tes produits seront retirés et ne seront plus visibles des clients.'
-    : 'Tes données seront supprimées : commandes, favoris, conversations et historique de paiements.';
+  const consequences =
+    role === 'merchant'
+      ? 'Tes données seront supprimées : commandes, cahier de dettes, conversations. Ta vitrine et tes produits seront retirés et ne seront plus visibles des clients.'
+      : 'Tes données seront supprimées : commandes, favoris, conversations et historique de paiements.';
 
   return (
     <Modal
@@ -96,7 +123,6 @@ export default function DeleteAccountModal({ visible, role, onClose, onSuccess }
     >
       <View style={styles.overlay}>
         <View style={styles.sheet}>
-
           {/* ── Icône danger ─────────────────────────────────────────────── */}
           <View style={styles.iconBox}>
             <IcoWarning />
@@ -107,7 +133,7 @@ export default function DeleteAccountModal({ visible, role, onClose, onSuccess }
 
           {/* ── Conséquences ─────────────────────────────────────────────── */}
           <View style={styles.warnBox}>
-            <Text style={styles.warnLabel}>⚠️  Cette action est définitive</Text>
+            <Text style={styles.warnLabel}>⚠️ Cette action est définitive</Text>
             <Text style={styles.warnBody}>{consequences}</Text>
           </View>
 
@@ -120,15 +146,11 @@ export default function DeleteAccountModal({ visible, role, onClose, onSuccess }
             <View style={[styles.checkbox, confirmed && styles.checkboxOn]}>
               {confirmed && <IcoCheck />}
             </View>
-            <Text style={styles.checkLabel}>
-              Je comprends que cette suppression est définitive
-            </Text>
+            <Text style={styles.checkLabel}>Je comprends que cette suppression est définitive</Text>
           </TouchableOpacity>
 
           {/* ── Erreur ───────────────────────────────────────────────────── */}
-          {erreur ? (
-            <Text style={styles.erreur}>{erreur}</Text>
-          ) : null}
+          {erreur ? <Text style={styles.erreur}>{erreur}</Text> : null}
 
           {/* ── Boutons ──────────────────────────────────────────────────── */}
           <TouchableOpacity
@@ -158,7 +180,6 @@ export default function DeleteAccountModal({ visible, role, onClose, onSuccess }
           >
             <Text style={styles.cancelBtnTxt}>Annuler</Text>
           </TouchableOpacity>
-
         </View>
       </View>
     </Modal>
@@ -177,7 +198,7 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius:  24,
+    borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderWidth: 1,
     borderBottomWidth: 0,
@@ -245,7 +266,7 @@ const styles = StyleSheet.create({
   },
   checkboxOn: {
     backgroundColor: colors.danger,
-    borderColor:     colors.danger,
+    borderColor: colors.danger,
   },
   checkLabel: {
     flex: 1,

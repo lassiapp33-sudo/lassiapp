@@ -7,14 +7,14 @@ import { formatPrice } from '../../utils/format';
 export type OrderStatus = 'new' | 'preparing';
 
 export interface MerchantOrder {
-  id:         string;
-  initial:    string;
-  name:       string;
+  id: string;
+  initial: string;
+  name: string;
   avatarUrl?: string | null;
-  items:      string;   // ex : "2× Pain-œuf · 1× Café"
-  timeAgo:    string;   // ex : "il y a 2 min" ou "en préparation"
-  status:     OrderStatus;
-  price:      number;
+  items: string; // ex : "2× Pain-œuf · 1× Café"
+  timeAgo: string; // ex : "il y a 2 min" ou "en préparation"
+  status: OrderStatus;
+  price: number;
 }
 
 // ─── Badge statut ─────────────────────────────────────────────────────────────
@@ -22,12 +22,12 @@ export interface MerchantOrder {
 const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; color: string }> = {
   new: {
     label: 'NOUVELLE',
-    bg:    'rgba(95,211,138,.15)',
+    bg: 'rgba(95,211,138,.15)',
     color: colors.success,
   },
   preparing: {
     label: 'EN COURS',
-    bg:    'rgba(240,168,71,.15)',
+    bg: 'rgba(240,168,71,.15)',
     color: colors.orange,
   },
 };
@@ -35,7 +35,7 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; color: str
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 interface Props {
-  order:    MerchantOrder;
+  order: MerchantOrder;
   onPress?: () => void;
 }
 
@@ -45,12 +45,7 @@ export default function OrderCard({ order, onPress }: Props) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       {/* Avatar client — Avatar unique, source de vérité profiles.avatar_url */}
-      <Avatar
-        imageUrl={order.avatarUrl}
-        name={order.name}
-        size={44}
-        variant="user"
-      />
+      <Avatar imageUrl={order.avatarUrl} name={order.name} size={44} variant="user" />
 
       {/* Infos commande */}
       <View style={styles.info}>
@@ -85,7 +80,6 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 10,
   },
-
 
   info: {
     flex: 1,

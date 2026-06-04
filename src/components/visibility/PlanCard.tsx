@@ -4,19 +4,19 @@ import { colors, fonts } from '../../theme';
 import { formatPrice } from '../../utils/format';
 
 export interface Plan {
-  id:        string;
-  label:     string;          // "3 mois"
-  desc?:     string;          // "Économise 6 000 F" — optionnel
-  price:     number;
-  perLabel:  string;          // "8 000 F/mois"
+  id: string;
+  label: string; // "3 mois"
+  desc?: string; // "Économise 6 000 F" — optionnel
+  price: number;
+  perLabel: string; // "8 000 F/mois"
   oldPrice?: number | null;
-  popular?:  boolean;
+  popular?: boolean;
 }
 
 interface Props {
-  plan:       Plan;
-  selected:   boolean;
-  onSelect:   () => void;
+  plan: Plan;
+  selected: boolean;
+  onSelect: () => void;
 }
 
 export default function PlanCard({ plan, selected, onSelect }: Props) {
@@ -50,13 +50,9 @@ export default function PlanCard({ plan, selected, onSelect }: Props) {
         {/* Prix */}
         <View style={styles.priceBlock}>
           {plan.oldPrice != null && (
-            <Text style={styles.oldPrice}>
-              {formatPrice(plan.oldPrice)}
-            </Text>
+            <Text style={styles.oldPrice}>{formatPrice(plan.oldPrice)}</Text>
           )}
-          <Text style={styles.price}>
-            {formatPrice(plan.price)}
-          </Text>
+          <Text style={styles.price}>{formatPrice(plan.price)}</Text>
           <Text style={styles.perLabel}>{plan.perLabel}</Text>
         </View>
       </View>

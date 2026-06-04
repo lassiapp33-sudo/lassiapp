@@ -4,15 +4,19 @@ import { colors, fonts } from '../theme';
 
 const SIZE = 240;
 
-interface Props { onFinish: () => void; }
+interface Props {
+  onFinish: () => void;
+}
 
 export default function SplashScreen({ onFinish }: Props) {
-  const rotation   = useRef(new Animated.Value(0)).current;
+  const rotation = useRef(new Animated.Value(0)).current;
   const tagOpacity = useRef(new Animated.Value(0)).current;
-  const tagY       = useRef(new Animated.Value(14)).current;
+  const tagY = useRef(new Animated.Value(14)).current;
   // Ref pour onFinish : évite de redémarrer l'animation si le parent recrée la fonction
   const onFinishRef = useRef(onFinish);
-  useEffect(() => { onFinishRef.current = onFinish; });
+  useEffect(() => {
+    onFinishRef.current = onFinish;
+  });
 
   // Montage seul — animations lancées une fois, timer unique
   useEffect(() => {
@@ -23,18 +27,22 @@ export default function SplashScreen({ onFinish }: Props) {
         duration: 3000,
         easing: Easing.linear,
         useNativeDriver: true,
-      })
+      }),
     ).start();
 
     // Tagline : fondu + légère montée décalée
     Animated.parallel([
       Animated.timing(tagOpacity, {
-        toValue: 1, duration: 700, delay: 500,
+        toValue: 1,
+        duration: 700,
+        delay: 500,
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
       Animated.timing(tagY, {
-        toValue: 0, duration: 700, delay: 500,
+        toValue: 0,
+        duration: 700,
+        delay: 500,
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
@@ -45,19 +53,15 @@ export default function SplashScreen({ onFinish }: Props) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rotate = rotation.interpolate({
-    inputRange:  [0, 1],
+    inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
 
   return (
     <View style={styles.container}>
-
       <View style={styles.radarBox}>
         {/* Décor fixe : cercle pointillé + "L" + point jaune — ne bouge jamais */}
-        <Image
-          source={require('../../assets/icon/lassi-radar-base.png')}
-          style={styles.layer}
-        />
+        <Image source={require('../../assets/icon/lassi-radar-base.png')} style={styles.layer} />
         {/* Aiguille seule par-dessus — tourne en boucle autour du centre */}
         <Animated.Image
           source={require('../../assets/icon/lassi-radar-aiguille.png')}
@@ -66,14 +70,10 @@ export default function SplashScreen({ onFinish }: Props) {
       </View>
 
       <Animated.Text
-        style={[
-          styles.tagline,
-          { opacity: tagOpacity, transform: [{ translateY: tagY }] },
-        ]}
+        style={[styles.tagline, { opacity: tagOpacity, transform: [{ translateY: tagY }] }]}
       >
         L'économie de ton quartier, dans ta poche
       </Animated.Text>
-
     </View>
   );
 }
@@ -81,7 +81,7 @@ export default function SplashScreen({ onFinish }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,   // #14152A — fond unique, plein écran
+    backgroundColor: colors.bg, // #14152A — fond unique, plein écran
     alignItems: 'center',
     justifyContent: 'center',
     gap: 36,

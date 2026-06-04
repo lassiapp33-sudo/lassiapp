@@ -3,17 +3,17 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-nati
 import { colors, fonts } from '../../theme';
 import { MerchantTab } from '../../types/orders';
 
-const TABS: Array<{ id: MerchantTab; label: string }> = [
-  { id: 'all',      label: 'Toutes'    },
-  { id: 'new',      label: 'Nouvelles' },
-  { id: 'preparing',label: 'En cours'  },
-  { id: 'done',     label: 'Terminées' },
-  { id: 'refused',  label: 'Annulées'  },
+const TABS: { id: MerchantTab; label: string }[] = [
+  { id: 'all', label: 'Toutes' },
+  { id: 'new', label: 'Nouvelles' },
+  { id: 'preparing', label: 'En cours' },
+  { id: 'done', label: 'Terminées' },
+  { id: 'refused', label: 'Annulées' },
 ];
 
 interface Props {
-  active:   MerchantTab;
-  counts:   Record<MerchantTab, number>;
+  active: MerchantTab;
+  counts: Record<MerchantTab, number>;
   onChange: (s: MerchantTab) => void;
 }
 
@@ -26,11 +26,11 @@ export default function StatusTabs({ active, counts, onChange }: Props) {
       style={styles.strip}
     >
       {TABS.map(tab => {
-        const on        = tab.id === active;
-        const count     = counts[tab.id];
+        const on = tab.id === active;
+        const count = counts[tab.id];
         const showBadge = count > 0;
         // Badge rouge uniquement sur "Nouvelles" pour l'urgence
-        const isUrgent  = tab.id === 'new';
+        const isUrgent = tab.id === 'new';
 
         return (
           <TouchableOpacity
@@ -43,16 +43,18 @@ export default function StatusTabs({ active, counts, onChange }: Props) {
               {tab.label}
             </Text>
             {showBadge && (
-              <View style={[
-                styles.badge,
-                on       ? styles.badgeOn    :
-                isUrgent ? styles.badgeUrgent :
-                           styles.badgeOff,
-              ]}>
-                <Text style={[
-                  styles.badgeTxt,
-                  on || isUrgent ? styles.badgeTxtLight : styles.badgeTxtDark,
-                ]}>
+              <View
+                style={[
+                  styles.badge,
+                  on ? styles.badgeOn : isUrgent ? styles.badgeUrgent : styles.badgeOff,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.badgeTxt,
+                    on || isUrgent ? styles.badgeTxtLight : styles.badgeTxtDark,
+                  ]}
+                >
                   {count}
                 </Text>
               </View>
@@ -81,10 +83,10 @@ const styles = StyleSheet.create({
     gap: 7,
     flexShrink: 0,
   },
-  tabOn:  { backgroundColor: colors.accent },
+  tabOn: { backgroundColor: colors.accent },
   tabOff: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  tabTxt:    { fontFamily: fonts.title, fontSize: 13 },
-  tabTxtOn:  { color: colors.bg    },
+  tabTxt: { fontFamily: fonts.title, fontSize: 13 },
+  tabTxtOn: { color: colors.bg },
   tabTxtOff: { color: colors.muted },
 
   badge: {
@@ -95,10 +97,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 5,
   },
-  badgeOn:     { backgroundColor: 'rgba(20,21,42,.2)' },
-  badgeUrgent: { backgroundColor: colors.danger       },
-  badgeOff:    { backgroundColor: colors.border       },
-  badgeTxt:    { fontFamily: fonts.titleXL, fontSize: 10 },
+  badgeOn: { backgroundColor: 'rgba(20,21,42,.2)' },
+  badgeUrgent: { backgroundColor: colors.danger },
+  badgeOff: { backgroundColor: colors.border },
+  badgeTxt: { fontFamily: fonts.titleXL, fontSize: 10 },
   badgeTxtLight: { color: colors.white },
-  badgeTxtDark:  { color: colors.muted },
+  badgeTxtDark: { color: colors.muted },
 });

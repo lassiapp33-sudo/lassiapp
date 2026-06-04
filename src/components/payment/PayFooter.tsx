@@ -1,13 +1,27 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
+  Platform,
+} from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { PayMethod } from '../../types/payment';
 import { formatPrice } from '../../utils/format';
 
 const IcoCard = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={20}
+    height={20}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Rect x={2} y={5} width={20} height={14} rx={2} stroke={colors.bg} />
     <Path d="M2 10h20" stroke={colors.bg} />
   </Svg>
@@ -24,14 +38,14 @@ const BOTTOM_PAD = Platform.OS === 'ios' ? 20 : 8;
 
 const METHOD_LABEL: Record<PayMethod, string> = {
   wave: 'Wave',
-  om:   'Orange Money',
+  om: 'Orange Money',
 };
 
 interface Props {
-  method:  PayMethod;
-  total:   number;
+  method: PayMethod;
+  total: number;
   loading: boolean;
-  onPay:   () => void;
+  onPay: () => void;
 }
 
 export default function PayFooter({ method, total, loading, onPay }: Props) {

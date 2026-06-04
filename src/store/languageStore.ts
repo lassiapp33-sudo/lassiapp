@@ -11,9 +11,9 @@ interface LanguageState {
 
 const useLanguageStore = create<LanguageState>()(
   persist(
-    (set) => ({
+    set => ({
       lang: 'fr',
-      setLang: (l) => set({ lang: l }),
+      setLang: l => set({ lang: l }),
     }),
     {
       name: 'lassi_lang',

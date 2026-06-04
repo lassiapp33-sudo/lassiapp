@@ -3,15 +3,15 @@ import { ScrollView, TouchableOpacity, Text, Image, View, StyleSheet } from 'rea
 import { colors, fonts, radius } from '../../theme';
 
 export interface SubCat {
-  id:        string;
-  label:     string;
-  imageUri?: number;                              // require('../../../assets/xxx.png')
-  SvgIcon?:  React.FC<{ color: string }>;        // composant SVG inline
+  id: string;
+  label: string;
+  imageUri?: number; // require('../../../assets/xxx.png')
+  SvgIcon?: React.FC<{ color: string }>; // composant SVG inline
 }
 
 interface Props {
-  tabs:     SubCat[];
-  active:   string;
+  tabs: SubCat[];
+  active: string;
   onChange: (id: string) => void;
 }
 
@@ -34,20 +34,17 @@ export default function SubCatTabs({ tabs, active, onChange }: Props) {
           >
             {tab.imageUri || tab.SvgIcon ? (
               <View style={styles.row}>
-                {tab.imageUri
-                  ? <Image source={tab.imageUri} style={styles.ico} resizeMode="contain" />
-                  : tab.SvgIcon
-                    ? <tab.SvgIcon color={on ? colors.bg : colors.muted} />
-                    : null
-                }
+                {tab.imageUri ? (
+                  <Image source={tab.imageUri} style={styles.ico} resizeMode="contain" />
+                ) : tab.SvgIcon ? (
+                  <tab.SvgIcon color={on ? colors.bg : colors.muted} />
+                ) : null}
                 <Text style={[styles.label, on ? styles.labelOn : styles.labelOff]}>
                   {tab.label}
                 </Text>
               </View>
             ) : (
-              <Text style={[styles.label, on ? styles.labelOn : styles.labelOff]}>
-                {tab.label}
-              </Text>
+              <Text style={[styles.label, on ? styles.labelOn : styles.labelOff]}>{tab.label}</Text>
             )}
           </TouchableOpacity>
         );
@@ -71,7 +68,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tabOn:  { backgroundColor: colors.accent },
+  tabOn: { backgroundColor: colors.accent },
   tabOff: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -91,6 +88,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.ui,
     fontSize: 13,
   },
-  labelOn:  { color: colors.bg },
+  labelOn: { color: colors.bg },
   labelOff: { color: colors.muted },
 });

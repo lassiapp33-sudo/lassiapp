@@ -1,30 +1,42 @@
 import React, { useState } from 'react';
 import {
-  View, Text, Modal, TouchableOpacity,
-  ScrollView, StyleSheet, Platform,
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 
 export interface ClientOption {
-  id:         string;
-  name:       string;
-  initial:    string;
-  isExisting: boolean;  // true = débiteur existant, false = client de messagerie
+  id: string;
+  name: string;
+  initial: string;
+  isExisting: boolean; // true = débiteur existant, false = client de messagerie
 }
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
 const IcoCheck = () => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={19}
+    height={19}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.4}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M20 6 9 17l-5-5" stroke={colors.bg} />
   </Svg>
 );
 
 // ─── Pavé numérique ───────────────────────────────────────────────────────────
 
-const KEYS = ['1','2','3','4','5','6','7','8','9','·000','0','⌫'] as const;
+const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '·000', '0', '⌫'] as const;
 const BOTTOM_PAD = Platform.OS === 'ios' ? 24 : 12;
 
 function formatDisplay(str: string): string {
@@ -35,22 +47,22 @@ function formatDisplay(str: string): string {
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 interface Props {
-  visible:   boolean;
-  clients:   ClientOption[];
-  onSave:    (option: ClientOption, amount: number) => void;
-  onClose:   () => void;
+  visible: boolean;
+  clients: ClientOption[];
+  onSave: (option: ClientOption, amount: number) => void;
+  onClose: () => void;
 }
 
 export default function AddDebtSheet({ visible, clients, onSave, onClose }: Props) {
-  const [selectedId,    setSelectedId]    = useState(clients[0]?.id ?? '');
-  const [amountStr,     setAmountStr]     = useState('0');
-  const [showPicker,    setShowPicker]    = useState(false);
+  const [selectedId, setSelectedId] = useState(clients[0]?.id ?? '');
+  const [amountStr, setAmountStr] = useState('0');
+  const [showPicker, setShowPicker] = useState(false);
 
   const selected = clients.find(c => c.id === selectedId) ?? clients[0];
-  const amount   = parseInt(amountStr, 10) || 0;
+  const amount = parseInt(amountStr, 10) || 0;
 
   // ── Pavé numérique ──────────────────────────────────────────────────────────
-  const handleKey = (key: typeof KEYS[number]) => {
+  const handleKey = (key: (typeof KEYS)[number]) => {
     if (key === '⌫') {
       setAmountStr(s => (s.length > 1 ? s.slice(0, -1) : '0'));
     } else if (key === '·000') {
@@ -68,18 +80,9 @@ export default function AddDebtSheet({ visible, clients, onSave, onClose }: Prop
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       {/* Fond semi-transparent */}
-      <TouchableOpacity
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={onClose}
-      />
+      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} />
 
       {/* Sheet */}
       <View style={[styles.sheet, { paddingBottom: BOTTOM_PAD }]}>
@@ -89,9 +92,7 @@ export default function AddDebtSheet({ visible, clients, onSave, onClose }: Prop
         {!showPicker ? (
           <>
             <Text style={styles.sheetTitle}>Nouvelle dette</Text>
-            <Text style={styles.sheetSub}>
-              Sélectionne le client et le montant. C'est tout.
-            </Text>
+            <Text style={styles.sheetSub}>Sélectionne le client et le montant. C'est tout.</Text>
 
             {/* Picker client */}
             <Text style={styles.label}>CLIENT</Text>
@@ -111,8 +112,7 @@ export default function AddDebtSheet({ visible, clients, onSave, onClose }: Prop
             <Text style={styles.label}>MONTANT DÛ</Text>
             <View style={styles.amountBox}>
               <Text style={styles.amountVal}>
-                {formatDisplay(amountStr)}{' '}
-                <Text style={styles.amountF}>F</Text>
+                {formatDisplay(amountStr)} <Text style={styles.amountF}>F</Text>
               </Text>
             </View>
 
@@ -143,7 +143,7 @@ export default function AddDebtSheet({ visible, clients, onSave, onClose }: Prop
             <ScrollView style={styles.clientList} showsVerticalScrollIndicator={false}>
               {(() => {
                 const existing = clients.filter(c => c.isExisting);
-                const fresh    = clients.filter(c => !c.isExisting);
+                const fresh = clients.filter(c => !c.isExisting);
                 return (
                   <>
                     {existing.length > 0 && (
@@ -153,7 +153,10 @@ export default function AddDebtSheet({ visible, clients, onSave, onClose }: Prop
                       <TouchableOpacity
                         key={c.id}
                         style={[styles.clientRow, c.id === selectedId && styles.clientRowSel]}
-                        onPress={() => { setSelectedId(c.id); setShowPicker(false); }}
+                        onPress={() => {
+                          setSelectedId(c.id);
+                          setShowPicker(false);
+                        }}
                         activeOpacity={0.8}
                       >
                         <View style={styles.clientAvatar}>
@@ -172,7 +175,10 @@ export default function AddDebtSheet({ visible, clients, onSave, onClose }: Prop
                       <TouchableOpacity
                         key={c.id}
                         style={[styles.clientRow, c.id === selectedId && styles.clientRowSel]}
-                        onPress={() => { setSelectedId(c.id); setShowPicker(false); }}
+                        onPress={() => {
+                          setSelectedId(c.id);
+                          setShowPicker(false);
+                        }}
                         activeOpacity={0.8}
                       >
                         <View style={styles.clientAvatar}>
@@ -186,7 +192,11 @@ export default function AddDebtSheet({ visible, clients, onSave, onClose }: Prop
                 );
               })()}
             </ScrollView>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowPicker(false)} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={() => setShowPicker(false)}
+              activeOpacity={0.8}
+            >
               <Text style={styles.cancelTxt}>Annuler</Text>
             </TouchableOpacity>
           </>
@@ -309,7 +319,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   key: {
-    width: '30%',         // 3 colonnes avec gaps
+    width: '30%', // 3 colonnes avec gaps
     height: 44,
     borderRadius: 12,
     backgroundColor: colors.surface,

@@ -1,7 +1,12 @@
 import React, { useState, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import BackButton from '../../components/auth/BackButton';
@@ -13,11 +18,11 @@ import { useT } from '../../i18n';
 import { getErrorMessage } from '../../utils/errorUtils';
 
 interface Props {
-  onBack:           () => void;
+  onBack: () => void;
   // Async : peut rejeter avec une Error (message d'erreur en français)
-  onSuccess:        (phone: string, password: string) => Promise<void>;
+  onSuccess: (phone: string, password: string) => Promise<void>;
   onForgotPassword: () => void;
-  onRegister:       () => void;
+  onRegister: () => void;
 }
 
 const IconLock = () => (
@@ -28,14 +33,24 @@ const IconLock = () => (
 );
 
 const IconEye = ({ off }: { off?: boolean }) => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.7} strokeLinecap="round">
+  <Svg
+    width={19}
+    height={19}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.7}
+    strokeLinecap="round"
+  >
     {off ? (
       <>
-        <Path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
-          stroke={colors.muted} />
-        <Path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
-          stroke={colors.muted} />
+        <Path
+          d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
+          stroke={colors.muted}
+        />
+        <Path
+          d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
+          stroke={colors.muted}
+        />
         <Path d="M1 1l22 22" stroke={colors.muted} />
       </>
     ) : (
@@ -50,11 +65,11 @@ const IconEye = ({ off }: { off?: boolean }) => (
 export default function LoginScreen({ onBack, onSuccess, onForgotPassword, onRegister }: Props) {
   const t = useT();
 
-  const [tel,     setTel]     = useState('');
-  const [mdp,     setMdp]     = useState('');
+  const [tel, setTel] = useState('');
+  const [mdp, setMdp] = useState('');
   const [showMdp, setShowMdp] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [erreur,  setErreur]  = useState<string | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
 
@@ -100,7 +115,7 @@ export default function LoginScreen({ onBack, onSuccess, onForgotPassword, onReg
           label={t.auth.phoneLabel}
           placeholder={t.auth.phonePlaceholder}
           value={tel}
-          onChangeText={(v) => setTel(formatPhoneSenegal(v))}
+          onChangeText={v => setTel(formatPhoneSenegal(v))}
           phonePrefix
           keyboardType="phone-pad"
           autoComplete="tel"
@@ -130,11 +145,7 @@ export default function LoginScreen({ onBack, onSuccess, onForgotPassword, onReg
 
         {erreur ? <Text style={styles.erreur}>{erreur}</Text> : null}
 
-        <AuthButton
-          label={t.auth.loginBtn}
-          onPress={handleSubmit}
-          loading={loading}
-        />
+        <AuthButton label={t.auth.loginBtn} onPress={handleSubmit} loading={loading} />
 
         <View style={styles.swapRow}>
           <Text style={styles.swapTxt}>{t.auth.noAccount}</Text>

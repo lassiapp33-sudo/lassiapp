@@ -1,8 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet,
-  Animated, Easing,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, TOP_INSET } from '../../theme';
 import { LassiMascotte, MASCOTTE_NOM } from '../../components/LassiMascotte';
@@ -11,8 +8,15 @@ import { IcoClose } from '../../components/icons';
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
 const IcoMic = () => (
-  <Svg width={36} height={36} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={36}
+    height={36}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" stroke={colors.bg} />
     <Path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke={colors.bg} />
     <Path d="M12 19v3" stroke={colors.bg} />
@@ -22,9 +26,21 @@ const IcoMic = () => (
 // ─── Exemples de phrases ──────────────────────────────────────────────────────
 
 const EXAMPLES = [
-  { highlight: 'coiffeur', rest: ' pour des tresses près de la ', highlight2: 'Patte d\'Oie', prefix: '« Trouve-moi un ', suffix: ' »' },
+  {
+    highlight: 'coiffeur',
+    rest: ' pour des tresses près de la ',
+    highlight2: "Patte d'Oie",
+    prefix: '« Trouve-moi un ',
+    suffix: ' »',
+  },
   { full: '« Boobu Tangana la gënë dëgër ci Grand Dakar ? »', wolof: true },
-  { highlight: 'ciment', rest: ' disponible à ', highlight2: 'Rufisque', prefix: '« Qui a du ', suffix: ' ? »' },
+  {
+    highlight: 'ciment',
+    rest: ' disponible à ',
+    highlight2: 'Rufisque',
+    prefix: '« Qui a du ',
+    suffix: ' ? »',
+  },
 ];
 
 // ─── Composant ────────────────────────────────────────────────────────────────
@@ -56,20 +72,25 @@ export default function VoiceAssistantScreen({ onClose }: Props) {
             duration: 0,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
 
     const a1 = makePulse(ring1, 0);
     const a2 = makePulse(ring2, 600);
     a1.start();
     a2.start();
-    return () => { a1.stop(); a2.stop(); };
+    return () => {
+      a1.stop();
+      a2.stop();
+    };
   }, []);
 
   const makeRingStyle = (anim: Animated.Value) => ({
-    transform: [{
-      scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.38] }),
-    }],
+    transform: [
+      {
+        scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.38] }),
+      },
+    ],
     opacity: anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 0.65, 0] }),
   });
 
@@ -85,15 +106,11 @@ export default function VoiceAssistantScreen({ onClose }: Props) {
       </TouchableOpacity>
 
       {/* Label en-tête */}
-      <Text style={[styles.label, { marginTop: TOP_INSET + 10 }]}>
-        ✨ Assistant LASSİ
-      </Text>
+      <Text style={[styles.label, { marginTop: TOP_INSET + 10 }]}>✨ Assistant LASSİ</Text>
 
       {/* Mascotte + message d'accueil */}
       <LassiMascotte forme="welcome" taille={90} style={{ marginTop: 18 }} />
-      <Text style={styles.greeting}>
-        {`Salut ! Je suis ${MASCOTTE_NOM} 🐝`}
-      </Text>
+      <Text style={styles.greeting}>{`Salut ! Je suis ${MASCOTTE_NOM} 🐝`}</Text>
 
       {/* Espace flexible réduit */}
       <View style={{ flex: 0.4 }} />
@@ -243,18 +260,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dot: {
-    width: 7, height: 7, borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
     backgroundColor: colors.success,
   },
   dotSoon: {
-    width: 7, height: 7, borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
     backgroundColor: colors.muted,
   },
   listeningTxt: {
-    color: colors.success, fontFamily: fonts.body, fontSize: 13,
+    color: colors.success,
+    fontFamily: fonts.body,
+    fontSize: 13,
   },
   listeningTxtSoon: {
-    color: colors.muted, fontFamily: fonts.body, fontSize: 13,
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
   },
 
   // Exemples

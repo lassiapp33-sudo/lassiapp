@@ -1,20 +1,26 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  View, Text, FlatList, TextInput, TouchableOpacity,
-  StyleSheet, Platform, Alert,
+  View,
+  Text,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import DebtHeader    from '../../components/debts/DebtHeader';
-import TotalCard     from '../../components/debts/TotalCard';
-import FilterChips   from '../../components/debts/FilterChips';
-import DebtorCard    from '../../components/debts/DebtorCard';
+import DebtHeader from '../../components/debts/DebtHeader';
+import TotalCard from '../../components/debts/TotalCard';
+import FilterChips from '../../components/debts/FilterChips';
+import DebtorCard from '../../components/debts/DebtorCard';
 import AddDebtSheet, { ClientOption } from '../../components/debts/AddDebtSheet';
 import { colors, fonts } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import { DebtFilter, DebtStatus } from '../../types/debts';
 import useDebtsStore from '../../store/debtsStore';
-import useShopStore  from '../../store/shopStore';
-import * as chatService  from '../../services/chat';
+import useShopStore from '../../store/shopStore';
+import * as chatService from '../../services/chat';
 import * as debtsService from '../../services/debts';
 import { IcoPlus, IcoClose, IcoSearch } from '../../components/icons';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -24,77 +30,89 @@ const FAB_BOTTOM = Platform.OS === 'ios' ? 34 : 24;
 
 const IcoX = () => <IcoClose size={16} color={colors.muted} />;
 
-interface Props { onBack: () => void; }
+interface Props {
+  onBack: () => void;
+}
 
 export default function DebtsScreen({ onBack }: Props) {
-  const shopId     = useShopStore(s => s.shopId);
-  const debtors    = useDebtsStore(s => s.debtors);
-  const loading    = useDebtsStore(s => s.loading);
-  const addToDebt  = useDebtsStore(s => s.addToDebt);
-  const loadDebts  = useDebtsStore(s => s.loadDebts);
+  const shopId = useShopStore(s => s.shopId);
+  const debtors = useDebtsStore(s => s.debtors);
+  const loading = useDebtsStore(s => s.loading);
+  const addToDebt = useDebtsStore(s => s.addToDebt);
+  const loadDebts = useDebtsStore(s => s.loadDebts);
 
-  const [filter,       setFilter]       = useState<DebtFilter>('all');
-  const [showSheet,    setShowSheet]    = useState(false);
-  const [showSearch,   setShowSearch]   = useState(false);
-  const [searchQuery,  setSearchQuery]  = useState('');
-  const [convClients,  setConvClients]  = useState<ClientOption[]>([]);
+  const [filter, setFilter] = useState<DebtFilter>('all');
+  const [showSheet, setShowSheet] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [convClients, setConvClients] = useState<ClientOption[]>([]);
 
   useEffect(() => {
     if (!shopId) return;
     loadDebts(shopId);
     // Charge les clients qui ont échangé des messages avec ce prestataire
-    chatService.getMerchantConversations(shopId).then(async convs => {
-      const profiles = await Promise.all(
-        convs.map(c => chatService.getClientProfile(c.clientId).then(p => ({
-          id:   c.clientId,
-          name: p.name || 'Client',
-        })))
-      );
-      setConvClients(
-        profiles
-          .filter(p => p.name && p.name !== 'Client')
-          .map(p => ({
-            id:         p.id,
-            name:       p.name,
-            initial:    p.name.charAt(0).toUpperCase(),
-            isExisting: false,
-          }))
-      );
-    }).catch(() => {});
+    chatService
+      .getMerchantConversations(shopId)
+      .then(async convs => {
+        const profiles = await Promise.all(
+          convs.map(c =>
+            chatService.getClientProfile(c.clientId).then(p => ({
+              id: c.clientId,
+              name: p.name || 'Client',
+            })),
+          ),
+        );
+        setConvClients(
+          profiles
+            .filter(p => p.name && p.name !== 'Client')
+            .map(p => ({
+              id: p.id,
+              name: p.name,
+              initial: p.name.charAt(0).toUpperCase(),
+              isExisting: false,
+            })),
+        );
+      })
+      .catch(() => {});
   }, [shopId]);
 
   const q = searchQuery.trim().toLowerCase();
-  const displayed = useMemo(() =>
-    debtors
-      .filter(d => filter === 'all' || d.status === filter)
-      .filter(d => !q || d.name.toLowerCase().includes(q))
-      .sort((a, b) => URGENCY[a.status] - URGENCY[b.status]),
-  [debtors, filter, q]);
+  const displayed = useMemo(
+    () =>
+      debtors
+        .filter(d => filter === 'all' || d.status === filter)
+        .filter(d => !q || d.name.toLowerCase().includes(q))
+        .sort((a, b) => URGENCY[a.status] - URGENCY[b.status]),
+    [debtors, filter, q],
+  );
 
   // Options combinées : débiteurs existants + clients des conversations pas encore débiteurs
   const existingNames = new Set(debtors.map(d => d.name.toLowerCase()));
   const existingOptions: ClientOption[] = debtors.map(d => ({
-    id:         d.id,
-    name:       d.name,
-    initial:    d.initial,
+    id: d.id,
+    name: d.name,
+    initial: d.initial,
     isExisting: true,
   }));
   const newOptions: ClientOption[] = convClients.filter(
-    c => !existingNames.has(c.name.toLowerCase())
+    c => !existingNames.has(c.name.toLowerCase()),
   );
   const clientOptions: ClientOption[] = [...existingOptions, ...newOptions];
 
   const handleAddDebt = async (option: ClientOption, amount: number) => {
     if (!shopId) return;
     if (option.isExisting) {
-      try { await addToDebt(option.id, amount); }
-      catch { Alert.alert('Erreur', "Impossible d'enregistrer la dette. Réessaie."); }
+      try {
+        await addToDebt(option.id, amount);
+      } catch {
+        Alert.alert('Erreur', "Impossible d'enregistrer la dette. Réessaie.");
+      }
     } else {
       // Nouveau client : créer la ligne debt puis ajouter le montant
       try {
         const newDebtor = await debtsService.addDebtor(shopId, option.name);
         await debtsService.addToDebt(newDebtor.id, amount);
-        loadDebts(shopId);  // recharge depuis Supabase
+        loadDebts(shopId); // recharge depuis Supabase
       } catch {
         Alert.alert('Erreur', "Impossible d'enregistrer la dette. Réessaie.");
       }
@@ -134,7 +152,6 @@ export default function DebtsScreen({ onBack }: Props) {
         </>
       }
     >
-
       {loading ? (
         <LoadingSpinner />
       ) : (
@@ -151,7 +168,8 @@ export default function DebtsScreen({ onBack }: Props) {
               <FilterChips active={filter} onChange={setFilter} />
               {displayed.length > 0 && (
                 <Text style={styles.sec}>
-                  {displayed.length} client{displayed.length > 1 ? 's' : ''} · classé{displayed.length > 1 ? 's' : ''} par urgence
+                  {displayed.length} client{displayed.length > 1 ? 's' : ''} · classé
+                  {displayed.length > 1 ? 's' : ''} par urgence
                 </Text>
               )}
             </>

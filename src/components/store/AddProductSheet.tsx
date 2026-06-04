@@ -1,14 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, Modal, TextInput, TouchableOpacity,
-  ScrollView, StyleSheet, Platform, KeyboardAvoidingView,
-  Image, ActionSheetIOS, Alert, ActivityIndicator,
+  View,
+  Text,
+  Modal,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  Platform,
+  KeyboardAvoidingView,
+  Image,
+  ActionSheetIOS,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import {
-  StoreProduct, StoreCategory,
-  FormulaPeriod, FORMULA_PERIOD_LABELS,
+  StoreProduct,
+  StoreCategory,
+  FormulaPeriod,
+  FORMULA_PERIOD_LABELS,
 } from '../../types/store';
 import * as storageService from '../../services/storage';
 import useShopStore from '../../store/shopStore';
@@ -16,29 +28,68 @@ import useShopStore from '../../store/shopStore';
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
 const IcoCamera = () => (
-  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" stroke={colors.accent} />
+  <Svg
+    width={22}
+    height={22}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path
+      d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"
+      stroke={colors.accent}
+    />
     <Circle cx={12} cy={13} r={3} stroke={colors.accent} />
   </Svg>
 );
 
 const IcoCheck = () => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={19}
+    height={19}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.4}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M20 6 9 17l-5-5" stroke={colors.bg} />
   </Svg>
 );
 
 const IcoTrash = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={16}
+    height={16}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="#ff5a5a" />
   </Svg>
 );
 
 // Emojis disponibles pour illustrer un produit (palette rapide)
-const QUICK_EMOJIS = ['🥖','🍳','🥪','🍝','☕','🍵','🥤','🍚','🥘','🍗','🍔','🥗','🍰','🧃'];
+const QUICK_EMOJIS = [
+  '🥖',
+  '🍳',
+  '🥪',
+  '🍝',
+  '☕',
+  '🍵',
+  '🥤',
+  '🍚',
+  '🥘',
+  '🍗',
+  '🍔',
+  '🥗',
+  '🍰',
+  '🧃',
+];
 
 const BOTTOM_PAD = Platform.OS === 'ios' ? 28 : 14;
 
@@ -51,37 +102,47 @@ const FieldLabel = ({ children }: { children: string }) => (
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 interface Props {
-  visible:    boolean;
-  product:    StoreProduct | null;   // null = nouveau produit
+  visible: boolean;
+  product: StoreProduct | null; // null = nouveau produit
   categories: StoreCategory[];
-  onSave:     (p: StoreProduct) => Promise<void>;
-  onDelete?:  () => void;
-  onClose:    () => void;
+  onSave: (p: StoreProduct) => Promise<void>;
+  onDelete?: () => void;
+  onClose: () => void;
 }
 
-export default function AddProductSheet({ visible, product, categories, onSave, onDelete, onClose }: Props) {
-  const shopId   = useShopStore(s => s.shopId);
+export default function AddProductSheet({
+  visible,
+  product,
+  categories,
+  onSave,
+  onDelete,
+  onClose,
+}: Props) {
+  const shopId = useShopStore(s => s.shopId);
   const shopType = useShopStore(s => s.context.shopType);
 
   // Dériver l'itemType depuis le shopType
-  const itemType = shopType === 'services'    ? 'service'    as const
-                 : shopType === 'memberships' ? 'membership' as const
-                 :                             'product'     as const;
+  const itemType =
+    shopType === 'services'
+      ? ('service' as const)
+      : shopType === 'memberships'
+        ? ('membership' as const)
+        : ('product' as const);
 
-  const [emoji,         setEmoji]         = useState('');
-  const [photoUrl,      setPhotoUrl]      = useState<string | undefined>();
-  const [uploading,     setUploading]     = useState(false);
-  const [name,          setName]          = useState('');
-  const [desc,          setDesc]          = useState('');
-  const [price,         setPrice]         = useState('');
-  const [catId,         setCatId]         = useState(categories[0]?.id ?? '');
-  const [duration,      setDuration]      = useState('');
+  const [emoji, setEmoji] = useState('');
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>();
+  const [uploading, setUploading] = useState(false);
+  const [name, setName] = useState('');
+  const [desc, setDesc] = useState('');
+  const [price, setPrice] = useState('');
+  const [catId, setCatId] = useState(categories[0]?.id ?? '');
+  const [duration, setDuration] = useState('');
   const [formulaPeriod, setFormulaPeriod] = useState<FormulaPeriod>('mois');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-  const scrollRef  = useRef<ScrollView>(null);
-  const [nameY,  setNameY]  = useState(0);
-  const [descY,  setDescY]  = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const [nameY, setNameY] = useState(0);
+  const [descY, setDescY] = useState(0);
   const [priceY, setPriceY] = useState(0);
 
   const scrollToField = (y: number) => {
@@ -118,9 +179,10 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
   // ── Sélection et upload de photo ────────────────────────────────────────────
   const handlePickPhoto = async (source: 'gallery' | 'camera') => {
     try {
-      const uri = source === 'gallery'
-        ? await storageService.pickImageFromGallery()
-        : await storageService.pickImageFromCamera();
+      const uri =
+        source === 'gallery'
+          ? await storageService.pickImageFromGallery()
+          : await storageService.pickImageFromCamera();
 
       if (!uri) return;
       if (!shopId) {
@@ -130,9 +192,9 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
 
       setUploading(true);
       const path = storageService.productImagePath(shopId, product?.id ?? `new_${Date.now()}`);
-      const url  = await storageService.uploadImage('products', uri, path);
+      const url = await storageService.uploadImage('products', uri, path);
       setPhotoUrl(url);
-    } catch (err) {
+    } catch {
       Alert.alert('Erreur', "Impossible d'uploader la photo. Réessaie.");
     } finally {
       setUploading(false);
@@ -144,17 +206,26 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         { options: ['Annuler', 'Galerie', 'Caméra', 'Emoji à la place'], cancelButtonIndex: 0 },
-        (idx) => {
+        idx => {
           if (idx === 1) handlePickPhoto('gallery');
           if (idx === 2) handlePickPhoto('camera');
-          if (idx === 3) { setPhotoUrl(undefined); setShowEmojiPicker(true); }
+          if (idx === 3) {
+            setPhotoUrl(undefined);
+            setShowEmojiPicker(true);
+          }
         },
       );
     } else {
       Alert.alert('Ajouter une photo', '', [
-        { text: 'Galerie',         onPress: () => handlePickPhoto('gallery') },
-        { text: 'Caméra',          onPress: () => handlePickPhoto('camera')  },
-        { text: 'Emoji à la place', onPress: () => { setPhotoUrl(undefined); setShowEmojiPicker(true); } },
+        { text: 'Galerie', onPress: () => handlePickPhoto('gallery') },
+        { text: 'Caméra', onPress: () => handlePickPhoto('camera') },
+        {
+          text: 'Emoji à la place',
+          onPress: () => {
+            setPhotoUrl(undefined);
+            setShowEmojiPicker(true);
+          },
+        },
         { text: 'Annuler', style: 'cancel' },
       ]);
     }
@@ -165,7 +236,7 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
 
   // Cycle vers la catégorie suivante (picker simple)
   const cycleCat = () => {
-    const idx  = categories.findIndex(c => c.id === catId);
+    const idx = categories.findIndex(c => c.id === catId);
     const next = categories[(idx + 1) % categories.length];
     setCatId(next.id);
   };
@@ -182,16 +253,16 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
       return;
     }
     const p: StoreProduct = {
-      id:           product?.id ?? `p_${Date.now()}`,
+      id: product?.id ?? `p_${Date.now()}`,
       emoji,
       photoUrl,
-      name:         name.trim(),
-      desc:         desc.trim(),
-      price:        parseInt(price, 10) || 0,
-      category:     catId,
-      stock:        product?.stock ?? 'in',
+      name: name.trim(),
+      desc: desc.trim(),
+      price: parseInt(price, 10) || 0,
+      category: catId,
+      stock: product?.stock ?? 'in',
       itemType,
-      duration:     itemType === 'service' && duration ? parseInt(duration, 10) : undefined,
+      duration: itemType === 'service' && duration ? parseInt(duration, 10) : undefined,
       formulaPeriod: itemType === 'membership' ? formulaPeriod : undefined,
     };
     setSaving(true);
@@ -199,19 +270,17 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
       await onSave(p);
       onClose();
     } catch {
-      Alert.alert('Erreur', "Impossible d'enregistrer le produit. Vérifie ta connexion et réessaie.");
+      Alert.alert(
+        'Erreur',
+        "Impossible d'enregistrer le produit. Vérifie ta connexion et réessaie.",
+      );
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -224,15 +293,23 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
           {/* Poignée */}
           <View style={styles.grab} />
 
-          <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            ref={scrollRef}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             <Text style={styles.title}>
               {product
-                ? (itemType === 'service'    ? 'Modifier la prestation'
-                 : itemType === 'membership' ? 'Modifier la formule'
-                 : 'Modifier le produit')
-                : (itemType === 'service'    ? 'Nouvelle prestation'
-                 : itemType === 'membership' ? 'Nouvelle formule'
-                 : 'Nouveau produit')}
+                ? itemType === 'service'
+                  ? 'Modifier la prestation'
+                  : itemType === 'membership'
+                    ? 'Modifier la formule'
+                    : 'Modifier le produit'
+                : itemType === 'service'
+                  ? 'Nouvelle prestation'
+                  : itemType === 'membership'
+                    ? 'Nouvelle formule'
+                    : 'Nouveau produit'}
             </Text>
 
             {/* Zone photo / emoji ─────────────────────────────────────────── */}
@@ -244,13 +321,15 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
               {uploading ? (
                 // Chargement pendant l'upload
                 <ActivityIndicator color={colors.accent} size="large" />
-
               ) : showEmojiPicker ? (
                 // Palette d'emojis rapide + option "Aucun"
                 <View style={styles.emojiGrid}>
                   <TouchableOpacity
                     style={[styles.emojiBtn, !emoji && styles.emojiBtnSel]}
-                    onPress={() => { setEmoji(''); setShowEmojiPicker(false); }}
+                    onPress={() => {
+                      setEmoji('');
+                      setShowEmojiPicker(false);
+                    }}
                   >
                     <Text style={[styles.emojiTxt, { fontSize: 13, color: colors.muted }]}>✕</Text>
                   </TouchableOpacity>
@@ -258,17 +337,18 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
                     <TouchableOpacity
                       key={e}
                       style={[styles.emojiBtn, e === emoji && styles.emojiBtnSel]}
-                      onPress={() => { setEmoji(e); setShowEmojiPicker(false); }}
+                      onPress={() => {
+                        setEmoji(e);
+                        setShowEmojiPicker(false);
+                      }}
                     >
                       <Text style={styles.emojiTxt}>{e}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
-
               ) : photoUrl ? (
                 // Vraie photo uploadée
                 <Image source={{ uri: photoUrl }} style={styles.photoPreview} />
-
               ) : emoji ? (
                 // Emoji choisi — appuie pour changer
                 <>
@@ -286,7 +366,7 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
             </TouchableOpacity>
 
             {/* Nom ────────────────────────────────────────────────────────── */}
-            <View onLayout={(e) => setNameY(e.nativeEvent.layout.y)}>
+            <View onLayout={e => setNameY(e.nativeEvent.layout.y)}>
               <FieldLabel>Nom du produit</FieldLabel>
               <TextInput
                 style={styles.input}
@@ -300,7 +380,7 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
             </View>
 
             {/* Description ────────────────────────────────────────────────── */}
-            <View onLayout={(e) => setDescY(e.nativeEvent.layout.y)}>
+            <View onLayout={e => setDescY(e.nativeEvent.layout.y)}>
               <FieldLabel>Description courte</FieldLabel>
               <TextInput
                 style={[styles.input, { marginBottom: 14 }]}
@@ -314,7 +394,7 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
             </View>
 
             {/* Prix + Catégorie (2 colonnes) ──────────────────────────────── */}
-            <View style={styles.row2} onLayout={(e) => setPriceY(e.nativeEvent.layout.y)}>
+            <View style={styles.row2} onLayout={e => setPriceY(e.nativeEvent.layout.y)}>
               <View style={styles.flex}>
                 <FieldLabel>Prix</FieldLabel>
                 <View style={styles.inputRow}>
@@ -364,19 +444,21 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
               <View style={{ marginTop: 14 }}>
                 <FieldLabel>Période de la formule</FieldLabel>
                 <View style={styles.periodRow}>
-                  {(Object.entries(FORMULA_PERIOD_LABELS) as [FormulaPeriod, string][]).map(([key, label]) => {
-                    const on = formulaPeriod === key;
-                    return (
-                      <TouchableOpacity
-                        key={key}
-                        style={[styles.periodPill, on && styles.periodPillOn]}
-                        onPress={() => setFormulaPeriod(key)}
-                        activeOpacity={0.75}
-                      >
-                        <Text style={[styles.periodTxt, on && styles.periodTxtOn]}>{label}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                  {(Object.entries(FORMULA_PERIOD_LABELS) as [FormulaPeriod, string][]).map(
+                    ([key, label]) => {
+                      const on = formulaPeriod === key;
+                      return (
+                        <TouchableOpacity
+                          key={key}
+                          style={[styles.periodPill, on && styles.periodPillOn]}
+                          onPress={() => setFormulaPeriod(key)}
+                          activeOpacity={0.75}
+                        >
+                          <Text style={[styles.periodTxt, on && styles.periodTxtOn]}>{label}</Text>
+                        </TouchableOpacity>
+                      );
+                    },
+                  )}
                 </View>
               </View>
             )}
@@ -386,13 +468,10 @@ export default function AddProductSheet({ visible, product, categories, onSave, 
             {/* Bouton sauvegarder ─────────────────────────────────────────── */}
             <TouchableOpacity
               style={[styles.saveBtn, (uploading || saving) && { opacity: 0.5 }]}
-              onPress={(uploading || saving) ? undefined : handleSave}
+              onPress={uploading || saving ? undefined : handleSave}
               activeOpacity={0.85}
             >
-              {saving
-                ? <ActivityIndicator color={colors.bg} size="small" />
-                : <IcoCheck />
-              }
+              {saving ? <ActivityIndicator color={colors.bg} size="small" /> : <IcoCheck />}
               <Text style={styles.saveTxt}>Enregistrer le produit</Text>
             </TouchableOpacity>
 
@@ -484,7 +563,10 @@ const styles = StyleSheet.create({
   },
   photoPreview: {
     position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   emojiGrid: {
     flexDirection: 'row',

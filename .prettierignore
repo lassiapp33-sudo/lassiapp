@@ -1,0 +1,5 @@
+node_modules/
+.expo/
+supabase/
+ngrok-localtunnel-shim/
+package-lock.json

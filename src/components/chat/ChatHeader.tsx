@@ -8,8 +8,15 @@ import { IcoBack } from '../icons';
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
 const IcoPhone = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path
       d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"
       stroke={colors.accent}
@@ -20,16 +27,24 @@ const IcoPhone = () => (
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 interface Props {
-  initial:  string;
-  name:     string;
-  isVip?:   boolean;
+  initial: string;
+  name: string;
+  isVip?: boolean;
   isOnline: boolean;
-  onBack:   () => void;
-  onCall?:  () => void;
+  onBack: () => void;
+  onCall?: () => void;
   logoUrl?: string | null;
 }
 
-export default function ChatHeader({ initial, name, isVip, isOnline, onBack, onCall, logoUrl }: Props) {
+export default function ChatHeader({
+  initial,
+  name,
+  isVip,
+  isOnline,
+  onBack,
+  onCall,
+  logoUrl,
+}: Props) {
   return (
     <View style={[styles.header, { paddingTop: TOP_INSET + 8 }]}>
       {/* Retour */}
@@ -38,20 +53,18 @@ export default function ChatHeader({ initial, name, isVip, isOnline, onBack, onC
       </TouchableOpacity>
 
       {/* Logo commerçant — Avatar unique source de vérité */}
-      <Avatar
-        imageUrl={logoUrl}
-        name={name || initial}
-        size={42}
-        variant="shop"
-      />
+      <Avatar imageUrl={logoUrl} name={name || initial} size={42} variant="shop" />
 
       {/* Nom + statut */}
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>
-          {name}{isVip ? '  🏆' : ''}
+          {name}
+          {isVip ? '  🏆' : ''}
         </Text>
         <View style={styles.statusRow}>
-          <View style={[styles.dot, { backgroundColor: isOnline ? colors.success : colors.muted }]} />
+          <View
+            style={[styles.dot, { backgroundColor: isOnline ? colors.success : colors.muted }]}
+          />
           <Text style={[styles.status, { color: isOnline ? colors.success : colors.muted }]}>
             {isOnline ? 'En ligne' : 'Hors ligne'}
           </Text>

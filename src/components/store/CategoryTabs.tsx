@@ -4,16 +4,22 @@ import { colors, fonts } from '../../theme';
 import { StoreCategory } from '../../types/store';
 
 interface Props {
-  categories:   StoreCategory[];
-  active:       string;
-  onSelect:     (id: string) => void;
-  onAddCat?:    (label: string) => void;
+  categories: StoreCategory[];
+  active: string;
+  onSelect: (id: string) => void;
+  onAddCat?: (label: string) => void;
   onDeleteCat?: (id: string) => void;
 }
 
-export default function CategoryTabs({ categories, active, onSelect, onAddCat, onDeleteCat }: Props) {
+export default function CategoryTabs({
+  categories,
+  active,
+  onSelect,
+  onAddCat,
+  onDeleteCat,
+}: Props) {
   const [isAdding, setIsAdding] = useState(false);
-  const [draft,    setDraft]    = useState('');
+  const [draft, setDraft] = useState('');
 
   const confirmAdd = () => {
     const trimmed = draft.trim();
@@ -119,7 +125,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     flex: 1,
   },
-  tabTxtOn:  { color: colors.bg    },
+  tabTxtOn: { color: colors.bg },
   tabTxtOff: { color: colors.muted },
 
   delBtn: {

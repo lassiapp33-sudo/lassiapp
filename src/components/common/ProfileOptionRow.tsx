@@ -3,15 +3,15 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts } from '../../theme';
 
 export interface ProfileRowProps {
-  icon:      React.ReactNode;
-  title:     string;
+  icon: React.ReactNode;
+  title: string;
   subtitle?: string;
-  danger?:   boolean;
-  end?:      'arrow' | 'toggle' | 'none';
-  toggled?:  boolean;
+  danger?: boolean;
+  end?: 'arrow' | 'toggle' | 'none';
+  toggled?: boolean;
   onToggle?: () => void;
-  onPress?:  () => void;
-  last?:     boolean;
+  onPress?: () => void;
+  last?: boolean;
 }
 
 function ProfileToggle({ value, onToggle }: { value: boolean; onToggle: () => void }) {
@@ -27,7 +27,15 @@ function ProfileToggle({ value, onToggle }: { value: boolean; onToggle: () => vo
 }
 
 export function ProfileOptionRow({
-  icon, title, subtitle, danger, end = 'arrow', toggled, onToggle, onPress, last,
+  icon,
+  title,
+  subtitle,
+  danger,
+  end = 'arrow',
+  toggled,
+  onToggle,
+  onPress,
+  last,
 }: ProfileRowProps) {
   return (
     <TouchableOpacity
@@ -40,8 +48,10 @@ export function ProfileOptionRow({
         <Text style={[styles.optTitle, danger && styles.optTitleDanger]}>{title}</Text>
         {subtitle ? <Text style={styles.optSub}>{subtitle}</Text> : null}
       </View>
-      {end === 'arrow'  && <Text style={styles.arrow}>›</Text>}
-      {end === 'toggle' && <ProfileToggle value={toggled ?? false} onToggle={onToggle ?? (() => {})} />}
+      {end === 'arrow' && <Text style={styles.arrow}>›</Text>}
+      {end === 'toggle' && (
+        <ProfileToggle value={toggled ?? false} onToggle={onToggle ?? (() => {})} />
+      )}
     </TouchableOpacity>
   );
 }
@@ -123,13 +133,13 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     justifyContent: 'center',
   },
-  swOn:  { backgroundColor: colors.accent },
+  swOn: { backgroundColor: colors.accent },
   swOff: { backgroundColor: colors.border },
   swKnob: {
     width: 20,
     height: 20,
     borderRadius: 10,
   },
-  swKnobOn:  { backgroundColor: colors.bg,    alignSelf: 'flex-end',   marginRight: 2 },
+  swKnobOn: { backgroundColor: colors.bg, alignSelf: 'flex-end', marginRight: 2 },
   swKnobOff: { backgroundColor: colors.muted, alignSelf: 'flex-start', marginLeft: 2 },
 });

@@ -1,35 +1,36 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Linking, Image,
-} from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Image } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import ShopCover                       from '../../components/shop/ShopCover';
-import AvisSection                     from '../../components/avis/AvisSection';
-import useAuthStore                    from '../../store/authStore';
-import ShopIdentity                    from '../../components/shop/ShopIdentity';
-import ShopStats                       from '../../components/shop/ShopStats';
-import ShopInfoBar                     from '../../components/shop/ShopInfoBar';
-import MenuTabs,     { MenuTabId }     from '../../components/shop/MenuTabs';
-import ProductTile,  { Product }       from '../../components/shop/ProductTile';
-import CartFloating                    from '../../components/shop/CartFloating';
-import ShopFooter,   { FOOTER_HEIGHT } from '../../components/shop/ShopFooter';
-import OpeningHoursCard                from '../../components/store/OpeningHoursCard';
+import ShopCover from '../../components/shop/ShopCover';
+import AvisSection from '../../components/avis/AvisSection';
+import useAuthStore from '../../store/authStore';
+import ShopIdentity from '../../components/shop/ShopIdentity';
+import ShopStats from '../../components/shop/ShopStats';
+import ShopInfoBar from '../../components/shop/ShopInfoBar';
+import MenuTabs, { MenuTabId } from '../../components/shop/MenuTabs';
+import ProductTile, { Product } from '../../components/shop/ProductTile';
+import CartFloating from '../../components/shop/CartFloating';
+import ShopFooter, { FOOTER_HEIGHT } from '../../components/shop/ShopFooter';
+import OpeningHoursCard from '../../components/store/OpeningHoursCard';
 import { colors, fonts, TOP_INSET, radius } from '../../theme';
 import useCartStore, { OrderType } from '../../store/cartStore';
 import useFavoritesStore from '../../store/favoritesStore';
-import useLocationStore  from '../../store/locationStore';
-import * as shopsService    from '../../services/shops';
+import useLocationStore from '../../store/locationStore';
+import * as shopsService from '../../services/shops';
 import * as productsService from '../../services/products';
-import * as promosService   from '../../services/promotions';
-import { Shop }             from '../../services/shops';
+import * as promosService from '../../services/promotions';
+import { Shop } from '../../services/shops';
 import { Promotion } from '../../types/promotions';
-import { reverseGeocode }   from '../../services/location';
-import { StoreProduct }     from '../../types/store';
-import logger               from '../../utils/logger';
+import { reverseGeocode } from '../../services/location';
+import { StoreProduct } from '../../types/store';
+import logger from '../../utils/logger';
 import {
-  computeStatus, WeekHours, formatHour, DayKey, DEFAULT_WEEK_HOURS,
+  computeStatus,
+  WeekHours,
+  formatHour,
+  DayKey,
+  DEFAULT_WEEK_HOURS,
 } from '../../services/hours';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
@@ -38,21 +39,45 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
 const IcoPhone = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.07 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.09 9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z" stroke={colors.accent} />
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path
+      d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.07 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.09 9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z"
+      stroke={colors.accent}
+    />
   </Svg>
 );
 const IcoPin2 = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={16}
+    height={16}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" stroke={colors.muted} />
     <Path d="M12 10m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0" stroke={colors.muted} />
   </Svg>
 );
 const IcoFav = ({ on }: { on: boolean }) => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={20}
+    height={20}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path
       d="M12 17.8 5.8 21 7 14.1 2 9.3l7-1L12 2l3 6.3 7 1-5 4.8 1.2 6.9z"
       stroke={on ? colors.accent : '#fff'}
@@ -75,47 +100,50 @@ function toPairs<T>(arr: T[]): T[][] {
 
 function storeProductToProduct(p: StoreProduct): Product {
   return {
-    id:       p.id,
-    emoji:    p.emoji,
+    id: p.id,
+    emoji: p.emoji,
     photoUrl: p.photoUrl,
-    name:     p.name,
-    desc:     p.desc,
-    price:    p.price,
+    name: p.name,
+    desc: p.desc,
+    price: p.price,
     category: p.category,
-    stock:    p.stock,
+    stock: p.stock,
   };
 }
 
 // Correspondance JS Date.getDay() (0=Dim) → DayKey
-const JS_DAY_TO_KEY: DayKey[] = ['sun','mon','tue','wed','thu','fri','sat'];
+const JS_DAY_TO_KEY: DayKey[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  shopId?:     string;
-  shopName?:   string;
-  onBack:      () => void;
-  onChat?:     (logoUrl: string | null, isVip: boolean) => void;
+  shopId?: string;
+  shopName?: string;
+  onBack: () => void;
+  onChat?: (logoUrl: string | null, isVip: boolean) => void;
   onCheckout?: () => void;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
 export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCheckout }: Props) {
-  const [shopData,      setShopData]      = useState<Shop | null>(null);
-  const [realProducts,  setRealProducts]  = useState<StoreProduct[]>([]);
-  const [loading,       setLoading]       = useState(true);
-  const [loadError,     setLoadError]     = useState(false);
-  const [activeTab,     setActiveTab]     = useState<MenuTabId>('all');
-  const [resolvedZone,  setResolvedZone]  = useState<string>('');
-  const [activePromos,  setActivePromos]  = useState<Promotion[]>([]);
+  const [shopData, setShopData] = useState<Shop | null>(null);
+  const [realProducts, setRealProducts] = useState<StoreProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [activeTab, setActiveTab] = useState<MenuTabId>('all');
+  const [resolvedZone, setResolvedZone] = useState<string>('');
+  const [activePromos, setActivePromos] = useState<Promotion[]>([]);
 
   // Position utilisateur (déjà chargée dans locationStore par ClientHomeScreen)
   const userCoords = useLocationStore(s => s.coords);
 
   // ── Chargement depuis Supabase ────────────────────────────────────────────
   const loadShop = useCallback(async () => {
-    if (!shopId) { setLoading(false); return; }
+    if (!shopId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setLoadError(false);
     try {
@@ -145,48 +173,54 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
     }
   }, [shopId]);
 
-  useEffect(() => { loadShop(); }, [loadShop]);
+  useEffect(() => {
+    loadShop();
+  }, [loadShop]);
 
   // ── Type de vitrine ───────────────────────────────────────────────────────
   const shopType = shopData?.shopType ?? 'products';
 
   // ── Données dérivées ──────────────────────────────────────────────────────
-  const displayName    = shopData?.name    ?? shopName ?? 'Boutique';
+  const displayName = shopData?.name ?? shopName ?? 'Boutique';
   const displayInitial = displayName.charAt(0).toUpperCase();
   const displayLogoUrl = shopData?.logoUrl ?? undefined;
-  const displayZone    = resolvedZone;
-  const isVip            = shopData?.isVip            ?? false;
-  const reviewsCount     = shopData?.reviewsCount     ?? 0;
-  const ordersCount      = shopData?.ordersCount      ?? 0;
-  const rating           = shopData?.rating           ?? 0;
-  const createdAt        = shopData?.createdAt        ?? new Date().toISOString();
+  const displayZone = resolvedZone;
+  const isVip = shopData?.isVip ?? false;
+  const reviewsCount = shopData?.reviewsCount ?? 0;
+  const ordersCount = shopData?.ordersCount ?? 0;
+  const rating = shopData?.rating ?? 0;
+  const createdAt = shopData?.createdAt ?? new Date().toISOString();
 
   // ── Statut d'ouverture dynamique ─────────────────────────────────────────
-  const shopHours     = shopData?.openingHours as WeekHours | null ?? null;
+  const shopHours = (shopData?.openingHours as WeekHours | null) ?? null;
   const manuallyClose = shopData?.isManuallyClose ?? false;
-  // Merge DB hours over DEFAULT_WEEK_HOURS so every day key is always present
-  const effectiveHours: WeekHours = { ...DEFAULT_WEEK_HOURS, ...(shopHours ?? {}) };
-  const status        = computeStatus(shopHours ? effectiveHours : null, manuallyClose);
-  const isOpen        = status.isOpen;
+  const status = computeStatus(shopHours, manuallyClose);
+  const isOpen = status.isOpen;
 
   // Plage horaire du jour courant ("7h – 22h") — basée sur les horaires réels du prestataire
-  const todayKey      = JS_DAY_TO_KEY[new Date().getDay()];
-  const todayDay      = shopHours ? effectiveHours[todayKey] : null;
-  const todayHoursStr = todayDay && !todayDay.closed
-    ? `${formatHour(todayDay.open)} – ${formatHour(todayDay.close)}`
-    : null;
+  const todayKey = JS_DAY_TO_KEY[new Date().getDay()];
+  const effectiveHours: WeekHours = shopHours
+    ? ({ ...DEFAULT_WEEK_HOURS, ...shopHours } as WeekHours)
+    : DEFAULT_WEEK_HOURS;
+  const todayDay = shopHours ? effectiveHours[todayKey] : null;
+  const todayHoursStr =
+    todayDay && !todayDay.closed
+      ? `${formatHour(todayDay.open)} – ${formatHour(todayDay.close)}`
+      : null;
 
   // ── Distance GPS ──────────────────────────────────────────────────────────
-  const shopLat = shopData?.latitude  ?? null;
+  const shopLat = shopData?.latitude ?? null;
   const shopLng = shopData?.longitude ?? null;
   const shopHasCoords = shopLat !== null && shopLng !== null;
 
   const distanceText: string | null = (() => {
     if (!shopHasCoords) return null;
-    if (!userCoords)    return null;  // noGps gère ce cas
+    if (!userCoords) return null; // noGps gère ce cas
     const meters = shopsService.calcDistanceMeters(
-      userCoords.latitude, userCoords.longitude,
-      shopLat!, shopLng!,
+      userCoords.latitude,
+      userCoords.longitude,
+      shopLat!,
+      shopLng!,
     );
     return shopsService.formatDistance(meters);
   })();
@@ -195,42 +229,44 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
   const noGps = shopHasCoords && !userCoords;
 
   // ── Options "Sur place / À emporter" — masquées pour bakery et stores ────
-  const shopCategory     = shopData?.category ?? '';
-  const noOrderOptions   = ['bakery', 'stores'].includes(shopCategory);
+  const shopCategory = shopData?.category ?? '';
+  const noOrderOptions = ['bakery', 'stores'].includes(shopCategory);
   const showOrderOptions = shopType === 'products' && !noOrderOptions;
   const orderOptions = [
-    { id: 'place',    label: 'Sur place',  emoji: '🍽' },
+    { id: 'place', label: 'Sur place', emoji: '🍽' },
     { id: 'emporter', label: 'À emporter', emoji: '🥡' },
   ];
   const selectedLabel = orderOptions.find(o => o.id === selectedOrder)?.label ?? 'Sur place';
 
   // Type de service affiché dans la barre d'infos
-  const infoBarOrderType = shopType === 'services'    ? 'Sur rendez-vous'
-                         : shopType === 'memberships' ? 'Abonnement'
-                         : noOrderOptions             ? ''
-                         : selectedLabel;
+  const infoBarOrderType =
+    shopType === 'services'
+      ? 'Sur rendez-vous'
+      : shopType === 'memberships'
+        ? 'Abonnement'
+        : noOrderOptions
+          ? ''
+          : selectedLabel;
 
   // ── Catalogue ─────────────────────────────────────────────────────────────
-  const catIds   = [...new Set(realProducts.map(p => p.category))];
-  const tabs     = [
-    { id: 'all', label: 'Tout' },
-    ...catIds.map(id => ({ id, label: capitalize(id) })),
-  ];
+  const catIds = [...new Set(realProducts.map(p => p.category))];
+  const tabs = [{ id: 'all', label: 'Tout' }, ...catIds.map(id => ({ id, label: capitalize(id) }))];
   const sections = catIds.map(id => ({ id, label: capitalize(id) }));
 
-  const visibleSections = activeTab === 'all'
-    ? sections
-    : sections.filter(s => s.id === activeTab);
+  const visibleSections = activeTab === 'all' ? sections : sections.filter(s => s.id === activeTab);
 
-  const emptyLabel = shopType === 'services'    ? 'Aucune prestation disponible pour l\'instant.'
-                   : shopType === 'memberships' ? 'Aucune formule disponible pour l\'instant.'
-                   : 'Aucun produit disponible pour l\'instant.';
+  const emptyLabel =
+    shopType === 'services'
+      ? "Aucune prestation disponible pour l'instant."
+      : shopType === 'memberships'
+        ? "Aucune formule disponible pour l'instant."
+        : "Aucun produit disponible pour l'instant.";
 
   // ── Infos pratiques ───────────────────────────────────────────────────────
-  const shopPhone      = shopData?.phone       ?? null;
-  const shopAddress    = shopData?.addressText ?? null;
-  const galleryUrls    = shopData?.galleryUrls ?? [];
-  const hasGallery     = galleryUrls.length > 0;
+  const shopPhone = shopData?.phone ?? null;
+  const shopAddress = shopData?.addressText ?? null;
+  const galleryUrls = shopData?.galleryUrls ?? [];
+  const hasGallery = galleryUrls.length > 0;
   const hasInfoSection = !!(shopPhone || shopAddress || shopHours);
 
   // Index du composant sticky MenuTabs
@@ -238,32 +274,34 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
 
   // ── Promos ────────────────────────────────────────────────────────────────
   const productPromoMap = promosService.buildProductPromoMap(activePromos);
-  const shopWidePromos  = activePromos.filter(p => p.cibleType === 'vitrine' || p.cibleType === 'categorie');
+  const shopWidePromos = activePromos.filter(
+    p => p.cibleType === 'vitrine' || p.cibleType === 'categorie',
+  );
 
   // ── Utilisateur courant ────────────────────────────────────────────────────
-  const currentUser   = useAuthStore(s => s.user);
+  const currentUser = useAuthStore(s => s.user);
   const currentUserId = currentUser?.id;
-  const isMerchant    = Boolean(shopData?.merchantId && shopData.merchantId === currentUserId);
+  const isMerchant = Boolean(shopData?.merchantId && shopData.merchantId === currentUserId);
 
   // ── Panier ────────────────────────────────────────────────────────────────
-  const stableId      = shopId || shopName || '';
-  const isFav         = useFavoritesStore(s => s.favorites.includes(stableId));
-  const toggleFav     = useFavoritesStore(s => s.toggleFavorite);
-  const cartItems     = useCartStore(s => s.items);
-  const addItem       = useCartStore(s => s.addItem);
-  const removeItem    = useCartStore(s => s.removeItem);
+  const stableId = shopId || shopName || '';
+  const isFav = useFavoritesStore(s => s.favorites.includes(stableId));
+  const toggleFav = useFavoritesStore(s => s.toggleFavorite);
+  const cartItems = useCartStore(s => s.items);
+  const addItem = useCartStore(s => s.addItem);
+  const removeItem = useCartStore(s => s.removeItem);
   const selectedOrder = useCartStore(s => s.orderType);
-  const setCartOrder  = useCartStore(s => s.setOrderType);
+  const setCartOrder = useCartStore(s => s.setOrderType);
 
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
   const cartTotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
 
   const shopInfo = {
-    id:       stableId,
-    initial:  displayInitial,
-    name:     displayName,
+    id: stableId,
+    initial: displayInitial,
+    name: displayName,
     location: `📍 ${displayZone} · ${selectedLabel}`,
-    logoUrl:  displayLogoUrl,
+    logoUrl: displayLogoUrl,
   };
 
   const addToCart = (p: StoreProduct) => {
@@ -271,9 +309,9 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
     addItem(shopInfo, { id: p.id, name: p.name, emoji: p.emoji, price: p.price });
   };
 
-  const CART_BAR_H   = 56;
+  const CART_BAR_H = 56;
   const scrollBotPad = FOOTER_HEIGHT + (cartCount > 0 ? CART_BAR_H + 16 : 0) + 28;
-  const cartBottom   = FOOTER_HEIGHT + 8;
+  const cartBottom = FOOTER_HEIGHT + 8;
 
   if (loadError) {
     return (
@@ -367,8 +405,12 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
               <View style={{ flex: 1 }}>
                 {shopWidePromos.map(p => (
                   <Text key={p.id} style={styles.promoBannerTxt} numberOfLines={1}>
-                    {p.titre}{p.type === 'pourcentage' ? ` · −${p.valeur}%` :
-                              p.type === 'montant_fixe' ? ` · −${formatPrice(p.valeur)}` : ''}
+                    {p.titre}
+                    {p.type === 'pourcentage'
+                      ? ` · −${p.valeur}%`
+                      : p.type === 'montant_fixe'
+                        ? ` · −${formatPrice(p.valeur)}`
+                        : ''}
                     {p.montantMin > 0 ? ` (dès ${formatPrice(p.montantMin)})` : ''}
                   </Text>
                 ))}
@@ -418,20 +460,14 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
               {shopHours && (
                 <View style={{ marginTop: 12 }}>
                   <Text style={styles.hoursTitle}>Horaires</Text>
-                  <OpeningHoursCard
-                    hours={shopHours}
-                    isManuallyClose={manuallyClose}
-                    readOnly
-                  />
+                  <OpeningHoursCard hours={shopHours} isManuallyClose={manuallyClose} readOnly />
                 </View>
               )}
             </View>
           )}
 
           {/* 8 — Onglets catalogue (STICKY) */}
-          {tabs.length > 1 && (
-            <MenuTabs tabs={tabs} active={activeTab} onPress={setActiveTab} />
-          )}
+          {tabs.length > 1 && <MenuTabs tabs={tabs} active={activeTab} onPress={setActiveTab} />}
 
           {/* 9 — Catalogue */}
           {realProducts.length === 0 ? (
@@ -453,7 +489,11 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
                             <ProductTile
                               key={product.id}
                               product={storeProductToProduct(product)}
-                              qty={product.stock === 'out' ? 0 : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)}
+                              qty={
+                                product.stock === 'out'
+                                  ? 0
+                                  : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)
+                              }
                               onAdd={() => addToCart(product)}
                               onRemove={() => removeItem(product.id)}
                               promoInfo={productPromoMap[product.id]}
@@ -487,7 +527,11 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
           <IcoBack />
         </TouchableOpacity>
         <View style={styles.ctrlRight} pointerEvents="box-none">
-<TouchableOpacity style={styles.ctrlBtn} onPress={() => toggleFav(stableId)} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.ctrlBtn}
+            onPress={() => toggleFav(stableId)}
+            activeOpacity={0.8}
+          >
             <IcoFav on={isFav} />
           </TouchableOpacity>
         </View>
@@ -514,7 +558,7 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
@@ -690,9 +734,9 @@ const styles = StyleSheet.create({
   },
   promoBannerIco: { fontSize: 16 },
   promoBannerTxt: {
-    color:      colors.accent,
+    color: colors.accent,
     fontFamily: fonts.body,
-    fontSize:   12,
+    fontSize: 12,
     lineHeight: 18,
   },
 
@@ -704,7 +748,8 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   backBtnSm: {
-    width: 38, height: 38,
+    width: 38,
+    height: 38,
     borderRadius: radius.sm,
     backgroundColor: colors.surface,
     borderWidth: 1,

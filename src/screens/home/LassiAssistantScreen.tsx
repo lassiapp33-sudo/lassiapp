@@ -1,34 +1,40 @@
-import React, {
-  useState, useRef, useEffect, useLayoutEffect,
-} from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, Image, ActivityIndicator,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, TOP_INSET, radius } from '../../theme';
 import { IcoClose } from '../../components/icons';
 import { contacterServiceClient } from '../../config/contact';
-import { LassiMascotte }           from '../../components/LassiMascotte';
+import { LassiMascotte } from '../../components/LassiMascotte';
 import {
   analyserMessage,
   rechercherPrestataires,
   loggerQuestionSansReponse,
   ShopResult,
   CatMatch,
-}                                  from '../../services/lassiAssistant';
-import { SUGGESTIONS_ACCUEIL }     from '../../data/faqData';
-import { CATEGORIES }              from '../../config/categories';
-import useAuthStore                from '../../store/authStore';
+} from '../../services/lassiAssistant';
+import { SUGGESTIONS_ACCUEIL } from '../../data/faqData';
+import { CATEGORIES } from '../../config/categories';
+import useAuthStore from '../../store/authStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type ChatMsg =
-  | { id: string; kind: 'bot';         text: string }
-  | { id: string; kind: 'user';        text: string }
-  | { id: string; kind: 'shops';       shops: ShopResult[]; catLabel: string; zone?: string }
+  | { id: string; kind: 'bot'; text: string }
+  | { id: string; kind: 'user'; text: string }
+  | { id: string; kind: 'shops'; shops: ShopResult[]; catLabel: string; zone?: string }
   | { id: string; kind: 'sc' }
   | { id: string; kind: 'chips' }
   | { id: string; kind: 'suggestions' }
@@ -42,40 +48,63 @@ function chatKey(userId: string) {
   return `lassi_chat_${userId}`;
 }
 
-const SEARCH_CHIPS: { id: string; label: string; emoji: string; imageUri?: number; cat: CatMatch }[] =
-  CATEGORIES.flatMap(cat =>
-    cat.subcats.map(sub => ({
-      id:       `${cat.id}_${sub.id}`,
-      label:    sub.label,
-      emoji:    sub.emoji,
-      imageUri: sub.imageUri,
-      cat:      { id: cat.id, label: cat.label } as CatMatch,
-    }))
-  );
+const SEARCH_CHIPS: {
+  id: string;
+  label: string;
+  emoji: string;
+  imageUri?: number;
+  cat: CatMatch;
+}[] = CATEGORIES.flatMap(cat =>
+  cat.subcats.map(sub => ({
+    id: `${cat.id}_${sub.id}`,
+    label: sub.label,
+    emoji: sub.emoji,
+    imageUri: sub.imageUri,
+    cat: { id: cat.id, label: cat.label } as CatMatch,
+  })),
+);
 
 const uid = () => `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
 // welcome + chips sont rendus dans le header fixe hors FlatList
 function makeInitialMsgs(): ChatMsg[] {
   return [
-    { id: uid(), kind: 'bot',         text: "Ou pose-moi une question sur l'app :" },
+    { id: uid(), kind: 'bot', text: "Ou pose-moi une question sur l'app :" },
     { id: uid(), kind: 'suggestions' },
   ];
 }
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
-
 const IcoSend = ({ active }: { active: boolean }) => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={20}
+    height={20}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M22 2 11 13" stroke={active ? colors.bg : colors.muted} />
     <Path d="M22 2 15 22 11 13 2 9l20-7Z" stroke={active ? colors.bg : colors.muted} />
   </Svg>
 );
 
 const IcoPhone = () => (
-  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.14 13.5a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.05 2.78h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 10.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 18l-.08-1.08Z" stroke={colors.bg} />
+  <Svg
+    width={17}
+    height={17}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path
+      d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.14 13.5a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.05 2.78h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 10.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 18l-.08-1.08Z"
+      stroke={colors.bg}
+    />
   </Svg>
 );
 
@@ -132,30 +161,50 @@ function ShopCard({ shop, onPress }: { shop: ShopResult; onPress: () => void }) 
       {/* Infos */}
       <View style={styles.shopInfo}>
         <View style={styles.shopNameRow}>
-          <Text style={styles.shopName} numberOfLines={1}>{shop.name}</Text>
+          <Text style={styles.shopName} numberOfLines={1}>
+            {shop.name}
+          </Text>
           {shop.isVip && <Text style={styles.vipBadge}>🥇 VIP</Text>}
         </View>
-        <Text style={styles.shopZone} numberOfLines={1}>{shop.zone || shop.category}</Text>
+        <Text style={styles.shopZone} numberOfLines={1}>
+          {shop.zone || shop.category}
+        </Text>
         <View style={styles.shopStatusRow}>
-          <View style={[styles.statusDot, { backgroundColor: shop.isOpen ? colors.success : colors.danger }]} />
+          <View
+            style={[
+              styles.statusDot,
+              { backgroundColor: shop.isOpen ? colors.success : colors.danger },
+            ]}
+          />
           <Text style={[styles.statusTxt, { color: shop.isOpen ? colors.success : colors.danger }]}>
             {shop.isOpen ? 'Ouvert' : 'Fermé'}
           </Text>
-          {shop.distance != null && (
-            <Text style={styles.distTxt}> · {fmtDist(shop.distance)}</Text>
-          )}
+          {shop.distance != null && <Text style={styles.distTxt}> · {fmtDist(shop.distance)}</Text>}
         </View>
       </View>
 
       {/* Chevron */}
-      <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+      <Svg
+        width={14}
+        height={14}
+        viewBox="0 0 24 24"
+        fill="none"
+        strokeWidth={2.2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <Path d="M9 18l6-6-6-6" stroke={colors.muted} />
       </Svg>
     </TouchableOpacity>
   );
 }
 
-function ShopsMessage({ shops, catLabel, zone, onShopPress }: {
+function ShopsMessage({
+  shops,
+  catLabel,
+  zone,
+  onShopPress,
+}: {
   shops: ShopResult[];
   catLabel: string;
   zone?: string;
@@ -211,10 +260,11 @@ function SearchChips({ onPress }: { onPress: (cat: CatMatch) => void }) {
           onPress={() => onPress(c.cat)}
           activeOpacity={0.78}
         >
-          {c.imageUri
-            ? <Image source={c.imageUri} style={styles.chipImg} resizeMode="cover" />
-            : <Text style={styles.chipEmoji}>{c.emoji}</Text>
-          }
+          {c.imageUri ? (
+            <Image source={c.imageUri} style={styles.chipImg} resizeMode="cover" />
+          ) : (
+            <Text style={styles.chipEmoji}>{c.emoji}</Text>
+          )}
           <Text style={styles.chipTxt}>{c.label}</Text>
         </TouchableOpacity>
       ))}
@@ -226,9 +276,21 @@ function SuggestionsList({ onPress }: { onPress: (q: string) => void }) {
   return (
     <View style={styles.suggWrap}>
       {SUGGESTIONS_ACCUEIL.map(q => (
-        <TouchableOpacity key={q} style={styles.suggItem} onPress={() => onPress(q)} activeOpacity={0.78}>
+        <TouchableOpacity
+          key={q}
+          style={styles.suggItem}
+          onPress={() => onPress(q)}
+          activeOpacity={0.78}
+        >
           <Text style={styles.suggTxt}>{q}</Text>
-          <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round">
+          <Svg
+            width={13}
+            height={13}
+            viewBox="0 0 24 24"
+            fill="none"
+            strokeWidth={2}
+            strokeLinecap="round"
+          >
             <Path d="M9 18l6-6-6-6" stroke={colors.muted} />
           </Svg>
         </TouchableOpacity>
@@ -240,27 +302,27 @@ function SuggestionsList({ onPress }: { onPress: (q: string) => void }) {
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 interface Props {
-  onClose:     () => void;
+  onClose: () => void;
   onShopPress: (shopId: string, shopName: string) => void;
 }
 
 export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
   const [messages, setMessages] = useState<ChatMsg[]>(() => makeInitialMsgs());
-  const [input,    setInput]    = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [headerH,  setHeaderH]  = useState(0);
-  const listRef                 = useRef<FlatList>(null);
-  const inputRef                = useRef<TextInput>(null);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [headerH, setHeaderH] = useState(0);
+  const listRef = useRef<FlatList>(null);
+  const inputRef = useRef<TextInput>(null);
 
-  const user   = useAuthStore(s => s.user);
+  const user = useAuthStore(s => s.user);
   const userId = user?.id ?? 'guest';
-  const role   = user?.role ?? 'client';
+  const role = user?.role ?? 'client';
   const profil = (role === 'merchant' ? 'prestataire' : role) as 'client' | 'prestataire' | 'tous';
-  const myKey  = chatKey(userId);
+  const myKey = chatKey(userId);
 
   // ── sendRef — mis à jour AVANT chaque rendu (useLayoutEffect synchrone) ─────
-  const sendRef       = useRef<(t: string) => void>(() => {});
-  const hasLoadedRef  = useRef(false); // empêche la sauvegarde avant le chargement
+  const sendRef = useRef<(t: string) => void>(() => {});
+  const hasLoadedRef = useRef(false); // empêche la sauvegarde avant le chargement
 
   // ── Chargement historique (72h, privé par userId) ─────────────────────────
   useEffect(() => {
@@ -268,12 +330,14 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
       .then(raw => {
         if (raw) {
           const { msgs, savedAt } = JSON.parse(raw);
-          const isNewFormat = Array.isArray(msgs) && msgs.every((m: ChatMsg) => String(m.id).includes('_'));
+          const isNewFormat =
+            Array.isArray(msgs) && msgs.every((m: ChatMsg) => String(m.id).includes('_'));
           if (isNewFormat && msgs.length > 0 && Date.now() - savedAt < CHAT_TTL_MS) {
             // Retirer les anciens chips/welcome du format précédent (maintenant dans le header fixe)
             const cleaned: ChatMsg[] = msgs.filter(
-              (m: ChatMsg) => m.kind !== 'chips' &&
-                !(m.kind === 'bot' && m.text.startsWith('Salut ! Je suis Lassi'))
+              (m: ChatMsg) =>
+                m.kind !== 'chips' &&
+                !(m.kind === 'bot' && m.text.startsWith('Salut ! Je suis Lassi')),
             );
             setMessages(cleaned.length > 0 ? cleaned : makeInitialMsgs());
           } else {
@@ -282,17 +346,22 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
         }
       })
       .catch(() => {})
-      .finally(() => { hasLoadedRef.current = true; });
+      .finally(() => {
+        hasLoadedRef.current = true;
+      });
   }, [myKey]);
 
   // ── Sauvegarde automatique (uniquement pour cet utilisateur) ──────────────
   useEffect(() => {
     if (!hasLoadedRef.current) return;
     const toSave = messages.filter(m => m.kind !== 'loading');
-    AsyncStorage.setItem(myKey, JSON.stringify({
-      msgs:    toSave,
-      savedAt: Date.now(),
-    })).catch(() => {});
+    AsyncStorage.setItem(
+      myKey,
+      JSON.stringify({
+        msgs: toSave,
+        savedAt: Date.now(),
+      }),
+    ).catch(() => {});
   }, [messages, myKey]);
 
   // ── Auto-scroll ─────────────────────────────────────────────────────────────
@@ -322,42 +391,57 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
           ...prev.filter(m => m.id !== loadId),
           { id: uid(), kind: 'bot' as const, text: intent.reponse! },
         ]);
-
       } else if (intent.type === 'search' && intent.categorie) {
         const shops = await rechercherPrestataires(intent.categorie.id, intent.zone, null);
         setMessages(prev => {
           const base = prev.filter(m => m.id !== loadId);
           if (shops.length === 0) {
             const loc = intent.zone ? ` à ${intent.zone}` : '';
-            return [...base, {
-              id: uid(), kind: 'bot' as const,
-              text: `Je n'ai trouvé aucun ${intent.categorie!.label}${loc} pour l'instant 🐝\nEssaie une autre zone ou regarde la carte !`,
-            }];
+            return [
+              ...base,
+              {
+                id: uid(),
+                kind: 'bot' as const,
+                text: `Je n'ai trouvé aucun ${intent.categorie!.label}${loc} pour l'instant 🐝\nEssaie une autre zone ou regarde la carte !`,
+              },
+            ];
           }
-          return [...base, {
-            id: uid(), kind: 'shops' as const,
-            shops, catLabel: intent.categorie!.label, zone: intent.zone,
-          }];
+          return [
+            ...base,
+            {
+              id: uid(),
+              kind: 'shops' as const,
+              shops,
+              catLabel: intent.categorie!.label,
+              zone: intent.zone,
+            },
+          ];
         });
-
       } else if (intent.type === 'faq' && intent.faq) {
         setMessages(prev => [
           ...prev.filter(m => m.id !== loadId),
           { id: uid(), kind: 'bot' as const, text: intent.faq!.reponse },
         ]);
-
       } else {
         await loggerQuestionSansReponse(txt);
         setMessages(prev => [
           ...prev.filter(m => m.id !== loadId),
-          { id: uid(), kind: 'bot' as const, text: 'Je n\'ai pas bien compris 🐝\nEssaie "coiffeur à Patte d\'Oie" ou pose une question sur l\'app. Le service client peut aussi t\'aider !' },
+          {
+            id: uid(),
+            kind: 'bot' as const,
+            text: "Je n'ai pas bien compris 🐝\nEssaie \"coiffeur à Patte d'Oie\" ou pose une question sur l'app. Le service client peut aussi t'aider !",
+          },
           { id: uid(), kind: 'sc' as const },
         ]);
       }
     } catch {
       setMessages(prev => [
         ...prev.filter(m => m.id !== loadId),
-        { id: uid(), kind: 'bot' as const, text: 'Une erreur est survenue. Réessaie ou contacte le service client.' },
+        {
+          id: uid(),
+          kind: 'bot' as const,
+          text: 'Une erreur est survenue. Réessaie ou contacte le service client.',
+        },
         { id: uid(), kind: 'sc' as const },
       ]);
     } finally {
@@ -392,9 +476,9 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
       case 'sc':
         return <ServiceClientBanner />;
       case 'chips':
-        return <SearchChips onPress={(cat) => sendRef.current(cat.label)} />;
+        return <SearchChips onPress={cat => sendRef.current(cat.label)} />;
       case 'suggestions':
-        return <SuggestionsList onPress={(q) => sendRef.current(q)} />;
+        return <SuggestionsList onPress={q => sendRef.current(q)} />;
       default:
         return null;
     }
@@ -419,7 +503,11 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
         <View style={styles.mascotteSection}>
           <LassiMascotte forme="search" taille={80} animation="peek" glow boucle />
         </View>
-        <BotBubble text={'Salut ! Je suis Lassi 🐝\nPose-moi ta question ou cherche un commerce près de toi !'} />
+        <BotBubble
+          text={
+            'Salut ! Je suis Lassi 🐝\nPose-moi ta question ou cherche un commerce près de toi !'
+          }
+        />
         <SearchChips onPress={cat => sendRef.current(cat.label)} />
       </View>
 
@@ -474,7 +562,10 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
       {headerH > 0 && (
         <View style={[styles.fadeTop, { top: headerH }]} pointerEvents="none">
           {Array.from({ length: 8 }, (_, i) => (
-            <View key={i} style={{ flex: 1, backgroundColor: `rgba(20,21,42,${((7 - i) / 7) * 0.9})` }} />
+            <View
+              key={i}
+              style={{ flex: 1, backgroundColor: `rgba(20,21,42,${((7 - i) / 7) * 0.9})` }}
+            />
           ))}
         </View>
       )}
@@ -492,30 +583,30 @@ const styles = StyleSheet.create({
 
   // En-tête
   header: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    justifyContent:    'space-between',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom:     10,
+    paddingBottom: 10,
   },
   headerTitle: {
-    color:         colors.accent,
-    fontFamily:    fonts.ui,
-    fontSize:      12,
+    color: colors.accent,
+    fontFamily: fonts.ui,
+    fontSize: 12,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   closeBtn: {
-    width:           36,
-    height:          36,
-    borderRadius:    10,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,.07)',
-    alignItems:      'center',
-    justifyContent:  'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   mascotteSection: {
-    alignItems:    'center',
-    height:        112,   // imgH = 80*1.27 ≈ 102px + 10 marge
+    alignItems: 'center',
+    height: 112, // imgH = 80*1.27 ≈ 102px + 10 marge
     // PAS d'overflow:hidden — l'anim peek entre par le bas, il faut la laisser passer
   },
 
@@ -527,43 +618,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chatContent: {
-    paddingVertical:   16,
+    paddingVertical: 16,
     paddingHorizontal: 0,
-    paddingBottom:     56, // espace sous le dernier message avant le dégradé
+    paddingBottom: 56, // espace sous le dernier message avant le dégradé
   },
   // Fondu BAS — chevauche le bas de la FlatList vers la barre de saisie
   fadeBottom: {
-    height:    72,
+    height: 72,
     marginTop: -72,
   },
   // Fondu HAUT — positionné absolument à la base du header fixe (top: headerH via inline style)
   fadeTop: {
     position: 'absolute',
-    left:     0,
-    right:    0,
-    height:   28,
+    left: 0,
+    right: 0,
+    height: 28,
   },
 
   // Bulles bot
   rowBot: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    marginBottom:  10,
+    marginBottom: 10,
   },
   bubbleBot: {
-    maxWidth:         '82%',
-    backgroundColor:  colors.surface,
-    borderRadius:     radius.lg,
+    maxWidth: '82%',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     borderTopLeftRadius: 4,
-    paddingVertical:  11,
+    paddingVertical: 11,
     paddingHorizontal: 14,
-    borderWidth:      1,
-    borderColor:      colors.border,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   bubbleTxt: {
-    color:      colors.white,
+    color: colors.white,
     fontFamily: fonts.body,
-    fontSize:   13.5,
+    fontSize: 13.5,
     lineHeight: 20,
   },
 
@@ -572,20 +663,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     paddingHorizontal: 16,
-    marginBottom:  10,
+    marginBottom: 10,
   },
   bubbleUser: {
-    maxWidth:            '78%',
-    backgroundColor:     colors.accent,
-    borderRadius:        radius.lg,
+    maxWidth: '78%',
+    backgroundColor: colors.accent,
+    borderRadius: radius.lg,
     borderTopRightRadius: 4,
-    paddingVertical:     10,
-    paddingHorizontal:   14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
   },
   bubbleUserTxt: {
-    color:      colors.bg,
+    color: colors.bg,
     fontFamily: fonts.ui,
-    fontSize:   13.5,
+    fontSize: 13.5,
     lineHeight: 20,
   },
 
@@ -598,186 +689,189 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    backgroundColor:  colors.surface,
-    borderWidth:      1,
-    borderColor:      colors.border,
-    borderRadius:     radius.pill,
-    paddingVertical:  8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingVertical: 8,
     paddingHorizontal: 14,
-    flexDirection:    'row',
-    alignItems:       'center',
-    gap:              6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  chipImg:   { width: 24, height: 24, borderRadius: 5 },
+  chipImg: { width: 24, height: 24, borderRadius: 5 },
   chipEmoji: { fontSize: 16 },
   chipTxt: {
-    color:      colors.white,
+    color: colors.white,
     fontFamily: fonts.ui,
-    fontSize:   13,
+    fontSize: 13,
   },
 
   // Suggestions
   suggWrap: {
     marginHorizontal: 16,
-    marginBottom:     10,
-    borderRadius:     radius.md,
-    overflow:         'hidden',
-    borderWidth:      1,
-    borderColor:      colors.border,
+    marginBottom: 10,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   suggItem: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    justifyContent:  'space-between',
-    paddingVertical:  12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    backgroundColor:   colors.surface,
+    backgroundColor: colors.surface,
   },
   suggTxt: {
-    flex:       1,
-    color:      '#D0D1E8',
+    flex: 1,
+    color: '#D0D1E8',
     fontFamily: fonts.body,
-    fontSize:   13,
+    fontSize: 13,
     lineHeight: 18,
   },
 
   // Cartes shops
   shopsList: {
     paddingHorizontal: 16,
-    marginBottom:      10,
+    marginBottom: 10,
     gap: 8,
   },
   shopCard: {
-    flexDirection:    'row',
-    alignItems:       'center',
-    backgroundColor:  colors.surface,
-    borderRadius:     radius.md,
-    borderWidth:      1,
-    borderColor:      colors.border,
-    padding:          12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 12,
     gap: 12,
   },
   shopLogo: {
-    width:           46,
-    height:          46,
-    borderRadius:    12,
+    width: 46,
+    height: 46,
+    borderRadius: 12,
     backgroundColor: 'rgba(253,207,52,0.12)',
-    borderWidth:     1,
-    borderColor:     'rgba(253,207,52,0.25)',
-    alignItems:      'center',
-    justifyContent:  'center',
-    overflow:        'hidden',
-    flexShrink:      0,
+    borderWidth: 1,
+    borderColor: 'rgba(253,207,52,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    flexShrink: 0,
   },
   shopLogoImg: {
-    width: 46, height: 46,
+    width: 46,
+    height: 46,
   },
   shopLogoInitial: {
-    color:      colors.accent,
+    color: colors.accent,
     fontFamily: fonts.title,
-    fontSize:   20,
+    fontSize: 20,
   },
   shopInfo: {
     flex: 1,
-    gap:  2,
+    gap: 2,
   },
   shopNameRow: {
     flexDirection: 'row',
-    alignItems:    'center',
+    alignItems: 'center',
     gap: 6,
   },
   shopName: {
-    flex:       1,
-    color:      colors.white,
+    flex: 1,
+    color: colors.white,
     fontFamily: fonts.ui,
-    fontSize:   14,
+    fontSize: 14,
   },
   vipBadge: {
-    fontSize:   11,
-    color:      colors.accent,
+    fontSize: 11,
+    color: colors.accent,
     fontFamily: fonts.ui,
   },
   shopZone: {
-    color:      colors.muted,
+    color: colors.muted,
     fontFamily: fonts.body,
-    fontSize:   12,
+    fontSize: 12,
   },
   shopStatusRow: {
     flexDirection: 'row',
-    alignItems:    'center',
+    alignItems: 'center',
     gap: 4,
-    marginTop:     2,
+    marginTop: 2,
   },
   statusDot: {
-    width: 6, height: 6, borderRadius: 3,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   statusTxt: {
     fontFamily: fonts.ui,
-    fontSize:   11.5,
+    fontSize: 11.5,
   },
   distTxt: {
-    color:      colors.muted,
+    color: colors.muted,
     fontFamily: fonts.body,
-    fontSize:   11.5,
+    fontSize: 11.5,
   },
 
   // Service client
   scBanner: {
     paddingHorizontal: 16,
-    marginBottom:      10,
+    marginBottom: 10,
   },
   scBtn: {
-    flexDirection:  'row',
-    alignItems:     'center',
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    gap:            9,
+    gap: 9,
     backgroundColor: colors.accent,
-    borderRadius:   radius.md,
+    borderRadius: radius.md,
     paddingVertical: 13,
   },
   scBtnTxt: {
-    color:      colors.bg,
+    color: colors.bg,
     fontFamily: fonts.ui,
-    fontSize:   14,
+    fontSize: 14,
   },
 
   // Barre de saisie
   inputBar: {
-    flexDirection:    'row',
-    alignItems:       'center',
-    gap:              10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     paddingHorizontal: 16,
-    paddingVertical:   12,
-    borderTopWidth:    1,
-    borderTopColor:    colors.border,
-    backgroundColor:   colors.bg,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.bg,
   },
   input: {
-    flex:             1,
-    height:           44,
-    backgroundColor:  colors.surface,
-    borderWidth:      1,
-    borderColor:      colors.border,
-    borderRadius:     radius.pill,
+    flex: 1,
+    height: 44,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
     paddingHorizontal: 16,
-    color:            colors.white,
-    fontFamily:       fonts.body,
-    fontSize:         14,
+    color: colors.white,
+    fontFamily: fonts.body,
+    fontSize: 14,
   },
   sendBtn: {
-    width:           44,
-    height:          44,
-    borderRadius:    22,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.surface,
-    borderWidth:     1,
-    borderColor:     colors.border,
-    alignItems:      'center',
-    justifyContent:  'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sendBtnActive: {
     backgroundColor: colors.accent,
-    borderColor:     colors.accent,
+    borderColor: colors.accent,
   },
 });

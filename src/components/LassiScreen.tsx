@@ -4,10 +4,7 @@ import { colors } from '../theme';
 
 // Pré-calculé hors composant pour éviter de recréer les nœuds à chaque rendu
 const TOP_FADE_ROWS = Array.from({ length: 8 }, (_, i) => (
-  <View
-    key={i}
-    style={{ flex: 1, backgroundColor: `rgba(20,21,42,${((7 - i) / 7) * 0.88})` }}
-  />
+  <View key={i} style={{ flex: 1, backgroundColor: `rgba(20,21,42,${((7 - i) / 7) * 0.88})` }} />
 ));
 
 interface Props {
@@ -37,14 +34,10 @@ export default function LassiScreen({ header, footer, children, style }: Props) 
   return (
     <View style={[s.root, style]}>
       {/* ── Header fixe ──────────────────────────────────────────────────── */}
-      <View onLayout={e => setHeaderH(e.nativeEvent.layout.height)}>
-        {header}
-      </View>
+      <View onLayout={e => setHeaderH(e.nativeEvent.layout.height)}>{header}</View>
 
       {/* ── Contenu défilant ─────────────────────────────────────────────── */}
-      <View style={s.content}>
-        {children}
-      </View>
+      <View style={s.content}>{children}</View>
 
       {/* ── Footer fixe (optionnel) ──────────────────────────────────────── */}
       {footer}
@@ -69,8 +62,8 @@ const s = StyleSheet.create({
   },
   topFade: {
     position: 'absolute',
-    left:     0,
-    right:    0,
-    height:   24,
+    left: 0,
+    right: 0,
+    height: 24,
   },
 });

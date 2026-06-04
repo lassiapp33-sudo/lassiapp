@@ -6,27 +6,33 @@
  *   readOnly=false, sans onToggleManuallyClose → formulaire d'inscription (étape 4)
  */
 import React from 'react';
-import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Switch,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Switch } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 import {
-  DAY_KEYS, DAY_LABELS, DayKey, DayHours, WeekHours,
-  DEFAULT_WEEK_HOURS, computeStatus, formatDayHours,
+  DAY_KEYS,
+  DAY_LABELS,
+  DayKey,
+  DayHours,
+  WeekHours,
+  DEFAULT_WEEK_HOURS,
+  computeStatus,
+  formatDayHours,
 } from '../../services/hours';
 
 interface Props {
-  hours:                  WeekHours | null;
-  isManuallyClose:        boolean;
-  readOnly?:              boolean;
-  onChange?:              (h: WeekHours) => void;
+  hours: WeekHours | null;
+  isManuallyClose: boolean;
+  readOnly?: boolean;
+  onChange?: (h: WeekHours) => void;
   onToggleManuallyClose?: () => void;
 }
 
 export default function OpeningHoursCard({
-  hours, isManuallyClose, readOnly = false,
-  onChange, onToggleManuallyClose,
+  hours,
+  isManuallyClose,
+  readOnly = false,
+  onChange,
+  onToggleManuallyClose,
 }: Props) {
   // Merge over defaults so every day key is always present (guards against partial JSONB)
   const eff: WeekHours = { ...DEFAULT_WEEK_HOURS, ...(hours ?? {}) };
@@ -41,13 +47,18 @@ export default function OpeningHoursCard({
     return (
       <View style={styles.card}>
         <View style={styles.statusRow}>
-          <View style={[styles.dot, { backgroundColor: status.isOpen ? colors.success : colors.danger }]} />
-          <Text style={[styles.statusTxt, { color: status.isOpen ? colors.success : colors.danger }]}>
+          <View
+            style={[
+              styles.dot,
+              { backgroundColor: status.isOpen ? colors.success : colors.danger },
+            ]}
+          />
+          <Text
+            style={[styles.statusTxt, { color: status.isOpen ? colors.success : colors.danger }]}
+          >
             {status.label}
           </Text>
-          {!!status.nextChange && (
-            <Text style={styles.nextChangeTxt}> · {status.nextChange}</Text>
-          )}
+          {!!status.nextChange && <Text style={styles.nextChangeTxt}> · {status.nextChange}</Text>}
         </View>
 
         {DAY_KEYS.map(day => (
@@ -70,10 +81,7 @@ export default function OpeningHoursCard({
         return (
           <View
             key={day}
-            style={[
-              styles.editRow,
-              idx < DAY_KEYS.length - 1 && styles.editRowBorder,
-            ]}
+            style={[styles.editRow, idx < DAY_KEYS.length - 1 && styles.editRowBorder]}
           >
             <Text style={styles.editDayName}>{DAY_LABELS[day].slice(0, 3)}</Text>
 
@@ -140,24 +148,25 @@ export default function OpeningHoursCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderWidth:     1,
-    borderColor:     colors.border,
-    borderRadius:    radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
     paddingHorizontal: 14,
-    paddingVertical:   10,
+    paddingVertical: 10,
   },
 
   // Lecture seule
   statusRow: {
     flexDirection: 'row',
-    alignItems:    'center',
-    marginBottom:  12,
+    alignItems: 'center',
+    marginBottom: 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   dot: {
-    width: 8, height: 8,
+    width: 8,
+    height: 8,
     borderRadius: 4,
     marginRight: 7,
   },
@@ -192,7 +201,7 @@ const styles = StyleSheet.create({
   // Édition
   editRow: {
     flexDirection: 'row',
-    alignItems:    'center',
+    alignItems: 'center',
     paddingVertical: 8,
     gap: 8,
   },
@@ -239,20 +248,20 @@ const styles = StyleSheet.create({
   },
   toggleBtn: {
     paddingHorizontal: 10,
-    paddingVertical:   6,
-    borderRadius:      8,
-    backgroundColor:   'rgba(224,122,122,.12)',
-    borderWidth:       1,
-    borderColor:       'rgba(224,122,122,.3)',
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(224,122,122,.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(224,122,122,.3)',
   },
   toggleBtnOpen: {
     backgroundColor: 'rgba(95,211,138,.12)',
-    borderColor:     'rgba(95,211,138,.3)',
+    borderColor: 'rgba(95,211,138,.3)',
   },
   toggleTxt: {
-    color:      colors.danger,
+    color: colors.danger,
     fontFamily: fonts.ui,
-    fontSize:   11,
+    fontSize: 11,
     letterSpacing: 0.2,
   },
   toggleTxtOpen: {

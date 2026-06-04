@@ -1,35 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, TextInput, Image,
-  KeyboardAvoidingView, Platform,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  TextInput,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { IcoPlus } from '../../components/icons';
 
-import StoreHeader      from '../../components/store/StoreHeader';
-import ShopProfileCard  from '../../components/store/ShopProfileCard';
-import CategoryTabs     from '../../components/store/CategoryTabs';
-import ProductRow       from '../../components/store/ProductRow';
-import AddProductSheet  from '../../components/store/AddProductSheet';
+import StoreHeader from '../../components/store/StoreHeader';
+import ShopProfileCard from '../../components/store/ShopProfileCard';
+import CategoryTabs from '../../components/store/CategoryTabs';
+import ProductRow from '../../components/store/ProductRow';
+import AddProductSheet from '../../components/store/AddProductSheet';
 import OpeningHoursCard from '../../components/store/OpeningHoursCard';
 import { colors, fonts, radius } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import { StoreProduct } from '../../types/store';
 import { ProductPromoInfo } from '../../types/promotions';
-import useShopStore      from '../../store/shopStore';
-import useAuthStore     from '../../store/authStore';
+import useShopStore from '../../store/shopStore';
+import useAuthStore from '../../store/authStore';
 import { getCurrentLocation, reverseGeocode } from '../../services/location';
 import * as storageService from '../../services/storage';
-import * as promoService   from '../../services/promotions';
-import { getErrorMessage }  from '../../utils/errorUtils';
+import * as promoService from '../../services/promotions';
+import { getErrorMessage } from '../../utils/errorUtils';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
-
 const IcoPin = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={16}
+    height={16}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" stroke={colors.accent} />
     <Path d="M12 10m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0" stroke={colors.accent} />
   </Svg>
@@ -37,13 +52,22 @@ const IcoPin = () => (
 
 // ─── SectionHead (label adapté au shop_type) ──────────────────────────────────
 
-function SectionHead({ title, count, itemLabel }: {
-  title: string; count: number; itemLabel: string;
+function SectionHead({
+  title,
+  count,
+  itemLabel,
+}: {
+  title: string;
+  count: number;
+  itemLabel: string;
 }) {
   return (
     <View style={styles.sec}>
       <Text style={styles.secTitle}>{title}</Text>
-      <Text style={styles.secCount}>{count} {itemLabel}{count > 1 ? 's' : ''}</Text>
+      <Text style={styles.secCount}>
+        {count} {itemLabel}
+        {count > 1 ? 's' : ''}
+      </Text>
     </View>
   );
 }
@@ -51,9 +75,9 @@ function SectionHead({ title, count, itemLabel }: {
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  onBack:     () => void;
+  onBack: () => void;
   onPreview?: () => void;
-  onPromos?:  () => void;
+  onPromos?: () => void;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
@@ -61,47 +85,48 @@ interface Props {
 const MAX_GALLERY = 5;
 
 export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
-  const profileRaw          = useShopStore(s => s.profile);
-  const avatarUrl           = useAuthStore(s => s.user?.avatarUrl);
-  const profile             = { ...profileRaw, logoUrl: avatarUrl ?? profileRaw.logoUrl ?? undefined };
-  const context             = useShopStore(s => s.context);
-  const shopId              = useShopStore(s => s.shopId);
-  const shopNotFound        = useShopStore(s => s.shopNotFound);
-  const categories          = useShopStore(s => s.categories);
-  const products            = useShopStore(s => s.products);
-  const loading             = useShopStore(s => s.loading);
-  const updateProfile       = useShopStore(s => s.updateProfile);
-  const updateOpeningHours  = useShopStore(s => s.updateOpeningHours);
+  const profileRaw = useShopStore(s => s.profile);
+  const avatarUrl = useAuthStore(s => s.user?.avatarUrl);
+  const profile = { ...profileRaw, logoUrl: avatarUrl ?? profileRaw.logoUrl ?? undefined };
+  const context = useShopStore(s => s.context);
+  const shopId = useShopStore(s => s.shopId);
+  const shopNotFound = useShopStore(s => s.shopNotFound);
+  const categories = useShopStore(s => s.categories);
+  const products = useShopStore(s => s.products);
+  const loading = useShopStore(s => s.loading);
+  const updateProfile = useShopStore(s => s.updateProfile);
+  const updateOpeningHours = useShopStore(s => s.updateOpeningHours);
   const toggleManuallyClose = useShopStore(s => s.toggleManuallyClose);
-  const saveShopDetails     = useShopStore(s => s.saveShopDetails);
-  const updateGalleryUrls   = useShopStore(s => s.updateGalleryUrls);
-  const saveProduct         = useShopStore(s => s.saveProduct);
-  const removeProduct       = useShopStore(s => s.removeProduct);
-  const toggleStock         = useShopStore(s => s.toggleStock);
-  const loadMyShop          = useShopStore(s => s.loadMyShop);
-  const addCategory         = useShopStore(s => s.addCategory);
-  const removeCategory      = useShopStore(s => s.removeCategory);
+  const saveShopDetails = useShopStore(s => s.saveShopDetails);
+  const updateGalleryUrls = useShopStore(s => s.updateGalleryUrls);
+  const saveProduct = useShopStore(s => s.saveProduct);
+  const removeProduct = useShopStore(s => s.removeProduct);
+  const toggleStock = useShopStore(s => s.toggleStock);
+  const loadMyShop = useShopStore(s => s.loadMyShop);
+  const addCategory = useShopStore(s => s.addCategory);
+  const removeCategory = useShopStore(s => s.removeCategory);
 
   // ── Catalogue ─────────────────────────────────────────────────────────────
-  const [activeCat,  setActiveCat]  = useState('petitdej');
+  const [activeCat, setActiveCat] = useState('petitdej');
   const [editTarget, setEditTarget] = useState<StoreProduct | null>(null);
-  const [showSheet,  setShowSheet]  = useState(false);
+  const [showSheet, setShowSheet] = useState(false);
 
   // ── Promos actives (pour badges sur les produits) ─────────────────────────
   const [promoMap, setPromoMap] = useState<Record<string, ProductPromoInfo>>({});
 
   // ── Géolocalisation ────────────────────────────────────────────────────────
   const [locLoading, setLocLoading] = useState(false);
-  const [locZone,    setLocZone]    = useState<string | null>(null);
+  const [locZone, setLocZone] = useState<string | null>(null);
 
   // ── Infos boutique (description / adresse / téléphone) ─────────────────────
-  const [desc,      setDesc]      = useState(profile.description ?? '');
-  const [addr,      setAddr]      = useState(profile.addressText ?? '');
-  const [phone,     setPhone]     = useState(profile.phone ?? '');
+  const [desc, setDesc] = useState(profile.description ?? '');
+  const [addr, setAddr] = useState(profile.addressText ?? '');
+  const [phone, setPhone] = useState(profile.phone ?? '');
   const [detailsLoading, setDetailsLoading] = useState(false);
-  const detailsDirty = desc !== (profile.description ?? '')
-    || addr !== (profile.addressText ?? '')
-    || phone !== (profile.phone ?? '');
+  const detailsDirty =
+    desc !== (profile.description ?? '') ||
+    addr !== (profile.addressText ?? '') ||
+    phone !== (profile.phone ?? '');
 
   // Synchronise les champs locaux quand le store se met à jour (après loadMyShop)
   useEffect(() => {
@@ -111,15 +136,18 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
   }, [profile.description, profile.addressText, profile.phone]);
 
   // ── Galerie ───────────────────────────────────────────────────────────────
-  const galleryUrls     = context.galleryUrls;
+  const galleryUrls = context.galleryUrls;
   const [galLoading, setGalLoading] = useState(false);
 
   // Montage seul — loadMyShop est stable (Zustand)
-  useEffect(() => { loadMyShop(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadMyShop();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!shopId) return;
-    promoService.getActivePromos(shopId)
+    promoService
+      .getActivePromos(shopId)
       .then(promos => setPromoMap(promoService.buildProductPromoMap(promos)))
       .catch(() => {});
   }, [shopId]);
@@ -131,17 +159,29 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
   }, [categories]);
 
   const activeCatData = categories.find(c => c.id === activeCat);
-  const filtered      = products.filter(p => p.category === activeCat);
-  const openEdit      = (p: StoreProduct) => { setEditTarget(p); setShowSheet(true); };
-  const openAdd       = () => { setEditTarget(null); setShowSheet(true); };
+  const filtered = products.filter(p => p.category === activeCat);
+  const openEdit = (p: StoreProduct) => {
+    setEditTarget(p);
+    setShowSheet(true);
+  };
+  const openAdd = () => {
+    setEditTarget(null);
+    setShowSheet(true);
+  };
 
   // Labels adaptatifs selon le shop_type
-  const itemLabel    = context.shopType === 'services'    ? 'prestation'
-                     : context.shopType === 'memberships' ? 'formule'
-                     : 'produit';
-  const addItemLabel = context.shopType === 'services'    ? 'Ajouter une prestation'
-                     : context.shopType === 'memberships' ? 'Ajouter une formule'
-                     : 'Ajouter un produit';
+  const itemLabel =
+    context.shopType === 'services'
+      ? 'prestation'
+      : context.shopType === 'memberships'
+        ? 'formule'
+        : 'produit';
+  const addItemLabel =
+    context.shopType === 'services'
+      ? 'Ajouter une prestation'
+      : context.shopType === 'memberships'
+        ? 'Ajouter une formule'
+        : 'Ajouter un produit';
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -150,7 +190,10 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
     try {
       const coords = await getCurrentLocation();
       if (!coords) {
-        Alert.alert('Permission refusée', 'Autorise LASSİ à accéder à ta position dans les réglages.');
+        Alert.alert(
+          'Permission refusée',
+          'Autorise LASSİ à accéder à ta position dans les réglages.',
+        );
         return;
       }
       await useShopStore.getState().updateLocation(coords.latitude, coords.longitude);
@@ -168,24 +211,32 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
     Alert.alert('Supprimer ce produit ?', 'Cette action est irréversible.', [
       { text: 'Annuler', style: 'cancel' },
       {
-        text: 'Supprimer', style: 'destructive',
+        text: 'Supprimer',
+        style: 'destructive',
         onPress: async () => {
-          try { await removeProduct(id); setShowSheet(false); }
-          catch { Alert.alert('Erreur', 'Impossible de supprimer ce produit. Réessaie.'); }
+          try {
+            await removeProduct(id);
+            setShowSheet(false);
+          } catch {
+            Alert.alert('Erreur', 'Impossible de supprimer ce produit. Réessaie.');
+          }
         },
       },
     ]);
   };
 
   const handleDeleteCat = (catId: string) => {
-    const count   = products.filter(p => p.category === catId).length;
+    const count = products.filter(p => p.category === catId).length;
     const doDelete = async () => {
       if (activeCat === catId) {
         const next = categories.find(c => c.id !== catId);
         if (next) setActiveCat(next.id);
       }
-      try { await removeCategory(catId); }
-      catch { Alert.alert('Erreur', 'Impossible de supprimer ce menu. Réessaie.'); }
+      try {
+        await removeCategory(catId);
+      } catch {
+        Alert.alert('Erreur', 'Impossible de supprimer ce menu. Réessaie.');
+      }
     };
     if (count > 0) {
       Alert.alert(
@@ -223,7 +274,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
       if (!uri) return;
       setGalLoading(true);
       const path = storageService.galleryImagePath(shopId);
-      const url  = await storageService.uploadImage('gallery', uri, path);
+      const url = await storageService.uploadImage('gallery', uri, path);
       await updateGalleryUrls([...galleryUrls, url]);
     } catch (err: unknown) {
       const msg = getErrorMessage(err, '');
@@ -244,10 +295,14 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
     Alert.alert('Supprimer cette photo ?', 'Elle ne sera plus visible sur ta fiche.', [
       { text: 'Annuler', style: 'cancel' },
       {
-        text: 'Supprimer', style: 'destructive',
+        text: 'Supprimer',
+        style: 'destructive',
         onPress: async () => {
-          try { await updateGalleryUrls(galleryUrls.filter(u => u !== url)); }
-          catch { Alert.alert('Erreur', 'Impossible de supprimer la photo. Réessaie.'); }
+          try {
+            await updateGalleryUrls(galleryUrls.filter(u => u !== url));
+          } catch {
+            Alert.alert('Erreur', 'Impossible de supprimer la photo. Réessaie.');
+          }
         },
       },
     ]);
@@ -280,8 +335,11 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
   }
 
   return (
-    <LassiScreen header={<StoreHeader onBack={onBack} onPreview={onPreview ?? (() => {})} onPromos={onPromos} />}>
-
+    <LassiScreen
+      header={
+        <StoreHeader onBack={onBack} onPreview={onPreview ?? (() => {})} onPromos={onPromos} />
+      }
+    >
       {loading ? (
         <LoadingSpinner />
       ) : (
@@ -289,179 +347,199 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-        >
-          {/* Profil + toggle ouvert/fermé */}
-          <ShopProfileCard
-            profile={profile}
-            onToggle={async () => {
-              try { await updateProfile({ isOpen: !profile.isOpen }); }
-              catch { Alert.alert('Erreur', 'Impossible de mettre à jour le statut. Réessaie.'); }
-            }}
-          />
-
-          {/* ── Infos boutique ──────────────────────────────────────────── */}
-          <View style={styles.sectionWrap}>
-            <Text style={styles.sectionTitle}>Infos boutique</Text>
-            <View style={styles.card}>
-              <Text style={styles.fieldLabel}>Description</Text>
-              <TextInput
-                style={[styles.fieldInput, styles.fieldMulti]}
-                value={desc}
-                onChangeText={setDesc}
-                placeholder="Spécialité, ambiance, services proposés…"
-                placeholderTextColor={colors.muted}
-                multiline
-                numberOfLines={3}
-              />
-
-              <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Adresse</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={addr}
-                onChangeText={setAddr}
-                placeholder="Ex : Rue 10 x 17, Dakar Plateau"
-                placeholderTextColor={colors.muted}
-                returnKeyType="next"
-              />
-
-              <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Téléphone de contact</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="77 XXX XX XX"
-                placeholderTextColor={colors.muted}
-                keyboardType="phone-pad"
-                returnKeyType="done"
-              />
-
-              {detailsDirty && (
-                <TouchableOpacity
-                  style={styles.saveDetailsBtn}
-                  onPress={handleSaveDetails}
-                  disabled={detailsLoading}
-                  activeOpacity={0.85}
-                >
-                  {detailsLoading
-                    ? <ActivityIndicator color={colors.bg} size="small" />
-                    : <Text style={styles.saveDetailsTxt}>Enregistrer les modifications</Text>
-                  }
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          {/* ── Galerie photos ───────────────────────────────────────────── */}
-          <View style={styles.sectionWrap}>
-            <Text style={styles.sectionTitle}>
-              Galerie photos
-              <Text style={styles.sectionSub}> ({galleryUrls.length}/{MAX_GALLERY})</Text>
-            </Text>
-            <View style={styles.galleryRow}>
-              {galleryUrls.map(url => (
-                <TouchableOpacity
-                  key={url}
-                  onLongPress={() => handleRemoveGalleryPhoto(url)}
-                  activeOpacity={0.85}
-                  style={styles.galleryThumbWrap}
-                >
-                  <Image source={{ uri: url }} style={styles.galleryThumb} />
-                </TouchableOpacity>
-              ))}
-
-              {galleryUrls.length < MAX_GALLERY && (
-                <TouchableOpacity
-                  style={styles.galleryAddBtn}
-                  onPress={handleAddGalleryPhoto}
-                  disabled={galLoading}
-                  activeOpacity={0.8}
-                >
-                  {galLoading
-                    ? <ActivityIndicator color={colors.accent} size="small" />
-                    : <Text style={styles.galleryAddTxt}>＋</Text>
-                  }
-                </TouchableOpacity>
-              )}
-            </View>
-            <Text style={styles.galleryHint}>Appui long sur une photo pour la supprimer.</Text>
-          </View>
-
-          {/* ── Horaires d'ouverture ─────────────────────────────────────── */}
-          <View style={styles.sectionWrap}>
-            <Text style={styles.sectionTitle}>Horaires</Text>
-            <OpeningHoursCard
-              hours={context.openingHours}
-              isManuallyClose={context.isManuallyClose}
-              readOnly={false}
-              onChange={async (h) => {
-                try { await updateOpeningHours(h); }
-                catch { Alert.alert('Erreur', 'Impossible de sauvegarder les horaires. Réessaie.'); }
-              }}
-              onToggleManuallyClose={async () => {
-                try { await toggleManuallyClose(); }
-                catch { Alert.alert('Erreur', 'Impossible de mettre à jour le statut exceptionnel. Réessaie.'); }
-              }}
-            />
-          </View>
-
-          {/* ── Catalogue ────────────────────────────────────────────────── */}
-          <CategoryTabs
-            categories={categories}
-            active={activeCat}
-            onSelect={setActiveCat}
-            onAddCat={addCategory}
-            onDeleteCat={handleDeleteCat}
-          />
-
-          <SectionHead
-            title={activeCatData?.label ?? ''}
-            count={filtered.length}
-            itemLabel={itemLabel}
-          />
-
-          {filtered.map(product => (
-            <ProductRow
-              key={product.id}
-              product={product}
-              promoInfo={promoMap[product.id]}
-              onEdit={() => openEdit(product)}
-              onToggleStock={async () => {
-                try { await toggleStock(product.id); }
-                catch { Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.'); }
-              }}
-            />
-          ))}
-
-          <TouchableOpacity style={styles.addProd} onPress={openAdd} activeOpacity={0.8}>
-            <IcoPlus />
-            <Text style={styles.addProdTxt}>{addItemLabel}</Text>
-          </TouchableOpacity>
-
-          {/* ── Géolocalisation ──────────────────────────────────────────── */}
-          <TouchableOpacity
-            style={styles.locBtn}
-            onPress={handleCaptureLocation}
-            disabled={locLoading}
-            activeOpacity={0.8}
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
           >
-            <IcoPin />
-            <Text style={styles.locBtnTxt}>
-              {locLoading
-                ? 'Localisation…'
-                : locZone
-                  ? `📍 ${locZone} — Mettre à jour`
-                  : "Définir l'emplacement de ma boutique"}
-            </Text>
-          </TouchableOpacity>
+            {/* Profil + toggle ouvert/fermé */}
+            <ShopProfileCard
+              profile={profile}
+              onToggle={async () => {
+                try {
+                  await updateProfile({ isOpen: !profile.isOpen });
+                } catch {
+                  Alert.alert('Erreur', 'Impossible de mettre à jour le statut. Réessaie.');
+                }
+              }}
+            />
 
-          <View style={{ height: 32 }} />
-        </ScrollView>
+            {/* ── Infos boutique ──────────────────────────────────────────── */}
+            <View style={styles.sectionWrap}>
+              <Text style={styles.sectionTitle}>Infos boutique</Text>
+              <View style={styles.card}>
+                <Text style={styles.fieldLabel}>Description</Text>
+                <TextInput
+                  style={[styles.fieldInput, styles.fieldMulti]}
+                  value={desc}
+                  onChangeText={setDesc}
+                  placeholder="Spécialité, ambiance, services proposés…"
+                  placeholderTextColor={colors.muted}
+                  multiline
+                  numberOfLines={3}
+                />
+
+                <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Adresse</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={addr}
+                  onChangeText={setAddr}
+                  placeholder="Ex : Rue 10 x 17, Dakar Plateau"
+                  placeholderTextColor={colors.muted}
+                  returnKeyType="next"
+                />
+
+                <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Téléphone de contact</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="77 XXX XX XX"
+                  placeholderTextColor={colors.muted}
+                  keyboardType="phone-pad"
+                  returnKeyType="done"
+                />
+
+                {detailsDirty && (
+                  <TouchableOpacity
+                    style={styles.saveDetailsBtn}
+                    onPress={handleSaveDetails}
+                    disabled={detailsLoading}
+                    activeOpacity={0.85}
+                  >
+                    {detailsLoading ? (
+                      <ActivityIndicator color={colors.bg} size="small" />
+                    ) : (
+                      <Text style={styles.saveDetailsTxt}>Enregistrer les modifications</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* ── Galerie photos ───────────────────────────────────────────── */}
+            <View style={styles.sectionWrap}>
+              <Text style={styles.sectionTitle}>
+                Galerie photos
+                <Text style={styles.sectionSub}>
+                  {' '}
+                  ({galleryUrls.length}/{MAX_GALLERY})
+                </Text>
+              </Text>
+              <View style={styles.galleryRow}>
+                {galleryUrls.map(url => (
+                  <TouchableOpacity
+                    key={url}
+                    onLongPress={() => handleRemoveGalleryPhoto(url)}
+                    activeOpacity={0.85}
+                    style={styles.galleryThumbWrap}
+                  >
+                    <Image source={{ uri: url }} style={styles.galleryThumb} />
+                  </TouchableOpacity>
+                ))}
+
+                {galleryUrls.length < MAX_GALLERY && (
+                  <TouchableOpacity
+                    style={styles.galleryAddBtn}
+                    onPress={handleAddGalleryPhoto}
+                    disabled={galLoading}
+                    activeOpacity={0.8}
+                  >
+                    {galLoading ? (
+                      <ActivityIndicator color={colors.accent} size="small" />
+                    ) : (
+                      <Text style={styles.galleryAddTxt}>＋</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
+              <Text style={styles.galleryHint}>Appui long sur une photo pour la supprimer.</Text>
+            </View>
+
+            {/* ── Horaires d'ouverture ─────────────────────────────────────── */}
+            <View style={styles.sectionWrap}>
+              <Text style={styles.sectionTitle}>Horaires</Text>
+              <OpeningHoursCard
+                hours={context.openingHours}
+                isManuallyClose={context.isManuallyClose}
+                readOnly={false}
+                onChange={async h => {
+                  try {
+                    await updateOpeningHours(h);
+                  } catch {
+                    Alert.alert('Erreur', 'Impossible de sauvegarder les horaires. Réessaie.');
+                  }
+                }}
+                onToggleManuallyClose={async () => {
+                  try {
+                    await toggleManuallyClose();
+                  } catch {
+                    Alert.alert(
+                      'Erreur',
+                      'Impossible de mettre à jour le statut exceptionnel. Réessaie.',
+                    );
+                  }
+                }}
+              />
+            </View>
+
+            {/* ── Catalogue ────────────────────────────────────────────────── */}
+            <CategoryTabs
+              categories={categories}
+              active={activeCat}
+              onSelect={setActiveCat}
+              onAddCat={addCategory}
+              onDeleteCat={handleDeleteCat}
+            />
+
+            <SectionHead
+              title={activeCatData?.label ?? ''}
+              count={filtered.length}
+              itemLabel={itemLabel}
+            />
+
+            {filtered.map(product => (
+              <ProductRow
+                key={product.id}
+                product={product}
+                promoInfo={promoMap[product.id]}
+                onEdit={() => openEdit(product)}
+                onToggleStock={async () => {
+                  try {
+                    await toggleStock(product.id);
+                  } catch {
+                    Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
+                  }
+                }}
+              />
+            ))}
+
+            <TouchableOpacity style={styles.addProd} onPress={openAdd} activeOpacity={0.8}>
+              <IcoPlus />
+              <Text style={styles.addProdTxt}>{addItemLabel}</Text>
+            </TouchableOpacity>
+
+            {/* ── Géolocalisation ──────────────────────────────────────────── */}
+            <TouchableOpacity
+              style={styles.locBtn}
+              onPress={handleCaptureLocation}
+              disabled={locLoading}
+              activeOpacity={0.8}
+            >
+              <IcoPin />
+              <Text style={styles.locBtnTxt}>
+                {locLoading
+                  ? 'Localisation…'
+                  : locZone
+                    ? `📍 ${locZone} — Mettre à jour`
+                    : "Définir l'emplacement de ma boutique"}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={{ height: 32 }} />
+          </ScrollView>
         </KeyboardAvoidingView>
       )}
 
@@ -480,10 +558,10 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  root:    { flex: 1, backgroundColor: colors.bg },
-  scroll:  { flex: 1 },
+  root: { flex: 1, backgroundColor: colors.bg },
+  scroll: { flex: 1 },
   content: { paddingTop: 4, flexGrow: 1 },
-  loader:      { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   notFoundTxt: {
     color: colors.muted,
     fontFamily: fonts.body,
@@ -620,7 +698,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   secTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
-  secCount: { color: colors.muted, fontFamily: fonts.body,  fontSize: 11.5 },
+  secCount: { color: colors.muted, fontFamily: fonts.body, fontSize: 11.5 },
 
   addProd: {
     marginHorizontal: 18,

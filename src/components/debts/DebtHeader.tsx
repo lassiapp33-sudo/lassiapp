@@ -4,7 +4,7 @@ import { colors, fonts, TOP_INSET } from '../../theme';
 import { IcoBack, IcoSearch } from '../icons';
 
 interface Props {
-  onBack:    () => void;
+  onBack: () => void;
   onSearch?: () => void;
 }
 

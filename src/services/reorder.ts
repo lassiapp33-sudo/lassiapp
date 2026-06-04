@@ -8,40 +8,40 @@
  *  - Articles correspondants par nom (les order_items ne stockent pas le productId)
  */
 
-import { getShopById }  from './shops';
-import { getProducts }  from './products';
+import { getShopById } from './shops';
+import { getProducts } from './products';
 import { CartShopInfo } from '../store/cartStore';
-import { OrderItem }    from '../types/clientOrders';
+import { OrderItem } from '../types/clientOrders';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface ReorderItem {
-  id:    string;
-  name:  string;
+  id: string;
+  name: string;
   emoji: string;
   price: number; // prix ACTUEL
-  qty:   number;
+  qty: number;
 }
 
 export interface ReorderRemoved {
-  name:   string;
+  name: string;
   reason: 'unavailable' | 'deleted';
 }
 
 export interface ReorderPriceChange {
-  name:     string;
+  name: string;
   oldPrice: number;
   newPrice: number;
 }
 
 export type ReorderResult =
   | {
-      ok:           true;
-      shopId:       string;
-      shopName:     string;
-      shopInfo:     CartShopInfo;
-      added:        ReorderItem[];
-      removed:      ReorderRemoved[];
+      ok: true;
+      shopId: string;
+      shopName: string;
+      shopInfo: CartShopInfo;
+      added: ReorderItem[];
+      removed: ReorderRemoved[];
       priceChanged: ReorderPriceChange[];
     }
   | { ok: false; error: string };
@@ -49,8 +49,8 @@ export type ReorderResult =
 // ─── Fonction principale ──────────────────────────────────────────────────────
 
 export async function prepareReorder(
-  shopId:    string,
-  shopName:  string,
+  shopId: string,
+  shopName: string,
   prevItems: OrderItem[],
 ): Promise<ReorderResult> {
   if (!shopId) {
@@ -65,7 +65,7 @@ export async function prepareReorder(
     return { ok: false, error: 'Impossible de vérifier le commerce. Réessaie.' };
   }
   if (!shop) {
-    return { ok: false, error: 'Ce commerce n\'est plus disponible sur LASSİ.' };
+    return { ok: false, error: "Ce commerce n'est plus disponible sur LASSİ." };
   }
 
   // 2. Charger les produits actuels du commerce (prix + stock à jour)
@@ -77,13 +77,13 @@ export async function prepareReorder(
   }
 
   // 3. Matcher chaque ancien article avec les produits actuels (par nom)
-  const added:        ReorderItem[]       = [];
-  const removed:      ReorderRemoved[]    = [];
+  const added: ReorderItem[] = [];
+  const removed: ReorderRemoved[] = [];
   const priceChanged: ReorderPriceChange[] = [];
 
   for (const prev of prevItems) {
     const match = currentProducts.find(
-      p => p.name.toLowerCase().trim() === prev.name.toLowerCase().trim()
+      p => p.name.toLowerCase().trim() === prev.name.toLowerCase().trim(),
     );
 
     if (!match) {
@@ -103,28 +103,28 @@ export async function prepareReorder(
     }
 
     added.push({
-      id:    match.id,
-      name:  match.name,
+      id: match.id,
+      name: match.name,
       emoji: match.emoji,
       price: match.price, // ← PRIX ACTUEL (jamais l'ancien)
-      qty:   prev.qty ?? 1,
+      qty: prev.qty ?? 1,
     });
   }
 
   // 4. Aucun article valide → pas de panier
   if (added.length === 0) {
     return {
-      ok:    false,
-      error: 'Aucun article de cette commande n\'est encore disponible.',
+      ok: false,
+      error: "Aucun article de cette commande n'est encore disponible.",
     };
   }
 
   const shopInfo: CartShopInfo = {
-    id:       shopId,
-    initial:  shopName.charAt(0).toUpperCase(),
-    name:     shopName,
+    id: shopId,
+    initial: shopName.charAt(0).toUpperCase(),
+    name: shopName,
     location: `📍 ${shop.zone ?? ''}`,
-    logoUrl:  shop.logoUrl ?? undefined,
+    logoUrl: shop.logoUrl ?? undefined,
   };
 
   return {

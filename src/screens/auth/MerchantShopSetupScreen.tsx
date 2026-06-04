@@ -8,31 +8,36 @@
  */
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, Image,
-  StyleSheet, KeyboardAvoidingView, Platform, TextInput,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  TextInput,
 } from 'react-native';
-import BackButton      from '../../components/auth/BackButton';
-import AuthButton      from '../../components/auth/AuthButton';
-import LassiLogo       from '../../components/LassiLogo';
-import Avatar          from '../../components/Avatar';
+import BackButton from '../../components/auth/BackButton';
+import AuthButton from '../../components/auth/AuthButton';
+import LassiLogo from '../../components/LassiLogo';
+import Avatar from '../../components/Avatar';
 import OpeningHoursCard from '../../components/store/OpeningHoursCard';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import { RegisterData } from './RegisterScreen';
-import {
-  CatId, CATEGORIES, CatConfig, getCatConfig,
-} from '../../config/categories';
+import { CatId, CATEGORIES, CatConfig, getCatConfig } from '../../config/categories';
 import { DEFAULT_WEEK_HOURS, WeekHours } from '../../services/hours';
 import * as storageService from '../../services/storage';
-import * as authService    from '../../services/auth';
-import useAuthStore        from '../../store/authStore';
+import * as authService from '../../services/auth';
+import useAuthStore from '../../store/authStore';
 import { getErrorMessage } from '../../utils/errorUtils';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  userData:          RegisterData;
-  onBack:            () => void;
-  onComplete:        (role: 'merchant') => void;
+  userData: RegisterData;
+  onBack: () => void;
+  onComplete: (role: 'merchant') => void;
 }
 
 type Step = 1 | 2 | 3 | 4;
@@ -41,7 +46,10 @@ type Step = 1 | 2 | 3 | 4;
 
 const STEP_LABELS = ['Catégorie', 'Spécialité', 'Identité', 'Horaires'];
 
-interface HeaderProps { step: Step; onBack: () => void; }
+interface HeaderProps {
+  step: Step;
+  onBack: () => void;
+}
 
 const Header = React.memo(function Header({ step, onBack }: HeaderProps) {
   return (
@@ -71,14 +79,14 @@ const Header = React.memo(function Header({ step, onBack }: HeaderProps) {
 // ─── Écran principal ──────────────────────────────────────────────────────────
 
 export default function MerchantShopSetupScreen({ userData, onBack, onComplete }: Props) {
-  const [step,        setStep]        = useState<Step>(1);
-  const [catId,       setCatId]       = useState<CatId | null>(null);
-  const [subcats,     setSubcats]     = useState<string[]>([]);
-  const [shopName,    setShopName]    = useState('');
-  const [logoUri,     setLogoUri]     = useState<string | null>(null);
-  const [hours,       setHours]       = useState<WeekHours>(DEFAULT_WEEK_HOURS);
-  const [loading,     setLoading]     = useState(false);
-  const [erreur,      setErreur]      = useState<string | null>(null);
+  const [step, setStep] = useState<Step>(1);
+  const [catId, setCatId] = useState<CatId | null>(null);
+  const [subcats, setSubcats] = useState<string[]>([]);
+  const [shopName, setShopName] = useState('');
+  const [logoUri, setLogoUri] = useState<string | null>(null);
+  const [hours, setHours] = useState<WeekHours>(DEFAULT_WEEK_HOURS);
+  const [loading, setLoading] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   const catConfig: CatConfig | undefined = catId ? getCatConfig(catId) : undefined;
 
@@ -93,13 +101,22 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
   const handleNext = () => {
     setErreur(null);
     if (step === 1) {
-      if (!catId) { setErreur('Choisis une catégorie pour ton commerce.'); return; }
+      if (!catId) {
+        setErreur('Choisis une catégorie pour ton commerce.');
+        return;
+      }
       setStep(2);
     } else if (step === 2) {
-      if (subcats.length === 0) { setErreur('Choisis au moins une spécialité.'); return; }
+      if (subcats.length === 0) {
+        setErreur('Choisis au moins une spécialité.');
+        return;
+      }
       setStep(3);
     } else if (step === 3) {
-      if (!shopName.trim()) { setErreur('Le nom du commerce est obligatoire.'); return; }
+      if (!shopName.trim()) {
+        setErreur('Le nom du commerce est obligatoire.');
+        return;
+      }
       setStep(4);
     } else {
       handleSubmit(false);
@@ -118,9 +135,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
     if (catConfig.subcatMode === 'single') {
       setSubcats([id]);
     } else {
-      setSubcats(prev =>
-        prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id],
-      );
+      setSubcats(prev => (prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]));
     }
   };
 
@@ -140,17 +155,17 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
         : '';
 
       const user = await authService.registerMerchant({
-        name:              userData.name,
-        phone:             userData.phone,
-        email:             userData.email,
-        password:          userData.password,
-        shopName:          shopName.trim(),
-        shopSubtitle:      autoSubtitle || undefined,
-        shopCategory:      catId!,
+        name: userData.name,
+        phone: userData.phone,
+        email: userData.email,
+        password: userData.password,
+        shopName: shopName.trim(),
+        shopSubtitle: autoSubtitle || undefined,
+        shopCategory: catId!,
         shopSubcategories: subcats,
-        shopType:          catConfig?.shopType ?? 'products',
-        openingHours:      skipHours ? null : hours,
-        logoLocalUri:      logoUri,
+        shopType: catConfig?.shopType ?? 'products',
+        openingHours: skipHours ? null : hours,
+        logoLocalUri: logoUri,
       });
       useAuthStore.getState().setUser(user);
       onComplete('merchant');
@@ -166,7 +181,10 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
 
   if (step === 1) {
     return (
-      <KeyboardAvoidingView style={styles.kav} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={styles.kav}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingTop: TOP_INSET }]}
           keyboardShouldPersistTaps="handled"
@@ -174,7 +192,9 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
         >
           <Header step={step} onBack={handleBack} />
           <Text style={styles.h1}>Quel type de commerce ?</Text>
-          <Text style={styles.sub}>Choisis la catégorie qui correspond le mieux à ton activité.</Text>
+          <Text style={styles.sub}>
+            Choisis la catégorie qui correspond le mieux à ton activité.
+          </Text>
           <View style={{ height: 20 }} />
 
           {CATEGORIES.map(cat => {
@@ -191,9 +211,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.catLabel, on && styles.catLabelOn]}>{cat.label}</Text>
-                  <Text style={styles.catSub}>
-                    {cat.subcats.map(s => s.label).join(', ')}
-                  </Text>
+                  <Text style={styles.catSub}>{cat.subcats.map(s => s.label).join(', ')}</Text>
                 </View>
                 <View style={[styles.radio, on && styles.radioOn]}>
                   {on && <View style={styles.radioDot} />}
@@ -216,7 +234,10 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
   if (step === 2 && catConfig) {
     const isMultiple = catConfig.subcatMode === 'multiple';
     return (
-      <KeyboardAvoidingView style={styles.kav} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={styles.kav}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingTop: TOP_INSET }]}
           keyboardShouldPersistTaps="handled"
@@ -242,24 +263,28 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
                 onPress={() => toggleSubcat(sub.id)}
                 activeOpacity={0.8}
               >
-                {sub.imageUri
-                  ? <Image source={sub.imageUri} style={styles.subcatImg} resizeMode="cover" />
-                  : <Text style={styles.subcatEmoji}>{sub.emoji}</Text>
-                }
+                {sub.imageUri ? (
+                  <Image source={sub.imageUri} style={styles.subcatImg} resizeMode="cover" />
+                ) : (
+                  <Text style={styles.subcatEmoji}>{sub.emoji}</Text>
+                )}
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.subcatLabel, on && styles.subcatLabelOn]}>{sub.label}</Text>
                   <Text style={styles.subcatDesc}>{sub.desc}</Text>
                 </View>
                 {/* Checkbox ou radio selon le mode */}
-                <View style={[
-                  isMultiple ? styles.checkbox : styles.radio,
-                  on && (isMultiple ? styles.checkboxOn : styles.radioOn),
-                ]}>
-                  {on && (
-                    isMultiple
-                      ? <Text style={styles.checkmark}>✓</Text>
-                      : <View style={styles.radioDot} />
-                  )}
+                <View
+                  style={[
+                    isMultiple ? styles.checkbox : styles.radio,
+                    on && (isMultiple ? styles.checkboxOn : styles.radioOn),
+                  ]}
+                >
+                  {on &&
+                    (isMultiple ? (
+                      <Text style={styles.checkmark}>✓</Text>
+                    ) : (
+                      <View style={styles.radioDot} />
+                    ))}
                 </View>
               </TouchableOpacity>
             );
@@ -289,15 +314,28 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
         >
           <Header step={step} onBack={handleBack} />
           <Text style={styles.h1}>Présente ton commerce</Text>
-          <Text style={styles.sub}>Le nom et le logo apparaîtront sur ta fiche boutique. Tu pourras ajouter une description depuis ta vitrine.</Text>
+          <Text style={styles.sub}>
+            Le nom et le logo apparaîtront sur ta fiche boutique. Tu pourras ajouter une description
+            depuis ta vitrine.
+          </Text>
           <View style={{ height: 24 }} />
 
           {/* Logo */}
-          <Text style={styles.sectionLbl}>Logo <Text style={styles.opt}>(optionnel)</Text></Text>
+          <Text style={styles.sectionLbl}>
+            Logo <Text style={styles.opt}>(optionnel)</Text>
+          </Text>
           <TouchableOpacity style={styles.logoRow} onPress={handlePickLogo} activeOpacity={0.8}>
             <View style={styles.logoAvatarWrap}>
-              <Avatar imageUrl={logoUri} name={shopName || userData.name} size={68} variant="shop" showBorder />
-              <View style={styles.logoBadge}><Text style={styles.logoBadgeTxt}>+</Text></View>
+              <Avatar
+                imageUrl={logoUri}
+                name={shopName || userData.name}
+                size={68}
+                variant="shop"
+                showBorder
+              />
+              <View style={styles.logoBadge}>
+                <Text style={styles.logoBadgeTxt}>+</Text>
+              </View>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.logoHintTitle}>
@@ -310,7 +348,9 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
           <View style={{ height: 20 }} />
 
           {/* Nom */}
-          <Text style={styles.sectionLbl}>Nom du commerce <Text style={styles.req}>*</Text></Text>
+          <Text style={styles.sectionLbl}>
+            Nom du commerce <Text style={styles.req}>*</Text>
+          </Text>
           <View style={styles.inputWrap}>
             <TextInput
               style={styles.input}
@@ -347,8 +387,8 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
         <Header step={step} onBack={handleBack} />
         <Text style={styles.h1}>Tes horaires d'ouverture</Text>
         <Text style={styles.sub}>
-          Définir tes horaires permet aux clients de savoir si tu es ouvert en temps réel.
-          Tu pourras les modifier à tout moment depuis ta vitrine.
+          Définir tes horaires permet aux clients de savoir si tu es ouvert en temps réel. Tu
+          pourras les modifier à tout moment depuis ta vitrine.
         </Text>
         <View style={{ height: 20 }} />
 
@@ -413,7 +453,7 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 99,
   },
-  progressSegDone:  { backgroundColor: colors.accent },
+  progressSegDone: { backgroundColor: colors.accent },
   progressSegEmpty: { backgroundColor: colors.border },
   stepLabel: {
     color: colors.muted,
@@ -467,14 +507,15 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   radio: {
-    width: 20, height: 20,
+    width: 20,
+    height: 20,
     borderRadius: 10,
     borderWidth: 2,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioOn:  { borderColor: colors.accent },
+  radioOn: { borderColor: colors.accent },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accent },
 
   // Étape 2 — rangée sous-catégorie
@@ -494,7 +535,7 @@ const styles = StyleSheet.create({
     borderColor: colors.accent,
   },
   subcatEmoji: { fontSize: 22, width: 38, textAlign: 'center' },
-  subcatImg:   { width: 38, height: 38, borderRadius: 6 },
+  subcatImg: { width: 38, height: 38, borderRadius: 6 },
   subcatLabel: {
     color: colors.muted,
     fontFamily: fonts.title,
@@ -509,7 +550,8 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   checkbox: {
-    width: 20, height: 20,
+    width: 20,
+    height: 20,
     borderRadius: 5,
     borderWidth: 2,
     borderColor: colors.border,
@@ -551,8 +593,10 @@ const styles = StyleSheet.create({
   logoAvatarWrap: { position: 'relative', flexShrink: 0 },
   logoBadge: {
     position: 'absolute',
-    bottom: -2, right: -2,
-    width: 22, height: 22,
+    bottom: -2,
+    right: -2,
+    width: 22,
+    height: 22,
     borderRadius: 11,
     backgroundColor: colors.accent,
     alignItems: 'center',

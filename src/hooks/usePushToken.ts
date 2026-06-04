@@ -1,7 +1,7 @@
-import { useEffect }  from 'react';
-import { Platform }   from 'react-native';
-import Constants      from 'expo-constants';
-import useAuthStore   from '../store/authStore';
+import { useEffect } from 'react';
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+import useAuthStore from '../store/authStore';
 import { savePushToken, deletePushToken } from '../services/notifications';
 
 const EAS_PROJECT_ID = 'e9058ef3-df10-43e4-af04-6830a98025e9';

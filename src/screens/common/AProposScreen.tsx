@@ -1,28 +1,24 @@
 import React, { useState } from 'react';
-import {
-  View, Text, TouchableOpacity, ScrollView,
-  StyleSheet, Platform,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import Constants from 'expo-constants';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
-import LassiLogo             from '../../components/LassiLogo';
-import LassiRoiScintillant   from '../../components/LassiRoiScintillant';
-import LassiScreen           from '../../components/LassiScreen';
-import MascoHomeBtn          from '../../components/MascoHomeBtn';
+import LassiLogo from '../../components/LassiLogo';
+import LassiRoiScintillant from '../../components/LassiRoiScintillant';
+import LassiScreen from '../../components/LassiScreen';
+import MascoHomeBtn from '../../components/MascoHomeBtn';
 import { contacterServiceClient } from '../../config/contact';
-import CGUScreen             from './CGUScreen';
+import CGUScreen from './CGUScreen';
 import ConfidentialiteScreen from './ConfidentialiteScreen';
 import { IcoBack } from '../../components/icons';
 
 // ─── Version dynamique depuis app.json ───────────────────────────────────────
 
-const appVersion   = Constants.expoConfig?.version ?? '1.0.0';
-const buildIos     = Constants.expoConfig?.ios?.buildNumber;
+const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+const buildIos = Constants.expoConfig?.ios?.buildNumber;
 const buildAndroid = Constants.expoConfig?.android?.versionCode;
-const buildNumber  = Platform.OS === 'ios'
-  ? buildIos
-  : buildAndroid != null ? String(buildAndroid) : undefined;
+const buildNumber =
+  Platform.OS === 'ios' ? buildIos : buildAndroid != null ? String(buildAndroid) : undefined;
 const versionLabel = buildNumber
   ? `Version ${appVersion} (build ${buildNumber})`
   : `Version ${appVersion}`;
@@ -30,8 +26,15 @@ const versionLabel = buildNumber
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
 const IcoChevron = () => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={14}
+    height={14}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M9 18l6-6-6-6" stroke={colors.muted} />
   </Svg>
 );
@@ -43,11 +46,12 @@ interface Props {
 }
 
 export default function AProposScreen({ onBack }: Props) {
-  const [showCGU, setShowCGU]                       = useState(false);
+  const [showCGU, setShowCGU] = useState(false);
   const [showConfidentialite, setShowConfidentialite] = useState(false);
 
-  if (showCGU)             return <CGUScreen             onBack={() => setShowCGU(false)} />;
-  if (showConfidentialite) return <ConfidentialiteScreen onBack={() => setShowConfidentialite(false)} />;
+  if (showCGU) return <CGUScreen onBack={() => setShowCGU(false)} />;
+  if (showConfidentialite)
+    return <ConfidentialiteScreen onBack={() => setShowConfidentialite(false)} />;
 
   return (
     <LassiScreen
@@ -81,19 +85,15 @@ export default function AProposScreen({ onBack }: Props) {
         {/* ── Description ───────────────────────────────────────────────── */}
         <View style={s.descWrap}>
           <Text style={s.descTxt}>
-            LASSİ connecte les habitants de Dakar aux commerçants et prestataires
-            de leur quartier : restos, tangana, coiffeurs, salles de sport, boutiques
-            et plus encore. Découvre, commande et paie facilement, près de chez toi.
+            LASSİ connecte les habitants de Dakar aux commerçants et prestataires de leur quartier :
+            restos, tangana, coiffeurs, salles de sport, boutiques et plus encore. Découvre,
+            commande et paie facilement, près de chez toi.
           </Text>
         </View>
 
         {/* ── Liens ─────────────────────────────────────────────────────── */}
         <View style={s.linksWrap}>
-          <TouchableOpacity
-            style={s.linkRow}
-            onPress={() => setShowCGU(true)}
-            activeOpacity={0.75}
-          >
+          <TouchableOpacity style={s.linkRow} onPress={() => setShowCGU(true)} activeOpacity={0.75}>
             <Text style={s.linkTxt}>Conditions Générales d'Utilisation</Text>
             <IcoChevron />
           </TouchableOpacity>
@@ -134,107 +134,107 @@ export default function AProposScreen({ onBack }: Props) {
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  scroll:  { flex: 1 },
+  scroll: { flex: 1 },
   content: { paddingBottom: 40, flexGrow: 1 },
 
   // Header
   header: {
-    flexDirection:    'row',
-    alignItems:       'center',
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 18,
-    paddingBottom:    14,
+    paddingBottom: 14,
   },
   backBtn: {
-    width:           38,
-    height:          38,
-    borderRadius:    11,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     backgroundColor: colors.surface,
-    borderWidth:     1,
-    borderColor:     colors.border,
-    alignItems:      'center',
-    justifyContent:  'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    flex:        1,
-    textAlign:   'center',
-    color:       colors.white,
-    fontFamily:  fonts.titleXL,
-    fontSize:    18,
+    flex: 1,
+    textAlign: 'center',
+    color: colors.white,
+    fontFamily: fonts.titleXL,
+    fontSize: 18,
   },
 
   // Hero
   hero: {
-    alignItems:   'center',
-    paddingTop:   32,
+    alignItems: 'center',
+    paddingTop: 32,
     paddingBottom: 8,
-    gap:          12,
+    gap: 12,
   },
   logo: {
     marginTop: 4,
   },
   slogan: {
-    color:       '#8a8eb5',
-    fontFamily:  fonts.body,
-    fontSize:    13.5,
-    textAlign:   'center',
+    color: '#8a8eb5',
+    fontFamily: fonts.body,
+    fontSize: 13.5,
+    textAlign: 'center',
     letterSpacing: 0.2,
   },
 
   // Version
   versionWrap: {
-    alignItems:   'center',
+    alignItems: 'center',
     paddingVertical: 14,
   },
   versionTxt: {
-    color:       colors.accent,
-    fontFamily:  fonts.ui,
-    fontSize:    12,
+    color: colors.accent,
+    fontFamily: fonts.ui,
+    fontSize: 12,
     letterSpacing: 0.4,
   },
 
   // Description
   descWrap: {
     marginHorizontal: 24,
-    marginBottom:     24,
-    padding:          16,
-    backgroundColor:  colors.surface,
-    borderWidth:      1,
-    borderColor:      colors.border,
-    borderRadius:     radius.lg,
+    marginBottom: 24,
+    padding: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
   },
   descTxt: {
-    color:       '#e8e9f5',
-    fontFamily:  fonts.body,
-    fontSize:    13.5,
-    lineHeight:  21,
-    textAlign:   'center',
+    color: '#e8e9f5',
+    fontFamily: fonts.body,
+    fontSize: 13.5,
+    lineHeight: 21,
+    textAlign: 'center',
   },
 
   // Liens
   linksWrap: {
     marginHorizontal: 18,
-    marginBottom:     28,
-    backgroundColor:  colors.surface,
-    borderWidth:      1,
-    borderColor:      colors.border,
-    borderRadius:     radius.lg,
-    overflow:         'hidden',
+    marginBottom: 28,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
   },
   linkRow: {
-    flexDirection:    'row',
-    alignItems:       'center',
-    justifyContent:   'space-between',
-    paddingVertical:  14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
     paddingHorizontal: 16,
   },
   linkTxt: {
-    color:      '#e8e9f5',
+    color: '#e8e9f5',
     fontFamily: fonts.body,
-    fontSize:   13.5,
-    flex:       1,
+    fontSize: 13.5,
+    flex: 1,
   },
   sep: {
-    height:     1,
+    height: 1,
     backgroundColor: colors.border,
     marginHorizontal: 16,
   },
@@ -246,13 +246,13 @@ const s = StyleSheet.create({
     gap: 4,
   },
   footerLine: {
-    color:      '#8a8eb5',
+    color: '#8a8eb5',
     fontFamily: fonts.body,
-    fontSize:   13,
+    fontSize: 13,
   },
   footerCopy: {
-    color:      '#4a4c6a',
+    color: '#4a4c6a',
     fontFamily: fonts.body,
-    fontSize:   11,
+    fontSize: 11,
   },
 });

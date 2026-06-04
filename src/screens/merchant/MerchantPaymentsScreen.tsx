@@ -1,21 +1,24 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, RefreshControl, AppState,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  RefreshControl,
+  AppState,
 } from 'react-native';
 import Svg, { Path, Polyline } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
-import {
-  MerchantPayment, PaymentFilter, PaymentStatus,
-} from '../../types/merchantPayments';
+import { MerchantPayment, PaymentFilter, PaymentStatus } from '../../types/merchantPayments';
 import * as paymentsService from '../../services/merchantPayments';
-import useAuthStore  from '../../store/authStore';
-import { supabase }   from '../../lib/supabase';
-import MascoHomeBtn   from '../../components/MascoHomeBtn';
-import { IcoBack }    from '../../components/icons';
+import useAuthStore from '../../store/authStore';
+import { supabase } from '../../lib/supabase';
+import MascoHomeBtn from '../../components/MascoHomeBtn';
+import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
-import LoadingSpinner  from '../../components/LoadingSpinner';
-import { PaymentWeekChart }    from '../../components/merchant/PaymentWeekChart';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { PaymentWeekChart } from '../../components/merchant/PaymentWeekChart';
 import { PaymentReceiptModal } from '../../components/merchant/PaymentReceiptModal';
 import { MerchantPaymentCard } from '../../components/merchant/MerchantPaymentCard';
 
@@ -23,7 +26,10 @@ import { MerchantPaymentCard } from '../../components/merchant/MerchantPaymentCa
 
 const IcoReceipt = () => (
   <Svg width={52} height={52} viewBox="0 0 24 24" fill="none" strokeWidth={1} strokeLinecap="round">
-    <Path d="M4 2v20l3-2 2.5 2L12 20l2.5 2L17 20l3 2V2l-3 2-2.5-2L12 4l-2.5-2L7 4Z" stroke={colors.border} />
+    <Path
+      d="M4 2v20l3-2 2.5 2L12 20l2.5 2L17 20l3 2V2l-3 2-2.5-2L12 4l-2.5-2L7 4Z"
+      stroke={colors.border}
+    />
     <Path d="M9 9h6M9 13h6M9 17h3" stroke={colors.border} />
   </Svg>
 );
@@ -50,17 +56,18 @@ const IcoTrend = () => (
 
 // ─── Config statuts (pour les stats card) ────────────────────────────────────
 
-const STATUS_CFG: Record<PaymentStatus, { label: string; dot: string; text: string; bg: string }> = {
-  pending:  { label: 'En attente', dot: '#FDCF34', text: '#FDCF34', bg: 'rgba(253,207,52,0.12)'  },
-  success:  { label: 'Reçu',       dot: '#5FD38A', text: '#5FD38A', bg: 'rgba(95,211,138,0.12)'  },
-  failed:   { label: 'Échoué',     dot: '#E07A7A', text: '#E07A7A', bg: 'rgba(224,122,122,0.12)' },
-  refunded: { label: 'Remboursé',  dot: '#60A5FA', text: '#60A5FA', bg: 'rgba(96,165,250,0.12)'  },
-};
+const STATUS_CFG: Record<PaymentStatus, { label: string; dot: string; text: string; bg: string }> =
+  {
+    pending: { label: 'En attente', dot: '#FDCF34', text: '#FDCF34', bg: 'rgba(253,207,52,0.12)' },
+    success: { label: 'Reçu', dot: '#5FD38A', text: '#5FD38A', bg: 'rgba(95,211,138,0.12)' },
+    failed: { label: 'Échoué', dot: '#E07A7A', text: '#E07A7A', bg: 'rgba(224,122,122,0.12)' },
+    refunded: { label: 'Remboursé', dot: '#60A5FA', text: '#60A5FA', bg: 'rgba(96,165,250,0.12)' },
+  };
 
-const FILTER_TABS: Array<{ id: PaymentFilter; label: string }> = [
-  { id: 'all',  label: 'Tous'         },
-  { id: 'wave', label: 'Wave'         },
-  { id: 'om',   label: 'Orange Money' },
+const FILTER_TABS: { id: PaymentFilter; label: string }[] = [
+  { id: 'all', label: 'Tous' },
+  { id: 'wave', label: 'Wave' },
+  { id: 'om', label: 'Orange Money' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -72,36 +79,44 @@ function filterPayments(payments: MerchantPayment[], filter: PaymentFilter): Mer
 
 // ─── Écran principal ──────────────────────────────────────────────────────────
 
-interface Props { onBack: () => void; }
+interface Props {
+  onBack: () => void;
+}
 
 export default function MerchantPaymentsScreen({ onBack }: Props) {
   const user = useAuthStore(s => s.user);
 
-  const [payments,   setPayments]   = useState<MerchantPayment[]>([]);
-  const [loading,    setLoading]    = useState(true);
+  const [payments, setPayments] = useState<MerchantPayment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error,      setError]      = useState<string | null>(null);
-  const [filter,     setFilter]     = useState<PaymentFilter>('all');
-  const [receipt,    setReceipt]    = useState<MerchantPayment | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<PaymentFilter>('all');
+  const [receipt, setReceipt] = useState<MerchantPayment | null>(null);
 
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  const load = useCallback(async (isRefresh = false) => {
-    if (!user?.id) return;
-    if (isRefresh) setRefreshing(true); else setLoading(true);
-    setError(null);
-    try {
-      const data = await paymentsService.getMerchantPayments(user.id);
-      setPayments(data);
-    } catch {
-      setError('Impossible de charger les paiements. Tire vers le bas pour réessayer.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [user?.id]);
+  const load = useCallback(
+    async (isRefresh = false) => {
+      if (!user?.id) return;
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+      setError(null);
+      try {
+        const data = await paymentsService.getMerchantPayments(user.id);
+        setPayments(data);
+      } catch {
+        setError('Impossible de charger les paiements. Tire vers le bas pour réessayer.');
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [user?.id],
+  );
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   // Realtime — nouveaux paiements reçus
   useEffect(() => {
@@ -113,12 +128,12 @@ export default function MerchantPaymentsScreen({ onBack }: Props) {
         .on(
           'postgres_changes',
           {
-            event:  'INSERT',
+            event: 'INSERT',
             schema: 'public',
-            table:  'payments',
+            table: 'payments',
             filter: `prestataire_id=eq.${user.id}`,
           },
-          () => load(),   // recharge simplement la liste
+          () => load(), // recharge simplement la liste
         )
         .subscribe();
       channelRef.current = ch;
@@ -139,7 +154,7 @@ export default function MerchantPaymentsScreen({ onBack }: Props) {
     };
   }, [user?.id, load]);
 
-  const stats     = paymentsService.computeStats(payments);
+  const stats = paymentsService.computeStats(payments);
   const chartData = paymentsService.getLast7Days(payments);
   const displayed = filterPayments(payments, filter);
 
@@ -226,9 +241,7 @@ export default function MerchantPaymentsScreen({ onBack }: Props) {
                   onPress={() => setFilter(tab.id)}
                   activeOpacity={0.75}
                 >
-                  <Text style={[s.tabTxt, on ? s.tabTxtOn : s.tabTxtOff]}>
-                    {tab.label}
-                  </Text>
+                  <Text style={[s.tabTxt, on ? s.tabTxtOn : s.tabTxtOff]}>{tab.label}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -251,11 +264,7 @@ export default function MerchantPaymentsScreen({ onBack }: Props) {
             </View>
           ) : (
             displayed.map(p => (
-              <MerchantPaymentCard
-                key={p.id}
-                payment={p}
-                onReceipt={() => setReceipt(p)}
-              />
+              <MerchantPaymentCard key={p.id} payment={p} onReceipt={() => setReceipt(p)} />
             ))
           )}
 
@@ -271,63 +280,100 @@ export default function MerchantPaymentsScreen({ onBack }: Props) {
 // ─── Styles écran ─────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: colors.bg },
   header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 18, paddingBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingBottom: 14,
   },
   backBtn: {
-    width: 38, height: 38, borderRadius: 11,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
-    flex: 1, textAlign: 'center',
-    color: colors.white, fontFamily: fonts.titleXL, fontSize: 18,
+    flex: 1,
+    textAlign: 'center',
+    color: colors.white,
+    fontFamily: fonts.titleXL,
+    fontSize: 18,
   },
-  scroll:   { flex: 1 },
-  content:  { paddingTop: 8 },
-  center:   { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  errorTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 13, textAlign: 'center', marginBottom: 16, lineHeight: 20 },
-  retryBtn: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.accent },
+  scroll: { flex: 1 },
+  content: { paddingTop: 8 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  errorTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  retryBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
   retryTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 13 },
 
   statsCard: {
-    marginHorizontal: 18, marginBottom: 14,
+    marginHorizontal: 18,
+    marginBottom: 14,
     backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.lg, overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
   },
   statsRow: { flexDirection: 'row' },
   statsRow2: {
     flexDirection: 'row',
-    borderTopWidth: 1, borderTopColor: colors.border,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  statCell:  { flex: 1, padding: 16 },
+  statCell: { flex: 1, padding: 16 },
   statCell2: { flex: 1, padding: 14 },
   statTopRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
   statDivider: { width: 1, backgroundColor: colors.border },
   statLabel: { color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginBottom: 4 },
-  statBig:   { color: colors.white, fontFamily: fonts.titleXL, fontSize: 18 },
-  statMed:   { color: colors.white, fontFamily: fonts.title,   fontSize: 14 },
+  statBig: { color: colors.white, fontFamily: fonts.titleXL, fontSize: 18 },
+  statMed: { color: colors.white, fontFamily: fonts.title, fontSize: 14 },
   methodRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
 
   tabs: {
-    flexDirection: 'row', gap: 8,
-    paddingHorizontal: 18, marginBottom: 14,
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 18,
+    marginBottom: 14,
   },
   tab: {
-    flex: 1, height: 36, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center',
+    flex: 1,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  tabOn:     { backgroundColor: colors.accent },
-  tabOff:    { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  tabTxt:    { fontFamily: fonts.title, fontSize: 12 },
-  tabTxtOn:  { color: colors.bg    },
+  tabOn: { backgroundColor: colors.accent },
+  tabOff: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  tabTxt: { fontFamily: fonts.title, fontSize: 12 },
+  tabTxtOn: { color: colors.bg },
   tabTxtOff: { color: colors.muted },
 
   empty: { alignItems: 'center', paddingVertical: 60, paddingHorizontal: 32, gap: 12 },
   emptyTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 15, textAlign: 'center' },
-  emptySub:   { color: colors.muted, fontFamily: fonts.body,  fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  emptySub: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
 });

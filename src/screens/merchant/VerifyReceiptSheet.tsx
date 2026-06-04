@@ -1,7 +1,13 @@
 import React, { useState, useRef } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Modal, KeyboardAvoidingView, Platform,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
   ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -16,7 +22,14 @@ import { formatPrice } from '../../utils/format';
 const IcoCloseBtn = () => <IcoClose color={colors.muted} />;
 
 const IcoCheck = () => (
-  <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" strokeWidth={2.5} strokeLinecap="round">
+  <Svg
+    width={28}
+    height={28}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.5}
+    strokeLinecap="round"
+  >
     <Path d="M20 6 9 17l-5-5" stroke={colors.success} />
   </Svg>
 );
@@ -26,10 +39,10 @@ const IcoX = () => <IcoClose size={28} color={colors.danger} />;
 // ─── Messages d'erreur lisibles ───────────────────────────────────────────────
 
 const REASON_LABELS: Record<string, string> = {
-  introuvable:  'Code introuvable. Vérifie le code et réessaie.',
-  expire:       'Ce reçu a expiré (délai de 40 min dépassé).',
+  introuvable: 'Code introuvable. Vérifie le code et réessaie.',
+  expire: 'Ce reçu a expiré (délai de 40 min dépassé).',
   deja_utilise: 'Ce reçu a déjà été utilisé.',
-  aucun:        'Aucun reçu associé à ce code.',
+  aucun: 'Aucun reçu associé à ce code.',
 };
 
 function reasonLabel(reason?: string): string {
@@ -40,7 +53,10 @@ function reasonLabel(reason?: string): string {
 // ─── Formatage du code en XXXX XXXX ──────────────────────────────────────────
 
 function formatCode(raw: string): string {
-  const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+  const clean = raw
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 8);
   if (clean.length <= 4) return clean;
   return `${clean.slice(0, 4)} ${clean.slice(4)}`;
 }
@@ -48,15 +64,15 @@ function formatCode(raw: string): string {
 // ─── Composant principal ─────────────────────────────────────────────────────
 
 interface Props {
-  visible:  boolean;
-  onClose:  () => void;
+  visible: boolean;
+  onClose: () => void;
   onVerified?: (result: VerifyResult) => void;
 }
 
 export default function VerifyReceiptSheet({ visible, onClose, onVerified }: Props) {
-  const [code,    setCode]    = useState('');
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result,  setResult]  = useState<VerifyResult | null>(null);
+  const [result, setResult] = useState<VerifyResult | null>(null);
   const inputRef = useRef<TextInput>(null);
 
   const rawCode = code.replace(/\s/g, '');
@@ -89,12 +105,7 @@ export default function VerifyReceiptSheet({ visible, onClose, onVerified }: Pro
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={handleClose}
-    >
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={s.overlay}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -127,9 +138,7 @@ export default function VerifyReceiptSheet({ visible, onClose, onVerified }: Pro
                     <Text style={s.resultSuccessSub}>Client : {result.clientName}</Text>
                   )}
                   {result.total !== undefined && (
-                    <Text style={s.resultSuccessSub}>
-                      Total : {formatPrice(result.total)}
-                    </Text>
+                    <Text style={s.resultSuccessSub}>Total : {formatPrice(result.total)}</Text>
                   )}
                 </View>
               </View>
@@ -169,10 +178,11 @@ export default function VerifyReceiptSheet({ visible, onClose, onVerified }: Pro
                   activeOpacity={0.85}
                   disabled={rawCode.length < 8 || loading}
                 >
-                  {loading
-                    ? <ActivityIndicator color={colors.bg} size="small" />
-                    : <Text style={s.btnTxt}>Vérifier le reçu</Text>
-                  }
+                  {loading ? (
+                    <ActivityIndicator color={colors.bg} size="small" />
+                  ) : (
+                    <Text style={s.btnTxt}>Vérifier le reçu</Text>
+                  )}
                 </TouchableOpacity>
               </>
             )}
@@ -212,7 +222,7 @@ const s = StyleSheet.create({
 
   sheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius:  24,
+    borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 22,
     borderTopWidth: 1,
@@ -220,11 +230,13 @@ const s = StyleSheet.create({
   },
 
   grab: {
-    width: 40, height: 4,
+    width: 40,
+    height: 4,
     borderRadius: 2,
     backgroundColor: colors.border,
     alignSelf: 'center',
-    marginTop: 10, marginBottom: 14,
+    marginTop: 10,
+    marginBottom: 14,
   },
   sheetHeader: { marginBottom: 20 },
   titleRow: {
@@ -239,11 +251,14 @@ const s = StyleSheet.create({
     fontSize: 18,
   },
   closeBtn: {
-    width: 34, height: 34,
+    width: 34,
+    height: 34,
     borderRadius: 10,
     backgroundColor: colors.bg,
-    borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   subtitle: {
     color: colors.muted,
@@ -258,7 +273,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     backgroundColor: 'rgba(95,211,138,0.1)',
-    borderWidth: 1, borderColor: 'rgba(95,211,138,0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(95,211,138,0.3)',
     borderRadius: radius.md,
     padding: 16,
     marginBottom: 16,
@@ -266,7 +282,8 @@ const s = StyleSheet.create({
   resultSuccessTitle: {
     color: colors.success,
     fontFamily: fonts.titleXL,
-    fontSize: 16, marginBottom: 4,
+    fontSize: 16,
+    marginBottom: 4,
   },
   resultSuccessSub: {
     color: colors.white,
@@ -279,7 +296,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     backgroundColor: 'rgba(224,122,122,0.1)',
-    borderWidth: 1, borderColor: 'rgba(224,122,122,0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(224,122,122,0.3)',
     borderRadius: radius.md,
     padding: 16,
     marginBottom: 16,
@@ -295,7 +313,8 @@ const s = StyleSheet.create({
   // Input
   inputWrap: {
     backgroundColor: colors.bg,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: radius.md,
     height: 64,
     alignItems: 'center',

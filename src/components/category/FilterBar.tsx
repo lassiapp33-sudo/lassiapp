@@ -7,11 +7,11 @@ import { useT } from '../../i18n';
 export type FilterId = 'near' | 'top' | 'open';
 
 interface Filter {
-  id:    FilterId;
-  icon:  (active: boolean) => React.ReactNode;
+  id: FilterId;
+  icon: (active: boolean) => React.ReactNode;
 }
 
-const c = (on: boolean) => on ? colors.accent : colors.muted;
+const c = (on: boolean) => (on ? colors.accent : colors.muted);
 
 const FILTER_DEFS: Filter[] = [
   {
@@ -27,7 +27,11 @@ const FILTER_DEFS: Filter[] = [
     id: 'top',
     icon: on => (
       <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
-        <Path d="M12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9z" stroke={c(on)} fill={on ? colors.accent : 'none'} />
+        <Path
+          d="M12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9z"
+          stroke={c(on)}
+          fill={on ? colors.accent : 'none'}
+        />
       </Svg>
     ),
   },
@@ -43,7 +47,7 @@ const FILTER_DEFS: Filter[] = [
 ];
 
 interface Props {
-  active:   FilterId;
+  active: FilterId;
   onChange: (id: FilterId) => void;
 }
 
@@ -51,7 +55,7 @@ export default function FilterBar({ active, onChange }: Props) {
   const t = useT();
   const labels: Record<FilterId, string> = {
     near: t.category.nearFilter,
-    top:  t.category.topFilter,
+    top: t.category.topFilter,
     open: t.category.openFilter,
   };
 

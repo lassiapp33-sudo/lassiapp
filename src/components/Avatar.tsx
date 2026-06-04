@@ -13,8 +13,13 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity,
-  ActivityIndicator, StyleSheet, StyleProp, ViewStyle,
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
+  StyleProp,
+  ViewStyle,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { colors, fonts } from '../theme';
@@ -24,16 +29,16 @@ import { getInitials } from '../utils/getInitials';
 
 export interface AvatarProps {
   /** URL Supabase Storage (avatar_url ou logo_url). Si absent → fallback initiale. */
-  imageUrl?:   string | null;
+  imageUrl?: string | null;
   /** Nom complet — sert au calcul de l'initiale en fallback. */
-  name:        string;
+  name: string;
   /** Taille en pixels (width = height). */
-  size:        number;
+  size: number;
   /** Forme et couleurs :
    *  - 'user'  → rond, fond surface, initiale accent
    *  - 'shop'  → carré arrondi, fond accent jaune, initiale bg
    */
-  variant?:    'user' | 'shop';
+  variant?: 'user' | 'shop';
   /**
    * Affiche une bordure mise en valeur :
    *  - user  → 2px colors.accent
@@ -41,11 +46,11 @@ export interface AvatarProps {
    */
   showBorder?: boolean;
   /** Rend le composant pressable. */
-  onPress?:    () => void;
+  onPress?: () => void;
   /** Affiche un spinner à la place de l'image (pendant l'upload). */
-  uploading?:  boolean;
+  uploading?: boolean;
   /** Style additionnel appliqué au conteneur (ex. marges). */
-  style?:      StyleProp<ViewStyle>;
+  style?: StyleProp<ViewStyle>;
 }
 
 // ─── Composant ───────────────────────────────────────────────────────────────
@@ -54,25 +59,28 @@ export default function Avatar({
   imageUrl,
   name,
   size,
-  variant    = 'user',
+  variant = 'user',
   showBorder = false,
   onPress,
-  uploading  = false,
+  uploading = false,
   style,
 }: AvatarProps) {
   // Réinitialise l'état d'erreur quand l'URL change (nouvelle photo uploadée)
   const [hasError, setHasError] = useState(false);
-  useEffect(() => { setHasError(false); }, [imageUrl]);
+  useEffect(() => {
+    setHasError(false);
+  }, [imageUrl]);
 
   // ── Géométrie ────────────────────────────────────────────────────────────
-  const borderRadius = variant === 'user'
-    ? size / 2                     // Rond parfait pour les utilisateurs
-    : Math.round(size * 0.27);    // Carré arrondi (ratio extrait des designs existants)
+  const borderRadius =
+    variant === 'user'
+      ? size / 2 // Rond parfait pour les utilisateurs
+      : Math.round(size * 0.27); // Carré arrondi (ratio extrait des designs existants)
 
   // ── Couleurs ─────────────────────────────────────────────────────────────
-  const bgColor      = variant === 'shop' ? colors.accent : colors.surface;
-  const initialColor = variant === 'shop' ? colors.bg     : colors.accent;
-  const fontSize     = Math.round(size * 0.38);
+  const bgColor = variant === 'shop' ? colors.accent : colors.surface;
+  const initialColor = variant === 'shop' ? colors.bg : colors.accent;
+  const fontSize = Math.round(size * 0.38);
 
   // ── Bordure ───────────────────────────────────────────────────────────────
   let borderWidth: number;
@@ -88,8 +96,8 @@ export default function Avatar({
   const containerStyle = [
     styles.base,
     {
-      width:           size,
-      height:          size,
+      width: size,
+      height: size,
       borderRadius,
       backgroundColor: bgColor,
       borderWidth,
@@ -103,10 +111,7 @@ export default function Avatar({
 
   const inner = uploading ? (
     // Spinner pendant l'upload
-    <ActivityIndicator
-      color={variant === 'shop' ? colors.bg : colors.accent}
-      size="small"
-    />
+    <ActivityIndicator color={variant === 'shop' ? colors.bg : colors.accent} size="small" />
   ) : showImage ? (
     // Image réelle depuis Supabase Storage — expo-image : cache disque + transition
     <Image
@@ -138,9 +143,9 @@ export default function Avatar({
 
 const styles = StyleSheet.create({
   base: {
-    alignItems:     'center',
+    alignItems: 'center',
     justifyContent: 'center',
-    flexShrink:     0,
-    overflow:       'hidden', // clip l'image au borderRadius
+    flexShrink: 0,
+    overflow: 'hidden', // clip l'image au borderRadius
   },
 });

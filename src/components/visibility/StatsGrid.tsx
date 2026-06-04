@@ -14,15 +14,16 @@ const IcoEye = ({ color }: { color: string }) => (
 
 const IcoClick = ({ color }: { color: string }) => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>
-    <Path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
-      stroke={color} />
+    <Path
+      d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
+      stroke={color}
+    />
   </Svg>
 );
 
 const IcoChat = ({ color }: { color: string }) => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>
-    <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-      stroke={color} />
+    <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke={color} />
   </Svg>
 );
 
@@ -35,10 +36,25 @@ const IcoCoin = ({ color }: { color: string }) => (
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const STATS = [
-  { Icon: IcoEye,   color: colors.accent,  iconBg: 'rgba(253,207,52,.12)', label: 'Vues ce mois'           },
-  { Icon: IcoClick, color: colors.success, iconBg: 'rgba(95,211,138,.12)', label: 'Clics vers ta boutique' },
-  { Icon: IcoChat,  color: colors.accent,  iconBg: 'rgba(253,207,52,.12)', label: 'Discussions lancées'    },
-  { Icon: IcoCoin,  color: colors.success, iconBg: 'rgba(95,211,138,.12)', label: 'Ventes générées (F)'    },
+  { Icon: IcoEye, color: colors.accent, iconBg: 'rgba(253,207,52,.12)', label: 'Vues ce mois' },
+  {
+    Icon: IcoClick,
+    color: colors.success,
+    iconBg: 'rgba(95,211,138,.12)',
+    label: 'Clics vers ta boutique',
+  },
+  {
+    Icon: IcoChat,
+    color: colors.accent,
+    iconBg: 'rgba(253,207,52,.12)',
+    label: 'Discussions lancées',
+  },
+  {
+    Icon: IcoCoin,
+    color: colors.success,
+    iconBg: 'rgba(95,211,138,.12)',
+    label: 'Ventes générées (F)',
+  },
 ];
 
 // ─── Composant ────────────────────────────────────────────────────────────────

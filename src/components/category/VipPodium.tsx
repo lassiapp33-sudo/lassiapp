@@ -7,24 +7,24 @@ import Avatar from '../Avatar';
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface VipEntry {
-  rank:          1 | 2 | 3;
+  rank: 1 | 2 | 3;
   /** ID de la boutique pour la navigation — vide si placeholder. */
-  id:            string;
-  initial:       string;
-  name:          string;
-  zone:          string;
-  rating:        number;
-  logoUrl?:      string | null;
+  id: string;
+  initial: string;
+  name: string;
+  zone: string;
+  rating: number;
+  logoUrl?: string | null;
   /** true = emplacement non encore occupé, affiché grisé avec lettre A/B/C. */
   isPlaceholder: boolean;
 }
 
 interface Props {
   /** 0 à 3 entrées VIP réelles — les positions manquantes deviennent des placeholders. */
-  entries:   VipEntry[];
-  subLabel?: string;   // ex: "Tangana"
-  renewIn?:  string;   // ex: "7j"
-  onPress?:  (entry: VipEntry) => void;
+  entries: VipEntry[];
+  subLabel?: string; // ex: "Tangana"
+  renewIn?: string; // ex: "7j"
+  onPress?: (entry: VipEntry) => void;
 }
 
 // ─── Constantes visuelles ────────────────────────────────────────────────────
@@ -35,16 +35,16 @@ const MEDAL_BG: Record<number, string> = {
   3: '#CD8B5E',
 };
 const PLACEHOLDER_LABEL = ['A', 'B', 'C'];
-const BASE_H:  Record<1|2|3, number> = { 1: 46, 2: 34, 3: 26 };
-const AV_SIZE: Record<1|2|3, number> = { 1: 74, 2: 60, 3: 60 };
-const AV_FONT: Record<1|2|3, number> = { 1: 24, 2: 20, 3: 20 };
+const BASE_H: Record<1 | 2 | 3, number> = { 1: 46, 2: 34, 3: 26 };
+const AV_SIZE: Record<1 | 2 | 3, number> = { 1: 74, 2: 60, 3: 60 };
+const AV_FONT: Record<1 | 2 | 3, number> = { 1: 24, 2: 20, 3: 20 };
 
 // ─── Colonne du podium ───────────────────────────────────────────────────────
 
 function PodColumn({ entry, onPress }: { entry: VipEntry; onPress?: () => void }) {
   const { rank, name, zone, rating, logoUrl, isPlaceholder } = entry;
-  const avSize  = AV_SIZE[rank];
-  const baseH   = BASE_H[rank];
+  const avSize = AV_SIZE[rank];
+  const baseH = BASE_H[rank];
   const isFirst = rank === 1;
 
   return (
@@ -62,7 +62,9 @@ function PodColumn({ entry, onPress }: { entry: VipEntry; onPress?: () => void }
 
       {/* Avatar ou cercle grisé pour placeholder */}
       {isPlaceholder ? (
-        <View style={[styles.phCircle, { width: avSize, height: avSize, borderRadius: avSize / 2 }]}>
+        <View
+          style={[styles.phCircle, { width: avSize, height: avSize, borderRadius: avSize / 2 }]}
+        >
           <Text style={[styles.phLetter, { fontSize: AV_FONT[rank] }]}>
             {PLACEHOLDER_LABEL[rank - 1]}
           </Text>
@@ -88,35 +90,32 @@ function PodColumn({ entry, onPress }: { entry: VipEntry; onPress?: () => void }
       )}
 
       {/* Nom */}
-      <Text
-        style={[styles.name, isPlaceholder && styles.namePh]}
-        numberOfLines={2}
-      >
+      <Text style={[styles.name, isPlaceholder && styles.namePh]} numberOfLines={2}>
         {isPlaceholder ? 'Place disponible' : name}
       </Text>
 
       {/* Zone ou accroche placeholder */}
-      <Text style={styles.zone}>
-        {isPlaceholder ? 'Sois actif pour grimper ici' : zone}
-      </Text>
+      <Text style={styles.zone}>{isPlaceholder ? 'Sois actif pour grimper ici' : zone}</Text>
 
       {/* Note — seulement pour les vrais VIP avec rating > 0 */}
-      {!isPlaceholder && rating > 0 && (
-        <Text style={styles.rating}>⭐ {rating.toFixed(1)}</Text>
-      )}
+      {!isPlaceholder && rating > 0 && <Text style={styles.rating}>⭐ {rating.toFixed(1)}</Text>}
 
       {/* Socle du podium */}
-      <View style={[
-        styles.base,
-        { height: baseH },
-        isFirst && !isPlaceholder && styles.base1,
-        isPlaceholder && styles.basePh,
-      ]}>
-        <Text style={[
-          styles.baseNum,
-          isFirst && !isPlaceholder && styles.baseNum1,
-          isPlaceholder && styles.baseNumPh,
-        ]}>
+      <View
+        style={[
+          styles.base,
+          { height: baseH },
+          isFirst && !isPlaceholder && styles.base1,
+          isPlaceholder && styles.basePh,
+        ]}
+      >
+        <Text
+          style={[
+            styles.baseNum,
+            isFirst && !isPlaceholder && styles.baseNum1,
+            isPlaceholder && styles.baseNumPh,
+          ]}
+        >
           {rank}
         </Text>
       </View>
@@ -132,12 +131,12 @@ function buildPodium(entries: VipEntry[]): VipEntry[] {
     if (found) return found;
     return {
       rank,
-      id:            '',
-      initial:       PLACEHOLDER_LABEL[rank - 1],
-      name:          'Place disponible',
-      zone:          '',
-      rating:        0,
-      logoUrl:       null,
+      id: '',
+      initial: PLACEHOLDER_LABEL[rank - 1],
+      name: 'Place disponible',
+      zone: '',
+      rating: 0,
+      logoUrl: null,
       isPlaceholder: true,
     };
   });
@@ -147,7 +146,7 @@ function buildPodium(entries: VipEntry[]): VipEntry[] {
 
 export default function VipPodium({ entries, subLabel = '', renewIn = '7j', onPress }: Props) {
   const hasReal = entries.some(e => !e.isPlaceholder);
-  const podium  = buildPodium(entries);
+  const podium = buildPodium(entries);
 
   // Ordre d'affichage : 2e à gauche, 1er au centre, 3e à droite
   const sorted = [
@@ -185,11 +184,7 @@ export default function VipPodium({ entries, subLabel = '', renewIn = '7j', onPr
       {/* Podium */}
       <View style={styles.podium}>
         {sorted.map(entry => (
-          <PodColumn
-            key={entry.rank}
-            entry={entry}
-            onPress={() => onPress?.(entry)}
-          />
+          <PodColumn key={entry.rank} entry={entry} onPress={() => onPress?.(entry)} />
         ))}
       </View>
     </View>
@@ -214,7 +209,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   headIcon: { fontSize: 17 },
-  crown:    { fontSize: 17 },
+  crown: { fontSize: 17 },
   headTitle: {
     color: colors.white,
     fontFamily: fonts.title,

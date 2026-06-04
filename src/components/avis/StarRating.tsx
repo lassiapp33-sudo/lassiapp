@@ -3,9 +3,13 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme';
 
-const STAR_PATH = 'M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z';
+const STAR_PATH =
+  'M12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z';
 
-interface StarProps { filled: boolean; size: number; }
+interface StarProps {
+  filled: boolean;
+  size: number;
+}
 
 function Star({ filled, size }: StarProps) {
   return (
@@ -23,10 +27,10 @@ function Star({ filled, size }: StarProps) {
 }
 
 interface Props {
-  value:     number;
+  value: number;
   onChange?: (v: number) => void;
-  size?:     number;
-  gap?:      number;
+  size?: number;
+  gap?: number;
 }
 
 export default function StarRating({ value, onChange, size = 28, gap = 6 }: Props) {

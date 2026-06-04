@@ -1,28 +1,36 @@
 import React from 'react';
-import {
-  Modal, View, Text, TouchableOpacity, StyleSheet,
-} from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Polyline } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import useLanguageStore, { Lang } from '../../store/languageStore';
 
 const IcoCheck = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={16}
+    height={16}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Polyline points="20 6 9 17 4 12" stroke={colors.accent} />
   </Svg>
 );
 
 interface Props {
-  visible:  boolean;
-  onClose:  () => void;
+  visible: boolean;
+  onClose: () => void;
 }
 
 export default function LanguageModal({ visible, onClose }: Props) {
-  const lang    = useLanguageStore(s => s.lang);
+  const lang = useLanguageStore(s => s.lang);
   const setLang = useLanguageStore(s => s.setLang);
 
-  const select = (l: Lang) => { setLang(l); onClose(); };
+  const select = (l: Lang) => {
+    setLang(l);
+    onClose();
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>

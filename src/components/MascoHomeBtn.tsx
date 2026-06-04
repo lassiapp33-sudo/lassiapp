@@ -30,19 +30,19 @@ export default function MascoHomeBtn({ style }: Props) {
 
 const styles = StyleSheet.create({
   btn: {
-    width:           38,
-    height:          38,
-    borderRadius:    11,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     backgroundColor: colors.surface,
-    borderWidth:     1,
-    borderColor:     colors.border,
-    alignItems:      'center',
-    justifyContent:  'center',
-    overflow:        'hidden',
-    padding:         3,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    padding: 3,
   },
   img: {
-    width:  '100%',
+    width: '100%',
     height: '100%',
   },
 });

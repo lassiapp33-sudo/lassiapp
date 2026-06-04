@@ -8,11 +8,12 @@ import { IcoSearch } from '../icons';
 
 const IcoStore = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>
-    <Path d="M3 9l1-5h16l1 5M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9M3 9h18"
-      stroke={colors.accent} />
+    <Path
+      d="M3 9l1-5h16l1 5M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9M3 9h18"
+      stroke={colors.accent}
+    />
   </Svg>
 );
-
 
 const IcoPulse = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>
@@ -25,18 +26,18 @@ const IcoPulse = () => (
 const BENEFITS = [
   {
     Icon: IcoStore,
-    title: 'Placement premium sur l\'accueil',
-    desc:  'Ta carte apparaît dès l\'ouverture de l\'app',
+    title: "Placement premium sur l'accueil",
+    desc: "Ta carte apparaît dès l'ouverture de l'app",
   },
   {
     Icon: () => <IcoSearch color={colors.accent} />,
     title: 'Visible dans toutes les catégories',
-    desc:  'Même quand le client cherche autre chose',
+    desc: 'Même quand le client cherche autre chose',
   },
   {
     Icon: IcoPulse,
     title: 'Tunnel direct vers ta boutique',
-    desc:  '1 clic = le client entre chez toi',
+    desc: '1 clic = le client entre chez toi',
   },
 ];
 

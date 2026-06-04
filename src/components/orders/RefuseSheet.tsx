@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View, Text, Modal, TouchableOpacity,
-  StyleSheet, Platform,
-} from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 import { IncomingOrder } from '../../types/orders';
 import { IcoClose } from '../icons';
@@ -11,18 +7,13 @@ import { formatPrice } from '../../utils/format';
 
 const BOTTOM_PAD = Platform.OS === 'ios' ? 28 : 14;
 
-const REASONS = [
-  'Rupture de stock',
-  'Commerce fermé',
-  'Article indisponible',
-  'Délai trop long',
-];
+const REASONS = ['Rupture de stock', 'Commerce fermé', 'Article indisponible', 'Délai trop long'];
 
 interface Props {
-  visible:  boolean;
-  order:    IncomingOrder | null;
+  visible: boolean;
+  order: IncomingOrder | null;
   onRefuse: (reason: string) => void;
-  onClose:  () => void;
+  onClose: () => void;
 }
 
 export default function RefuseSheet({ visible, order, onRefuse, onClose }: Props) {
@@ -31,12 +22,7 @@ export default function RefuseSheet({ visible, order, onRefuse, onClose }: Props
   if (!order) return null;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} />
 
       <View style={[styles.sheet, { paddingBottom: BOTTOM_PAD }]}>
@@ -68,9 +54,7 @@ export default function RefuseSheet({ visible, order, onRefuse, onClose }: Props
               onPress={() => setSelected(r)}
               activeOpacity={0.75}
             >
-              <Text style={[styles.chipTxt, selected === r && styles.chipTxtSel]}>
-                {r}
-              </Text>
+              <Text style={[styles.chipTxt, selected === r && styles.chipTxtSel]}>{r}</Text>
             </TouchableOpacity>
           ))}
         </View>

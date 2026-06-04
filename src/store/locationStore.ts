@@ -2,23 +2,23 @@ import { create } from 'zustand';
 import * as locationService from '../services/location';
 
 export interface UserCoords {
-  latitude:  number;
+  latitude: number;
   longitude: number;
 }
 
 interface LocationState {
-  coords:   UserCoords | null;
+  coords: UserCoords | null;
   zoneName: string;
-  loading:  boolean;
+  loading: boolean;
 
   /** Demande la permission GPS, récupère la position et le nom de zone. */
   refreshLocation: () => Promise<void>;
 }
 
-const useLocationStore = create<LocationState>()((set) => ({
-  coords:   null,
+const useLocationStore = create<LocationState>()(set => ({
+  coords: null,
   zoneName: 'Localisation…',
-  loading:  false,
+  loading: false,
 
   refreshLocation: async () => {
     set({ loading: true, zoneName: 'Localisation…' });

@@ -4,8 +4,14 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, TextInput, KeyboardAvoidingView, Platform,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { notifyError } from '../../utils/errorUtils';
 import Svg, { Path } from 'react-native-svg';
@@ -16,10 +22,10 @@ import logger from '../../utils/logger';
 import { IcoBack } from '../../components/icons';
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> = {
-  open:      { bg: 'rgba(224,122,122,0.15)', text: '#E07A7A', label: 'Ouvert' },
-  in_review: { bg: 'rgba(240,168,71,0.15)',  text: '#F0A847', label: 'En examen' },
-  resolved:  { bg: 'rgba(95,211,138,0.15)',  text: '#5FD38A', label: 'Résolu' },
-  rejected:  { bg: 'rgba(154,155,176,0.15)', text: '#9A9BB0', label: 'Rejeté' },
+  open: { bg: 'rgba(224,122,122,0.15)', text: '#E07A7A', label: 'Ouvert' },
+  in_review: { bg: 'rgba(240,168,71,0.15)', text: '#F0A847', label: 'En examen' },
+  resolved: { bg: 'rgba(95,211,138,0.15)', text: '#5FD38A', label: 'Résolu' },
+  rejected: { bg: 'rgba(154,155,176,0.15)', text: '#9A9BB0', label: 'Rejeté' },
 };
 
 interface Props {
@@ -27,22 +33,24 @@ interface Props {
 }
 
 export default function MyDisputesScreen({ onBack }: Props) {
-  const [disputes,  setDisputes]  = useState<Dispute[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [selected,  setSelected]  = useState<Dispute | null>(null);
-  const [messages,  setMessages]  = useState<DisputeMessage[]>([]);
-  const [newMsg,    setNewMsg]    = useState('');
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Dispute | null>(null);
+  const [messages, setMessages] = useState<DisputeMessage[]>([]);
+  const [newMsg, setNewMsg] = useState('');
   const [sendingMsg, setSendingMsg] = useState(false);
 
   useEffect(() => {
-    disputeService.getMyDisputes()
+    disputeService
+      .getMyDisputes()
       .then(setDisputes)
       .catch(err => logger.warn('[MyDisputesScreen] getMyDisputes:', err))
       .finally(() => setLoading(false));
   }, []);
 
   const loadMessages = useCallback((id: string) => {
-    disputeService.getDisputeMessages(id)
+    disputeService
+      .getDisputeMessages(id)
       .then(setMessages)
       .catch(err => logger.warn('[MyDisputesScreen] getDisputeMessages:', err));
   }, []);
@@ -78,7 +86,11 @@ export default function MyDisputesScreen({ onBack }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={[styles.head, { paddingTop: TOP_INSET + 8 }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => setSelected(null)} activeOpacity={0.75}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => setSelected(null)}
+            activeOpacity={0.75}
+          >
             <IcoBack />
           </TouchableOpacity>
           <Text style={styles.headTitle} numberOfLines={1}>
@@ -96,9 +108,7 @@ export default function MyDisputesScreen({ onBack }: Props) {
         >
           {/* Contexte */}
           <View style={styles.contextCard}>
-            <Text style={styles.contextTitle}>
-              {disputeService.REASON_LABELS[selected.reason]}
-            </Text>
+            <Text style={styles.contextTitle}>{disputeService.REASON_LABELS[selected.reason]}</Text>
             <Text style={styles.contextDesc}>{selected.description}</Text>
           </View>
 
@@ -117,22 +127,17 @@ export default function MyDisputesScreen({ onBack }: Props) {
           ) : (
             messages.map(msg => {
               const isAdmin = msg.senderRole === 'admin';
-              const isMe    = msg.senderRole !== 'admin' && true; // simplifié
+              const isMe = msg.senderRole !== 'admin' && true; // simplifié
               return (
-                <View
-                  key={msg.id}
-                  style={[
-                    styles.msgBubble,
-                    isAdmin && styles.msgBubbleAdmin,
-                  ]}
-                >
+                <View key={msg.id} style={[styles.msgBubble, isAdmin && styles.msgBubbleAdmin]}>
                   <Text style={[styles.msgSender, isAdmin && styles.msgSenderAdmin]}>
                     {isAdmin ? '🛡 Admin' : msg.senderName}
                   </Text>
                   <Text style={styles.msgText}>{msg.message}</Text>
                   <Text style={styles.msgTime}>
                     {new Date(msg.createdAt).toLocaleTimeString('fr-FR', {
-                      hour: '2-digit', minute: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
                     })}
                   </Text>
                 </View>
@@ -212,12 +217,11 @@ export default function MyDisputesScreen({ onBack }: Props) {
                     <Text style={[styles.statusTxt, { color: ss.text }]}>{ss.label}</Text>
                   </View>
                 </View>
-                <Text style={styles.disputeReason}>
-                  {disputeService.REASON_LABELS[d.reason]}
-                </Text>
+                <Text style={styles.disputeReason}>{disputeService.REASON_LABELS[d.reason]}</Text>
                 <Text style={styles.disputeDate}>
                   {new Date(d.createdAt).toLocaleDateString('fr-FR', {
-                    day: '2-digit', month: 'long',
+                    day: '2-digit',
+                    month: 'long',
                   })}
                 </Text>
               </TouchableOpacity>

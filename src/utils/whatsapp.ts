@@ -13,9 +13,10 @@ export function normalizePhoneSN(raw: string | null | undefined): string | null 
   if (!raw) return null;
   let d = String(raw).replace(/[^\d]/g, ''); // retire tout sauf les chiffres
   if (d.startsWith('00')) d = d.slice(2);
-  if (d.startsWith('221'))  { /* indicatif déjà présent */ }
-  else if (d.startsWith('0')) d = '221' + d.slice(1);
-  else if (d.length === 9)    d = '221' + d;  // format local 9 chiffres
+  if (d.startsWith('221')) {
+    /* indicatif déjà présent */
+  } else if (d.startsWith('0')) d = '221' + d.slice(1);
+  else if (d.length === 9) d = '221' + d; // format local 9 chiffres
   if (!/^221\d{9}$/.test(d)) return null;
   return d; // ex : 221781376161
 }
@@ -37,7 +38,11 @@ export async function openDirectPhoneCall(rawPhone: string | null | undefined): 
   // Utilise le numéro normalisé si possible, sinon le brut (au moins 8 chiffres)
   const dialStr = normalized
     ? `+${normalized}`
-    : digits.length >= 8 ? (digits.startsWith('+') ? digits : `+${digits}`) : null;
+    : digits.length >= 8
+      ? digits.startsWith('+')
+        ? digits
+        : `+${digits}`
+      : null;
 
   if (!dialStr) {
     Alert.alert('Appel impossible', 'Numéro de contact indisponible.');
@@ -64,8 +69,8 @@ export async function openWhatsAppCall(rawPhone: string | null | undefined): Pro
   }
 
   const waScheme = `whatsapp://send?phone=${num}`;
-  const waWeb    = `https://wa.me/${num}`;
-  const tel      = `tel:+${num}`;
+  const waWeb = `https://wa.me/${num}`;
+  const tel = `tel:+${num}`;
 
   try {
     const canWA = await Linking.canOpenURL(waScheme);
@@ -73,14 +78,10 @@ export async function openWhatsAppCall(rawPhone: string | null | undefined): Pro
       await Linking.openURL(waScheme);
       return;
     }
-    Alert.alert(
-      'Appel impossible',
-      "WhatsApp n'est pas installé sur ton téléphone.",
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Appeler quand même', onPress: () => Linking.openURL(tel) },
-      ],
-    );
+    Alert.alert('Appel impossible', "WhatsApp n'est pas installé sur ton téléphone.", [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Appeler quand même', onPress: () => Linking.openURL(tel) },
+    ]);
   } catch {
     Linking.openURL(waWeb).catch(() =>
       Alert.alert('Appel impossible', "Impossible d'ouvrir WhatsApp."),

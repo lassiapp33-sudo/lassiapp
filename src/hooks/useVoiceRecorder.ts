@@ -5,47 +5,47 @@ import logger from '../utils/logger';
 // Options d'enregistrement cross-platform — produit toujours un .m4a
 const RECORDING_OPTIONS: Audio.RecordingOptions = {
   android: {
-    extension:     '.m4a',
-    outputFormat:  Audio.AndroidOutputFormat.MPEG_4,
-    audioEncoder:  Audio.AndroidAudioEncoder.AAC,
-    sampleRate:    44100,
+    extension: '.m4a',
+    outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+    audioEncoder: Audio.AndroidAudioEncoder.AAC,
+    sampleRate: 44100,
     numberOfChannels: 1,
-    bitRate:       96000,
+    bitRate: 96000,
   },
   ios: {
-    extension:     '.m4a',
-    outputFormat:  Audio.IOSOutputFormat.MPEG4AAC,
-    audioQuality:  Audio.IOSAudioQuality.MEDIUM,
-    sampleRate:    44100,
+    extension: '.m4a',
+    outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+    audioQuality: Audio.IOSAudioQuality.MEDIUM,
+    sampleRate: 44100,
     numberOfChannels: 1,
-    bitRate:       96000,
+    bitRate: 96000,
     linearPCMBitDepth: 16,
     linearPCMIsBigEndian: false,
-    linearPCMIsFloat:    false,
+    linearPCMIsFloat: false,
   },
   web: { mimeType: 'audio/webm', bitsPerSecond: 96000 },
 };
 
 export interface VoiceResult {
-  uri:      string;
+  uri: string;
   duration: number; // secondes
 }
 
 export interface UseVoiceRecorderReturn {
-  isRecording:      boolean;
-  elapsed:          number;         // secondes écoulées
-  startRecording:   () => Promise<void>;
-  stopRecording:    () => Promise<VoiceResult | null>;
-  cancelRecording:  () => Promise<void>;
+  isRecording: boolean;
+  elapsed: number; // secondes écoulées
+  startRecording: () => Promise<void>;
+  stopRecording: () => Promise<VoiceResult | null>;
+  cancelRecording: () => Promise<void>;
 }
 
 export function useVoiceRecorder(): UseVoiceRecorderReturn {
   const [isRecording, setIsRecording] = useState(false);
-  const [elapsed,     setElapsed]     = useState(0);
+  const [elapsed, setElapsed] = useState(0);
 
-  const recordingRef  = useRef<Audio.Recording | null>(null);
-  const timerRef      = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef  = useRef(0);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef(0);
 
   // Nettoyage en cas de démontage
   useEffect(() => {
@@ -62,7 +62,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
 
     try {
       await Audio.setAudioModeAsync({
-        allowsRecordingIOS:   true,
+        allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
 
@@ -84,7 +84,10 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
   const stopRecording = useCallback(async (): Promise<VoiceResult | null> => {
     if (!recordingRef.current) return null;
 
-    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     const durationSec = Math.floor((Date.now() - startTimeRef.current) / 1000);
 
     try {
@@ -106,8 +109,13 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
   }, []);
 
   const cancelRecording = useCallback(async () => {
-    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-    try { await recordingRef.current?.stopAndUnloadAsync(); } catch {}
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    try {
+      await recordingRef.current?.stopAndUnloadAsync();
+    } catch {}
     recordingRef.current = null;
     setIsRecording(false);
     setElapsed(0);

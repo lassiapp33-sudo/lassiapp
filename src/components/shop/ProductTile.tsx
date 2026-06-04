@@ -7,22 +7,22 @@ import { IcoCartAdd } from '../icons';
 import { formatPrice } from '../../utils/format';
 
 export interface Product {
-  id:        string;
-  emoji:     string;
+  id: string;
+  emoji: string;
   photoUrl?: string;
-  name:      string;
-  desc:      string;
-  price:     number;
-  category:  string;
-  stock?:    'in' | 'out';
+  name: string;
+  desc: string;
+  price: number;
+  category: string;
+  stock?: 'in' | 'out';
 }
 
 interface Props {
-  product:   Product;
-  qty:       number;
-  onAdd:     () => void;
-  onRemove:  () => void;
-  onPress?:  () => void;
+  product: Product;
+  qty: number;
+  onAdd: () => void;
+  onRemove: () => void;
+  onPress?: () => void;
   promoInfo?: ProductPromoInfo;
 }
 
@@ -39,7 +39,12 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
       {/* Zone visuelle photo, emoji, ou vide */}
       <View style={styles.imgZone}>
         {product.photoUrl ? (
-          <Image source={{ uri: product.photoUrl }} style={styles.photo} contentFit="cover" transition={150} />
+          <Image
+            source={{ uri: product.photoUrl }}
+            style={styles.photo}
+            contentFit="cover"
+            transition={150}
+          />
         ) : product.emoji ? (
           <Text style={styles.emoji}>{product.emoji}</Text>
         ) : null}
@@ -59,39 +64,53 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
         )}
 
         {/* Contrôles panier — masqués si indisponible */}
-        {!isOut && (qty === 0 ? (
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={e => { e.stopPropagation?.(); onAdd(); }}
-            activeOpacity={0.8}
-          >
-            <IcoCartAdd />
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.qtyBar}>
+        {!isOut &&
+          (qty === 0 ? (
             <TouchableOpacity
-              style={styles.qtyBtn}
-              onPress={e => { e.stopPropagation?.(); onRemove(); }}
+              style={styles.addBtn}
+              onPress={e => {
+                e.stopPropagation?.();
+                onAdd();
+              }}
               activeOpacity={0.8}
             >
-              <Text style={styles.qtyOp}>−</Text>
+              <IcoCartAdd />
             </TouchableOpacity>
-            <Text style={styles.qtyNum}>{qty}</Text>
-            <TouchableOpacity
-              style={styles.qtyBtn}
-              onPress={e => { e.stopPropagation?.(); onAdd(); }}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.qtyOp}>+</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
+          ) : (
+            <View style={styles.qtyBar}>
+              <TouchableOpacity
+                style={styles.qtyBtn}
+                onPress={e => {
+                  e.stopPropagation?.();
+                  onRemove();
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.qtyOp}>−</Text>
+              </TouchableOpacity>
+              <Text style={styles.qtyNum}>{qty}</Text>
+              <TouchableOpacity
+                style={styles.qtyBtn}
+                onPress={e => {
+                  e.stopPropagation?.();
+                  onAdd();
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.qtyOp}>+</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
       </View>
 
       {/* Infos produit */}
       <View style={styles.body}>
-        <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
-        <Text style={styles.desc} numberOfLines={1}>{product.desc}</Text>
+        <Text style={styles.name} numberOfLines={2}>
+          {product.name}
+        </Text>
+        <Text style={styles.desc} numberOfLines={1}>
+          {product.desc}
+        </Text>
         {/* Prix barré + prix promo OU prix normal */}
         {promoInfo?.promoPrice !== undefined ? (
           <View style={styles.priceRow}>
@@ -99,9 +118,7 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
             <Text style={styles.pricePromo}>{formatPrice(promoInfo.promoPrice)}</Text>
           </View>
         ) : (
-          <Text style={[styles.price, isOut && styles.priceOut]}>
-            {formatPrice(product.price)}
-          </Text>
+          <Text style={[styles.price, isOut && styles.priceOut]}>{formatPrice(product.price)}</Text>
         )}
       </View>
     </TouchableOpacity>
@@ -206,24 +223,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
   },
   promoBadgeTxt: {
-    color:      colors.bg,
+    color: colors.bg,
     fontFamily: fonts.titleXL,
-    fontSize:   9,
+    fontSize: 9,
     letterSpacing: 0.3,
   },
 
   // Prix barré
-  priceRow:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
   priceOld: {
-    color:            colors.muted,
-    fontFamily:       fonts.body,
-    fontSize:         11,
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 11,
     textDecorationLine: 'line-through',
   },
   pricePromo: {
-    color:      colors.accent,
+    color: colors.accent,
     fontFamily: fonts.titleXL,
-    fontSize:   14,
+    fontSize: 14,
   },
 
   // État indisponible
@@ -231,18 +248,18 @@ const styles = StyleSheet.create({
     opacity: 0.58,
   },
   epuiseBadge: {
-    position:        'absolute',
-    top:             8,
-    left:            8,
+    position: 'absolute',
+    top: 8,
+    left: 8,
     backgroundColor: colors.danger,
-    borderRadius:    6,
-    paddingVertical:  3,
+    borderRadius: 6,
+    paddingVertical: 3,
     paddingHorizontal: 7,
   },
   epuiseTxt: {
-    color:      '#fff',
+    color: '#fff',
     fontFamily: fonts.titleXL,
-    fontSize:   9,
+    fontSize: 9,
     letterSpacing: 0.3,
   },
   priceOut: {

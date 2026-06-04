@@ -5,13 +5,13 @@ import { colors, fonts, radius } from '../../theme';
 export type MenuTabId = string;
 
 export interface MenuTab {
-  id:    MenuTabId;
+  id: MenuTabId;
   label: string;
 }
 
 interface Props {
-  tabs:    MenuTab[];
-  active:  MenuTabId;
+  tabs: MenuTab[];
+  active: MenuTabId;
   onPress: (id: MenuTabId) => void;
 }
 
@@ -74,6 +74,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.title,
     fontSize: 13,
   },
-  tabTxtOn:  { color: colors.bg },
+  tabTxtOn: { color: colors.bg },
   tabTxtOff: { color: colors.muted },
 });

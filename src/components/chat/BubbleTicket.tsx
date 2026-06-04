@@ -14,16 +14,30 @@ const IcoReceipt = ({ color }: { color: string }) => (
 );
 
 const IcoCard = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Rect x={2} y={5} width={20} height={14} rx={2} stroke={colors.bg} />
     <Path d="M2 10h20" stroke={colors.bg} />
   </Svg>
 );
 
 const IcoCheck = () => (
-  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={17}
+    height={17}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M20 6 9 17l-5-5" stroke={colors.success} />
   </Svg>
 );
@@ -31,47 +45,51 @@ const IcoCheck = () => (
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface TicketItem {
-  qty:   number;
-  name:  string;
+  qty: number;
+  name: string;
   price: number;
 }
 
 interface Props {
-  sender:  'me' | 'them';
+  sender: 'me' | 'them';
   orderId: string;
-  items:   TicketItem[];
-  total:   number;
-  paid:    boolean;
-  time:    string;
-  read?:   boolean;
-  onPay?:  () => void;  // déclenché quand l'utilisateur tape "Payer"
+  items: TicketItem[];
+  total: number;
+  paid: boolean;
+  time: string;
+  read?: boolean;
+  onPay?: () => void; // déclenché quand l'utilisateur tape "Payer"
 }
 
 // ─── Ticket ───────────────────────────────────────────────────────────────────
 
-export default function BubbleTicket({ sender, orderId, items, total, paid, time, read, onPay }: Props) {
-  const isMe    = sender === 'me';
-  const showPay = !isMe && !paid && !!onPay;  // bouton visible seulement côté "them" non payé
+export default function BubbleTicket({
+  sender,
+  orderId,
+  items,
+  total,
+  paid,
+  time,
+  read,
+  onPay,
+}: Props) {
+  const isMe = sender === 'me';
+  const showPay = !isMe && !paid && !!onPay; // bouton visible seulement côté "them" non payé
 
-  const headBg    = paid
-    ? 'rgba(95,211,138,.1)'
-    : 'rgba(253,207,52,.1)';
+  const headBg = paid ? 'rgba(95,211,138,.1)' : 'rgba(253,207,52,.1)';
   const headColor = paid ? colors.success : colors.accent;
   const borderColor = paid ? colors.success : colors.accent;
 
   return (
     <View style={[styles.row, isMe ? styles.rowMe : styles.rowThem]}>
       <View style={[styles.ticket, { borderColor }]}>
-
         {/* En-tête : icon + titre + tag */}
         <View style={[styles.thead, { backgroundColor: headBg }]}>
           <IcoReceipt color={headColor} />
           <Text style={styles.theadTitle}>
             {paid ? `Commande ${orderId}` : 'Ticket de commande'}
           </Text>
-          <Text style={[styles.theadTag, { color: headColor }]}>
-            {paid ? 'Payée' : orderId}
-          </Text>
+          <Text style={[styles.theadTag, { color: headColor }]}>{paid ? 'Payée' : orderId}</Text>
         </View>
 
         {/* Corps */}
@@ -90,12 +108,10 @@ export default function BubbleTicket({ sender, orderId, items, total, paid, time
               {items.map((item, i) => (
                 <View key={i} style={styles.line}>
                   <Text style={styles.lineLeft}>
-                    <Text style={styles.lineQty}>{item.qty}×  </Text>
+                    <Text style={styles.lineQty}>{item.qty}× </Text>
                     {item.name}
                   </Text>
-                  <Text style={styles.linePrice}>
-                    {formatPrice(item.price)}
-                  </Text>
+                  <Text style={styles.linePrice}>{formatPrice(item.price)}</Text>
                 </View>
               ))}
               <View style={styles.separator} />
@@ -129,7 +145,8 @@ export default function BubbleTicket({ sender, orderId, items, total, paid, time
       </View>
 
       <Text style={[styles.time, isMe ? styles.timeMe : styles.timeThem]}>
-        {time}{isMe && read ? ' ✓✓' : isMe ? ' ✓' : ''}
+        {time}
+        {isMe && read ? ' ✓✓' : isMe ? ' ✓' : ''}
       </Text>
     </View>
   );
@@ -137,7 +154,7 @@ export default function BubbleTicket({ sender, orderId, items, total, paid, time
 
 const styles = StyleSheet.create({
   row: { maxWidth: '90%' },
-  rowMe:   { alignSelf: 'flex-end', alignItems: 'flex-end' },
+  rowMe: { alignSelf: 'flex-end', alignItems: 'flex-end' },
   rowThem: { alignSelf: 'flex-start', alignItems: 'flex-start' },
 
   ticket: {
@@ -266,6 +283,6 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     marginTop: 4,
   },
-  timeMe:   { marginRight: 3 },
+  timeMe: { marginRight: 3 },
   timeThem: { marginLeft: 3 },
 });

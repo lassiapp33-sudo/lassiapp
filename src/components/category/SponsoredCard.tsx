@@ -4,11 +4,11 @@ import { colors, fonts } from '../../theme';
 import Avatar from '../Avatar';
 
 interface Props {
-  initial:   string;
-  name:      string;
-  desc:      string;
-  logoUrl?:  string | null;
-  onPress?:  () => void;
+  initial: string;
+  name: string;
+  desc: string;
+  logoUrl?: string | null;
+  onPress?: () => void;
 }
 
 export default function SponsoredCard({ name, desc, logoUrl, onPress }: Props) {
@@ -20,17 +20,14 @@ export default function SponsoredCard({ name, desc, logoUrl, onPress }: Props) {
       </View>
 
       {/* Logo boutique sponsorisée — Avatar unique */}
-      <Avatar
-        imageUrl={logoUrl}
-        name={name}
-        size={46}
-        variant="shop"
-      />
+      <Avatar imageUrl={logoUrl} name={name} size={46} variant="shop" />
 
       {/* Infos */}
       <View style={styles.info}>
         <Text style={styles.name}>{name}</Text>
-        <Text style={styles.desc} numberOfLines={2}>{desc}</Text>
+        <Text style={styles.desc} numberOfLines={2}>
+          {desc}
+        </Text>
       </View>
 
       {/* Flèche */}

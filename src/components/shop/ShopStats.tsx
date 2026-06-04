@@ -11,10 +11,7 @@ const StarFilled = () => (
 
 const StarEmpty = () => (
   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={1.5}>
-    <Path
-      d="M12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9z"
-      stroke={colors.muted}
-    />
+    <Path d="M12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9z" stroke={colors.muted} />
   </Svg>
 );
 
@@ -24,18 +21,23 @@ const Divider = () => <View style={styles.div} />;
 const MATURE_MS = 4 * 30 * 24 * 60 * 60 * 1000;
 
 interface Props {
-  rating:            number;
-  reviewsCount:      number;
-  ordersCount:       number;
-  createdAt:         string;    // ISO — pour calculer l'âge de la boutique
-  zone:              string;
-  distanceText?:     string | null;  // "2.3 km · ~18 min à pied"
-  noGps?:            boolean;        // GPS refusé mais shop a des coords
+  rating: number;
+  reviewsCount: number;
+  ordersCount: number;
+  createdAt: string; // ISO — pour calculer l'âge de la boutique
+  zone: string;
+  distanceText?: string | null; // "2.3 km · ~18 min à pied"
+  noGps?: boolean; // GPS refusé mais shop a des coords
 }
 
 export default function ShopStats({
-  rating, reviewsCount, ordersCount, createdAt,
-  zone, distanceText, noGps,
+  rating,
+  reviewsCount,
+  ordersCount,
+  createdAt,
+  zone,
+  distanceText,
+  noGps,
 }: Props) {
   // La boutique a-t-elle plus de 4 mois ?
   const isMature = Date.now() - new Date(createdAt).getTime() >= MATURE_MS;
@@ -44,14 +46,14 @@ export default function ShopStats({
   //   "Nouveau"  → âge < 4 mois ET aucune commande ni avis
   //   "Établi"   → âge >= 4 mois ET aucune activité (note invisible)
   //   Note réelle → commandes validées OU vrais avis
-  const hasActivity  = ordersCount > 0 || reviewsCount > 0;
-  const showNouveauBadge  = !isMature && !hasActivity;
-  const showEtabli        = isMature  && !hasActivity;
+  const hasActivity = ordersCount > 0 || reviewsCount > 0;
+  const showNouveauBadge = !isMature && !hasActivity;
+  const showEtabli = isMature && !hasActivity;
 
   // Libellé du sous-titre de la note
   const ratingLabel = (() => {
-    if (reviewsCount > 0)  return `${reviewsCount} avis`;
-    if (ordersCount  > 0)  return `${ordersCount} commande${ordersCount > 1 ? 's' : ''}`;
+    if (reviewsCount > 0) return `${reviewsCount} avis`;
+    if (ordersCount > 0) return `${ordersCount} commande${ordersCount > 1 ? 's' : ''}`;
     return 'Établi';
   })();
 
@@ -60,7 +62,6 @@ export default function ShopStats({
 
   return (
     <View style={styles.row}>
-
       {/* ── Réputation ───────────────────────────────────────── */}
       {showNouveauBadge ? (
         // Badge "Nouveau" — âge < 4 mois, aucune commande
@@ -107,7 +108,6 @@ export default function ShopStats({
           </View>
         </>
       ) : null}
-
     </View>
   );
 }

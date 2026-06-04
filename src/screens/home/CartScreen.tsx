@@ -1,8 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, TextInput,
-  ScrollView, StyleSheet, Alert, ActivityIndicator,
-  KeyboardAvoidingView, Platform,
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -20,16 +27,30 @@ import { notifyError } from '../../utils/errorUtils';
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
 const IcoNote = () => (
-  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={17}
+    height={17}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke={colors.muted} />
     <Path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" stroke={colors.muted} />
   </Svg>
 );
 
 const IcoPay = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={20}
+    height={20}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Rect x={2} y={5} width={20} height={14} rx={2} stroke={colors.bg} />
     <Path d="M2 10h20" stroke={colors.bg} />
   </Svg>
@@ -38,42 +59,48 @@ const IcoPay = () => (
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 interface Props {
-  shopId:     string;
-  shopName:   string;
-  onBack:     () => void;
+  shopId: string;
+  shopName: string;
+  onBack: () => void;
   onCheckout: (order: OrderInfo) => void;
 }
 
 export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Props) {
-  const items      = useCartStore(s => s.items);
-  const shopInfo   = useCartStore(s => s.shopInfo);
-  const orderType  = useCartStore(s => s.orderType);
-  const updateQty  = useCartStore(s => s.updateQty);
+  const items = useCartStore(s => s.items);
+  const shopInfo = useCartStore(s => s.shopInfo);
+  const orderType = useCartStore(s => s.orderType);
+  const updateQty = useCartStore(s => s.updateQty);
 
-  const [note,        setNote]        = useState('');
+  const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [discounts,   setDiscounts]   = useState<AppliedDiscount[]>([]);
+  const [discounts, setDiscounts] = useState<AppliedDiscount[]>([]);
 
   // Garde synchrone anti-double-clic — la ref se met à jour immédiatement,
   // sans attendre un cycle de rendu React.
   const isSubmittingRef = useRef(false);
 
-  const subtotal      = items.reduce((s, i) => s + i.price * i.qty, 0);
+  const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
   const totalDiscount = discounts.reduce((s, d) => s + d.reductionFcfa, 0);
-  const total         = Math.max(subtotal - totalDiscount, 0);
+  const total = Math.max(subtotal - totalDiscount, 0);
 
   // Charger les promos actives du shop pour l'affichage (calcul serveur au paiement)
   useEffect(() => {
     const sid = shopId || shopInfo?.id || '';
-    if (!sid || items.length === 0) { setDiscounts([]); return; }
-    promosService.getActivePromos(sid).then(promos => {
-      setDiscounts(promosService.calcClientDiscount(promos, items));
-    }).catch(() => {});
+    if (!sid || items.length === 0) {
+      setDiscounts([]);
+      return;
+    }
+    promosService
+      .getActivePromos(sid)
+      .then(promos => {
+        setDiscounts(promosService.calcClientDiscount(promos, items));
+      })
+      .catch(() => {});
   }, [shopId, shopInfo?.id, items]);
 
   const hasItems = items.length > 0;
 
-  const displayName     = shopInfo?.name     ?? shopName;
+  const displayName = shopInfo?.name ?? shopName;
   const displayLocation = shopInfo?.location ?? '';
 
   // ── Checkout ────────────────────────────────────────────────────────────────
@@ -89,13 +116,16 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
 
     try {
       // ② Lire l'état FRAIS du store (évite la closure périmée)
-      const store     = useCartStore.getState();
+      const store = useCartStore.getState();
       const freshItems = store.items;
 
       if (freshItems.length === 0) return;
 
       const sid = shopId || store.shopInfo?.id || '';
-      const unavailable = await validateCartAvailability(sid, freshItems.map(i => i.id));
+      const unavailable = await validateCartAvailability(
+        sid,
+        freshItems.map(i => i.id),
+      );
 
       if (unavailable.length > 0) {
         // ③ Retirer complètement (qty→0) les articles indisponibles
@@ -132,32 +162,31 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
       }
 
       // ④ Recalculer le total depuis l'état frais (pas depuis la closure)
-      const freshStore    = useCartStore.getState();
+      const freshStore = useCartStore.getState();
       const freshSubtotal = freshStore.items.reduce((s, i) => s + i.price * i.qty, 0);
       // Les discounts locaux (state React) sont cohérents avec l'état frais si les
       // items n'ont pas changé ; le serveur recalcule de toute façon.
-      const freshTotal    = Math.max(freshSubtotal - totalDiscount, 0);
+      const freshTotal = Math.max(freshSubtotal - totalDiscount, 0);
 
-      const orderItems    = freshStore.items.map(i => ({
-        qty:   i.qty,
-        name:  i.name,
+      const orderItems = freshStore.items.map(i => ({
+        qty: i.qty,
+        name: i.name,
         price: i.price * i.qty,
       }));
-      const freshShopInfo  = freshStore.shopInfo;
+      const freshShopInfo = freshStore.shopInfo;
       const freshOrderType = freshStore.orderType;
 
       freshStore.clearCart();
       onCheckout({
-        ticketId:     'cart',
-        orderId:      '#' + Math.random().toString(36).substr(2, 4).toUpperCase(),
-        shopInitial:  freshShopInfo?.initial  ?? shopName.charAt(0).toUpperCase(),
-        shopName:     freshShopInfo?.name     ?? shopName,
+        ticketId: 'cart',
+        orderId: '#' + Math.random().toString(36).substr(2, 4).toUpperCase(),
+        shopInitial: freshShopInfo?.initial ?? shopName.charAt(0).toUpperCase(),
+        shopName: freshShopInfo?.name ?? shopName,
         shopLocation: freshShopInfo?.location ?? '',
-        items:        orderItems,
-        total:        freshTotal,
-        orderType:    freshOrderType,
+        items: orderItems,
+        total: freshTotal,
+        orderType: freshOrderType,
       });
-
     } catch {
       notifyError('Une erreur est survenue. Réessaie dans un instant.');
     } finally {
@@ -183,107 +212,107 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-      <ScrollView
-        style={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100, flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
-      >
-        {/* Bandeau commerce — Avatar unique pour le logo */}
-        <View style={styles.shopBand}>
-          <Avatar
-            imageUrl={shopInfo?.logoUrl ?? undefined}
-            name={displayName}
-            size={44}
-            variant="shop"
-          />
-          <View style={styles.shopInfo}>
-            <Text style={styles.shopName}>{displayName}</Text>
-            <Text style={styles.shopLoc}>{displayLocation}</Text>
-          </View>
-        </View>
-
-        {/* Articles */}
-        {items.map(item => (
-          <View key={item.id} style={styles.lineItem}>
-            {/* Emoji ou initiale */}
-            <View style={styles.itemThumb}>
-              <Text style={styles.itemInitial}>{item.emoji || item.name.charAt(0).toUpperCase()}</Text>
-            </View>
-
-            {/* Nom + prix unitaire */}
-            <View style={styles.itemInfo}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemPrice}>
-                {formatPrice(item.price)}
-              </Text>
-            </View>
-
-            {/* Contrôles quantité */}
-            <View style={styles.qtyWrap}>
-              <TouchableOpacity
-                style={styles.qtyBtn}
-                onPress={() => updateQty(item.id, item.qty - 1)}
-                activeOpacity={0.75}
-              >
-                <Text style={styles.qtyBtnTxt}>−</Text>
-              </TouchableOpacity>
-              <Text style={styles.qtyNum}>{item.qty}</Text>
-              <TouchableOpacity
-                style={[styles.qtyBtn, styles.qtyBtnPlus]}
-                onPress={() => updateQty(item.id, item.qty + 1)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.qtyBtnTxt, styles.qtyBtnPlusTxt]}>+</Text>
-              </TouchableOpacity>
+        <ScrollView
+          style={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 100, flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+        >
+          {/* Bandeau commerce — Avatar unique pour le logo */}
+          <View style={styles.shopBand}>
+            <Avatar
+              imageUrl={shopInfo?.logoUrl ?? undefined}
+              name={displayName}
+              size={44}
+              variant="shop"
+            />
+            <View style={styles.shopInfo}>
+              <Text style={styles.shopName}>{displayName}</Text>
+              <Text style={styles.shopLoc}>{displayLocation}</Text>
             </View>
           </View>
-        ))}
 
-        {/* Champ note */}
-        <View style={styles.noteField}>
-          <IcoNote />
-          <TextInput
-            style={styles.noteInput}
-            placeholder="Ajouter une note (ex: bien sucré, sans piment…)"
-            placeholderTextColor="#5a5c80"
-            value={note}
-            onChangeText={setNote}
-            multiline
-          />
-        </View>
-
-        {/* Résumé de commande */}
-        <View style={styles.summary}>
-          <View style={styles.summaryLine}>
-            <Text style={styles.summaryKey}>Sous-total</Text>
-            <Text style={styles.summaryVal}>{formatPrice(subtotal)}</Text>
-          </View>
-          <View style={styles.summaryLine}>
-            <Text style={styles.summaryKey}>Type</Text>
-            <Text style={styles.summaryVal}>
-              {orderType === 'place' ? '🍽 Sur place' : '🥡 À emporter'}
-            </Text>
-          </View>
-          {/* Lignes de réduction (display-only, le serveur recalcule) */}
-          {discounts.map(d => (
-            <View key={d.promoId} style={styles.discountLine}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.discountKey}>🏷️ {d.titre}</Text>
-                <Text style={styles.discountSub}>{d.label}</Text>
+          {/* Articles */}
+          {items.map(item => (
+            <View key={item.id} style={styles.lineItem}>
+              {/* Emoji ou initiale */}
+              <View style={styles.itemThumb}>
+                <Text style={styles.itemInitial}>
+                  {item.emoji || item.name.charAt(0).toUpperCase()}
+                </Text>
               </View>
-              <Text style={styles.discountVal}>−{formatPrice(d.reductionFcfa)}</Text>
+
+              {/* Nom + prix unitaire */}
+              <View style={styles.itemInfo}>
+                <Text style={styles.itemName}>{item.name}</Text>
+                <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
+              </View>
+
+              {/* Contrôles quantité */}
+              <View style={styles.qtyWrap}>
+                <TouchableOpacity
+                  style={styles.qtyBtn}
+                  onPress={() => updateQty(item.id, item.qty - 1)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={styles.qtyBtnTxt}>−</Text>
+                </TouchableOpacity>
+                <Text style={styles.qtyNum}>{item.qty}</Text>
+                <TouchableOpacity
+                  style={[styles.qtyBtn, styles.qtyBtnPlus]}
+                  onPress={() => updateQty(item.id, item.qty + 1)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.qtyBtnTxt, styles.qtyBtnPlusTxt]}>+</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
-          {/* Séparateur */}
-          <View style={styles.separator} />
-          <View style={styles.totalRow}>
-            <Text style={styles.totalKey}>Total</Text>
-            <Text style={styles.totalVal}>{formatPrice(total)}</Text>
+
+          {/* Champ note */}
+          <View style={styles.noteField}>
+            <IcoNote />
+            <TextInput
+              style={styles.noteInput}
+              placeholder="Ajouter une note (ex: bien sucré, sans piment…)"
+              placeholderTextColor="#5a5c80"
+              value={note}
+              onChangeText={setNote}
+              multiline
+            />
           </View>
-        </View>
-      </ScrollView>
+
+          {/* Résumé de commande */}
+          <View style={styles.summary}>
+            <View style={styles.summaryLine}>
+              <Text style={styles.summaryKey}>Sous-total</Text>
+              <Text style={styles.summaryVal}>{formatPrice(subtotal)}</Text>
+            </View>
+            <View style={styles.summaryLine}>
+              <Text style={styles.summaryKey}>Type</Text>
+              <Text style={styles.summaryVal}>
+                {orderType === 'place' ? '🍽 Sur place' : '🥡 À emporter'}
+              </Text>
+            </View>
+            {/* Lignes de réduction (display-only, le serveur recalcule) */}
+            {discounts.map(d => (
+              <View key={d.promoId} style={styles.discountLine}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.discountKey}>🏷️ {d.titre}</Text>
+                  <Text style={styles.discountSub}>{d.label}</Text>
+                </View>
+                <Text style={styles.discountVal}>−{formatPrice(d.reductionFcfa)}</Text>
+              </View>
+            ))}
+            {/* Séparateur */}
+            <View style={styles.separator} />
+            <View style={styles.totalRow}>
+              <Text style={styles.totalKey}>Total</Text>
+              <Text style={styles.totalVal}>{formatPrice(total)}</Text>
+            </View>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
 
       {/* Footer fixe — Commander */}
@@ -294,10 +323,14 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
           activeOpacity={0.85}
           disabled={!hasItems || isSubmitting}
         >
-          {isSubmitting
-            ? <ActivityIndicator color={colors.bg} size="small" />
-            : <><IcoPay /><Text style={styles.payBtnTxt}>Commander · {formatPrice(total)}</Text></>
-          }
+          {isSubmitting ? (
+            <ActivityIndicator color={colors.bg} size="small" />
+          ) : (
+            <>
+              <IcoPay />
+              <Text style={styles.payBtnTxt}>Commander · {formatPrice(total)}</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </LassiScreen>
@@ -305,7 +338,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
 
   // Header

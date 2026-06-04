@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardTypeOptions, ScrollView,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardTypeOptions,
+  ScrollView,
   type TextInputProps,
 } from 'react-native';
 import { colors, fonts } from '../../theme';
@@ -28,12 +33,24 @@ interface Props {
 }
 
 export default function InputField({
-  label, optional, placeholder, value, onChangeText,
-  leftIcon, rightIcon, onRightPress,
-  secureTextEntry, keyboardType = 'default',
-  autoCapitalize = 'none', phonePrefix,
-  autoComplete, textContentType, onFocus, scrollRef,
-  returnKeyType, onSubmitEditing,
+  label,
+  optional,
+  placeholder,
+  value,
+  onChangeText,
+  leftIcon,
+  rightIcon,
+  onRightPress,
+  secureTextEntry,
+  keyboardType = 'default',
+  autoCapitalize = 'none',
+  phonePrefix,
+  autoComplete,
+  textContentType,
+  onFocus,
+  scrollRef,
+  returnKeyType,
+  onSubmitEditing,
 }: Props) {
   const [layoutY, setLayoutY] = useState(0);
 
@@ -47,10 +64,7 @@ export default function InputField({
   };
 
   return (
-    <View
-      style={styles.wrap}
-      onLayout={(e) => setLayoutY(e.nativeEvent.layout.y)}
-    >
+    <View style={styles.wrap} onLayout={e => setLayoutY(e.nativeEvent.layout.y)}>
       <View style={styles.labelRow}>
         <Text style={styles.label}>{label}</Text>
         {optional && <Text style={styles.optional}>facultatif</Text>}
@@ -62,7 +76,9 @@ export default function InputField({
             <Text style={styles.flag}>🇸🇳 +221</Text>
             <View style={styles.divider} />
           </>
-        ) : leftIcon}
+        ) : (
+          leftIcon
+        )}
 
         <TextInput
           style={styles.input}
@@ -92,7 +108,7 @@ export default function InputField({
 }
 
 const styles = StyleSheet.create({
-  wrap:     { marginBottom: 14 },
+  wrap: { marginBottom: 14 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 7 },
   label: {
     color: colors.muted,

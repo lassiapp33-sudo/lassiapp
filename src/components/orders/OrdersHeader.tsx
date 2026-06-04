@@ -1,12 +1,11 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, TOP_INSET } from '../../theme';
 import { IcoBack } from '../icons';
 
 interface Props {
   newCount: number;
-  onBack:   () => void;
+  onBack: () => void;
 }
 
 export default function OrdersHeader({ newCount, onBack }: Props) {

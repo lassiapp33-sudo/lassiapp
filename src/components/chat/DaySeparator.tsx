@@ -2,7 +2,9 @@ import React from 'react';
 import { Text, StyleSheet } from 'react-native';
 import { fonts } from '../../theme';
 
-interface Props { label: string; }
+interface Props {
+  label: string;
+}
 
 export default function DaySeparator({ label }: Props) {
   return <Text style={styles.txt}>{label}</Text>;

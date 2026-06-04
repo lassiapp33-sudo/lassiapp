@@ -7,20 +7,20 @@ import useFavoritesStore from '../../store/favoritesStore';
 import VipBadge from '../VipBadge';
 
 export interface Shop {
-  id:          string;
-  initial:     string;
-  name:        string;
-  logoUrl?:    string | null;
-  isVip:       boolean;
-  rating:      number;
-  status:      'open' | 'closing' | 'closed';
+  id: string;
+  initial: string;
+  name: string;
+  logoUrl?: string | null;
+  isVip: boolean;
+  rating: number;
+  status: 'open' | 'closing' | 'closed';
   statusLabel: string;
-  specialty:   string;
-  distance:    string;
+  specialty: string;
+  distance: string;
 }
 
 interface Props {
-  shop:    Shop;
+  shop: Shop;
   onPress?: () => void;
 }
 
@@ -34,29 +34,28 @@ const StarFill = ({ filled }: { filled: boolean }) => (
   </Svg>
 );
 
-
 function ShopCard({ shop, onPress }: Props) {
-  const isFav     = useFavoritesStore(s => s.favorites.includes(shop.id));
+  const isFav = useFavoritesStore(s => s.favorites.includes(shop.id));
   const toggleFav = useFavoritesStore(s => s.toggleFavorite);
 
   const statusColor =
-    shop.status === 'open'    ? colors.success :
-    shop.status === 'closing' ? colors.danger   : colors.muted;
+    shop.status === 'open'
+      ? colors.success
+      : shop.status === 'closing'
+        ? colors.danger
+        : colors.muted;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       {/* Logo boutique — Avatar unique, source de vérité shops.logo_url */}
-      <Avatar
-        imageUrl={shop.logoUrl}
-        name={shop.name}
-        size={58}
-        variant="shop"
-      />
+      <Avatar imageUrl={shop.logoUrl} name={shop.name} size={58} variant="shop" />
 
       {/* Infos */}
       <View style={styles.info}>
         <View style={styles.topRow}>
-          <Text style={styles.name} numberOfLines={1}>{shop.name}</Text>
+          <Text style={styles.name} numberOfLines={1}>
+            {shop.name}
+          </Text>
           {shop.isVip && <VipBadge />}
         </View>
         <View style={styles.meta}>
@@ -68,7 +67,9 @@ function ShopCard({ shop, onPress }: Props) {
             <View style={[styles.dot, { backgroundColor: statusColor }]} />
             <Text style={[styles.metaTxt, { color: statusColor }]}>{shop.statusLabel}</Text>
           </View>
-          <Text style={styles.metaTxt} numberOfLines={1}>{shop.specialty}</Text>
+          <Text style={styles.metaTxt} numberOfLines={1}>
+            {shop.specialty}
+          </Text>
         </View>
       </View>
 
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
     gap: 13,
     marginBottom: 11,
   },
-  info:   { flex: 1, minWidth: 0 },
+  info: { flex: 1, minWidth: 0 },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 5 },
   name: {
     color: colors.white,
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.title,
     fontSize: 8,
   },
-  meta:     { flexDirection: 'row', alignItems: 'center', gap: 9, flexWrap: 'wrap' },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 9, flexWrap: 'wrap' },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   metaTxt: {
     color: colors.muted,

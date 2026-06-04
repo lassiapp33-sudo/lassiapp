@@ -1,32 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View, Text, FlatList, TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { formatConvTime } from '../../utils/format';
 import { Conversation } from '../../services/chat';
 import * as chatService from '../../services/chat';
-import ChatScreen  from '../chat/ChatScreen';
+import ChatScreen from '../chat/ChatScreen';
 import useShopStore from '../../store/shopStore';
-import Avatar        from '../../components/Avatar';
-import MascoHomeBtn  from '../../components/MascoHomeBtn';
+import Avatar from '../../components/Avatar';
+import MascoHomeBtn from '../../components/MascoHomeBtn';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
 
 // ─── Carte conversation ───────────────────────────────────────────────────────
 
 interface ConvCardProps {
-  conv:        Conversation;
-  clientName:  string;
+  conv: Conversation;
+  clientName: string;
   clientAvatar: string | null;
-  onPress:     () => void;
+  onPress: () => void;
 }
 
 function ConvCard({ conv, clientName, clientAvatar, onPress }: ConvCardProps) {
@@ -35,17 +30,14 @@ function ConvCard({ conv, clientName, clientAvatar, onPress }: ConvCardProps) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       {/* Avatar client — Avatar unique, source de vérité profiles.avatar_url */}
-      <Avatar
-        imageUrl={clientAvatar}
-        name={clientName || '?'}
-        size={46}
-        variant="user"
-      />
+      <Avatar imageUrl={clientAvatar} name={clientName || '?'} size={46} variant="user" />
 
       {/* Contenu */}
       <View style={styles.cardBody}>
         <View style={styles.cardTop}>
-          <Text style={styles.cardName} numberOfLines={1}>{clientName}</Text>
+          <Text style={styles.cardName} numberOfLines={1}>
+            {clientName}
+          </Text>
           <Text style={styles.cardTime}>{formatConvTime(conv.lastMessageAt)}</Text>
         </View>
         <Text style={[styles.cardLast, unread > 0 && styles.cardLastUnread]} numberOfLines={1}>
@@ -71,29 +63,39 @@ interface Props {
 
 interface OpenChat {
   conversationId: string;
-  clientInitial:  string;
-  clientName:     string;
-  clientAvatar:   string | null;
+  clientInitial: string;
+  clientName: string;
+  clientAvatar: string | null;
 }
 
 export default function MerchantMessagesScreen({ onBack }: Props) {
   const shopId = useShopStore(s => s.shopId);
 
-  const [conversations,  setConversations]  = useState<Conversation[]>([]);
-  const [clientProfiles, setClientProfiles] = useState<Record<string, { name: string; avatarUrl: string | null }>>({});
-  const [loading,        setLoading]        = useState(true);
-  const [openChat,       setOpenChat]       = useState<OpenChat | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [clientProfiles, setClientProfiles] = useState<
+    Record<string, { name: string; avatarUrl: string | null }>
+  >({});
+  const [loading, setLoading] = useState(true);
+  const [openChat, setOpenChat] = useState<OpenChat | null>(null);
 
   useEffect(() => {
-    if (!shopId) { setLoading(false); return; }
-    chatService.getMerchantConversations(shopId).then(async convs => {
-      setConversations(convs);
-      const profiles: Record<string, { name: string; avatarUrl: string | null }> = {};
-      await Promise.all(convs.map(async c => {
-        profiles[c.clientId] = await chatService.getClientProfile(c.clientId);
-      }));
-      setClientProfiles(profiles);
-    }).finally(() => setLoading(false));
+    if (!shopId) {
+      setLoading(false);
+      return;
+    }
+    chatService
+      .getMerchantConversations(shopId)
+      .then(async convs => {
+        setConversations(convs);
+        const profiles: Record<string, { name: string; avatarUrl: string | null }> = {};
+        await Promise.all(
+          convs.map(async c => {
+            profiles[c.clientId] = await chatService.getClientProfile(c.clientId);
+          }),
+        );
+        setClientProfiles(profiles);
+      })
+      .finally(() => setLoading(false));
   }, [shopId]);
 
   if (openChat) {
@@ -135,20 +137,22 @@ export default function MerchantMessagesScreen({ onBack }: Props) {
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
-            const profile     = clientProfiles[item.clientId] ?? { name: '', avatarUrl: null };
-            const name        = profile.name || 'Client';
-            const initial     = name.charAt(0).toUpperCase();
+            const profile = clientProfiles[item.clientId] ?? { name: '', avatarUrl: null };
+            const name = profile.name || 'Client';
+            const initial = name.charAt(0).toUpperCase();
             return (
               <ConvCard
                 conv={item}
                 clientName={name}
                 clientAvatar={profile.avatarUrl}
-                onPress={() => setOpenChat({
-                  conversationId: item.id,
-                  clientInitial:  initial,
-                  clientName:     name,
-                  clientAvatar:   profile.avatarUrl,
-                })}
+                onPress={() =>
+                  setOpenChat({
+                    conversationId: item.id,
+                    clientInitial: initial,
+                    clientName: name,
+                    clientAvatar: profile.avatarUrl,
+                  })
+                }
               />
             );
           }}

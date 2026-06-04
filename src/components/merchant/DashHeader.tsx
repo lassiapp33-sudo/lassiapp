@@ -4,8 +4,15 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 
 const IcoBell = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={20}
+    height={20}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" stroke={colors.white} />
     <Path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" stroke={colors.white} />
   </Svg>
@@ -19,21 +26,29 @@ const IcoPin = () => (
 );
 
 interface Props {
-  name:          string;
-  isVip?:        boolean;
-  notifCount?:   number;
-  zoneName?:     string;
+  name: string;
+  isVip?: boolean;
+  notifCount?: number;
+  zoneName?: string;
   onNotifPress?: () => void;
-  onLocation?:   () => void;
+  onLocation?: () => void;
 }
 
-export default function DashHeader({ name, isVip, notifCount = 0, zoneName, onNotifPress, onLocation }: Props) {
+export default function DashHeader({
+  name,
+  isVip,
+  notifCount = 0,
+  zoneName,
+  onNotifPress,
+  onLocation,
+}: Props) {
   return (
     <View style={styles.row}>
       <View>
         <Text style={styles.greeting}>Asalaa maalekum 👋</Text>
         <Text style={styles.name}>
-          {name}{isVip ? <Text style={styles.vip}> 🏆</Text> : null}
+          {name}
+          {isVip ? <Text style={styles.vip}> 🏆</Text> : null}
         </Text>
         {/* Zone géographique réelle sous le nom */}
         {zoneName ? (

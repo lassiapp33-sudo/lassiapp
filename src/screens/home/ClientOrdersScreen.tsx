@@ -1,22 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, FlatList, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl, Alert,
+  View,
+  Text,
+  FlatList,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  RefreshControl,
+  Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import { ClientOrder, OrderFilter } from '../../types/clientOrders';
 import * as clientOrdersService from '../../services/clientOrders';
-import { prepareReorder }       from '../../services/reorder';
-import useAuthStore              from '../../store/authStore';
-import useCartStore              from '../../store/cartStore';
-import AvisForm                  from '../../components/avis/AvisForm';
-import { Avis }                  from '../../types/avis';
-import MascoHomeBtn              from '../../components/MascoHomeBtn';
-import { IcoBack }               from '../../components/icons';
-import LoadingSpinner            from '../../components/LoadingSpinner';
-import { ClientOrderCard }       from '../../components/orders/ClientOrderCard';
+import { prepareReorder } from '../../services/reorder';
+import useAuthStore from '../../store/authStore';
+import useCartStore from '../../store/cartStore';
+import AvisForm from '../../components/avis/AvisForm';
+import { Avis } from '../../types/avis';
+import MascoHomeBtn from '../../components/MascoHomeBtn';
+import { IcoBack } from '../../components/icons';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { ClientOrderCard } from '../../components/orders/ClientOrderCard';
 
 // ─── Icône état vide ─────────────────────────────────────────────────────────
 
@@ -28,66 +34,84 @@ const IcoEmpty = () => (
   </Svg>
 );
 
-const FILTER_TABS: Array<{ id: OrderFilter; label: string }> = [
-  { id: 'all',       label: 'Toutes'    },
-  { id: 'active',    label: 'En cours'  },
+const FILTER_TABS: { id: OrderFilter; label: string }[] = [
+  { id: 'all', label: 'Toutes' },
+  { id: 'active', label: 'En cours' },
   { id: 'completed', label: 'Terminées' },
-  { id: 'cancelled', label: 'Annulées'  },
+  { id: 'cancelled', label: 'Annulées' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function applyFilter(orders: ClientOrder[], filter: OrderFilter): ClientOrder[] {
   switch (filter) {
-    case 'active':    return orders.filter(o => ['pending','in_progress','ready'].includes(o.status));
-    case 'completed': return orders.filter(o => o.status === 'completed');
-    case 'cancelled': return orders.filter(o => o.status === 'cancelled');
-    default:          return orders;
+    case 'active':
+      return orders.filter(o => ['pending', 'in_progress', 'ready'].includes(o.status));
+    case 'completed':
+      return orders.filter(o => o.status === 'completed');
+    case 'cancelled':
+      return orders.filter(o => o.status === 'cancelled');
+    default:
+      return orders;
   }
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  onBack:          () => void;
-  onExplore:       () => void;
-  onGoToCart?:     (shopId: string, shopName: string) => void;
-  onViewReceipt?:  (orderId: string) => void;
+  onBack: () => void;
+  onExplore: () => void;
+  onGoToCart?: (shopId: string, shopName: string) => void;
+  onViewReceipt?: (orderId: string) => void;
 }
 
-export default function ClientOrdersScreen({ onBack, onExplore, onGoToCart, onViewReceipt }: Props) {
+export default function ClientOrdersScreen({
+  onBack,
+  onExplore,
+  onGoToCart,
+  onViewReceipt,
+}: Props) {
   const user = useAuthStore(s => s.user);
 
-  const [orders,       setOrders]       = useState<ClientOrder[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [refreshing,   setRefreshing]   = useState(false);
-  const [error,        setError]        = useState<string | null>(null);
-  const [filter,       setFilter]       = useState<OrderFilter>('all');
+  const [orders, setOrders] = useState<ClientOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<OrderFilter>('all');
   const [reorderingId, setReorderingId] = useState<string | null>(null);
-  const [avisTarget,   setAvisTarget]   = useState<{
-    orderId: string; shopId: string; shopName: string; existing?: Avis;
+  const [avisTarget, setAvisTarget] = useState<{
+    orderId: string;
+    shopId: string;
+    shopName: string;
+    existing?: Avis;
   } | null>(null);
 
-  const addItem    = useCartStore(s => s.addItem);
-  const updateQty  = useCartStore(s => s.updateQty);
-  const clearCart  = useCartStore(s => s.clearCart);
+  const addItem = useCartStore(s => s.addItem);
+  const updateQty = useCartStore(s => s.updateQty);
+  const clearCart = useCartStore(s => s.clearCart);
 
-  const load = useCallback(async (isRefresh = false) => {
-    if (!user?.id) return;
-    if (isRefresh) setRefreshing(true); else setLoading(true);
-    setError(null);
-    try {
-      const data = await clientOrdersService.getClientOrders(user.id);
-      setOrders(data);
-    } catch {
-      setError('Impossible de charger tes commandes. Tire vers le bas pour réessayer.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [user?.id]);
+  const load = useCallback(
+    async (isRefresh = false) => {
+      if (!user?.id) return;
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+      setError(null);
+      try {
+        const data = await clientOrdersService.getClientOrders(user.id);
+        setOrders(data);
+      } catch {
+        setError('Impossible de charger tes commandes. Tire vers le bas pour réessayer.');
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [user?.id],
+  );
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleCancel = (orderId: string) => {
     Alert.alert(
@@ -102,7 +126,7 @@ export default function ClientOrdersScreen({ onBack, onExplore, onGoToCart, onVi
             try {
               await clientOrdersService.cancelOrder(orderId);
               setOrders(prev =>
-                prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' as const } : o)
+                prev.map(o => (o.id === orderId ? { ...o, status: 'cancelled' as const } : o)),
               );
             } catch {
               Alert.alert('Erreur', "Impossible d'annuler. Réessaie.");
@@ -130,7 +154,12 @@ export default function ClientOrdersScreen({ onBack, onExplore, onGoToCart, onVi
       // Construire le nouveau panier
       clearCart();
       for (const item of result.added) {
-        addItem(result.shopInfo, { id: item.id, name: item.name, emoji: item.emoji, price: item.price });
+        addItem(result.shopInfo, {
+          id: item.id,
+          name: item.name,
+          emoji: item.emoji,
+          price: item.price,
+        });
         if (item.qty > 1) updateQty(item.id, item.qty);
       }
 
@@ -146,9 +175,10 @@ export default function ClientOrdersScreen({ onBack, onExplore, onGoToCart, onVi
         lines.push('⚠️ Certains prix ont été mis à jour depuis ta dernière commande.');
       }
 
-      const msg = lines.length > 0
-        ? `Ton panier est prêt !\n\n${lines.join('\n')}`
-        : 'Ton panier est prêt ! Vérifie et confirme ta commande.';
+      const msg =
+        lines.length > 0
+          ? `Ton panier est prêt !\n\n${lines.join('\n')}`
+          : 'Ton panier est prêt ! Vérifie et confirme ta commande.';
 
       Alert.alert('Commander à nouveau', msg, [
         {
@@ -172,118 +202,123 @@ export default function ClientOrdersScreen({ onBack, onExplore, onGoToCart, onVi
 
   return (
     <>
-    <LassiScreen
-      header={
-        <>
-          <View style={[s.header, { paddingTop: TOP_INSET + 4 }]}>
-            <TouchableOpacity style={s.backBtn} onPress={onBack} activeOpacity={0.8}>
-              <IcoBack />
-            </TouchableOpacity>
-            <Text style={s.title}>Mes commandes</Text>
-            <MascoHomeBtn />
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={s.tabsScroll}
-            contentContainerStyle={s.tabsRow}
-          >
-            {FILTER_TABS.map(tab => {
-              const on = tab.id === filter;
-              return (
-                <TouchableOpacity
-                  key={tab.id}
-              style={[s.tab, on ? s.tabOn : s.tabOff]}
-              onPress={() => setFilter(tab.id)}
-              activeOpacity={0.75}
-            >
-              <Text style={[s.tabTxt, on ? s.tabTxtOn : s.tabTxtOff]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          );
-              })}
-          </ScrollView>
-        </>
-      }
-    >
-      {/* ── Contenu ── */}
-      {loading ? (
-        <LoadingSpinner />
-      ) : error ? (
-        <View style={s.center}>
-          <Text style={s.errorTxt}>{error}</Text>
-          <TouchableOpacity style={s.retryBtn} onPress={() => load()} activeOpacity={0.8}>
-            <Text style={s.retryTxt}>Réessayer</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={displayed}
-          keyExtractor={item => item.id}
-          style={s.scroll}
-          contentContainerStyle={s.content}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => load(true)}
-              tintColor={colors.accent}
-              colors={[colors.accent]}
-            />
-          }
-          renderItem={({ item: order }) => (
-            <ClientOrderCard
-              order={order}
-              onCancel={handleCancel}
-              onReorder={handleReorder}
-              isReordering={reorderingId === order.id}
-              onViewReceipt={onViewReceipt}
-              onLeaveAvis={order.status === 'completed' && !order.avisId ? () => {
-                setAvisTarget({
-                  orderId:  order.id,
-                  shopId:   order.shopId,
-                  shopName: order.commerceName,
-                });
-              } : undefined}
-            />
-          )}
-          ListEmptyComponent={
-            <View style={s.empty}>
-              <IcoEmpty />
-              <Text style={s.emptyTitle}>
-                {orders.length === 0
-                  ? "Tu n'as pas encore de commandes."
-                  : "Aucune commande dans cette catégorie."}
-              </Text>
-              {orders.length === 0 && (
-                <>
-                  <Text style={s.emptySub}>Découvre les prestataires près de toi !</Text>
-                  <TouchableOpacity style={s.exploreBtn} onPress={onExplore} activeOpacity={0.85}>
-                    <Text style={s.exploreTxt}>Explorer l'accueil</Text>
-                  </TouchableOpacity>
-                </>
-              )}
+      <LassiScreen
+        header={
+          <>
+            <View style={[s.header, { paddingTop: TOP_INSET + 4 }]}>
+              <TouchableOpacity style={s.backBtn} onPress={onBack} activeOpacity={0.8}>
+                <IcoBack />
+              </TouchableOpacity>
+              <Text style={s.title}>Mes commandes</Text>
+              <MascoHomeBtn />
             </View>
-          }
-          ListFooterComponent={<View style={{ height: 40 }} />}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={s.tabsScroll}
+              contentContainerStyle={s.tabsRow}
+            >
+              {FILTER_TABS.map(tab => {
+                const on = tab.id === filter;
+                return (
+                  <TouchableOpacity
+                    key={tab.id}
+                    style={[s.tab, on ? s.tabOn : s.tabOff]}
+                    onPress={() => setFilter(tab.id)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[s.tabTxt, on ? s.tabTxtOn : s.tabTxtOff]}>{tab.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </>
+        }
+      >
+        {/* ── Contenu ── */}
+        {loading ? (
+          <LoadingSpinner />
+        ) : error ? (
+          <View style={s.center}>
+            <Text style={s.errorTxt}>{error}</Text>
+            <TouchableOpacity style={s.retryBtn} onPress={() => load()} activeOpacity={0.8}>
+              <Text style={s.retryTxt}>Réessayer</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={displayed}
+            keyExtractor={item => item.id}
+            style={s.scroll}
+            contentContainerStyle={s.content}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => load(true)}
+                tintColor={colors.accent}
+                colors={[colors.accent]}
+              />
+            }
+            renderItem={({ item: order }) => (
+              <ClientOrderCard
+                order={order}
+                onCancel={handleCancel}
+                onReorder={handleReorder}
+                isReordering={reorderingId === order.id}
+                onViewReceipt={onViewReceipt}
+                onLeaveAvis={
+                  order.status === 'completed' && !order.avisId
+                    ? () => {
+                        setAvisTarget({
+                          orderId: order.id,
+                          shopId: order.shopId,
+                          shopName: order.commerceName,
+                        });
+                      }
+                    : undefined
+                }
+              />
+            )}
+            ListEmptyComponent={
+              <View style={s.empty}>
+                <IcoEmpty />
+                <Text style={s.emptyTitle}>
+                  {orders.length === 0
+                    ? "Tu n'as pas encore de commandes."
+                    : 'Aucune commande dans cette catégorie.'}
+                </Text>
+                {orders.length === 0 && (
+                  <>
+                    <Text style={s.emptySub}>Découvre les prestataires près de toi !</Text>
+                    <TouchableOpacity style={s.exploreBtn} onPress={onExplore} activeOpacity={0.85}>
+                      <Text style={s.exploreTxt}>Explorer l'accueil</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            }
+            ListFooterComponent={<View style={{ height: 40 }} />}
+          />
+        )}
+      </LassiScreen>
+
+      {/* ── Formulaire avis ── */}
+      {avisTarget && (
+        <AvisForm
+          visible
+          shopId={avisTarget.shopId}
+          shopName={avisTarget.shopName}
+          orderId={avisTarget.orderId}
+          existingAvis={avisTarget.existing}
+          onClose={() => setAvisTarget(null)}
+          onSaved={() => {
+            setAvisTarget(null);
+            load();
+          }}
         />
       )}
-    </LassiScreen>
-
-    {/* ── Formulaire avis ── */}
-    {avisTarget && (
-      <AvisForm
-        visible
-        shopId={avisTarget.shopId}
-        shopName={avisTarget.shopName}
-        orderId={avisTarget.orderId}
-        existingAvis={avisTarget.existing}
-        onClose={() => setAvisTarget(null)}
-        onSaved={() => { setAvisTarget(null); load(); }}
-      />
-    )}
-  </>
+    </>
   );
 }
 
@@ -333,13 +368,13 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  tabOn:     { backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.accent },
-  tabOff:    { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  tabTxt:    { fontFamily: fonts.title, fontSize: 12 },
-  tabTxtOn:  { color: colors.bg },
+  tabOn: { backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.accent },
+  tabOff: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  tabTxt: { fontFamily: fonts.title, fontSize: 12 },
+  tabTxtOn: { color: colors.bg },
   tabTxtOff: { color: colors.muted },
 
-  scroll:  { flex: 1 },
+  scroll: { flex: 1 },
   content: { paddingTop: 8 },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },

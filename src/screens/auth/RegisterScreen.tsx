@@ -1,14 +1,19 @@
 import React, { useState, useRef } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
-import BackButton  from '../../components/auth/BackButton';
-import InputField  from '../../components/auth/InputField';
-import AuthButton  from '../../components/auth/AuthButton';
-import NoteBox     from '../../components/auth/NoteBox';
-import LassiLogo   from '../../components/LassiLogo';
+import BackButton from '../../components/auth/BackButton';
+import InputField from '../../components/auth/InputField';
+import AuthButton from '../../components/auth/AuthButton';
+import NoteBox from '../../components/auth/NoteBox';
+import LassiLogo from '../../components/LassiLogo';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import { formatPhoneSenegal, cleanPhone, isValidPhone, PHONE_ERROR } from '../../utils/phone';
 import { useT } from '../../i18n';
@@ -17,18 +22,18 @@ import { getErrorMessage } from '../../utils/errorUtils';
 type Role = 'client' | 'merchant';
 
 export interface RegisterData {
-  name:     string;
-  phone:    string;
-  email:    string;
+  name: string;
+  phone: string;
+  email: string;
   password: string;
 }
 
 interface Props {
-  role:              Role;
-  onBack:            () => void;
-  onSuccess:         (data: RegisterData) => Promise<void>;
-  onLogin:           () => void;
-  onCGU:             () => void;
+  role: Role;
+  onBack: () => void;
+  onSuccess: (data: RegisterData) => Promise<void>;
+  onLogin: () => void;
+  onCGU: () => void;
   onConfidentialite: () => void;
 }
 
@@ -56,14 +61,24 @@ const IconLock = () => (
 );
 
 const IconEye = ({ off }: { off?: boolean }) => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.7} strokeLinecap="round">
+  <Svg
+    width={19}
+    height={19}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.7}
+    strokeLinecap="round"
+  >
     {off ? (
       <>
-        <Path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
-          stroke={colors.muted} />
-        <Path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
-          stroke={colors.muted} />
+        <Path
+          d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
+          stroke={colors.muted}
+        />
+        <Path
+          d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
+          stroke={colors.muted}
+        />
         <Path d="M1 1l22 22" stroke={colors.muted} />
       </>
     ) : (
@@ -80,10 +95,12 @@ const RoleChip = ({ role }: { role: Role }) => (
     <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
       {role === 'client' ? (
         <>
-          <Circle cx={9}  cy={21} r={1} stroke={colors.accent} />
+          <Circle cx={9} cy={21} r={1} stroke={colors.accent} />
           <Circle cx={20} cy={21} r={1} stroke={colors.accent} />
-          <Path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"
-            stroke={colors.accent} />
+          <Path
+            d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"
+            stroke={colors.accent}
+          />
         </>
       ) : (
         <>
@@ -99,17 +116,24 @@ const RoleChip = ({ role }: { role: Role }) => (
 
 // ─── Écran ───────────────────────────────────────────────────────────────────
 
-export default function RegisterScreen({ role, onBack, onSuccess, onLogin, onCGU, onConfidentialite }: Props) {
+export default function RegisterScreen({
+  role,
+  onBack,
+  onSuccess,
+  onLogin,
+  onCGU,
+  onConfidentialite,
+}: Props) {
   const t = useT();
 
-  const [nom,         setNom]         = useState('');
-  const [tel,         setTel]         = useState('');
-  const [email,       setEmail]       = useState('');
-  const [mdp,         setMdp]         = useState('');
-  const [showMdp,     setShowMdp]     = useState(false);
+  const [nom, setNom] = useState('');
+  const [tel, setTel] = useState('');
+  const [email, setEmail] = useState('');
+  const [mdp, setMdp] = useState('');
+  const [showMdp, setShowMdp] = useState(false);
   const [cguAccepted, setCguAccepted] = useState(false);
-  const [loading,     setLoading]     = useState(false);
-  const [erreur,      setErreur]      = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
 
@@ -134,9 +158,9 @@ export default function RegisterScreen({ role, onBack, onSuccess, onLogin, onCGU
     setLoading(true);
     try {
       await onSuccess({
-        name:     nom.trim(),
-        phone:    cleanPhone(tel),   // stocké sans espaces : "781376161"
-        email:    email.trim(),
+        name: nom.trim(),
+        phone: cleanPhone(tel), // stocké sans espaces : "781376161"
+        email: email.trim(),
         password: mdp,
       });
     } catch (e: unknown) {
@@ -186,7 +210,7 @@ export default function RegisterScreen({ role, onBack, onSuccess, onLogin, onCGU
           label={t.auth.phoneLabel}
           placeholder={t.auth.phonePlaceholder}
           value={tel}
-          onChangeText={(v) => setTel(formatPhoneSenegal(v))}
+          onChangeText={v => setTel(formatPhoneSenegal(v))}
           phonePrefix
           keyboardType="phone-pad"
           autoComplete="tel"
@@ -230,17 +254,13 @@ export default function RegisterScreen({ role, onBack, onSuccess, onLogin, onCGU
 
         {/* Acceptation CGU */}
         <View style={styles.cguRow}>
-          <TouchableOpacity
-            onPress={() => setCguAccepted(v => !v)}
-            activeOpacity={0.8}
-            hitSlop={8}
-          >
+          <TouchableOpacity onPress={() => setCguAccepted(v => !v)} activeOpacity={0.8} hitSlop={8}>
             <View style={[styles.cguCheckbox, cguAccepted && styles.cguCheckboxOn]}>
               {cguAccepted && <Text style={styles.cguCheckmark}>✓</Text>}
             </View>
           </TouchableOpacity>
           <Text style={styles.cguText}>
-            {'J\'ai lu et j\'accepte les '}
+            {"J'ai lu et j'accepte les "}
             <Text style={styles.cguLink} onPress={onCGU}>
               Conditions Générales d'Utilisation
             </Text>

@@ -1,7 +1,11 @@
 import React from 'react';
 import {
-  View, Text, TouchableOpacity, ActivityIndicator,
-  StyleSheet, Platform,
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
+  Platform,
 } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
@@ -10,16 +14,30 @@ import type { PayMethod } from '../../services/visibilityPayment';
 import { formatPrice } from '../../utils/format';
 
 const IcoCard = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={20}
+    height={20}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Rect x={2} y={5} width={20} height={14} rx={2} stroke={colors.bg} />
     <Path d="M2 10h20" stroke={colors.bg} />
   </Svg>
 );
 
 const IcoClock = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={16}
+    height={16}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Circle cx={12} cy={12} r={10} stroke={colors.muted} />
     <Path d="M12 6v6l4 2" stroke={colors.muted} />
   </Svg>
@@ -28,16 +46,16 @@ const IcoClock = () => (
 const BOTTOM_PAD = Platform.OS === 'ios' ? 20 : 4;
 
 const METHOD_LABELS: Record<PayMethod, string> = {
-  wave:         'Wave',
+  wave: 'Wave',
   orange_money: 'Orange Money',
 };
 
 interface Props {
-  plan:           VisibilityPlan;
-  payMethod:      PayMethod;
+  plan: VisibilityPlan;
+  payMethod: PayMethod;
   onMethodChange: (m: PayMethod) => void;
-  onPay:          () => void;
-  loading?:       boolean;
+  onPay: () => void;
+  loading?: boolean;
 }
 
 export default function PayFooter({ plan, payMethod, onMethodChange, onPay, loading }: Props) {
@@ -48,14 +66,12 @@ export default function PayFooter({ plan, payMethod, onMethodChange, onPay, load
         <Text style={styles.sumLabel}>
           Forfait <Text style={styles.sumBold}>{plan.label}</Text>
         </Text>
-        <Text style={styles.sumPrice}>
-          {formatPrice(plan.price)}
-        </Text>
+        <Text style={styles.sumPrice}>{formatPrice(plan.price)}</Text>
       </View>
 
       {/* Sélecteur de méthode de paiement */}
       <View style={styles.methods}>
-        {(['wave', 'orange_money'] as PayMethod[]).map((m) => (
+        {(['wave', 'orange_money'] as PayMethod[]).map(m => (
           <TouchableOpacity
             key={m}
             style={[styles.method, payMethod === m && styles.methodSel]}
@@ -81,9 +97,7 @@ export default function PayFooter({ plan, payMethod, onMethodChange, onPay, load
         ) : (
           <>
             <IcoCard />
-            <Text style={styles.btnTxt}>
-              Payer via {METHOD_LABELS[payMethod]}
-            </Text>
+            <Text style={styles.btnTxt}>Payer via {METHOD_LABELS[payMethod]}</Text>
           </>
         )}
       </TouchableOpacity>
@@ -100,9 +114,7 @@ export function PayFooterUnavailable({ plan }: { plan: VisibilityPlan }) {
         <Text style={styles.sumLabel}>
           Forfait <Text style={styles.sumBold}>{plan.label}</Text>
         </Text>
-        <Text style={styles.sumPrice}>
-          {formatPrice(plan.price)}
-        </Text>
+        <Text style={styles.sumPrice}>{formatPrice(plan.price)}</Text>
       </View>
       <View style={styles.btnUnavail}>
         <IcoClock />

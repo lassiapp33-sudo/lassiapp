@@ -5,19 +5,16 @@ import { OrderInfo } from '../../types/payment';
 import Avatar from '../Avatar';
 import { formatPrice } from '../../utils/format';
 
-interface Props { order: OrderInfo; }
+interface Props {
+  order: OrderInfo;
+}
 
 export default function OrderRecap({ order }: Props) {
   return (
     <View style={styles.card}>
       {/* Ligne commerçant — Avatar unique pour le logo boutique */}
       <View style={styles.shopRow}>
-        <Avatar
-          imageUrl={undefined}
-          name={order.shopName}
-          size={40}
-          variant="shop"
-        />
+        <Avatar imageUrl={undefined} name={order.shopName} size={40} variant="shop" />
         <View>
           <Text style={styles.shopName}>{order.shopName}</Text>
           <Text style={styles.shopLoc}>{order.shopLocation}</Text>
@@ -28,12 +25,10 @@ export default function OrderRecap({ order }: Props) {
       {order.items.map((item, i) => (
         <View key={i} style={styles.line}>
           <Text style={styles.lineLeft}>
-            <Text style={styles.lineQty}>{item.qty}×  </Text>
+            <Text style={styles.lineQty}>{item.qty}× </Text>
             {item.name}
           </Text>
-          <Text style={styles.linePrice}>
-            {formatPrice(item.price)}
-          </Text>
+          <Text style={styles.linePrice}>{formatPrice(item.price)}</Text>
         </View>
       ))}
 

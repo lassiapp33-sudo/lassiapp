@@ -4,8 +4,8 @@ import { colors, fonts, radius } from '../../theme';
 import { IcoBack, IcoSearch } from '../icons';
 
 interface Props {
-  title:    string;
-  onBack:   () => void;
+  title: string;
+  onBack: () => void;
   onSearch?: () => void;
 }
 
@@ -18,7 +18,9 @@ export default function TopBar({ title, onBack, onSearch }: Props) {
         <IcoBack />
       </TouchableOpacity>
 
-      <Text style={styles.title} numberOfLines={1}>{title}</Text>
+      <Text style={styles.title} numberOfLines={1}>
+        {title}
+      </Text>
 
       <TouchableOpacity style={styles.btn} onPress={onSearch} activeOpacity={0.7}>
         <IcoSearch />

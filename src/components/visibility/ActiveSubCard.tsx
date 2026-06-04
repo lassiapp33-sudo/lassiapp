@@ -10,10 +10,10 @@ const IcoCheck = () => (
 );
 
 interface Props {
-  planLabel:  string;   // ex: "3 mois"
-  daysLeft:   number;   // jours restants
-  expiryDate: string;   // ex: "21 juillet 2026"
-  progress:   number;   // 0–1 : fraction du temps ÉCOULÉ
+  planLabel: string; // ex: "3 mois"
+  daysLeft: number; // jours restants
+  expiryDate: string; // ex: "21 juillet 2026"
+  progress: number; // 0–1 : fraction du temps ÉCOULÉ
 }
 
 export default function ActiveSubCard({ planLabel, daysLeft, expiryDate, progress }: Props) {
@@ -24,9 +24,7 @@ export default function ActiveSubCard({ planLabel, daysLeft, expiryDate, progres
       {/* Statut */}
       <View style={styles.statusRow}>
         <IcoCheck />
-        <Text style={styles.statusTxt}>
-          Forfait actif · {planLabel}
-        </Text>
+        <Text style={styles.statusTxt}>Forfait actif · {planLabel}</Text>
       </View>
 
       {/* Titre */}
@@ -50,18 +48,20 @@ export function computeSubCardProps(sub: {
   startedAt: string;
   expiresAt: string;
 }): { planLabel: string; daysLeft: number; expiryDate: string; progress: number } {
-  const now     = Date.now();
-  const start   = new Date(sub.startedAt).getTime();
-  const end     = new Date(sub.expiresAt).getTime();
-  const total   = Math.max(end - start, 1);
+  const now = Date.now();
+  const start = new Date(sub.startedAt).getTime();
+  const end = new Date(sub.expiresAt).getTime();
+  const total = Math.max(end - start, 1);
   const elapsed = now - start;
   const remaining = Math.max(end - now, 0);
 
   return {
-    planLabel:  sub.planLabel,
-    daysLeft:   Math.ceil(remaining / 86_400_000),
+    planLabel: sub.planLabel,
+    daysLeft: Math.ceil(remaining / 86_400_000),
     expiryDate: new Date(sub.expiresAt).toLocaleDateString('fr-FR', {
-      day: 'numeric', month: 'long', year: 'numeric',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
     }),
     progress: Math.min(1, Math.max(0, elapsed / total)),
   };

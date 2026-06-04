@@ -1,18 +1,15 @@
-import { supabase }                           from '../lib/supabase';
-import { VERSION as CGU_VERSION }            from '../legal/cgu';
-import { VERSION as PRIVACY_VERSION }        from '../legal/confidentialite';
+import { supabase } from '../lib/supabase';
+import { VERSION as CGU_VERSION } from '../legal/cgu';
+import { VERSION as PRIVACY_VERSION } from '../legal/confidentialite';
 
 export { CGU_VERSION, PRIVACY_VERSION };
 
-export async function saveConsent(
-  userId: string,
-  role:   'client' | 'prestataire',
-): Promise<void> {
+export async function saveConsent(userId: string, role: 'client' | 'prestataire'): Promise<void> {
   const { error } = await supabase.from('user_consents').insert({
-    user_id:         userId,
-    cgu_version:     CGU_VERSION,
+    user_id: userId,
+    cgu_version: CGU_VERSION,
     privacy_version: PRIVACY_VERSION,
-    user_role:       role,
+    user_role: role,
   });
   if (error) throw error;
 }

@@ -1,25 +1,37 @@
 import React, { useState, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import BackButton from '../../components/auth/BackButton';
 import InputField from '../../components/auth/InputField';
 import AuthButton from '../../components/auth/AuthButton';
-import NoteBox    from '../../components/auth/NoteBox';
+import NoteBox from '../../components/auth/NoteBox';
 import { colors, fonts, spacing, TOP_INSET } from '../../theme';
 import * as authService from '../../services/auth';
 import { getErrorMessage } from '../../utils/errorUtils';
 
 interface Props {
-  onBack:  () => void;
+  onBack: () => void;
   onLogin: () => void;
 }
 
 const IconMail = () => (
-  <Svg width={32} height={32} viewBox="0 0 24 24" fill="none"
-    strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <Svg
+    width={32}
+    height={32}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <Rect x={2} y={4} width={20} height={16} rx={2} stroke={colors.accent} />
     <Path d="m22 7-10 5L2 7" stroke={colors.accent} />
   </Svg>
@@ -33,10 +45,10 @@ const IconMailInput = () => (
 );
 
 export default function ForgotPasswordScreen({ onBack, onLogin }: Props) {
-  const [email,   setEmail]   = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sent,    setSent]    = useState(false);
-  const [erreur,  setErreur]  = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   const handleSend = async () => {
@@ -101,16 +113,9 @@ export default function ForgotPasswordScreen({ onBack, onLogin }: Props) {
         {erreur ? <Text style={styles.erreur}>{erreur}</Text> : null}
 
         {!sent ? (
-          <AuthButton
-            label="Envoyer le lien"
-            onPress={handleSend}
-            loading={loading}
-          />
+          <AuthButton label="Envoyer le lien" onPress={handleSend} loading={loading} />
         ) : (
-          <AuthButton
-            label="Retour à la connexion"
-            onPress={onLogin}
-          />
+          <AuthButton label="Retour à la connexion" onPress={onLogin} />
         )}
 
         <NoteBox

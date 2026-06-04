@@ -1,16 +1,20 @@
 /**
  * services/disputes.ts — Signalement et suivi des litiges depuis l'app mobile.
  */
-import { supabase }          from '../lib/supabase';
-import * as storageService   from './storage';
-import useAuthStore          from '../store/authStore';
+import { supabase } from '../lib/supabase';
+import * as storageService from './storage';
+import useAuthStore from '../store/authStore';
 
 // Interfaces locales pour les relations nested Supabase (joins)
-interface ProfileNameRow  { name: string | null; }
-interface ShopNameRow     { name: string | null; }
+interface ProfileNameRow {
+  name: string | null;
+}
+interface ShopNameRow {
+  name: string | null;
+}
 interface DisputeRow extends Record<string, unknown> {
-  against:  ProfileNameRow | null;
-  shops:    ShopNameRow    | null;
+  against: ProfileNameRow | null;
+  shops: ShopNameRow | null;
 }
 interface DisputeMessageRow extends Record<string, unknown> {
   profiles: ProfileNameRow | null;
@@ -26,56 +30,63 @@ export type DisputeReason =
   | 'other';
 
 export interface Dispute {
-  id:           string;
+  id: string;
   reporterRole: 'client' | 'merchant';
-  againstName:  string;
-  shopName:     string | null;
-  type:         'order' | 'debt';
-  reason:       DisputeReason;
-  description:  string;
+  againstName: string;
+  shopName: string | null;
+  type: 'order' | 'debt';
+  reason: DisputeReason;
+  description: string;
   evidenceUrls: string[];
-  status:       DisputeStatus;
-  resolution:   string | null;
-  createdAt:    string;
+  status: DisputeStatus;
+  resolution: string | null;
+  createdAt: string;
 }
 
 export interface DisputeMessage {
-  id:            string;
-  senderName:    string;
-  senderRole:    'client' | 'merchant' | 'admin';
-  message:       string;
+  id: string;
+  senderName: string;
+  senderRole: 'client' | 'merchant' | 'admin';
+  message: string;
   attachmentUrl: string | null;
-  createdAt:     string;
+  createdAt: string;
 }
 
 export const REASON_LABELS: Record<DisputeReason, string> = {
   paid_not_received: 'Payé mais rien reçu',
-  wrong_product:     'Produit non conforme',
-  payment_issue:     'Problème de paiement',
+  wrong_product: 'Produit non conforme',
+  payment_issue: 'Problème de paiement',
   debt_disagreement: 'Désaccord sur dette',
-  no_response:       'Commerçant ne répond pas',
-  other:             'Autre',
+  no_response: 'Commerçant ne répond pas',
+  other: 'Autre',
 };
 
 export const ORDER_REASONS: DisputeReason[] = [
-  'paid_not_received', 'wrong_product', 'payment_issue', 'no_response', 'other',
+  'paid_not_received',
+  'wrong_product',
+  'payment_issue',
+  'no_response',
+  'other',
 ];
 
 export const DEBT_REASONS: DisputeReason[] = [
-  'debt_disagreement', 'payment_issue', 'no_response', 'other',
+  'debt_disagreement',
+  'payment_issue',
+  'no_response',
+  'other',
 ];
 
 // ─── Création d'un litige ────────────────────────────────────────────────────
 
 export interface CreateDisputeParams {
-  againstId:    string;
-  shopId?:      string;
-  type:         'order' | 'debt';
-  orderId?:     string;
-  debtId?:      string;
-  reason:       DisputeReason;
-  description:  string;
-  evidenceUris: string[];   // URIs locales des photos — uploadées ici
+  againstId: string;
+  shopId?: string;
+  type: 'order' | 'debt';
+  orderId?: string;
+  debtId?: string;
+  reason: DisputeReason;
+  description: string;
+  evidenceUris: string[]; // URIs locales des photos — uploadées ici
 }
 
 export async function createDispute(params: CreateDisputeParams): Promise<string> {
@@ -87,7 +98,7 @@ export async function createDispute(params: CreateDisputeParams): Promise<string
   for (const uri of params.evidenceUris) {
     try {
       const path = `${user.id}/${Date.now()}_${evidenceUrls.length}.jpg`;
-      const url  = await storageService.uploadImage('disputes', uri, path);
+      const url = await storageService.uploadImage('disputes', uri, path);
       evidenceUrls.push(url);
     } catch {
       // Photo non uploadée — non bloquant
@@ -97,15 +108,15 @@ export async function createDispute(params: CreateDisputeParams): Promise<string
   const { data, error } = await supabase
     .from('disputes')
     .insert({
-      reporter_id:   user.id,
+      reporter_id: user.id,
       reporter_role: user.role,
-      against_id:    params.againstId,
-      shop_id:       params.shopId  ?? null,
-      type:          params.type,
-      order_id:      params.orderId ?? null,
-      debt_id:       params.debtId  ?? null,
-      reason:        params.reason,
-      description:   params.description,
+      against_id: params.againstId,
+      shop_id: params.shopId ?? null,
+      type: params.type,
+      order_id: params.orderId ?? null,
+      debt_id: params.debtId ?? null,
+      reason: params.reason,
+      description: params.description,
       evidence_urls: evidenceUrls,
     })
     .select('id')
@@ -123,12 +134,14 @@ export async function getMyDisputes(): Promise<Dispute[]> {
 
   const { data, error } = await supabase
     .from('disputes')
-    .select(`
+    .select(
+      `
       id, reporter_role, type, reason, description,
       evidence_urls, status, resolution, created_at,
       against:profiles!against_id(name),
       shops(name)
-    `)
+    `,
+    )
     .eq('reporter_id', userId)
     .order('created_at', { ascending: false });
 
@@ -137,17 +150,17 @@ export async function getMyDisputes(): Promise<Dispute[]> {
   return (data ?? []).map(r => {
     const row = r as unknown as DisputeRow;
     return {
-      id:           r.id,
+      id: r.id,
       reporterRole: r.reporter_role,
-      againstName:  row.against?.name ?? 'Inconnu',
-      shopName:     row.shops?.name ?? null,
-      type:         r.type,
-      reason:       r.reason,
-      description:  r.description,
+      againstName: row.against?.name ?? 'Inconnu',
+      shopName: row.shops?.name ?? null,
+      type: r.type,
+      reason: r.reason,
+      description: r.description,
       evidenceUrls: (r.evidence_urls ?? []) as string[],
-      status:       r.status,
-      resolution:   r.resolution,
-      createdAt:    r.created_at,
+      status: r.status,
+      resolution: r.resolution,
+      createdAt: r.created_at,
     };
   });
 }
@@ -166,28 +179,25 @@ export async function getDisputeMessages(disputeId: string): Promise<DisputeMess
   return (data ?? []).map(r => {
     const row = r as unknown as DisputeMessageRow;
     return {
-      id:            r.id,
-      senderName:    row.profiles?.name ?? 'Inconnu',
-      senderRole:    r.sender_role,
-      message:       r.message,
+      id: r.id,
+      senderName: row.profiles?.name ?? 'Inconnu',
+      senderRole: r.sender_role,
+      message: r.message,
       attachmentUrl: r.attachment_url,
-      createdAt:     r.created_at,
+      createdAt: r.created_at,
     };
   });
 }
 
 // ─── Envoyer un message dans le fil ─────────────────────────────────────────
 
-export async function sendDisputeMessage(
-  disputeId: string,
-  message:   string,
-): Promise<void> {
+export async function sendDisputeMessage(disputeId: string, message: string): Promise<void> {
   const user = useAuthStore.getState().user;
   if (!user) throw new Error('Non connecté');
 
   const { error } = await supabase.from('dispute_messages').insert({
-    dispute_id:  disputeId,
-    sender_id:   user.id,
+    dispute_id: disputeId,
+    sender_id: user.id,
     sender_role: user.role,
     message,
   });

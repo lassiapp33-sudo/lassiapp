@@ -7,7 +7,14 @@ import { formatPrice, formatDateTime } from '../../utils/format';
 import { IcoClose } from '../icons';
 
 const IcoCheck = () => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2.5} strokeLinecap="round">
+  <Svg
+    width={14}
+    height={14}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.5}
+    strokeLinecap="round"
+  >
     <Path d="M20 6 9 17l-5-5" stroke={colors.success} />
   </Svg>
 );
@@ -25,12 +32,13 @@ const IcoOM = () => (
   </Svg>
 );
 
-const STATUS_CFG: Record<PaymentStatus, { label: string; dot: string; text: string; bg: string }> = {
-  pending:  { label: 'En attente', dot: '#FDCF34', text: '#FDCF34', bg: 'rgba(253,207,52,0.12)'  },
-  success:  { label: 'Reçu',       dot: '#5FD38A', text: '#5FD38A', bg: 'rgba(95,211,138,0.12)'  },
-  failed:   { label: 'Échoué',     dot: '#E07A7A', text: '#E07A7A', bg: 'rgba(224,122,122,0.12)' },
-  refunded: { label: 'Remboursé',  dot: '#60A5FA', text: '#60A5FA', bg: 'rgba(96,165,250,0.12)'  },
-};
+const STATUS_CFG: Record<PaymentStatus, { label: string; dot: string; text: string; bg: string }> =
+  {
+    pending: { label: 'En attente', dot: '#FDCF34', text: '#FDCF34', bg: 'rgba(253,207,52,0.12)' },
+    success: { label: 'Reçu', dot: '#5FD38A', text: '#5FD38A', bg: 'rgba(95,211,138,0.12)' },
+    failed: { label: 'Échoué', dot: '#E07A7A', text: '#E07A7A', bg: 'rgba(224,122,122,0.12)' },
+    refunded: { label: 'Remboursé', dot: '#60A5FA', text: '#60A5FA', bg: 'rgba(96,165,250,0.12)' },
+  };
 
 export interface PaymentReceiptModalProps {
   payment: MerchantPayment | null;
@@ -75,11 +83,10 @@ export function PaymentReceiptModal({ payment, onClose }: PaymentReceiptModalPro
               {payment.items.map((item, i) => (
                 <View key={i} style={s.itemRow}>
                   <Text style={s.itemName}>
-                    {item.qty && item.qty > 1 ? `${item.qty}× ` : ''}{item.name}
+                    {item.qty && item.qty > 1 ? `${item.qty}× ` : ''}
+                    {item.name}
                   </Text>
-                  {item.price != null && (
-                    <Text style={s.itemPrice}>{formatPrice(item.price)}</Text>
-                  )}
+                  {item.price != null && <Text style={s.itemPrice}>{formatPrice(item.price)}</Text>}
                 </View>
               ))}
             </View>
@@ -119,37 +126,68 @@ export function PaymentReceiptModal({ payment, onClose }: PaymentReceiptModalPro
 
 const s = StyleSheet.create({
   overlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.65)',
-    justifyContent: 'flex-end', padding: 16, paddingBottom: 32,
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'flex-end',
+    padding: 16,
+    paddingBottom: 32,
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border, padding: 20,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 20,
   },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
-  title:    { color: colors.white, fontFamily: fonts.titleXL, fontSize: 17 },
-  closeBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+  title: { color: colors.white, fontFamily: fonts.titleXL, fontSize: 17 },
+  closeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   statusBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12,
-    borderRadius: radius.pill, marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    marginBottom: 16,
   },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   statusTxt: { fontFamily: fonts.title, fontSize: 12 },
   row: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  rowLabel:    { color: colors.muted,  fontFamily: fonts.body,    fontSize: 12 },
-  rowValue:    { color: colors.white,  fontFamily: fonts.ui,      fontSize: 13, flex: 1, textAlign: 'right' },
+  rowLabel: { color: colors.muted, fontFamily: fonts.body, fontSize: 12 },
+  rowValue: {
+    color: colors.white,
+    fontFamily: fonts.ui,
+    fontSize: 13,
+    flex: 1,
+    textAlign: 'right',
+  },
   amountValue: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 18 },
-  reference:   { fontFamily: fonts.body, fontSize: 11, color: colors.muted },
-  methodRow:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  itemsSection:{ paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border },
-  itemRow:     { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
-  itemName:    { color: '#cfd0e0', fontFamily: fonts.body, fontSize: 12, flex: 1 },
-  itemPrice:   { color: colors.muted, fontFamily: fonts.ui, fontSize: 12 },
-  divider:     { height: 1, backgroundColor: colors.border, marginVertical: 4 },
+  reference: { fontFamily: fonts.body, fontSize: 11, color: colors.muted },
+  methodRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  itemsSection: { paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border },
+  itemRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
+  itemName: { color: '#cfd0e0', fontFamily: fonts.body, fontSize: 12, flex: 1 },
+  itemPrice: { color: colors.muted, fontFamily: fonts.ui, fontSize: 12 },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: 4 },
 });

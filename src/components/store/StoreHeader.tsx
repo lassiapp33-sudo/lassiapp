@@ -12,17 +12,27 @@ const IcoEye = () => (
 );
 
 const IcoTag = () => (
-  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none"
-    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" stroke={colors.bg} />
+  <Svg
+    width={13}
+    height={13}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path
+      d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"
+      stroke={colors.bg}
+    />
     <Path d="M7 7h.01" stroke={colors.bg} />
   </Svg>
 );
 
 interface Props {
-  onBack:     () => void;
-  onPreview:  () => void;
-  onPromos?:  () => void;
+  onBack: () => void;
+  onPreview: () => void;
+  onPromos?: () => void;
 }
 
 export default function StoreHeader({ onBack, onPreview, onPromos }: Props) {
@@ -88,9 +98,9 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   promosTxt: {
-    color:      colors.bg,
+    color: colors.bg,
     fontFamily: fonts.title,
-    fontSize:   11.5,
+    fontSize: 11.5,
   },
   preview: {
     height: 34,

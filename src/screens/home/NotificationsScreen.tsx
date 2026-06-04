@@ -1,8 +1,5 @@
 import React, { useEffect, useCallback, useMemo } from 'react';
-import {
-  View, Text, TouchableOpacity,
-  SectionList, StyleSheet,
-} from 'react-native';
+import { View, Text, TouchableOpacity, SectionList, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import useNotificationsStore, { NotifType, Notif } from '../../store/notificationsStore';
@@ -35,11 +32,14 @@ const IcoMsg = ({ color }: { color: string }) => (
   </Svg>
 );
 
-const TYPE_CONFIG: Record<NotifType, { Icon: React.FC<{ color: string }>; color: string; bg: string }> = {
-  order: { Icon: IcoOrder, color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
-  pay:   { Icon: IcoPay,   color: colors.success, bg: 'rgba(95,211,138,.13)' },
-  vip:   { Icon: IcoStar,  color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
-  msg:   { Icon: IcoMsg,   color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+const TYPE_CONFIG: Record<
+  NotifType,
+  { Icon: React.FC<{ color: string }>; color: string; bg: string }
+> = {
+  order: { Icon: IcoOrder, color: colors.accent, bg: 'rgba(253,207,52,.13)' },
+  pay: { Icon: IcoPay, color: colors.success, bg: 'rgba(95,211,138,.13)' },
+  vip: { Icon: IcoStar, color: colors.orange, bg: 'rgba(240,168,71,.13)' },
+  msg: { Icon: IcoMsg, color: colors.accent, bg: 'rgba(253,207,52,.13)' },
 };
 
 function NotifCard({ notif, onPress }: { notif: Notif; onPress: () => void }) {
@@ -65,35 +65,38 @@ function NotifCard({ notif, onPress }: { notif: Notif; onPress: () => void }) {
 }
 
 interface Props {
-  onBack:       () => void;
-  onNavigate?:  (type: NotifType, targetId?: string) => void;
+  onBack: () => void;
+  onNavigate?: (type: NotifType, targetId?: string) => void;
 }
 
 export default function NotificationsScreen({ onBack, onNavigate }: Props) {
-  const notifications     = useNotificationsStore(s => s.notifications);
-  const markRead          = useNotificationsStore(s => s.markRead);
-  const markAllRead       = useNotificationsStore(s => s.markAllRead);
+  const notifications = useNotificationsStore(s => s.notifications);
+  const markRead = useNotificationsStore(s => s.markRead);
+  const markAllRead = useNotificationsStore(s => s.markAllRead);
   const loadNotifications = useNotificationsStore(s => s.loadNotifications);
 
   // Montage seul — chargement + marquage lu une seule fois à l'ouverture de l'écran
   useEffect(() => {
     loadNotifications();
-    markAllRead();   // toutes les notifs marquées lues → badge retombe à 0
+    markAllRead(); // toutes les notifs marquées lues → badge retombe à 0
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sections = useMemo(() => {
     const today = notifications.filter(n => n.group === 'today');
-    const week  = notifications.filter(n => n.group === 'week');
+    const week = notifications.filter(n => n.group === 'week');
     return [
       ...(today.length > 0 ? [{ title: "Aujourd'hui", data: today }] : []),
-      ...(week.length  > 0 ? [{ title: 'Cette semaine', data: week }] : []),
+      ...(week.length > 0 ? [{ title: 'Cette semaine', data: week }] : []),
     ];
   }, [notifications]);
 
-  const handlePress = useCallback((n: Notif) => {
-    markRead(n.id);
-    onNavigate?.(n.type, n.targetId);
-  }, [markRead, onNavigate]);
+  const handlePress = useCallback(
+    (n: Notif) => {
+      markRead(n.id);
+      onNavigate?.(n.type, n.targetId);
+    },
+    [markRead, onNavigate],
+  );
 
   return (
     <View style={styles.root}>
@@ -108,12 +111,8 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
         style={styles.scroll}
         sections={sections}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <NotifCard notif={item} onPress={() => handlePress(item)} />
-        )}
-        renderSectionHeader={({ section }) => (
-          <Text style={styles.dayLbl}>{section.title}</Text>
-        )}
+        renderItem={({ item }) => <NotifCard notif={item} onPress={() => handlePress(item)} />}
+        renderSectionHeader={({ section }) => <Text style={styles.dayLbl}>{section.title}</Text>}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyTxt}>Aucune notification</Text>
@@ -127,7 +126,7 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
 
   head: {
@@ -196,10 +195,16 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   content: { flex: 1 },
-  title:   { color: colors.white, fontFamily: fonts.title,  fontSize: 13.5 },
-  body:    { color: colors.muted, fontFamily: fonts.body,   fontSize: 11.5, marginTop: 2, lineHeight: 16 },
-  time:    { color: '#5a5c80',    fontFamily: fonts.body,   fontSize: 10, marginTop: 5 },
+  title: { color: colors.white, fontFamily: fonts.title, fontSize: 13.5 },
+  body: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 11.5,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  time: { color: '#5a5c80', fontFamily: fonts.body, fontSize: 10, marginTop: 5 },
 
-  empty:    { paddingVertical: 60, alignItems: 'center' },
+  empty: { paddingVertical: 60, alignItems: 'center' },
   emptyTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 13 },
 });

@@ -11,9 +11,9 @@ const WA_COLOR = '#25D366';
 
 // Mapping statut → couleurs
 const STATUS: Record<DebtStatus, { stripe: string; dot: string; text: string }> = {
-  late:  { stripe: colors.danger,  dot: colors.danger,  text: colors.danger  },
-  watch: { stripe: colors.orange,  dot: colors.orange,  text: colors.orange  },
-  good:  { stripe: colors.success, dot: colors.success, text: colors.success },
+  late: { stripe: colors.danger, dot: colors.danger, text: colors.danger },
+  watch: { stripe: colors.orange, dot: colors.orange, text: colors.orange },
+  good: { stripe: colors.success, dot: colors.success, text: colors.success },
 };
 
 const IcoWA = () => (
@@ -37,7 +37,7 @@ function buildWaUrl(debtor: Debtor): string {
 }
 
 interface Props {
-  debtor:  Debtor;
+  debtor: Debtor;
   onPress?: () => void;
 }
 
@@ -53,22 +53,13 @@ function DebtorCard({ debtor, onPress }: Props) {
   };
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={onPress}
-      activeOpacity={0.82}
-    >
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.82}>
       {/* Barre colorée gauche — repérage visuel instantané */}
       <View style={[styles.stripe, { backgroundColor: sc.stripe }]} />
 
       {/* Avatar débiteur + pastille statut — wrapper relatif pour positionner le dot */}
       <View style={styles.avatarWrap}>
-        <Avatar
-          imageUrl={debtor.avatarUrl}
-          name={debtor.name}
-          size={46}
-          variant="user"
-        />
+        <Avatar imageUrl={debtor.avatarUrl} name={debtor.name} size={46} variant="user" />
         <View style={[styles.pdot, { backgroundColor: sc.dot }]} />
       </View>
 
@@ -76,9 +67,7 @@ function DebtorCard({ debtor, onPress }: Props) {
       <View style={styles.info}>
         <Text style={styles.name}>{debtor.name}</Text>
         <View style={styles.meta}>
-          <Text style={[styles.tranche, { color: sc.text }]}>
-            ● {debtor.statusLabel}
-          </Text>
+          <Text style={[styles.tranche, { color: sc.text }]}>● {debtor.statusLabel}</Text>
           <Text style={styles.date}>· depuis {debtor.daysSince}j</Text>
         </View>
       </View>
@@ -129,8 +118,8 @@ const styles = StyleSheet.create({
 
   // Wrapper relatif autour d'Avatar pour positionner la pastille de statut
   avatarWrap: {
-    flexShrink:     0,
-    position:       'relative',
+    flexShrink: 0,
+    position: 'relative',
   },
   pdot: {
     position: 'absolute',
