@@ -2,6 +2,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase }  from '../lib/supabase';
 import { computeStatus, WeekHours } from './hours';
 
+// Interface locale pour la relation nested Supabase (recently_viewed JOIN shops)
+interface RecentShopRow {
+  name:               string | null;
+  category:           string | null;
+  logo_url:           string | null;
+  is_vip:             boolean | null;
+  rating:             number | null;
+  opening_hours:      WeekHours | null;
+  is_manually_closed: boolean | null;
+}
+
 export interface RecentShop {
   shopId:      string;
   name:        string;
@@ -111,17 +122,14 @@ export async function getRecentlyViewed(limit = 20): Promise<RecentShop[]> {
   if (error) throw new Error(error.message);
 
   const shops = (data ?? []).flatMap(row => {
-    const shop = (row.shops as Record<string, any> | null) ?? null;
+    const shop = (row.shops as unknown as RecentShopRow | null) ?? null;
     if (!shop || !shop.name) return []; // commerce supprimé ou désactivé → ignoré
-    const status = computeStatus(
-      (shop.opening_hours ?? null) as WeekHours | null,
-      Boolean(shop.is_manually_closed),
-    );
+    const status = computeStatus(shop.opening_hours ?? null, Boolean(shop.is_manually_closed));
     return [{
       shopId:      row.shop_id,
-      name:        shop.name     as string,
-      category:    (shop.category ?? '') as string,
-      logoUrl:     (shop.logo_url ?? null) as string | null,
+      name:        shop.name,
+      category:    shop.category ?? '',
+      logoUrl:     shop.logo_url ?? null,
       isVip:       Boolean(shop.is_vip),
       rating:      Number(shop.rating ?? 0),
       isOpen:      status.isOpen,

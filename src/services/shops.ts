@@ -244,7 +244,7 @@ export async function updateShopStatus(shopId: string, isOpen: boolean): Promise
 
 export async function updateOpeningHours(
   shopId: string,
-  hours:  Record<string, any> | null,
+  hours:  WeekHours | null,
 ): Promise<void> {
   const { error } = await supabase
     .from('shops')

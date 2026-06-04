@@ -1,6 +1,10 @@
 import { OrderLineItem } from './orders';
 
 export type PaymentStatus    = 'pending' | 'success' | 'failed' | 'refunded';
+
+// Interface locale pour les relations nested Supabase dans rowToPayment
+export interface PaymentClientRow  { name?: string | null; phone?: string | null; }
+export interface PaymentOrderRow   { items?: OrderLineItem[] | null; }
 export type MerchantPayMethod = 'wave' | 'om';
 export type PaymentFilter     = 'all' | 'wave' | 'om';
 

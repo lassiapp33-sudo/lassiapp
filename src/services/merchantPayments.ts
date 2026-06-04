@@ -2,15 +2,16 @@ import { supabase } from '../lib/supabase';
 import {
   MerchantPayment, MerchantPayMethod,
   PaymentStats, DayRevenue,
+  PaymentClientRow, PaymentOrderRow,
 } from '../types/merchantPayments';
 
 // ─── Mapping ──────────────────────────────────────────────────────────────────
 
 function rowToPayment(row: Record<string, any>): MerchantPayment {
-  const client = (row.client as Record<string, any> | null) ?? {};
-  const order  = (row.order  as Record<string, any> | null) ?? {};
-  const items  = Array.isArray(row.items)       ? row.items :
-                 Array.isArray(order.items)      ? order.items : [];
+  const client = (row.client as PaymentClientRow | null) ?? {};
+  const order  = (row.order  as PaymentOrderRow  | null) ?? {};
+  const items  = Array.isArray(row.items)         ? row.items :
+                 Array.isArray(order.items)        ? order.items : [];
   return {
     id:          row.id,
     orderId:     row.order_id     ?? undefined,
