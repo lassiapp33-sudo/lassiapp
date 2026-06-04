@@ -23,14 +23,14 @@ interface NotifState {
   loadNotifications: () => Promise<void>;
 
   // Mutations — optimistes + write-through Supabase
-  markRead:    (id: string) => void;
-  markAllRead: () => void;
+  markRead:    (id: string) => Promise<void>;
+  markAllRead: () => Promise<void>;
   addNotif:    (notif: Notif) => void;
 
   setLoading: (v: boolean) => void;
 }
 
-const useNotificationsStore = create<NotifState>()((set) => ({
+const useNotificationsStore = create<NotifState>()((set, get) => ({
   notifications: [],
   loading:       false,
 
@@ -46,20 +46,32 @@ const useNotificationsStore = create<NotifState>()((set) => ({
     }
   },
 
-  markRead: (id) => {
+  markRead: async (id) => {
+    const prev = get().notifications;
     set(state => ({
       notifications: state.notifications.map(n =>
         n.id === id ? { ...n, unread: false } : n,
       ),
     }));
-    notifsService.markAsRead(id).catch(err => logger.warn('[notificationsStore] markRead:', err));
+    try {
+      await notifsService.markAsRead(id);
+    } catch (err) {
+      set({ notifications: prev });
+      logger.warn('[notificationsStore] markRead:', err);
+    }
   },
 
-  markAllRead: () => {
+  markAllRead: async () => {
+    const prev = get().notifications;
     set(state => ({
       notifications: state.notifications.map(n => ({ ...n, unread: false })),
     }));
-    notifsService.markAllRead().catch(err => logger.warn('[notificationsStore] markAllRead:', err));
+    try {
+      await notifsService.markAllRead();
+    } catch (err) {
+      set({ notifications: prev });
+      logger.warn('[notificationsStore] markAllRead:', err);
+    }
   },
 
   // Utilisé par le hook Realtime pour injecter une nouvelle notif en live
