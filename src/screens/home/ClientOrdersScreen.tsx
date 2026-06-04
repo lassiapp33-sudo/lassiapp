@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
+  View, Text, FlatList, ScrollView, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -218,7 +218,9 @@ export default function ClientOrdersScreen({ onBack, onExplore, onGoToCart, onVi
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView
+        <FlatList
+          data={displayed}
+          keyExtractor={item => item.id}
           style={s.scroll}
           contentContainerStyle={s.content}
           showsVerticalScrollIndicator={false}
@@ -230,8 +232,23 @@ export default function ClientOrdersScreen({ onBack, onExplore, onGoToCart, onVi
               colors={[colors.accent]}
             />
           }
-        >
-          {displayed.length === 0 ? (
+          renderItem={({ item: order }) => (
+            <ClientOrderCard
+              order={order}
+              onCancel={handleCancel}
+              onReorder={handleReorder}
+              isReordering={reorderingId === order.id}
+              onViewReceipt={onViewReceipt}
+              onLeaveAvis={order.status === 'completed' && !order.avisId ? () => {
+                setAvisTarget({
+                  orderId:  order.id,
+                  shopId:   order.shopId,
+                  shopName: order.commerceName,
+                });
+              } : undefined}
+            />
+          )}
+          ListEmptyComponent={
             <View style={s.empty}>
               <IcoEmpty />
               <Text style={s.emptyTitle}>
@@ -241,40 +258,16 @@ export default function ClientOrdersScreen({ onBack, onExplore, onGoToCart, onVi
               </Text>
               {orders.length === 0 && (
                 <>
-                  <Text style={s.emptySub}>
-                    Découvre les prestataires près de toi !
-                  </Text>
-                  <TouchableOpacity
-                    style={s.exploreBtn}
-                    onPress={onExplore}
-                    activeOpacity={0.85}
-                  >
+                  <Text style={s.emptySub}>Découvre les prestataires près de toi !</Text>
+                  <TouchableOpacity style={s.exploreBtn} onPress={onExplore} activeOpacity={0.85}>
                     <Text style={s.exploreTxt}>Explorer l'accueil</Text>
                   </TouchableOpacity>
                 </>
               )}
             </View>
-          ) : (
-            displayed.map(order => (
-              <ClientOrderCard
-                key={order.id}
-                order={order}
-                onCancel={handleCancel}
-                onReorder={handleReorder}
-                isReordering={reorderingId === order.id}
-                onViewReceipt={onViewReceipt}
-                onLeaveAvis={order.status === 'completed' && !order.avisId ? () => {
-                  setAvisTarget({
-                    orderId:  order.id,
-                    shopId:   order.shopId,
-                    shopName: order.commerceName,
-                  });
-                } : undefined}
-              />
-            ))
-          )}
-          <View style={{ height: 40 }} />
-        </ScrollView>
+          }
+          ListFooterComponent={<View style={{ height: 40 }} />}
+        />
       )}
     </LassiScreen>
 

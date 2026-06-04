@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity,
-  ScrollView, StyleSheet,
+  SectionList, StyleSheet,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -81,8 +81,19 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
     markAllRead();   // toutes les notifs marquées lues → badge retombe à 0
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const todayNotifs = notifications.filter(n => n.group === 'today');
-  const weekNotifs  = notifications.filter(n => n.group === 'week');
+  const sections = useMemo(() => {
+    const today = notifications.filter(n => n.group === 'today');
+    const week  = notifications.filter(n => n.group === 'week');
+    return [
+      ...(today.length > 0 ? [{ title: "Aujourd'hui", data: today }] : []),
+      ...(week.length  > 0 ? [{ title: 'Cette semaine', data: week }] : []),
+    ];
+  }, [notifications]);
+
+  const handlePress = useCallback((n: Notif) => {
+    markRead(n.id);
+    onNavigate?.(n.type, n.targetId);
+  }, [markRead, onNavigate]);
 
   return (
     <View style={styles.root}>
@@ -93,49 +104,24 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
         <Text style={styles.headTitle}>Notifications</Text>
       </View>
 
-      <ScrollView
+      <SectionList
         style={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}
-      >
-        {notifications.length === 0 && (
+        sections={sections}
+        keyExtractor={item => item.id}
+        renderItem={({ item }) => (
+          <NotifCard notif={item} onPress={() => handlePress(item)} />
+        )}
+        renderSectionHeader={({ section }) => (
+          <Text style={styles.dayLbl}>{section.title}</Text>
+        )}
+        ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyTxt}>Aucune notification</Text>
           </View>
-        )}
-
-        {todayNotifs.length > 0 && (
-          <>
-            <Text style={styles.dayLbl}>Aujourd'hui</Text>
-            {todayNotifs.map(n => (
-              <NotifCard
-                key={n.id}
-                notif={n}
-                onPress={() => {
-                  markRead(n.id);
-                  onNavigate?.(n.type, n.targetId);
-                }}
-              />
-            ))}
-          </>
-        )}
-
-        {weekNotifs.length > 0 && (
-          <>
-            <Text style={styles.dayLbl}>Cette semaine</Text>
-            {weekNotifs.map(n => (
-              <NotifCard
-                key={n.id}
-                notif={n}
-                onPress={() => {
-                  markRead(n.id);
-                  onNavigate?.(n.type, n.targetId);
-                }}
-              />
-            ))}
-          </>
-        )}
-      </ScrollView>
+        }
+        contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+      />
     </View>
   );
 }

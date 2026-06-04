@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import TopBar                         from '../../components/category/TopBar';
 import CatNavBar                       from '../../components/category/CatNavBar';
 import { CatId, getCatConfig }        from '../../config/categories';
@@ -199,65 +199,64 @@ export default function CategoryScreen({ initialCatId, onBack, onShopPress, onSe
     filteredShops.map(s => toShopCard(s, userLoc)),
   [filteredShops, userLoc]);
 
+  const handleShopPress = useCallback((id: string, name: string) => {
+    onShopPress?.(id, name);
+  }, [onShopPress]);
+
+  const handleVipPress = useCallback((entry: VipEntry) => {
+    if (!entry.isPlaceholder && entry.id) handleShopPress(entry.id, entry.name);
+  }, [handleShopPress]);
+
+  const listHeader = (
+    <>
+      <CatNavBar active={catId} onSelect={handleCatChange} />
+      {meta.subcats.length > 1 && (
+        <SubCatTabs tabs={meta.subcats} active={subCat} onChange={setSubCat} />
+      )}
+      <VipPodium
+        entries={vipEntries}
+        subLabel={meta.subLabel}
+        renewIn="7j"
+        onPress={handleVipPress}
+      />
+      <FilterBar active={filter} onChange={setFilter} />
+      <View style={styles.px}>
+        <View style={styles.listHead}>
+          <Text style={styles.listTitle}>{t.category.allShopsPrefix} {meta.subLabel}{t.category.allShopsSuffix}</Text>
+          <Text style={styles.listCount}>{filteredShops.length} {filteredShops.length > 1 ? t.category.registeredPlural : t.category.registered}</Text>
+        </View>
+      </View>
+    </>
+  );
+
   return (
     <LassiScreen
       header={<TopBar title={meta.title} onBack={onBack} onSearch={onSearch} />}
       footer={<BottomNav active={navTab} onPress={handleNavPress} />}
     >
-      <ScrollView
+      <FlatList
+        data={loading ? [] : shopCards}
+        keyExtractor={item => item.id}
         style={styles.scroll}
         contentContainerStyle={{ paddingBottom: NAV_HEIGHT + 20 }}
         showsVerticalScrollIndicator={false}
-      >
-        <CatNavBar active={catId} onSelect={handleCatChange} />
-
-        {meta.subcats.length > 1 && (
-          <SubCatTabs
-            tabs={meta.subcats}
-            active={subCat}
-            onChange={setSubCat}
-          />
-        )}
-
-        {/* Podium Top 3 VIP — toujours affiché, placeholders si < 3 VIP réels */}
-        <VipPodium
-          entries={vipEntries}
-          subLabel={meta.subLabel}
-          renewIn="7j"
-          onPress={entry => {
-            if (!entry.isPlaceholder && entry.id) {
-              onShopPress?.(entry.id, entry.name);
-            }
-          }}
-        />
-
-        <FilterBar active={filter} onChange={setFilter} />
-
-        <View style={styles.px}>
-          <View style={styles.listHead}>
-            <Text style={styles.listTitle}>{t.category.allShopsPrefix} {meta.subLabel}{t.category.allShopsSuffix}</Text>
-            <Text style={styles.listCount}>{filteredShops.length} {filteredShops.length > 1 ? t.category.registeredPlural : t.category.registered}</Text>
+        renderItem={({ item: shop }) => (
+          <View style={styles.px}>
+            <ShopCard shop={shop} onPress={() => handleShopPress(shop.id, shop.name)} />
           </View>
-
-          {loading ? (
+        )}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={
+          <View style={styles.px}>
             <View style={styles.empty}>
-              <ActivityIndicator color={colors.accent} />
+              {loading
+                ? <ActivityIndicator color={colors.accent} />
+                : <Text style={styles.emptyTxt}>{t.category.noShops}</Text>
+              }
             </View>
-          ) : shopCards.length === 0 ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyTxt}>{t.category.noShops}</Text>
-            </View>
-          ) : (
-            shopCards.map(shop => (
-              <ShopCard
-                key={shop.id}
-                shop={shop}
-                onPress={() => onShopPress?.(shop.id, shop.name)}
-              />
-            ))
-          )}
-        </View>
-      </ScrollView>
+          </View>
+        }
+      />
     </LassiScreen>
   );
 }

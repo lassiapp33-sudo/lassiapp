@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  View, Text, ScrollView, TextInput, TouchableOpacity,
+  View, Text, FlatList, TextInput, TouchableOpacity,
   StyleSheet, Platform, Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -138,32 +138,31 @@ export default function DebtsScreen({ onBack }: Props) {
       {loading ? (
         <LoadingSpinner />
       ) : (
-        <ScrollView
+        <FlatList
+          data={displayed}
+          keyExtractor={item => item.id}
           style={styles.scroll}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
-        >
-          <TotalCard debtors={debtors} />
-          <FilterChips active={filter} onChange={setFilter} />
-
-          {displayed.length > 0 && (
-            <Text style={styles.sec}>
-              {displayed.length} client{displayed.length > 1 ? 's' : ''} · classé{displayed.length > 1 ? 's' : ''} par urgence
-            </Text>
-          )}
-
-          {displayed.length === 0 ? (
+          renderItem={({ item: debtor }) => <DebtorCard debtor={debtor} />}
+          ListHeaderComponent={
+            <>
+              <TotalCard debtors={debtors} />
+              <FilterChips active={filter} onChange={setFilter} />
+              {displayed.length > 0 && (
+                <Text style={styles.sec}>
+                  {displayed.length} client{displayed.length > 1 ? 's' : ''} · classé{displayed.length > 1 ? 's' : ''} par urgence
+                </Text>
+              )}
+            </>
+          }
+          ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyTxt}>Aucun client dans cette catégorie</Text>
             </View>
-          ) : (
-            displayed.map(debtor => (
-              <DebtorCard key={debtor.id} debtor={debtor} />
-            ))
-          )}
-
-          <View style={{ height: 100 }} />
-        </ScrollView>
+          }
+          ListFooterComponent={<View style={{ height: 100 }} />}
+        />
       )}
 
       <TouchableOpacity
