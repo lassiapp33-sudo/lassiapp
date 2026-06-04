@@ -167,18 +167,25 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
   const handleDeleteProduct = (id: string) => {
     Alert.alert('Supprimer ce produit ?', 'Cette action est irréversible.', [
       { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: () => { removeProduct(id); setShowSheet(false); } },
+      {
+        text: 'Supprimer', style: 'destructive',
+        onPress: async () => {
+          try { await removeProduct(id); setShowSheet(false); }
+          catch { Alert.alert('Erreur', 'Impossible de supprimer ce produit. Réessaie.'); }
+        },
+      },
     ]);
   };
 
   const handleDeleteCat = (catId: string) => {
     const count   = products.filter(p => p.category === catId).length;
-    const doDelete = () => {
+    const doDelete = async () => {
       if (activeCat === catId) {
         const next = categories.find(c => c.id !== catId);
         if (next) setActiveCat(next.id);
       }
-      removeCategory(catId);
+      try { await removeCategory(catId); }
+      catch { Alert.alert('Erreur', 'Impossible de supprimer ce menu. Réessaie.'); }
     };
     if (count > 0) {
       Alert.alert(
@@ -238,7 +245,10 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
       { text: 'Annuler', style: 'cancel' },
       {
         text: 'Supprimer', style: 'destructive',
-        onPress: () => updateGalleryUrls(galleryUrls.filter(u => u !== url)),
+        onPress: async () => {
+          try { await updateGalleryUrls(galleryUrls.filter(u => u !== url)); }
+          catch { Alert.alert('Erreur', 'Impossible de supprimer la photo. Réessaie.'); }
+        },
       },
     ]);
   };
@@ -289,7 +299,10 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
           {/* Profil + toggle ouvert/fermé */}
           <ShopProfileCard
             profile={profile}
-            onToggle={() => updateProfile({ isOpen: !profile.isOpen })}
+            onToggle={async () => {
+              try { await updateProfile({ isOpen: !profile.isOpen }); }
+              catch { Alert.alert('Erreur', 'Impossible de mettre à jour le statut. Réessaie.'); }
+            }}
           />
 
           {/* ── Infos boutique ──────────────────────────────────────────── */}
@@ -386,8 +399,14 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
               hours={context.openingHours}
               isManuallyClose={context.isManuallyClose}
               readOnly={false}
-              onChange={updateOpeningHours}
-              onToggleManuallyClose={toggleManuallyClose}
+              onChange={async (h) => {
+                try { await updateOpeningHours(h); }
+                catch { Alert.alert('Erreur', 'Impossible de sauvegarder les horaires. Réessaie.'); }
+              }}
+              onToggleManuallyClose={async () => {
+                try { await toggleManuallyClose(); }
+                catch { Alert.alert('Erreur', 'Impossible de mettre à jour le statut exceptionnel. Réessaie.'); }
+              }}
             />
           </View>
 
@@ -412,7 +431,10 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
               product={product}
               promoInfo={promoMap[product.id]}
               onEdit={() => openEdit(product)}
-              onToggleStock={() => toggleStock(product.id)}
+              onToggleStock={async () => {
+                try { await toggleStock(product.id); }
+                catch { Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.'); }
+              }}
             />
           ))}
 

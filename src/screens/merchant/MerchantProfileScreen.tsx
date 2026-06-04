@@ -170,7 +170,7 @@ export default function MerchantProfileScreen({ onBack, onStore, onVisibility, o
       const url  = await storageService.uploadImage('avatars', uri, path);
       await authService.updateAvatarUrl(user.id, url);
       updateProfile({ avatarUrl: url });
-      if (shopId) updateLogo(url);
+      if (shopId) await updateLogo(url);
     } catch {
       Alert.alert(t.common.error, t.common.photoUpdateError);
     } finally {

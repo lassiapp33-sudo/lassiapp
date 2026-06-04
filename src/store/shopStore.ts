@@ -35,8 +35,8 @@ interface ShopState {
 
   loadMyShop: () => Promise<void>;
 
-  updateProfile:      (updates: Partial<StoreProfile>) => void;
-  updateLogo:         (logoUrl: string)                => void;
+  updateProfile:      (updates: Partial<StoreProfile>) => Promise<void>;
+  updateLogo:         (logoUrl: string)                => Promise<void>;
   saveShopDetails:    (description: string, addressText: string, phone: string) => Promise<void>;
   saveProduct:        (product: StoreProduct)          => Promise<void>;
   toggleStock:        (id: string)                     => Promise<void>;
@@ -47,7 +47,7 @@ interface ShopState {
   updateGalleryUrls:  (urls: string[])                 => Promise<void>;
 
   addCategory:    (label: string) => void;
-  removeCategory: (id: string)    => void;
+  removeCategory: (id: string)    => Promise<void>;
 
   setProducts: (products: StoreProduct[]) => void;
   setLoading:  (v: boolean)              => void;
@@ -137,34 +137,57 @@ const useShopStore = create<ShopState>()((set, get) => ({
     }
   },
 
-  updateProfile: (updates) => {
+  updateProfile: async (updates) => {
+    const prev = get().profile;
     set(state => ({ profile: { ...state.profile, ...updates } }));
     const { shopId } = get();
-    if (shopId && updates.isOpen !== undefined) {
-      shopsService.updateShopStatus(shopId, updates.isOpen).catch(logger.warn);
+    if (!shopId || updates.isOpen === undefined) return;
+    try {
+      await shopsService.updateShopStatus(shopId, updates.isOpen);
+    } catch (err) {
+      set({ profile: prev });
+      throw err;
     }
   },
 
-  updateLogo: (logoUrl) => {
-    set(state => ({ profile: { ...state.profile, logoUrl } }));
+  updateLogo: async (logoUrl) => {
     const { shopId } = get();
-    if (shopId) shopsService.updateShopLogo(shopId, logoUrl).catch(logger.warn);
+    const prev = get().profile.logoUrl;
+    set(state => ({ profile: { ...state.profile, logoUrl } }));
+    if (!shopId) return;
+    try {
+      await shopsService.updateShopLogo(shopId, logoUrl);
+    } catch (err) {
+      set(state => ({ profile: { ...state.profile, logoUrl: prev } }));
+      logger.warn('[shopStore] updateLogo:', err);
+      // Non-critique — ne pas propager (l'upload Storage a déjà réussi)
+    }
   },
 
   saveShopDetails: async (description, addressText, phone) => {
     const { shopId } = get();
     if (!shopId) return;
-    set(state => ({
-      profile: { ...state.profile, description, addressText, phone },
-    }));
-    await shopsService.updateShopDetails(shopId, { description, addressText, phone });
+    const prev = get().profile;
+    set(state => ({ profile: { ...state.profile, description, addressText, phone } }));
+    try {
+      await shopsService.updateShopDetails(shopId, { description, addressText, phone });
+    } catch (err) {
+      set({ profile: prev });
+      throw err;
+    }
   },
 
   updateGalleryUrls: async (urls) => {
     const { shopId } = get();
     if (!shopId) return;
+    const prev = get().context.galleryUrls;
     set(state => ({ context: { ...state.context, galleryUrls: urls } }));
-    await shopsService.updateGalleryUrls(shopId, urls);
+    try {
+      await shopsService.updateGalleryUrls(shopId, urls);
+    } catch (err) {
+      set(state => ({ context: { ...state.context, galleryUrls: prev } }));
+      throw err;
+    }
   },
 
   updateLocation: async (lat, lng) => {
@@ -176,16 +199,28 @@ const useShopStore = create<ShopState>()((set, get) => ({
   updateOpeningHours: async (hours) => {
     const { shopId } = get();
     if (!shopId) return;
+    const prev = get().context.openingHours;
     set(state => ({ context: { ...state.context, openingHours: hours } }));
-    await shopsService.updateOpeningHours(shopId, hours);
+    try {
+      await shopsService.updateOpeningHours(shopId, hours);
+    } catch (err) {
+      set(state => ({ context: { ...state.context, openingHours: prev } }));
+      throw err;
+    }
   },
 
   toggleManuallyClose: async () => {
     const { shopId, context } = get();
     if (!shopId) return;
-    const closed = !context.isManuallyClose;
+    const prev = context.isManuallyClose;
+    const closed = !prev;
     set(state => ({ context: { ...state.context, isManuallyClose: closed } }));
-    await shopsService.updateManuallyClose(shopId, closed);
+    try {
+      await shopsService.updateManuallyClose(shopId, closed);
+    } catch (err) {
+      set(state => ({ context: { ...state.context, isManuallyClose: prev } }));
+      throw err;
+    }
   },
 
   saveProduct: async (product) => {
@@ -195,13 +230,18 @@ const useShopStore = create<ShopState>()((set, get) => ({
     if (!shopId) return;
 
     if (exists) {
-      // Mise à jour optimiste
+      const prev = get().products;
       set(state => ({
         products: state.products.map(p => p.id === product.id ? product : p),
       }));
-      productsService.updateProduct(product.id, product).catch(logger.warn);
+      try {
+        await productsService.updateProduct(product.id, product);
+      } catch (err) {
+        set({ products: prev });
+        throw err;
+      }
     } else {
-      // Nouveau produit → insérer dans Supabase pour obtenir l'UUID réel
+      // Nouveau produit → attend l'UUID Supabase réel
       const saved = await productsService.addProduct(shopId, product);
       set(state => ({ products: [...state.products, saved] }));
     }
@@ -231,19 +271,29 @@ const useShopStore = create<ShopState>()((set, get) => ({
     const { products } = get();
     const product = products.find(p => p.id === id);
     if (!product) return;
-
-    // Mise à jour optimiste
+    const prev = get().products;
     set(state => ({
       products: state.products.map(p =>
         p.id === id ? { ...p, stock: p.stock === 'in' ? 'out' : 'in' } : p,
       ),
     }));
-    productsService.toggleStock(id, product.stock).catch(logger.warn);
+    try {
+      await productsService.toggleStock(id, product.stock);
+    } catch (err) {
+      set({ products: prev });
+      throw err;
+    }
   },
 
   removeProduct: async (id) => {
+    const prev = get().products;
     set(state => ({ products: state.products.filter(p => p.id !== id) }));
-    productsService.deleteProduct(id).catch(logger.warn);
+    try {
+      await productsService.deleteProduct(id);
+    } catch (err) {
+      set({ products: prev });
+      throw err;
+    }
   },
 
   addCategory: (label) => {
@@ -258,19 +308,28 @@ const useShopStore = create<ShopState>()((set, get) => ({
     }));
   },
 
-  removeCategory: (catId) => {
+  removeCategory: async (catId) => {
     const { categories, products } = get();
     const remaining = categories.filter(c => c.id !== catId);
     if (remaining.length === 0) return;
-    const fallback  = remaining[0].id;
-    const toUpdate  = products.filter(p => p.category === catId);
+    const fallback   = remaining[0].id;
+    const toUpdate   = products.filter(p => p.category === catId);
+    const prevCats   = categories;
+    const prevProds  = products;
     set({
       categories: remaining,
       products:   products.map(p => p.category === catId ? { ...p, category: fallback } : p),
     });
-    toUpdate.forEach(p =>
-      productsService.updateProduct(p.id, { ...p, category: fallback }).catch(logger.warn)
-    );
+    try {
+      await Promise.all(
+        toUpdate.map(p =>
+          productsService.updateProduct(p.id, { ...p, category: fallback })
+        )
+      );
+    } catch (err) {
+      set({ categories: prevCats, products: prevProds });
+      throw err;
+    }
   },
 }));
 
