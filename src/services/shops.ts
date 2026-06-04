@@ -2,6 +2,7 @@ import { supabase }           from '../lib/supabase';
 import useAuthStore           from '../store/authStore';
 import * as Location          from 'expo-location';
 import { reverseGeocode }     from './location';
+import type { WeekHours }     from './hours';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -20,7 +21,7 @@ export interface Shop {
   longitude:       number | null;
   isOpen:          boolean;
   isManuallyClose: boolean;
-  openingHours:    Record<string, any> | null;
+  openingHours:    WeekHours | null;
   galleryUrls:     string[];
   isVip:             boolean;
   vipRank:           number | null;   // 1, 2, 3 dans le podium — null si pas VIP
@@ -175,7 +176,7 @@ export interface UpsertShopParams {
   zone:            string;
   isOpen:          boolean;
   phone?:          string;
-  openingHours?:   Record<string, any> | null;
+  openingHours?:   WeekHours | null;
   isManuallyClose?: boolean;
 }
 

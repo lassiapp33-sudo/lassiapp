@@ -273,7 +273,7 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
             // Retirer les anciens chips/welcome du format précédent (maintenant dans le header fixe)
             const cleaned: ChatMsg[] = msgs.filter(
               (m: ChatMsg) => m.kind !== 'chips' &&
-                !(m.kind === 'bot' && (m as any).text?.startsWith('Salut ! Je suis Lassi'))
+                !(m.kind === 'bot' && m.text.startsWith('Salut ! Je suis Lassi'))
             );
             setMessages(cleaned.length > 0 ? cleaned : makeInitialMsgs());
           } else {

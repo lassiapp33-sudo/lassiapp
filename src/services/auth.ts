@@ -17,6 +17,7 @@ import { AuthUser, UserRole }         from '../store/authStore';
 import { getInitials }                from '../utils/getInitials';
 import { uploadImage, logoPath }      from './storage';
 import { saveConsent }               from './consents';
+import type { WeekHours }            from './hours';
 import logger                       from '../utils/logger';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -142,7 +143,7 @@ export interface RegisterMerchantParams {
   shopSubcategories?: string[];
   shopType?:        'products' | 'services' | 'memberships';
   shopAddress?:     string;
-  openingHours?:    Record<string, any> | null;
+  openingHours?:    WeekHours | null;
   logoLocalUri?:    string | null;
 }
 
