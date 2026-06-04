@@ -18,6 +18,19 @@ async function authHeaders(): Promise<Record<string, string>> {
 
 export type PayMethod = 'wave' | 'orange_money';
 
+// Interface locale pour la ligne Supabase (visibility_subscriptions avec join plan)
+interface VisibilitySubRow {
+  id:         string;
+  plan_id:    string;
+  amount:     number;
+  status:     string;
+  started_at: string;
+  expires_at: string;
+  paid_at:    string | null;
+  pay_method: string;
+  plan:       { label: string } | null;
+}
+
 export interface VisibilityPlan {
   id:             string;
   label:          string;
@@ -37,7 +50,7 @@ export interface ActiveSub {
   status:      'active';
   startedAt:   string;
   expiresAt:   string;
-  paidAt:      string;
+  paidAt:      string | null;
   payMethod:   PayMethod;
 }
 
@@ -91,16 +104,17 @@ export async function getActiveSub(shopId: string): Promise<ActiveSub | null> {
 
   if (!data) return null;
 
+  const row = data as unknown as VisibilitySubRow;
   return {
-    id:        data.id,
-    planId:    data.plan_id,
-    planLabel: (data.plan as unknown as { label: string } | null)?.label ?? data.plan_id,
-    amount:    data.amount,
+    id:        row.id,
+    planId:    row.plan_id,
+    planLabel: row.plan?.label ?? row.plan_id,
+    amount:    row.amount,
     status:    'active',
-    startedAt: data.started_at,
-    expiresAt: data.expires_at,
-    paidAt:    data.paid_at,
-    payMethod: data.pay_method as PayMethod,
+    startedAt: row.started_at,
+    expiresAt: row.expires_at,
+    paidAt:    row.paid_at,
+    payMethod: row.pay_method as PayMethod,
   };
 }
 

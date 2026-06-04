@@ -2,6 +2,18 @@ import { supabase } from '../lib/supabase';
 
 export type ReceiptStatus = 'aucun' | 'valide' | 'utilise' | 'expire';
 
+// Interfaces locales pour les relations nested Supabase (joins)
+interface OrderItemRow {
+  product_name: string | null;
+  name:         string | null;
+  qty:          number | null;
+  unit_price:   number | null;
+}
+interface ReceiptOrderRow extends Record<string, unknown> {
+  shops:       { name: string | null } | null;
+  order_items: OrderItemRow[];
+}
+
 export interface ReceiptInfo {
   orderId:           string;
   shopName:          string;
@@ -33,14 +45,15 @@ export async function getReceipt(orderId: string): Promise<ReceiptInfo | null> {
 
   if (error || !data || !data.receipt_code) return null;
 
+  const row = data as unknown as ReceiptOrderRow;
   return {
     orderId:           data.id,
-    shopName:          (data.shops as any)?.name ?? '—',
+    shopName:          row.shops?.name ?? '—',
     receiptCode:       data.receipt_code,
     receiptStatus:     data.receipt_status as ReceiptStatus,
     validatedAt:       data.validated_at,
     receiptValidUntil: data.receipt_valid_until,
-    items:             ((data.order_items as any[]) ?? []).map(i => ({
+    items:             (row.order_items ?? []).map(i => ({
       name:  i.product_name ?? i.name ?? '—',
       qty:   i.qty   ?? 1,
       price: (i.unit_price ?? 0) * (i.qty ?? 1),

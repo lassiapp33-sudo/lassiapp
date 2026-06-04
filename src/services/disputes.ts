@@ -5,6 +5,17 @@ import { supabase }          from '../lib/supabase';
 import * as storageService   from './storage';
 import useAuthStore          from '../store/authStore';
 
+// Interfaces locales pour les relations nested Supabase (joins)
+interface ProfileNameRow  { name: string | null; }
+interface ShopNameRow     { name: string | null; }
+interface DisputeRow extends Record<string, unknown> {
+  against:  ProfileNameRow | null;
+  shops:    ShopNameRow    | null;
+}
+interface DisputeMessageRow extends Record<string, unknown> {
+  profiles: ProfileNameRow | null;
+}
+
 export type DisputeStatus = 'open' | 'in_review' | 'resolved' | 'rejected';
 export type DisputeReason =
   | 'paid_not_received'
@@ -76,7 +87,7 @@ export async function createDispute(params: CreateDisputeParams): Promise<string
   for (const uri of params.evidenceUris) {
     try {
       const path = `${user.id}/${Date.now()}_${evidenceUrls.length}.jpg`;
-      const url  = await storageService.uploadImage('disputes' as any, uri, path);
+      const url  = await storageService.uploadImage('disputes', uri, path);
       evidenceUrls.push(url);
     } catch {
       // Photo non uploadée — non bloquant
@@ -123,19 +134,22 @@ export async function getMyDisputes(): Promise<Dispute[]> {
 
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map(row => ({
-    id:           row.id,
-    reporterRole: row.reporter_role,
-    againstName:  (row.against as any)?.name ?? 'Inconnu',
-    shopName:     (row.shops as any)?.name ?? null,
-    type:         row.type,
-    reason:       row.reason,
-    description:  row.description,
-    evidenceUrls: (row.evidence_urls ?? []) as string[],
-    status:       row.status,
-    resolution:   row.resolution,
-    createdAt:    row.created_at,
-  }));
+  return (data ?? []).map(r => {
+    const row = r as unknown as DisputeRow;
+    return {
+      id:           r.id,
+      reporterRole: r.reporter_role,
+      againstName:  row.against?.name ?? 'Inconnu',
+      shopName:     row.shops?.name ?? null,
+      type:         r.type,
+      reason:       r.reason,
+      description:  r.description,
+      evidenceUrls: (r.evidence_urls ?? []) as string[],
+      status:       r.status,
+      resolution:   r.resolution,
+      createdAt:    r.created_at,
+    };
+  });
 }
 
 // ─── Messages d'un litige ────────────────────────────────────────────────────
@@ -149,14 +163,17 @@ export async function getDisputeMessages(disputeId: string): Promise<DisputeMess
 
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map(row => ({
-    id:            row.id,
-    senderName:    (row.profiles as any)?.name ?? 'Inconnu',
-    senderRole:    row.sender_role,
-    message:       row.message,
-    attachmentUrl: row.attachment_url,
-    createdAt:     row.created_at,
-  }));
+  return (data ?? []).map(r => {
+    const row = r as unknown as DisputeMessageRow;
+    return {
+      id:            r.id,
+      senderName:    row.profiles?.name ?? 'Inconnu',
+      senderRole:    r.sender_role,
+      message:       r.message,
+      attachmentUrl: r.attachment_url,
+      createdAt:     r.created_at,
+    };
+  });
 }
 
 // ─── Envoyer un message dans le fil ─────────────────────────────────────────

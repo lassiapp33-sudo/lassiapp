@@ -76,7 +76,7 @@ export async function pickImageFromCamera(): Promise<string | null> {
  * @param path    - chemin dans le bucket, ex : "shop123/logo.jpg"
  */
 export async function uploadImage(
-  bucket:   'logos' | 'products' | 'covers' | 'avatars' | 'gallery' | 'signalements' | 'avis',
+  bucket:   'logos' | 'products' | 'covers' | 'avatars' | 'gallery' | 'signalements' | 'avis' | 'disputes',
   localUri: string,
   path:     string,
 ): Promise<string> {
