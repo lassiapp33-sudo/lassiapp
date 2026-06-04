@@ -58,8 +58,9 @@ export default function OrdersScreen({ onBack }: Props) {
   const shopId         = useShopStore(s => s.shopId);
   const orders         = useOrdersStore(s => s.orders);
   const loading        = useOrdersStore(s => s.loading);
-  const setOrderStatus = useOrdersStore(s => s.setOrderStatus);
-  const refuseOrder    = useOrdersStore(s => s.refuseOrder);
+  const setOrderStatus  = useOrdersStore(s => s.setOrderStatus);
+  const syncOrderStatus = useOrdersStore(s => s.syncOrderStatus);
+  const refuseOrder     = useOrdersStore(s => s.refuseOrder);
   const addOrder       = useOrdersStore(s => s.addOrder);
   const loadOrders     = useOrdersStore(s => s.loadOrders);
 
@@ -88,13 +89,13 @@ export default function OrdersScreen({ onBack }: Props) {
     setActiveTab('new');
   }, [addOrder]);
 
-  // Changement de statut en temps réel (autre appareil / Edge Function)
+  // Changement de statut en temps réel — statut déjà confirmé côté serveur
   const handleStatusChange = useCallback((orderId: string, status: string) => {
     const valid: OrderStatus[] = ['new','preparing','ready','done','refused'];
     if (valid.includes(status as OrderStatus)) {
-      setOrderStatus(orderId, status as OrderStatus);
+      syncOrderStatus(orderId, status as OrderStatus);
     }
-  }, [setOrderStatus]);
+  }, [syncOrderStatus]);
 
   useRealtimeOrders(shopId, handleNewOrder, handleStatusChange);
 
@@ -109,8 +110,10 @@ export default function OrdersScreen({ onBack }: Props) {
 
   const displayed = filterByTab(orders, activeTab);
 
-  const advance = (id: string, to: OrderStatus, prepTime?: string) =>
-    setOrderStatus(id, to, prepTime);
+  const advance = async (id: string, to: OrderStatus, prepTime?: string) => {
+    try { await setOrderStatus(id, to, prepTime); }
+    catch { Alert.alert('Erreur', 'Impossible de mettre à jour la commande. Réessaie.'); }
+  };
 
   const openPrepSheet = (order: IncomingOrder) => {
     setAcceptTarget(order);

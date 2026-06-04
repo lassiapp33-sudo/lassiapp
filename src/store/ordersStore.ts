@@ -9,7 +9,10 @@ interface OrdersState {
   loading:  boolean;
 
   loadOrders:    (shopId: string) => Promise<void>;
-  setOrderStatus:(id: string, status: OrderStatus, prepTime?: string) => void;
+  // Action utilisateur (optimiste + DB + rollback)
+  setOrderStatus:(id: string, status: OrderStatus, prepTime?: string) => Promise<void>;
+  // Sync realtime : état déjà confirmé côté serveur, pas d'appel DB
+  syncOrderStatus:(id: string, status: OrderStatus, prepTime?: string) => void;
   refuseOrder:   (id: string, reason?: string) => Promise<void>;
   addOrder:      (order: IncomingOrder) => void;
   setLoading:    (v: boolean) => void;
@@ -33,7 +36,8 @@ const useOrdersStore = create<OrdersState>()((set, get) => ({
     }
   },
 
-  setOrderStatus: (id, status, prepTime) => {
+  setOrderStatus: async (id, status, prepTime) => {
+    const prev = get().orders;
     set(state => ({
       orders: state.orders.map(o =>
         o.id === id
@@ -41,7 +45,22 @@ const useOrdersStore = create<OrdersState>()((set, get) => ({
           : o,
       ),
     }));
-    ordersService.updateOrderStatus(id, status, prepTime).catch(err => logger.warn('[ordersStore] setOrderStatus:', err));
+    try {
+      await ordersService.updateOrderStatus(id, status, prepTime);
+    } catch (err) {
+      set({ orders: prev });
+      throw err;
+    }
+  },
+
+  syncOrderStatus: (id, status, prepTime) => {
+    set(state => ({
+      orders: state.orders.map(o =>
+        o.id === id
+          ? { ...o, status, ...(prepTime ? { prepTime } : {}) }
+          : o,
+      ),
+    }));
   },
 
   refuseOrder: async (id, reason) => {
