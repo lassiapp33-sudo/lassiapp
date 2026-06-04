@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { colors, fonts, radius } from '../../theme';
 import { ProductPromoInfo } from '../../types/promotions';
-import { IcoPlus } from '../icons';
+import { IcoCartAdd } from '../icons';
 import { formatPrice } from '../../utils/format';
 
 export interface Product {
@@ -39,7 +39,7 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
       {/* Zone visuelle photo, emoji, ou vide */}
       <View style={styles.imgZone}>
         {product.photoUrl ? (
-          <Image source={{ uri: product.photoUrl }} style={styles.photo} />
+          <Image source={{ uri: product.photoUrl }} style={styles.photo} contentFit="cover" transition={150} />
         ) : product.emoji ? (
           <Text style={styles.emoji}>{product.emoji}</Text>
         ) : null}
@@ -65,7 +65,7 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
             onPress={e => { e.stopPropagation?.(); onAdd(); }}
             activeOpacity={0.8}
           >
-            <IcoPlus />
+            <IcoCartAdd />
           </TouchableOpacity>
         ) : (
           <View style={styles.qtyBar}>

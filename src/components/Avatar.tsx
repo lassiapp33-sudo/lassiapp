@@ -13,9 +13,10 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, Image, TouchableOpacity,
+  View, Text, TouchableOpacity,
   ActivityIndicator, StyleSheet, StyleProp, ViewStyle,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { colors, fonts } from '../theme';
 import { getInitials } from '../utils/getInitials';
 
@@ -107,12 +108,13 @@ export default function Avatar({
       size="small"
     />
   ) : showImage ? (
-    // Image réelle depuis Supabase Storage
-    // key={imageUrl} : React force un remount si l'URL change → rechargement immédiat
+    // Image réelle depuis Supabase Storage — expo-image : cache disque + transition
     <Image
       key={imageUrl}
       source={{ uri: imageUrl }}
       style={{ width: size, height: size, borderRadius }}
+      contentFit="cover"
+      transition={150}
       onError={() => setHasError(true)}
     />
   ) : (
