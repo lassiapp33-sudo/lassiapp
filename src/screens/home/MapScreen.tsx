@@ -17,6 +17,9 @@ import {
   haversineMeters, formatDistance, walkMinutes, reverseGeocode,
 } from '../../services/location';
 import type { Shop } from '../../services/shops';
+import { computeStatus }        from '../../services/hours';
+import type { WeekHours }        from '../../services/hours';
+import { useRealtimeShops }      from '../../hooks/useRealtimeShops';
 import { CATEGORIES } from '../../config/categories';
 
 // ─── HTML Leaflet embarqué (100 % gratuit — tuiles Carto dark) ────────────────
@@ -168,6 +171,7 @@ interface SheetProps {
 function MapShopSheet({ shop, distanceM, zone, onView, onRoute }: SheetProps) {
   const distStr = distanceM !== null ? formatDistance(distanceM) : null;
   const walkStr = distanceM !== null ? walkMinutes(distanceM) : null;
+  const { isOpen } = computeStatus(shop.openingHours as WeekHours | null, shop.isManuallyClose ?? false);
 
   return (
     <View style={styles.sheet}>
@@ -189,8 +193,8 @@ function MapShopSheet({ shop, distanceM, zone, onView, onRoute }: SheetProps) {
           </View>
           <View style={styles.sheetMeta}>
             <Text style={styles.sheetMetaTxt}>⭐ {shop.rating.toFixed(1)}</Text>
-            <Text style={[styles.sheetMetaTxt, { color: shop.isOpen ? colors.success : colors.danger }]}>
-              ● {shop.isOpen ? 'Ouvert' : 'Fermé'}
+            <Text style={[styles.sheetMetaTxt, { color: isOpen ? colors.success : colors.danger }]}>
+              ● {isOpen ? 'Ouvert' : 'Fermé'}
             </Text>
             {zone ? <Text style={styles.sheetMetaTxt}>{zone}</Text> : null}
           </View>
@@ -272,6 +276,11 @@ export default function MapScreen({ onBack, onShopPress, excludeShopId }: Props)
     if (!coords) refreshLocation();
     loadAllShops();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Mise à jour temps réel quand un commerce change ses horaires ou son statut
+  useRealtimeShops((updated) => {
+    setAllShops(prev => prev.map(s => s.id === updated.id ? updated : s));
+  });
 
   // Recentre la carte quand la position GPS devient disponible
   useEffect(() => {

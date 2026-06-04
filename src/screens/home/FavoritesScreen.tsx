@@ -9,6 +9,9 @@ import LassiScreen from '../../components/LassiScreen';
 import useFavoritesStore from '../../store/favoritesStore';
 import * as shopsService from '../../services/shops';
 import { Shop }          from '../../services/shops';
+import { computeStatus }   from '../../services/hours';
+import type { WeekHours }   from '../../services/hours';
+import { useRealtimeShops } from '../../hooks/useRealtimeShops';
 import Avatar            from '../../components/Avatar';
 import { useT }          from '../../i18n';
 import logger            from '../../utils/logger';
@@ -54,8 +57,9 @@ function toFavFilter(category: string): FavFilter {
 
 function FavCard({ shop, onPress }: { shop: Shop; onPress: () => void }) {
   const t = useT();
-  const statusColor = shop.isOpen ? colors.success : colors.danger;
-  const statusLabel = shop.isOpen ? t.common.open : t.common.closed;
+  const { isOpen } = computeStatus(shop.openingHours as WeekHours | null, shop.isManuallyClose ?? false);
+  const statusColor = isOpen ? colors.success : colors.danger;
+  const statusLabel = isOpen ? t.common.open : t.common.closed;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
@@ -136,6 +140,11 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
   }, [favorites]);
 
   useEffect(() => { loadFavShops(); }, [loadFavShops]);
+
+  // Mise à jour temps réel quand un commerce change ses horaires ou son statut
+  useRealtimeShops((updated) => {
+    setFavShops(prev => prev.map(s => s.id === updated.id ? updated : s));
+  });
 
   const visible = useMemo(() =>
     filter === 'all' ? favShops : favShops.filter(s => toFavFilter(s.category) === filter),

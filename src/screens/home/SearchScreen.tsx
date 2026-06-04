@@ -6,6 +6,9 @@ import {
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import * as shopsService from '../../services/shops';
 import { Shop }          from '../../services/shops';
+import { computeStatus }   from '../../services/hours';
+import type { WeekHours }   from '../../services/hours';
+import { useRealtimeShops } from '../../hooks/useRealtimeShops';
 import Avatar            from '../../components/Avatar';
 import { useT }          from '../../i18n';
 import { LassiMascotte, MASCOTTE_NOM } from '../../components/LassiMascotte';
@@ -34,6 +37,7 @@ function GroupLabel({ emoji, label, vip }: { emoji: string; label: string; vip?:
 
 function ResultCard({ shop, onPress }: { shop: Shop; onPress: () => void }) {
   const t = useT();
+  const { isOpen } = computeStatus(shop.openingHours as WeekHours | null, shop.isManuallyClose ?? false);
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       {/* Logo boutique — Avatar unique, source de vérité shops.logo_url */}
@@ -55,13 +59,13 @@ function ResultCard({ shop, onPress }: { shop: Shop; onPress: () => void }) {
           {shop.rating > 0 && <View style={{ marginRight: 3 }}><IcoStar /></View>}
           <Text style={styles.meta}>
             {shop.rating > 0 ? `${shop.rating} · ` : ''}
-            {shop.isOpen ? t.common.open : t.common.closed} · {shop.zone}
+            {isOpen ? t.common.open : t.common.closed} · {shop.zone}
           </Text>
         </View>
       </View>
 
-      <Text style={[styles.status, shop.isOpen ? styles.statusOpen : styles.statusClosed]}>
-        {shop.isOpen ? t.common.open : t.common.closed}
+      <Text style={[styles.status, isOpen ? styles.statusOpen : styles.statusClosed]}>
+        {isOpen ? t.common.open : t.common.closed}
       </Text>
     </TouchableOpacity>
   );
@@ -88,6 +92,11 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
       .catch(() => setShops([]))
       .finally(() => setLoading(false));
   }, []);
+
+  // Mise à jour temps réel quand un commerce change ses horaires ou son statut
+  useRealtimeShops((updated) => {
+    setShops(prev => prev.map(s => s.id === updated.id ? updated : s));
+  });
 
   const q = query.trim().toLowerCase();
   const filtered = q

@@ -1,6 +1,8 @@
 import { supabase }               from '../lib/supabase';
 import { FAQ_ITEMS, FaqItem }       from '../data/faqData';
 import { calcDistanceMeters }       from './shops';
+import { computeStatus }            from './hours';
+import type { WeekHours }           from './hours';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -272,7 +274,7 @@ function rowToResult(row: Record<string, any>): ShopResult {
     category:  row.category,
     zone:      row.zone ?? '',
     logoUrl:   row.logo_url ?? null,
-    isOpen:    Boolean(row.is_open),
+    isOpen:    computeStatus(row.opening_hours as WeekHours | null, Boolean(row.is_manually_closed)).isOpen,
     isVip,
     rating:    Number(row.rating ?? 0),
     latitude:  row.latitude ?? null,
@@ -287,7 +289,7 @@ export async function rechercherPrestataires(
 ): Promise<ShopResult[]> {
   let query = supabase
     .from('shops')
-    .select('id,name,category,zone,logo_url,is_open,is_vip,vip_manual,vip_manual_until,rating,latitude,longitude')
+    .select('id,name,category,zone,logo_url,opening_hours,is_manually_closed,is_vip,vip_manual,vip_manual_until,rating,latitude,longitude')
     .eq('category', categorieId)
     .limit(20);
 
