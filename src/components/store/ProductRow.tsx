@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { StoreProduct, StockStatus } from '../../types/store';
@@ -41,7 +42,8 @@ export default function ProductRow({ product, onEdit, onToggleStock, promoInfo }
           <Image
             source={{ uri: product.photoUrl }}
             style={styles.photo}
-            onError={() => {}}
+            contentFit="cover"
+            transition={150}
           />
         ) : product.emoji ? (
           <Text style={styles.emoji}>{product.emoji}</Text>

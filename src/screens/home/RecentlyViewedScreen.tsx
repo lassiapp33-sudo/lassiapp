@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Image,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import * as rvService from '../../services/recentlyViewed';
@@ -48,7 +49,7 @@ function RecentCard({ shop, onPress }: CardProps) {
     <TouchableOpacity style={rc.wrap} onPress={onPress} activeOpacity={0.8}>
       <View style={rc.logo}>
         {shop.logoUrl
-          ? <Image source={{ uri: shop.logoUrl }} style={rc.logoImg} />
+          ? <Image source={{ uri: shop.logoUrl }} style={rc.logoImg} contentFit="cover" transition={150} />
           : <Text style={rc.logoFallback}>{shop.name.charAt(0).toUpperCase()}</Text>
         }
       </View>

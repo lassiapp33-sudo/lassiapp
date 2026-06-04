@@ -207,7 +207,7 @@ export default function CategoryScreen({ initialCatId, onBack, onShopPress, onSe
     if (!entry.isPlaceholder && entry.id) handleShopPress(entry.id, entry.name);
   }, [handleShopPress]);
 
-  const listHeader = (
+  const listHeader = useMemo(() => (
     <>
       <CatNavBar active={catId} onSelect={handleCatChange} />
       {meta.subcats.length > 1 && (
@@ -227,7 +227,7 @@ export default function CategoryScreen({ initialCatId, onBack, onShopPress, onSe
         </View>
       </View>
     </>
-  );
+  ), [catId, meta, subCat, vipEntries, filter, t, filteredShops.length, handleCatChange, setSubCat, handleVipPress, setFilter]);
 
   return (
     <LassiScreen
