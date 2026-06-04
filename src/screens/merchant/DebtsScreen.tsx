@@ -85,7 +85,8 @@ export default function DebtsScreen({ onBack }: Props) {
   const handleAddDebt = async (option: ClientOption, amount: number) => {
     if (!shopId) return;
     if (option.isExisting) {
-      addToDebt(option.id, amount);
+      try { await addToDebt(option.id, amount); }
+      catch { Alert.alert('Erreur', "Impossible d'enregistrer la dette. Réessaie."); }
     } else {
       // Nouveau client : créer la ligne debt puis ajouter le montant
       try {

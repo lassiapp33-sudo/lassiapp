@@ -12,10 +12,10 @@ interface DebtsState {
   loadDebts: (shopId: string) => Promise<void>;
 
   // Mutations — optimistes + write-through Supabase
-  addToDebt:    (debtorId: string, amount: number) => void;
+  addToDebt:    (debtorId: string, amount: number) => Promise<void>;
   addDebtor:    (debtor: Omit<Debtor, 'id'>)       => Promise<void>;
-  markPaid:     (debtorId: string)                 => void;
-  removeDebtor: (debtorId: string)                 => void;
+  markPaid:     (debtorId: string)                 => Promise<void>;
+  removeDebtor: (debtorId: string)                 => Promise<void>;
 
   setLoading: (v: boolean) => void;
 }
@@ -38,8 +38,8 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
     }
   },
 
-  addToDebt: (debtorId, amount) => {
-    // Mise à jour optimiste
+  addToDebt: async (debtorId, amount) => {
+    const prev = get().debtors;
     set(state => ({
       debtors: state.debtors.map(d =>
         d.id === debtorId
@@ -47,21 +47,23 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
           : d,
       ),
     }));
-    debtsService.addToDebt(debtorId, amount).catch(logger.warn);
+    try {
+      await debtsService.addToDebt(debtorId, amount);
+    } catch (err) {
+      set({ debtors: prev });
+      throw err;
+    }
   },
 
   addDebtor: async (debtor) => {
     const { shopId } = get();
     if (!shopId) return;
-    try {
-      const saved = await debtsService.addDebtor(shopId, debtor.name, debtor.phone);
-      set(state => ({ debtors: [...state.debtors, saved] }));
-    } catch (err) {
-      logger.warn('[debtsStore] addDebtor:', err);
-    }
+    const saved = await debtsService.addDebtor(shopId, debtor.name, debtor.phone);
+    set(state => ({ debtors: [...state.debtors, saved] }));
   },
 
-  markPaid: (debtorId) => {
+  markPaid: async (debtorId) => {
+    const prev = get().debtors;
     set(state => ({
       debtors: state.debtors.map(d =>
         d.id === debtorId
@@ -69,12 +71,23 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
           : d,
       ),
     }));
-    debtsService.markPaid(debtorId).catch(logger.warn);
+    try {
+      await debtsService.markPaid(debtorId);
+    } catch (err) {
+      set({ debtors: prev });
+      throw err;
+    }
   },
 
-  removeDebtor: (debtorId) => {
+  removeDebtor: async (debtorId) => {
+    const prev = get().debtors;
     set(state => ({ debtors: state.debtors.filter(d => d.id !== debtorId) }));
-    debtsService.removeDebtor(debtorId).catch(logger.warn);
+    try {
+      await debtsService.removeDebtor(debtorId);
+    } catch (err) {
+      set({ debtors: prev });
+      throw err;
+    }
   },
 }));
 
