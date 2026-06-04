@@ -18,8 +18,13 @@ import OnboardingScreen  from './src/screens/OnboardingScreen';
 import AuthNavigator     from './src/screens/AuthNavigator';
 import HomeNavigator     from './src/screens/home/HomeNavigator';
 import MerchantNavigator from './src/screens/merchant/MerchantNavigator';
-import useAuthStore      from './src/store/authStore';
-import * as authService  from './src/services/auth';
+import useAuthStore           from './src/store/authStore';
+import useShopStore            from './src/store/shopStore';
+import useOrdersStore          from './src/store/ordersStore';
+import useDebtsStore           from './src/store/debtsStore';
+import useFavoritesStore       from './src/store/favoritesStore';
+import useNotificationsStore   from './src/store/notificationsStore';
+import * as authService        from './src/services/auth';
 import { usePushToken, removeCurrentDeviceToken } from './src/hooks/usePushToken';
 import usePendingNavStore from './src/store/pendingNavStore';
 
@@ -138,11 +143,16 @@ export default function App() {
 
   if (!fontsLoaded) return null;
 
-  // Déconnexion : supprime le token push, Supabase + store + retour à l'auth
+  // Déconnexion : supprime le token push, Supabase + tous les stores + retour à l'auth
   const handleLogout = async () => {
     await removeCurrentDeviceToken();
     try { await authService.logout(); } catch (_) {}
     useAuthStore.getState().logout();
+    useShopStore.setState({ shopId: null, profile: { initial: 'M', name: 'Ma Boutique', subtitle: '', isOpen: true }, categories: [], products: [], loading: false, shopNotFound: false });
+    useOrdersStore.setState({ orders: [], shopId: null, loading: false });
+    useDebtsStore.setState({ debtors: [], shopId: null, loading: false });
+    useFavoritesStore.setState({ favorites: [], loading: false });
+    useNotificationsStore.setState({ notifications: [], loading: false });
     setScreen('auth');
   };
 
