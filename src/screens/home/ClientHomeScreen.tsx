@@ -49,11 +49,12 @@ export default function ClientHomeScreen({
 }: Props) {
   const t = useT();
 
-  const [tab,     setTab]     = useState<HomeTab>('nearby');
-  const [navTab,  setNavTab]  = useState<NavTab>('home');
-  const [nearby,  setNearby]  = useState<NearbyPlace[]>([]);
-  const [recos,   setRecos]   = useState<RecoItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tab,       setTab]       = useState<HomeTab>('nearby');
+  const [navTab,    setNavTab]    = useState<NavTab>('home');
+  const [nearby,    setNearby]    = useState<NearbyPlace[]>([]);
+  const [recos,     setRecos]     = useState<RecoItem[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const userInitial       = useAuthStore(s => s.user?.initial  ?? 'A');
   const userName          = useAuthStore(s => s.user?.name     ?? '');
@@ -120,9 +121,11 @@ export default function ClientHomeScreen({
       }
 
       setNearby(places);
+      setLoadError(false);
     } catch {
       setNearby([]);
       setRecos([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -217,6 +220,10 @@ export default function ClientHomeScreen({
           {loading ? (
             <View style={styles.loader}>
               <ActivityIndicator color={colors.accent} />
+            </View>
+          ) : loadError ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyTxt}>Connexion impossible. Vérifie ta connexion et réessaie.</Text>
             </View>
           ) : nearby.length === 0 ? (
             <View style={styles.empty}>

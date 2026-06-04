@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Linking, Image,
@@ -105,6 +105,7 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
   const [shopData,      setShopData]      = useState<Shop | null>(null);
   const [realProducts,  setRealProducts]  = useState<StoreProduct[]>([]);
   const [loading,       setLoading]       = useState(true);
+  const [loadError,     setLoadError]     = useState(false);
   const [activeTab,     setActiveTab]     = useState<MenuTabId>('all');
   const [resolvedZone,  setResolvedZone]  = useState<string>('');
   const [activePromos,  setActivePromos]  = useState<Promotion[]>([]);
@@ -113,32 +114,38 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
   const userCoords = useLocationStore(s => s.coords);
 
   // ── Chargement depuis Supabase ────────────────────────────────────────────
-  useEffect(() => {
+  const loadShop = useCallback(async () => {
     if (!shopId) { setLoading(false); return; }
-    Promise.all([
-      shopsService.getShopById(shopId),
-      productsService.getProducts(shopId),
-      promosService.getActivePromos(shopId),
-    ])
-      .then(([shop, products, promos]) => {
-        setShopData(shop);
-        setActivePromos(promos);
-        // Disponibles d'abord, épuisés en bas (toujours visibles mais marqués)
-        setRealProducts([
-          ...products.filter(p => p.stock === 'in'),
-          ...products.filter(p => p.stock === 'out'),
-        ]);
-        if (shop?.zone) {
-          setResolvedZone(shop.zone);
-        } else if (shop?.latitude && shop?.longitude) {
-          reverseGeocode(shop.latitude, shop.longitude)
-            .then(z => setResolvedZone(z))
-            .catch(() => {});
-        }
-      })
-      .catch(err => logger.warn('[ShopScreen] load:', err))
-      .finally(() => setLoading(false));
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const [shop, products, promos] = await Promise.all([
+        shopsService.getShopById(shopId),
+        productsService.getProducts(shopId),
+        promosService.getActivePromos(shopId),
+      ]);
+      setShopData(shop);
+      setActivePromos(promos);
+      setRealProducts([
+        ...products.filter(p => p.stock === 'in'),
+        ...products.filter(p => p.stock === 'out'),
+      ]);
+      if (shop?.zone) {
+        setResolvedZone(shop.zone);
+      } else if (shop?.latitude && shop?.longitude) {
+        reverseGeocode(shop.latitude, shop.longitude)
+          .then(z => setResolvedZone(z))
+          .catch(() => {});
+      }
+    } catch (err) {
+      logger.warn('[ShopScreen] load:', err);
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [shopId]);
+
+  useEffect(() => { loadShop(); }, [loadShop]);
 
   // ── Type de vitrine ───────────────────────────────────────────────────────
   const shopType = shopData?.shopType ?? 'products';
@@ -267,6 +274,25 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
   const CART_BAR_H   = 56;
   const scrollBotPad = FOOTER_HEIGHT + (cartCount > 0 ? CART_BAR_H + 16 : 0) + 28;
   const cartBottom   = FOOTER_HEIGHT + 8;
+
+  if (loadError) {
+    return (
+      <View style={styles.root}>
+        <View style={[styles.errorCtrl, { paddingTop: TOP_INSET + 8 }]}>
+          <TouchableOpacity style={styles.backBtnSm} onPress={onBack} activeOpacity={0.75}>
+            <IcoBack />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.errorCenter}>
+          <Text style={styles.errorTitle}>Impossible de charger la fiche</Text>
+          <Text style={styles.errorSub}>Vérifie ta connexion et réessaie.</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={loadShop} activeOpacity={0.8}>
+            <Text style={styles.retryTxt}>Réessayer</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -668,5 +694,53 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize:   12,
     lineHeight: 18,
+  },
+
+  // État d'erreur
+  errorCtrl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingBottom: 8,
+  },
+  backBtnSm: {
+    width: 38, height: 38,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  errorTitle: {
+    color: colors.white,
+    fontFamily: fonts.title,
+    fontSize: 17,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorSub: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryBtn: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  retryTxt: {
+    color: colors.bg,
+    fontFamily: fonts.title,
+    fontSize: 15,
   },
 });

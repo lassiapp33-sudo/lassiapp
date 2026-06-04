@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, TextInput, KeyboardAvoidingView, Platform,
+  StyleSheet, TextInput, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
@@ -59,7 +59,7 @@ export default function MyDisputesScreen({ onBack }: Props) {
       setNewMsg('');
       loadMessages(selected.id);
     } catch {
-      // Erreur silencieuse — l'input reste rempli
+      Alert.alert('Erreur', "Impossible d'envoyer le message. Vérifie ta connexion et réessaie.");
     } finally {
       setSendingMsg(false);
     }

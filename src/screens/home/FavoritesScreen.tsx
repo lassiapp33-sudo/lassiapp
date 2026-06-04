@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity,
-  ScrollView, StyleSheet,
+  ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -112,8 +112,9 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
     { id: 'hair',    label: t.favorites.hair     },
   ];
 
-  const [filter,    setFilter]    = useState<FavFilter>('all');
-  const [favShops,  setFavShops]  = useState<Shop[]>([]);
+  const [filter,      setFilter]      = useState<FavFilter>('all');
+  const [favShops,    setFavShops]    = useState<Shop[]>([]);
+  const [shopsLoading, setShopsLoading] = useState(false);
 
   const favorites     = useFavoritesStore(s => s.favorites);
   const loadFavorites = useFavoritesStore(s => s.loadFavorites);
@@ -125,9 +126,11 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
   // Charger les boutiques favorisées depuis Supabase
   useEffect(() => {
     if (favorites.length === 0) { setFavShops([]); return; }
+    setShopsLoading(true);
     Promise.all(favorites.map(id => shopsService.getShopById(id)))
       .then(results => setFavShops(results.filter(Boolean) as Shop[]))
-      .catch(err => logger.warn('[FavoritesScreen] load shops:', err));
+      .catch(err => logger.warn('[FavoritesScreen] load shops:', err))
+      .finally(() => setShopsLoading(false));
   }, [favorites]);
 
   const visible = filter === 'all'
@@ -174,19 +177,27 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}
       >
-        {visible.map(shop => (
-          <FavCard
-            key={shop.id}
-            shop={shop}
-            onPress={() => onShopPress(shop.id, shop.name)}
-          />
-        ))}
-
-        {visible.length === 0 && (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTxt}>{t.favorites.empty}</Text>
-            <Text style={styles.emptySub}>{t.favorites.emptySub}</Text>
+        {shopsLoading ? (
+          <View style={styles.loader}>
+            <ActivityIndicator color={colors.accent} />
           </View>
+        ) : (
+          <>
+            {visible.map(shop => (
+              <FavCard
+                key={shop.id}
+                shop={shop}
+                onPress={() => onShopPress(shop.id, shop.name)}
+              />
+            ))}
+
+            {visible.length === 0 && (
+              <View style={styles.empty}>
+                <Text style={styles.emptyTxt}>{t.favorites.empty}</Text>
+                <Text style={styles.emptySub}>{t.favorites.emptySub}</Text>
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
     </LassiScreen>
@@ -273,6 +284,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  loader:   { paddingVertical: 48, alignItems: 'center' },
   empty:    { paddingVertical: 40, alignItems: 'center', paddingHorizontal: 24 },
   emptyTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 13, textAlign: 'center' },
   emptySub: { color: '#3a3c5c', fontFamily: fonts.body, fontSize: 11.5, textAlign: 'center', marginTop: 6 },

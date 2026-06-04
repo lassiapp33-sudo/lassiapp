@@ -157,9 +157,8 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         orderType:    freshOrderType,
       });
 
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erreur inattendue';
-      Alert.alert('Erreur', msg);
+    } catch {
+      Alert.alert('Erreur', 'Une erreur est survenue. Réessaie dans un instant.');
     } finally {
       if (releaseInFinally) {
         isSubmittingRef.current = false;

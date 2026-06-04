@@ -70,6 +70,7 @@ export default function OrdersScreen({ onBack }: Props) {
   const [showPrep,      setShowPrep]      = useState(false);
   const [showVerify,    setShowVerify]    = useState(false);
   const [refreshing,    setRefreshing]    = useState(false);
+  const [processingId,  setProcessingId]  = useState<string | null>(null);
 
   useEffect(() => {
     if (shopId) loadOrders(shopId);
@@ -111,8 +112,11 @@ export default function OrdersScreen({ onBack }: Props) {
   const displayed = filterByTab(orders, activeTab);
 
   const advance = async (id: string, to: OrderStatus, prepTime?: string) => {
+    if (processingId) return;
+    setProcessingId(id);
     try { await setOrderStatus(id, to, prepTime); }
     catch { Alert.alert('Erreur', 'Impossible de mettre à jour la commande. Réessaie.'); }
+    finally { setProcessingId(null); }
   };
 
   const openPrepSheet = (order: IncomingOrder) => {
