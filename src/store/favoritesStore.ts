@@ -10,7 +10,7 @@ interface FavoritesState {
   loadFavorites: () => Promise<void>;
 
   // Toggle — optimiste + write-through Supabase
-  toggleFavorite: (shopId: string) => void;
+  toggleFavorite: (shopId: string) => Promise<void>;
 
   setLoading: (v: boolean) => void;
 }
@@ -31,18 +31,21 @@ const useFavoritesStore = create<FavoritesState>()((set, get) => ({
     }
   },
 
-  toggleFavorite: (shopId) => {
+  toggleFavorite: async (shopId) => {
     const { favorites } = get();
     const isFav = favorites.includes(shopId);
-
-    // Mise à jour optimiste
     set({
       favorites: isFav
         ? favorites.filter(id => id !== shopId)
         : [...favorites, shopId],
     });
-
-    favService.toggleFavorite(shopId, isFav).catch(err => logger.warn('[favoritesStore] toggleFavorite:', err));
+    try {
+      await favService.toggleFavorite(shopId, isFav);
+    } catch (err) {
+      // Rollback : l'icône cœur revient à son état précédent
+      set({ favorites });
+      logger.warn('[favoritesStore] toggleFavorite:', err);
+    }
   },
 }));
 
