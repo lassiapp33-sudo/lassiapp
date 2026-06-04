@@ -18,13 +18,14 @@ import OnboardingScreen  from './src/screens/OnboardingScreen';
 import AuthNavigator     from './src/screens/AuthNavigator';
 import HomeNavigator     from './src/screens/home/HomeNavigator';
 import MerchantNavigator from './src/screens/merchant/MerchantNavigator';
-import useAuthStore           from './src/store/authStore';
-import useShopStore            from './src/store/shopStore';
-import useOrdersStore          from './src/store/ordersStore';
-import useDebtsStore           from './src/store/debtsStore';
-import useFavoritesStore       from './src/store/favoritesStore';
-import useNotificationsStore   from './src/store/notificationsStore';
-import * as authService        from './src/services/auth';
+import useAuthStore            from './src/store/authStore';
+import useShopStore             from './src/store/shopStore';
+import useOrdersStore           from './src/store/ordersStore';
+import useDebtsStore            from './src/store/debtsStore';
+import useFavoritesStore        from './src/store/favoritesStore';
+import useNotificationsStore    from './src/store/notificationsStore';
+import useCartStore             from './src/store/cartStore';
+import * as authService         from './src/services/auth';
 import { usePushToken, removeCurrentDeviceToken } from './src/hooks/usePushToken';
 import usePendingNavStore from './src/store/pendingNavStore';
 
@@ -148,11 +149,20 @@ export default function App() {
     await removeCurrentDeviceToken();
     try { await authService.logout(); } catch (_) {}
     useAuthStore.getState().logout();
-    useShopStore.setState({ shopId: null, profile: { initial: 'M', name: 'Ma Boutique', subtitle: '', isOpen: true }, categories: [], products: [], loading: false, shopNotFound: false });
+    useShopStore.setState({
+      shopId: null,
+      profile:  { initial: 'M', name: 'Ma Boutique', subtitle: '', isOpen: true },
+      context:  { shopType: 'products', openingHours: null, isManuallyClose: false, galleryUrls: [] },
+      categories: [],
+      products:   [],
+      loading:    false,
+      shopNotFound: false,
+    });
     useOrdersStore.setState({ orders: [], shopId: null, loading: false });
     useDebtsStore.setState({ debtors: [], shopId: null, loading: false });
     useFavoritesStore.setState({ favorites: [], loading: false });
     useNotificationsStore.setState({ notifications: [], loading: false });
+    useCartStore.getState().clearCart();
     setScreen('auth');
   };
 

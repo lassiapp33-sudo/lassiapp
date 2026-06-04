@@ -48,7 +48,15 @@ export async function deleteAccount(): Promise<void> {
 
   // Vider tous les stores Zustand
   useAuthStore.getState().logout();
-  useShopStore.setState({ shopId: null, loading: false });
+  useShopStore.setState({
+    shopId: null,
+    profile:  { initial: 'M', name: 'Ma Boutique', subtitle: '', isOpen: true },
+    context:  { shopType: 'products', openingHours: null, isManuallyClose: false, galleryUrls: [] },
+    categories: [],
+    products:   [],
+    loading:    false,
+    shopNotFound: false,
+  });
   useOrdersStore.setState({ orders: [], shopId: null, loading: false });
   useDebtsStore.setState({ debtors: [], shopId: null, loading: false });
   useFavoritesStore.setState({ favorites: [], loading: false });
