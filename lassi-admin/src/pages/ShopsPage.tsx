@@ -11,7 +11,7 @@ import { getShopDisputeStats, type RecidivistStat } from '../services/disputes'
 
 const CAT_LABELS: Record<string, string> = {
   stores: 'Commerçants', tangana: 'Tangana', food: 'Restos',
-  hair: 'Coiffeurs', sport: 'Fitness', bakery: 'Boulangeries',
+  hair: 'Coiffeurs', sport: 'Sport', bakery: 'Boulangeries',
   fruiterie: 'Fruiterie',
 }
 

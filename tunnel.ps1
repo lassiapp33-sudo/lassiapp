@@ -11,10 +11,12 @@ if (-not (Test-Path $appDir)) {
     exit 1
 }
 
-# Recupere l'IP Tailscale automatiquement
+# Recupere l'IP Tailscale automatiquement (sans 2>$null : peut corrompre la variable en PS 5.1)
 $tailscaleIp = $null
 try {
-    $tailscaleIp = (tailscale ip -4 2>$null).Trim()
+    $raw = & tailscale ip -4
+    $tailscaleIp = ($raw | Where-Object { $_ -match '^\d{1,3}(\.\d{1,3}){3}$' } | Select-Object -First 1)
+    if ($tailscaleIp) { $tailscaleIp = $tailscaleIp.Trim() }
 } catch {}
 
 if (-not $tailscaleIp) {

@@ -16,7 +16,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   tangana:   'Tangana',
   food:      'Restos',
   hair:      'Coiffeurs',
-  sport:     'Fitness',
+  sport:     'Sport',
   bakery:    'Boulangeries',
   fruiterie: 'Fruiterie',
 }

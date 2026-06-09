@@ -190,13 +190,15 @@ export default function SignalementsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [typeFilter,   setTypeFilter]   = useState<TypeFilter>('all')
   const [loading,      setLoading]      = useState(true)
+  const [error,        setError]        = useState<string | null>(null)
   const [selected,     setSelected]     = useState<Signalement | null>(null)
 
   function load() {
     setLoading(true)
+    setError(null)
     getSignalements(statusFilter, typeFilter)
       .then(setSignalements)
-      .catch(console.error)
+      .catch((e: any) => setError(e.message))
       .finally(() => setLoading(false))
   }
 
@@ -207,6 +209,8 @@ export default function SignalementsPage() {
   function handleStatusChange(id: string, status: SignalementStatus) {
     setSignalements(prev => prev.map(s => s.id === id ? { ...s, status } : s))
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, status } : null)
+    // Notifie la sidebar de rafraîchir son badge
+    window.dispatchEvent(new CustomEvent('signalement-status-changed'))
   }
 
   return (
@@ -220,6 +224,12 @@ export default function SignalementsPage() {
           </span>
         )}
       </div>
+
+      {error && (
+        <div className="bg-danger/10 border border-danger/30 rounded-xl p-4">
+          <p className="text-danger text-sm">Erreur : {error}</p>
+        </div>
+      )}
 
       {/* Filtres statut */}
       <div className="flex gap-1 bg-surface border border-border rounded-lg p-1 w-fit flex-wrap">

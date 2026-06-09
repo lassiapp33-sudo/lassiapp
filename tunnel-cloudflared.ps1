@@ -17,87 +17,46 @@ if (-not (Get-Command cloudflared -ErrorAction SilentlyContinue)) {
     Write-Host "  Installation via winget..." -ForegroundColor Yellow
     Write-Host ""
     winget install cloudflare.cloudflared --source winget --accept-source-agreements --accept-package-agreements
-    $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" +
-                [System.Environment]::GetEnvironmentVariable("PATH", "User")
+
+    # Rafraichir le PATH depuis le registre + repertoire shims WinGet (scope user)
+    $machinePath = [System.Environment]::GetEnvironmentVariable("PATH", "Machine")
+    $userPath    = [System.Environment]::GetEnvironmentVariable("PATH", "User")
+    $wingetLinks = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links"
+    $env:PATH = "$machinePath;$userPath;$wingetLinks"
+
     if (-not (Get-Command cloudflared -ErrorAction SilentlyContinue)) {
         Write-Host "  Ouvre un nouveau terminal et relance ce script." -ForegroundColor Yellow
         exit 1
     }
 }
 
-# --- Creer le faux module @expo/ngrok qui utilise cloudflared ---
+# --- Synchroniser le shim @expo/ngrok avec ngrok-localtunnel-shim ---
+# node_modules/@expo/ngrok est gere par npm (file: dans package.json).
+# On ecrase quand meme pour garantir la version cloudflared apres npm install.
 $ngrokDir = Join-Path $appDir "node_modules\@expo\ngrok"
 New-Item -ItemType Directory -Force -Path $ngrokDir | Out-Null
 
-Set-Content -Path (Join-Path $ngrokDir "package.json") -Encoding UTF8 -Value @'
-{
-  "name": "@expo/ngrok",
-  "version": "4.1.0",
-  "main": "index.js"
+# Utiliser WriteAllText (UTF-8 sans BOM) car Set-Content -Encoding UTF8 ajoute un BOM en PS 5.1
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+
+[System.IO.File]::WriteAllText(
+    (Join-Path $ngrokDir "package.json"),
+    "{`n  `"name`": `"@expo/ngrok`",`n  `"version`": `"4.1.0`",`n  `"main`": `"index.js`"`n}`n",
+    $utf8NoBom
+)
+
+$shimSrc = Join-Path $appDir "ngrok-localtunnel-shim\index.js"
+if (Test-Path $shimSrc) {
+    # Copier directement depuis la source (evite la duplication)
+    [System.IO.File]::WriteAllText(
+        (Join-Path $ngrokDir "index.js"),
+        [System.IO.File]::ReadAllText($shimSrc, $utf8NoBom),
+        $utf8NoBom
+    )
+} else {
+    Write-Error "Shim introuvable : $shimSrc"
+    exit 1
 }
-'@
-
-Set-Content -Path (Join-Path $ngrokDir "index.js") -Encoding UTF8 -Value @'
-const { spawn } = require('child_process');
-
-let cfProcess = null;
-
-function cleanup() {
-  if (cfProcess) {
-    try { cfProcess.kill(); } catch(e) {}
-    cfProcess = null;
-  }
-}
-process.on('exit', cleanup);
-process.on('SIGINT', cleanup);
-process.on('SIGTERM', cleanup);
-
-function startTunnel(port) {
-  return new Promise((resolve, reject) => {
-    cfProcess = spawn('cloudflared', [
-      'tunnel', '--url', `http://localhost:${port}`
-    ], { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
-
-    cfProcess.on('error', err =>
-      reject(new Error('cloudflared introuvable : ' + err.message))
-    );
-
-    let output = '';
-    let resolved = false;
-
-    cfProcess.stderr.on('data', (data) => {
-      output += data.toString();
-      const m = output.match(/https:\/\/[a-z0-9\-]+\.trycloudflare\.com/);
-      if (m && !resolved) {
-        resolved = true;
-        console.log('\n\x1b[32m  Tunnel Cloudflare : ' + m[0] + '\x1b[0m');
-        console.log('\x1b[90m  Scanne le QR code avec la camera iPhone -> Expo Go\x1b[0m\n');
-        resolve(m[0]);
-      }
-    });
-
-    setTimeout(() => {
-      if (!resolved) reject(new Error('Timeout : URL cloudflared introuvable apres 60s'));
-    }, 60000);
-  });
-}
-
-// Expo SDK 54 appelle instance.connect(portOrOptions)
-async function connect(portOrOptions) {
-  const port = typeof portOrOptions === 'object'
-    ? (portOrOptions.port || portOrOptions.addr || 8081)
-    : portOrOptions;
-  return startTunnel(port);
-}
-
-async function connectAsync(port) { return startTunnel(port); }
-async function disconnect() { cleanup(); }
-async function disconnectAsync() { cleanup(); }
-async function kill() { cleanup(); }
-async function killAsync() { cleanup(); }
-
-module.exports = { connect, connectAsync, disconnect, disconnectAsync, kill, killAsync };
-'@
 
 Write-Host ""
 Write-Host "  LASSI - Expo start (Cloudflare Tunnel)" -ForegroundColor Yellow

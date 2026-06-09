@@ -49,13 +49,13 @@ export async function getSignalements(
   status?: SignalementStatus | 'all',
   type?:   SignalementType   | 'all',
 ): Promise<Signalement[]> {
+  // user_id → auth.users (pas profiles), donc pas de join direct possible via PostgREST
   let q = supabase
     .from('signalements')
     .select(`
       id, user_id, profil, type, description,
       related_order_id, related_shop_id,
       screenshot_url, status, created_at,
-      profiles!user_id(name),
       shops!related_shop_id(name)
     `)
     .order('created_at', { ascending: false })
@@ -66,10 +66,25 @@ export async function getSignalements(
   const { data, error } = await q
   if (error) throw new Error(error.message)
 
-  return (data ?? []).map((row: any) => ({
+  const rows = data ?? []
+
+  // Récupération des noms en une seule requête batch
+  const userIds = [...new Set(rows.map((r: any) => r.user_id).filter(Boolean))]
+  let nameMap: Record<string, string> = {}
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .in('id', userIds)
+    if (profiles) {
+      nameMap = Object.fromEntries(profiles.map((p: any) => [p.id, p.name]))
+    }
+  }
+
+  return rows.map((row: any) => ({
     id:             row.id,
     userId:         row.user_id,
-    userName:       row.profiles?.name ?? null,
+    userName:       nameMap[row.user_id] ?? null,
     profil:         row.profil,
     type:           row.type,
     description:    row.description,

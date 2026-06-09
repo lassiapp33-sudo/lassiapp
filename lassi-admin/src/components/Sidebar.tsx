@@ -25,14 +25,26 @@ export default function Sidebar() {
   const [openDisputes,    setOpenDisputes]    = useState(0)
   const [newSignalements, setNewSignalements] = useState(0)
 
+  function refreshSignalementsCount() {
+    getNewSignalementsCount().then(setNewSignalements).catch(() => {})
+  }
+
   useEffect(() => {
     getOpenDisputesCount().then(setOpenDisputes).catch(() => {})
-    getNewSignalementsCount().then(setNewSignalements).catch(() => {})
+    refreshSignalementsCount()
+
     const interval = setInterval(() => {
       getOpenDisputesCount().then(setOpenDisputes).catch(() => {})
-      getNewSignalementsCount().then(setNewSignalements).catch(() => {})
+      refreshSignalementsCount()
     }, 60_000)
-    return () => clearInterval(interval)
+
+    // Mise à jour immédiate du badge quand un statut change depuis SignalementsPage
+    window.addEventListener('signalement-status-changed', refreshSignalementsCount)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('signalement-status-changed', refreshSignalementsCount)
+    }
   }, [])
 
   const navItems: NavItem[] = [
