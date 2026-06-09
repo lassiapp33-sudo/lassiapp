@@ -106,7 +106,7 @@ export default function BubbleTicket({
             // Version normale : détail des articles + total
             <>
               {items.map((item, i) => (
-                <View key={i} style={styles.line}>
+                <View key={`${item.name}_${i}`} style={styles.line}>
                   <Text style={styles.lineLeft}>
                     <Text style={styles.lineQty}>{item.qty}× </Text>
                     {item.name}

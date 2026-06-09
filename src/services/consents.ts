@@ -22,7 +22,6 @@ export async function hasCurrentConsent(userId: string): Promise<boolean> {
     .eq('user_id', userId)
     .eq('cgu_version', CGU_VERSION)
     .eq('privacy_version', PRIVACY_VERSION)
-    .limit(1)
-    .single();
+    .maybeSingle();
   return Boolean(data);
 }

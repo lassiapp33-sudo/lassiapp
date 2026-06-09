@@ -22,13 +22,17 @@ const useLocationStore = create<LocationState>()(set => ({
 
   refreshLocation: async () => {
     set({ loading: true, zoneName: 'Localisation…' });
-    const coords = await locationService.getCurrentLocation();
-    if (!coords) {
+    try {
+      const coords = await locationService.getCurrentLocation();
+      if (!coords) {
+        set({ loading: false, zoneName: 'Position non disponible' });
+        return;
+      }
+      const zoneName = await locationService.reverseGeocode(coords.latitude, coords.longitude);
+      set({ coords, zoneName, loading: false });
+    } catch {
       set({ loading: false, zoneName: 'Position non disponible' });
-      return;
     }
-    const zoneName = await locationService.reverseGeocode(coords.latitude, coords.longitude);
-    set({ coords, zoneName, loading: false });
   },
 }));
 

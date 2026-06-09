@@ -19,19 +19,20 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
   useEffect(() => {
     let cancelled = false;
 
-    supabase
-      .from('products')
-      .select(`
-        id,
-        name,
-        price,
-        emoji,
-        photo_url,
-        shops ( id, name, category )
-      `)
-      .eq('stock', 'in')
-      .limit(30)
-      .then(({ data }) => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('products')
+          .select(`
+            id,
+            name,
+            price,
+            emoji,
+            photo_url,
+            shops ( id, name, category )
+          `)
+          .eq('stock', 'in')
+          .limit(30);
         if (cancelled) return;
         const items: PromoItem[] = (data ?? []).map((row: any) => ({
           id: row.id,
@@ -48,7 +49,10 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
         }));
         setRaw(items);
         setLoading(false);
-      });
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    })();
 
     return () => {
       cancelled = true;

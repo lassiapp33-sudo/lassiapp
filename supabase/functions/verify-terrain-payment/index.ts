@@ -17,22 +17,47 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
+    // ── Authentification JWT obligatoire ──────────────────────────────────────
+    const token = req.headers.get('Authorization')?.replace('Bearer ', '');
+    if (!token) return json({ error: 'Non autorisé' }, 401);
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !user) return json({ error: 'Non autorisé' }, 401);
+
     const { reference, reservationId, method } = await req.json();
 
     if (!reference || !reservationId || !method) {
       return json({ error: 'Paramètres manquants' }, 400);
     }
 
-    // ── Vérification auprès de l'opérateur ────────────────────────────────────
-    // MODE DEV : si les clés ne sont pas configurées, on simule un paiement réussi
+    // ── Vérifier que la réservation appartient à l'utilisateur ────────────────
+    const { data: reservation, error: resErr } = await supabase
+      .from('reservations_terrain')
+      .select('user_id, statut')
+      .eq('id', reservationId)
+      .single();
+
+    if (resErr || !reservation) return json({ error: 'Réservation introuvable' }, 404);
+    if (reservation.user_id !== user.id) return json({ error: 'Non autorisé' }, 403);
+
+    // ── Idempotence : déjà payée → retour immédiat ────────────────────────────
+    if (reservation.statut === 'paye') return json({ paid: true });
+
+    // ── Vérification auprès de l'opérateur ───────────────────────────────────
     const waveKey = Deno.env.get('WAVE_SECRET_KEY');
     const omKey   = Deno.env.get('OM_API_KEY');
-    const devMode = !waveKey && !omKey;
+    const PAYMENT_MODE = Deno.env.get('PAYMENT_MODE') ?? 'simulation';
+    const devMode = PAYMENT_MODE !== 'production';
 
     let paid = false;
 
     if (devMode) {
-      paid = true; // simulation — à retirer quand les vraies clés sont en place
+      paid = true;
     } else if (method === 'wave') {
       if (!waveKey) return json({ error: 'WAVE_SECRET_KEY non configurée' }, 500);
       const res = await fetch(`https://api.wave.com/v1/checkout/sessions/${reference}`, {
@@ -52,31 +77,25 @@ serve(async (req) => {
       );
       if (!res.ok) throw new Error(`OM ${res.status}`);
       const tx = await res.json();
-      paid = tx.status === 'SUCCESSFULL';
+      paid = tx.status === 'SUCCESSFUL' || tx.status === 'SUCCESSFULL' || tx.status === 'SUCCESS';
     }
 
     if (!paid) return json({ paid: false });
 
     // ── Mise à jour de la réservation ─────────────────────────────────────────
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
-
     // Récupérer date + heure_fin pour calculer la validité du QR
-    const { data: res, error: fetchErr } = await supabase
+    const { data: resDetail, error: fetchErr } = await supabase
       .from('reservations_terrain')
       .select('date_reservation, heure_fin')
       .eq('id', reservationId)
       .single();
 
-    if (fetchErr || !res) throw new Error('Réservation introuvable');
+    if (fetchErr || !resDetail) throw new Error('Réservation introuvable');
 
     const receiptValidUntil = new Date(
-      `${res.date_reservation}T${res.heure_fin}`,
+      `${resDetail.date_reservation}T${resDetail.heure_fin}`,
     ).toISOString();
 
-    // Générer un code QR alphanumérique 8 chars
     const receipt_code = Array.from(
       crypto.getRandomValues(new Uint8Array(6)),
       b => '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'[b % 34],

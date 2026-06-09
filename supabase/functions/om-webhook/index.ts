@@ -30,21 +30,23 @@ serve(async (req) => {
       status     = url.searchParams.get('status');
     }
 
-    // ── Vérification HMAC optionnelle (si secret configuré — requise en prod) ─
-    if (OM_WEBHOOK_SECRET) {
+    // ── Vérification HMAC (requise sur POST quand secret configuré) ─────────
+    if (OM_WEBHOOK_SECRET && req.method === 'POST') {
       const omSig = req.headers.get('x-om-signature') ?? req.headers.get('x-orange-signature') ?? '';
-      if (omSig && rawBody) {
-        const key = await crypto.subtle.importKey(
-          'raw', new TextEncoder().encode(OM_WEBHOOK_SECRET),
-          { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
-        );
-        const mac      = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody));
-        const expected = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
-        const sigNorm  = omSig.startsWith('sha256=') ? omSig.slice(7) : omSig;
-        if (!timingSafeEqual(expected, sigNorm)) {
-          console.error('[om-webhook] Signature invalide');
-          return new Response('Signature invalide', { status: 401 });
-        }
+      if (!omSig) {
+        console.error('[om-webhook] Signature header absent');
+        return new Response('Signature manquante', { status: 401 });
+      }
+      const key = await crypto.subtle.importKey(
+        'raw', new TextEncoder().encode(OM_WEBHOOK_SECRET),
+        { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+      );
+      const mac      = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody));
+      const expected = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
+      const sigNorm  = omSig.startsWith('sha256=') ? omSig.slice(7) : omSig;
+      if (!timingSafeEqual(expected, sigNorm)) {
+        console.error('[om-webhook] Signature invalide');
+        return new Response('Signature invalide', { status: 401 });
       }
     }
 

@@ -39,9 +39,8 @@ export function useRealtimeNotifications(
 
     const sub = AppState.addEventListener('change', state => {
       if (state === 'active') {
-        supabase.removeChannel(channel).then(() => {
-          channel = subscribe();
-        });
+        supabase.removeChannel(channel);
+        channel = subscribe();
       }
     });
 
