@@ -54,12 +54,19 @@ serve(async (req) => {
   const mac      = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
   const expected = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-  if (signature !== expected && signature !== `sha256=${expected}`) {
+  const sigNorm = signature.startsWith('sha256=') ? signature.slice(7) : signature;
+  if (!timingSafeEqual(expected, sigNorm)) {
     console.error('[webhook] Signature invalide');
     return new Response('Signature invalide', { status: 401 });
   }
 
-  const payload = JSON.parse(body);
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    console.error('[webhook] Body non-JSON');
+    return new Response('Body invalide', { status: 400 });
+  }
 
   // ── Validation du payment_intent_id (Fix: rejet si absent) ───────────────
   const piId: unknown = payload.client_reference ?? payload.order_id ?? payload.metadata?.pi_id;
@@ -69,7 +76,7 @@ serve(async (req) => {
   }
 
   const externalStatus = payload.payment_status ?? payload.status;
-  const isSuccess      = ['succeeded', 'completed', 'success', 'SUCCESSFULL'].includes(externalStatus);
+  const isSuccess      = ['succeeded', 'completed', 'success', 'SUCCESSFUL', 'SUCCESSFULL'].includes(externalStatus);
 
   // Mettre à jour le payment_intent
   await supabase.from('payment_intents').update({
@@ -102,3 +109,13 @@ serve(async (req) => {
 
   return new Response('OK', { status: 200 });
 });
+
+// Comparaison HMAC en temps constant — évite les timing attacks
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
