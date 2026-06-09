@@ -39,23 +39,34 @@ serve(async (req) => {
 
   try {
     const body = await req.json() as {
-      // nouveau contrat (paymentService.ts)
+      // flux order (paymentService.ts)
       orderId?:        string;
+      prestataireId?:  string;
       prixBase?:       number;
       moyenPaiement?:  string;
-      // ancien contrat (payment.ts — terrain/ticket flows)
+      // flux ticket/chat legacy (payment.ts)
       ticketId?:       string;
       amount?:         number;
       method?:         string;
       merchantName?:   string;
       idempotencyKey?: string;
     };
-    // alias : accepte les deux conventions de nommage
-    const ticketId    = body.orderId      ?? body.ticketId   ?? '';
-    const amount      = body.prixBase     ?? body.amount     ?? 0;
-    const method      = body.moyenPaiement ?? body.method    ?? '';
+
+    const token = req.headers.get('Authorization')?.replace('Bearer ', '');
+    const sb    = createClient(SUPABASE_URL, SUPABASE_SRK);
+    const { data: { user } } = await sb.auth.getUser(token);
+    if (!user) return fail('Non autorisé', 401);
+
+    // ── Discriminer flux order vs flux ticket ─────────────────────────────────
+    const isOrderFlow = !!(body.orderId && body.prestataireId);
+
+    const ticketId     = body.orderId  ?? body.ticketId   ?? '';
+    const amount       = body.prixBase ?? body.amount     ?? 0;
+    const method       = body.moyenPaiement ?? body.method ?? '';
     const merchantName = body.merchantName ?? '';
-    const idempotencyKey = body.idempotencyKey;
+    const idempotencyKey = body.idempotencyKey
+      ?? req.headers.get('x-idempotency-key')
+      ?? `pay_${ticketId}_${user.id}`;
 
     // ── Validation serveur ────────────────────────────────────────────────────
     if (!ticketId || !amount || !method)
@@ -65,17 +76,8 @@ serve(async (req) => {
     if (!validerMethode(method))
       return fail('Moyen de paiement non supporté', 400);
 
-    const token = req.headers.get('Authorization')?.replace('Bearer ', '');
-    const sb    = createClient(SUPABASE_URL, SUPABASE_SRK);
-    const { data: { user } } = await sb.auth.getUser(token);
-    if (!user) return fail('Non autorisé', 401);
-
-    // ── Idempotency — évite les doublons sur retry réseau / double-clic ───────
-    const iKey = idempotencyKey
-      ?? req.headers.get('x-idempotency-key')
-      ?? `pay_${ticketId}_${user.id}`;
-
-    const cached = await checkIdempotency(sb, iKey);
+    // ── Idempotency ───────────────────────────────────────────────────────────
+    const cached = await checkIdempotency(sb, idempotencyKey);
     if (cached) {
       await logEvent(sb, {
         event_type: 'idempotency_hit',
@@ -88,36 +90,137 @@ serve(async (req) => {
       return ok(cached);
     }
 
-    const reference  = `LASSI_${ticketId}_${Date.now()}`;
     const commission = calculerCommission(amount);
     const provider   = method === 'wave' ? 'wave' : 'orange_money';
+    const moyen      = method === 'wave' ? 'wave' : 'orange_money';
 
     await logEvent(sb, {
       event_type: 'create_initiated',
-      reference,  ticket_id: ticketId, user_id: user.id,
-      amount,     commission, method: provider, provider,
+      reference:  idempotencyKey, ticket_id: ticketId, user_id: user.id,
+      amount, commission, method: provider, provider,
       status: 'initiated',
     });
 
-    // ── Mode simulation (aucune clé API requise) ──────────────────────────────
-    if (isSimulation()) {
-      await sb.rpc('merge_ticket_reference', { p_message_id: ticketId, p_reference: reference });
+    // ── Flux ORDER : créer payment_intent via RPC ─────────────────────────────
+    if (isOrderFlow) {
+      const { data: piId, error: piErr } = await sb.rpc('create_payment_intent', {
+        p_order_id:        body.orderId,
+        p_client_id:       user.id,
+        p_prestataire_id:  body.prestataireId,
+        p_prix_base:       amount,
+        p_moyen_paiement:  moyen,
+        p_idempotency_key: idempotencyKey,
+      });
+
+      if (piErr || !piId) {
+        console.error('[create-payment] create_payment_intent error:', piErr?.message);
+        return fail('Impossible de créer le paiement', 500);
+      }
+
+      // ── Simulation (sans clé API) ──────────────────────────────────────────
+      if (isSimulation()) {
+        // Marquer comme simulé directement
+        await sb.from('payment_intents').update({
+          statut:     'simulated',
+          updated_at: new Date().toISOString(),
+        }).eq('id', piId);
+
+        const result = {
+          success:          true,
+          paymentIntentId:  piId,
+          redirectUrl:      `lassiapp://paiement/succes?pi=${piId}`,
+          paymentUrl:       `lassiapp://simulate?pi=${piId}`,
+          reference:        piId,
+          simulation:       true,
+          mode:             'simulation' as const,
+          prixBase:         amount,
+          commission,
+          montantTotal:     amount + commission,
+        };
+        await setIdempotency(sb, idempotencyKey, result);
+        await logEvent(sb, {
+          event_type: 'create_success',
+          reference:  piId, ticket_id: ticketId, user_id: user.id,
+          amount, commission, method: provider, provider: 'simulation',
+          status: 'simulated',
+        });
+        return ok(result);
+      }
+
+      // ── Production ────────────────────────────────────────────────────────
+      let paymentUrl: string;
+      try {
+        // piId sert de client_reference — c'est ce que le webhook reçoit
+        paymentUrl = method === 'wave'
+          ? await createWaveSession({ amount: amount + commission, reference: piId, merchantName })
+          : await createOmSession({ amount: amount + commission, reference: piId, merchantName });
+      } catch (e) {
+        await logEvent(sb, {
+          event_type:        'create_failed',
+          reference:         piId, ticket_id: ticketId, user_id: user.id,
+          amount,            method: provider, provider,
+          status:            'failed',
+          provider_response: (e as Error).message,
+        });
+        throw e;
+      }
+
+      await sb.from('payment_intents').update({
+        statut:       'initiated',
+        external_ref: paymentUrl,
+        updated_at:   new Date().toISOString(),
+      }).eq('id', piId);
+
       const result = {
-        paymentUrl:  `lassi://simulate?ref=${encodeURIComponent(reference)}`,
-        reference,
-        simulation:  true,
+        success:         true,
+        paymentIntentId: piId,
+        redirectUrl:     paymentUrl,
+        paymentUrl,
+        reference:       piId,
+        simulation:      false,
+        mode:            'production' as const,
+        prixBase:        amount,
+        commission,
+        montantTotal:    amount + commission,
       };
-      await setIdempotency(sb, iKey, result);
+      await setIdempotency(sb, idempotencyKey, result);
       await logEvent(sb, {
         event_type: 'create_success',
-        reference,  ticket_id: ticketId, user_id: user.id,
-        amount,     commission, method: provider, provider: 'simulation',
+        reference:  piId, ticket_id: ticketId, user_id: user.id,
+        amount, commission, method: provider, provider,
         status: 'pending',
       });
       return ok(result);
     }
 
-    // ── Mode production ───────────────────────────────────────────────────────
+    // ── Flux TICKET/CHAT legacy ───────────────────────────────────────────────
+    const reference = `LASSI_${ticketId}_${Date.now()}`;
+
+    if (isSimulation()) {
+      await sb.rpc('merge_ticket_reference', { p_message_id: ticketId, p_reference: reference });
+      const result = {
+        success:         true,
+        paymentIntentId: reference,
+        redirectUrl:     `lassiapp://simulate?ref=${encodeURIComponent(reference)}`,
+        paymentUrl:      `lassiapp://simulate?ref=${encodeURIComponent(reference)}`,
+        reference,
+        simulation:      true,
+        mode:            'simulation' as const,
+        prixBase:        amount,
+        commission,
+        montantTotal:    amount + commission,
+      };
+      await setIdempotency(sb, idempotencyKey, result);
+      await logEvent(sb, {
+        event_type: 'create_success',
+        reference, ticket_id: ticketId, user_id: user.id,
+        amount, commission, method: provider, provider: 'simulation',
+        status: 'pending',
+      });
+      return ok(result);
+    }
+
+    // Production — flux ticket
     let paymentUrl: string;
     try {
       paymentUrl = method === 'wave'
@@ -134,18 +237,27 @@ serve(async (req) => {
       throw e;
     }
 
-    // Stocker la référence côté DB avant de retourner l'URL (atomicité)
     await sb.rpc('merge_ticket_reference', { p_message_id: ticketId, p_reference: reference });
 
-    const result = { paymentUrl, reference };
-    await setIdempotency(sb, iKey, result);
+    const result = {
+      success:         true,
+      paymentIntentId: reference,
+      redirectUrl:     paymentUrl,
+      paymentUrl,
+      reference,
+      simulation:      false,
+      mode:            'production' as const,
+      prixBase:        amount,
+      commission,
+      montantTotal:    amount + commission,
+    };
+    await setIdempotency(sb, idempotencyKey, result);
     await logEvent(sb, {
       event_type: 'create_success',
-      reference,  ticket_id: ticketId, user_id: user.id,
-      amount,     commission, method: provider, provider,
+      reference, ticket_id: ticketId, user_id: user.id,
+      amount, commission, method: provider, provider,
       status: 'pending',
     });
-
     return ok(result);
 
   } catch (e) {
@@ -155,7 +267,6 @@ serve(async (req) => {
 });
 
 // ─── Wave Checkout API ────────────────────────────────────────────────────────
-// Docs : https://developer.wave.com/docs/checkout-api
 
 async function createWaveSession(p: {
   amount: number; reference: string; merchantName: string;
@@ -170,8 +281,8 @@ async function createWaveSession(p: {
       amount:           String(p.amount),
       currency:         'XOF',
       client_reference: p.reference,
-      success_url:      `${WEBHOOK_BASE}/wave-webhook`,
-      error_url:        `${WEBHOOK_BASE}/wave-webhook`,
+      success_url:      `lassiapp://paiement/succes?pi=${p.reference}`,
+      error_url:        `lassiapp://paiement/echec?pi=${p.reference}`,
     }),
   });
   const data = await res.json();
@@ -183,7 +294,6 @@ async function createWaveSession(p: {
 }
 
 // ─── Orange Money Web Payment API (Sénégal / WAEMU) ─────────────────────────
-// Docs : https://developer.orange.com/apis/orange-money-webpay-senegal
 
 async function createOmSession(p: {
   amount: number; reference: string; merchantName: string;
@@ -213,9 +323,9 @@ async function createOmSession(p: {
       currency:     'OUV',
       order_id:     p.reference,
       amount:       p.amount,
-      return_url:   `${WEBHOOK_BASE}/om-webhook`,
-      cancel_url:   `${WEBHOOK_BASE}/om-webhook`,
-      notif_url:    `${WEBHOOK_BASE}/om-webhook`,
+      return_url:   `lassiapp://paiement/succes?pi=${p.reference}`,
+      cancel_url:   `lassiapp://paiement/echec?pi=${p.reference}`,
+      notif_url:    `${WEBHOOK_BASE}/webhook-payment`,
       lang:         'fr',
       reference:    p.reference,
     }),

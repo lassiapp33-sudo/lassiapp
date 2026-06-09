@@ -28,6 +28,7 @@ import useAuthStore from '../../store/authStore';
 import useNotificationsStore from '../../store/notificationsStore';
 import usePendingNavStore from '../../store/pendingNavStore';
 import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
+import { usePaymentDeepLink } from '../../hooks/usePaymentDeepLink';
 import { OrderInfo } from '../../types/payment';
 
 // Navigateur du cockpit prestataire — tous les modules sont câblés ici.
@@ -90,8 +91,9 @@ export default function MerchantNavigator({ onLogout }: Props) {
 
   // Abonnement Realtime toujours actif — met à jour le badge immédiatement
   useRealtimeNotifications(userId, addNotif);
+  usePaymentDeepLink();
 
-  // Deep link depuis notification push (app fermée / arrière-plan)
+  // Deep link depuis notification push ou retour paiement
   useEffect(() => {
     if (!pendingNav) return;
     clearPending();
@@ -101,6 +103,10 @@ export default function MerchantNavigator({ onLogout }: Props) {
       setScreen({ id: 'chat', conversationId: pendingNav.conversationId });
     } else if (pendingNav.type === 'order') {
       setScreen('orders');
+    } else if (pendingNav.type === 'payment_success') {
+      setScreen('orders');
+    } else if (pendingNav.type === 'payment_failed') {
+      setScreen('payments');
     }
   }, [pendingNav, clearPending]);
 

@@ -1,6 +1,8 @@
 // Edge Function — vérifie le statut d'un paiement Wave ou Orange Money
-// Appelée par le bouton "J'ai payé" dans PaymentScreen
-// Mode simulation : confirme automatiquement sans appel API
+// Deux contrats acceptés :
+//   nouveau : { paymentIntentId } — flux order (CheckoutPayment / deep link)
+//   ancien  : { reference, ticketId, method } — flux ticket/chat (PaymentScreen)
+// Mode simulation : confirmation automatique sans appel API
 
 import { serve }        from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -24,18 +26,109 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
-    const { reference, ticketId, method } = await req.json() as {
-      reference: string;
-      ticketId:  string;
-      method:    'wave' | 'om' | 'orange_money';
+    const body = await req.json() as {
+      // nouveau contrat (paymentService.ts + deep link)
+      paymentIntentId?: string;
+      // ancien contrat (payment.ts — flux ticket/chat)
+      reference?:  string;
+      ticketId?:   string;
+      method?:     'wave' | 'om' | 'orange_money';
     };
-
-    if (!reference || !ticketId) return fail('Paramètres manquants', 400);
 
     const token = req.headers.get('Authorization')?.replace('Bearer ', '');
     const sb    = createClient(SUPABASE_URL, SUPABASE_SRK);
     const { data: { user } } = await sb.auth.getUser(token);
     if (!user) return fail('Non autorisé', 401);
+
+    // ── Flux ORDER : vérification via payment_intents ─────────────────────────
+    if (body.paymentIntentId) {
+      const piId = body.paymentIntentId;
+
+      const { data: pi, error: piErr } = await sb
+        .from('payment_intents')
+        .select('id, statut, moyen_paiement, external_ref, order_id')
+        .eq('id', piId)
+        .single();
+
+      if (piErr || !pi) {
+        console.error('[verify-payment] payment_intent introuvable:', piId, piErr?.message);
+        return fail('Paiement introuvable', 404);
+      }
+
+      // Déjà confirmé ou traité → retour immédiat (idempotent)
+      if (pi.statut === 'confirmed' || pi.statut === 'split_done' || pi.statut === 'simulated') {
+        return ok({ paid: true, confirmed: true, statut: pi.statut, mode: isSimulation() ? 'simulation' : 'production' });
+      }
+
+      await logEvent(sb, {
+        event_type: 'verify_attempt',
+        reference:  piId, ticket_id: pi.order_id ?? '', user_id: user.id,
+        method:     pi.moyen_paiement, provider: pi.moyen_paiement,
+        status:     'verifying',
+      });
+
+      // ── Simulation ──────────────────────────────────────────────────────────
+      if (isSimulation()) {
+        await sb.from('payment_intents').update({
+          statut:       'confirmed',
+          confirmed_at: new Date().toISOString(),
+          updated_at:   new Date().toISOString(),
+        }).eq('id', piId);
+
+        // Déclencher la commande
+        const { error: rpcErr } = await sb.rpc('confirm_order_from_payment', {
+          p_payment_intent_id: piId,
+        });
+        if (rpcErr) console.error('[verify-payment] confirm_order_from_payment:', rpcErr.message);
+
+        await logEvent(sb, {
+          event_type: 'verify_success',
+          reference:  piId, ticket_id: pi.order_id ?? '', user_id: user.id,
+          method:     pi.moyen_paiement, provider: 'simulation',
+          status:     'confirmed',
+        });
+        return ok({ paid: true, confirmed: true, statut: 'confirmed', mode: 'simulation' });
+      }
+
+      // ── Production ──────────────────────────────────────────────────────────
+      const provider   = pi.moyen_paiement;
+      const paid = provider === 'wave'
+        ? await checkWavePayment(piId)
+        : await checkOmPayment(piId);
+
+      if (paid) {
+        await sb.from('payment_intents').update({
+          statut:       'confirmed',
+          confirmed_at: new Date().toISOString(),
+          updated_at:   new Date().toISOString(),
+        }).eq('id', piId);
+
+        const { error: rpcErr } = await sb.rpc('confirm_order_from_payment', {
+          p_payment_intent_id: piId,
+        });
+        if (rpcErr) console.error('[verify-payment] confirm_order_from_payment:', rpcErr.message);
+
+        await logEvent(sb, {
+          event_type: 'verify_success',
+          reference:  piId, ticket_id: pi.order_id ?? '', user_id: user.id,
+          method:     provider, provider,
+          status:     'confirmed',
+        });
+      } else {
+        await logEvent(sb, {
+          event_type: 'verify_failed',
+          reference:  piId, ticket_id: pi.order_id ?? '', user_id: user.id,
+          method:     provider, provider,
+          status:     'pending',
+        });
+      }
+
+      return ok({ paid, confirmed: paid, statut: paid ? 'confirmed' : 'pending', mode: 'production' });
+    }
+
+    // ── Flux TICKET/CHAT legacy ───────────────────────────────────────────────
+    const { reference, ticketId, method } = body;
+    if (!reference || !ticketId) return fail('Paramètres manquants', 400);
 
     const provider = method === 'wave' ? 'wave' : 'orange_money';
 
@@ -46,7 +139,6 @@ serve(async (req) => {
       status:     'verifying',
     });
 
-    // ── Mode simulation — confirmation automatique ────────────────────────────
     if (isSimulation()) {
       await sb.rpc('mark_ticket_paid', { p_message_id: ticketId });
       await logEvent(sb, {
@@ -55,16 +147,13 @@ serve(async (req) => {
         method:     provider, provider: 'simulation',
         status:     'paid',
       });
-      return ok({ paid: true, simulation: true });
+      return ok({ paid: true, confirmed: true, statut: 'paid', mode: 'simulation' });
     }
 
-    // ── Mode production ───────────────────────────────────────────────────────
-    let paid: boolean;
-    if (method === 'wave') {
-      paid = await checkWavePayment(reference);
-    } else {
-      paid = await checkOmPayment(reference);
-    }
+    // Production — ticket
+    const paid = method === 'wave'
+      ? await checkWavePayment(reference)
+      : await checkOmPayment(reference);
 
     if (paid) {
       await sb.rpc('mark_ticket_paid', { p_message_id: ticketId });
@@ -83,7 +172,7 @@ serve(async (req) => {
       });
     }
 
-    return ok({ paid });
+    return ok({ paid, confirmed: paid, statut: paid ? 'paid' : 'pending', mode: 'production' });
 
   } catch (e) {
     console.error('[verify-payment]', e);

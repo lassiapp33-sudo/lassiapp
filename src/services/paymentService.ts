@@ -46,18 +46,18 @@ export const initierPaiement = async (params: {
     headers: { Authorization: `Bearer ${session.access_token}` },
   });
 
-  if (error || !data?.success) {
+  if (error || (!data?.success && !data?.paymentIntentId)) {
     return { success: false, error: error?.message ?? data?.error ?? 'Erreur paiement' };
   }
 
   return {
-    success: true,
-    paymentIntentId: data.paymentIntentId,
-    montantTotal: data.montantTotal,
-    commission: data.commission,
-    prixBase: data.prixBase,
-    redirectUrl: data.redirectUrl,
-    mode: data.mode,
+    success:         true,
+    paymentIntentId: data.paymentIntentId ?? data.reference,
+    montantTotal:    data.montantTotal,
+    commission:      data.commission,
+    prixBase:        data.prixBase,
+    redirectUrl:     data.redirectUrl ?? data.paymentUrl,
+    mode:            (data.mode ?? (data.simulation ? 'simulation' : 'production')) as 'simulation' | 'production',
   };
 };
 
@@ -74,6 +74,12 @@ export const verifierPaiement = async (paymentIntentId: string): Promise<{
     headers: { Authorization: `Bearer ${session.access_token}` },
   });
 
-  if (error || !data?.success) return { confirmed: false, statut: 'failed', mode: 'unknown' };
-  return { confirmed: data.confirmed, statut: data.statut, mode: data.mode };
+  if (error || (!data?.confirmed && !data?.paid)) {
+    return { confirmed: false, statut: 'failed', mode: 'unknown' };
+  }
+  return {
+    confirmed: data.confirmed ?? data.paid ?? false,
+    statut:    data.statut ?? 'unknown',
+    mode:      data.mode   ?? 'unknown',
+  };
 };
