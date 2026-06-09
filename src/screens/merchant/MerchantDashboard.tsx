@@ -164,12 +164,10 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
         <QuickActions
           onPress={key => onNavigate?.(key as NavDest)}
           debtCount={debtorsWithDebt}
-          showTerrains={
-            shopType === 'terrains' ||
-            shopSubcategories.some(s =>
-              s === 'reservation_terrain_foot' || s === 'reservation_terrain_basket',
-            )
-          }
+          showTerrains={shopType === 'terrains'}
+          isSlotShop={shopSubcategories.some(s =>
+            s === 'reservation_terrain_foot' || s === 'reservation_terrain_basket',
+          )}
         />
 
         {/* ④ Commandes en cours */}

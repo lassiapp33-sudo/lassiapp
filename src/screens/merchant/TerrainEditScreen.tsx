@@ -1,15 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
   TextInput, Alert, ActivityIndicator, Platform, KeyboardAvoidingView, Switch,
 } from 'react-native';
+import Svg, { Path, Line } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { Terrain, SportType, SPORT_EMOJI, SPORT_LABEL } from '../../types/terrain';
 import * as terrainsService from '../../services/terrains';
+import { pickImageFromGallery, pickImageFromCamera, uploadImage } from '../../services/storage';
 import useAuthStore from '../../store/authStore';
 import logger from '../../utils/logger';
 import { getErrorMessage } from '../../utils/errorUtils';
+
+const IcoImage = ({ stroke }: { stroke: string }) => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke={stroke} />
+    <Path d="M17 8l-5-5-5 5" stroke={stroke} />
+    <Line x1="12" y1="3" x2="12" y2="15" stroke={stroke} />
+  </Svg>
+);
+
+const IcoCamera = ({ stroke }: { stroke: string }) => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke={stroke} />
+    <Path d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke={stroke} />
+  </Svg>
+);
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -71,6 +88,7 @@ export default function TerrainEditScreen({ terrain, onBack, onSaved }: Props) {
 
   const [horaires, setHoraires] = useState<HoraireForm[]>(DEFAULT_HORAIRES);
   const [loadingHoraires, setLoadingHoraires] = useState(!!terrain);
+  const [images, setImages] = useState<string[]>(terrain?.images ?? []);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -94,6 +112,20 @@ export default function TerrainEditScreen({ terrain, onBack, onSaved }: Props) {
     setHoraires(prev => prev.map(h => h.jour_semaine === jour ? { ...h, [field]: value } : h));
   };
 
+  const pickFromGallery = async () => {
+    const uri = await pickImageFromGallery();
+    if (uri) setImages(prev => [...prev, uri]);
+  };
+
+  const pickFromCamera = async () => {
+    const uri = await pickImageFromCamera();
+    if (uri) setImages(prev => [...prev, uri]);
+  };
+
+  const removeImage = (idx: number) => {
+    setImages(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSave = async () => {
     if (!form.nom.trim()) {
       Alert.alert('Champ requis', 'Le nom du terrain est obligatoire.');
@@ -106,6 +138,15 @@ export default function TerrainEditScreen({ terrain, onBack, onSaved }: Props) {
     }
     setSaving(true);
     try {
+      // Upload les images locales (URI file://), garder les URLs déjà distantes
+      const uploadedImages = await Promise.all(
+        images.map(async (uri) => {
+          if (uri.startsWith('http')) return uri;
+          const path = `terrains/${prestataireId}/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+          return uploadImage('gallery', uri, path);
+        }),
+      );
+
       const saved = await terrainsService.saveTerrain({
         id: terrain?.id,
         prestataire_id: prestataireId,
@@ -115,6 +156,7 @@ export default function TerrainEditScreen({ terrain, onBack, onSaved }: Props) {
         sport_type: form.sportType,
         capacite: parseInt(form.capacite, 10) || 10,
         adresse: form.adresse.trim() || undefined,
+        images: uploadedImages,
         actif: true,
       });
       await terrainsService.saveTerrainHoraires(saved.id, horaires);
@@ -128,7 +170,7 @@ export default function TerrainEditScreen({ terrain, onBack, onSaved }: Props) {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.root}
     >
       {/* Header */}
@@ -141,7 +183,12 @@ export default function TerrainEditScreen({ terrain, onBack, onSaved }: Props) {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+      >
 
         {/* ── Infos terrain ─────────────────────────────────────────────────── */}
         <Text style={styles.sectionLabel}>Informations</Text>
@@ -210,6 +257,38 @@ export default function TerrainEditScreen({ terrain, onBack, onSaved }: Props) {
           multiline
           numberOfLines={3}
         />
+
+        {/* ── Photos du terrain ─────────────────────────────────────────── */}
+        <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Photos du terrain</Text>
+        <Text style={styles.sectionSub}>Ajoutez des photos pour attirer plus de clients.</Text>
+
+        <View style={styles.imgPickerRow}>
+          <TouchableOpacity style={styles.imgPickBtn} onPress={pickFromGallery} activeOpacity={0.85}>
+            <IcoImage stroke={colors.accent} />
+            <Text style={styles.imgPickTxt}>Galerie</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.imgPickBtn} onPress={pickFromCamera} activeOpacity={0.85}>
+            <IcoCamera stroke={colors.accent} />
+            <Text style={styles.imgPickTxt}>Caméra</Text>
+          </TouchableOpacity>
+        </View>
+
+        {images.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imgScroll}>
+            {images.map((uri, idx) => (
+              <View key={idx} style={styles.imgThumb}>
+                <Image source={{ uri }} style={styles.imgThumbImg} />
+                <TouchableOpacity
+                  style={styles.imgDel}
+                  onPress={() => removeImage(idx)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.imgDelTxt}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        )}
 
         {/* ── Horaires d'ouverture ───────────────────────────────────────── */}
         <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Horaires d'ouverture</Text>
@@ -353,4 +432,23 @@ const styles = StyleSheet.create({
     height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 28,
   },
   saveTxt: { color: colors.bg, fontFamily: fonts.titleXL, fontSize: 15 },
+
+  imgPickerRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  imgPickBtn: {
+    flex: 1, height: 52,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.md, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 8,
+  },
+  imgPickTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 13 },
+
+  imgScroll: { marginBottom: 8 },
+  imgThumb: { width: 88, height: 88, marginRight: 8, borderRadius: radius.sm, overflow: 'visible' },
+  imgThumbImg: { width: 88, height: 88, borderRadius: radius.sm, backgroundColor: colors.surface },
+  imgDel: {
+    position: 'absolute', top: -6, right: -6,
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center',
+  },
+  imgDelTxt: { color: colors.white, fontFamily: fonts.titleXL, fontSize: 11 },
 });

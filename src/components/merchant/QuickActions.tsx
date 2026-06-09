@@ -120,6 +120,7 @@ interface Props {
   msgCount?: number;
   avisCount?: number;
   showTerrains?: boolean;
+  isSlotShop?: boolean;
 }
 
 export default function QuickActions({
@@ -128,6 +129,7 @@ export default function QuickActions({
   msgCount = 0,
   avisCount = 0,
   showTerrains = false,
+  isSlotShop = false,
 }: Props) {
   return (
     <View style={styles.grid}>
@@ -166,14 +168,25 @@ export default function QuickActions({
           desc="Découvre et commande chez d'autres"
           onPress={() => onPress?.('aroundme')}
         />
-        <ActionCard
-          Icon={IcoGrid}
-          iconBg="rgba(240,168,71,.13)"
-          iconStroke={colors.orange}
-          title="Ma vitrine"
-          desc="Gérer mes produits"
-          onPress={() => onPress?.('store')}
-        />
+        {isSlotShop ? (
+          <ActionCard
+            Icon={IcoGrid}
+            iconBg="rgba(95,211,138,.13)"
+            iconStroke={colors.success}
+            title="Mes terrains"
+            desc="Gérer, réservations, scanner QR"
+            onPress={() => onPress?.('terrains')}
+          />
+        ) : (
+          <ActionCard
+            Icon={IcoGrid}
+            iconBg="rgba(240,168,71,.13)"
+            iconStroke={colors.orange}
+            title="Ma vitrine"
+            desc="Gérer mes produits"
+            onPress={() => onPress?.('store')}
+          />
+        )}
       </View>
       <View style={styles.row}>
         <ActionCard
@@ -189,7 +202,7 @@ export default function QuickActions({
           badge={undefined}
           onPress={() => onPress?.('avis')}
         />
-        {showTerrains && (
+        {showTerrains && !isSlotShop && (
           <ActionCard
             Icon={IcoGrid}
             iconBg="rgba(95,211,138,.13)"

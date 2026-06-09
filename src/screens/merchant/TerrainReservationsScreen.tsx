@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Platform,
@@ -51,17 +51,15 @@ function todayStr(): string {
 function buildDateChips(): { iso: string; label: string }[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  return [-1, 0, 1, 2].map(offset => {
+  return [0, 1, 2, 3, 4, 5, 6].map(offset => {
     const d = new Date(today);
     d.setDate(today.getDate() + offset);
     const iso = d.toISOString().slice(0, 10);
     const day = DAYS_SHORT[d.getDay()];
-    const label = offset === -1 ? 'Hier' : offset === 0 ? "Aujourd'hui" : `${day} ${d.getDate()}`;
+    const label = offset === 0 ? "Aujourd'hui" : `${day} ${d.getDate()}`;
     return { iso, label };
   });
 }
-
-const DATE_CHIPS = buildDateChips();
 
 const STATUT_CFG: Record<string, { label: string; color: string }> = {
   en_attente: { label: 'En attente', color: colors.muted },
@@ -149,6 +147,7 @@ interface Props {
 
 export default function TerrainReservationsScreen({ terrain, onBack }: Props) {
   const prestataireId = useAuthStore(s => s.user?.id ?? '');
+  const DATE_CHIPS = useMemo(() => buildDateChips(), []);
   const [dateSelected, setDateSelected] = useState(todayStr());
   const [reservations, setReservations] = useState<ReservationTerrain[]>([]);
   const [loading, setLoading] = useState(true);
@@ -389,7 +388,7 @@ const styles = StyleSheet.create({
   headerTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 16 },
   headerSub: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 1 },
 
-  datesRow: { paddingHorizontal: 18, paddingVertical: 10, gap: 8 },
+  datesRow: { paddingHorizontal: 18, paddingVertical: 10, gap: 8, alignItems: 'center' },
   dateChip: {
     paddingHorizontal: 16, paddingVertical: 8, borderRadius: radius.pill,
     borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface,
