@@ -89,6 +89,8 @@ const IcoFav = ({ on }: { on: boolean }) => (
   </Svg>
 );
 
+const SLOT_SUBCATS = ['reservation_terrain_foot', 'reservation_terrain_basket'];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function capitalize(s: string): string {
