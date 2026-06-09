@@ -188,7 +188,8 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
         ...products.filter(p => p.stock === 'in'),
         ...products.filter(p => p.stock === 'out'),
       ]);
-      if (shop?.shopType === 'terrains' && shop?.merchantId) {
+      const isSlotCat = (shop?.subcategories ?? []).some(s => SLOT_SUBCATS.includes(s));
+      if ((shop?.shopType === 'terrains' || isSlotCat) && shop?.merchantId) {
         const terrainList = await terrainsService.getTerrainsByMerchant(shop.merchantId).catch(() => []);
         setTerrains(terrainList);
       }
@@ -234,8 +235,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   // ── Type de vitrine ───────────────────────────────────────────────────────
   const shopType = shopData?.shopType ?? 'products';
   const isTerrainShop = shopType === 'terrains';
-  const SLOT_SUBCATS = ['reservation_terrain_foot', 'reservation_terrain_basket'];
-  const isSlotShop = isTerrainShop && (shopData?.subcategories ?? []).some(s => SLOT_SUBCATS.includes(s));
+  const isSlotShop = (shopData?.subcategories ?? []).some(s => SLOT_SUBCATS.includes(s));
 
   // ── Données dérivées ──────────────────────────────────────────────────────
   const displayName = shopData?.name ?? shopName ?? 'Boutique';
@@ -530,74 +530,72 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
           {/* 8 — Onglets catalogue (STICKY) */}
           {tabs.length > 1 && <MenuTabs tabs={tabs} active={activeTab} onPress={setActiveTab} />}
 
-          {/* 9 — Catalogue / Terrains */}
-          {isTerrainShop ? (
-            isSlotShop ? (
-              terrains.length > 0 ? (
-                <ShopTerrainSlotPicker
-                  terrain={terrains[0]}
-                  prestataireName={displayName}
-                  openingHours={effectiveHours}
-                  onBook={(p: SlotBookParams) =>
-                    onBookTerrainDirect?.({
-                      terrainId: p.terrain.id,
-                      terrainNom: p.terrain.nom,
-                      prestataireId: p.terrain.prestataire_id,
-                      prestataireName: p.prestataireName,
-                      dateReservation: p.dateReservation,
-                      heureDebut: p.heureDebut,
-                      heureFin: p.heureFin,
-                      dureeHeures: p.dureeHeures,
-                      prixTotal: p.prixTotal,
-                    })
-                  }
-                />
-              ) : (
-                <View style={styles.emptyProducts}>
-                  <Text style={styles.emptyTxt}>Aucun terrain configuré pour l'instant.</Text>
-                </View>
-              )
+          {/* 9 — Catalogue / Terrains / Créneaux foot-basket */}
+          {isSlotShop ? (
+            terrains.length > 0 ? (
+              <ShopTerrainSlotPicker
+                terrain={terrains[0]}
+                prestataireName={displayName}
+                openingHours={effectiveHours}
+                onBook={(p: SlotBookParams) =>
+                  onBookTerrainDirect?.({
+                    terrainId: p.terrain.id,
+                    terrainNom: p.terrain.nom,
+                    prestataireId: p.terrain.prestataire_id,
+                    prestataireName: p.prestataireName,
+                    dateReservation: p.dateReservation,
+                    heureDebut: p.heureDebut,
+                    heureFin: p.heureFin,
+                    dureeHeures: p.dureeHeures,
+                    prixTotal: p.prixTotal,
+                  })
+                }
+              />
             ) : (
-              <View>
-                <Text style={styles.catTitle}>Terrains disponibles</Text>
-                {terrains.length === 0 ? (
-                  <View style={styles.emptyProducts}>
-                    <Text style={styles.emptyTxt}>Aucun terrain disponible pour l'instant.</Text>
-                  </View>
-                ) : (
-                  <View style={styles.terrainsContainer}>
-                    {terrains.map(terrain => (
-                      <TouchableOpacity
-                        key={terrain.id}
-                        style={styles.terrainCard}
-                        activeOpacity={0.85}
-                        onPress={() =>
-                          onBookTerrain?.({ terrain, prestataireName: displayName })
-                        }
-                      >
-                        <View style={styles.terrainTop}>
-                          <Text style={styles.terrainEmoji}>{SPORT_EMOJI[terrain.sport_type]}</Text>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.terrainNom}>{terrain.nom}</Text>
-                            <Text style={styles.terrainSport}>{SPORT_LABEL[terrain.sport_type]}</Text>
-                          </View>
-                          <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={styles.terrainPrice}>{formatPrice(terrain.prix_horaire)}</Text>
-                            <Text style={styles.terrainPriceSub}>/ heure</Text>
-                          </View>
-                        </View>
-                        {terrain.description ? (
-                          <Text style={styles.terrainDesc} numberOfLines={2}>{terrain.description}</Text>
-                        ) : null}
-                        <View style={styles.terrainCta}>
-                          <Text style={styles.terrainCtaTxt}>Réserver un créneau →</Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
+              <View style={styles.emptyProducts}>
+                <Text style={styles.emptyTxt}>Aucun terrain configuré pour l'instant.</Text>
               </View>
             )
+          ) : isTerrainShop ? (
+            <View>
+              <Text style={styles.catTitle}>Terrains disponibles</Text>
+              {terrains.length === 0 ? (
+                <View style={styles.emptyProducts}>
+                  <Text style={styles.emptyTxt}>Aucun terrain disponible pour l'instant.</Text>
+                </View>
+              ) : (
+                <View style={styles.terrainsContainer}>
+                  {terrains.map(terrain => (
+                    <TouchableOpacity
+                      key={terrain.id}
+                      style={styles.terrainCard}
+                      activeOpacity={0.85}
+                      onPress={() =>
+                        onBookTerrain?.({ terrain, prestataireName: displayName })
+                      }
+                    >
+                      <View style={styles.terrainTop}>
+                        <Text style={styles.terrainEmoji}>{SPORT_EMOJI[terrain.sport_type]}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.terrainNom}>{terrain.nom}</Text>
+                          <Text style={styles.terrainSport}>{SPORT_LABEL[terrain.sport_type]}</Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={styles.terrainPrice}>{formatPrice(terrain.prix_horaire)}</Text>
+                          <Text style={styles.terrainPriceSub}>/ heure</Text>
+                        </View>
+                      </View>
+                      {terrain.description ? (
+                        <Text style={styles.terrainDesc} numberOfLines={2}>{terrain.description}</Text>
+                      ) : null}
+                      <View style={styles.terrainCta}>
+                        <Text style={styles.terrainCtaTxt}>Réserver un créneau →</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
           ) : realProducts.length === 0 ? (
             <View style={styles.emptyProducts}>
               <Text style={styles.emptyTxt}>{emptyLabel}</Text>
