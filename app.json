@@ -17,7 +17,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "LASSİ utilise ta position pour te montrer les commerces autour de toi.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "LASSİ utilise ta position pour te montrer les commerces autour de toi."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "LASSİ utilise ta position pour te montrer les commerces autour de toi.",
+        "NSCameraUsageDescription": "LASSİ accède à ta caméra pour scanner les QR codes de réservation terrain."
       }
     },
     "android": {
@@ -33,7 +34,8 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.CAMERA"
       ]
     },
     "web": {
@@ -41,6 +43,12 @@
     },
     "plugins": [
       "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "LASSİ accède à ta caméra pour scanner les QR codes de réservation terrain."
+        }
+      ],
       [
         "expo-location",
         {

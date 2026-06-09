@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { View, ScrollView, KeyboardAvoidingView, Platform, StyleSheet, Alert } from 'react-native';
+import { ScrollView, KeyboardAvoidingView, Platform, StyleSheet, Alert } from 'react-native';
 
 import ChatHeader from '../../components/chat/ChatHeader';
 import DaySeparator from '../../components/chat/DaySeparator';
@@ -158,7 +158,7 @@ export default function ChatScreen({
       isMounted.current = false;
       pendingTimers.current.forEach(clearTimeout);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Auto-scroll ───────────────────────────────────────────────────────────
   useEffect(() => {

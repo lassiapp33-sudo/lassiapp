@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, TOP_INSET } from '../../theme';
 import AvisSection from '../../components/avis/AvisSection';
 import useShopStore from '../../store/shopStore';

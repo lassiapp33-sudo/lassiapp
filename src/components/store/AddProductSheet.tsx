@@ -174,7 +174,7 @@ export default function AddProductSheet({
     }
     setShowEmojiPicker(false);
     setUploading(false);
-  }, [visible, product]);
+  }, [visible, product]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sélection et upload de photo ────────────────────────────────────────────
   const handlePickPhoto = async (source: 'gallery' | 'camera') => {

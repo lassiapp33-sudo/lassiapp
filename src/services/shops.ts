@@ -14,7 +14,7 @@ export interface Shop {
   description: string | null;
   category: string;
   subcategories: string[];
-  shopType: 'products' | 'services' | 'memberships';
+  shopType: 'products' | 'services' | 'memberships' | 'terrains';
   zone: string;
   addressText: string | null;
   latitude: number | null;
@@ -161,7 +161,7 @@ export interface UpsertShopParams {
   subtitle: string;
   category: string;
   subcategories?: string[];
-  shopType?: 'products' | 'services' | 'memberships';
+  shopType?: 'products' | 'services' | 'memberships' | 'terrains';
   description?: string;
   addressText?: string;
   zone: string;

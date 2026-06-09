@@ -156,7 +156,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
     if (categories.length > 0 && !categories.find(c => c.id === activeCat)) {
       setActiveCat(categories[0].id);
     }
-  }, [categories]);
+  }, [categories, activeCat]);
 
   const activeCatData = categories.find(c => c.id === activeCat);
   const filtered = products.filter(p => p.category === activeCat);
@@ -335,6 +335,10 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
   }
 
   return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
     <LassiScreen
       header={
         <StoreHeader onBack={onBack} onPreview={onPreview ?? (() => {})} onPromos={onPromos} />
@@ -343,10 +347,6 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
       {loading ? (
         <LoadingSpinner />
       ) : (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
-        >
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.content}
@@ -540,7 +540,6 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
 
             <View style={{ height: 32 }} />
           </ScrollView>
-        </KeyboardAvoidingView>
       )}
 
       <AddProductSheet
@@ -552,6 +551,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
         onClose={() => setShowSheet(false)}
       />
     </LassiScreen>
+    </KeyboardAvoidingView>
   );
 }
 

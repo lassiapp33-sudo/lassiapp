@@ -23,26 +23,6 @@ const IcoMic = () => (
   </Svg>
 );
 
-// ─── Exemples de phrases ──────────────────────────────────────────────────────
-
-const EXAMPLES = [
-  {
-    highlight: 'coiffeur',
-    rest: ' pour des tresses près de la ',
-    highlight2: "Patte d'Oie",
-    prefix: '« Trouve-moi un ',
-    suffix: ' »',
-  },
-  { full: '« Boobu Tangana la gënë dëgër ci Grand Dakar ? »', wolof: true },
-  {
-    highlight: 'ciment',
-    rest: ' disponible à ',
-    highlight2: 'Rufisque',
-    prefix: '« Qui a du ',
-    suffix: ' ? »',
-  },
-];
-
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -83,7 +63,7 @@ export default function VoiceAssistantScreen({ onClose }: Props) {
       a1.stop();
       a2.stop();
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const makeRingStyle = (anim: Animated.Value) => ({
     transform: [

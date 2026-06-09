@@ -358,7 +358,7 @@ const CATEGORY_MAP: { keywords: string[]; cat: CatMatch }[] = [
       'aerobic',
       'sport',
     ],
-    cat: { id: 'sport', label: 'Fitness / Sport' },
+    cat: { id: 'sport', label: 'Sport' },
   },
   {
     keywords: ['boulangerie', 'baguette', 'patisserie', 'gateau', 'tarte', 'croissant', 'pain'],

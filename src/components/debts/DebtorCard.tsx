@@ -36,18 +36,24 @@ function buildWaUrl(debtor: Debtor): string {
   return `whatsapp://send?phone=${phone}&text=${encodeURIComponent(msg)}`;
 }
 
+const IcoPaid = () => (
+  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" strokeWidth={2.2}>
+    <Path d="M20 6L9 17l-5-5" stroke={colors.success} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 interface Props {
   debtor: Debtor;
   onPress?: () => void;
+  onMarkPaid?: () => void;
 }
 
-function DebtorCard({ debtor, onPress }: Props) {
+function DebtorCard({ debtor, onPress, onMarkPaid }: Props) {
   const sc = STATUS[debtor.status];
 
   const handleRelance = () => {
     const url = buildWaUrl(debtor);
     Linking.openURL(url).catch(() => {
-      // Fallback SMS si WhatsApp absent
       if (debtor.phone) Linking.openURL(`sms:${debtor.phone}`);
     });
   };
@@ -57,7 +63,7 @@ function DebtorCard({ debtor, onPress }: Props) {
       {/* Barre colorée gauche — repérage visuel instantané */}
       <View style={[styles.stripe, { backgroundColor: sc.stripe }]} />
 
-      {/* Avatar débiteur + pastille statut — wrapper relatif pour positionner le dot */}
+      {/* Avatar débiteur + pastille statut */}
       <View style={styles.avatarWrap}>
         <Avatar imageUrl={debtor.avatarUrl} name={debtor.name} size={46} variant="user" />
         <View style={[styles.pdot, { backgroundColor: sc.dot }]} />
@@ -72,18 +78,31 @@ function DebtorCard({ debtor, onPress }: Props) {
         </View>
       </View>
 
-      {/* Montant + bouton relance */}
+      {/* Montant + boutons */}
       <View style={styles.right}>
         <Text style={styles.due}>{formatPrice(debtor.amount)}</Text>
-        <TouchableOpacity
-          style={styles.waBtn}
-          onPress={handleRelance}
-          activeOpacity={0.8}
-          hitSlop={8}
-        >
-          <IcoWA />
-          <Text style={styles.waTxt}>Relancer</Text>
-        </TouchableOpacity>
+        <View style={styles.btns}>
+          {onMarkPaid && (
+            <TouchableOpacity
+              style={styles.paidBtn}
+              onPress={onMarkPaid}
+              activeOpacity={0.8}
+              hitSlop={8}
+            >
+              <IcoPaid />
+              <Text style={styles.paidTxt}>Payé</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.waBtn}
+            onPress={handleRelance}
+            activeOpacity={0.8}
+            hitSlop={8}
+          >
+            <IcoWA />
+            <Text style={styles.waTxt}>Relancer</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -163,6 +182,28 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: fonts.titleXL,
     fontSize: 15,
+  },
+  btns: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+
+  // Bouton "Payé ✓" — vert success
+  paidBtn: {
+    height: 30,
+    paddingHorizontal: 10,
+    borderRadius: 9,
+    backgroundColor: 'rgba(34,197,94,.13)',
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,.3)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  paidTxt: {
+    color: colors.success,
+    fontFamily: fonts.title,
+    fontSize: 11,
   },
 
   // Bouton WhatsApp — couleur verte officielle

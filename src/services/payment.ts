@@ -34,9 +34,12 @@ export async function createPayment(params: {
     headers: await authHeaders(),
     body: JSON.stringify(params),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? 'Erreur de paiement');
-  return data as PaymentSession;
+  const data = await res.json() as Record<string, unknown>;
+  if (!res.ok) throw new Error((data.error as string) ?? 'Erreur de paiement');
+  if (data.status === 'awaiting_keys') {
+    throw new Error('Paiement mobile bientôt disponible. Les intégrations Wave et Orange Money sont en cours de finalisation.');
+  }
+  return data as unknown as PaymentSession;
 }
 
 // ─── Vérifier si un paiement a été effectué ───────────────────────────────────
@@ -51,7 +54,7 @@ export async function verifyPayment(params: {
     headers: await authHeaders(),
     body: JSON.stringify(params),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? 'Erreur vérification');
+  const data = await res.json() as Record<string, unknown>;
+  if (!res.ok) throw new Error((data.error as string) ?? 'Erreur vérification');
   return data.paid === true;
 }

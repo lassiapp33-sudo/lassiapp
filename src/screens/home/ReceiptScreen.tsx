@@ -135,7 +135,7 @@ export default function ReceiptScreen({ orderId, onBack }: Props) {
 
   useEffect(() => {
     load();
-  }, [orderId]);
+  }, [orderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Quand le compte à rebours atteint 0, on passe localement à 'expire'
   useEffect(() => {

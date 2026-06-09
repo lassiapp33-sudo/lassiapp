@@ -14,7 +14,6 @@ import {
   Platform,
 } from 'react-native';
 import { notifyError } from '../../utils/errorUtils';
-import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import * as disputeService from '../../services/disputes';
 import type { Dispute, DisputeMessage } from '../../services/disputes';
@@ -127,7 +126,6 @@ export default function MyDisputesScreen({ onBack }: Props) {
           ) : (
             messages.map(msg => {
               const isAdmin = msg.senderRole === 'admin';
-              const isMe = msg.senderRole !== 'admin' && true; // simplifié
               return (
                 <View key={msg.id} style={[styles.msgBubble, isAdmin && styles.msgBubbleAdmin]}>
                   <Text style={[styles.msgSender, isAdmin && styles.msgSenderAdmin]}>

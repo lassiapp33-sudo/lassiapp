@@ -10,6 +10,11 @@ import OrdersScreen from './OrdersScreen';
 import VisibilityScreen from './VisibilityScreen';
 import RevenueScreen from './RevenueScreen';
 import PromotionsScreen from './PromotionsScreen';
+import TerrainScreen from './TerrainScreen';
+import TerrainEditScreen from './TerrainEditScreen';
+import TerrainReservationsScreen from './TerrainReservationsScreen';
+import TerrainScanScreen from './TerrainScanScreen';
+import { Terrain } from '../../types/terrain';
 import NotificationsScreen from '../home/NotificationsScreen';
 import ChatScreen from '../chat/ChatScreen';
 import ShopScreen from '../shop/ShopScreen';
@@ -60,7 +65,11 @@ type MerchantScreen =
       shopName: string;
       from: 'cart' | 'chat';
       backTo?: 'aroundme' | 'assistant';
-    };
+    }
+  | 'terrains'
+  | { id: 'terrain_edit'; terrain?: Terrain }
+  | { id: 'terrain_reservations'; terrain: Terrain }
+  | 'terrain_scan';
 
 interface Props {
   onLogout: () => void;
@@ -266,6 +275,36 @@ export default function MerchantNavigator({ onLogout }: Props) {
         }}
       />
     );
+  if (screen === 'terrain_scan')
+    return <TerrainScanScreen onBack={() => setScreen('terrains')} />;
+
+  if (typeof screen === 'object' && screen.id === 'terrain_edit')
+    return (
+      <TerrainEditScreen
+        terrain={screen.terrain}
+        onBack={() => setScreen('terrains')}
+        onSaved={() => setScreen('terrains')}
+      />
+    );
+
+  if (typeof screen === 'object' && screen.id === 'terrain_reservations')
+    return (
+      <TerrainReservationsScreen
+        terrain={screen.terrain}
+        onBack={() => setScreen('terrains')}
+      />
+    );
+
+  if (screen === 'terrains')
+    return (
+      <TerrainScreen
+        onBack={() => setScreen('dashboard')}
+        onAddTerrain={() => setScreen({ id: 'terrain_edit' })}
+        onEditTerrain={t => setScreen({ id: 'terrain_edit', terrain: t })}
+        onTerrainReservations={t => setScreen({ id: 'terrain_reservations', terrain: t })}
+      />
+    );
+
   if (screen === 'preview')
     return <ShopScreen shopId={shopId ?? ''} onBack={() => setScreen('store')} />;
   if (screen === 'avis') return <MerchantAvisScreen onBack={() => setScreen('dashboard')} />;
@@ -311,6 +350,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
         if (dest === 'assistant') setScreen('assistant');
         if (dest === 'aroundme') setScreen('aroundme');
         if (dest === 'avis') setScreen('avis');
+        if (dest === 'terrains') setScreen('terrains');
       }}
       onNotifPress={() => setScreen('notifications')}
     />

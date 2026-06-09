@@ -59,7 +59,7 @@ export default function SearchBar({ value, onChangeText, onMicPress, onPress }: 
     );
     anim.start();
     return () => anim.stop();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <View style={styles.row}>

@@ -16,8 +16,15 @@ import CategoryScreen from '../category/CategoryScreen';
 import ShopScreen from '../shop/ShopScreen';
 import ChatScreen from '../chat/ChatScreen';
 import PaymentScreen from '../payment/PaymentScreen';
+import TerrainBookingScreen from '../terrain/TerrainBookingScreen';
+import TerrainPaymentScreen from '../terrain/TerrainPaymentScreen';
+import TerrainQRScreen from '../terrain/TerrainQRScreen';
+import TerrainsListScreen from '../terrain/TerrainsListScreen';
+import TerrainDetailScreen from '../terrain/TerrainDetailScreen';
+import TerrainMyReservationsScreen from '../terrain/TerrainMyReservationsScreen';
 import { CatId } from '../../components/category/CatNavBar';
 import { OrderInfo } from '../../types/payment';
+import { Terrain, SportType } from '../../types/terrain';
 import useAuthStore from '../../store/authStore';
 import useNotificationsStore from '../../store/notificationsStore';
 import usePendingNavStore from '../../store/pendingNavStore';
@@ -39,7 +46,7 @@ type HomeStack =
   | { id: 'map' }
   | { id: 'cart'; shopId: string; shopName: string }
   | { id: 'category'; catId: CatId; title: string }
-  | { id: 'shop'; shopId: string; shopName: string }
+  | { id: 'shop'; shopId: string; shopName: string; targetProductId?: string }
   | {
       id: 'chat';
       shopId?: string;
@@ -57,7 +64,33 @@ type HomeStack =
       shopId?: string;
       shopName?: string;
     }
-  | { id: 'receipt'; orderId: string };
+  | { id: 'receipt'; orderId: string }
+  | { id: 'terrain_list'; sport?: SportType }
+  | { id: 'terrain_my_reservations' }
+  | { id: 'terrain_detail'; terrain: Terrain }
+  | { id: 'terrain_booking'; terrain: Terrain; prestataireName: string }
+  | {
+      id: 'terrain_payment';
+      terrainId: string;
+      terrainNom: string;
+      prestataireId: string;
+      prestataireName: string;
+      dateReservation: string;
+      heureDebut: string;
+      heureFin: string;
+      dureeHeures: number;
+      prixTotal: number;
+    }
+  | {
+      id: 'terrain_qr';
+      receiptCode: string;
+      terrainNom: string;
+      dateReservation: string;
+      heureDebut: string;
+      heureFin: string;
+      prestataireName: string;
+      prixTotal: number;
+    };
 
 interface Props {
   onLogout: () => void;
@@ -78,6 +111,12 @@ export default function HomeNavigator({ onLogout }: Props) {
   const pushShop = (shopId: string, shopName: string) => {
     recordView(shopId).catch(err => logger.warn('[HomeNavigator] recordView:', err));
     push({ id: 'shop', shopId, shopName });
+  };
+
+  // Navigation depuis PromoBanner — ouvre la vitrine et pointe l'article cliqué
+  const pushShopItem = (shopId: string, shopName: string, productId: string) => {
+    recordView(shopId).catch(err => logger.warn('[HomeNavigator] recordView:', err));
+    push({ id: 'shop', shopId, shopName, targetProductId: productId });
   };
 
   // Abonnement Realtime toujours actif — met à jour le badge cloche en temps réel
@@ -173,12 +212,109 @@ export default function HomeNavigator({ onLogout }: Props) {
     );
   }
 
+  // ── QR terrain ───────────────────────────────────────────────────────────
+  if (screen.id === 'terrain_qr') {
+    return (
+      <TerrainQRScreen
+        receiptCode={screen.receiptCode}
+        terrainNom={screen.terrainNom}
+        dateReservation={screen.dateReservation}
+        heureDebut={screen.heureDebut}
+        heureFin={screen.heureFin}
+        prestataireName={screen.prestataireName}
+        prixTotal={screen.prixTotal}
+        onBack={() => setHistory([{ id: 'main' }])}
+      />
+    );
+  }
+
+  // ── Paiement terrain ──────────────────────────────────────────────────────
+  if (screen.id === 'terrain_payment') {
+    return (
+      <TerrainPaymentScreen
+        terrainId={screen.terrainId}
+        terrainNom={screen.terrainNom}
+        prestataireId={screen.prestataireId}
+        prestataireName={screen.prestataireName}
+        dateReservation={screen.dateReservation}
+        heureDebut={screen.heureDebut}
+        heureFin={screen.heureFin}
+        dureeHeures={screen.dureeHeures}
+        prixTotal={screen.prixTotal}
+        onBack={pop}
+        onSuccess={receiptCode =>
+          push({
+            id: 'terrain_qr',
+            receiptCode,
+            terrainNom: screen.terrainNom,
+            dateReservation: screen.dateReservation,
+            heureDebut: screen.heureDebut,
+            heureFin: screen.heureFin,
+            prestataireName: screen.prestataireName,
+            prixTotal: screen.prixTotal,
+          })
+        }
+      />
+    );
+  }
+
+  // ── Mes réservations terrain ──────────────────────────────────────────────
+  if (screen.id === 'terrain_my_reservations') {
+    return <TerrainMyReservationsScreen onBack={pop} />;
+  }
+
+  // ── Liste découverte terrains ─────────────────────────────────────────────
+  if (screen.id === 'terrain_list') {
+    return (
+      <TerrainsListScreen
+        onBack={pop}
+        onSelectTerrain={terrain => push({ id: 'terrain_detail', terrain })}
+        initialSport={screen.sport}
+      />
+    );
+  }
+
+  if (screen.id === 'terrain_detail') {
+    return (
+      <TerrainDetailScreen
+        terrain={screen.terrain}
+        onBack={pop}
+      />
+    );
+  }
+
+  // ── Réservation terrain ───────────────────────────────────────────────────
+  if (screen.id === 'terrain_booking') {
+    return (
+      <TerrainBookingScreen
+        terrain={screen.terrain}
+        prestataireName={screen.prestataireName}
+        onBack={pop}
+        onBook={params =>
+          push({
+            id: 'terrain_payment',
+            terrainId: params.terrainId,
+            terrainNom: params.terrainNom,
+            prestataireId: params.prestataireId,
+            prestataireName: params.prestataireName,
+            dateReservation: params.dateReservation,
+            heureDebut: params.heureDebut,
+            heureFin: params.heureFin,
+            dureeHeures: params.dureeHeures,
+            prixTotal: params.prixTotal,
+          })
+        }
+      />
+    );
+  }
+
   // ── Vitrine prestataire ───────────────────────────────────────────────────
   if (screen.id === 'shop') {
     return (
       <ShopScreen
         shopId={screen.shopId}
         shopName={screen.shopName}
+        targetProductId={screen.targetProductId}
         onBack={pop}
         onChat={(logoUrl, isVip) =>
           push({
@@ -191,6 +327,23 @@ export default function HomeNavigator({ onLogout }: Props) {
           })
         }
         onCheckout={() => push({ id: 'cart', shopId: screen.shopId, shopName: screen.shopName })}
+        onBookTerrain={params =>
+          push({ id: 'terrain_booking', terrain: params.terrain, prestataireName: params.prestataireName })
+        }
+        onBookTerrainDirect={params =>
+          push({
+            id: 'terrain_payment',
+            terrainId: params.terrainId,
+            terrainNom: params.terrainNom,
+            prestataireId: params.prestataireId,
+            prestataireName: params.prestataireName,
+            dateReservation: params.dateReservation,
+            heureDebut: params.heureDebut,
+            heureFin: params.heureFin,
+            dureeHeures: params.dureeHeures,
+            prixTotal: params.prixTotal,
+          })
+        }
       />
     );
   }
@@ -300,6 +453,7 @@ export default function HomeNavigator({ onLogout }: Props) {
         onBack={pop}
         onOrders={() => push({ id: 'orders' })}
         onFavorites={() => push({ id: 'favorites' })}
+        onTerrainReservations={() => push({ id: 'terrain_my_reservations' })}
         onLogout={onLogout}
       />
     );
@@ -310,6 +464,7 @@ export default function HomeNavigator({ onLogout }: Props) {
     <ClientHomeScreen
       onCategoryPress={(catId, title) => push({ id: 'category', catId, title })}
       onShopPress={pushShop}
+      onShopItemPress={pushShopItem}
       onSearch={() => push({ id: 'search' })}
       onVoice={() => push({ id: 'voice' })}
       onFavorites={() => push({ id: 'favorites' })}
@@ -318,6 +473,7 @@ export default function HomeNavigator({ onLogout }: Props) {
       onNotifications={() => push({ id: 'notifications' })}
       onProfile={() => push({ id: 'profile' })}
       onMap={() => push({ id: 'map' })}
+      onTerrains={() => push({ id: 'terrain_list' })}
     />
   );
 }

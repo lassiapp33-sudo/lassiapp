@@ -9,8 +9,7 @@ import {
 } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
-import { VisibilityPlan } from '../../services/visibilityPayment';
-import type { PayMethod } from '../../services/visibilityPayment';
+import { VisibilityPlan, type PayMethod } from '../../services/visibilityPayment';
 import { formatPrice } from '../../utils/format';
 
 const IcoCard = () => (

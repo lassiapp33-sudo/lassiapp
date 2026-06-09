@@ -27,8 +27,7 @@ import {
   reverseGeocode,
 } from '../../services/location';
 import type { Shop } from '../../services/shops';
-import { computeStatus } from '../../services/hours';
-import type { WeekHours } from '../../services/hours';
+import { computeStatus, type WeekHours } from '../../services/hours';
 import { useRealtimeShops } from '../../hooks/useRealtimeShops';
 import { CATEGORIES } from '../../config/categories';
 

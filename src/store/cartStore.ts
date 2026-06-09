@@ -18,6 +18,7 @@ export interface CartShopInfo {
   name: string;
   location: string;
   logoUrl?: string;
+  showOrderType?: boolean; // true uniquement pour les boutiques alimentaires (produits hors bakery/stores)
 }
 
 interface CartState {

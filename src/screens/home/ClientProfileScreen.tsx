@@ -20,7 +20,6 @@ import LanguageModal from '../../components/common/LanguageModal';
 import HelpScreen from './HelpScreen';
 import * as storageService from '../../services/storage';
 import * as authService from '../../services/auth';
-import Avatar from '../../components/Avatar';
 import LassiScreen from '../../components/LassiScreen';
 import { contacterServiceClient } from '../../config/contact';
 import AProposScreen from '../common/AProposScreen';
@@ -33,20 +32,6 @@ import { ProfileIdCard } from '../../components/common/ProfileIdCard';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
-const IcoEdit = () => (
-  <Svg
-    width={16}
-    height={16}
-    viewBox="0 0 24 24"
-    fill="none"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke={colors.muted} />
-    <Path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" stroke={colors.muted} />
-  </Svg>
-);
 
 const IcoOrder = () => (
   <Svg
@@ -197,6 +182,21 @@ const IcoWhatsApp = () => (
   </Svg>
 );
 
+const IcoTerrain = () => (
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path d="M3 17l4-8 4 4 4-6 4 10H3z" stroke={colors.accent} />
+    <Path d="M3 20h18" stroke={colors.accent} />
+  </Svg>
+);
+
 const IcoLogout = () => (
   <Svg
     width={18}
@@ -235,12 +235,13 @@ interface Props {
   onBack?: () => void;
   onOrders?: () => void;
   onFavorites?: () => void;
+  onTerrainReservations?: () => void;
   onLogout?: () => void;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
-export default function ClientProfileScreen({ onBack, onOrders, onFavorites, onLogout }: Props) {
+export default function ClientProfileScreen({ onBack, onOrders, onFavorites, onTerrainReservations, onLogout }: Props) {
   const t = useT();
   const lang = useLanguageStore(s => s.lang);
 
@@ -349,6 +350,12 @@ export default function ClientProfileScreen({ onBack, onOrders, onFavorites, onL
             title={t.profile.myFavorites}
             subtitle={favSubtitle}
             onPress={onFavorites}
+          />
+          <ProfileOptionRow
+            icon={<IcoTerrain />}
+            title="Mes terrains réservés"
+            subtitle="Football, basketball & plus"
+            onPress={onTerrainReservations}
           />
           <ProfileOptionRow
             icon={<IcoCard />}

@@ -15,7 +15,6 @@ import {
   Image,
   Alert,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import * as disputeService from '../../services/disputes';
 import * as storageService from '../../services/storage';

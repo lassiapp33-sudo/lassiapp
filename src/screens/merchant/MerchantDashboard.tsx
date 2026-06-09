@@ -51,7 +51,8 @@ type NavDest =
   | 'notifications'
   | 'assistant'
   | 'aroundme'
-  | 'avis';
+  | 'avis'
+  | 'terrains';
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
@@ -73,6 +74,7 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
   // Shop
   const shopId = useShopStore(s => s.shopId);
   const shopIsVip = useShopStore(s => s.profile?.isVip ?? false);
+  const shopType = useShopStore(s => s.context.shopType);
   const loadMyShop = useShopStore(s => s.loadMyShop);
 
   // Commandes
@@ -158,7 +160,11 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
         />
 
         {/* ③ 4 actions rapides — compteurs réels */}
-        <QuickActions onPress={key => onNavigate?.(key as NavDest)} debtCount={debtorsWithDebt} />
+        <QuickActions
+          onPress={key => onNavigate?.(key as NavDest)}
+          debtCount={debtorsWithDebt}
+          showTerrains={shopType === 'terrains'}
+        />
 
         {/* ④ Commandes en cours */}
         <SectionHeader

@@ -3,8 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import * as shopsService from '../../services/shops';
 import { Shop } from '../../services/shops';
-import { computeStatus } from '../../services/hours';
-import type { WeekHours } from '../../services/hours';
+import { computeStatus, type WeekHours } from '../../services/hours';
 import { useRealtimeShops } from '../../hooks/useRealtimeShops';
 import Avatar from '../../components/Avatar';
 import { useT } from '../../i18n';

@@ -11,9 +11,10 @@ const DEFAULT_CATS: StoreCategory[] = [
   { id: 'plats', label: 'Plats', emoji: '🍽' },
 ];
 
-function getDefaultCats(shopType: 'products' | 'services' | 'memberships'): StoreCategory[] {
+function getDefaultCats(shopType: 'products' | 'services' | 'memberships' | 'terrains'): StoreCategory[] {
   if (shopType === 'services') return [{ id: 'prestations', label: 'Prestations', emoji: '✂️' }];
   if (shopType === 'memberships') return [{ id: 'formules', label: 'Formules', emoji: '🏋️' }];
+  if (shopType === 'terrains') return [];
   return [{ id: 'catalogue', label: 'Catalogue', emoji: '📦' }];
 }
 

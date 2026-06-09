@@ -13,8 +13,7 @@ import LassiScreen from '../../components/LassiScreen';
 import useFavoritesStore from '../../store/favoritesStore';
 import * as shopsService from '../../services/shops';
 import { Shop } from '../../services/shops';
-import { computeStatus } from '../../services/hours';
-import type { WeekHours } from '../../services/hours';
+import { computeStatus, type WeekHours } from '../../services/hours';
 import { useRealtimeShops } from '../../hooks/useRealtimeShops';
 import Avatar from '../../components/Avatar';
 import { useT } from '../../i18n';
@@ -56,7 +55,7 @@ function catLabel(category: string): string {
     food: 'Restos & Boissons',
     hair: 'Coiffeurs & Salons',
     stores: 'Commerçants du quartier',
-    sport: 'Fitness',
+    sport: 'Sport',
     bakery: 'Boulangeries',
     fruiterie: 'Fruiterie',
   };

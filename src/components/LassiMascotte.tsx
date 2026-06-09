@@ -125,7 +125,7 @@ export function LassiMascotte({
     glowAnim.current = loop;
     loop.start();
     return () => loop.stop();
-  }, [glow, actif]);
+  }, [glow, actif]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Animation principale ──────────────────────────────────────────────────
   useEffect(() => {
@@ -284,15 +284,15 @@ export function LassiMascotte({
     animRef.current = main;
     main.start();
     return () => main.stop();
-  }, [anim, boucle, actif]);
+  }, [anim, boucle, actif]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Effet au toucher ──────────────────────────────────────────────────────
   const handlePressIn = useCallback(() => {
     Animated.timing(pressScale, { toValue: 0.92, duration: 80, useNativeDriver: true }).start();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const handlePressOut = useCallback(() => {
     Animated.spring(pressScale, { toValue: 1, useNativeDriver: true }).start();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Éléments ──────────────────────────────────────────────────────────────
   const imgH = taille * 1.27;

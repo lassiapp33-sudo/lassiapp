@@ -42,13 +42,13 @@ export const FOOTER_HEIGHT = 88 + BOTTOM_EXTRA;
 const LABELS: Record<string, { main: string; sub: string }> = {
   products: { main: 'Commander', sub: 'Payer via Wave / OM' },
   services: { main: 'Réserver', sub: 'Confirmer la réservation' },
-  memberships: { main: "S'abonner", sub: 'Voir les formules' },
+  memberships: { main: 'Réserver', sub: 'Voir les formules' },
 };
 
 interface Props {
   total: number;
   hasItems: boolean;
-  shopType?: 'products' | 'services' | 'memberships';
+  shopType?: 'products' | 'services' | 'memberships' | 'terrains';
   onChat?: () => void;
   onCheckout?: () => void;
 }

@@ -15,6 +15,7 @@ import TabSelector, { HomeTab } from '../../components/home/TabSelector';
 import CategoryGrid from '../../components/home/CategoryGrid';
 import { CatId } from '../../components/category/CatNavBar';
 import RecoCarousel, { RecoItem } from '../../components/home/RecoCarousel';
+import PromoBanner from '../../components/home/PromoBanner';
 import NearbyCard, { NearbyPlace } from '../../components/home/NearbyCard';
 import BottomNav, { NavTab, NAV_HEIGHT } from '../../components/home/BottomNav';
 import { colors, fonts, TOP_INSET } from '../../theme';
@@ -38,6 +39,8 @@ interface Props {
   onNotifications?: () => void;
   onProfile?: () => void;
   onMap?: () => void;
+  onTerrains?: () => void;
+  onShopItemPress?: (shopId: string, shopName: string, productId: string) => void;
 }
 
 export default function ClientHomeScreen({
@@ -51,6 +54,8 @@ export default function ClientHomeScreen({
   onNotifications,
   onProfile,
   onMap,
+  onTerrains,
+  onShopItemPress,
 }: Props) {
   const t = useT();
 
@@ -209,6 +214,9 @@ export default function ClientHomeScreen({
           <CategoryGrid onSelect={handleCategorySelect} />
         </View>
 
+        {/* Produits en vitrine — carrousel auto-défilant avec indicateurs */}
+        <PromoBanner onPress={onShopItemPress} />
+
         {/* Recommandations — boutiques VIP réelles */}
         {recos.length > 0 && (
           <View style={styles.recoSection}>
@@ -283,6 +291,17 @@ const styles = StyleSheet.create({
   },
   secLink: { color: colors.accent, fontFamily: fonts.ui, fontSize: 12 },
   recoSection: { marginTop: 28, marginBottom: 8 },
+  terrainBanner: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: `${colors.accent}40`,
+    borderRadius: 16, padding: 16, marginBottom: 28, marginTop: 8,
+  },
+  terrainBannerLeft: { flex: 1, gap: 4 },
+  terrainBannerEmoji: { fontSize: 22, letterSpacing: 2, marginBottom: 2 },
+  terrainBannerTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
+  terrainBannerSub: { color: colors.muted, fontFamily: fonts.body, fontSize: 12 },
+  terrainBannerArrow: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 20 },
   loader: { paddingVertical: 32, alignItems: 'center' },
   empty: { paddingVertical: 24, alignItems: 'center' },
   emptyTxt: {

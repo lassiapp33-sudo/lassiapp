@@ -9,7 +9,6 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import DebtHeader from '../../components/debts/DebtHeader';
 import TotalCard from '../../components/debts/TotalCard';
 import FilterChips from '../../components/debts/FilterChips';
@@ -39,6 +38,7 @@ export default function DebtsScreen({ onBack }: Props) {
   const debtors = useDebtsStore(s => s.debtors);
   const loading = useDebtsStore(s => s.loading);
   const addToDebt = useDebtsStore(s => s.addToDebt);
+  const markPaid = useDebtsStore(s => s.markPaid);
   const loadDebts = useDebtsStore(s => s.loadDebts);
 
   const [filter, setFilter] = useState<DebtFilter>('all');
@@ -98,6 +98,27 @@ export default function DebtsScreen({ onBack }: Props) {
     c => !existingNames.has(c.name.toLowerCase()),
   );
   const clientOptions: ClientOption[] = [...existingOptions, ...newOptions];
+
+  const handleMarkPaid = (debtorId: string, name: string) => {
+    Alert.alert(
+      'Confirmer le paiement',
+      `${name} a réglé sa dette en entier ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Oui, payé ✓',
+          style: 'default',
+          onPress: async () => {
+            try {
+              await markPaid(debtorId);
+            } catch {
+              Alert.alert('Erreur', 'Impossible de marquer comme payé. Réessaie.');
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const handleAddDebt = async (option: ClientOption, amount: number) => {
     if (!shopId) return;
@@ -161,7 +182,12 @@ export default function DebtsScreen({ onBack }: Props) {
           style={styles.scroll}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item: debtor }) => <DebtorCard debtor={debtor} />}
+          renderItem={({ item: debtor }) => (
+            <DebtorCard
+              debtor={debtor}
+              onMarkPaid={() => handleMarkPaid(debtor.id, debtor.name)}
+            />
+          )}
           ListHeaderComponent={
             <>
               <TotalCard debtors={debtors} />

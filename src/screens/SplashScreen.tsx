@@ -72,7 +72,7 @@ export default function SplashScreen({ onFinish }: Props) {
       <Animated.Text
         style={[styles.tagline, { opacity: tagOpacity, transform: [{ translateY: tagY }] }]}
       >
-        L'économie de ton quartier, dans ta poche
+        Ton quartier dans ta poche
       </Animated.Text>
     </View>
   );
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   tagline: {
     color: '#8a8eb5',
     fontFamily: fonts.title,
-    fontSize: 16,
+    fontSize: 22,
     marginTop: 44,
   },
 });

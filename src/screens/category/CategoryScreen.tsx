@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import TopBar from '../../components/category/TopBar';
 import CatNavBar from '../../components/category/CatNavBar';
 import { CatId, getCatConfig } from '../../config/categories';
+import { supabase } from '../../lib/supabase';
 import SubCatTabs, { SubCat } from '../../components/category/SubCatTabs';
 import VipPodium, { VipEntry } from '../../components/category/VipPodium';
 import FilterBar, { FilterId } from '../../components/category/FilterBar';
@@ -120,8 +121,9 @@ export default function CategoryScreen({
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
 
   const meta = getCatMeta(catId);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  async function loadShops(cat: CatId) {
+  const loadShops = useCallback(async (cat: CatId) => {
     setLoading(true);
     try {
       const data = await shopsService.getShopsByCategory(cat);
@@ -131,17 +133,30 @@ export default function CategoryScreen({
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     getUserLocation().then(setUserLoc);
     loadShops(catId);
-  }, [catId]);
 
-  const handleCatChange = (id: CatId) => {
+    // Realtime : mise à jour automatique quand un prestataire s'inscrit ou modifie sa fiche
+    const ch = supabase
+      .channel(`shops-cat-${catId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'shops', filter: `category=eq.${catId}` },
+        () => loadShops(catId),
+      )
+      .subscribe();
+
+    channelRef.current = ch;
+    return () => { ch.unsubscribe(); };
+  }, [catId, loadShops]);
+
+  const handleCatChange = useCallback((id: CatId) => {
     setCatId(id);
     setSubCat(getCatMeta(id).subcats[0].id);
-  };
+  }, []);
 
   const handleNavPress = (t: NavTab) => {
     setNavTab(t);
@@ -150,6 +165,13 @@ export default function CategoryScreen({
     if (t === 'messages') onMessages?.();
     if (t === 'profile') onProfile?.();
   };
+
+  const activeSubCatLabel = useMemo(() => {
+    if (meta.subcats.length <= 1) return meta.subLabel;
+    const cfg = getCatConfig(catId);
+    const sub = cfg?.subcats.find(s => s.id === subCat);
+    return sub?.label ?? meta.subLabel;
+  }, [catId, subCat, meta]);
 
   // Top 3 VIP — mémorisé : filter+sort coûteux sur grande liste
   const vipShops = useMemo(
@@ -235,7 +257,7 @@ export default function CategoryScreen({
         )}
         <VipPodium
           entries={vipEntries}
-          subLabel={meta.subLabel}
+          subLabel={activeSubCatLabel}
           renewIn="7j"
           onPress={handleVipPress}
         />
@@ -258,6 +280,7 @@ export default function CategoryScreen({
       catId,
       meta,
       subCat,
+      activeSubCatLabel,
       vipEntries,
       filter,
       t,

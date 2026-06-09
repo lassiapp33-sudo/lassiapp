@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import Svg, { Path, Polyline } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
-import { MerchantPayment, PaymentFilter, PaymentStatus } from '../../types/merchantPayments';
+import { MerchantPayment, PaymentFilter } from '../../types/merchantPayments';
 import * as paymentsService from '../../services/merchantPayments';
 import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
@@ -53,16 +53,6 @@ const IcoTrend = () => (
     <Polyline points="16 7 22 7 22 13" stroke={colors.success} />
   </Svg>
 );
-
-// ─── Config statuts (pour les stats card) ────────────────────────────────────
-
-const STATUS_CFG: Record<PaymentStatus, { label: string; dot: string; text: string; bg: string }> =
-  {
-    pending: { label: 'En attente', dot: '#FDCF34', text: '#FDCF34', bg: 'rgba(253,207,52,0.12)' },
-    success: { label: 'Reçu', dot: '#5FD38A', text: '#5FD38A', bg: 'rgba(95,211,138,0.12)' },
-    failed: { label: 'Échoué', dot: '#E07A7A', text: '#E07A7A', bg: 'rgba(224,122,122,0.12)' },
-    refunded: { label: 'Remboursé', dot: '#60A5FA', text: '#60A5FA', bg: 'rgba(96,165,250,0.12)' },
-  };
 
 const FILTER_TABS: { id: PaymentFilter; label: string }[] = [
   { id: 'all', label: 'Tous' },

@@ -74,7 +74,7 @@ export default function AProposScreen({ onBack }: Props) {
         <View style={s.hero}>
           <LassiRoiScintillant />
           <LassiLogo width={160} style={s.logo} />
-          <Text style={s.slogan}>Ton quartier, à portée de main.</Text>
+          <Text style={s.slogan}>Ton quartier dans ta poche</Text>
         </View>
 
         {/* ── Version ───────────────────────────────────────────────────── */}
@@ -175,7 +175,7 @@ const s = StyleSheet.create({
   slogan: {
     color: '#8a8eb5',
     fontFamily: fonts.body,
-    fontSize: 13.5,
+    fontSize: 20,
     textAlign: 'center',
     letterSpacing: 0.2,
   },

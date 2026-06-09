@@ -14,17 +14,15 @@ import {
   Platform,
   Image,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 
 import LassiScreen from '../../components/LassiScreen';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import useShopStore from '../../store/shopStore';
 import { Promotion, PromoType, PromoCibleType } from '../../types/promotions';
-import { StoreProduct } from '../../types/store';
 import * as promoService from '../../services/promotions';
 import { getErrorMessage } from '../../utils/errorUtils';
 import { IcoBack, IcoPlus } from '../../components/icons';
-import { formatPrice, formatDateDMY } from '../../utils/format';
+import { formatDateDMY } from '../../utils/format';
 import { PromoCard, IcoTag } from '../../components/merchant/PromoCard';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────

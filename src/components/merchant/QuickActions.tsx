@@ -119,6 +119,7 @@ interface Props {
   debtCount?: number;
   msgCount?: number;
   avisCount?: number;
+  showTerrains?: boolean;
 }
 
 export default function QuickActions({
@@ -126,6 +127,7 @@ export default function QuickActions({
   debtCount = 0,
   msgCount = 0,
   avisCount = 0,
+  showTerrains = false,
 }: Props) {
   return (
     <View style={styles.grid}>
@@ -187,6 +189,16 @@ export default function QuickActions({
           badge={undefined}
           onPress={() => onPress?.('avis')}
         />
+        {showTerrains && (
+          <ActionCard
+            Icon={IcoGrid}
+            iconBg="rgba(95,211,138,.13)"
+            iconStroke={colors.success}
+            title="Mes terrains"
+            desc="Gérer, réservations, scanner QR"
+            onPress={() => onPress?.('terrains')}
+          />
+        )}
       </View>
     </View>
   );

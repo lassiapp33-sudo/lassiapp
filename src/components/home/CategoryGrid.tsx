@@ -7,7 +7,7 @@ import { CatId, CATEGORIES } from '../../config/categories';
 const DISPLAY: Partial<Record<CatId, { label?: string; oneLine?: boolean; itemWidth?: number }>> = {
   stores: { label: 'Commerçants\ndu quartier', itemWidth: 82 },
   hair: { label: 'Coiffeurs' },
-  sport: { label: 'Fitness' },
+  sport: { label: 'Sport' },
   bakery: { oneLine: true },
 };
 

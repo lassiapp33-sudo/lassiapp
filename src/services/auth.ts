@@ -141,7 +141,7 @@ export interface RegisterMerchantParams {
   shopSubtitle?: string; // tagline auto-généré depuis les sous-catégories
   shopCategory: string;
   shopSubcategories?: string[];
-  shopType?: 'products' | 'services' | 'memberships';
+  shopType?: 'products' | 'services' | 'memberships' | 'terrains';
   shopAddress?: string;
   openingHours?: WeekHours | null;
   logoLocalUri?: string | null;

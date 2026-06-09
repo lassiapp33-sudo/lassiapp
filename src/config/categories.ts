@@ -11,12 +11,13 @@ const IMG_NDEKI = require('../../assets/ndeki.png');
 const IMG_SOUPE = require('../../assets/soupe.png');
 const IMG_JUS = require('../../assets/jus.png');
 const IMG_SNACK = require('../../assets/snack.png');
+const IMG_MALIBU = require('../../assets/malibu.jpg');
 const IMG_COIFFEUR_HOMME = require('../../assets/coiffeur_homme.png');
 const IMG_FRUITS_MARINES = require('../../assets/fruits_marines.png');
 
 export type CatId = 'stores' | 'tangana' | 'food' | 'hair' | 'sport' | 'bakery' | 'fruiterie';
 
-export type ShopType = 'products' | 'services' | 'memberships';
+export type ShopType = 'products' | 'services' | 'memberships' | 'terrains';
 
 export interface SubcatOption {
   id: string;
@@ -24,6 +25,8 @@ export interface SubcatOption {
   label: string;
   desc: string;
   imageUri?: number;
+  /** true → vitrine affiche la réservation de créneaux (TerrainCreneaux) */
+  hasSlots?: boolean;
 }
 
 export interface CatConfig {
@@ -176,6 +179,13 @@ export const CATEGORIES: CatConfig[] = [
         desc: 'Plats complets, sur place / à emporter',
       },
       { id: 'fastfood', emoji: '🍔', label: 'Fast-food', desc: 'Burgers, shawarma, sandwichs' },
+      {
+        id: 'malibu',
+        emoji: '🍹',
+        label: 'Malibu',
+        desc: 'Cocktails, boissons exotiques, ambiance',
+        imageUri: IMG_MALIBU,
+      },
       { id: 'dibiterie', emoji: '🥩', label: 'Dibiterie', desc: 'Viande grillée, thiébou guinar' },
       { id: 'seras', emoji: '🔥', label: 'Séraas', desc: 'Poisson braisé, fruits de mer' },
       {
@@ -188,7 +198,7 @@ export const CATEGORIES: CatConfig[] = [
       {
         id: 'snack',
         emoji: '🍰',
-        label: 'Snack & Pâtisserie',
+        label: 'Snack & Gourmandise',
         desc: 'Gâteaux, viennoiseries, snacks',
         imageUri: IMG_SNACK,
       },
@@ -291,9 +301,9 @@ export const CATEGORIES: CatConfig[] = [
   },
   {
     id: 'sport',
-    label: 'Salles de sport',
-    subLabel: 'Salle',
-    emoji: '🏋',
+    label: 'Sport',
+    subLabel: 'Sport',
+    emoji: '⚽',
     shopType: 'memberships',
     subcatMode: 'multiple',
     subcats: [
@@ -303,8 +313,21 @@ export const CATEGORIES: CatConfig[] = [
         label: 'Musculation / Fitness',
         desc: 'Salle de musculation, cardio',
       },
+      {
+        id: 'reservation_terrain_foot',
+        emoji: '⚽',
+        label: 'Réservation de terrain foot',
+        desc: 'Terrain de football en salle ou en plein air',
+        hasSlots: true,
+      },
+      {
+        id: 'reservation_terrain_basket',
+        emoji: '🏀',
+        label: 'Réservation de terrain basket',
+        desc: 'Terrain de basketball en salle ou en plein air',
+        hasSlots: true,
+      },
       { id: 'arts_martiaux', emoji: '🥊', label: 'Arts martiaux', desc: 'Boxe, judo, taekwondo…' },
-      { id: 'collectifs', emoji: '🤸', label: 'Cours collectifs', desc: 'Yoga, danse, aérobic' },
     ],
     renderIcon: (color, size = 24) =>
       React.createElement(

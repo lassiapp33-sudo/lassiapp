@@ -289,12 +289,14 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
               <Text style={styles.summaryKey}>Sous-total</Text>
               <Text style={styles.summaryVal}>{formatPrice(subtotal)}</Text>
             </View>
-            <View style={styles.summaryLine}>
-              <Text style={styles.summaryKey}>Type</Text>
-              <Text style={styles.summaryVal}>
-                {orderType === 'place' ? '🍽 Sur place' : '🥡 À emporter'}
-              </Text>
-            </View>
+            {shopInfo?.showOrderType && (
+              <View style={styles.summaryLine}>
+                <Text style={styles.summaryKey}>Type</Text>
+                <Text style={styles.summaryVal}>
+                  {orderType === 'place' ? '🍽 Sur place' : '🥡 À emporter'}
+                </Text>
+              </View>
+            )}
             {/* Lignes de réduction (display-only, le serveur recalcule) */}
             {discounts.map(d => (
               <View key={d.promoId} style={styles.discountLine}>

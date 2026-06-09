@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Image } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -20,10 +20,13 @@ import useLocationStore from '../../store/locationStore';
 import * as shopsService from '../../services/shops';
 import * as productsService from '../../services/products';
 import * as promosService from '../../services/promotions';
+import * as terrainsService from '../../services/terrains';
 import { Shop } from '../../services/shops';
 import { Promotion } from '../../types/promotions';
 import { reverseGeocode } from '../../services/location';
 import { StoreProduct } from '../../types/store';
+import { Terrain, SPORT_EMOJI, SPORT_LABEL } from '../../types/terrain';
+import ShopTerrainSlotPicker, { SlotBookParams } from '../../components/terrain/ShopTerrainSlotPicker';
 import logger from '../../utils/logger';
 import {
   computeStatus,
@@ -116,23 +119,48 @@ const JS_DAY_TO_KEY: DayKey[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
+export interface TerrainBookingParams {
+  terrain: Terrain;
+  prestataireName: string;
+}
+
+export interface TerrainDirectBookParams {
+  terrainId: string;
+  terrainNom: string;
+  prestataireId: string;
+  prestataireName: string;
+  dateReservation: string;
+  heureDebut: string;
+  heureFin: string;
+  dureeHeures: number;
+  prixTotal: number;
+}
+
 interface Props {
   shopId?: string;
   shopName?: string;
+  targetProductId?: string;
   onBack: () => void;
   onChat?: (logoUrl: string | null, isVip: boolean) => void;
   onCheckout?: () => void;
+  onBookTerrain?: (params: TerrainBookingParams) => void;
+  onBookTerrainDirect?: (params: TerrainDirectBookParams) => void;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
-export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCheckout }: Props) {
+export default function ShopScreen({ shopId = '', shopName, targetProductId, onBack, onChat, onCheckout, onBookTerrain, onBookTerrainDirect }: Props) {
   const [shopData, setShopData] = useState<Shop | null>(null);
   const [realProducts, setRealProducts] = useState<StoreProduct[]>([]);
+  const [terrains, setTerrains] = useState<Terrain[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [activeTab, setActiveTab] = useState<MenuTabId>('all');
   const [resolvedZone, setResolvedZone] = useState<string>('');
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  const scrollRef = useRef<ScrollView>(null);
+  const productSectionY = useRef(0);
   const [activePromos, setActivePromos] = useState<Promotion[]>([]);
 
   // Position utilisateur (déjà chargée dans locationStore par ClientHomeScreen)
@@ -158,6 +186,10 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
         ...products.filter(p => p.stock === 'in'),
         ...products.filter(p => p.stock === 'out'),
       ]);
+      if (shop?.shopType === 'terrains' && shop?.merchantId) {
+        const terrainList = await terrainsService.getTerrainsByMerchant(shop.merchantId).catch(() => []);
+        setTerrains(terrainList);
+      }
       if (shop?.zone) {
         setResolvedZone(shop.zone);
       } else if (shop?.latitude && shop?.longitude) {
@@ -177,8 +209,31 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
     loadShop();
   }, [loadShop]);
 
+  // Quand un produit cible est fourni (depuis PromoBanner), filtre sur sa catégorie et s'y positionne
+  useEffect(() => {
+    if (!targetProductId || realProducts.length === 0) return;
+    const target = realProducts.find(p => p.id === targetProductId);
+    if (!target) return;
+
+    setActiveTab(target.category as MenuTabId);
+    setHighlightId(targetProductId);
+
+    const scrollTimer = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: productSectionY.current, animated: true });
+    }, 350);
+    const clearTimer = setTimeout(() => setHighlightId(null), 2800);
+
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [targetProductId, realProducts]);
+
   // ── Type de vitrine ───────────────────────────────────────────────────────
   const shopType = shopData?.shopType ?? 'products';
+  const isTerrainShop = shopType === 'terrains';
+  const SLOT_SUBCATS = ['reservation_terrain_foot', 'reservation_terrain_basket'];
+  const isSlotShop = isTerrainShop && (shopData?.subcategories ?? []).some(s => SLOT_SUBCATS.includes(s));
 
   // ── Données dérivées ──────────────────────────────────────────────────────
   const displayName = shopData?.name ?? shopName ?? 'Boutique';
@@ -244,9 +299,11 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
       ? 'Sur rendez-vous'
       : shopType === 'memberships'
         ? 'Abonnement'
-        : noOrderOptions
-          ? ''
-          : selectedLabel;
+        : shopType === 'terrains'
+          ? 'Réservation'
+          : noOrderOptions
+            ? ''
+            : selectedLabel;
 
   // ── Catalogue ─────────────────────────────────────────────────────────────
   const catIds = [...new Set(realProducts.map(p => p.category))];
@@ -302,6 +359,7 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
     name: displayName,
     location: `📍 ${displayZone} · ${selectedLabel}`,
     logoUrl: displayLogoUrl,
+    showOrderType: showOrderOptions,
   };
 
   const addToCart = (p: StoreProduct) => {
@@ -338,6 +396,7 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
         <LoadingSpinner />
       ) : (
         <ScrollView
+          ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={{ paddingBottom: scrollBotPad, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
@@ -469,13 +528,80 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
           {/* 8 — Onglets catalogue (STICKY) */}
           {tabs.length > 1 && <MenuTabs tabs={tabs} active={activeTab} onPress={setActiveTab} />}
 
-          {/* 9 — Catalogue */}
-          {realProducts.length === 0 ? (
+          {/* 9 — Catalogue / Terrains */}
+          {isTerrainShop ? (
+            isSlotShop ? (
+              terrains.length > 0 ? (
+                <ShopTerrainSlotPicker
+                  terrain={terrains[0]}
+                  prestataireName={displayName}
+                  openingHours={effectiveHours}
+                  onBook={(p: SlotBookParams) =>
+                    onBookTerrainDirect?.({
+                      terrainId: p.terrain.id,
+                      terrainNom: p.terrain.nom,
+                      prestataireId: p.terrain.prestataire_id,
+                      prestataireName: p.prestataireName,
+                      dateReservation: p.dateReservation,
+                      heureDebut: p.heureDebut,
+                      heureFin: p.heureFin,
+                      dureeHeures: p.dureeHeures,
+                      prixTotal: p.prixTotal,
+                    })
+                  }
+                />
+              ) : (
+                <View style={styles.emptyProducts}>
+                  <Text style={styles.emptyTxt}>Aucun terrain configuré pour l'instant.</Text>
+                </View>
+              )
+            ) : (
+              <View>
+                <Text style={styles.catTitle}>Terrains disponibles</Text>
+                {terrains.length === 0 ? (
+                  <View style={styles.emptyProducts}>
+                    <Text style={styles.emptyTxt}>Aucun terrain disponible pour l'instant.</Text>
+                  </View>
+                ) : (
+                  <View style={styles.terrainsContainer}>
+                    {terrains.map(terrain => (
+                      <TouchableOpacity
+                        key={terrain.id}
+                        style={styles.terrainCard}
+                        activeOpacity={0.85}
+                        onPress={() =>
+                          onBookTerrain?.({ terrain, prestataireName: displayName })
+                        }
+                      >
+                        <View style={styles.terrainTop}>
+                          <Text style={styles.terrainEmoji}>{SPORT_EMOJI[terrain.sport_type]}</Text>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.terrainNom}>{terrain.nom}</Text>
+                            <Text style={styles.terrainSport}>{SPORT_LABEL[terrain.sport_type]}</Text>
+                          </View>
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={styles.terrainPrice}>{formatPrice(terrain.prix_horaire)}</Text>
+                            <Text style={styles.terrainPriceSub}>/ heure</Text>
+                          </View>
+                        </View>
+                        {terrain.description ? (
+                          <Text style={styles.terrainDesc} numberOfLines={2}>{terrain.description}</Text>
+                        ) : null}
+                        <View style={styles.terrainCta}>
+                          <Text style={styles.terrainCtaTxt}>Réserver un créneau →</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )
+          ) : realProducts.length === 0 ? (
             <View style={styles.emptyProducts}>
               <Text style={styles.emptyTxt}>{emptyLabel}</Text>
             </View>
           ) : (
-            <View>
+            <View onLayout={e => { productSectionY.current = e.nativeEvent.layout.y; }}>
               {visibleSections.map(section => {
                 const products = realProducts.filter(p => p.category === section.id);
                 if (products.length === 0) return null;
@@ -486,18 +612,25 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
                       {toPairs(products).map((pair, i) => (
                         <View key={i} style={styles.gridRow}>
                           {pair.map(product => (
-                            <ProductTile
+                            <View
                               key={product.id}
-                              product={storeProductToProduct(product)}
-                              qty={
-                                product.stock === 'out'
-                                  ? 0
-                                  : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)
-                              }
-                              onAdd={() => addToCart(product)}
-                              onRemove={() => removeItem(product.id)}
-                              promoInfo={productPromoMap[product.id]}
-                            />
+                              style={[
+                                styles.tileWrapper,
+                                product.id === highlightId && styles.tileHighlight,
+                              ]}
+                            >
+                              <ProductTile
+                                product={storeProductToProduct(product)}
+                                qty={
+                                  product.stock === 'out'
+                                    ? 0
+                                    : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)
+                                }
+                                onAdd={() => addToCart(product)}
+                                onRemove={() => removeItem(product.id)}
+                                promoInfo={productPromoMap[product.id]}
+                              />
+                            </View>
                           ))}
                           {pair.length === 1 && <View style={styles.tileSpacer} />}
                         </View>
@@ -537,13 +670,15 @@ export default function ShopScreen({ shopId = '', shopName, onBack, onChat, onCh
         </View>
       </View>
 
-      {/* Panier flottant */}
-      <CartFloating
-        count={cartCount}
-        total={cartTotal}
-        onPress={cartCount > 0 ? () => onCheckout?.() : () => {}}
-        bottom={cartBottom}
-      />
+      {/* Panier flottant — masqué pour les terrains */}
+      {!isTerrainShop && (
+        <CartFloating
+          count={cartCount}
+          total={cartTotal}
+          onPress={cartCount > 0 ? () => onCheckout?.() : () => {}}
+          bottom={cartBottom}
+        />
+      )}
 
       {/* Footer fixe — bouton adapté au type de vitrine */}
       <ShopFooter
@@ -654,6 +789,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tileSpacer: { flex: 1 },
+  tileWrapper: { flex: 1 },
+  tileHighlight: {
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#FBBF24',
+    shadowColor: '#FBBF24',
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 5,
+  },
 
   emptyProducts: {
     paddingVertical: 40,
@@ -718,6 +863,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 8,
   },
+
+  // Terrains
+  terrainsContainer: { paddingHorizontal: 20, gap: 14 },
+  terrainCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: 16,
+  },
+  terrainTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 6 },
+  terrainEmoji: { fontSize: 30 },
+  terrainNom: { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
+  terrainSport: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 2 },
+  terrainPrice: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 16 },
+  terrainPriceSub: { color: colors.muted, fontFamily: fonts.body, fontSize: 11 },
+  terrainDesc: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, lineHeight: 18, marginBottom: 10 },
+  terrainCta: {
+    marginTop: 10,
+    backgroundColor: `${colors.accent}15`,
+    borderWidth: 1,
+    borderColor: `${colors.accent}35`,
+    borderRadius: radius.md,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  terrainCtaTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 13 },
 
   // Bandeau promotions
   promoBanner: {

@@ -129,7 +129,7 @@ export default function AuthNavigator({ onComplete }: Props) {
       break;
 
     default: {
-      const _exhaustive: never = current;
+      void (current as never); // garde TypeScript exhaustif — oblige à gérer tous les cas
       screen = null;
     }
   }

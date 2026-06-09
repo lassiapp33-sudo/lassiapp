@@ -52,7 +52,7 @@ function Sparkle({ top, left, right, delay, actif, cycleMs }: SparkleProps) {
     return () => {
       anim.current?.stop();
     };
-  }, [actif]);
+  }, [actif]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Animated.Text
@@ -103,7 +103,7 @@ export default function LassiRoiScintillant({ size = 190, actif = true }: Props)
     return () => {
       breathAnim.current?.stop();
     };
-  }, [actif]);
+  }, [actif]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reflet doré : traverse rapidement, revient lentement hors-champ
   useEffect(() => {
@@ -130,7 +130,7 @@ export default function LassiRoiScintillant({ size = 190, actif = true }: Props)
     return () => {
       sheenAnim.current?.stop();
     };
-  }, [actif]);
+  }, [actif]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const CYCLE = 3600;
 
