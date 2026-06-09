@@ -39,13 +39,23 @@ serve(async (req) => {
 
   try {
     const body = await req.json() as {
-      ticketId:        string;
-      amount:          number;
-      method:          string;
-      merchantName:    string;
+      // nouveau contrat (paymentService.ts)
+      orderId?:        string;
+      prixBase?:       number;
+      moyenPaiement?:  string;
+      // ancien contrat (payment.ts — terrain/ticket flows)
+      ticketId?:       string;
+      amount?:         number;
+      method?:         string;
+      merchantName?:   string;
       idempotencyKey?: string;
     };
-    const { ticketId, amount, method, merchantName, idempotencyKey } = body;
+    // alias : accepte les deux conventions de nommage
+    const ticketId    = body.orderId      ?? body.ticketId   ?? '';
+    const amount      = body.prixBase     ?? body.amount     ?? 0;
+    const method      = body.moyenPaiement ?? body.method    ?? '';
+    const merchantName = body.merchantName ?? '';
+    const idempotencyKey = body.idempotencyKey;
 
     // ── Validation serveur ────────────────────────────────────────────────────
     if (!ticketId || !amount || !method)
