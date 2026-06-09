@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Alert } from 'react-native';
 import logger from '../../utils/logger';
 import ClientHomeScreen from './ClientHomeScreen';
 import ClientProfileScreen from './ClientProfileScreen';
@@ -145,6 +146,10 @@ export default function HomeNavigator({ onLogout }: Props) {
       ]);
     } else if (pendingNav.type === 'order') {
       setHistory([{ id: 'main' }, { id: 'orders' }]);
+    } else if (pendingNav.type === 'payment_success') {
+      setHistory([{ id: 'main' }, { id: 'orders' }]);
+    } else if (pendingNav.type === 'payment_failed') {
+      Alert.alert('Paiement échoué', 'Le paiement n\'a pas pu être confirmé. Réessaie ou contacte le support.');
     }
   }, [pendingNav, clearPending]);
 

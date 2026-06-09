@@ -27,6 +27,7 @@ import useNotificationsStore    from './src/store/notificationsStore';
 import useCartStore             from './src/store/cartStore';
 import * as authService         from './src/services/auth';
 import { usePushToken, removeCurrentDeviceToken } from './src/hooks/usePushToken';
+import { usePaymentDeepLink } from './src/hooks/usePaymentDeepLink';
 import usePendingNavStore from './src/store/pendingNavStore';
 
 // ─── Détection Expo Go ────────────────────────────────────────────────────────
@@ -65,6 +66,8 @@ export default function App() {
 
   // Enregistre le token push dès que l'utilisateur est connecté
   usePushToken();
+  // Écoute les retours Wave/OM via deep link
+  usePaymentDeepLink();
 
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_500Medium,

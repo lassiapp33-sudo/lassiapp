@@ -7,7 +7,9 @@ import { create } from 'zustand';
 export type PendingNav =
   | { type: 'msg'; conversationId: string }
   | { type: 'order'; orderId: string }
-  | { type: 'home' };
+  | { type: 'home' }
+  | { type: 'payment_success'; paymentIntentId: string }
+  | { type: 'payment_failed' };
 
 interface PendingNavState {
   pendingNav: PendingNav | null;
