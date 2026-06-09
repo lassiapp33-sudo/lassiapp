@@ -7,7 +7,7 @@ import { COMMISSION_RATE } from './commission'
 
 export interface GtvSummary {
   gtv:          number  // Gross Transaction Value en FCFA
-  commission:   number  // GTV × 0.5%
+  commission:   number  // GTV × 1%
   ordersCount:  number
   shopsActive:  number
 }

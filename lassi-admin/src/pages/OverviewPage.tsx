@@ -109,7 +109,7 @@ export default function OverviewPage() {
               accent
             />
             <StatCard
-              label="Ta commission (0,5%)"
+              label="Ta commission (1%)"
               value={formatFcfa(summary.commission)}
               sub="Sur le GTV de la période"
               icon={<Coins size={18} />}
