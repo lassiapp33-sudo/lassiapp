@@ -152,7 +152,7 @@ export default function App() {
     useShopStore.setState({
       shopId: null,
       profile:  { initial: 'M', name: 'Ma Boutique', subtitle: '', isOpen: true },
-      context:  { shopType: 'products', openingHours: null, isManuallyClose: false, galleryUrls: [] },
+      context:  { shopType: 'products', openingHours: null, isManuallyClose: false, galleryUrls: [], subcategories: [] },
       categories: [],
       products:   [],
       loading:    false,

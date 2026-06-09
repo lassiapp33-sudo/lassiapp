@@ -12,7 +12,7 @@ export interface OrderInfo {
   shopLocation: string; // ex : "📍 Medina"
   items: OrderItem[];
   total: number;
-  orderType: 'place' | 'emporter';
+  orderType?: 'place' | 'emporter';
 }
 
 export type PayMethod = 'wave' | 'om';

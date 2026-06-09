@@ -75,6 +75,7 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
   const shopId = useShopStore(s => s.shopId);
   const shopIsVip = useShopStore(s => s.profile?.isVip ?? false);
   const shopType = useShopStore(s => s.context.shopType);
+  const shopSubcategories = useShopStore(s => s.context.subcategories);
   const loadMyShop = useShopStore(s => s.loadMyShop);
 
   // Commandes
@@ -163,7 +164,12 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
         <QuickActions
           onPress={key => onNavigate?.(key as NavDest)}
           debtCount={debtorsWithDebt}
-          showTerrains={shopType === 'terrains'}
+          showTerrains={
+            shopType === 'terrains' ||
+            shopSubcategories.some(s =>
+              s === 'reservation_terrain_foot' || s === 'reservation_terrain_basket',
+            )
+          }
         />
 
         {/* ④ Commandes en cours */}

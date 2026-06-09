@@ -59,6 +59,7 @@ const DEFAULT_CONTEXT: ShopContext = {
   openingHours: null,
   isManuallyClose: false,
   galleryUrls: [],
+  subcategories: [],
 };
 
 const useShopStore = create<ShopState>()((set, get) => ({
@@ -128,6 +129,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
           openingHours: shop.openingHours as WeekHours | null,
           isManuallyClose: shop.isManuallyClose,
           galleryUrls: shop.galleryUrls,
+          subcategories: shop.subcategories ?? [],
         },
         categories,
         products,

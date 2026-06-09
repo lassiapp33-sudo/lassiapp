@@ -185,7 +185,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         shopLocation: freshShopInfo?.location ?? '',
         items: orderItems,
         total: freshTotal,
-        orderType: freshOrderType,
+        orderType: freshShopInfo?.showOrderType ? freshOrderType : undefined,
       });
     } catch {
       notifyError('Une erreur est survenue. Réessaie dans un instant.');

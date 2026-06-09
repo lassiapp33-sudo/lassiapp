@@ -130,21 +130,23 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
             </Text>
           </View>
           <View style={styles.rightCol}>
-            <View
-              style={[
-                styles.orderTypeTag,
-                order.orderType === 'place' ? styles.orderTypePlace : styles.orderTypeEmporter,
-              ]}
-            >
-              <Text
+            {order.orderType != null && (
+              <View
                 style={[
-                  styles.orderTypeTxt,
-                  { color: order.orderType === 'place' ? '#5FD38A' : colors.accent },
+                  styles.orderTypeTag,
+                  order.orderType === 'place' ? styles.orderTypePlace : styles.orderTypeEmporter,
                 ]}
               >
-                {order.orderType === 'place' ? '🍽 Sur place' : '🥡 À emporter'}
-              </Text>
-            </View>
+                <Text
+                  style={[
+                    styles.orderTypeTxt,
+                    { color: order.orderType === 'place' ? '#5FD38A' : colors.accent },
+                  ]}
+                >
+                  {order.orderType === 'place' ? '🍽 Sur place' : '🥡 À emporter'}
+                </Text>
+              </View>
+            )}
             <Text style={styles.total}>{formatPrice(order.total)}</Text>
           </View>
         </View>

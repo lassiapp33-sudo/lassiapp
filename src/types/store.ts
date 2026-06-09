@@ -59,4 +59,5 @@ export interface ShopContext {
   openingHours: WeekHours | null;
   isManuallyClose: boolean;
   galleryUrls: string[];
+  subcategories: string[];
 }

@@ -45,7 +45,7 @@ function rowToOrder(row: Record<string, any>): IncomingOrder {
     payMethod: row.pay_method as 'wave' | 'om',
     timeLabel: timeLabel(row.created_at),
     prepTime: row.prep_time ?? undefined,
-    orderType: (row.order_type === 'emporter' ? 'emporter' : 'place') as 'place' | 'emporter',
+    orderType: row.order_type === 'emporter' ? 'emporter' : row.order_type === 'place' ? 'place' : null,
     refusalReason: row.refusal_reason ?? null,
   };
 }
@@ -125,7 +125,7 @@ export async function createOrderSecure(
       shopId,
       items,
       note,
-      orderType: orderType ?? 'place',
+      orderType: orderType ?? null,
       idempotencyKey,
     }),
   });

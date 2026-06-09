@@ -29,6 +29,6 @@ export interface IncomingOrder {
   payMethod: PayMethodOrder;
   timeLabel: string; // "il y a 2 min" / "acceptée à 08:09"
   prepTime?: string; // "5-10 min" — défini à l'acceptation
-  orderType: 'place' | 'emporter';
+  orderType?: 'place' | 'emporter' | null;
   refusalReason?: string | null;
 }
