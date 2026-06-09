@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Alert } from 'react-native';
 import MerchantDashboard from './MerchantDashboard';
 import MerchantProfileScreen from './MerchantProfileScreen';
 import MerchantMessagesScreen from './MerchantMessagesScreen';
@@ -28,7 +29,6 @@ import useAuthStore from '../../store/authStore';
 import useNotificationsStore from '../../store/notificationsStore';
 import usePendingNavStore from '../../store/pendingNavStore';
 import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
-import { usePaymentDeepLink } from '../../hooks/usePaymentDeepLink';
 import { OrderInfo } from '../../types/payment';
 
 // Navigateur du cockpit prestataire — tous les modules sont câblés ici.
@@ -91,7 +91,6 @@ export default function MerchantNavigator({ onLogout }: Props) {
 
   // Abonnement Realtime toujours actif — met à jour le badge immédiatement
   useRealtimeNotifications(userId, addNotif);
-  usePaymentDeepLink();
 
   // Deep link depuis notification push ou retour paiement
   useEffect(() => {
@@ -106,6 +105,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
     } else if (pendingNav.type === 'payment_success') {
       setScreen('orders');
     } else if (pendingNav.type === 'payment_failed') {
+      Alert.alert('Paiement échoué', 'Le paiement n\'a pas pu être confirmé. Réessayez ou choisissez un autre moyen de paiement.');
       setScreen('payments');
     }
   }, [pendingNav, clearPending]);

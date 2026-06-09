@@ -30,7 +30,7 @@ export const initierPaiement = async (params: {
     return { success: false, error: 'Montant invalide' };
   }
 
-  const idempotencyKey = `${params.orderId}-${params.moyenPaiement}-${new Date().toDateString()}`;
+  const idempotencyKey = `${params.orderId}-${params.moyenPaiement}-${new Date().toISOString().slice(0, 10)}`;
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return { success: false, error: 'Non connecté' };

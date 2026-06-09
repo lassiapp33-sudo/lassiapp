@@ -30,7 +30,6 @@ import useAuthStore from '../../store/authStore';
 import useNotificationsStore from '../../store/notificationsStore';
 import usePendingNavStore from '../../store/pendingNavStore';
 import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
-import { usePaymentDeepLink } from '../../hooks/usePaymentDeepLink';
 import { recordView } from '../../services/recentlyViewed';
 
 // ─── Stack de navigation client ───────────────────────────────────────────────
@@ -127,7 +126,6 @@ export default function HomeNavigator({ onLogout }: Props) {
   const pendingNav = usePendingNavStore(s => s.pendingNav);
   const clearPending = usePendingNavStore(s => s.clearPendingNav);
   useRealtimeNotifications(userId, addNotif);
-  usePaymentDeepLink();
 
   // Deep link depuis notification push (app fermée / arrière-plan)
   useEffect(() => {

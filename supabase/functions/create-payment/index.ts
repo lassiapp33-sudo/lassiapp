@@ -166,9 +166,8 @@ serve(async (req) => {
       }
 
       await sb.from('payment_intents').update({
-        statut:       'initiated',
-        external_ref: paymentUrl,
-        updated_at:   new Date().toISOString(),
+        statut:     'initiated',
+        updated_at: new Date().toISOString(),
       }).eq('id', piId);
 
       const result = {
@@ -278,7 +277,7 @@ async function createWaveSession(p: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      amount:           String(p.amount),
+      amount:           p.amount,
       currency:         'XOF',
       client_reference: p.reference,
       success_url:      `lassiapp://paiement/succes?pi=${p.reference}`,
@@ -325,7 +324,7 @@ async function createOmSession(p: {
       amount:       p.amount,
       return_url:   `lassiapp://paiement/succes?pi=${p.reference}`,
       cancel_url:   `lassiapp://paiement/echec?pi=${p.reference}`,
-      notif_url:    `${WEBHOOK_BASE}/webhook-payment`,
+      notif_url:    `${WEBHOOK_BASE}/om-webhook`,
       lang:         'fr',
       reference:    p.reference,
     }),

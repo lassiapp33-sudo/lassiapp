@@ -56,7 +56,8 @@ serve(async (req) => {
       }
 
       // Déjà confirmé ou traité → retour immédiat (idempotent)
-      if (pi.statut === 'confirmed' || pi.statut === 'split_done' || pi.statut === 'simulated') {
+      // 'simulated' n'est PAS ici : il doit passer par confirm_order_from_payment
+      if (pi.statut === 'confirmed' || pi.statut === 'split_done') {
         return ok({ paid: true, confirmed: true, statut: pi.statut, mode: isSimulation() ? 'simulation' : 'production' });
       }
 
@@ -73,7 +74,7 @@ serve(async (req) => {
           statut:       'confirmed',
           confirmed_at: new Date().toISOString(),
           updated_at:   new Date().toISOString(),
-        }).eq('id', piId);
+        }).eq('id', piId).in('statut', ['pending', 'initiated', 'simulated']);
 
         // Déclencher la commande
         const { error: rpcErr } = await sb.rpc('confirm_order_from_payment', {
@@ -101,7 +102,7 @@ serve(async (req) => {
           statut:       'confirmed',
           confirmed_at: new Date().toISOString(),
           updated_at:   new Date().toISOString(),
-        }).eq('id', piId);
+        }).eq('id', piId).in('statut', ['pending', 'initiated', 'simulated']);
 
         const { error: rpcErr } = await sb.rpc('confirm_order_from_payment', {
           p_payment_intent_id: piId,
@@ -210,7 +211,7 @@ async function checkOmPayment(reference: string): Promise<boolean> {
     { headers: { Authorization: `Bearer ${access_token}` } },
   );
   const data = await res.json();
-  return data?.status === 'SUCCESSFULL' || data?.status === 'SUCCESS';
+  return data?.status === 'SUCCESSFUL' || data?.status === 'SUCCESSFULL' || data?.status === 'SUCCESS';
 }
 
 function ok(data: unknown) {
