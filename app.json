@@ -15,6 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.lassiapp.lassiapp",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "LASSİ utilise ta position pour te montrer les commerces autour de toi.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "LASSİ utilise ta position pour te montrer les commerces autour de toi.",
@@ -74,7 +75,8 @@
     "extra": {
       "eas": {
         "projectId": "e9058ef3-df10-43e4-af04-6830a98025e9"
-      }
+      },
+      "privacyPolicyUrl": "https://lassiapp33-sudo.github.io/lassiapp/privacy-policy.html"
     },
     "owner": "lassiapp"
   }
