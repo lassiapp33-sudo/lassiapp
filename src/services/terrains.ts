@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { Terrain, TerrainHoraire, CreneauPris, ReservationTerrain } from '../types/terrain';
+import { PAYMENT_CONFIG } from '../config/payment';
 
-const COMMISSION_RATE = 0.005; // 0.5%
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
@@ -9,11 +9,13 @@ export const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
 // ─── Helpers prix ─────────────────────────────────────────────────────────────
 
+// Prestataire entre son prix de base → on ajoute 1% → prix affiché au client
 export const calculerPrixAvecMarge = (prixBase: number): number =>
-  Math.ceil(prixBase / (1 - COMMISSION_RATE));
+  prixBase + Math.ceil(prixBase * PAYMENT_CONFIG.COMMISSION_RATE);
 
+// Extrait la commission LASSİ depuis le prix total payé par le client
 export const calculerCommission = (prixTotal: number): number =>
-  Math.round(prixTotal * COMMISSION_RATE);
+  Math.ceil(prixTotal * PAYMENT_CONFIG.COMMISSION_RATE / (1 + PAYMENT_CONFIG.COMMISSION_RATE));
 
 // ─── Terrains (vitrine client) ────────────────────────────────────────────────
 

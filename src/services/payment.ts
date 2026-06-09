@@ -16,29 +16,30 @@ async function authHeaders(): Promise<Record<string, string>> {
   };
 }
 
-// ─── Créer une session de paiement SenePay ────────────────────────────────────
+// ─── Créer une session de paiement Wave / Orange Money ───────────────────────
 
 export interface PaymentSession {
-  paymentUrl: string;
-  reference: string;
+  paymentUrl:  string;
+  reference:   string;
+  simulation?: boolean; // true en mode démo (sans clés API)
 }
 
 export async function createPayment(params: {
-  ticketId: string;
-  amount: number;
-  method: PayMethod;
+  ticketId:     string;
+  amount:       number;
+  method:       PayMethod;
   merchantName: string;
 }): Promise<PaymentSession> {
+  // Clé d'idempotency : empêche les doublons sur retry ou double-clic
+  const idempotencyKey = `pay_${params.ticketId}`;
+
   const res = await fetch(`${FUNCTIONS_BASE}/create-payment`, {
     method: 'POST',
     headers: await authHeaders(),
-    body: JSON.stringify(params),
+    body: JSON.stringify({ ...params, idempotencyKey }),
   });
   const data = await res.json() as Record<string, unknown>;
   if (!res.ok) throw new Error((data.error as string) ?? 'Erreur de paiement');
-  if (data.status === 'awaiting_keys') {
-    throw new Error('Paiement mobile bientôt disponible. Les intégrations Wave et Orange Money sont en cours de finalisation.');
-  }
   return data as unknown as PaymentSession;
 }
 

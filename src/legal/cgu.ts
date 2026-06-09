@@ -45,7 +45,7 @@ export const CGU_SECTIONS: Section[] = [
   {
     titre: '7. Commission et tarification',
     contenu:
-      "LASSİ prélève une commission de 0,5 % sur chaque transaction effectuée par l'intermédiaire de la plateforme. Cette commission est à la charge du commerçant et est déduite automatiquement du montant reversé.\n\nLes tarifs d'abonnement éventuels pour les commerçants sont définis dans l'espace commerçant de l'Application et peuvent être modifiés avec un préavis de 30 jours.",
+      "LASSİ prélève une commission de 1 % sur chaque transaction effectuée par l'intermédiaire de la plateforme. Cette commission est incluse dans le prix affiché au client et est déduite automatiquement du montant reversé au commerçant.\n\nLes tarifs d'abonnement éventuels pour les commerçants sont définis dans l'espace commerçant de l'Application et peuvent être modifiés avec un préavis de 30 jours.",
   },
   {
     titre: '8. Obligations des commerçants',

@@ -3,6 +3,7 @@
 
 import { serve }        from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { logEvent }     from '../_shared/payment_utils.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')              ?? '';
 const SUPABASE_SRK = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -23,6 +24,16 @@ serve(async (req) => {
       status    = url.searchParams.get('status');
     }
 
+    const sb = createClient(SUPABASE_URL, SUPABASE_SRK);
+
+    await logEvent(sb, {
+      event_type:        'webhook_received',
+      provider:          'orange_money',
+      reference:         reference ?? '',
+      status:            'received',
+      provider_response: { status, method: req.method },
+    });
+
     if (!reference?.startsWith('LASSI_')) {
       return new Response('not a LASSI payment', { status: 200 });
     }
@@ -35,8 +46,17 @@ serve(async (req) => {
 
     const ticketId = reference.split('_')[1];
 
-    const sb = createClient(SUPABASE_URL, SUPABASE_SRK);
     await sb.rpc('mark_ticket_paid', { p_message_id: ticketId });
+
+    await logEvent(sb, {
+      event_type: 'verify_success',
+      reference,
+      ticket_id:  ticketId,
+      provider:   'orange_money',
+      method:     'orange_money',
+      status:     'paid',
+      metadata:   { source: 'webhook' },
+    });
 
     return new Response('ok', { status: 200 });
 

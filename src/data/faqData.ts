@@ -133,7 +133,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "C'est quoi la commission de LASSİ ?",
     motsCles: ['commission', 'frais', 'pourcentage', 'naata commission', 'ñaata commission'],
     reponse:
-      'Une petite commission de 0,5% sur chaque achat validé. Minime, et ça fait vivre la plateforme. Le commerçant reçoit le reste. 🐝',
+      'Une commission de 1% sur chaque achat validé, déjà incluse dans le prix affiché au client. Le commerçant reçoit le reste directement sur son Wave ou Orange Money. 🐝',
   },
   {
     id: 14,
@@ -296,7 +296,7 @@ export const FAQ_ITEMS: FaqItem[] = [
       'inscription gratuite',
     ],
     reponse:
-      "L'inscription est gratuite. LASSİ se rémunère via la commission de 0,5%. Des forfaits de visibilité optionnels existent.",
+      "L'inscription est gratuite. LASSİ se rémunère via la commission de 1% incluse dans le prix client. Des forfaits de visibilité optionnels existent.",
   },
   {
     id: 30,
@@ -363,7 +363,7 @@ export const FAQ_ITEMS: FaqItem[] = [
       'paiement prestataire',
     ],
     reponse:
-      "Quand un client paie, l'argent t'est reversé automatiquement sur ton Wave/OM, moins la commission de 0,5%. 💰",
+      "Quand un client paie, l'argent t'est reversé automatiquement sur ton Wave/OM. La commission de 1% est déjà intégrée dans le prix affiché au client — tu reçois ton prix de base, LASSİ garde le 1%. 💰",
   },
   {
     id: 36,
@@ -736,7 +736,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "Ñaata la commission bi ? (C'est combien la commission ?)",
     motsCles: ['naata commission', 'commission naata', 'ñaata commission', 'nata commission'],
     reponse:
-      "Commission bi 0,5% la rekk ci benn benn achat bu validé. Tuuti la. 🐝\n(La commission est juste 0,5% par achat validé, c'est minime.)",
+      "Commission bi 1% la ci benn benn achat bu validé. Yëgël na ci jiit bi client bi dafa fay. 🐝\n(La commission est 1% par achat validé, incluse dans le prix affiché au client.)",
   },
 
   // ── PLUS DE QUESTIONS ─────────────────────────────────────────────────────────
