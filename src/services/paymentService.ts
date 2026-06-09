@@ -7,7 +7,7 @@ import {
   MoyenPaiement,
 } from '../config/payment';
 
-export { calculerPrixClient, calculerCommission, PAYMENT_CONFIG };
+export { calculerPrixClient, calculerCommission, PAYMENT_CONFIG, MoyenPaiement };
 
 export interface PaymentResult {
   success: boolean;
