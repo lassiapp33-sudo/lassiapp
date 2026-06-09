@@ -3,10 +3,10 @@
 # Usage : depuis C:\Users\USER\Desktop\lassiapp, executer .\tunnel-cloudflared.ps1
 
 $ErrorActionPreference = "Stop"
-$appDir = Join-Path $PSScriptRoot "LassiApp"
+$appDir = Join-Path $PSScriptRoot "Lassi"
 
 if (-not (Test-Path $appDir)) {
-    Write-Error "Dossier LassiApp introuvable : $appDir"
+    Write-Error "Dossier Lassi introuvable : $appDir"
     exit 1
 }
 
@@ -34,7 +34,7 @@ if (-not (Get-Command cloudflared -ErrorAction SilentlyContinue)) {
 # node_modules/@expo/ngrok est gere par npm (file: dans package.json).
 # On ecrase quand meme pour garantir la version cloudflared apres npm install.
 $ngrokDir = Join-Path $appDir "node_modules\@expo\ngrok"
-New-Item -ItemType Directory -Force -Path $ngrokDir | Out-Null
+$null = [System.IO.Directory]::CreateDirectory($ngrokDir)
 
 # Utiliser WriteAllText (UTF-8 sans BOM) car Set-Content -Encoding UTF8 ajoute un BOM en PS 5.1
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
