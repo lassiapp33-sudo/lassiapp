@@ -27,17 +27,17 @@ create index if not exists signalements_created_idx on signalements(created_at d
 
 alter table signalements enable row level security;
 
--- INSERT : tout utilisateur authentifié peut créer un signalement à son nom
+drop policy if exists "signalements_insert" on signalements;
 create policy "signalements_insert" on signalements
   for insert to authenticated
   with check (user_id = auth.uid());
 
--- SELECT : l'utilisateur voit uniquement ses propres signalements
+drop policy if exists "signalements_select_own" on signalements;
 create policy "signalements_select_own" on signalements
   for select to authenticated
   using (user_id = auth.uid());
 
--- SELECT admin : les comptes admin voient tout
+drop policy if exists "signalements_select_admin" on signalements;
 create policy "signalements_select_admin" on signalements
   for select to authenticated
   using (
@@ -48,7 +48,7 @@ create policy "signalements_select_admin" on signalements
     )
   );
 
--- UPDATE admin : seul l'admin peut changer le statut
+drop policy if exists "signalements_update_admin" on signalements;
 create policy "signalements_update_admin" on signalements
   for update to authenticated
   using (
@@ -59,7 +59,7 @@ create policy "signalements_update_admin" on signalements
     )
   );
 
--- DELETE admin uniquement
+drop policy if exists "signalements_delete_admin" on signalements;
 create policy "signalements_delete_admin" on signalements
   for delete to authenticated
   using (

@@ -72,14 +72,20 @@ CREATE TABLE IF NOT EXISTS payment_logs (
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 -- IMMUABLE : pas de UPDATE/DELETE sur payment_logs
-CREATE RULE payment_logs_no_update AS ON UPDATE TO payment_logs DO INSTEAD NOTHING;
-CREATE RULE payment_logs_no_delete AS ON DELETE TO payment_logs DO INSTEAD NOTHING;
+DO $$ BEGIN
+  DROP RULE IF EXISTS payment_logs_no_update ON payment_logs;
+  CREATE RULE payment_logs_no_update AS ON UPDATE TO payment_logs DO INSTEAD NOTHING;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN
+  DROP RULE IF EXISTS payment_logs_no_delete ON payment_logs;
+  CREATE RULE payment_logs_no_delete AS ON DELETE TO payment_logs DO INSTEAD NOTHING;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
 -- Index pour performances
-CREATE INDEX idx_payment_intent_client ON payment_intents(client_id);
-CREATE INDEX idx_payment_intent_order ON payment_intents(order_id);
-CREATE INDEX idx_payment_intent_idempotency ON payment_intents(idempotency_key);
-CREATE INDEX idx_payment_logs_intent ON payment_logs(payment_intent_id);
+CREATE INDEX IF NOT EXISTS idx_payment_intent_client ON payment_intents(client_id);
+CREATE INDEX IF NOT EXISTS idx_payment_intent_order ON payment_intents(order_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_intent_idempotency ON payment_intents(idempotency_key);
+CREATE INDEX IF NOT EXISTS idx_payment_logs_intent ON payment_logs(payment_intent_id);
 
 -- ============================================================
 -- RLS
@@ -88,14 +94,17 @@ ALTER TABLE payment_intents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_logs ENABLE ROW LEVEL SECURITY;
 
 -- Client voit ses propres payment_intents
+DROP POLICY IF EXISTS "pi_client_read" ON payment_intents;
 CREATE POLICY "pi_client_read" ON payment_intents
   FOR SELECT USING (auth.uid() = client_id);
 
 -- Prestataire voit les paiements qui le concernent
+DROP POLICY IF EXISTS "pi_prestataire_read" ON payment_intents;
 CREATE POLICY "pi_prestataire_read" ON payment_intents
   FOR SELECT USING (auth.uid() = prestataire_id);
 
 -- Création uniquement par le client authentifié
+DROP POLICY IF EXISTS "pi_client_insert" ON payment_intents;
 CREATE POLICY "pi_client_insert" ON payment_intents
   FOR INSERT WITH CHECK (auth.uid() = client_id);
 
@@ -103,6 +112,7 @@ CREATE POLICY "pi_client_insert" ON payment_intents
 -- (pas de RLS pour service_role, c'est le comportement par défaut Supabase)
 
 -- Logs : lecture seule pour les parties concernées
+DROP POLICY IF EXISTS "logs_read" ON payment_logs;
 CREATE POLICY "logs_read" ON payment_logs
   FOR SELECT USING (
     auth.uid() IN (

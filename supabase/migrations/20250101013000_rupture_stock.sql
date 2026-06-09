@@ -32,8 +32,8 @@ do $$ begin
     execute $policy$
       create policy "products_owner_update" on products
         for update to authenticated
-        using  (shop_id in (select id from shops where owner_id = auth.uid()))
-        with check (shop_id in (select id from shops where owner_id = auth.uid()));
+        using  (shop_id in (select id from shops where merchant_id = auth.uid()))
+        with check (shop_id in (select id from shops where merchant_id = auth.uid()));
     $policy$;
   end if;
 end $$;

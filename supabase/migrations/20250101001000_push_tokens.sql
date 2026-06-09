@@ -18,6 +18,7 @@ create index if not exists push_tokens_user_idx on push_tokens (user_id);
 alter table push_tokens enable row level security;
 
 -- L'utilisateur gère uniquement ses propres tokens
+drop policy if exists "push_tokens_self" on push_tokens;
 create policy "push_tokens_self" on push_tokens
   for all
   using  (auth.uid() = user_id)

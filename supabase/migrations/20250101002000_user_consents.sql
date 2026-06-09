@@ -18,11 +18,13 @@ create index if not exists user_consents_user_id_idx on user_consents(user_id);
 alter table user_consents enable row level security;
 
 -- Lecture : uniquement ses propres lignes
+drop policy if exists "user_consents_select_own" on user_consents;
 create policy "user_consents_select_own"
   on user_consents for select
   using (auth.uid() = user_id);
 
 -- Insertion : uniquement pour soi-même (à l'inscription)
+drop policy if exists "user_consents_insert_own" on user_consents;
 create policy "user_consents_insert_own"
   on user_consents for insert
   with check (auth.uid() = user_id);

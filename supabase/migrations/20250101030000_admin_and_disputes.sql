@@ -26,10 +26,10 @@ ALTER TABLE shops
 -- Utilisée par le dashboard admin — l'app mobile peut continuer à lire is_vip directement.
 -- Pour l'app mobile, l'admin met à jour is_vip manuellement via le dashboard.
 
-CREATE OR REPLACE VIEW shops_effective AS
+DROP VIEW IF EXISTS shops_effective CASCADE;
+CREATE VIEW shops_effective AS
   SELECT
     s.*,
-    -- VIP effectif : scoring OU mise en avant manuelle non expirée
     (
       s.is_vip = TRUE
       OR (
@@ -37,7 +37,6 @@ CREATE OR REPLACE VIEW shops_effective AS
         AND (s.vip_manual_until IS NULL OR s.vip_manual_until > NOW())
       )
     ) AS is_effectively_vip,
-    -- Recommandation effective : mise en avant manuelle non expirée
     (
       s.featured_manual = TRUE
       AND (s.featured_manual_until IS NULL OR s.featured_manual_until > NOW())
@@ -60,6 +59,7 @@ CREATE TABLE IF NOT EXISTS admin_actions_log (
 ALTER TABLE admin_actions_log ENABLE ROW LEVEL SECURITY;
 
 -- Seuls les admins accèdent au journal
+DROP POLICY IF EXISTS aal_admin_only ON admin_actions_log;
 CREATE POLICY aal_admin_only ON admin_actions_log
   FOR ALL USING (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE)
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS disputes (
 
 ALTER TABLE disputes ENABLE ROW LEVEL SECURITY;
 
--- Lecture : le plaignant, la partie visée, ou un admin
+DROP POLICY IF EXISTS disputes_select ON disputes;
 CREATE POLICY disputes_select ON disputes FOR SELECT
   USING (
     reporter_id = auth.uid()
@@ -102,11 +102,11 @@ CREATE POLICY disputes_select ON disputes FOR SELECT
     OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE)
   );
 
--- Création : uniquement le plaignant authentifié
+DROP POLICY IF EXISTS disputes_insert ON disputes;
 CREATE POLICY disputes_insert ON disputes FOR INSERT
   WITH CHECK (reporter_id = auth.uid());
 
--- Modification (statut, résolution) : admin uniquement
+DROP POLICY IF EXISTS disputes_update ON disputes;
 CREATE POLICY disputes_update ON disputes FOR UPDATE
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE));
 
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS dispute_messages (
 
 ALTER TABLE dispute_messages ENABLE ROW LEVEL SECURITY;
 
--- Lecture/écriture : les deux parties + admins
+DROP POLICY IF EXISTS dm_select ON dispute_messages;
 CREATE POLICY dm_select ON dispute_messages FOR SELECT
   USING (
     EXISTS (
@@ -137,6 +137,7 @@ CREATE POLICY dm_select ON dispute_messages FOR SELECT
     )
   );
 
+DROP POLICY IF EXISTS dm_insert ON dispute_messages;
 CREATE POLICY dm_insert ON dispute_messages FOR INSERT
   WITH CHECK (
     sender_id = auth.uid()
@@ -158,18 +159,14 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('disputes', 'disputes', false)
 ON CONFLICT (id) DO NOTHING;
 
-CREATE POLICY "disputes_evidence_read"
-  ON storage.objects FOR SELECT TO authenticated
-  USING (bucket_id = 'disputes');
-
-CREATE POLICY "disputes_evidence_write"
-  ON storage.objects FOR INSERT TO authenticated
-  WITH CHECK (bucket_id = 'disputes');
+DO $$ BEGIN CREATE POLICY "disputes_evidence_read"  ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'disputes'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE POLICY "disputes_evidence_write" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'disputes'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
 -- ─── 8. POLITIQUES RLS ÉLARGIES POUR LES ADMINS ─────────────────────────────
 
 -- Les admins peuvent lire TOUS les profils (pour la gestion utilisateurs)
+DROP POLICY IF EXISTS profiles_admin_read ON profiles;
 CREATE POLICY profiles_admin_read ON profiles FOR SELECT
   USING (
     id = auth.uid()
@@ -177,21 +174,21 @@ CREATE POLICY profiles_admin_read ON profiles FOR SELECT
   );
 
 -- Les admins peuvent modifier TOUS les profils (suspendre, etc.)
+DROP POLICY IF EXISTS profiles_admin_update ON profiles;
 CREATE POLICY profiles_admin_update ON profiles FOR UPDATE
   USING (EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.is_admin = TRUE));
 
 -- Les admins peuvent lire TOUTES les commandes
+DROP POLICY IF EXISTS orders_admin_read ON orders;
 CREATE POLICY orders_admin_read ON orders FOR SELECT
   USING (
-    -- Marchand : ses propres commandes
     shop_id IN (SELECT id FROM shops WHERE merchant_id = auth.uid())
-    -- Client : ses propres commandes
     OR client_id = auth.uid()
-    -- Admin : toutes les commandes
     OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE)
   );
 
 -- Les admins peuvent modifier les shops (VIP, featured)
+DROP POLICY IF EXISTS shops_admin_update ON shops;
 CREATE POLICY shops_admin_update ON shops FOR UPDATE
   USING (
     merchant_id = auth.uid()

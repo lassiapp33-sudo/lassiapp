@@ -78,7 +78,6 @@ create trigger on_order_ready
 create or replace function is_receipt_valid(p_order_id uuid)
 returns jsonb language plpgsql security definer as $$
 declare
-  v row%rowtype;   -- alias pour orders
   r orders%rowtype;
 begin
   select * into r

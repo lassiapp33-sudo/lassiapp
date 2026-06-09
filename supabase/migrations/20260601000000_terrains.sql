@@ -94,34 +94,42 @@ ALTER TABLE terrain_horaires ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reservations_terrain ENABLE ROW LEVEL SECURITY;
 
 -- TERRAINS
+DROP POLICY IF EXISTS "terrains_public_read" ON terrains;
 CREATE POLICY "terrains_public_read" ON terrains
   FOR SELECT USING (actif = true);
 
+DROP POLICY IF EXISTS "terrains_prestataire_manage" ON terrains;
 CREATE POLICY "terrains_prestataire_manage" ON terrains
   FOR ALL USING (auth.uid() = prestataire_id);
 
 -- HORAIRES
+DROP POLICY IF EXISTS "horaires_public_read" ON terrain_horaires;
 CREATE POLICY "horaires_public_read" ON terrain_horaires
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "horaires_prestataire_manage" ON terrain_horaires;
 CREATE POLICY "horaires_prestataire_manage" ON terrain_horaires
   FOR ALL USING (
     auth.uid() = (SELECT prestataire_id FROM terrains WHERE id = terrain_id)
   );
 
 -- RESERVATIONS
+DROP POLICY IF EXISTS "reservations_client_read" ON reservations_terrain;
 CREATE POLICY "reservations_client_read" ON reservations_terrain
   FOR SELECT USING (auth.uid() = client_id OR auth.uid() = prestataire_id);
 
+DROP POLICY IF EXISTS "reservations_client_insert" ON reservations_terrain;
 CREATE POLICY "reservations_client_insert" ON reservations_terrain
   FOR INSERT WITH CHECK (auth.uid() = client_id);
 
+DROP POLICY IF EXISTS "reservations_prestataire_update" ON reservations_terrain;
 CREATE POLICY "reservations_prestataire_update" ON reservations_terrain
   FOR UPDATE USING (auth.uid() = prestataire_id OR auth.uid() = client_id);
 
 -- ============================================================
 -- FONCTION : créneaux réservés pour un terrain + date
 -- ============================================================
+DROP FUNCTION IF EXISTS get_crenaux_pris(UUID, DATE);
 CREATE OR REPLACE FUNCTION get_crenaux_pris(
   p_terrain_id UUID,
   p_date DATE
@@ -139,6 +147,7 @@ $$;
 -- ============================================================
 -- FONCTION : vérifier + marquer un QR code utilisé (atomique)
 -- ============================================================
+DROP FUNCTION IF EXISTS verify_terrain_receipt(TEXT, UUID);
 CREATE OR REPLACE FUNCTION verify_terrain_receipt(
   p_receipt_code TEXT,
   p_prestataire_id UUID
@@ -188,4 +197,12 @@ END;
 $$;
 
 -- Activer Realtime sur reservations_terrain
-ALTER PUBLICATION supabase_realtime ADD TABLE reservations_terrain;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'reservations_terrain'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE reservations_terrain;
+  END IF;
+END $$;

@@ -1,3 +1,7 @@
+-- ─── Colonne is_featured sur shops (badge visibilité payante) ────────────────
+ALTER TABLE shops
+  ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE;
+
 -- ─── visibility_plans : source de vérité des offres et prix ──────────────────
 -- Les prix sont chargés depuis cette table côté serveur.
 -- Jamais depuis le client → impossible de manipuler le montant.
@@ -52,11 +56,13 @@ ALTER TABLE visibility_plans          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE visibility_subscriptions  ENABLE ROW LEVEL SECURITY;
 
 -- Plans : lecture par tout utilisateur authentifié (plans publics actifs)
+DROP POLICY IF EXISTS "vis_plans_read" ON visibility_plans;
 CREATE POLICY "vis_plans_read"
   ON visibility_plans FOR SELECT TO authenticated
   USING (active = TRUE);
 
 -- Abonnements : chaque marchand lit uniquement ses propres lignes
+DROP POLICY IF EXISTS "vis_subs_own_read" ON visibility_subscriptions;
 CREATE POLICY "vis_subs_own_read"
   ON visibility_subscriptions FOR SELECT TO authenticated
   USING (merchant_id = auth.uid());

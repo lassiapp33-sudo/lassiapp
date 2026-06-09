@@ -20,11 +20,13 @@ create table if not exists promotions (
 alter table promotions enable row level security;
 
 -- Lecture publique (les clients voient les promos actives)
+drop policy if exists "promotions_select_public" on promotions;
 create policy "promotions_select_public"
   on promotions for select
   using (true);
 
 -- Création : uniquement le propriétaire du shop
+drop policy if exists "promotions_insert_owner" on promotions;
 create policy "promotions_insert_owner"
   on promotions for insert
   with check (
@@ -34,6 +36,7 @@ create policy "promotions_insert_owner"
   );
 
 -- Modification : uniquement le propriétaire du shop
+drop policy if exists "promotions_update_owner" on promotions;
 create policy "promotions_update_owner"
   on promotions for update
   using (
@@ -43,6 +46,7 @@ create policy "promotions_update_owner"
   );
 
 -- Suppression : uniquement le propriétaire du shop
+drop policy if exists "promotions_delete_owner" on promotions;
 create policy "promotions_delete_owner"
   on promotions for delete
   using (
