@@ -70,7 +70,8 @@
           "color": "#14152A",
           "sounds": []
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {
