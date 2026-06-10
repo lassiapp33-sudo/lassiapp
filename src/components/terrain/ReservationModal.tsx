@@ -1,9 +1,9 @@
 import React, { useRef, useState } from 'react';
 import {
-  Modal, View, Text, StyleSheet, TouchableOpacity,
+  Modal, View, Text, Image, StyleSheet, TouchableOpacity,
   ActivityIndicator, Alert, Linking,
 } from 'react-native';
-import { createReservation, verifyTerrainPayment } from '../../services/terrains';
+import { createReservation, verifyTerrainPayment, calculerPrixAvecMarge } from '../../services/terrains';
 import { createPayment } from '../../services/payment';
 import { Terrain, ReservationTerrain } from '../../types/terrain';
 import useAuthStore from '../../store/authStore';
@@ -23,6 +23,10 @@ interface Props {
 type Stage = 'confirm' | 'waiting';
 type MoyenPaiement = 'wave' | 'orange_money';
 
+// Logos partenaires intégrés tels quels — ne pas modifier les images
+const WAVE_LOGO = require('../../../assets/wave.jpg');
+const OM_LOGO = require('../../../assets/om.png');
+
 const Row = ({ label, value, gold }: { label: string; value: string; gold?: boolean }) => (
   <View style={styles.row}>
     <Text style={styles.rowLabel}>{label}</Text>
@@ -40,7 +44,7 @@ export default function ReservationModal({
   const [loading, setLoading] = useState(false);
   const referenceRef = useRef('');
 
-  const prixTotal = terrain.prix_horaire * dureeHeures;
+  const prixTotal = calculerPrixAvecMarge(terrain.prix_horaire * dureeHeures);
 
   const handleClose = () => {
     setStage('confirm');
@@ -150,8 +154,13 @@ export default function ReservationModal({
                     style={[styles.paiBtn, paiement === m && styles.paiBtnActive]}
                     onPress={() => setPaiement(m)}
                   >
+                    <Image
+                      source={m === 'wave' ? WAVE_LOGO : OM_LOGO}
+                      style={styles.paiLogo}
+                      resizeMode="cover"
+                    />
                     <Text style={styles.paiBtnText}>
-                      {m === 'wave' ? '🌊 Wave' : '🟠 Orange Money'}
+                      {m === 'wave' ? 'Wave' : 'Orange Money'}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -232,10 +241,11 @@ const styles = StyleSheet.create({
   },
   paiRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   paiBtn: {
-    flex: 1, padding: 12, borderRadius: 14,
-    borderWidth: 1.5, borderColor: '#2A2C52', alignItems: 'center',
+    flex: 1, flexDirection: 'row', gap: 8, padding: 12, borderRadius: 14,
+    borderWidth: 1.5, borderColor: '#2A2C52', alignItems: 'center', justifyContent: 'center',
   },
   paiBtnActive: { borderColor: '#FDCF34', backgroundColor: 'rgba(253,207,52,.1)' },
+  paiLogo: { width: 24, height: 24, borderRadius: 6 },
   paiBtnText: { color: '#EDEEF7', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 13 },
   btn: {
     backgroundColor: '#FDCF34', borderRadius: 16,

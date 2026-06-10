@@ -10,7 +10,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { Terrain, CreneauPris } from '../../types/terrain';
 import { WeekHours, DayKey, DAY_SHORT, formatHour, DEFAULT_WEEK_HOURS } from '../../services/hours';
-import { genererCreneaux, isCreneauDisponible } from '../../services/terrains';
+import { genererCreneaux, isCreneauDisponible, calculerPrixAvecMarge } from '../../services/terrains';
 import { colors, fonts, radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
 
@@ -132,7 +132,7 @@ export default function ShopTerrainSlotPicker({ terrain, prestataireName, openin
       heureDebut: picked,
       heureFin,
       dureeHeures: 1.5,
-      prixTotal: Math.round(terrain.prix_horaire * 1.5),
+      prixTotal: calculerPrixAvecMarge(Math.round(terrain.prix_horaire * 1.5)),
     });
   };
 
@@ -218,7 +218,7 @@ export default function ShopTerrainSlotPicker({ terrain, prestataireName, openin
           <View style={styles.recapRow}>
             <Text style={styles.recapLbl}>Prix</Text>
             <Text style={[styles.recapVal, styles.recapGold]}>
-              {formatPrice(Math.round(terrain.prix_horaire * 1.5))}
+              {formatPrice(calculerPrixAvecMarge(Math.round(terrain.prix_horaire * 1.5)))}
             </Text>
           </View>
           <TouchableOpacity style={styles.bookBtn} onPress={handleBook} activeOpacity={0.85}>

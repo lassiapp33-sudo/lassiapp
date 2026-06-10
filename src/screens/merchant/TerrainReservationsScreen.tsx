@@ -101,7 +101,7 @@ function ReservationCard({
           <Text style={styles.cardCode}>Code : {reservation.receipt_code}</Text>
         </View>
         <View style={styles.cardRight}>
-          <Text style={styles.cardPrix}>{formatPrice(reservation.prix_total)}</Text>
+          <Text style={styles.cardPrix}>{formatPrice(reservation.montant_prestataire)}</Text>
           <View style={[styles.statutBadge, { backgroundColor: `${cfg.color}20` }]}>
             <Text style={[styles.statutTxt, { color: cfg.color }]}>{cfg.label}</Text>
           </View>
@@ -242,6 +242,7 @@ export default function TerrainReservationsScreen({ terrain, onBack }: Props) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.datesScroll}
         contentContainerStyle={styles.datesRow}
       >
         {DATE_CHIPS.map(({ iso, label }) => {
@@ -388,6 +389,7 @@ const styles = StyleSheet.create({
   headerTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 16 },
   headerSub: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 1 },
 
+  datesScroll: { flexGrow: 0, flexShrink: 0 },
   datesRow: { paddingHorizontal: 18, paddingVertical: 10, gap: 8, alignItems: 'center' },
   dateChip: {
     paddingHorizontal: 16, paddingVertical: 8, borderRadius: radius.pill,

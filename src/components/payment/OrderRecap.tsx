@@ -4,6 +4,7 @@ import { colors, fonts, radius } from '../../theme';
 import { OrderInfo } from '../../types/payment';
 import Avatar from '../Avatar';
 import { formatPrice } from '../../utils/format';
+import { PAYMENT_CONFIG } from '../../config/payment';
 
 interface Props {
   order: OrderInfo;
@@ -31,6 +32,22 @@ export default function OrderRecap({ order }: Props) {
           <Text style={styles.linePrice}>{formatPrice(item.price)}</Text>
         </View>
       ))}
+
+      {/* Sous-total + Frais de service LASSİ */}
+      {order.commission !== undefined && order.commission > 0 && (
+        <>
+          <View style={styles.line}>
+            <Text style={styles.lineLeft}>Sous-total</Text>
+            <Text style={styles.linePrice}>{formatPrice(order.total - order.commission)}</Text>
+          </View>
+          <View style={styles.line}>
+            <Text style={styles.lineLeft}>
+              Frais de service LASSİ ({PAYMENT_CONFIG.COMMISSION_PERCENT_DISPLAY})
+            </Text>
+            <Text style={styles.linePrice}>{formatPrice(order.commission)}</Text>
+          </View>
+        </>
+      )}
 
       {/* Total */}
       <View style={styles.separator} />

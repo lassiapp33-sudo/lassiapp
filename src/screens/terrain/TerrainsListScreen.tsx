@@ -3,7 +3,7 @@ import {
   View, Text, FlatList, StyleSheet,
   TouchableOpacity, Image, ActivityIndicator,
 } from 'react-native';
-import { getTerrains } from '../../services/terrains';
+import { getTerrains, calculerPrixAvecMarge } from '../../services/terrains';
 import { Terrain, SportType, SPORT_EMOJI, SPORT_LABEL } from '../../types/terrain';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
@@ -99,7 +99,7 @@ export default function TerrainsListScreen({ onBack, onSelectTerrain, initialSpo
                     <Text style={styles.nom}>{item.nom}</Text>
                     <Text style={styles.sport}>{SPORT_LABEL[item.sport_type]}</Text>
                   </View>
-                  <Text style={styles.prix}>{formatPrice(item.prix_horaire)}/h</Text>
+                  <Text style={styles.prix}>{formatPrice(calculerPrixAvecMarge(item.prix_horaire))}/h</Text>
                 </View>
                 {item.adresse ? (
                   <Text style={styles.adresse} numberOfLines={1}>{item.adresse}</Text>

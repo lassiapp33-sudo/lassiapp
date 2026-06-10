@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
+import { calculerPrixClient } from '../../config/payment';
 import { usePromoItems, PromoItem } from '../../hooks/usePromoItems';
 
 // ─── Constantes de mise en page ───────────────────────────────────────────────
@@ -74,7 +75,7 @@ function PromoCard({
         <Text style={styles.cardItem} numberOfLines={2}>
           {item.name}
         </Text>
-        <Text style={styles.cardPrice}>{formatPrice(item.price)}</Text>
+        <Text style={styles.cardPrice}>{formatPrice(calculerPrixClient(item.price))}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -136,31 +137,46 @@ export default function PromoBanner({ onPress }: Props) {
     };
   }, [N]);
 
-  if (N < 3) return null;
+  if (N === 0) return null;
 
   return (
     <View style={styles.wrapper}>
       {/* Label section */}
       <Text style={styles.label}>🔥 Offres du quartier</Text>
 
-      {/* Carrousel */}
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        scrollEnabled={false}
-        showsHorizontalScrollIndicator={false}
-      >
-        {looped.map((item, i) => (
-          <PromoCard
-            key={`${item.id}-${i}`}
-            item={item}
-            onPress={() => onPress?.(item.shopId, item.shopName, item.id)}
-          />
-        ))}
-      </ScrollView>
+      {N < 3 ? (
+        // Peu d'annonceurs actifs : rangée statique, sans boucle ni dots
+        <View style={styles.staticRow}>
+          {items.map(item => (
+            <PromoCard
+              key={item.id}
+              item={item}
+              onPress={() => onPress?.(item.shopId, item.shopName, item.id)}
+            />
+          ))}
+        </View>
+      ) : (
+        <>
+          {/* Carrousel */}
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            scrollEnabled={false}
+            showsHorizontalScrollIndicator={false}
+          >
+            {looped.map((item, i) => (
+              <PromoCard
+                key={`${item.id}-${i}`}
+                item={item}
+                onPress={() => onPress?.(item.shopId, item.shopName, item.id)}
+              />
+            ))}
+          </ScrollView>
 
-      {/* Points indicateurs centrés en bas */}
-      <DotsIndicator total={totalPages} active={page} />
+          {/* Points indicateurs centrés en bas */}
+          <DotsIndicator total={totalPages} active={page} />
+        </>
+      )}
     </View>
   );
 }
@@ -183,6 +199,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: 12,
+  },
+
+  // Rangée statique (1 ou 2 annonceurs actifs)
+  staticRow: {
+    flexDirection: 'row',
+    gap: CARD_GAP,
   },
 
   // Carte — layout row : image gauche + texte droite

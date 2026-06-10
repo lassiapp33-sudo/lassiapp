@@ -6,7 +6,8 @@ import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { SPORT_EMOJI, Terrain, TerrainHoraire } from '../../types/terrain';
-import { getTerrainHoraires } from '../../services/terrains';
+import { getTerrainHoraires, calculerPrixAvecMarge, calculerCommission } from '../../services/terrains';
+import { PAYMENT_CONFIG } from '../../config/payment';
 import TerrainCreneaux from '../../components/terrain/TerrainCreneaux';
 import logger from '../../utils/logger';
 
@@ -87,7 +88,9 @@ export default function TerrainBookingScreen({ terrain, prestataireName, onBack,
   const dayOfWeek = selectedDate.getDay();
   const horaire = horaires.find(h => h.jour_semaine === dayOfWeek);
   const ferme = !horaire || horaire.ferme;
-  const prixTotal = Math.round((terrain.prix_horaire * selectedDuration) / 60);
+  const prixBase = Math.round((terrain.prix_horaire * selectedDuration) / 60);
+  const prixTotal = calculerPrixAvecMarge(prixBase);
+  const commission = calculerCommission(prixTotal);
 
   const handleBook = () => {
     if (!selectedSlot) return;
@@ -127,7 +130,7 @@ export default function TerrainBookingScreen({ terrain, prestataireName, onBack,
       >
         {/* Prix + infos */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoPrice}>{formatPrice(terrain.prix_horaire)} / heure</Text>
+          <Text style={styles.infoPrice}>{formatPrice(calculerPrixAvecMarge(terrain.prix_horaire))} / heure</Text>
           {terrain.capacite > 0 && (
             <Text style={styles.infoSub}>{terrain.capacite} joueurs max</Text>
           )}
@@ -209,6 +212,16 @@ export default function TerrainBookingScreen({ terrain, prestataireName, onBack,
               <Text style={styles.recapPriceLabel}>
                 {formatPrice(terrain.prix_horaire)} x {selectedSlot.duree}h
               </Text>
+              <Text style={styles.recapVal}>{formatPrice(prixBase)}</Text>
+            </View>
+            <View style={styles.recapSubRow}>
+              <Text style={styles.recapPriceLabel}>
+                Frais de service LASSİ ({PAYMENT_CONFIG.COMMISSION_PERCENT_DISPLAY})
+              </Text>
+              <Text style={styles.recapVal}>{formatPrice(commission)}</Text>
+            </View>
+            <View style={[styles.recapSubRow, styles.recapTotalRow]}>
+              <Text style={styles.recapTotalLabel}>Total</Text>
               <Text style={styles.recapPrice}>{formatPrice(prixTotal)}</Text>
             </View>
           </View>
@@ -311,6 +324,12 @@ const styles = StyleSheet.create({
     marginTop: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border,
   },
   recapPriceLabel: { color: colors.muted, fontFamily: fonts.body, fontSize: 13 },
+  recapVal: { color: colors.white, fontFamily: fonts.ui, fontSize: 13 },
+  recapSubRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
+  recapTotalRow: {
+    marginTop: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  recapTotalLabel: { color: colors.white, fontFamily: fonts.title, fontSize: 14 },
   recapPrice: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 18 },
 
   footer: {

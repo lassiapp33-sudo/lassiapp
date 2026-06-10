@@ -23,6 +23,7 @@ import { AppliedDiscount } from '../../types/promotions';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { notifyError } from '../../utils/errorUtils';
+import { calculerPrixClient, calculerCommission, PAYMENT_CONFIG } from '../../config/payment';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,8 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
   const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
   const totalDiscount = discounts.reduce((s, d) => s + d.reductionFcfa, 0);
   const total = Math.max(subtotal - totalDiscount, 0);
+  const commission = calculerCommission(total);
+  const totalClient = calculerPrixClient(total);
 
   // Charger les promos actives du shop pour l'affichage (calcul serveur au paiement)
   useEffect(() => {
@@ -167,6 +170,8 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
       // Les discounts locaux (state React) sont cohérents avec l'état frais si les
       // items n'ont pas changé ; le serveur recalcule de toute façon.
       const freshTotal = Math.max(freshSubtotal - totalDiscount, 0);
+      const freshCommission = calculerCommission(freshTotal);
+      const freshTotalClient = calculerPrixClient(freshTotal);
 
       const orderItems = freshStore.items.map(i => ({
         qty: i.qty,
@@ -184,7 +189,8 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         shopName: freshShopInfo?.name ?? shopName,
         shopLocation: freshShopInfo?.location ?? '',
         items: orderItems,
-        total: freshTotal,
+        total: freshTotalClient,
+        commission: freshCommission,
         orderType: freshShopInfo?.showOrderType ? freshOrderType : undefined,
       });
     } catch {
@@ -307,11 +313,18 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
                 <Text style={styles.discountVal}>−{formatPrice(d.reductionFcfa)}</Text>
               </View>
             ))}
+            {/* Frais de service LASSİ */}
+            <View style={styles.summaryLine}>
+              <Text style={styles.summaryKey}>
+                Frais de service LASSİ ({PAYMENT_CONFIG.COMMISSION_PERCENT_DISPLAY})
+              </Text>
+              <Text style={styles.summaryVal}>{formatPrice(commission)}</Text>
+            </View>
             {/* Séparateur */}
             <View style={styles.separator} />
             <View style={styles.totalRow}>
               <Text style={styles.totalKey}>Total</Text>
-              <Text style={styles.totalVal}>{formatPrice(total)}</Text>
+              <Text style={styles.totalVal}>{formatPrice(totalClient)}</Text>
             </View>
           </View>
         </ScrollView>
@@ -330,7 +343,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
           ) : (
             <>
               <IcoPay />
-              <Text style={styles.payBtnTxt}>Commander · {formatPrice(total)}</Text>
+              <Text style={styles.payBtnTxt}>Commander · {formatPrice(totalClient)}</Text>
             </>
           )}
         </TouchableOpacity>

@@ -12,6 +12,8 @@ export interface OrderInfo {
   shopLocation: string; // ex : "📍 Medina"
   items: OrderItem[];
   total: number;
+  /** Frais de service LASSİ (1%) déjà inclus dans `total`. */
+  commission?: number;
   orderType?: 'place' | 'emporter';
 }
 

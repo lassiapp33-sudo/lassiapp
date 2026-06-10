@@ -7,7 +7,7 @@ import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { Terrain, ReservationTerrain, SPORT_EMOJI, SPORT_LABEL } from '../../types/terrain';
-import { JOURS } from '../../services/terrains';
+import { JOURS, calculerPrixAvecMarge } from '../../services/terrains';
 import TerrainCreneaux from '../../components/terrain/TerrainCreneaux';
 import ReservationModal from '../../components/terrain/ReservationModal';
 import ReservationRecu from '../../components/terrain/ReservationRecu';
@@ -61,7 +61,7 @@ export default function TerrainDetailScreen({ terrain, onBack }: Props) {
     );
   }
 
-  const prixSelection = selection ? terrain.prix_horaire * selection.duree : 0;
+  const prixSelection = selection ? calculerPrixAvecMarge(terrain.prix_horaire * selection.duree) : 0;
 
   return (
     <View style={styles.root}>
@@ -93,7 +93,7 @@ export default function TerrainDetailScreen({ terrain, onBack }: Props) {
               ) : null}
             </View>
             <View style={styles.prixBox}>
-              <Text style={styles.prix}>{formatPrice(terrain.prix_horaire)}</Text>
+              <Text style={styles.prix}>{formatPrice(calculerPrixAvecMarge(terrain.prix_horaire))}</Text>
               <Text style={styles.prixSub}>/heure</Text>
             </View>
           </View>

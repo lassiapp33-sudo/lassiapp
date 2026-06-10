@@ -320,16 +320,22 @@ export default function AddProductSheet({
 
             {/* Zone photo / emoji ─────────────────────────────────────────── */}
             <TouchableOpacity
-              style={styles.photoZone}
+              style={[styles.photoZone, showEmojiPicker && styles.photoZoneEmoji]}
               onPress={showEmojiPicker ? undefined : openPhotoPicker}
               activeOpacity={0.85}
+              disabled={showEmojiPicker}
             >
               {uploading ? (
                 // Chargement pendant l'upload
                 <ActivityIndicator color={colors.accent} size="large" />
               ) : showEmojiPicker ? (
-                // Palette d'emojis rapide + option "Aucun"
-                <View style={styles.emojiGrid}>
+                // Palette d'emojis rapide + option "Aucun" — défilable verticalement
+                <ScrollView
+                  style={styles.emojiScroll}
+                  contentContainerStyle={styles.emojiGrid}
+                  showsVerticalScrollIndicator
+                  nestedScrollEnabled
+                >
                   <TouchableOpacity
                     style={[styles.emojiBtn, !emoji && styles.emojiBtnSel]}
                     onPress={() => {
@@ -351,7 +357,7 @@ export default function AddProductSheet({
                       <Text style={styles.emojiTxt}>{e}</Text>
                     </TouchableOpacity>
                   ))}
-                </View>
+                </ScrollView>
               ) : photoUrl ? (
                 // Vraie photo uploadée
                 <Image source={{ uri: photoUrl }} style={styles.photoPreview} />
@@ -542,6 +548,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 18,
     overflow: 'hidden',
+  },
+  photoZoneEmoji: {
+    height: 230,
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
+  },
+  emojiScroll: {
+    flex: 1,
+    alignSelf: 'stretch',
   },
   camCircle: {
     width: 46,

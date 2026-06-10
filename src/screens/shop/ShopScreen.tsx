@@ -37,6 +37,7 @@ import {
 } from '../../services/hours';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
+import { calculerPrixClient } from '../../config/payment';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -353,7 +354,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const setCartOrder = useCartStore(s => s.setOrderType);
 
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
-  const cartTotal = cartItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const cartTotal = calculerPrixClient(cartItems.reduce((s, i) => s + i.price * i.qty, 0));
 
   const shopInfo = {
     id: stableId,
@@ -581,7 +582,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                           <Text style={styles.terrainSport}>{SPORT_LABEL[terrain.sport_type]}</Text>
                         </View>
                         <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={styles.terrainPrice}>{formatPrice(terrain.prix_horaire)}</Text>
+                          <Text style={styles.terrainPrice}>{formatPrice(terrainsService.calculerPrixAvecMarge(terrain.prix_horaire))}</Text>
                           <Text style={styles.terrainPriceSub}>/ heure</Text>
                         </View>
                       </View>

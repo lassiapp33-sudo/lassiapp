@@ -22,7 +22,7 @@ export interface Terrain {
   nom: string;
   description?: string;
   images: string[];
-  prix_horaire: number; // FCFA, commission 1% incluse
+  prix_horaire: number; // FCFA, prix de base prestataire (le client paie ce prix + 1% commission LASSİ)
   sport_type: SportType;
   capacite: number;
   adresse?: string;

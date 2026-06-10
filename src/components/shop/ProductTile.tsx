@@ -5,6 +5,7 @@ import { colors, fonts, radius } from '../../theme';
 import { ProductPromoInfo } from '../../types/promotions';
 import { IcoCartAdd } from '../icons';
 import { formatPrice } from '../../utils/format';
+import { calculerPrixClient } from '../../config/payment';
 
 export interface Product {
   id: string;
@@ -114,11 +115,11 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
         {/* Prix barré + prix promo OU prix normal */}
         {promoInfo?.promoPrice !== undefined ? (
           <View style={styles.priceRow}>
-            <Text style={styles.priceOld}>{formatPrice(product.price)}</Text>
-            <Text style={styles.pricePromo}>{formatPrice(promoInfo.promoPrice)}</Text>
+            <Text style={styles.priceOld}>{formatPrice(calculerPrixClient(product.price))}</Text>
+            <Text style={styles.pricePromo}>{formatPrice(calculerPrixClient(promoInfo.promoPrice))}</Text>
           </View>
         ) : (
-          <Text style={[styles.price, isOut && styles.priceOut]}>{formatPrice(product.price)}</Text>
+          <Text style={[styles.price, isOut && styles.priceOut]}>{formatPrice(calculerPrixClient(product.price))}</Text>
         )}
       </View>
     </TouchableOpacity>

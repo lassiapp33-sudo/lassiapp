@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
+import { calculerPrixClient } from '../../config/payment';
 import { usePromoItems, PromoItem } from '../../hooks/usePromoItems';
 
 const W = Dimensions.get('window').width;
@@ -56,7 +57,7 @@ function PromoCard({
       <Text style={styles.cardItem} numberOfLines={2}>
         {item.name}
       </Text>
-      <Text style={styles.cardPrice}>{formatPrice(item.price)}</Text>
+      <Text style={styles.cardPrice}>{formatPrice(calculerPrixClient(item.price))}</Text>
     </TouchableOpacity>
   );
 }

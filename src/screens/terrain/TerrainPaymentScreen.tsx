@@ -2,6 +2,7 @@
 import {
   View,
   Text,
+  Image,
   ScrollView,
   StyleSheet,
   Linking,
@@ -18,6 +19,7 @@ import { PayMethod } from '../../types/payment';
 import useAuthStore from '../../store/authStore';
 import * as terrainsService from '../../services/terrains';
 import * as payService from '../../services/payment';
+import { PAYMENT_CONFIG } from '../../config/payment';
 import logger from '../../utils/logger';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -31,6 +33,10 @@ const IcoClock = () => (
 
 // ─── Carte méthode de paiement ────────────────────────────────────────────────
 
+// Logos partenaires intégrés tels quels — ne pas modifier les images
+const WAVE_LOGO = require('../../../assets/wave.jpg');
+const OM_LOGO = require('../../../assets/om.png');
+
 function MethodCard({
   method,
   selected,
@@ -40,14 +46,18 @@ function MethodCard({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const label = method === 'wave' ? '🌊 Wave' : '🟠 Orange Money';
+  const label = method === 'wave' ? 'Wave' : 'Orange Money';
+  const logo = method === 'wave' ? WAVE_LOGO : OM_LOGO;
   return (
     <TouchableOpacity
       style={[styles.methodCard, selected && styles.methodCardOn]}
       onPress={onSelect}
       activeOpacity={0.85}
     >
-      <Text style={[styles.methodLabel, selected && styles.methodLabelOn]}>{label}</Text>
+      <View style={styles.methodLeft}>
+        <Image source={logo} style={styles.methodLogo} resizeMode="cover" />
+        <Text style={[styles.methodLabel, selected && styles.methodLabelOn]}>{label}</Text>
+      </View>
       <View style={[styles.methodRadio, selected && styles.methodRadioOn]}>
         {selected && <View style={styles.methodRadioDot} />}
       </View>
@@ -282,7 +292,7 @@ export default function TerrainPaymentScreen({
             <Text style={styles.recapTotal}>{formatPrice(prixTotal)}</Text>
           </View>
           <Text style={styles.recapNote}>
-            Marge LASSI (0,5%) incluse · Aucun remboursement après paiement
+            Frais de service LASSİ ({PAYMENT_CONFIG.COMMISSION_PERCENT_DISPLAY}) inclus · Aucun remboursement après paiement
           </Text>
         </View>
 
@@ -386,6 +396,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   methodCardOn: { borderColor: colors.accent },
+  methodLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  methodLogo: { width: 32, height: 32, borderRadius: 8 },
   methodLabel: { color: colors.white, fontFamily: fonts.ui, fontSize: 15 },
   methodLabelOn: { color: colors.accent },
   methodRadio: {
