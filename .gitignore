@@ -1,0 +1,30 @@
+# ─── Secrets — ne JAMAIS committer ────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.p8
+*.jks
+*.mobileprovision
+secrets/
+
+# ─── Dépendances ──────────────────────────────────────────────────────────────
+node_modules/
+
+# ─── Builds / artefacts ───────────────────────────────────────────────────────
+dist/
+build/
+web-build/
+.expo/
+
+# ─── OS / éditeurs ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Logs ──────────────────────────────────────────────────────────────────────
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
