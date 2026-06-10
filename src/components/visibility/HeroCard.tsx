@@ -32,9 +32,9 @@ export default function HeroCard() {
 
       {/* Corps */}
       <Text style={styles.body}>
-        {'Apparais dans les '}
-        <Text style={styles.accent}>Recommandations LASSİ</Text>
-        {" sur l'accueil et dans toutes les catégories. Attire jusqu'à "}
+        {'Mets un produit en avant dans '}
+        <Text style={styles.accent}>Offre du quartier</Text>
+        {", sur la page d'accueil de tous les clients à proximité. Attire jusqu'à "}
         <Text style={styles.accent}>5× plus de clients</Text>
         {'.'}
       </Text>

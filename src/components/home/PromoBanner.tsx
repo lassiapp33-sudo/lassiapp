@@ -202,9 +202,9 @@ const styles = StyleSheet.create({
   },
 
   // Rangée statique (1 ou 2 annonceurs actifs)
+  // Pas de `gap` ici : chaque carte a déjà `marginRight: CARD_GAP`.
   staticRow: {
     flexDirection: 'row',
-    gap: CARD_GAP,
   },
 
   // Carte — layout row : image gauche + texte droite

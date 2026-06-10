@@ -6,11 +6,14 @@ import VisibilityHeader from '../../components/visibility/VisibilityHeader';
 import HeroCard from '../../components/visibility/HeroCard';
 import BenefitsList from '../../components/visibility/BenefitsList';
 import PlanCard from '../../components/visibility/PlanCard';
+import ProductPicker from '../../components/visibility/ProductPicker';
 import PayFooter, { PayFooterUnavailable } from '../../components/visibility/PayFooter';
 import ActiveSubCard, { computeSubCardProps } from '../../components/visibility/ActiveSubCard';
 import StatsGrid from '../../components/visibility/StatsGrid';
 import { colors, fonts, radius } from '../../theme';
 import useShopStore from '../../store/shopStore';
+import { getProducts } from '../../services/products';
+import { StoreProduct } from '../../types/store';
 import {
   VisibilityPlan,
   ActiveSub,
@@ -100,6 +103,8 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
   const [plans, setPlans] = useState<VisibilityPlan[]>([]);
   const [activeSub, setActiveSub] = useState<ActiveSub | null>(null);
   const [selectedId, setSelectedId] = useState('3m');
+  const [products, setProducts] = useState<StoreProduct[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [payMethod, setPayMethod] = useState<PayMethod>('wave');
   const [payState, setPayState] = useState<PayState>({ type: 'idle' });
   const [initLoading, setInitLoading] = useState(true);
@@ -114,13 +119,18 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
   const init = useCallback(async () => {
     setInitLoading(true);
     try {
-      const [loadedPlans, sub, keys] = await Promise.all([
+      const [loadedPlans, sub, keys, loadedProducts] = await Promise.all([
         getVisibilityPlans(),
         shopId ? getActiveSub(shopId) : Promise.resolve(null),
         checkPaymentAvailability(),
+        shopId ? getProducts(shopId) : Promise.resolve([]),
       ]);
       setPlans(loadedPlans);
       setKeysAvailable(keys);
+      setProducts(loadedProducts);
+      setSelectedProductId(
+        loadedProducts.find(p => p.stock === 'in')?.id ?? loadedProducts[0]?.id ?? null,
+      );
       if (sub) {
         setActiveSub(sub);
         setView('subscribed');
@@ -141,11 +151,17 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
   const handlePay = async () => {
     if (!selectedPlan || !shopId) return;
 
+    if (!selectedProductId) {
+      Alert.alert('Produit requis', 'Choisis le produit à mettre en avant avant de payer.');
+      return;
+    }
+
     setPayState({ type: 'loading' });
     try {
       const result = await createVisibilityPayment({
         planId: selectedPlan.id,
         payMethod,
+        productId: selectedProductId,
       });
 
       if (result.status === 'awaiting_keys') {
@@ -225,7 +241,7 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
 
     return (
       <View style={styles.root}>
-        <VisibilityHeader title="Ma visibilité" onBack={onBack} />
+        <VisibilityHeader title="Offre du quartier" onBack={onBack} />
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.content}
@@ -236,6 +252,8 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
             daysLeft={cardProps.daysLeft}
             expiryDate={cardProps.expiryDate}
             progress={cardProps.progress}
+            productName={activeSub.productName}
+            productEmoji={activeSub.productEmoji}
           />
 
           <Text style={styles.secLabel}>Ce que ton forfait t'a rapporté</Text>
@@ -255,7 +273,7 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
   if (initLoading || !selectedPlan) {
     return (
       <View style={styles.root}>
-        <VisibilityHeader title="Booste ta visibilité" onBack={onBack} />
+        <VisibilityHeader title="Offre du quartier" onBack={onBack} />
         <View style={styles.loadingWrap}>
           <Text style={styles.loadingTxt}>Chargement…</Text>
         </View>
@@ -269,7 +287,7 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
 
   return (
     <View style={styles.root}>
-      <VisibilityHeader title="Booste ta visibilité" onBack={onBack} />
+      <VisibilityHeader title="Offre du quartier" onBack={onBack} />
 
       <ScrollView
         style={styles.scroll}
@@ -278,6 +296,13 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
       >
         <HeroCard />
         <BenefitsList />
+
+        <Text style={styles.secLabel}>Choisis le produit à mettre en avant</Text>
+        <ProductPicker
+          products={products}
+          selectedId={selectedProductId}
+          onSelect={setSelectedProductId}
+        />
 
         <Text style={styles.secLabel}>Choisis ton forfait</Text>
         {plans.map(plan => (

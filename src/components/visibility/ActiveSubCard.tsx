@@ -14,9 +14,18 @@ interface Props {
   daysLeft: number; // jours restants
   expiryDate: string; // ex: "21 juillet 2026"
   progress: number; // 0–1 : fraction du temps ÉCOULÉ
+  productName?: string | null;
+  productEmoji?: string | null;
 }
 
-export default function ActiveSubCard({ planLabel, daysLeft, expiryDate, progress }: Props) {
+export default function ActiveSubCard({
+  planLabel,
+  daysLeft,
+  expiryDate,
+  progress,
+  productName,
+  productEmoji,
+}: Props) {
   const clampedProgress = Math.min(1, Math.max(0, progress));
 
   return (
@@ -28,7 +37,14 @@ export default function ActiveSubCard({ planLabel, daysLeft, expiryDate, progres
       </View>
 
       {/* Titre */}
-      <Text style={styles.title}>Recommandé sur LASSİ</Text>
+      <Text style={styles.title}>Offre du quartier active</Text>
+
+      {/* Produit annoncé */}
+      {!!productName && (
+        <Text style={styles.product} numberOfLines={1}>
+          {productEmoji || '🛍️'} {productName}
+        </Text>
+      )}
 
       {/* Expiration */}
       <Text style={styles.left}>
@@ -93,6 +109,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.titleXL,
     fontSize: 22,
     marginBottom: 3,
+  },
+  product: {
+    color: 'rgba(20,21,42,.75)',
+    fontFamily: fonts.title,
+    fontSize: 13,
+    marginBottom: 8,
   },
   left: {
     color: 'rgba(20,21,42,.65)',
