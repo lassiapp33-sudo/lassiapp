@@ -58,6 +58,19 @@ if (Test-Path $shimSrc) {
     exit 1
 }
 
+# --- Patcher le timeout Expo (10s -> 90s) dans AsyncNgrok.js ---
+$asyncNgrokPath = Join-Path $appDir "node_modules\expo\node_modules\@expo\cli\build\src\start\server\AsyncNgrok.js"
+if (Test-Path $asyncNgrokPath) {
+    $content = [System.IO.File]::ReadAllText($asyncNgrokPath, $utf8NoBom)
+    $patched = $content -replace 'const TUNNEL_TIMEOUT = 10 \* 1000;', 'const TUNNEL_TIMEOUT = 90 * 1000;'
+    if ($patched -ne $content) {
+        [System.IO.File]::WriteAllText($asyncNgrokPath, $patched, $utf8NoBom)
+        Write-Host "  [OK] Timeout tunnel patche (10s -> 90s)" -ForegroundColor Green
+    }
+} else {
+    Write-Host "  [!] AsyncNgrok.js introuvable, timeout non patche" -ForegroundColor Yellow
+}
+
 Write-Host ""
 Write-Host "  LASSI - Expo start (Cloudflare Tunnel)" -ForegroundColor Yellow
 Write-Host "  Demarrage... le tunnel se lance automatiquement." -ForegroundColor Cyan
