@@ -1,0 +1,25 @@
+name: Classements Mensuel - Recompenses Mondiales
+
+on:
+  schedule:
+    - cron: '10 0 1 * *'  # Le 1er de chaque mois à 00h10 UTC (10 min après calculer_classement_mondial)
+  workflow_dispatch:       # Permet aussi de lancer manuellement depuis GitHub
+
+jobs:
+  attribuer-recompenses:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Calculer la période (mois précédent)
+        id: periode
+        run: echo "valeur=$(date -u -d 'yesterday' +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: Appeler attribuer-recompenses-mondial
+        run: |
+          curl -X POST \
+            "https://tsdemraszwtbzgtyjzum.supabase.co/functions/v1/attribuer-recompenses-mondial" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"periode\": \"${{ steps.periode.outputs.valeur }}\"}" \
+            --fail \
+            --silent \
+            --show-error

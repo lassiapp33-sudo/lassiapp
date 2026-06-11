@@ -36,4 +36,6 @@ SELECT cron.schedule(
 );
 
 -- Attribution des récompenses mondiales + notif ville (Edge Function Phase 4) :
--- voir 20260611140000_cron_recompenses_webhook.sql
+-- déclenchée par GitHub Actions (.github/workflows/classements-mensuel.yml),
+-- 10 min après ce job, avec le secret CRON_SECRET déjà configuré pour
+-- update-vip-rankings — aucune configuration manuelle supplémentaire requise.
