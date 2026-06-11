@@ -27,6 +27,7 @@ import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import { RegisterData } from './RegisterScreen';
 import { CatId, CATEGORIES, CatConfig, getCatConfig } from '../../config/categories';
 import { DEFAULT_WEEK_HOURS, WeekHours } from '../../services/hours';
+import { getCurrentLocation, reverseGeocode } from '../../services/location';
 import * as storageService from '../../services/storage';
 import * as authService from '../../services/auth';
 import useAuthStore from '../../store/authStore';
@@ -154,6 +155,18 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
         ? subcats.map(id => catConfig.subcats.find(s => s.id === id)?.label ?? id).join(' · ')
         : '';
 
+      // Position GPS à la finalisation du compte → "domicile fixe" du commerce
+      // (modifiable ensuite uniquement via le bouton "Définir l'emplacement de ma boutique")
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      let zone = '';
+      const coords = await getCurrentLocation();
+      if (coords) {
+        latitude = coords.latitude;
+        longitude = coords.longitude;
+        zone = await reverseGeocode(coords.latitude, coords.longitude);
+      }
+
       const user = await authService.registerMerchant({
         name: userData.name,
         phone: userData.phone,
@@ -166,6 +179,9 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
         shopType: catConfig?.shopType ?? 'products',
         openingHours: skipHours ? null : hours,
         logoLocalUri: logoUri,
+        latitude,
+        longitude,
+        zone,
       });
       useAuthStore.getState().setUser(user);
       onComplete('merchant');

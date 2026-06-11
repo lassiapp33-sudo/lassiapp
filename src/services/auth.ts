@@ -145,6 +145,10 @@ export interface RegisterMerchantParams {
   shopAddress?: string;
   openingHours?: WeekHours | null;
   logoLocalUri?: string | null;
+  // Position GPS capturée à la finalisation du compte → devient le "domicile fixe" du commerce
+  latitude?: number | null;
+  longitude?: number | null;
+  zone?: string;
 }
 
 export async function registerMerchant(params: RegisterMerchantParams): Promise<AuthUser> {
@@ -169,7 +173,9 @@ export async function registerMerchant(params: RegisterMerchantParams): Promise<
       subcategories: params.shopSubcategories ?? [],
       shop_type: params.shopType ?? 'products',
       address_text: params.shopAddress ?? null,
-      zone: '',
+      latitude: params.latitude ?? null,
+      longitude: params.longitude ?? null,
+      zone: params.zone ?? '',
       is_open: false,
       opening_hours: params.openingHours ?? null,
     })
