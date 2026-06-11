@@ -24,18 +24,35 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
         // ① Commerces avec une "Offre du quartier" effective (don admin ou abonnement payé)
         const { data: shops } = await supabase
           .from('shops_effective')
-          .select('id, name, category, featured_product_id')
-          .eq('is_effectively_featured', true)
-          .not('featured_product_id', 'is', null);
+          .select('id, name, category, featured_product_id, featured_product_ids, featured_all_products')
+          .eq('is_effectively_featured', true);
 
-        const shopRows = (shops ?? []) as {
+        type ShopRow = {
           id: string;
           name: string;
           category: string;
-          featured_product_id: string;
-        }[];
+          featured_product_id: string | null;
+          featured_product_ids: string[] | null;
+          featured_all_products: boolean;
+        };
+        const shopRows = (shops ?? []) as ShopRow[];
 
-        if (shopRows.length === 0) {
+        const allProductsShops = shopRows.filter(s => s.featured_all_products);
+        const specificShops = shopRows.filter(s => !s.featured_all_products);
+
+        // ② Produits annoncés individuellement (1, plusieurs, ou abonnement payé)
+        const shopByProductId = new Map<string, ShopRow>();
+        for (const s of specificShops) {
+          const ids = s.featured_product_ids?.length
+            ? s.featured_product_ids
+            : s.featured_product_id
+              ? [s.featured_product_id]
+              : [];
+          for (const id of ids) shopByProductId.set(id, s);
+        }
+        const specificIds = Array.from(shopByProductId.keys());
+
+        if (specificIds.length === 0 && allProductsShops.length === 0) {
           if (!cancelled) {
             setRaw([]);
             setLoading(false);
@@ -43,34 +60,49 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
           return;
         }
 
-        // ② Produits annoncés (en stock uniquement)
-        const productIds = shopRows.map(s => s.featured_product_id);
-        const { data: products } = await supabase
-          .from('products')
-          .select('id, name, price, emoji, photo_url, stock')
-          .in('id', productIds)
-          .eq('stock', 'in');
+        const [specificRes, allProductsRes] = await Promise.all([
+          specificIds.length > 0
+            ? supabase
+                .from('products')
+                .select('id, name, price, emoji, photo_url, stock, shop_id')
+                .in('id', specificIds)
+                .eq('stock', 'in')
+            : Promise.resolve({ data: [] as any[] }),
+          allProductsShops.length > 0
+            ? supabase
+                .from('products')
+                .select('id, name, price, emoji, photo_url, stock, shop_id')
+                .in('shop_id', allProductsShops.map(s => s.id))
+                .eq('stock', 'in')
+            : Promise.resolve({ data: [] as any[] }),
+        ]);
 
         if (cancelled) return;
 
-        const shopById = new Map(shopRows.map(s => [s.featured_product_id, s]));
+        const shopById = new Map(allProductsShops.map(s => [s.id, s]));
 
-        const items: PromoItem[] = (products ?? []).map((row: any) => {
-          const shop = shopById.get(row.id);
-          return {
-            id: row.id,
-            name: row.name,
-            price: row.price as number,
-            emoji: row.emoji ?? '',
-            photoUrl:
-              typeof row.photo_url === 'string' && row.photo_url.startsWith('http')
-                ? row.photo_url
-                : undefined,
-            shopName: shop?.name ?? '',
-            shopCategory: shop?.category ?? '',
-            shopId: shop?.id ?? '',
-          };
+        const toItem = (row: any, shop: ShopRow): PromoItem => ({
+          id: row.id,
+          name: row.name,
+          price: row.price as number,
+          emoji: row.emoji ?? '',
+          photoUrl:
+            typeof row.photo_url === 'string' && row.photo_url.startsWith('http')
+              ? row.photo_url
+              : undefined,
+          shopName: shop.name,
+          shopCategory: shop.category,
+          shopId: shop.id,
         });
+
+        const items: PromoItem[] = [
+          ...(specificRes.data ?? [])
+            .filter((row: any) => shopByProductId.has(row.id))
+            .map((row: any) => toItem(row, shopByProductId.get(row.id)!)),
+          ...(allProductsRes.data ?? [])
+            .filter((row: any) => shopById.has(row.shop_id))
+            .map((row: any) => toItem(row, shopById.get(row.shop_id)!)),
+        ];
 
         setRaw(items);
         setLoading(false);
