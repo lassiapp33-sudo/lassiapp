@@ -11,6 +11,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID, isBoolean, isSafeString, isPositiveInt } from '../_shared/validation.ts'
+import { logAuditEvent } from '../_shared/audit.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -83,6 +84,12 @@ Deno.serve(async (req) => {
         return json({ error: 'raison trop longue (500 caractères max)' }, 400)
       }
 
+      const { data: before } = await admin
+        .from('shops')
+        .select('vip_exclu, is_vip')
+        .eq('id', shopId)
+        .single()
+
       const { error } = await admin
         .from('shops')
         .update({ vip_exclu: Boolean(exclu) })
@@ -106,6 +113,17 @@ Deno.serve(async (req) => {
         action:         exclu ? 'vip_exclu_set' : 'vip_exclu_remove',
         target_shop_id: shopId,
         details:        { exclu: Boolean(exclu), raison, admin_name: profile.name },
+      })
+
+      await logAuditEvent(admin, {
+        action:      exclu ? 'vip_exclu_set' : 'vip_exclu_remove',
+        targetTable: 'shops',
+        targetId:    shopId,
+        before:      before ?? null,
+        after:       { vip_exclu: Boolean(exclu), is_vip: exclu ? false : before?.is_vip },
+        metadata:    { raison },
+        actorId:     user.id,
+        actorRole:   'admin',
       })
 
       return json({ ok: true })
@@ -148,6 +166,12 @@ Deno.serve(async (req) => {
       updates['updated_by'] = user.id
       updates['updated_at'] = new Date().toISOString()
 
+      const { data: before } = await admin
+        .from('vip_settings')
+        .select('*')
+        .eq('id', 1)
+        .single()
+
       const { error } = await admin
         .from('vip_settings')
         .update(updates)
@@ -158,6 +182,16 @@ Deno.serve(async (req) => {
         admin_id: user.id,
         action:   'vip_settings_update',
         details:  { updates, admin_name: profile.name },
+      })
+
+      await logAuditEvent(admin, {
+        action:      'vip_settings_update',
+        targetTable: 'vip_settings',
+        targetId:    '1',
+        before:      before ?? null,
+        after:       updates,
+        actorId:     user.id,
+        actorRole:   'admin',
       })
 
       return json({ ok: true })

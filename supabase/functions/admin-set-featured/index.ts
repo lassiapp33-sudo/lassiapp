@@ -5,6 +5,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID, isBoolean, isISODateString, isSafeString } from '../_shared/validation.ts'
+import { logAuditEvent } from '../_shared/audit.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -153,6 +154,13 @@ Deno.serve(async (req) => {
       updates.vip_manual = false
     }
 
+    // État avant mise à jour (pour l'audit)
+    const { data: before } = await admin
+      .from('shops')
+      .select('vip_manual, vip_manual_until, vip_exclu, is_vip, featured_manual, featured_manual_until, featured_product_ids, featured_all_products, manual_note')
+      .eq('id', shopId)
+      .single()
+
     // Mettre à jour le commerce
     const { error: updateErr } = await admin
       .from('shops')
@@ -177,6 +185,16 @@ Deno.serve(async (req) => {
         note,
         admin_name:           profile.name,
       },
+    })
+
+    await logAuditEvent(admin, {
+      action:      'set_featured_manual',
+      targetTable: 'shops',
+      targetId:    shopId,
+      before:      before ?? null,
+      after:       updates,
+      actorId:     user.id,
+      actorRole:   'admin',
     })
 
     return new Response(JSON.stringify({ ok: true }), {

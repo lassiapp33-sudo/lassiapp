@@ -16,6 +16,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { crypto } from 'https://deno.land/std@0.177.0/crypto/mod.ts';
 import { isUUID } from '../_shared/validation.ts';
+import { logAuditEvent } from '../_shared/audit.ts';
 
 const WAVE_WEBHOOK_SECRET = Deno.env.get('WAVE_WEBHOOK_SECRET') ?? '';
 const OM_WEBHOOK_SECRET   = Deno.env.get('OM_WEBHOOK_SECRET')   ?? '';
@@ -66,6 +67,11 @@ serve(async (req) => {
   const sigNorm = signature.startsWith('sha256=') ? signature.slice(7) : signature;
   if (!timingSafeEqual(expected, sigNorm)) {
     console.error('[webhook] Signature invalide — tentative rejetée');
+    await logAuditEvent(supabase, {
+      action:      'webhook_invalid_signature',
+      targetTable: 'payment_intents',
+      metadata:    { source },
+    });
     return new Response('Signature invalide', { status: 401 });
   }
 

@@ -5,6 +5,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID, isSafeString } from '../_shared/validation.ts'
+import { logAuditEvent } from '../_shared/audit.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -92,6 +93,16 @@ Deno.serve(async (req) => {
         target_role:  targetProfile?.role ?? '—',
         admin_name:   adminProfile.name,
       },
+    })
+
+    await logAuditEvent(admin, {
+      action:      'admin_delete_user',
+      targetTable: 'profiles',
+      targetId:    targetUserId,
+      before:      targetProfile ?? null,
+      metadata:    { reason: reason ?? 'Aucune raison fournie' },
+      actorId:     caller.id,
+      actorRole:   'admin',
     })
 
     // ── 6. Purger les données liées ───────────────────────────────────────────

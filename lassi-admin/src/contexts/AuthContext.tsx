@@ -145,9 +145,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Accès refusé — ce compte n'a pas les droits administrateur.")
     }
     setUser(admin)
+
+    // Section 8 : trace la connexion admin réussie (best-effort, non bloquant)
+    void supabase.rpc('log_audit_event', { p_action: 'admin_login_success' }).then(
+      () => {}, () => {},
+    )
   }, [])
 
   const signOut = useCallback(async () => {
+    // Section 8 : trace la déconnexion AVANT de révoquer la session — une
+    // fois signOut() appelé, l'utilisateur n'est plus authentifié et la RPC
+    // ne pourrait plus identifier qui se déconnecte.
+    await supabase.rpc('log_audit_event', { p_action: 'admin_logout' }).then(
+      () => {}, () => {},
+    )
+
     // scope: 'global' (Section 7) — révoque le refresh token côté serveur
     // en plus de nettoyer la session locale (localStorage).
     await supabase.auth.signOut({ scope: 'global' })
