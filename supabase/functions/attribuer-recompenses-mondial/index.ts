@@ -77,6 +77,19 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'periode invalide (attendu YYYY-MM)' }, 400)
   }
 
+  // --- Idempotence : si déjà attribué pour cette période, ne pas dupliquer
+  //     les récompenses ni renvoyer les notifs (retry GitHub Actions, etc.) ---
+  const { count: dejaAttribue } = await supabase
+    .from('recompenses_attribuees')
+    .select('id', { count: 'exact', head: true })
+    .eq('type_classement', 'mondial')
+    .eq('periode', periode)
+    .eq('est_actif', true)
+
+  if (dejaAttribue && dejaAttribue > 0) {
+    return jsonResponse({ success: true, skipped: true, reason: 'Récompenses déjà attribuées pour cette période' })
+  }
+
   // --- Lire le classement mondial actif (calculé par calculer_classement_mondial) ---
   const { data: classement, error: classementErr } = await supabase
     .from('classements')

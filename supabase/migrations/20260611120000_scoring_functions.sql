@@ -182,6 +182,8 @@ BEGIN
       VALUES (v_rec.client_id, 'client', p_periode, 1, '🎖️ Supporter n°1', true);
     END IF;
   END LOOP;
-  UPDATE client_scores SET points_semaine = 0;
+  -- Reset mensuel (points_semaine n'est pas utilisé pour les clients : pas de
+  -- classement hebdo client, seul le classement mensuel existe)
+  UPDATE client_scores SET points_mois = 0, nb_commandes_mois = 0;
 END;
 $$;
