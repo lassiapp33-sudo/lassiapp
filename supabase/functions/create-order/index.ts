@@ -1,10 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID, isPositiveInt, isSafeString } from '../_shared/validation.ts'
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from '../_shared/cors.ts'
 
 // Taux de commission LASSİ (1 %). Un seul endroit à modifier.
 const COMMISSION_RATE = 0.01
@@ -126,6 +122,7 @@ function applyBestPromo(
 // ─── Handler principal ───────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  const CORS = corsHeaders(req)
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   try {

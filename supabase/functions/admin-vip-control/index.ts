@@ -12,20 +12,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID, isBoolean, isSafeString, isPositiveInt } from '../_shared/validation.ts'
 import { logAuditEvent } from '../_shared/audit.ts'
-
-const CORS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  })
-}
+import { corsHeaders } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
+  const CORS = corsHeaders(req)
+
+  function json(data: unknown, status = 200) {
+    return new Response(JSON.stringify(data), {
+      status,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+    })
+  }
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   try {

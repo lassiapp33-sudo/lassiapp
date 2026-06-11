@@ -15,6 +15,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { isUUID, isSafeString } from '../_shared/validation.ts';
+import { corsHeaders as buildCorsHeaders } from '../_shared/cors.ts';
 
 // 🔌 Mêmes clés que create-payment. Sans elles → mode simulation.
 const WAVE_API_KEY     = Deno.env.get('WAVE_API_KEY')     ?? '';
@@ -22,12 +23,15 @@ const OM_API_KEY       = Deno.env.get('OM_API_KEY')       ?? '';
 const OM_MERCHANT_CODE = Deno.env.get('OM_MERCHANT_CODE') ?? '';
 const IS_PRODUCTION    = WAVE_API_KEY !== '' || OM_API_KEY !== '';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
+
+  const errorResponse = (message: string, status: number) =>
+    new Response(JSON.stringify({ success: false, error: message }), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
@@ -209,11 +213,4 @@ async function refundOrangeMoney(params: { paymentIntentId: string; externalRef:
 
   const data = await response.json();
   return data.transaction_id ?? data.pay_token;
-}
-
-function errorResponse(message: string, status: number) {
-  return new Response(JSON.stringify({ success: false, error: message }), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
 }

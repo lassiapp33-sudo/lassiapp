@@ -74,7 +74,15 @@ serve(async (req) => {
       payout.montant === payout.prix_base;
 
     if (!invariantOk) {
-      console.error('[ALERTE PAIEMENT] payout', payout.id, 'incohérence de montant — STOP', JSON.stringify(payout));
+      // Section 9 : ne jamais logger la ligne complète (contient
+      // prestataire_phone) — uniquement les montants utiles au diagnostic.
+      console.error('[ALERTE PAIEMENT] payout', payout.id, 'incohérence de montant — STOP', JSON.stringify({
+        montant_total: payout.montant_total,
+        montant: payout.montant,
+        prix_base: payout.prix_base,
+        commission_lassi: payout.commission_lassi,
+        payment_intent_statut: payout.payment_intent_statut,
+      }));
       await supabase.rpc('payout_queue_mark_failure', {
         p_payout_id: payout.id,
         p_error:     'amount_invariant_violation',
@@ -100,7 +108,9 @@ serve(async (req) => {
     // 3. Numéro Wave/OM du prestataire : présent et au format valide
     const phone = (payout.prestataire_phone ?? '').trim();
     if (!PHONE_RE.test(phone)) {
-      console.error('[ALERTE PAIEMENT] payout', payout.id, 'numéro prestataire invalide:', phone, '— STOP');
+      // Section 9 : ne jamais logger le numéro de téléphone (donnée
+      // financière sensible) — seule la longueur aide au diagnostic.
+      console.error('[ALERTE PAIEMENT] payout', payout.id, `numéro prestataire invalide (longueur=${phone.length}) — STOP`);
       await supabase.rpc('payout_queue_mark_failure', {
         p_payout_id: payout.id,
         p_error:     'invalid_prestataire_phone',

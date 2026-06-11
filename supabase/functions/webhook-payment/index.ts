@@ -86,7 +86,9 @@ serve(async (req) => {
   // ── Validation du payment_intent_id (rejet si absent) ─────────────────────
   const piId: unknown = payload.client_reference ?? payload.order_id ?? (payload.metadata as Record<string, unknown> | undefined)?.pi_id;
   if (!isUUID(piId)) {
-    console.error('[webhook] payment_intent_id absent ou invalide dans le payload', payload);
+    // Section 9 : ne jamais logger le payload complet (peut contenir des
+    // données client Wave/OM) — seules les clés reçues aident au diagnostic.
+    console.error('[webhook] payment_intent_id absent ou invalide dans le payload — clés reçues:', Object.keys(payload));
     return new Response('payment_intent_id manquant', { status: 400 });
   }
 

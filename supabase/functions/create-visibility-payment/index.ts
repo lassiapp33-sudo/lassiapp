@@ -1,10 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { isUUID } from '../_shared/validation.ts'
+import { isUUID, isSafeString, isBoolean } from '../_shared/validation.ts'
+import { corsHeaders } from '../_shared/cors.ts'
 
-const CORS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+const PLAN_ID_RE = /^[a-z0-9]+$/i
+const MAX_FEATURED_PRODUCTS = 50
 
 // ─── Clés API de paiement ─────────────────────────────────────────────────────
 // TODO: remplir ces variables dans le dashboard Supabase
@@ -29,14 +28,16 @@ const KEYS_READY = {
   orange_money: !!(OM_API_KEY   && OM_MERCHANT_ID),
 }
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  })
-}
-
 Deno.serve(async (req) => {
+  const CORS = corsHeaders(req)
+
+  function json(data: unknown, status = 200) {
+    return new Response(JSON.stringify(data), {
+      status,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+    })
+  }
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   // GET : expose la disponibilité des clés (appelé par l'app au chargement de l'écran)
@@ -55,15 +56,27 @@ Deno.serve(async (req) => {
     if (userError || !user) return json({ error: 'Non autorisé' }, 401)
 
     // ② Validation du body
-    const { planId, payMethod, productId } = await req.json()
-    if (!planId || !payMethod || !productId) {
-      return json({ error: 'planId, payMethod et productId requis' }, 400)
+    const { planId, payMethod, productIds, allProducts } = await req.json()
+    if (!planId || !payMethod) {
+      return json({ error: 'planId et payMethod requis' }, 400)
     }
-    if (!isUUID(planId) || !isUUID(productId)) {
-      return json({ error: 'planId ou productId invalide' }, 400)
+    if (!isSafeString(planId, { maxLen: 20, minLen: 1, pattern: PLAN_ID_RE })) {
+      return json({ error: 'planId invalide' }, 400)
     }
     if (!['wave', 'orange_money'].includes(payMethod)) {
       return json({ error: 'payMethod invalide (wave | orange_money)' }, 400)
+    }
+
+    const wantsAllProducts = allProducts === true
+    if (!wantsAllProducts) {
+      if (!Array.isArray(productIds) || productIds.length === 0) {
+        return json({ error: 'productIds requis (ou allProducts: true)' }, 400)
+      }
+      if (productIds.length > MAX_FEATURED_PRODUCTS || !productIds.every(isUUID)) {
+        return json({ error: 'productIds invalide' }, 400)
+      }
+    } else if (allProducts !== undefined && !isBoolean(allProducts)) {
+      return json({ error: 'allProducts invalide' }, 400)
     }
 
     const admin = createClient(
@@ -100,15 +113,21 @@ Deno.serve(async (req) => {
 
     if (!plan) return json({ error: 'Forfait introuvable ou inactif' }, 404)
 
-    // ⑤bis Vérifier que le produit choisi appartient bien à cette boutique
-    const { data: product } = await admin
-      .from('products')
-      .select('id')
-      .eq('id', productId)
-      .eq('shop_id', shop.id)
-      .maybeSingle()
+    // ⑤bis Vérifier que les produits choisis appartiennent bien à cette boutique
+    const featuredProductIds: string[] = []
+    if (!wantsAllProducts) {
+      const uniqueIds = Array.from(new Set(productIds as string[]))
+      const { data: ownedProducts } = await admin
+        .from('products')
+        .select('id')
+        .eq('shop_id', shop.id)
+        .in('id', uniqueIds)
 
-    if (!product) return json({ error: 'Produit invalide' }, 400)
+      if (!ownedProducts || ownedProducts.length !== uniqueIds.length) {
+        return json({ error: 'Produit invalide' }, 400)
+      }
+      featuredProductIds.push(...uniqueIds)
+    }
 
     // ⑥ Vérifier l'absence d'un abonnement déjà actif
     const now = new Date().toISOString()
@@ -126,13 +145,15 @@ Deno.serve(async (req) => {
     const { data: sub, error: subError } = await admin
       .from('visibility_subscriptions')
       .insert({
-        shop_id:     shop.id,
-        merchant_id: user.id,
-        plan_id:     plan.id,
-        product_id:  productId,
-        amount:      plan.price,  // prix chargé depuis la DB, pas depuis le client
-        pay_method:  payMethod,
-        status:      'pending',
+        shop_id:      shop.id,
+        merchant_id:  user.id,
+        plan_id:      plan.id,
+        product_id:   featuredProductIds[0] ?? null,  // legacy : 1er produit pour affichage simple
+        product_ids:  featuredProductIds,
+        all_products: wantsAllProducts,
+        amount:       plan.price,  // prix chargé depuis la DB, pas depuis le client
+        pay_method:   payMethod,
+        status:       'pending',
       })
       .select()
       .single()

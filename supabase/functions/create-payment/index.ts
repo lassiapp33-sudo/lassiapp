@@ -11,6 +11,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { isUUID } from '../_shared/validation.ts';
+import { corsHeaders as buildCorsHeaders } from '../_shared/cors.ts';
 
 // ============================================================
 // 🔌 POINT D'ENTRÉE POUR L'INGÉNIEUR WAVE/OM
@@ -30,12 +31,15 @@ const OM_MERCHANT_CODE = Deno.env.get('OM_MERCHANT_CODE') ?? '';
 
 const IS_PRODUCTION = WAVE_API_KEY !== '' || OM_API_KEY !== '';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
+
+  const errorResponse = (message: string, status: number) =>
+    new Response(JSON.stringify({ success: false, error: message }), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   const supabase = createClient(
@@ -311,11 +315,4 @@ async function initiateOrangeMoneyPayment(params: {
     redirectUrl: data.payment_url,
     status:      data.status,
   };
-}
-
-function errorResponse(message: string, status: number) {
-  return new Response(JSON.stringify({ success: false, error: message }), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
 }

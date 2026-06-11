@@ -14,6 +14,12 @@ extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [api.tls]
+# Section 9 — HTTPS obligatoire : ce `enabled = false` est UNIQUEMENT pour
+# le stack local du CLI Supabase (pas de certificat local). En production,
+# le projet hébergé (https://*.supabase.co) n'expose aucun port HTTP : toute
+# requête passe par HTTPS au niveau de la plateforme, ce réglage n'a aucun
+# effet et ne peut pas être désactivé. L'app mobile et lassi-admin utilisent
+# toutes deux des URLs https:// (voir .env / .env.example).
 enabled = false
 
 [db.pooler]
@@ -76,4 +82,12 @@ max_frequency = "5s"
 # disponible) : la passerelle Supabase ne doit pas exiger de JWT, la
 # fonction vérifie elle-même l'en-tête X-Cron-Secret (voir CRON_SECRET).
 [functions.process-payouts]
+verify_jwt = false
+
+# Section 9 — webhook-payment est appelée directement par les serveurs
+# Wave/Orange Money (pas de JWT Supabase dans leurs callbacks) : la
+# passerelle ne doit pas exiger de JWT, la fonction vérifie elle-même la
+# signature HMAC (X-Wave-Signature / X-OM-Signature, voir
+# WAVE_WEBHOOK_SECRET / OM_WEBHOOK_SECRET) avant tout traitement.
+[functions.webhook-payment]
 verify_jwt = false

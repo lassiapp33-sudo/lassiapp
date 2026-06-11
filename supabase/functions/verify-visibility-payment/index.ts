@@ -1,10 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID } from '../_shared/validation.ts'
-
-const CORS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from '../_shared/cors.ts'
 
 // ─── Clés API ─────────────────────────────────────────────────────────────────
 // Mêmes variables que create-visibility-payment.
@@ -13,14 +9,16 @@ const CORS = {
 const WAVE_SECRET_KEY = Deno.env.get('WAVE_SECRET_KEY') ?? ''  // clé pour vérifier le statut
 const OM_API_KEY      = Deno.env.get('OM_API_KEY')      ?? ''
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  })
-}
-
 Deno.serve(async (req) => {
+  const CORS = corsHeaders(req)
+
+  function json(data: unknown, status = 200) {
+    return new Response(JSON.stringify(data), {
+      status,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+    })
+  }
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   try {
@@ -112,12 +110,15 @@ Deno.serve(async (req) => {
 
     if (updateError) throw updateError
 
-    // ⑤ Activer "Offre du quartier" pour la boutique avec le produit choisi
+    // ⑤ Activer "Offre du quartier" pour la boutique avec le(s) produit(s) choisi(s)
+    //    — accès immédiat au type d'abonnement payé (1 produit / plusieurs / vitrine entière)
     await admin
       .from('shops')
       .update({
-        is_featured:         true,
-        featured_product_id: sub.product_id,
+        is_featured:           true,
+        featured_product_id:   sub.all_products ? null : (sub.product_ids?.[0] ?? sub.product_id ?? null),
+        featured_product_ids:  sub.all_products ? [] : (sub.product_ids ?? []),
+        featured_all_products: !!sub.all_products,
       })
       .eq('id', sub.shop_id)
 

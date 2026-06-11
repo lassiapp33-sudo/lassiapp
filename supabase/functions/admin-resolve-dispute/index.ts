@@ -4,13 +4,10 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID, isSafeString } from '../_shared/validation.ts'
-
-const CORS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
+  const CORS = corsHeaders(req)
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   try {

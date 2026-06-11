@@ -1,22 +1,20 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isSafeString } from '../_shared/validation.ts'
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from '../_shared/cors.ts'
 
 const WAVE_SECRET_KEY = Deno.env.get('WAVE_SECRET_KEY') ?? ''
 const OM_API_KEY      = Deno.env.get('OM_API_KEY') ?? ''
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  })
-}
-
 Deno.serve(async (req) => {
+  const CORS = corsHeaders(req)
+
+  function json(data: unknown, status = 200) {
+    return new Response(JSON.stringify(data), {
+      status,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+    })
+  }
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   try {
