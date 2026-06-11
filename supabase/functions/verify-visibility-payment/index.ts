@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
     // ② Charger l'abonnement — vérifier qu'il appartient au caller
     const { data: sub } = await admin
       .from('visibility_subscriptions')
-      .select('*, plan:plan_id(duration_months, label)')
+      .select('*, plan:plan_id(duration_days, label)')
       .eq('id', subscriptionId)
       .eq('merchant_id', user.id)
       .maybeSingle()
@@ -96,8 +96,7 @@ Deno.serve(async (req) => {
     // ④ Paiement confirmé → activer l'abonnement
     const now       = new Date()
     const startedAt = now.toISOString()
-    const expiresAt = new Date(now)
-    expiresAt.setMonth(expiresAt.getMonth() + sub.plan.duration_months)
+    const expiresAt = new Date(now.getTime() + sub.plan.duration_days * 86_400_000)
 
     const { error: updateError } = await admin
       .from('visibility_subscriptions')
@@ -111,12 +110,12 @@ Deno.serve(async (req) => {
 
     if (updateError) throw updateError
 
-    // ⑤ Activer la mise en avant de la boutique jusqu'à expiration
+    // ⑤ Activer "Offre du quartier" pour la boutique avec le produit choisi
     await admin
       .from('shops')
       .update({
-        is_featured:     true,
-        vip_manual_until: expiresAt.toISOString(),
+        is_featured:         true,
+        featured_product_id: sub.product_id,
       })
       .eq('id', sub.shop_id)
 
@@ -127,7 +126,7 @@ Deno.serve(async (req) => {
     await admin.from('notifications').insert({
       user_id: user.id,
       type:    'visibility',
-      title:   'Forfait visibilité activé ✅',
+      title:   'Offre du quartier activée ✅',
       body:    `Ton forfait ${sub.plan.label} est actif jusqu'au ${expiryFr}.`,
       data:    { subscription_id: sub.id },
     })

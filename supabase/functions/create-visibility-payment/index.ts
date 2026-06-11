@@ -54,8 +54,10 @@ Deno.serve(async (req) => {
     if (userError || !user) return json({ error: 'Non autorisé' }, 401)
 
     // ② Validation du body
-    const { planId, payMethod } = await req.json()
-    if (!planId || !payMethod) return json({ error: 'planId et payMethod requis' }, 400)
+    const { planId, payMethod, productId } = await req.json()
+    if (!planId || !payMethod || !productId) {
+      return json({ error: 'planId, payMethod et productId requis' }, 400)
+    }
     if (!['wave', 'orange_money'].includes(payMethod)) {
       return json({ error: 'payMethod invalide (wave | orange_money)' }, 400)
     }
@@ -87,12 +89,22 @@ Deno.serve(async (req) => {
     //    (on n'accepte jamais un prix envoyé par le client)
     const { data: plan } = await admin
       .from('visibility_plans')
-      .select('id, label, price, duration_months')
+      .select('id, label, price, duration_months, duration_days')
       .eq('id', planId)
       .eq('active', true)
       .maybeSingle()
 
     if (!plan) return json({ error: 'Forfait introuvable ou inactif' }, 404)
+
+    // ⑤bis Vérifier que le produit choisi appartient bien à cette boutique
+    const { data: product } = await admin
+      .from('products')
+      .select('id')
+      .eq('id', productId)
+      .eq('shop_id', shop.id)
+      .maybeSingle()
+
+    if (!product) return json({ error: 'Produit invalide' }, 400)
 
     // ⑥ Vérifier l'absence d'un abonnement déjà actif
     const now = new Date().toISOString()
@@ -113,6 +125,7 @@ Deno.serve(async (req) => {
         shop_id:     shop.id,
         merchant_id: user.id,
         plan_id:     plan.id,
+        product_id:  productId,
         amount:      plan.price,  // prix chargé depuis la DB, pas depuis le client
         pay_method:  payMethod,
         status:      'pending',
