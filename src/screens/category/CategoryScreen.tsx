@@ -91,8 +91,10 @@ function applyFilter(
 
 interface Props {
   initialCatId: CatId;
+  initialSubCatId?: string;
   onBack: () => void;
   onShopPress?: (shopId: string, shopName: string) => void;
+  onCatStateChange?: (catId: CatId, subCatId: string) => void;
   onSearch?: () => void;
   onFavorites?: () => void;
   onMessages?: () => void;
@@ -102,8 +104,10 @@ interface Props {
 
 export default function CategoryScreen({
   initialCatId,
+  initialSubCatId,
   onBack,
   onShopPress,
+  onCatStateChange,
   onSearch,
   onFavorites,
   onMessages,
@@ -113,7 +117,7 @@ export default function CategoryScreen({
   const t = useT();
 
   const [catId, setCatId] = useState<CatId>(initialCatId);
-  const [subCat, setSubCat] = useState<string>(getCatMeta(initialCatId).subcats[0].id);
+  const [subCat, setSubCat] = useState<string>(initialSubCatId ?? getCatMeta(initialCatId).subcats[0].id);
   const [filter, setFilter] = useState<FilterId>('near');
   const [navTab, setNavTab] = useState<NavTab>('home');
   const [shops, setShops] = useState<Shop[]>([]);
@@ -154,9 +158,16 @@ export default function CategoryScreen({
   }, [catId, loadShops]);
 
   const handleCatChange = useCallback((id: CatId) => {
+    const firstSub = getCatMeta(id).subcats[0].id;
     setCatId(id);
-    setSubCat(getCatMeta(id).subcats[0].id);
-  }, []);
+    setSubCat(firstSub);
+    onCatStateChange?.(id, firstSub);
+  }, [onCatStateChange]);
+
+  const handleSubCatChange = useCallback((id: string) => {
+    setSubCat(id);
+    onCatStateChange?.(catId, id);
+  }, [catId, onCatStateChange]);
 
   const handleNavPress = (t: NavTab) => {
     setNavTab(t);
@@ -253,7 +264,7 @@ export default function CategoryScreen({
       <>
         <CatNavBar active={catId} onSelect={handleCatChange} />
         {meta.subcats.length > 1 && (
-          <SubCatTabs tabs={meta.subcats} active={subCat} onChange={setSubCat} />
+          <SubCatTabs tabs={meta.subcats} active={subCat} onChange={handleSubCatChange} />
         )}
         <VipPodium
           entries={vipEntries}
@@ -286,7 +297,7 @@ export default function CategoryScreen({
       t,
       filteredShops.length,
       handleCatChange,
-      setSubCat,
+      handleSubCatChange,
       handleVipPress,
       setFilter,
     ],

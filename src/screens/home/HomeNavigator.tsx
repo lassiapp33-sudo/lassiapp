@@ -46,7 +46,7 @@ type HomeStack =
   | { id: 'messages' }
   | { id: 'map' }
   | { id: 'cart'; shopId: string; shopName: string }
-  | { id: 'category'; catId: CatId; title: string }
+  | { id: 'category'; catId: CatId; title: string; subCatId?: string }
   | { id: 'shop'; shopId: string; shopName: string; targetProductId?: string }
   | {
       id: 'chat';
@@ -358,8 +358,18 @@ export default function HomeNavigator({ onLogout }: Props) {
     return (
       <CategoryScreen
         initialCatId={screen.catId}
+        initialSubCatId={screen.subCatId}
         onBack={pop}
         onShopPress={pushShop}
+        onCatStateChange={(catId, subCatId) =>
+          setHistory(h => {
+            const last = h[h.length - 1];
+            if (last.id !== 'category' || (last.catId === catId && last.subCatId === subCatId)) {
+              return h;
+            }
+            return [...h.slice(0, -1), { ...last, catId, subCatId }];
+          })
+        }
         onSearch={() => setHistory([{ id: 'main' }, { id: 'search' }])}
         onFavorites={() => setHistory([{ id: 'main' }, { id: 'favorites' }])}
         onMessages={() => setHistory([{ id: 'main' }, { id: 'messages' }])}
