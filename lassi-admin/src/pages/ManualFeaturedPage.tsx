@@ -8,26 +8,28 @@ import { Search, Star, Trophy, X, Check, Ban } from 'lucide-react'
 import Badge        from '../components/Badge'
 import EmptyState   from '../components/EmptyState'
 import {
-  getAllShopsWithPromo, setShopFeatured, getActiveManualPromos,
-  type ShopWithPromo,
+  getAllShopsWithPromo, setShopFeatured, getActiveManualPromos, getShopProducts,
+  type ShopWithPromo, type ShopProduct,
 } from '../services/promotions'
 
 // Durées disponibles pour la mise en avant
 const DURATIONS = [
-  { label: '1 semaine',  days: 7 },
+  { label: '2 semaines', days: 14 },
   { label: '1 mois',     days: 30 },
   { label: '3 mois',     days: 90 },
+  { label: '6 mois',     days: 180 },
   { label: 'Illimité',   days: null },
 ]
 
 interface EditState {
-  shopId:       string
-  vipManual:    boolean
-  vipDays:      number | null
-  vipExclu:     boolean
-  featured:     boolean
-  featuredDays: number | null
-  note:         string
+  shopId:            string
+  vipManual:         boolean
+  vipDays:           number | null
+  vipExclu:          boolean
+  featured:          boolean
+  featuredDays:      number | null
+  featuredProductId: string | null
+  note:              string
 }
 
 export default function ManualFeaturedPage() {
@@ -40,6 +42,21 @@ export default function ManualFeaturedPage() {
   const [error,   setError]   = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [tab,     setTab]     = useState<'all' | 'active'>('all')
+
+  const [shopProducts,    setShopProducts]    = useState<ShopProduct[]>([])
+  const [productsLoading, setProductsLoading] = useState(false)
+
+  useEffect(() => {
+    if (!edit?.featured || !edit.shopId) {
+      setShopProducts([])
+      return
+    }
+    setProductsLoading(true)
+    getShopProducts(edit.shopId)
+      .then(setShopProducts)
+      .catch(() => setShopProducts([]))
+      .finally(() => setProductsLoading(false))
+  }, [edit?.featured, edit?.shopId])
 
   function load() {
     setLoading(true)
@@ -73,13 +90,14 @@ export default function ManualFeaturedPage() {
 
   function openEdit(shop: ShopWithPromo) {
     setEdit({
-      shopId:       shop.id,
-      vipManual:    shop.vipManual,
-      vipDays:      null,
-      vipExclu:     shop.vipExclu,
-      featured:     shop.featuredManual,
-      featuredDays: null,
-      note:         shop.manualNote ?? '',
+      shopId:            shop.id,
+      vipManual:         shop.vipManual,
+      vipDays:           null,
+      vipExclu:          shop.vipExclu,
+      featured:          shop.featuredManual,
+      featuredDays:      null,
+      featuredProductId: shop.featuredProductId,
+      note:              shop.manualNote ?? '',
     })
     setError(null)
   }
@@ -99,13 +117,14 @@ export default function ManualFeaturedPage() {
         : null
 
       await setShopFeatured({
-        shopId:         edit.shopId,
-        vipManual:      edit.vipExclu ? false : edit.vipManual,
-        vipUntil:       (edit.vipManual && !edit.vipExclu) ? vipUntil : null,
-        vipExclu:       edit.vipExclu,
-        featuredManual: edit.featured,
-        featuredUntil:  edit.featured ? featUntil : null,
-        note:           edit.note.trim() || null,
+        shopId:            edit.shopId,
+        vipManual:         edit.vipExclu ? false : edit.vipManual,
+        vipUntil:          (edit.vipManual && !edit.vipExclu) ? vipUntil : null,
+        vipExclu:          edit.vipExclu,
+        featuredManual:    edit.featured,
+        featuredUntil:     edit.featured ? featUntil : null,
+        featuredProductId: edit.featured ? edit.featuredProductId : null,
+        note:              edit.note.trim() || null,
       })
 
       setSuccess('Mise à jour enregistrée.')
@@ -136,7 +155,7 @@ export default function ManualFeaturedPage() {
         </div>
         <div className="bg-surface border border-border rounded-xl p-4 text-center">
           <p className="text-3xl font-title font-bold text-white">{active.featuredCount}</p>
-          <p className="text-muted text-xs mt-1">Recos offertes actives</p>
+          <p className="text-muted text-xs mt-1">Offres du quartier actives</p>
         </div>
       </div>
 
@@ -324,12 +343,12 @@ export default function ManualFeaturedPage() {
               )}
             </div>
 
-            {/* Toggle Recommandation */}
+            {/* Toggle Offre du quartier */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Star size={16} className="text-muted" />
-                  <span className="text-white text-sm font-medium">Forcer Recommandation</span>
+                  <span className="text-white text-sm font-medium">Offre du quartier</span>
                 </div>
                 <button
                   onClick={() => setEdit(e => e ? { ...e, featured: !e.featured } : e)}
@@ -343,21 +362,46 @@ export default function ManualFeaturedPage() {
                 </button>
               </div>
               {edit.featured && (
-                <div className="flex gap-2 flex-wrap">
-                  {DURATIONS.map(d => (
-                    <button
-                      key={d.label}
-                      onClick={() => setEdit(e => e ? { ...e, featuredDays: d.days } : e)}
-                      className={`text-xs px-2.5 py-1.5 rounded border transition-colors ${
-                        edit.featuredDays === d.days
-                          ? 'bg-accent/20 border-accent text-accent'
-                          : 'border-border text-muted hover:border-muted'
-                      }`}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div className="flex gap-2 flex-wrap">
+                    {DURATIONS.map(d => (
+                      <button
+                        key={d.label}
+                        onClick={() => setEdit(e => e ? { ...e, featuredDays: d.days } : e)}
+                        className={`text-xs px-2.5 py-1.5 rounded border transition-colors ${
+                          edit.featuredDays === d.days
+                            ? 'bg-accent/20 border-accent text-accent'
+                            : 'border-border text-muted hover:border-muted'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-muted font-medium mb-1.5 uppercase tracking-wide">
+                      Produit à mettre en avant
+                    </label>
+                    {productsLoading ? (
+                      <p className="text-muted text-xs">Chargement des produits…</p>
+                    ) : shopProducts.length === 0 ? (
+                      <p className="text-muted text-xs">Ce commerce n'a aucun produit dans sa vitrine.</p>
+                    ) : (
+                      <select
+                        value={edit.featuredProductId ?? ''}
+                        onChange={e => setEdit(prev => prev ? { ...prev, featuredProductId: e.target.value || null } : prev)}
+                        className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm
+                                   focus:outline-none focus:border-accent"
+                      >
+                        <option value="">— Choisir un produit —</option>
+                        {shopProducts.map(p => (
+                          <option key={p.id} value={p.id}>{p.emoji} {p.name} — {p.price} F</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </>
               )}
             </div>
 

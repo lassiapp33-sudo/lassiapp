@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
       vipExclu,
       featuredManual,
       featuredUntil,
+      featuredProductId,
       note,
     } = await req.json()
 
@@ -72,6 +73,25 @@ Deno.serve(async (req) => {
     if (featuredManual !== undefined) updates.featured_manual       = featuredManual
     if (featuredUntil  !== undefined) updates.featured_manual_until = featuredUntil
     if (note           !== undefined) updates.manual_note           = note
+
+    // Produit annoncé dans "Offre du quartier" — vérifier qu'il appartient au shop
+    if (featuredProductId !== undefined) {
+      if (featuredProductId !== null) {
+        const { data: product } = await admin
+          .from('products')
+          .select('id')
+          .eq('id', featuredProductId)
+          .eq('shop_id', shopId)
+          .maybeSingle()
+
+        if (!product) {
+          return new Response(JSON.stringify({ error: 'Produit invalide' }), {
+            status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+          })
+        }
+      }
+      updates.featured_product_id = featuredProductId
+    }
 
     // Si on exclut, retirer aussi le VIP auto
     if (vipExclu === true) {
@@ -93,13 +113,14 @@ Deno.serve(async (req) => {
       action:         'set_featured_manual',
       target_shop_id: shopId,
       details: {
-        vip_manual:       vipManual,
-        vip_until:        vipUntil,
-        vip_exclu:        vipExclu,
-        featured_manual:  featuredManual,
-        featured_until:   featuredUntil,
+        vip_manual:          vipManual,
+        vip_until:           vipUntil,
+        vip_exclu:           vipExclu,
+        featured_manual:     featuredManual,
+        featured_until:      featuredUntil,
+        featured_product_id: featuredProductId,
         note,
-        admin_name:       profile.name,
+        admin_name:          profile.name,
       },
     })
 
