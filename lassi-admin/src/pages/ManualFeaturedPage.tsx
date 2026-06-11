@@ -14,6 +14,7 @@ import {
 
 // Durées disponibles pour la mise en avant
 const DURATIONS = [
+  { label: '1 semaine',  days: 7 },
   { label: '2 semaines', days: 14 },
   { label: '1 mois',     days: 30 },
   { label: '3 mois',     days: 90 },
@@ -21,15 +22,23 @@ const DURATIONS = [
   { label: 'Illimité',   days: null },
 ]
 
+// Affiche la date d'expiration actuelle (ou "illimitée") d'une mise en avant
+function formatDurationLabel(until: string | null): string {
+  return until ? `jusqu'au ${new Date(until).toLocaleDateString('fr-FR')}` : 'illimitée'
+}
+
 interface EditState {
-  shopId:            string
-  vipManual:         boolean
-  vipDays:           number | null
-  vipExclu:          boolean
-  featured:          boolean
-  featuredDays:      number | null
-  featuredProductId: string | null
-  note:              string
+  shopId:              string
+  vipManual:           boolean
+  vipDays:             number | null
+  vipDaysTouched:      boolean
+  vipExclu:            boolean
+  featured:            boolean
+  featuredDays:        number | null
+  featuredDaysTouched: boolean
+  featuredProductIds:  string[]
+  featuredAllProducts: boolean
+  note:                string
 }
 
 export default function ManualFeaturedPage() {
@@ -90,17 +99,22 @@ export default function ManualFeaturedPage() {
 
   function openEdit(shop: ShopWithPromo) {
     setEdit({
-      shopId:            shop.id,
-      vipManual:         shop.vipManual,
-      vipDays:           null,
-      vipExclu:          shop.vipExclu,
-      featured:          shop.featuredManual,
-      featuredDays:      null,
-      featuredProductId: shop.featuredProductId,
-      note:              shop.manualNote ?? '',
+      shopId:              shop.id,
+      vipManual:           shop.vipManual,
+      vipDays:             null,
+      vipDaysTouched:      false,
+      vipExclu:            shop.vipExclu,
+      featured:            shop.featuredManual,
+      featuredDays:        null,
+      featuredDaysTouched: false,
+      featuredProductIds:  shop.featuredProductIds,
+      featuredAllProducts: shop.featuredAllProducts,
+      note:                shop.manualNote ?? '',
     })
     setError(null)
   }
+
+  const editingShop = edit ? shops.find(s => s.id === edit.shopId) : undefined
 
   async function handleSave() {
     if (!edit) return
@@ -117,14 +131,19 @@ export default function ManualFeaturedPage() {
         : null
 
       await setShopFeatured({
-        shopId:            edit.shopId,
-        vipManual:         edit.vipExclu ? false : edit.vipManual,
-        vipUntil:          (edit.vipManual && !edit.vipExclu) ? vipUntil : null,
-        vipExclu:          edit.vipExclu,
-        featuredManual:    edit.featured,
-        featuredUntil:     edit.featured ? featUntil : null,
-        featuredProductId: edit.featured ? edit.featuredProductId : null,
-        note:              edit.note.trim() || null,
+        shopId:              edit.shopId,
+        vipManual:           edit.vipExclu ? false : edit.vipManual,
+        vipUntil:            (edit.vipManual && !edit.vipExclu)
+                               ? (edit.vipDaysTouched ? vipUntil : undefined)
+                               : null,
+        vipExclu:            edit.vipExclu,
+        featuredManual:      edit.featured,
+        featuredUntil:       edit.featured
+                               ? (edit.featuredDaysTouched ? featUntil : undefined)
+                               : null,
+        featuredProductIds:  edit.featured ? edit.featuredProductIds : [],
+        featuredAllProducts: edit.featured ? edit.featuredAllProducts : false,
+        note:                edit.note.trim() || null,
       })
 
       setSuccess('Mise à jour enregistrée.')
@@ -325,20 +344,25 @@ export default function ManualFeaturedPage() {
                 </button>
               </div>
               {edit.vipManual && (
-                <div className="flex gap-2 flex-wrap">
-                  {DURATIONS.map(d => (
-                    <button
-                      key={d.label}
-                      onClick={() => setEdit(e => e ? { ...e, vipDays: d.days } : e)}
-                      className={`text-xs px-2.5 py-1.5 rounded border transition-colors ${
-                        edit.vipDays === d.days
-                          ? 'bg-accent/20 border-accent text-accent'
-                          : 'border-border text-muted hover:border-muted'
-                      }`}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
+                <div className="space-y-1.5">
+                  <p className="text-muted text-xs">
+                    Durée actuelle : {formatDurationLabel(editingShop?.vipManualUntil ?? null)}
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    {DURATIONS.map(d => (
+                      <button
+                        key={d.label}
+                        onClick={() => setEdit(e => e ? { ...e, vipDays: d.days, vipDaysTouched: true } : e)}
+                        className={`text-xs px-2.5 py-1.5 rounded border transition-colors ${
+                          edit.vipDaysTouched && edit.vipDays === d.days
+                            ? 'bg-accent/20 border-accent text-accent'
+                            : 'border-border text-muted hover:border-muted'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -363,42 +387,75 @@ export default function ManualFeaturedPage() {
               </div>
               {edit.featured && (
                 <>
-                  <div className="flex gap-2 flex-wrap">
-                    {DURATIONS.map(d => (
-                      <button
-                        key={d.label}
-                        onClick={() => setEdit(e => e ? { ...e, featuredDays: d.days } : e)}
-                        className={`text-xs px-2.5 py-1.5 rounded border transition-colors ${
-                          edit.featuredDays === d.days
-                            ? 'bg-accent/20 border-accent text-accent'
-                            : 'border-border text-muted hover:border-muted'
-                        }`}
-                      >
-                        {d.label}
-                      </button>
-                    ))}
+                  <div className="space-y-1.5">
+                    <p className="text-muted text-xs">
+                      Durée actuelle : {formatDurationLabel(editingShop?.featuredManualUntil ?? null)}
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
+                      {DURATIONS.map(d => (
+                        <button
+                          key={d.label}
+                          onClick={() => setEdit(e => e ? { ...e, featuredDays: d.days, featuredDaysTouched: true } : e)}
+                          className={`text-xs px-2.5 py-1.5 rounded border transition-colors ${
+                            edit.featuredDaysTouched && edit.featuredDays === d.days
+                              ? 'bg-accent/20 border-accent text-accent'
+                              : 'border-border text-muted hover:border-muted'
+                          }`}
+                        >
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-xs text-muted font-medium mb-1.5 uppercase tracking-wide">
-                      Produit à mettre en avant
+                      Produits à mettre en avant
                     </label>
                     {productsLoading ? (
                       <p className="text-muted text-xs">Chargement des produits…</p>
                     ) : shopProducts.length === 0 ? (
                       <p className="text-muted text-xs">Ce commerce n'a aucun produit dans sa vitrine.</p>
                     ) : (
-                      <select
-                        value={edit.featuredProductId ?? ''}
-                        onChange={e => setEdit(prev => prev ? { ...prev, featuredProductId: e.target.value || null } : prev)}
-                        className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm
-                                   focus:outline-none focus:border-accent"
-                      >
-                        <option value="">— Choisir un produit —</option>
-                        {shopProducts.map(p => (
-                          <option key={p.id} value={p.id}>{p.emoji} {p.name} — {p.price} F</option>
-                        ))}
-                      </select>
+                      <>
+                        <label className="flex items-center gap-2 mb-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={edit.featuredAllProducts}
+                            onChange={e => setEdit(prev => prev ? {
+                              ...prev,
+                              featuredAllProducts: e.target.checked,
+                              featuredProductIds: e.target.checked ? [] : prev.featuredProductIds,
+                            } : prev)}
+                            className="accent-accent"
+                          />
+                          <span className="text-white text-sm font-medium">
+                            Toute la vitrine ({shopProducts.length} produit{shopProducts.length > 1 ? 's' : ''})
+                          </span>
+                        </label>
+
+                        {!edit.featuredAllProducts && (
+                          <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                            {shopProducts.map(p => (
+                              <label key={p.id} className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={edit.featuredProductIds.includes(p.id)}
+                                  onChange={e => setEdit(prev => {
+                                    if (!prev) return prev
+                                    const ids = e.target.checked
+                                      ? [...prev.featuredProductIds, p.id]
+                                      : prev.featuredProductIds.filter(id => id !== p.id)
+                                    return { ...prev, featuredProductIds: ids }
+                                  })}
+                                  className="accent-accent"
+                                />
+                                <span className="text-white text-sm">{p.emoji} {p.name} — {p.price} F</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </>

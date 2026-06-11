@@ -20,7 +20,8 @@ export interface ShopWithPromo {
   vipExclu:             boolean
   featuredManual:       boolean
   featuredManualUntil:  string | null
-  featuredProductId:    string | null
+  featuredProductIds:   string[]
+  featuredAllProducts:  boolean
   manualNote:           string | null
   ordersCount?:         number
   rating:               number
@@ -113,7 +114,7 @@ export async function getAllShopsWithPromo(): Promise<ShopWithPromo[]> {
     .select(`
       id, name, category, zone, logo_url, is_vip, rating,
       vip_manual, vip_manual_until, vip_exclu,
-      featured_manual, featured_manual_until, featured_product_id,
+      featured_manual, featured_manual_until, featured_product_ids, featured_all_products,
       manual_note
     `)
     .order('name')
@@ -135,7 +136,8 @@ function rowToShopPromo(row: any): ShopWithPromo {
     vipExclu:            row.vip_exclu ?? false,
     featuredManual:      row.featured_manual,
     featuredManualUntil: row.featured_manual_until,
-    featuredProductId:   row.featured_product_id,
+    featuredProductIds:  row.featured_product_ids ?? [],
+    featuredAllProducts: row.featured_all_products ?? false,
     manualNote:          row.manual_note,
     rating:              Number(row.rating),
   }
@@ -163,7 +165,8 @@ interface SetFeaturedParams {
   vipExclu?:      boolean
   featuredManual?: boolean
   featuredUntil?: string | null
-  featuredProductId?: string | null
+  featuredProductIds?: string[]
+  featuredAllProducts?: boolean
   note?:          string | null
 }
 
@@ -179,14 +182,15 @@ export async function setShopFeatured(params: SetFeaturedParams): Promise<void> 
       apikey:         import.meta.env.VITE_SUPABASE_ANON_KEY as string,
     },
     body: JSON.stringify({
-      shopId:            params.shopId,
-      vipManual:         params.vipManual,
-      vipUntil:          params.vipUntil,
-      vipExclu:          params.vipExclu,
-      featuredManual:    params.featuredManual,
-      featuredUntil:     params.featuredUntil,
-      featuredProductId: params.featuredProductId,
-      note:              params.note,
+      shopId:              params.shopId,
+      vipManual:           params.vipManual,
+      vipUntil:            params.vipUntil,
+      vipExclu:            params.vipExclu,
+      featuredManual:      params.featuredManual,
+      featuredUntil:       params.featuredUntil,
+      featuredProductIds:  params.featuredProductIds,
+      featuredAllProducts: params.featuredAllProducts,
+      note:                params.note,
     }),
   })
 
@@ -256,7 +260,7 @@ export async function getActiveManualPromos(): Promise<{
     .select(`
       id, name, category, zone, logo_url, is_vip, rating,
       vip_manual, vip_manual_until, vip_exclu,
-      featured_manual, featured_manual_until, featured_product_id,
+      featured_manual, featured_manual_until, featured_product_ids, featured_all_products,
       manual_note
     `)
     .or(

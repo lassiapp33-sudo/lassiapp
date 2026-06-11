@@ -4,6 +4,7 @@
  * vip_manual / featured_manual ne peuvent JAMAIS être modifiés depuis l'app mobile.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isUUID, isBoolean, isISODateString, isSafeString } from '../_shared/validation.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -55,12 +56,65 @@ Deno.serve(async (req) => {
       vipExclu,
       featuredManual,
       featuredUntil,
-      featuredProductId,
+      featuredProductIds,
+      featuredAllProducts,
       note,
     } = await req.json()
 
     if (!shopId) {
       return new Response(JSON.stringify({ error: 'shopId requis' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // ── Section 4 : validation stricte des entrées ────────────────────────────
+    if (!isUUID(shopId)) {
+      return new Response(JSON.stringify({ error: 'shopId invalide' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (vipManual !== undefined && !isBoolean(vipManual)) {
+      return new Response(JSON.stringify({ error: 'vipManual doit être un booléen' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (vipExclu !== undefined && !isBoolean(vipExclu)) {
+      return new Response(JSON.stringify({ error: 'vipExclu doit être un booléen' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (featuredManual !== undefined && !isBoolean(featuredManual)) {
+      return new Response(JSON.stringify({ error: 'featuredManual doit être un booléen' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (vipUntil !== undefined && vipUntil !== null && !isISODateString(vipUntil)) {
+      return new Response(JSON.stringify({ error: 'vipUntil invalide' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (featuredUntil !== undefined && featuredUntil !== null && !isISODateString(featuredUntil)) {
+      return new Response(JSON.stringify({ error: 'featuredUntil invalide' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (featuredAllProducts !== undefined && !isBoolean(featuredAllProducts)) {
+      return new Response(JSON.stringify({ error: 'featuredAllProducts doit être un booléen' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (featuredProductIds !== undefined) {
+      const valid = Array.isArray(featuredProductIds)
+        && featuredProductIds.length <= 50
+        && featuredProductIds.every((id: unknown) => isUUID(id))
+      if (!valid) {
+        return new Response(JSON.stringify({ error: 'featuredProductIds invalide' }), {
+          status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+    if (note !== undefined && note !== null && !isSafeString(note, { maxLen: 500 })) {
+      return new Response(JSON.stringify({ error: 'note trop longue (500 caractères max)' }), {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
     }
@@ -74,24 +128,24 @@ Deno.serve(async (req) => {
     if (featuredUntil  !== undefined) updates.featured_manual_until = featuredUntil
     if (note           !== undefined) updates.manual_note           = note
 
-    // Produit annoncé dans "Offre du quartier" — vérifier qu'il appartient au shop
-    if (featuredProductId !== undefined) {
-      if (featuredProductId !== null) {
-        const { data: product } = await admin
+    // Produits annoncés dans "Offre du quartier" — vérifier qu'ils appartiennent au shop
+    if (featuredProductIds !== undefined) {
+      if (featuredProductIds.length > 0) {
+        const { data: products } = await admin
           .from('products')
           .select('id')
-          .eq('id', featuredProductId)
           .eq('shop_id', shopId)
-          .maybeSingle()
+          .in('id', featuredProductIds)
 
-        if (!product) {
+        if (!products || products.length !== featuredProductIds.length) {
           return new Response(JSON.stringify({ error: 'Produit invalide' }), {
             status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
           })
         }
       }
-      updates.featured_product_id = featuredProductId
+      updates.featured_product_ids = featuredProductIds
     }
+    if (featuredAllProducts !== undefined) updates.featured_all_products = featuredAllProducts
 
     // Si on exclut, retirer aussi le VIP auto
     if (vipExclu === true) {
@@ -113,14 +167,15 @@ Deno.serve(async (req) => {
       action:         'set_featured_manual',
       target_shop_id: shopId,
       details: {
-        vip_manual:          vipManual,
-        vip_until:           vipUntil,
-        vip_exclu:           vipExclu,
-        featured_manual:     featuredManual,
-        featured_until:      featuredUntil,
-        featured_product_id: featuredProductId,
+        vip_manual:           vipManual,
+        vip_until:            vipUntil,
+        vip_exclu:            vipExclu,
+        featured_manual:      featuredManual,
+        featured_until:       featuredUntil,
+        featured_product_ids: featuredProductIds,
+        featured_all_products: featuredAllProducts,
         note,
-        admin_name:          profile.name,
+        admin_name:           profile.name,
       },
     })
 
