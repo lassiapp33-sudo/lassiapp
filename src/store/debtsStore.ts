@@ -2,11 +2,24 @@ import { create } from 'zustand';
 import { Debtor } from '../types/debts';
 import * as debtsService from '../services/debts';
 import logger from '../utils/logger';
+import { isNetworkError } from '../utils/network';
+import { getCachedJSON, setCachedJSON } from '../lib/secureCache';
+import useConnectionStore from './connectionStore';
+
+// Section 10 — cache local chiffré du cahier de dettes : permet de consulter
+// la dernière version connue en mode dégradé (Supabase injoignable).
+const cacheKey = (shopId: string) => `debts_${shopId}`;
+
+function persistCache(shopId: string | null, debtors: Debtor[]) {
+  if (shopId) setCachedJSON(cacheKey(shopId), debtors);
+}
 
 interface DebtsState {
   debtors: Debtor[];
   shopId: string | null;
   loading: boolean;
+  // true si les données affichées proviennent du cache hors-ligne
+  fromCache: boolean;
 
   // Chargement depuis Supabase (appelé par DebtsScreen au mount)
   loadDebts: (shopId: string) => Promise<void>;
@@ -24,6 +37,7 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
   debtors: [],
   shopId: null,
   loading: false,
+  fromCache: false,
 
   setLoading: v => set({ loading: v }),
 
@@ -31,9 +45,19 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
     set({ loading: true, shopId });
     try {
       const debtors = await debtsService.getDebts(shopId);
-      set({ debtors, loading: false });
+      set({ debtors, loading: false, fromCache: false });
+      useConnectionStore.getState().setOffline(false);
+      persistCache(shopId, debtors);
     } catch (err) {
       logger.warn('[debtsStore] loadDebts:', err);
+      if (isNetworkError(err)) {
+        useConnectionStore.getState().setOffline(true);
+        const cached = await getCachedJSON<Debtor[]>(cacheKey(shopId));
+        if (cached) {
+          set({ debtors: cached, loading: false, fromCache: true });
+          return;
+        }
+      }
       set({ loading: false });
     }
   },
@@ -47,6 +71,7 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
     }));
     try {
       await debtsService.addToDebt(debtorId, amount);
+      persistCache(get().shopId, get().debtors);
     } catch (err) {
       set({ debtors: prev });
       throw err;
@@ -58,6 +83,7 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
     if (!shopId) return;
     const saved = await debtsService.addDebtor(shopId, debtor.name, debtor.phone);
     set(state => ({ debtors: [...state.debtors, saved] }));
+    persistCache(shopId, get().debtors);
   },
 
   markPaid: async debtorId => {
@@ -71,6 +97,7 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
     }));
     try {
       await debtsService.markPaid(debtorId);
+      persistCache(get().shopId, get().debtors);
     } catch (err) {
       set({ debtors: prev });
       throw err;
@@ -82,6 +109,7 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
     set(state => ({ debtors: state.debtors.filter(d => d.id !== debtorId) }));
     try {
       await debtsService.removeDebtor(debtorId);
+      persistCache(get().shopId, get().debtors);
     } catch (err) {
       set({ debtors: prev });
       throw err;

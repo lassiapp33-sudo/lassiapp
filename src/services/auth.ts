@@ -19,6 +19,7 @@ import { uploadImage, logoPath } from './storage';
 import { saveConsent } from './consents';
 import type { WeekHours } from './hours';
 import logger from '../utils/logger';
+import { isNetworkError } from '../utils/network';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -42,8 +43,7 @@ function traduireErreur(message: string): string {
   if (message.includes('Password should be at least'))
     return 'Le mot de passe doit contenir au moins 8 caractères.';
   if (message.includes('Unable to validate email address')) return 'Adresse email invalide.';
-  if (message.includes('Network request failed') || message.includes('fetch'))
-    return 'Pas de connexion Internet. Vérifie ton réseau.';
+  if (isNetworkError(message)) return 'Pas de connexion Internet. Vérifie ton réseau.';
   return 'Une erreur est survenue. Réessaie.';
 }
 

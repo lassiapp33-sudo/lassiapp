@@ -18,6 +18,9 @@ import OnboardingScreen  from './src/screens/OnboardingScreen';
 import AuthNavigator     from './src/screens/AuthNavigator';
 import HomeNavigator     from './src/screens/home/HomeNavigator';
 import MerchantNavigator from './src/screens/merchant/MerchantNavigator';
+import ErrorBoundary     from './src/components/common/ErrorBoundary';
+import OfflineBanner     from './src/components/common/OfflineBanner';
+import { useConnectionWatcher } from './src/hooks/useConnectionWatcher';
 import useAuthStore            from './src/store/authStore';
 import useShopStore             from './src/store/shopStore';
 import useOrdersStore           from './src/store/ordersStore';
@@ -73,6 +76,8 @@ export default function App() {
   usePushToken();
   // Écoute les retours Wave/OM via deep link
   usePaymentDeepLink();
+  // Section 10 : surveille la joignabilité de Supabase (bandeau hors-ligne)
+  useConnectionWatcher();
 
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_500Medium,
@@ -197,7 +202,9 @@ export default function App() {
   return (
     <View style={styles.root} onLayout={onLayout}>
       <StatusBar style="light" />
+      <OfflineBanner />
 
+      <ErrorBoundary>
       {screen === 'splash' && (
         <SplashScreen onFinish={async () => {
           const { hasSeenOnboarding } = useAuthStore.getState();
@@ -241,6 +248,7 @@ export default function App() {
 
       {screen === 'client'   && <HomeNavigator     onLogout={handleLogout} />}
       {screen === 'merchant' && <MerchantNavigator onLogout={handleLogout} />}
+      </ErrorBoundary>
     </View>
   );
 }

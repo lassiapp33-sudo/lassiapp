@@ -1,9 +1,14 @@
 import { supabase } from '../lib/supabase';
 import { PayMethod } from '../types/payment';
+import { retryWithBackoff } from '../utils/retry';
+import useConnectionStore from '../store/connectionStore';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;
 const ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+
+// Section 10 — message clair en mode dégradé (pas de message technique brut)
+const ERREUR_CONNEXION = 'Connexion impossible. Vérifie ton réseau et réessaie.';
 
 async function authHeaders(): Promise<Record<string, string>> {
   const {
@@ -33,11 +38,24 @@ export async function createPayment(params: {
   // Clé d'idempotency : empêche les doublons sur retry ou double-clic
   const idempotencyKey = `pay_${params.ticketId}`;
 
-  const res = await fetch(`${FUNCTIONS_BASE}/create-payment`, {
-    method: 'POST',
-    headers: await authHeaders(),
-    body: JSON.stringify({ ...params, idempotencyKey }),
-  });
+  let res: Response;
+  try {
+    // Section 10 — retry avec backoff exponentiel : seules les coupures
+    // réseau sont réessayées (idempotencyKey garantit qu'aucun doublon
+    // n'est créé côté Wave/OM).
+    res = await retryWithBackoff(async () =>
+      fetch(`${FUNCTIONS_BASE}/create-payment`, {
+        method: 'POST',
+        headers: await authHeaders(),
+        body: JSON.stringify({ ...params, idempotencyKey }),
+      }),
+    );
+  } catch {
+    useConnectionStore.getState().setOffline(true);
+    throw new Error(ERREUR_CONNEXION);
+  }
+  useConnectionStore.getState().setOffline(false);
+
   const data = await res.json() as Record<string, unknown>;
   if (!res.ok) throw new Error((data.error as string) ?? 'Erreur de paiement');
   return data as unknown as PaymentSession;
@@ -50,11 +68,21 @@ export async function verifyPayment(params: {
   ticketId: string;
   method: PayMethod;
 }): Promise<boolean> {
-  const res = await fetch(`${FUNCTIONS_BASE}/verify-payment`, {
-    method: 'POST',
-    headers: await authHeaders(),
-    body: JSON.stringify(params),
-  });
+  let res: Response;
+  try {
+    res = await retryWithBackoff(async () =>
+      fetch(`${FUNCTIONS_BASE}/verify-payment`, {
+        method: 'POST',
+        headers: await authHeaders(),
+        body: JSON.stringify(params),
+      }),
+    );
+  } catch {
+    useConnectionStore.getState().setOffline(true);
+    throw new Error(ERREUR_CONNEXION);
+  }
+  useConnectionStore.getState().setOffline(false);
+
   const data = await res.json() as Record<string, unknown>;
   if (!res.ok) throw new Error((data.error as string) ?? 'Erreur vérification');
   return data.paid === true;
