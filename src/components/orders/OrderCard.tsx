@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
+import * as Speech from 'expo-speech';
 import { colors, fonts } from '../../theme';
 import { IncomingOrder } from '../../types/orders';
 import Avatar from '../Avatar';
-import { IcoClose } from '../icons';
+import { IcoClose, IcoPlay, IcoStop } from '../icons';
 import { formatPrice } from '../../utils/format';
+import { buildOrderAnnouncement } from '../../utils/orderSpeech';
+import useSpeechStore from '../../store/speechStore';
 
 // Couleurs spécifiques aux boutons d'action
 const WAVE_COLOR = '#1DC8F2';
@@ -76,6 +79,36 @@ interface Props {
 function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props) {
   const badge = BADGE_CFG[order.status];
   const isNew = order.status === 'new';
+
+  // Lecture à voix haute de la commande — une seule lecture à la fois (état partagé)
+  const speakingOrderId = useSpeechStore(s => s.speakingOrderId);
+  const setSpeakingOrderId = useSpeechStore(s => s.setSpeakingOrderId);
+  const isSpeaking = speakingOrderId === order.id;
+
+  useEffect(() => {
+    return () => {
+      if (useSpeechStore.getState().speakingOrderId === order.id) {
+        Speech.stop();
+        useSpeechStore.getState().setSpeakingOrderId(null);
+      }
+    };
+  }, [order.id]);
+
+  const handleToggleSpeech = () => {
+    if (isSpeaking) {
+      Speech.stop();
+      setSpeakingOrderId(null);
+      return;
+    }
+    Speech.stop();
+    setSpeakingOrderId(order.id);
+    Speech.speak(buildOrderAnnouncement(order), {
+      language: 'fr-FR',
+      onDone: () => setSpeakingOrderId(null),
+      onStopped: () => setSpeakingOrderId(null),
+      onError: () => setSpeakingOrderId(null),
+    });
+  };
 
   return (
     <View style={[styles.card, isNew && styles.cardNew]}>
@@ -159,64 +192,76 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
         </View>
       )}
 
-      {/* ── Boutons d'action selon le statut ────────────────────────────────── */}
-      {order.status !== 'done' && order.status !== 'refused' && (
-        <View style={styles.acts}>
-          {/* Nouvelle : ❌ Refuser | 💬 Chat | ✅ Confirmer */}
-          {order.status === 'new' && (
-            <>
-              <TouchableOpacity style={styles.btnSquare} onPress={onRefuse} activeOpacity={0.8}>
-                <IcoClose color={colors.muted} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.btnChat} onPress={onChat} activeOpacity={0.8}>
-                <IcoChat />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.btnWide, styles.btnAccept]}
-                onPress={onAccept}
-                activeOpacity={0.85}
-              >
-                <IcoCheck color={colors.bg} />
-                <Text style={[styles.btnWideTxt, { color: colors.bg }]}>Confirmer</Text>
-              </TouchableOpacity>
-            </>
-          )}
+      {/* ── Boutons d'action ─────────────────────────────────────────────────── */}
+      <View style={styles.acts}>
+        {/* Lire la commande à voix haute */}
+        <TouchableOpacity
+          style={[styles.btnSquare, isSpeaking && styles.btnSquareActive]}
+          onPress={handleToggleSpeech}
+          activeOpacity={0.8}
+          accessibilityLabel="Lire la commande à voix haute"
+        >
+          {isSpeaking ? <IcoStop /> : <IcoPlay />}
+        </TouchableOpacity>
 
-          {/* Confirmée (preparing) : 💬 Chat | 🚀 Démarrer */}
-          {order.status === 'preparing' && (
-            <>
-              <TouchableOpacity style={styles.btnChat} onPress={onChat} activeOpacity={0.8}>
-                <IcoChat />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.btnWide, { backgroundColor: WAVE_COLOR }]}
-                onPress={onReady}
-                activeOpacity={0.85}
-              >
-                <IcoCheck color={WAVE_TEXT} />
-                <Text style={[styles.btnWideTxt, { color: WAVE_TEXT }]}>Démarrer</Text>
-              </TouchableOpacity>
-            </>
-          )}
+        {order.status !== 'done' && order.status !== 'refused' && (
+          <>
+            {/* Nouvelle : ❌ Refuser | 💬 Chat | ✅ Confirmer */}
+            {order.status === 'new' && (
+              <>
+                <TouchableOpacity style={styles.btnSquare} onPress={onRefuse} activeOpacity={0.8}>
+                  <IcoClose color={colors.muted} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.btnChat} onPress={onChat} activeOpacity={0.8}>
+                  <IcoChat />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.btnWide, styles.btnAccept]}
+                  onPress={onAccept}
+                  activeOpacity={0.85}
+                >
+                  <IcoCheck color={colors.bg} />
+                  <Text style={[styles.btnWideTxt, { color: colors.bg }]}>Confirmer</Text>
+                </TouchableOpacity>
+              </>
+            )}
 
-          {/* En cours (ready) : 💬 Chat | ✔️ Terminer */}
-          {order.status === 'ready' && (
-            <>
-              <TouchableOpacity style={styles.btnChat} onPress={onChat} activeOpacity={0.8}>
-                <IcoChat />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.btnWide, { backgroundColor: colors.success }]}
-                onPress={onDone}
-                activeOpacity={0.85}
-              >
-                <IcoCheck color={GREEN_TEXT} />
-                <Text style={[styles.btnWideTxt, { color: GREEN_TEXT }]}>Terminer</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      )}
+            {/* Confirmée (preparing) : 💬 Chat | 🚀 Démarrer */}
+            {order.status === 'preparing' && (
+              <>
+                <TouchableOpacity style={styles.btnChat} onPress={onChat} activeOpacity={0.8}>
+                  <IcoChat />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.btnWide, { backgroundColor: WAVE_COLOR }]}
+                  onPress={onReady}
+                  activeOpacity={0.85}
+                >
+                  <IcoCheck color={WAVE_TEXT} />
+                  <Text style={[styles.btnWideTxt, { color: WAVE_TEXT }]}>Démarrer</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* En cours (ready) : 💬 Chat | ✔️ Terminer */}
+            {order.status === 'ready' && (
+              <>
+                <TouchableOpacity style={styles.btnChat} onPress={onChat} activeOpacity={0.8}>
+                  <IcoChat />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.btnWide, { backgroundColor: colors.success }]}
+                  onPress={onDone}
+                  activeOpacity={0.85}
+                >
+                  <IcoCheck color={GREEN_TEXT} />
+                  <Text style={[styles.btnWideTxt, { color: GREEN_TEXT }]}>Terminer</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </>
+        )}
+      </View>
     </View>
   );
 }
@@ -401,6 +446,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+  },
+  // Bouton "lire à voix haute" actif (lecture en cours)
+  btnSquareActive: {
+    borderColor: colors.accent,
+    backgroundColor: 'rgba(253,207,52,.12)',
   },
   btnChat: {
     width: 46,

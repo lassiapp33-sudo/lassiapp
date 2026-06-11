@@ -71,6 +71,18 @@ export const IcoSearch = ({ color = colors.muted, size = 18 }: IconProps) => (
   </Svg>
 );
 
+export const IcoPlay = ({ color = colors.muted, size = 15 }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <Path d="M8 5v14l11-7z" />
+  </Svg>
+);
+
+export const IcoStop = ({ color = colors.accent, size = 13 }: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <Path d="M6 6h12v12H6z" />
+  </Svg>
+);
+
 export const IcoChevron = ({ color = colors.muted, size = 16 }: IconProps) => (
   <Svg
     width={size}
