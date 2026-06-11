@@ -63,3 +63,9 @@ enable_signup = true
 enable_confirmations = false
 template = "Your code is {{ .Code }} ."
 max_frequency = "5s"
+
+# process-payouts est appelée par pg_cron (pas de JWT utilisateur/anon
+# disponible) : la passerelle Supabase ne doit pas exiger de JWT, la
+# fonction vérifie elle-même l'en-tête X-Cron-Secret (voir CRON_SECRET).
+[functions.process-payouts]
+verify_jwt = false
