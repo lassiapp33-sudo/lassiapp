@@ -229,7 +229,15 @@ export async function login(params: LoginParams): Promise<AuthUser> {
     p_phone: cleanPhone,
   });
 
-  if (rpcError || !authEmail) {
+  if (rpcError) {
+    // Section 5 : rate limiting anti-bruteforce (5 tentatives / 15 min, blocage 30 min)
+    // Section 6 : compte temporairement suspendu (pattern attaquant détecté)
+    if (rpcError.code === 'PT429' || rpcError.code === 'PT403') {
+      throw new Error(rpcError.message);
+    }
+    throw new Error('Numéro introuvable. Vérifie ton numéro ou crée un compte.');
+  }
+  if (!authEmail) {
     throw new Error('Numéro introuvable. Vérifie ton numéro ou crée un compte.');
   }
 
