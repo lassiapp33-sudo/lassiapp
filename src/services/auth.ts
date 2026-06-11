@@ -254,12 +254,30 @@ export async function login(params: LoginParams): Promise<AuthUser> {
   const profile = await getProfileById(data.user.id);
   if (!profile) throw new Error('Profil introuvable. Contacte le support LASSİ.');
 
+  // Section 8 : trace la connexion réussie (best-effort, non bloquant)
+  void supabase.rpc('log_audit_event', { p_action: 'login_success' }).then(
+    ({ error }) => {
+      if (error) logger.warn('[auth] log_audit_event(login_success) échoué:', error.message);
+    },
+    () => {},
+  );
+
   return profile;
 }
 
 // ─── Déconnexion ────────────────────────────────────────────────────────────
 
 export async function logout(): Promise<void> {
+  // Section 8 : trace la déconnexion AVANT de révoquer la session — une fois
+  // signOut() appelé, l'utilisateur n'est plus authentifié et la RPC ne
+  // pourrait plus identifier qui se déconnecte.
+  await supabase.rpc('log_audit_event', { p_action: 'logout' }).then(
+    ({ error }) => {
+      if (error) logger.warn('[auth] log_audit_event(logout) échoué:', error.message);
+    },
+    () => {},
+  );
+
   // scope: 'global' (Section 7) — révoque le refresh token côté serveur
   // (toutes les sessions de cet utilisateur) en plus de nettoyer le
   // stockage local (secureStorage).
