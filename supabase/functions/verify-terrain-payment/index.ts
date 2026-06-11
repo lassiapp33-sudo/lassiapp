@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isSafeString } from '../_shared/validation.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -31,6 +32,14 @@ Deno.serve(async (req) => {
     const { reference, method } = await req.json()
     if (!reference || !method) {
       return json({ error: 'reference et method requis' }, 400)
+    }
+    // reference est interpolée dans l'URL appelée chez Wave/OM : on restreint
+    // strictement son alphabet pour empêcher toute manipulation de la requête sortante.
+    if (!isSafeString(reference, { maxLen: 128, pattern: /^[A-Za-z0-9_-]+$/ })) {
+      return json({ error: 'reference invalide' }, 400)
+    }
+    if (!['wave', 'om', 'orange_money'].includes(method)) {
+      return json({ error: 'method invalide' }, 400)
     }
 
     // ② Vérifier le statut du paiement côté opérateur

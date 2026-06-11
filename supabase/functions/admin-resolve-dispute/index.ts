@@ -3,6 +3,7 @@
  * Seul un is_admin peut changer le statut et écrire la résolution.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isUUID, isSafeString } from '../_shared/validation.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -55,6 +56,21 @@ Deno.serve(async (req) => {
     const validStatuses = ['open', 'in_review', 'resolved', 'rejected']
     if (!validStatuses.includes(status)) {
       return new Response(JSON.stringify({ error: 'Statut invalide' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (!isUUID(disputeId)) {
+      return new Response(JSON.stringify({ error: 'disputeId invalide' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (!isSafeString(resolution, { maxLen: 1000 })) {
+      return new Response(JSON.stringify({ error: 'resolution invalide (1000 caractères max)' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (message !== undefined && message !== null && !isSafeString(message, { maxLen: 1000 })) {
+      return new Response(JSON.stringify({ error: 'message invalide (1000 caractères max)' }), {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
     }

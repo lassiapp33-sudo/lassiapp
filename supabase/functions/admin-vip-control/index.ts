@@ -10,6 +10,7 @@
  * Accès admin uniquement.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isUUID, isBoolean, isSafeString, isPositiveInt } from '../_shared/validation.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -74,6 +75,13 @@ Deno.serve(async (req) => {
     if (action === 'set_exclu') {
       const { shopId, exclu, raison } = body
       if (!shopId) return json({ error: 'shopId requis' }, 400)
+      if (!isUUID(shopId)) return json({ error: 'shopId invalide' }, 400)
+      if (exclu !== undefined && !isBoolean(exclu)) {
+        return json({ error: 'exclu doit être un booléen' }, 400)
+      }
+      if (raison !== undefined && raison !== null && !isSafeString(raison, { maxLen: 500 })) {
+        return json({ error: 'raison trop longue (500 caractères max)' }, 400)
+      }
 
       const { error } = await admin
         .from('shops')
@@ -119,13 +127,23 @@ Deno.serve(async (req) => {
       const { settings } = body
       if (!settings) return json({ error: 'settings requis' }, 400)
 
-      const allowed = [
-        'poids_commandes','poids_ca','poids_note',
-        'cap_ca_par_commande','plafond_par_client','taille_podium',
-      ]
+      const NUMERIC_BOUNDS: Record<string, { min: number; max: number; integer?: boolean }> = {
+        poids_commandes:     { min: 0, max: 100 },
+        poids_ca:            { min: 0, max: 100 },
+        poids_note:          { min: 0, max: 100 },
+        cap_ca_par_commande: { min: 1, max: 100_000_000, integer: true },
+        plafond_par_client:  { min: 1, max: 1000, integer: true },
+        taille_podium:       { min: 1, max: 50, integer: true },
+      }
       const updates: Record<string, number> = {}
-      for (const k of allowed) {
-        if (settings[k] !== undefined) updates[k] = Number(settings[k])
+      for (const k of Object.keys(NUMERIC_BOUNDS)) {
+        if (settings[k] === undefined) continue
+        const val = settings[k]
+        const bounds = NUMERIC_BOUNDS[k]
+        const valid = typeof val === 'number' && Number.isFinite(val) &&
+          val >= bounds.min && val <= bounds.max && (!bounds.integer || Number.isInteger(val))
+        if (!valid) return json({ error: `${k} invalide` }, 400)
+        updates[k] = val
       }
       updates['updated_by'] = user.id
       updates['updated_at'] = new Date().toISOString()
@@ -148,6 +166,12 @@ Deno.serve(async (req) => {
     // ── Historique des classements ─────────────────────────────────────────
     if (action === 'get_history') {
       const { semaine, limit = 50 } = body
+      if (semaine !== undefined && semaine !== null && !/^\d{4}-W\d{2}$/.test(String(semaine))) {
+        return json({ error: 'semaine invalide (format AAAA-Www)' }, 400)
+      }
+      if (!isPositiveInt(limit, 200)) {
+        return json({ error: 'limit invalide (1-200)' }, 400)
+      }
       let query = admin
         .from('vip_rankings')
         .select(`
@@ -157,7 +181,7 @@ Deno.serve(async (req) => {
         .order('semaine', { ascending: false })
         .order('categorie')
         .order('rang')
-        .limit(Number(limit))
+        .limit(limit)
 
       if (semaine) query = query.eq('semaine', semaine)
 

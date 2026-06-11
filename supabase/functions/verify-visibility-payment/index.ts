@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isUUID } from '../_shared/validation.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -34,6 +35,7 @@ Deno.serve(async (req) => {
 
     const { subscriptionId } = await req.json()
     if (!subscriptionId) return json({ error: 'subscriptionId requis' }, 400)
+    if (!isUUID(subscriptionId)) return json({ error: 'subscriptionId invalide' }, 400)
 
     const admin = createClient(
       Deno.env.get('SUPABASE_URL')!,

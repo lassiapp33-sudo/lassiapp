@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isUUID } from '../_shared/validation.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -57,6 +58,9 @@ Deno.serve(async (req) => {
     const { planId, payMethod, productId } = await req.json()
     if (!planId || !payMethod || !productId) {
       return json({ error: 'planId, payMethod et productId requis' }, 400)
+    }
+    if (!isUUID(planId) || !isUUID(productId)) {
+      return json({ error: 'planId ou productId invalide' }, 400)
     }
     if (!['wave', 'orange_money'].includes(payMethod)) {
       return json({ error: 'payMethod invalide (wave | orange_money)' }, 400)

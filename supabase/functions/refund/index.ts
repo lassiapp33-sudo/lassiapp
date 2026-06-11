@@ -14,6 +14,7 @@
 // ============================================================
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { isUUID, isSafeString } from '../_shared/validation.ts';
 
 // 🔌 Mêmes clés que create-payment. Sans elles → mode simulation.
 const WAVE_API_KEY     = Deno.env.get('WAVE_API_KEY')     ?? '';
@@ -56,6 +57,10 @@ serve(async (req) => {
     // 3. Paramètres
     const { paymentIntentId, reason } = await req.json();
     if (!paymentIntentId) return errorResponse('paymentIntentId requis', 400);
+    if (!isUUID(paymentIntentId)) return errorResponse('paymentIntentId invalide', 400);
+    if (reason !== undefined && reason !== null && !isSafeString(reason, { maxLen: 500 })) {
+      return errorResponse('reason trop longue (500 caractères max)', 400);
+    }
 
     // 4. Remboursement DB : idempotent, bloqué si disputed, plafonné, tracé
     const { data: result, error: rpcError } = await admin.rpc('process_refund', {

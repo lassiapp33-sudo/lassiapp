@@ -15,6 +15,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { crypto } from 'https://deno.land/std@0.177.0/crypto/mod.ts';
+import { isUUID } from '../_shared/validation.ts';
 
 const WAVE_WEBHOOK_SECRET = Deno.env.get('WAVE_WEBHOOK_SECRET') ?? '';
 const OM_WEBHOOK_SECRET   = Deno.env.get('OM_WEBHOOK_SECRET')   ?? '';
@@ -78,7 +79,7 @@ serve(async (req) => {
 
   // ── Validation du payment_intent_id (rejet si absent) ─────────────────────
   const piId: unknown = payload.client_reference ?? payload.order_id ?? (payload.metadata as Record<string, unknown> | undefined)?.pi_id;
-  if (!piId || typeof piId !== 'string') {
+  if (!isUUID(piId)) {
     console.error('[webhook] payment_intent_id absent ou invalide dans le payload', payload);
     return new Response('payment_intent_id manquant', { status: 400 });
   }
@@ -126,6 +127,25 @@ serve(async (req) => {
     console.log('[webhook] événement déjà traité (idempotence) — pi', piId);
   } else if (result?.ignored) {
     console.log('[webhook] événement ignoré (anti-rejeu) — pi', piId, 'statut', result.statut);
+  }
+
+  // ── Section 5 : anti-abus — log si > 100 webhooks/h pour ce payment_intent ──
+  // Ne bloque jamais (Wave/OM doit toujours recevoir 200) : simple alerte.
+  if (result?.error !== 'payment_intent_not_found') {
+    const { data: rl } = await supabase.rpc('check_rate_limit', {
+      p_key: `webhook:${piId}`,
+      p_max_attempts: 100,
+      p_window_seconds: 3600,
+      p_block_seconds: 0,
+    });
+    if (rl?.allowed === false) {
+      console.error('[ALERTE ANTI-ABUS] +100 webhooks/h pour payment_intent', piId);
+      await supabase.from('payment_logs').insert({
+        payment_intent_id: piId,
+        event_type: 'webhook_abuse_alert',
+        event_data: { source, count: rl.count ?? null, external_event_id: externalEventId },
+      });
+    }
   }
 
   // 7. Répondre 200 OK rapidement à Wave/OM dans tous les cas gérés

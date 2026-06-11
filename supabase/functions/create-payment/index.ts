@@ -10,6 +10,7 @@
 // ============================================================
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { isUUID } from '../_shared/validation.ts';
 
 // ============================================================
 // 🔌 POINT D'ENTRÉE POUR L'INGÉNIEUR WAVE/OM
@@ -54,6 +55,9 @@ serve(async (req) => {
 
     if (!orderId || !moyenPaiement) {
       return errorResponse('Paramètres manquants', 400);
+    }
+    if (!isUUID(orderId)) {
+      return errorResponse('orderId invalide', 400);
     }
     if (!['wave', 'orange_money'].includes(moyenPaiement)) {
       return errorResponse('Moyen de paiement invalide', 400);

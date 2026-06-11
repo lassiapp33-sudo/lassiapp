@@ -4,6 +4,7 @@
  * supprime l'entrée Supabase Auth via service_role.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isUUID, isSafeString } from '../_shared/validation.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -51,6 +52,16 @@ Deno.serve(async (req) => {
 
     if (!targetUserId) {
       return new Response(JSON.stringify({ error: 'targetUserId requis' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (!isUUID(targetUserId)) {
+      return new Response(JSON.stringify({ error: 'targetUserId invalide' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (reason !== undefined && reason !== null && !isSafeString(reason, { maxLen: 500 })) {
+      return new Response(JSON.stringify({ error: 'reason trop longue (500 caractères max)' }), {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
     }

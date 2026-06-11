@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isUUID, isPositiveInt, isSafeString } from '../_shared/validation.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -141,9 +142,67 @@ Deno.serve(async (req) => {
       })
     }
 
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    )
+
+    // ── Section 5 : rate limiting anti-spam (20 commandes / heure / utilisateur) ──
+    const { data: rl } = await admin.rpc('check_rate_limit', {
+      p_key: `order:${user.id}`,
+      p_max_attempts: 20,
+      p_window_seconds: 3600,
+      p_block_seconds: 0,
+    })
+    if (rl?.allowed === false) {
+      return new Response(JSON.stringify({ error: 'Trop de commandes créées. Réessaie dans quelques instants.' }), {
+        status: 429,
+        headers: { ...CORS, 'Content-Type': 'application/json', 'Retry-After': String(rl.retry_after ?? 3600) },
+      })
+    }
+
     const { shopId, items, note, orderType, idempotencyKey } = await req.json()
     if (!shopId || !Array.isArray(items) || items.length === 0) {
       return new Response(JSON.stringify({ error: 'shopId et items requis' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // ── Section 4 : validation stricte des entrées ────────────────────────────
+    if (!isUUID(shopId)) {
+      return new Response(JSON.stringify({ error: 'shopId invalide' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const MAX_ITEMS = 50
+    const MAX_QTY   = 999
+    if (items.length > MAX_ITEMS) {
+      return new Response(JSON.stringify({ error: 'Trop d\'articles dans la commande' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    for (const item of items as unknown[]) {
+      const productId = (item as Record<string, unknown> | null)?.productId
+      const qty       = (item as Record<string, unknown> | null)?.qty
+      if (!isUUID(productId) || !isPositiveInt(qty, MAX_QTY)) {
+        return new Response(JSON.stringify({ error: 'Article de commande invalide' }), {
+          status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+
+    if (note !== undefined && note !== null && !isSafeString(note, { maxLen: 500 })) {
+      return new Response(JSON.stringify({ error: 'Note trop longue (500 caractères max)' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (
+      idempotencyKey !== undefined && idempotencyKey !== null &&
+      !isSafeString(idempotencyKey, { maxLen: 200, pattern: /^[A-Za-z0-9_:.-]+$/ })
+    ) {
+      return new Response(JSON.stringify({ error: 'idempotencyKey invalide' }), {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
     }
@@ -154,11 +213,6 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
     }
-
-    const admin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    )
 
     // ① Idempotence : si une commande avec cette clé existe déjà → retourner la même
     if (idempotencyKey) {

@@ -4,6 +4,7 @@
 // ============================================================
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { isUUID } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,6 +25,12 @@ serve(async (req) => {
     if (error || !user) return new Response(JSON.stringify({ success: false, error: 'Non autorisé' }), { status: 401 });
 
     const { paymentIntentId } = await req.json();
+
+    if (!isUUID(paymentIntentId)) {
+      return new Response(JSON.stringify({ success: false, error: 'paymentIntentId invalide' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Récupérer le payment_intent
     const { data: pi } = await supabase

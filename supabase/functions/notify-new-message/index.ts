@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isUUID, isSafeString } from '../_shared/validation.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -47,6 +48,16 @@ Deno.serve(async (req) => {
     const { conversationId, preview } = await req.json()
     if (!conversationId || !preview) {
       return new Response(JSON.stringify({ error: 'conversationId et preview requis' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (!isUUID(conversationId)) {
+      return new Response(JSON.stringify({ error: 'conversationId invalide' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+    if (!isSafeString(preview, { maxLen: 1000 })) {
+      return new Response(JSON.stringify({ error: 'preview invalide' }), {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
     }
