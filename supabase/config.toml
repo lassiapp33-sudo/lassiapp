@@ -43,7 +43,15 @@ file_size_limit = "50MiB"
 enabled = true
 site_url = "http://127.0.0.1:3000"
 additional_redirect_urls = ["https://127.0.0.1:3000"]
+# Section 7 — authentification renforcée :
+#   - mots de passe hachés en bcrypt par GoTrue (comportement par défaut,
+#     non configurable, vérifié dans le code source Supabase Auth)
+#   - longueur minimale 8 caractères (alignée avec la validation côté app)
+minimum_password_length = 8
+# JWT access token : expiration 1h max (Section 7)
 jwt_expiry = 3600
+# Refresh tokens sécurisés : rotation à chaque utilisation, avec une courte
+# fenêtre de réutilisation pour absorber les retries réseau (Section 7)
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
 enable_signup = true

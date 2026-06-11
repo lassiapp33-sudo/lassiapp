@@ -14,6 +14,12 @@ import React, {
 import { supabase } from '../lib/supabase'
 import type { User } from '@supabase/supabase-js'
 
+// Section 7 — déconnexion automatique après inactivité prolongée :
+// le dashboard admin manipule des données sensibles (paiements, litiges,
+// comptes), on utilise donc un délai plus court que côté app mobile.
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000 // 15 minutes
+const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'] as const
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface AdminUser {
@@ -142,9 +148,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut()
+    // scope: 'global' (Section 7) — révoque le refresh token côté serveur
+    // en plus de nettoyer la session locale (localStorage).
+    await supabase.auth.signOut({ scope: 'global' })
     setUser(null)
   }, [])
+
+  // Section 7 : déconnexion automatique après INACTIVITY_TIMEOUT_MS sans
+  // interaction (souris/clavier/scroll/touch) une fois connecté.
+  useEffect(() => {
+    if (!user) return
+
+    let timer: ReturnType<typeof setTimeout>
+
+    const reset = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        signOut()
+      }, INACTIVITY_TIMEOUT_MS)
+    }
+
+    reset()
+    ACTIVITY_EVENTS.forEach(evt => window.addEventListener(evt, reset))
+
+    return () => {
+      clearTimeout(timer)
+      ACTIVITY_EVENTS.forEach(evt => window.removeEventListener(evt, reset))
+    }
+  }, [user, signOut])
 
   const value = useMemo(
     () => ({ user, loading, signIn, signOut }),
