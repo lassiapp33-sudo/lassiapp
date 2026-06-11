@@ -2,12 +2,12 @@
  * legal/confidentialite.ts — Source unique de la Politique de confidentialité LASSİ.
  * Pour mettre à jour le texte, modifier CE fichier uniquement.
  *
- * ⚠️  Les passages marqués [À COMPLÉTER] doivent être renseignés avant publication
- *     et le document doit être validé par un juriste sénégalais + déclaré à la CDP.
+ * ⚠️  Avant publication définitive, le document doit être validé par un juriste
+ *     sénégalais et déclaré à la CDP (Commission de Protection des Données Personnelles).
  */
 
-export const VERSION = '1.0.0';
-export const DATE_MAJ = '02 juin 2026';
+export const VERSION = '1.1.0';
+export const DATE_MAJ = '11 juin 2026';
 
 export interface Section {
   titre: string;
@@ -19,7 +19,7 @@ export const CONFIDENTIALITE_SECTIONS: Section[] = [
     titre: '1. Introduction',
     contenu:
       "La présente Politique de Confidentialité décrit comment LASSİ (« nous », « l'Application ») collecte, utilise, protège et partage les données personnelles de ses utilisateurs (« vous »).\n\n" +
-      'Responsable du traitement : [À COMPLÉTER — raison sociale], Entreprise Individuelle — NINEA : [À COMPLÉTER] — RC : [À COMPLÉTER] — Dakar-Guédiawaye, Sénégal.\n\n' +
+      'Responsable du traitement : COULIBALY LASSANA, Entreprise Individuelle exerçant sous le nom commercial « LASSI » — NINEA : 013082079 — RCCM : SN DKR 2026 A 19335 — Adresse : Guédiawaye Golf Sud Fith Mith, Dakar, Sénégal.\n\n' +
       'Nous nous engageons à protéger votre vie privée conformément à la loi sénégalaise n° 2008-12 du 25 janvier 2008 sur la protection des données à caractère personnel, sous le contrôle de la Commission de Protection des Données Personnelles (CDP) du Sénégal.\n\n' +
       'En utilisant LASSİ, vous consentez aux pratiques décrites dans la présente politique.',
   },
@@ -136,7 +136,7 @@ export const CONFIDENTIALITE_SECTIONS: Section[] = [
       'Pour toute question relative à la protection de vos données :\n' +
       '• WhatsApp : +221 76 189 00 03\n' +
       '• E-mail : lassiapp33@gmail.com\n' +
-      '• Adresse : Dakar-Guédiawaye, Sénégal\n\n' +
+      '• Adresse : Guédiawaye Golf Sud Fith Mith, Dakar, Sénégal\n\n' +
       'Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir la Commission de Protection des Données Personnelles (CDP) du Sénégal.',
   },
 ];

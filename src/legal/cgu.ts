@@ -3,8 +3,8 @@
  * Pour mettre à jour le texte, modifier CE fichier uniquement.
  */
 
-export const VERSION = '1.0.0';
-export const DATE_MAJ = '02 juin 2026';
+export const VERSION = '1.1.0';
+export const DATE_MAJ = '11 juin 2026';
 
 export interface Section {
   titre: string;
@@ -15,7 +15,7 @@ export const CGU_SECTIONS: Section[] = [
   {
     titre: '1. Présentation',
     contenu:
-      "LASSİ est une plateforme mobile d'intermédiation économique qui met en relation les habitants de Dakar avec les commerçants et prestataires de leur quartier (restaurants, tanganas, coiffeurs, boutiques, salles de sport, etc.).\n\nLa plateforme est éditée par [À COMPLÉTER — raison sociale], Entreprise Individuelle, au capital de [À COMPLÉTER], immatriculée au RCCM de Dakar sous le numéro [À COMPLÉTER], NINEA [À COMPLÉTER], dont le siège social est situé à Dakar-Guédiawaye, Sénégal.\n\nContact : WhatsApp +221 76 189 00 03 · E-mail : lassiapp33@gmail.com.",
+      "LASSİ est une plateforme mobile d'intermédiation économique qui met en relation les habitants de Dakar avec les commerçants et prestataires de leur quartier (restaurants, tanganas, coiffeurs, boutiques, salles de sport, etc.).\n\nLa plateforme est éditée par COULIBALY LASSANA, Entreprise Individuelle exerçant sous le nom commercial « LASSI », immatriculée au Registre du Commerce et du Crédit Mobilier (RCCM) de Dakar sous le numéro SN DKR 2026 A 19335 (immatriculation du 15/05/2026), NINEA 013082079, dont le siège social est situé à Guédiawaye Golf Sud Fith Mith, Dakar, Sénégal.\n\nContact : WhatsApp +221 76 189 00 03 · E-mail : lassiapp33@gmail.com.",
   },
   {
     titre: '2. Objet et acceptation',
