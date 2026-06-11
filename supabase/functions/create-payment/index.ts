@@ -1,7 +1,12 @@
 // ============================================================
-// EDGE FUNCTION : create-payment
+// EDGE FUNCTION : create-payment (initiate-payment)
 // Crée le payment_intent + initie le paiement Wave/OM
-// Conçue pour être branchée facilement par l'ingénieur Wave/OM
+//
+// Section 3.1 — sécurité bancaire :
+//   Le client n'envoie QUE { orderId, moyenPaiement }. Aucun montant ni
+//   prestataire ne vient du client : le RPC initiate_order_payment recharge
+//   la commande, recalcule le montant depuis les vraies lignes (order_items)
+//   et dérive le prestataire depuis la boutique.
 // ============================================================
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -38,74 +43,115 @@ serve(async (req) => {
   );
 
   try {
-    // 1. Authentification
+    // 1. Authentification — rejeter si non authentifié
     const token = req.headers.get('Authorization')?.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token!);
     if (authError || !user) return errorResponse('Non autorisé', 401);
 
-    // 2. Paramètres
+    // 2. Paramètres : UNIQUEMENT order_id + moyen de paiement (jamais de montant client)
     const body = await req.json();
-    const { orderId, prestataireId, prixBase, moyenPaiement, idempotencyKey } = body;
+    const { orderId, moyenPaiement } = body;
 
-    // 3. Validation stricte
-    if (!orderId || !prestataireId || !prixBase || !moyenPaiement || !idempotencyKey) {
+    if (!orderId || !moyenPaiement) {
       return errorResponse('Paramètres manquants', 400);
-    }
-    if (!Number.isInteger(prixBase) || prixBase < 100 || prixBase > 5_000_000) {
-      return errorResponse('Montant invalide', 400);
     }
     if (!['wave', 'orange_money'].includes(moyenPaiement)) {
       return errorResponse('Moyen de paiement invalide', 400);
     }
 
-    // 4. Recalcul serveur (JAMAIS faire confiance au client)
-    const commission  = Math.ceil(prixBase * 0.01);
-    const montantTotal = prixBase + commission;
-
-    // 5. Créer payment_intent (idempotent)
-    const { data: piId, error: piError } = await supabase.rpc('create_payment_intent', {
-      p_order_id:        orderId,
-      p_client_id:       user.id,
-      p_prestataire_id:  prestataireId,
-      p_prix_base:       prixBase,
-      p_moyen_paiement:  moyenPaiement,
-      p_idempotency_key: idempotencyKey,
+    // 3-5. Recharger la commande, recalculer le montant depuis les vraies
+    // lignes, vérifier la cohérence (propriété, statut, plafond, déjà payée)
+    // — tout est fait côté serveur dans initiate_order_payment.
+    const { data: initResult, error: initError } = await supabase.rpc('initiate_order_payment', {
+      p_order_id:       orderId,
+      p_client_id:      user.id,
+      p_moyen_paiement: moyenPaiement,
     });
-    if (piError) throw new Error(piError.message);
+    if (initError) throw new Error(initError.message);
 
-    // 6. Initier le paiement
+    if (!initResult?.ok) {
+      if (initResult?.error === 'amount_mismatch') {
+        // Ne devrait jamais arriver (create-order recalcule déjà depuis les
+        // produits) — en cas de doute, on bloque et on trace pour audit.
+        console.error('[create-payment] AMOUNT_MISMATCH order=', orderId, JSON.stringify(initResult));
+      }
+      const { message, status } = mapInitiateError(initResult?.error);
+      return errorResponse(message, status);
+    }
+
+    const piId          = initResult.payment_intent_id as string;
+    const prixBase      = initResult.prix_base as number;
+    const commission    = initResult.commission as number;
+    const montantTotal  = initResult.montant_total as number;
+    const prestataireId = initResult.prestataire_id as string;
+
+    // 6-9. Initier le paiement chez le fournisseur
     let paymentResult;
 
-    if (!IS_PRODUCTION) {
-      // ======================================================
-      // MODE SIMULATION — Démo fonctionnelle sans API réelle
-      // L'ingénieur Wave/OM peut voir tout le flux fonctionner
-      // ======================================================
-      paymentResult = await simulatePaiement(piId, montantTotal, moyenPaiement);
+    try {
+      if (!IS_PRODUCTION) {
+        // ======================================================
+        // MODE SIMULATION — Démo fonctionnelle sans API réelle
+        // L'ingénieur Wave/OM peut voir tout le flux fonctionner
+        // ======================================================
+        paymentResult = await simulatePaiement(piId, montantTotal, moyenPaiement);
+
+        await supabase.from('payment_intents').update({
+          statut:       'simulated',
+          external_ref: paymentResult.ref,
+          updated_at:   new Date().toISOString(),
+        }).eq('id', piId);
+
+      } else if (moyenPaiement === 'wave') {
+        // ======================================================
+        // MODE PRODUCTION — WAVE
+        // 🔌 L'ingénieur Wave active cette branche en ajoutant WAVE_API_KEY
+        // ======================================================
+        paymentResult = await initiateWavePayment({
+          piId, montantTotal, prixBase, commission, prestataireId,
+        });
+
+        // 8. Stocker le checkout_id Wave + passer en 'initiated'
+        await supabase.from('payment_intents').update({
+          statut:       'initiated',
+          external_ref: paymentResult.ref,
+          updated_at:   new Date().toISOString(),
+        }).eq('id', piId);
+
+      } else {
+        // ======================================================
+        // MODE PRODUCTION — ORANGE MONEY
+        // 🔌 L'ingénieur OM active cette branche en ajoutant OM_API_KEY
+        // ======================================================
+        paymentResult = await initiateOrangeMoneyPayment({
+          piId, montantTotal, prixBase, commission, prestataireId,
+        });
+
+        // 8. Stocker le checkout_id OM + passer en 'initiated'
+        await supabase.from('payment_intents').update({
+          statut:       'initiated',
+          external_ref: paymentResult.ref,
+          updated_at:   new Date().toISOString(),
+        }).eq('id', piId);
+      }
+    } catch (apiErr: unknown) {
+      // 10. L'appel au fournisseur a échoué : marquer failed, logguer,
+      // ne JAMAIS laisser de transaction fantôme en 'pending'.
+      const apiMsg = apiErr instanceof Error ? apiErr.message : 'Erreur fournisseur de paiement';
+      console.error('[create-payment] échec appel fournisseur', moyenPaiement, apiMsg);
 
       await supabase.from('payment_intents').update({
-        statut:       'simulated',
-        external_ref: paymentResult.ref,
-        updated_at:   new Date().toISOString(),
+        statut:     'failed',
+        updated_at: new Date().toISOString(),
       }).eq('id', piId);
 
-    } else if (moyenPaiement === 'wave') {
-      // ======================================================
-      // MODE PRODUCTION — WAVE
-      // 🔌 L'ingénieur Wave active cette branche en ajoutant WAVE_API_KEY
-      // ======================================================
-      paymentResult = await initiateWavePayment({
-        piId, montantTotal, prixBase, commission, prestataireId,
+      await supabase.from('payment_logs').insert({
+        payment_intent_id: piId,
+        event_type: 'failed',
+        event_data: { error: apiMsg, moyen_paiement: moyenPaiement, mode: 'production' },
       });
 
-    } else {
-      // ======================================================
-      // MODE PRODUCTION — ORANGE MONEY
-      // 🔌 L'ingénieur OM active cette branche en ajoutant OM_API_KEY
-      // ======================================================
-      paymentResult = await initiateOrangeMoneyPayment({
-        piId, montantTotal, prixBase, commission, prestataireId,
-      });
+      return errorResponse('Le paiement n\'a pas pu être initié. Réessayez dans quelques instants.', 502);
     }
 
     // Log
@@ -121,6 +167,7 @@ serve(async (req) => {
       },
     });
 
+    // 9. Retourner les infos nécessaires au paiement (URL + récap d'affichage)
     return new Response(JSON.stringify({
       success:         true,
       paymentIntentId: piId,
@@ -138,6 +185,23 @@ serve(async (req) => {
     return errorResponse(msg, 500);
   }
 });
+
+// ============================================================
+// Traduction des erreurs métier d'initiate_order_payment
+// ============================================================
+function mapInitiateError(err: string | undefined): { message: string; status: number } {
+  switch (err) {
+    case 'order_not_found':   return { message: 'Commande introuvable', status: 404 };
+    case 'forbidden':         return { message: 'Cette commande ne vous appartient pas', status: 403 };
+    case 'order_not_payable': return { message: 'Cette commande n\'est plus en attente de paiement', status: 409 };
+    case 'already_paid':      return { message: 'Cette commande a déjà été payée', status: 409 };
+    case 'invalid_method':    return { message: 'Moyen de paiement invalide', status: 400 };
+    case 'invalid_amount':    return { message: 'Montant de commande invalide', status: 422 };
+    case 'amount_mismatch':   return { message: 'Incohérence détectée sur cette commande, contactez le support', status: 409 };
+    case 'shop_not_found':    return { message: 'Boutique introuvable', status: 500 };
+    default:                  return { message: 'Paiement impossible', status: 400 };
+  }
+}
 
 // ============================================================
 // SIMULATION (mode démo sans clés API)
@@ -168,6 +232,9 @@ async function initiateWavePayment(params: {
     headers: {
       'Authorization': `Bearer ${WAVE_API_KEY}`,
       'Content-Type': 'application/json',
+      // Idempotence côté fournisseur : un retry réseau de notre part ne doit
+      // jamais créer deux sessions de paiement pour le même payment_intent.
+      'Idempotency-Key': params.piId,
     },
     body: JSON.stringify({
       currency:     'XOF',
@@ -210,6 +277,9 @@ async function initiateOrangeMoneyPayment(params: {
     headers: {
       'Authorization': `Bearer ${OM_API_KEY}`,
       'Content-Type': 'application/json',
+      // Idempotence côté fournisseur : un retry réseau de notre part ne doit
+      // jamais créer deux sessions de paiement pour le même payment_intent.
+      'Idempotency-Key': params.piId,
     },
     body: JSON.stringify({
       merchant_key: OM_MERCHANT_CODE,
