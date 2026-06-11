@@ -3,6 +3,18 @@
 
 project_id = "lassiapp"
 
+# Section 10 — Backups & résilience.
+# Ces réglages sont gérés côté plateforme Supabase hébergée (Project
+# Settings > Database > Backups), pas dans ce fichier (config.toml ne
+# s'applique qu'au stack local du CLI) :
+#   - Backups automatiques : activés par défaut sur tous les projets
+#     hébergés (sauvegarde quotidienne, conservée 7 jours sur les plans
+#     Free/Pro). Vérifier dans le dashboard que le projet de prod est bien
+#     sur un plan avec backups activés.
+#   - Point-in-time recovery (PITR) : add-on payant (plan Pro et plus),
+#     permet de restaurer la base à n'importe quelle minute des derniers
+#     jours en cas de désastre (suppression/corruption de données). À
+#     activer avant la mise en production si le budget le permet.
 [db]
 major_version = 17
 
