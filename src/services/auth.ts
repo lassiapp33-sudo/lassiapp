@@ -73,6 +73,12 @@ export interface RegisterParams {
 export async function register(params: RegisterParams): Promise<AuthUser> {
   const realEmail = params.email.trim();
 
+  // Anti-spam : limite les inscriptions par appareil/IP (Section 5)
+  const { error: rlError } = await supabase.rpc('check_signup_rate_limit');
+  if (rlError?.code === 'PT429') {
+    throw new Error(rlError.message);
+  }
+
   // L'email Supabase : réel si fourni (utile pour reset mdp), sinon technique
   const authEmail = realEmail || phoneToTechEmail(params.phone);
 
