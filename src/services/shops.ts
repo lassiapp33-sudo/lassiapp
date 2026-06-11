@@ -25,7 +25,6 @@ export interface Shop {
   galleryUrls: string[];
   isVip: boolean;
   vipRank: number | null; // 1, 2, 3 dans le podium — null si pas VIP
-  isFeatured: boolean;
   rating: number;
   reviewsCount: number;
   ordersCount: number;
@@ -44,10 +43,6 @@ function rowToShop(row: Record<string, any>): Shop {
     !isExclu &&
     row.vip_manual === true &&
     (row.vip_manual_until == null || new Date(row.vip_manual_until) > now);
-  const isFeaturedManual =
-    row.featured_manual === true &&
-    (row.featured_manual_until == null || new Date(row.featured_manual_until) > now);
-
   return {
     id: row.id,
     merchantId: row.merchant_id ?? null,
@@ -67,7 +62,6 @@ function rowToShop(row: Record<string, any>): Shop {
     galleryUrls: Array.isArray(row.gallery_urls) ? row.gallery_urls : [],
     isVip: !isExclu && (Boolean(row.is_vip) || isVipManual),
     vipRank: isExclu ? null : (row.vip_rank ?? null),
-    isFeatured: isFeaturedManual,
     rating: Number(row.rating ?? 0),
     reviewsCount: Number(row.reviews_count ?? 0),
     ordersCount: Number(row.orders_count ?? 0),

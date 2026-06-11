@@ -248,7 +248,6 @@ const en: Translations = {
   },
   home: {
     explore: 'Explore your neighborhood',
-    recommendations: '✨ LASSI Recommendations',
     nearby: '📍 Right near you',
     noShops: 'No businesses found yet.',
     search: 'Search',

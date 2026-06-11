@@ -254,7 +254,6 @@ const fr: Translations = {
   },
   home: {
     explore: 'Explore ton quartier',
-    recommendations: '✨ Recommandations LASSI',
     nearby: '📍 Tout près de toi',
     noShops: "Aucune boutique trouvée pour l'instant.",
     search: 'Rechercher',

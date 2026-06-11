@@ -14,7 +14,6 @@ import SearchBar from '../../components/home/SearchBar';
 import TabSelector, { HomeTab } from '../../components/home/TabSelector';
 import CategoryGrid from '../../components/home/CategoryGrid';
 import { CatId } from '../../components/category/CatNavBar';
-import RecoCarousel, { RecoItem } from '../../components/home/RecoCarousel';
 import PromoBanner from '../../components/home/PromoBanner';
 import NearbyCard, { NearbyPlace } from '../../components/home/NearbyCard';
 import BottomNav, { NavTab, NAV_HEIGHT } from '../../components/home/BottomNav';
@@ -62,7 +61,6 @@ export default function ClientHomeScreen({
   const [tab, setTab] = useState<HomeTab>('nearby');
   const [navTab, setNavTab] = useState<NavTab>('home');
   const [nearby, setNearby] = useState<NearbyPlace[]>([]);
-  const [recos, setRecos] = useState<RecoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -80,18 +78,6 @@ export default function ClientHomeScreen({
     setLoadError(false);
     try {
       const shops = await shopsService.getShops();
-
-      // Recommandations : VIP scoring + vip_manual + featured_manual (tous calculés dans rowToShop)
-      const recoShops: RecoItem[] = shops
-        .filter(s => s.isVip || s.isFeatured)
-        .map(s => ({
-          id: s.id,
-          initial: s.name.charAt(0).toUpperCase(),
-          name: s.name,
-          desc: s.subtitle || `${s.category} · ${s.zone}`,
-          logoUrl: s.logoUrl,
-        }));
-      setRecos(recoShops);
 
       // Toutes les boutiques → liste "Tout près de toi"
       const currentCoords = useLocationStore.getState().coords;
@@ -141,7 +127,6 @@ export default function ClientHomeScreen({
       setLoadError(false);
     } catch {
       setNearby([]);
-      setRecos([]);
       setLoadError(true);
     } finally {
       setLoading(false);
@@ -217,23 +202,6 @@ export default function ClientHomeScreen({
         {/* Produits en vitrine — carrousel auto-défilant avec indicateurs */}
         <PromoBanner onPress={onShopItemPress} />
 
-        {/* Recommandations — boutiques VIP réelles */}
-        {recos.length > 0 && (
-          <View style={styles.recoSection}>
-            <View style={[styles.sectionHead, styles.px]}>
-              <Text style={styles.secTitle}>{t.home.recommendations}</Text>
-              <Text style={styles.secLink}>VIP</Text>
-            </View>
-            <RecoCarousel
-              items={recos}
-              onPress={id => {
-                const shop = recos.find(r => r.id === id);
-                if (shop) onShopPress?.(id, shop.name);
-              }}
-            />
-          </View>
-        )}
-
         {/* Boutiques à proximité */}
         <View style={styles.px}>
           <View style={styles.sectionHead}>
@@ -289,8 +257,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     letterSpacing: -0.2,
   },
-  secLink: { color: colors.accent, fontFamily: fonts.ui, fontSize: 12 },
-  recoSection: { marginTop: 28, marginBottom: 8 },
   terrainBanner: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.surface,

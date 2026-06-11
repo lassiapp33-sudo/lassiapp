@@ -119,7 +119,6 @@ export interface Translations {
   };
   home: {
     explore: string;
-    recommendations: string;
     nearby: string;
     noShops: string;
     search: string;
