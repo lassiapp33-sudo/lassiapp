@@ -16,6 +16,10 @@ interface Props {
   progress: number; // 0–1 : fraction du temps ÉCOULÉ
   productName?: string | null;
   productEmoji?: string | null;
+  /** Nombre de produits mis en avant (0 si allProducts). */
+  productCount?: number;
+  /** Toute la vitrine est mise en avant. */
+  allProducts?: boolean;
 }
 
 export default function ActiveSubCard({
@@ -25,6 +29,8 @@ export default function ActiveSubCard({
   progress,
   productName,
   productEmoji,
+  productCount = 0,
+  allProducts = false,
 }: Props) {
   const clampedProgress = Math.min(1, Math.max(0, progress));
 
@@ -39,11 +45,20 @@ export default function ActiveSubCard({
       {/* Titre */}
       <Text style={styles.title}>Offre du quartier active</Text>
 
-      {/* Produit annoncé */}
-      {!!productName && (
+      {/* Produit(s) annoncé(s) */}
+      {allProducts ? (
         <Text style={styles.product} numberOfLines={1}>
-          {productEmoji || '🛍️'} {productName}
+          🏪 Toute ta vitrine est mise en avant
         </Text>
+      ) : (
+        !!productName && (
+          <Text style={styles.product} numberOfLines={1}>
+            {productEmoji || '🛍️'} {productName}
+            {productCount > 1
+              ? ` + ${productCount - 1} autre${productCount - 1 > 1 ? 's' : ''}`
+              : ''}
+          </Text>
+        )
       )}
 
       {/* Expiration */}

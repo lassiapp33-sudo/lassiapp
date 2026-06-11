@@ -104,7 +104,8 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
   const [activeSub, setActiveSub] = useState<ActiveSub | null>(null);
   const [selectedId, setSelectedId] = useState('3m');
   const [products, setProducts] = useState<StoreProduct[]>([]);
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [featuredAllProducts, setFeaturedAllProducts] = useState(false);
   const [payMethod, setPayMethod] = useState<PayMethod>('wave');
   const [payState, setPayState] = useState<PayState>({ type: 'idle' });
   const [initLoading, setInitLoading] = useState(true);
@@ -128,9 +129,8 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
       setPlans(loadedPlans);
       setKeysAvailable(keys);
       setProducts(loadedProducts);
-      setSelectedProductId(
-        loadedProducts.find(p => p.stock === 'in')?.id ?? loadedProducts[0]?.id ?? null,
-      );
+      const defaultProduct = loadedProducts.find(p => p.stock === 'in') ?? loadedProducts[0];
+      setSelectedProductIds(defaultProduct ? [defaultProduct.id] : []);
       if (sub) {
         setActiveSub(sub);
         setView('subscribed');
@@ -147,12 +147,24 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
     init();
   }, [init]);
 
+  // ── Sélection des produits à mettre en avant ──────────────────────────────
+  const toggleProduct = (id: string) => {
+    setSelectedProductIds(prev => (prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]));
+  };
+
+  const toggleAllProducts = () => {
+    setFeaturedAllProducts(prev => !prev);
+  };
+
   // ── Lancer le paiement ────────────────────────────────────────────────────
   const handlePay = async () => {
     if (!selectedPlan || !shopId) return;
 
-    if (!selectedProductId) {
-      Alert.alert('Produit requis', 'Choisis le produit à mettre en avant avant de payer.');
+    if (!featuredAllProducts && selectedProductIds.length === 0) {
+      Alert.alert(
+        'Produit requis',
+        'Choisis au moins un produit (ou toute ta vitrine) à mettre en avant avant de payer.',
+      );
       return;
     }
 
@@ -161,7 +173,8 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
       const result = await createVisibilityPayment({
         planId: selectedPlan.id,
         payMethod,
-        productId: selectedProductId,
+        productIds: selectedProductIds,
+        allProducts: featuredAllProducts,
       });
 
       if (result.status === 'awaiting_keys') {
@@ -254,6 +267,8 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
             progress={cardProps.progress}
             productName={activeSub.productName}
             productEmoji={activeSub.productEmoji}
+            productCount={activeSub.productCount}
+            allProducts={activeSub.allProducts}
           />
 
           <Text style={styles.secLabel}>Ce que ton forfait t'a rapporté</Text>
@@ -297,11 +312,13 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
         <HeroCard />
         <BenefitsList />
 
-        <Text style={styles.secLabel}>Choisis le produit à mettre en avant</Text>
+        <Text style={styles.secLabel}>Choisis ce que tu veux mettre en avant</Text>
         <ProductPicker
           products={products}
-          selectedId={selectedProductId}
-          onSelect={setSelectedProductId}
+          selectedIds={selectedProductIds}
+          allProducts={featuredAllProducts}
+          onToggleProduct={toggleProduct}
+          onToggleAllProducts={toggleAllProducts}
         />
 
         <Text style={styles.secLabel}>Choisis ton forfait</Text>

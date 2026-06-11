@@ -31,6 +31,8 @@ interface VisibilitySubRow {
   paid_at: string | null;
   pay_method: string;
   product_id: string | null;
+  product_ids: string[] | null;
+  all_products: boolean;
   plan: { label: string } | null;
   product: { name: string; emoji: string | null; photo_url: string | null } | null;
 }
@@ -60,6 +62,10 @@ export interface ActiveSub {
   productId: string | null;
   productName: string | null;
   productEmoji: string | null;
+  /** Nombre de produits mis en avant (0 si allProducts). */
+  productCount: number;
+  /** Toute la vitrine est mise en avant (plutôt que des produits précis). */
+  allProducts: boolean;
 }
 
 export type CreatePaymentResult =
@@ -104,7 +110,8 @@ export async function getActiveSub(shopId: string): Promise<ActiveSub | null> {
   const { data } = await supabase
     .from('visibility_subscriptions')
     .select(
-      'id, plan_id, amount, status, started_at, expires_at, paid_at, pay_method, product_id, ' +
+      'id, plan_id, amount, status, started_at, expires_at, paid_at, pay_method, ' +
+        'product_id, product_ids, all_products, ' +
         'plan:plan_id(label), product:product_id(name, emoji, photo_url)',
     )
     .eq('shop_id', shopId)
@@ -128,8 +135,10 @@ export async function getActiveSub(shopId: string): Promise<ActiveSub | null> {
     paidAt: row.paid_at,
     payMethod: row.pay_method as PayMethod,
     productId: row.product_id,
-    productName: row.product?.name ?? null,
-    productEmoji: row.product?.emoji ?? null,
+    productName: row.all_products ? null : (row.product?.name ?? null),
+    productEmoji: row.all_products ? null : (row.product?.emoji ?? null),
+    productCount: row.product_ids?.length ?? (row.product_id ? 1 : 0),
+    allProducts: row.all_products,
   };
 }
 
@@ -158,7 +167,10 @@ export async function checkPaymentAvailability(): Promise<{
 export async function createVisibilityPayment(params: {
   planId: string;
   payMethod: PayMethod;
-  productId: string;
+  /** Produits choisis (ignoré si allProducts === true). */
+  productIds: string[];
+  /** Mettre en avant toute la vitrine plutôt que des produits précis. */
+  allProducts: boolean;
 }): Promise<CreatePaymentResult> {
   const res = await fetch(`${FUNCTIONS_BASE}/create-visibility-payment`, {
     method: 'POST',
