@@ -146,8 +146,8 @@ export default function RegisterScreen({
       setErreur(PHONE_ERROR);
       return;
     }
-    if (mdp.length < 6) {
-      setErreur('Le mot de passe doit contenir au moins 6 caractères.');
+    if (mdp.length < 8) {
+      setErreur('Le mot de passe doit contenir au moins 8 caractères.');
       return;
     }
     if (!cguAccepted) {
@@ -233,7 +233,7 @@ export default function RegisterScreen({
         />
         <InputField
           label={t.auth.passwordLabel}
-          placeholder="Min. 6 caractères"
+          placeholder="Min. 8 caractères"
           value={mdp}
           onChangeText={setMdp}
           leftIcon={<IconLock />}

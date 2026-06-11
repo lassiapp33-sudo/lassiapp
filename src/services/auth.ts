@@ -40,7 +40,7 @@ function traduireErreur(message: string): string {
   if (message.includes('Invalid login credentials')) return 'Numéro ou mot de passe incorrect.';
   if (message.includes('Email not confirmed')) return 'Compte non confirmé. Vérifie tes emails.';
   if (message.includes('Password should be at least'))
-    return 'Le mot de passe doit contenir au moins 6 caractères.';
+    return 'Le mot de passe doit contenir au moins 8 caractères.';
   if (message.includes('Unable to validate email address')) return 'Adresse email invalide.';
   if (message.includes('Network request failed') || message.includes('fetch'))
     return 'Pas de connexion Internet. Vérifie ton réseau.';
@@ -260,7 +260,10 @@ export async function login(params: LoginParams): Promise<AuthUser> {
 // ─── Déconnexion ────────────────────────────────────────────────────────────
 
 export async function logout(): Promise<void> {
-  const { error } = await supabase.auth.signOut();
+  // scope: 'global' (Section 7) — révoque le refresh token côté serveur
+  // (toutes les sessions de cet utilisateur) en plus de nettoyer le
+  // stockage local (secureStorage).
+  const { error } = await supabase.auth.signOut({ scope: 'global' });
   if (error) throw new Error(traduireErreur(error.message));
 }
 
