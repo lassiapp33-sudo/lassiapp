@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useT } from '../../i18n';
 
 import HomeHeader from '../../components/home/HomeHeader';
@@ -17,6 +18,7 @@ import { CatId } from '../../components/category/CatNavBar';
 import PromoBanner from '../../components/home/PromoBanner';
 import NearbyCard, { NearbyPlace } from '../../components/home/NearbyCard';
 import BottomNav, { NavTab, NAV_HEIGHT } from '../../components/home/BottomNav';
+import WelcomeClientModal from '../../components/home/WelcomeClientModal';
 import { colors, fonts, TOP_INSET } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import useAuthStore from '../../store/authStore';
@@ -64,7 +66,9 @@ export default function ClientHomeScreen({
   const [nearby, setNearby] = useState<NearbyPlace[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
 
+  const userId = useAuthStore(s => s.user?.id);
   const userInitial = useAuthStore(s => s.user?.initial ?? 'A');
   const userName = useAuthStore(s => s.user?.name ?? '');
   const userAvatarUrl = useAuthStore(s => s.user?.avatarUrl);
@@ -146,6 +150,23 @@ export default function ClientHomeScreen({
     refreshLocation();
     loadShops();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Message de bienvenue (essentiel de LASSI) — affiché une seule fois,
+  // mémorisé par compte via AsyncStorage.
+  useEffect(() => {
+    if (!userId) return;
+    const seenKey = `welcome_client_seen_${userId}`;
+    AsyncStorage.getItem(seenKey)
+      .then(seen => {
+        if (!seen) setShowWelcome(true);
+      })
+      .catch(() => {});
+  }, [userId]);
+
+  const dismissWelcome = () => {
+    setShowWelcome(false);
+    if (userId) AsyncStorage.setItem(`welcome_client_seen_${userId}`, '1').catch(() => {});
+  };
 
   const handleNavPress = (t: NavTab) => {
     setNavTab(t);
@@ -243,6 +264,8 @@ export default function ClientHomeScreen({
           )}
         </View>
       </ScrollView>
+
+      <WelcomeClientModal visible={showWelcome} onClose={dismissWelcome} />
     </LassiScreen>
   );
 }
