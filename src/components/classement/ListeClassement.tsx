@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
-import { colors, fonts, radius } from '../../theme';
+import { colors, fonts, radius, spacing } from '../../theme';
 import Avatar from '../Avatar';
 import { ClassementEntry } from '../../services/classementService';
 
@@ -9,16 +9,30 @@ interface Props {
   monId?: string;
   /** 'shop' pour les listes prestataires (logo boutique), 'user' pour les clients. */
   variant?: 'user' | 'shop';
+  /** Contenu défilant placé avant la liste (titre, podium, onglets…). */
+  ListHeaderComponent?: React.ReactElement | null;
+  /** Contenu défilant placé après la liste. */
+  ListFooterComponent?: React.ReactElement | null;
 }
 
-export default function ListeClassement({ entries, monId, variant = 'shop' }: Props) {
+export default function ListeClassement({
+  entries,
+  monId,
+  variant = 'shop',
+  ListHeaderComponent,
+  ListFooterComponent,
+}: Props) {
   return (
     <FlatList
+      style={styles.list}
+      contentContainerStyle={styles.contentContainer}
       data={entries}
       keyExtractor={(item, i) => `${item.rang}-${i}`}
       initialNumToRender={10}
       maxToRenderPerBatch={10}
       windowSize={5}
+      ListHeaderComponent={ListHeaderComponent}
+      ListFooterComponent={ListFooterComponent}
       renderItem={({ item }) => {
         const cestMoi = item.prestataire_id === monId || item.client_id === monId;
         return (
@@ -37,6 +51,8 @@ export default function ListeClassement({ entries, monId, variant = 'shop' }: Pr
 }
 
 const styles = StyleSheet.create({
+  list: { flex: 1 },
+  contentContainer: { paddingHorizontal: spacing.screen, paddingBottom: 32 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

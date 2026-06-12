@@ -52,7 +52,8 @@ type NavDest =
   | 'assistant'
   | 'aroundme'
   | 'avis'
-  | 'terrains';
+  | 'terrains'
+  | 'classement';
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
@@ -165,8 +166,8 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
           onPress={key => onNavigate?.(key as NavDest)}
           debtCount={debtorsWithDebt}
           showTerrains={shopType === 'terrains'}
-          isSlotShop={shopSubcategories.some(s =>
-            s === 'reservation_terrain_foot' || s === 'reservation_terrain_basket',
+          isSlotShop={shopSubcategories.some(
+            s => s === 'reservation_terrain_foot' || s === 'reservation_terrain_basket',
           )}
         />
 

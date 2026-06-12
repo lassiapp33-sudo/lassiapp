@@ -83,6 +83,24 @@ const IcoStar = ({ stroke }: { stroke: string }) => (
   </Svg>
 );
 
+const IcoTrophy = ({ stroke }: { stroke: string }) => (
+  <Svg
+    width={21}
+    height={21}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" stroke={stroke} />
+    <Path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" stroke={stroke} />
+    <Path d="M6 4h12v5a6 6 0 0 1-12 0Z" stroke={stroke} />
+    <Path d="M9 20h6" stroke={stroke} />
+    <Path d="M12 15v5" stroke={stroke} />
+  </Svg>
+);
+
 // ─── Carte d'action individuelle ──────────────────────────────────────────────
 
 interface ActionCardProps {
@@ -212,6 +230,16 @@ export default function QuickActions({
             onPress={() => onPress?.('terrains')}
           />
         )}
+      </View>
+      <View style={styles.row}>
+        <ActionCard
+          Icon={IcoTrophy}
+          iconBg="rgba(253,207,52,.13)"
+          iconStroke={colors.accent}
+          title="Classement"
+          desc="Ma position cette semaine"
+          onPress={() => onPress?.('classement')}
+        />
       </View>
     </View>
   );

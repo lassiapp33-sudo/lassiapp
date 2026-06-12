@@ -32,7 +32,6 @@ import { ProfileIdCard } from '../../components/common/ProfileIdCard';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
-
 const IcoOrder = () => (
   <Svg
     width={18}
@@ -197,6 +196,24 @@ const IcoTerrain = () => (
   </Svg>
 );
 
+const IcoTrophy = () => (
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" stroke={colors.accent} />
+    <Path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" stroke={colors.accent} />
+    <Path d="M6 4h12v5a6 6 0 0 1-12 0Z" stroke={colors.accent} />
+    <Path d="M9 20h6" stroke={colors.accent} />
+    <Path d="M12 15v5" stroke={colors.accent} />
+  </Svg>
+);
+
 const IcoLogout = () => (
   <Svg
     width={18}
@@ -236,12 +253,20 @@ interface Props {
   onOrders?: () => void;
   onFavorites?: () => void;
   onTerrainReservations?: () => void;
+  onClassement?: () => void;
   onLogout?: () => void;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
-export default function ClientProfileScreen({ onBack, onOrders, onFavorites, onTerrainReservations, onLogout }: Props) {
+export default function ClientProfileScreen({
+  onBack,
+  onOrders,
+  onFavorites,
+  onTerrainReservations,
+  onClassement,
+  onLogout,
+}: Props) {
   const t = useT();
   const lang = useLanguageStore(s => s.lang);
 
@@ -356,6 +381,12 @@ export default function ClientProfileScreen({ onBack, onOrders, onFavorites, onT
             title="Mes terrains réservés"
             subtitle="Football, basketball & plus"
             onPress={onTerrainReservations}
+          />
+          <ProfileOptionRow
+            icon={<IcoTrophy />}
+            title="Classement"
+            subtitle="Mon quartier & top clients"
+            onPress={onClassement}
           />
           <ProfileOptionRow
             icon={<IcoCard />}

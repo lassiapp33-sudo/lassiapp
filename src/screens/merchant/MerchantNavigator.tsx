@@ -24,6 +24,7 @@ import CartScreen from '../home/CartScreen';
 import PaymentScreen from '../payment/PaymentScreen';
 import ClientOrdersScreen from '../home/ClientOrdersScreen';
 import LassiAssistantScreen from '../home/LassiAssistantScreen';
+import ClassementScreen from '../classement/ClassementScreen';
 import useShopStore from '../../store/shopStore';
 import useAuthStore from '../../store/authStore';
 import useNotificationsStore from '../../store/notificationsStore';
@@ -49,6 +50,7 @@ type MerchantScreen =
   | 'aroundme'
   | 'myorders'
   | 'avis'
+  | 'classement'
   | { id: 'chat'; conversationId: string }
   | { id: 'buyerShop'; shopId: string; shopName: string; backTo?: 'aroundme' | 'assistant' }
   | { id: 'buyerCart'; shopId: string; shopName: string; backTo?: 'aroundme' | 'assistant' }
@@ -105,7 +107,10 @@ export default function MerchantNavigator({ onLogout }: Props) {
     } else if (pendingNav.type === 'payment_success') {
       setScreen('orders');
     } else if (pendingNav.type === 'payment_failed') {
-      Alert.alert('Paiement échoué', 'Le paiement n\'a pas pu être confirmé. Réessayez ou choisissez un autre moyen de paiement.');
+      Alert.alert(
+        'Paiement échoué',
+        "Le paiement n'a pas pu être confirmé. Réessayez ou choisissez un autre moyen de paiement.",
+      );
       setScreen('payments');
     }
   }, [pendingNav, clearPending]);
@@ -281,8 +286,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
         }}
       />
     );
-  if (screen === 'terrain_scan')
-    return <TerrainScanScreen onBack={() => setScreen('terrains')} />;
+  if (screen === 'terrain_scan') return <TerrainScanScreen onBack={() => setScreen('terrains')} />;
 
   if (typeof screen === 'object' && screen.id === 'terrain_edit')
     return (
@@ -295,10 +299,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
 
   if (typeof screen === 'object' && screen.id === 'terrain_reservations')
     return (
-      <TerrainReservationsScreen
-        terrain={screen.terrain}
-        onBack={() => setScreen('terrains')}
-      />
+      <TerrainReservationsScreen terrain={screen.terrain} onBack={() => setScreen('terrains')} />
     );
 
   if (screen === 'terrains')
@@ -314,6 +315,8 @@ export default function MerchantNavigator({ onLogout }: Props) {
   if (screen === 'preview')
     return <ShopScreen shopId={shopId ?? ''} onBack={() => setScreen('store')} />;
   if (screen === 'avis') return <MerchantAvisScreen onBack={() => setScreen('dashboard')} />;
+  if (screen === 'classement')
+    return <ClassementScreen variant="prestataire" onBack={() => setScreen('dashboard')} />;
   if (screen === 'debts') return <DebtsScreen onBack={() => setScreen('dashboard')} />;
   if (screen === 'promotions') return <PromotionsScreen onBack={() => setScreen('store')} />;
   if (screen === 'store')
@@ -357,6 +360,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
         if (dest === 'aroundme') setScreen('aroundme');
         if (dest === 'avis') setScreen('avis');
         if (dest === 'terrains') setScreen('terrains');
+        if (dest === 'classement') setScreen('classement');
       }}
       onNotifPress={() => setScreen('notifications')}
     />

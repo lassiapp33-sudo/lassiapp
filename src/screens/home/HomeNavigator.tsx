@@ -23,6 +23,7 @@ import TerrainQRScreen from '../terrain/TerrainQRScreen';
 import TerrainsListScreen from '../terrain/TerrainsListScreen';
 import TerrainDetailScreen from '../terrain/TerrainDetailScreen';
 import TerrainMyReservationsScreen from '../terrain/TerrainMyReservationsScreen';
+import ClassementScreen from '../classement/ClassementScreen';
 import { CatId } from '../../components/category/CatNavBar';
 import { OrderInfo } from '../../types/payment';
 import { Terrain, SportType } from '../../types/terrain';
@@ -37,6 +38,7 @@ import { recordView } from '../../services/recentlyViewed';
 type HomeStack =
   | { id: 'main' }
   | { id: 'profile' }
+  | { id: 'classement' }
   | { id: 'orders' }
   | { id: 'voice' }
   | { id: 'search' }
@@ -149,7 +151,10 @@ export default function HomeNavigator({ onLogout }: Props) {
     } else if (pendingNav.type === 'payment_success') {
       setHistory([{ id: 'main' }, { id: 'orders' }]);
     } else if (pendingNav.type === 'payment_failed') {
-      Alert.alert('Paiement échoué', 'Le paiement n\'a pas pu être confirmé. Réessaie ou contacte le support.');
+      Alert.alert(
+        'Paiement échoué',
+        "Le paiement n'a pas pu être confirmé. Réessaie ou contacte le support.",
+      );
     }
   }, [pendingNav, clearPending]);
 
@@ -280,12 +285,7 @@ export default function HomeNavigator({ onLogout }: Props) {
   }
 
   if (screen.id === 'terrain_detail') {
-    return (
-      <TerrainDetailScreen
-        terrain={screen.terrain}
-        onBack={pop}
-      />
-    );
+    return <TerrainDetailScreen terrain={screen.terrain} onBack={pop} />;
   }
 
   // ── Réservation terrain ───────────────────────────────────────────────────
@@ -333,7 +333,11 @@ export default function HomeNavigator({ onLogout }: Props) {
         }
         onCheckout={() => push({ id: 'cart', shopId: screen.shopId, shopName: screen.shopName })}
         onBookTerrain={params =>
-          push({ id: 'terrain_booking', terrain: params.terrain, prestataireName: params.prestataireName })
+          push({
+            id: 'terrain_booking',
+            terrain: params.terrain,
+            prestataireName: params.prestataireName,
+          })
         }
         onBookTerrainDirect={params =>
           push({
@@ -461,6 +465,11 @@ export default function HomeNavigator({ onLogout }: Props) {
     return <ReceiptScreen orderId={screen.orderId} onBack={pop} />;
   }
 
+  // ── Classement ───────────────────────────────────────────────────────────
+  if (screen.id === 'classement') {
+    return <ClassementScreen variant="client" onBack={pop} />;
+  }
+
   // ── Profil client ─────────────────────────────────────────────────────────
   if (screen.id === 'profile') {
     return (
@@ -469,6 +478,7 @@ export default function HomeNavigator({ onLogout }: Props) {
         onOrders={() => push({ id: 'orders' })}
         onFavorites={() => push({ id: 'favorites' })}
         onTerrainReservations={() => push({ id: 'terrain_my_reservations' })}
+        onClassement={() => push({ id: 'classement' })}
         onLogout={onLogout}
       />
     );
