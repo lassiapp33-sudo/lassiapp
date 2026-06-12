@@ -251,12 +251,14 @@ export const setCarrouselSelection = async (
 // ============================================================
 // Helpers période
 // ============================================================
-// Les snapshots de `classements` représentent toujours la PÉRIODE QUI VIENT
-// DE SE TERMINER : pg_cron calcule le classement de la semaine/du mois
-// précédent et l'active pour toute la période en cours (voir
-// 20260611130000_cron_classements.sql). Ces helpers renvoient donc la
-// période ACTIVE (précédente), pas la période en cours — sinon les requêtes
-// `getClassementXxx(periode)` ne trouveraient jamais de ligne `est_actif=true`.
+// - getPeriodeSemaine() : période ACTIVE = semaine précédente. "Ma
+//   catégorie" est calculé chaque dimanche 23h59 et reste figé toute la
+//   semaine suivante (20260611130000_cron_classements.sql).
+// - getPeriodeMois() : période EN COURS = mois en cours. Mondial / Quartier
+//   / Top clients sont un APERÇU LIVE du mois en cours, recalculé chaque
+//   dimanche à partir des points cumulés depuis le 1er
+//   (20260612140000_classement_mensuel_progressif.sql). Le calcul final
+//   (récompenses + reset des compteurs) a lieu le 1er du mois suivant.
 
 /**
  * Semaine ISO 8601 (IYYY-SWW) de la période active — même format que
@@ -277,13 +279,11 @@ export const getPeriodeSemaine = (): string => {
 };
 
 /**
- * Mois (YYYY-MM) de la période active — même format que
- * `to_char(now() - interval '1 day', 'YYYY-MM')` côté SQL.
+ * Mois en cours (YYYY-MM) — aperçu live du classement Mondial / Quartier /
+ * Top clients, même format que `to_char(now(), 'YYYY-MM')` côté SQL.
  */
 export const getPeriodeMois = (): string => {
   const d = new Date();
-  d.setDate(1); // évite le débordement de fin de mois (ex: 31 mars - 1 mois)
-  d.setMonth(d.getMonth() - 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 };
 
