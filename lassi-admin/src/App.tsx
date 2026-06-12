@@ -19,6 +19,7 @@ import UsersPage           from './pages/UsersPage'
 import ShopsPage           from './pages/ShopsPage'
 import BIPage              from './pages/BIPage'
 import AvisPage            from './pages/AvisPage'
+import AnnoncesPage        from './pages/AnnoncesPage'
 
 // ─── Garde de route ───────────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ function AppRoutes() {
         <Route path="shops"        element={<ShopsPage />} />
         <Route path="bi"           element={<BIPage />} />
         <Route path="avis"         element={<AvisPage />} />
+        <Route path="annonces"     element={<AnnoncesPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
