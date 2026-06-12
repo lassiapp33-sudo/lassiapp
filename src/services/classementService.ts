@@ -199,6 +199,14 @@ export const getMonCarrouselQuota = async (
   return eligibles.reduce((best, r) => (r.carrousel_produits > best.carrousel_produits ? r : best));
 };
 
+// --- Récompense de bienvenue (cadeau offert à la création du compte) ---
+export const getRecompenseBienvenue = async (
+  prestataireId: string,
+): Promise<RecompenseAttribuee | null> => {
+  const recompenses = await getMesRecompenses(prestataireId);
+  return recompenses.find(r => r.type_classement === 'bienvenue') ?? null;
+};
+
 // --- Ma sélection actuelle pour le carrousel ---
 export const getMesProduitsCarrousel = async (prestataireId: string): Promise<CarrouselItem[]> => {
   const { data, error } = await supabase

@@ -370,6 +370,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
         if (dest === 'avis') setScreen('avis');
         if (dest === 'terrains') setScreen('terrains');
         if (dest === 'classement') setScreen('classement');
+        if (dest === 'offre_quartier') setScreen('offre_quartier');
       }}
       onNotifPress={() => setScreen('notifications')}
     />

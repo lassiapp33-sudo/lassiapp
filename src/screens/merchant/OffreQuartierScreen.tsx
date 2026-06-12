@@ -136,7 +136,9 @@ export default function OffreQuartierScreen({ onBack }: Props) {
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           <View style={styles.banner}>
-            <Text style={styles.bannerTitle}>Top {quota.rang} mondial 🎉</Text>
+            <Text style={styles.bannerTitle}>
+              {quota.type_classement === 'bienvenue' ? '🎁 Cadeau de bienvenue' : `Top ${quota.rang} mondial 🎉`}
+            </Text>
             <Text style={styles.bannerTxt}>
               Choisis jusqu'à {quotaN} produit{quotaN > 1 ? 's' : ''} à mettre en avant dans le
               carrousel "Offre di Quartier".

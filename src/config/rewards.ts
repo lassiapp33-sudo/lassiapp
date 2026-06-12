@@ -124,6 +124,14 @@ export const RECOMPENSE_CLIENT = {
   badgeSupporter: '🎖️ Supporter n°1',
 };
 
+// --- Récompense BIENVENUE (nouveau compte prestataire) ---
+// Attribuée automatiquement par le trigger trg_profiles_recompense_bienvenue
+// (20260612160000_recompense_bienvenue.sql).
+export const RECOMPENSE_BIENVENUE = {
+  carrouselProduits: 4,
+  badge: '🎁 Bienvenue sur LASSI',
+};
+
 // --- Helper : trouver le palier d'un rang mondial ---
 export const getPalierMondial = (rang: number): PalierRecompense | null => {
   return PALIERS_MONDIAL.find(p => rang >= p.rangMin && rang <= p.rangMax) ?? null;
