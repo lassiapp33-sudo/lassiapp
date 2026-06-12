@@ -65,11 +65,11 @@ Deno.serve(async (req) => {
         .from('recompenses_attribuees')
         .select('*')
         .eq('id', recompenseId)
-        .eq('type_classement', 'manuel')
+        .in('type_classement', ['manuel', 'bienvenue'])
         .single()
 
       if (!before) {
-        return new Response(JSON.stringify({ error: 'Récompense manuelle introuvable' }), {
+        return new Response(JSON.stringify({ error: 'Récompense introuvable' }), {
           status: 404, headers: { ...CORS, 'Content-Type': 'application/json' },
         })
       }
