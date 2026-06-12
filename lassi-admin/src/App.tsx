@@ -11,6 +11,7 @@ import OverviewPage        from './pages/OverviewPage'
 import TransactionsPage    from './pages/TransactionsPage'
 import VipPage             from './pages/VipPage'
 import ManualFeaturedPage  from './pages/ManualFeaturedPage'
+import RecompensesPage     from './pages/RecompensesPage'
 import DisputesPage        from './pages/DisputesPage'
 import DisputeDetailPage   from './pages/DisputeDetailPage'
 import SignalementsPage    from './pages/SignalementsPage'
@@ -49,6 +50,7 @@ function AppRoutes() {
         <Route path="transactions" element={<TransactionsPage />} />
         <Route path="vip"          element={<VipPage />} />
         <Route path="featured"     element={<ManualFeaturedPage />} />
+        <Route path="recompenses"  element={<RecompensesPage />} />
         <Route path="disputes"     element={<DisputesPage />} />
         <Route path="disputes/:id"   element={<DisputeDetailPage />} />
         <Route path="signalements"   element={<SignalementsPage />} />

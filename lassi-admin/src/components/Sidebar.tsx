@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react'
 import { NavLink, useNavigate }        from 'react-router-dom'
 import {
-  LayoutDashboard, TrendingUp, Trophy, Star,
+  LayoutDashboard, TrendingUp, Trophy, Star, Gift,
   AlertTriangle, Flag, Users, Store, Map, LogOut, MessageSquare,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
@@ -52,6 +52,7 @@ export default function Sidebar() {
     { to: '/transactions', icon: <TrendingUp size={18} />,     label: 'GTV & Transactions' },
     { to: '/vip',          icon: <Trophy size={18} />,         label: 'Scoring VIP' },
     { to: '/featured',     icon: <Star size={18} />,           label: 'Mise en avant' },
+    { to: '/recompenses',  icon: <Gift size={18} />,           label: 'Récompenses' },
     { to: '/disputes',     icon: <AlertTriangle size={18} />,  label: 'Litiges',        badge: openDisputes    || undefined },
     { to: '/signalements', icon: <Flag size={18} />,           label: 'Signalements',   badge: newSignalements || undefined },
     { to: '/users',        icon: <Users size={18} />,          label: 'Utilisateurs' },
