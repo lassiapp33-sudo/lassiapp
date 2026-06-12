@@ -132,6 +132,51 @@ export const getMesRecompenses = async (prestataireId: string): Promise<Recompen
   return data ?? [];
 };
 
+// --- Badges actifs d'un prestataire (vitrine) ---
+export const getBadgesActifs = async (prestataireId: string): Promise<RecompenseAttribuee[]> => {
+  const { data, error } = await supabase
+    .from('recompenses_attribuees')
+    .select('*')
+    .eq('prestataire_id', prestataireId)
+    .eq('est_actif', true)
+    .gt('valide_jusqu_a', new Date().toISOString())
+    .order('rang');
+  if (error) throw new Error(error.message);
+  return data ?? [];
+};
+
+// --- Certificat actif d'un prestataire (meilleur rang avec certificat=true) ---
+export const getCertificatActif = async (
+  prestataireId: string,
+): Promise<RecompenseAttribuee | null> => {
+  const badges = await getBadgesActifs(prestataireId);
+  return badges.find(r => r.certificat) ?? null;
+};
+
+// --- Meilleur badge actif de plusieurs prestataires (cartes de liste) ---
+// Renvoie le badge de rang le plus bas par prestataire_id (données triées par rang).
+export const getBadgesActifsBatch = async (
+  prestataireIds: string[],
+): Promise<Record<string, RecompenseAttribuee>> => {
+  const ids = [...new Set(prestataireIds)];
+  if (ids.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from('recompenses_attribuees')
+    .select('*')
+    .in('prestataire_id', ids)
+    .eq('est_actif', true)
+    .gt('valide_jusqu_a', new Date().toISOString())
+    .order('rang');
+  if (error) throw new Error(error.message);
+
+  const best: Record<string, RecompenseAttribuee> = {};
+  for (const r of data ?? []) {
+    if (r.prestataire_id && !best[r.prestataire_id]) best[r.prestataire_id] = r;
+  }
+  return best;
+};
+
 // --- Carrousel Offre di Quartier (top 5 mondial) ---
 export const getCarrouselOffreQuartier = async (): Promise<CarrouselItem[]> => {
   const { data, error } = await supabase
@@ -142,6 +187,65 @@ export const getCarrouselOffreQuartier = async (): Promise<CarrouselItem[]> => {
     .limit(25); // max 5 prestataires × 5 produits (CLASSEMENT_CONFIG.CARROUSEL_MAX_PRESTATAIRES)
   if (error) throw new Error(error.message);
   return data ?? [];
+};
+
+// --- Quota carrousel du prestataire connecté (récompense Top 5 mondial active) ---
+export const getMonCarrouselQuota = async (
+  prestataireId: string,
+): Promise<RecompenseAttribuee | null> => {
+  const recompenses = await getMesRecompenses(prestataireId);
+  const eligibles = recompenses.filter(r => r.carrousel_produits > 0);
+  if (eligibles.length === 0) return null;
+  return eligibles.reduce((best, r) => (r.carrousel_produits > best.carrousel_produits ? r : best));
+};
+
+// --- Ma sélection actuelle pour le carrousel ---
+export const getMesProduitsCarrousel = async (prestataireId: string): Promise<CarrouselItem[]> => {
+  const { data, error } = await supabase
+    .from('carrousel_offre_quartier')
+    .select('*')
+    .eq('prestataire_id', prestataireId)
+    .order('ordre');
+  if (error) throw new Error(error.message);
+  return data ?? [];
+};
+
+export interface CarrouselSelectionItem {
+  productId: string;
+  nom: string;
+  prix: number;
+  imageUrl: string;
+}
+
+// --- Remplace ma sélection de produits mis en avant dans le carrousel ---
+export const setCarrouselSelection = async (
+  prestataireId: string,
+  periode: string,
+  rang: number,
+  items: CarrouselSelectionItem[],
+): Promise<void> => {
+  const { error: delError } = await supabase
+    .from('carrousel_offre_quartier')
+    .delete()
+    .eq('prestataire_id', prestataireId);
+  if (delError) throw new Error(delError.message);
+
+  if (items.length === 0) return;
+
+  const rows = items.map((item, index) => ({
+    prestataire_id: prestataireId,
+    product_id: item.productId,
+    nom: item.nom,
+    prix: item.prix,
+    image_url: item.imageUrl,
+    rang_prestataire: rang,
+    ordre: index,
+    periode,
+    est_actif: true,
+  }));
+
+  const { error: insError } = await supabase.from('carrousel_offre_quartier').insert(rows);
+  if (insError) throw new Error(insError.message);
 };
 
 // ============================================================
@@ -181,4 +285,37 @@ export const getPeriodeMois = (): string => {
   d.setDate(1); // évite le débordement de fin de mois (ex: 31 mars - 1 mois)
   d.setMonth(d.getMonth() - 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const MOIS_FR = [
+  'Janvier',
+  'Février',
+  'Mars',
+  'Avril',
+  'Mai',
+  'Juin',
+  'Juillet',
+  'Août',
+  'Septembre',
+  'Octobre',
+  'Novembre',
+  'Décembre',
+];
+
+/**
+ * Formate une période (`YYYY-MM` mondial ou `IYYY-SWW` sous-catégorie) en
+ * libellé lisible pour l'affichage (ex: certificat partageable).
+ */
+export const formatPeriodeLabel = (periode: string): string => {
+  const mois = periode.match(/^(\d{4})-(\d{2})$/);
+  if (mois) {
+    const [, year, month] = mois;
+    return `${MOIS_FR[parseInt(month, 10) - 1] ?? month} ${year}`;
+  }
+  const semaine = periode.match(/^(\d{4})-S(\d{2})$/);
+  if (semaine) {
+    const [, year, week] = semaine;
+    return `Semaine ${week} · ${year}`;
+  }
+  return periode;
 };

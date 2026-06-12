@@ -5,6 +5,7 @@ import { colors, fonts } from '../../theme';
 import useFavoritesStore from '../../store/favoritesStore';
 import Avatar from '../Avatar';
 import VipBadge from '../VipBadge';
+import ChampionBadge from '../ChampionBadge';
 
 export type PlaceStatus = 'open' | 'closing' | 'closed';
 export type PlaceCategory = string;
@@ -18,6 +19,7 @@ export interface NearbyPlace {
   status: PlaceStatus;
   statusLabel: string;
   isVip: boolean;
+  isChampion?: boolean;
   isFav: boolean;
   logoUrl?: string | null;
 }
@@ -70,6 +72,7 @@ function NearbyCard({ place, onPress }: Props) {
             {place.name}
           </Text>
           {place.isVip && <VipBadge />}
+          {place.isChampion && <ChampionBadge />}
         </View>
         <View style={styles.meta}>
           <View style={styles.metaItem}>

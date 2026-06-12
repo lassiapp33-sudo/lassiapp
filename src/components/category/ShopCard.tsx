@@ -5,6 +5,7 @@ import { colors, fonts } from '../../theme';
 import Avatar from '../Avatar';
 import useFavoritesStore from '../../store/favoritesStore';
 import VipBadge from '../VipBadge';
+import ChampionBadge from '../ChampionBadge';
 
 export interface Shop {
   id: string;
@@ -12,6 +13,7 @@ export interface Shop {
   name: string;
   logoUrl?: string | null;
   isVip: boolean;
+  isChampion?: boolean;
   rating: number;
   status: 'open' | 'closing' | 'closed';
   statusLabel: string;
@@ -57,6 +59,7 @@ function ShopCard({ shop, onPress }: Props) {
             {shop.name}
           </Text>
           {shop.isVip && <VipBadge />}
+          {shop.isChampion && <ChampionBadge />}
         </View>
         <View style={styles.meta}>
           <View style={styles.metaItem}>

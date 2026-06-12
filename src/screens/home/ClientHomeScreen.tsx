@@ -24,6 +24,7 @@ import useFavoritesStore from '../../store/favoritesStore';
 import useNotificationsStore from '../../store/notificationsStore';
 import useLocationStore from '../../store/locationStore';
 import * as shopsService from '../../services/shops';
+import { getBadgesActifsBatch, RecompenseAttribuee } from '../../services/classementService';
 import { haversineMeters, formatDistance } from '../../services/location';
 import { computeStatus, WeekHours } from '../../services/hours';
 
@@ -79,6 +80,11 @@ export default function ClientHomeScreen({
     try {
       const shops = await shopsService.getShops();
 
+      const merchantIds = shops.map(shop => shop.merchantId).filter((id): id is string => !!id);
+      const badgeMap = await getBadgesActifsBatch(merchantIds).catch(
+        () => ({}) as Record<string, RecompenseAttribuee>,
+      );
+
       // Toutes les boutiques → liste "Tout près de toi"
       const currentCoords = useLocationStore.getState().coords;
       const places: NearbyPlace[] = shops.map(shop => {
@@ -104,6 +110,7 @@ export default function ClientHomeScreen({
           rating: shop.rating,
           distance,
           isVip: shop.isVip,
+          isChampion: !!shop.merchantId && !!badgeMap[shop.merchantId],
           isFav: favorites.includes(shop.id),
           status: shopStatus.isOpen ? 'open' : 'closed',
           statusLabel: shopStatus.label,

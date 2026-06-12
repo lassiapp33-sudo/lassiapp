@@ -22,6 +22,7 @@ import * as productsService from '../../services/products';
 import * as promosService from '../../services/promotions';
 import * as terrainsService from '../../services/terrains';
 import { Shop } from '../../services/shops';
+import { getBadgesActifs, RecompenseAttribuee } from '../../services/classementService';
 import { Promotion } from '../../types/promotions';
 import { reverseGeocode } from '../../services/location';
 import { StoreProduct } from '../../types/store';
@@ -165,6 +166,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const scrollRef = useRef<ScrollView>(null);
   const productSectionY = useRef(0);
   const [activePromos, setActivePromos] = useState<Promotion[]>([]);
+  const [badges, setBadges] = useState<RecompenseAttribuee[]>([]);
 
   // Position utilisateur (déjà chargée dans locationStore par ClientHomeScreen)
   const userCoords = useLocationStore(s => s.coords);
@@ -185,6 +187,13 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
       ]);
       setShopData(shop);
       setActivePromos(promos);
+      if (shop?.merchantId) {
+        getBadgesActifs(shop.merchantId)
+          .then(setBadges)
+          .catch(() => setBadges([]));
+      } else {
+        setBadges([]);
+      }
       setRealProducts([
         ...products.filter(p => p.stock === 'in'),
         ...products.filter(p => p.stock === 'out'),
@@ -414,6 +423,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
             logoUrl={displayLogoUrl}
             isVip={isVip}
             isOpen={isOpen}
+            badge={badges[0]?.badge ?? null}
           />
 
           {/* 2 — Nom + tagline */}

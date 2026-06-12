@@ -9,6 +9,8 @@ import DebtsScreen from './DebtsScreen';
 import StoreScreen from './StoreScreen';
 import OrdersScreen from './OrdersScreen';
 import VisibilityScreen from './VisibilityScreen';
+import OffreQuartierScreen from './OffreQuartierScreen';
+import CertificatScreen from './CertificatScreen';
 import RevenueScreen from './RevenueScreen';
 import PromotionsScreen from './PromotionsScreen';
 import TerrainScreen from './TerrainScreen';
@@ -40,6 +42,8 @@ type MerchantScreen =
   | 'orders'
   | 'messages'
   | 'visibility'
+  | 'offre_quartier'
+  | 'certificat'
   | 'profile'
   | 'notifications'
   | 'revenue'
@@ -331,6 +335,9 @@ export default function MerchantNavigator({ onLogout }: Props) {
   if (screen === 'messages')
     return <MerchantMessagesScreen onBack={() => setScreen('dashboard')} />;
   if (screen === 'visibility') return <VisibilityScreen onBack={() => setScreen('dashboard')} />;
+  if (screen === 'offre_quartier')
+    return <OffreQuartierScreen onBack={() => setScreen('profile')} />;
+  if (screen === 'certificat') return <CertificatScreen onBack={() => setScreen('profile')} />;
   if (screen === 'revenue') return <RevenueScreen onBack={() => setScreen('profile')} />;
   if (screen === 'payments') return <MerchantPaymentsScreen onBack={() => setScreen('profile')} />;
   if (screen === 'profile')
@@ -339,6 +346,8 @@ export default function MerchantNavigator({ onLogout }: Props) {
         onBack={() => setScreen('dashboard')}
         onStore={() => setScreen('store')}
         onVisibility={() => setScreen('visibility')}
+        onOffreQuartier={() => setScreen('offre_quartier')}
+        onCertificat={() => setScreen('certificat')}
         onRevenue={() => setScreen('revenue')}
         onPayments={() => setScreen('payments')}
         onMyOrders={() => setScreen('myorders')}

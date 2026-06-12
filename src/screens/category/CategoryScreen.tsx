@@ -13,6 +13,7 @@ import { colors, fonts } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import * as shopsService from '../../services/shops';
 import { Shop, calcDistanceMeters, calcDistance, getUserLocation } from '../../services/shops';
+import { getBadgesActifsBatch, RecompenseAttribuee } from '../../services/classementService';
 import { computeStatus, WeekHours } from '../../services/hours';
 import { useT } from '../../i18n';
 
@@ -37,7 +38,11 @@ function getCatMeta(catId: CatId) {
   };
 }
 
-function toShopCard(s: Shop, userLoc?: { lat: number; lng: number } | null): ShopCard_Shop {
+function toShopCard(
+  s: Shop,
+  userLoc: { lat: number; lng: number } | null | undefined,
+  badgeMap: Record<string, RecompenseAttribuee>,
+): ShopCard_Shop {
   let distance = '—';
   if (userLoc && s.latitude != null && s.longitude != null) {
     distance = calcDistance(userLoc.lat, userLoc.lng, s.latitude, s.longitude);
@@ -49,6 +54,7 @@ function toShopCard(s: Shop, userLoc?: { lat: number; lng: number } | null): Sho
     name: s.name,
     logoUrl: s.logoUrl ?? null,
     isVip: s.isVip,
+    isChampion: !!s.merchantId && !!badgeMap[s.merchantId],
     rating: s.rating,
     status: realStatus.isOpen ? 'open' : 'closed',
     statusLabel: realStatus.isOpen ? 'Ouvert' : 'Fermé',
@@ -61,30 +67,46 @@ function applyFilter(
   shops: Shop[],
   filter: FilterId,
   userLoc: { lat: number; lng: number } | null,
+  priorityIds: Set<string>,
 ): Shop[] {
+  let sorted: Shop[];
   switch (filter) {
     case 'top':
-      return [...shops].sort((a, b) => b.rating - a.rating);
+      sorted = [...shops].sort((a, b) => b.rating - a.rating);
+      break;
     case 'open':
-      return [...shops]
+      sorted = [...shops]
         .filter(s => computeStatus(s.openingHours as WeekHours | null, s.isManuallyClose).isOpen)
         .sort((a, b) => b.rating - a.rating);
+      break;
     case 'near':
     default: {
-      if (!userLoc) return shops;
-      return [...shops].sort((a, b) => {
-        const dA =
-          a.latitude != null && a.longitude != null
-            ? calcDistanceMeters(userLoc.lat, userLoc.lng, a.latitude, a.longitude)
-            : Infinity;
-        const dB =
-          b.latitude != null && b.longitude != null
-            ? calcDistanceMeters(userLoc.lat, userLoc.lng, b.latitude, b.longitude)
-            : Infinity;
-        return dA - dB;
-      });
+      if (!userLoc) {
+        sorted = shops;
+      } else {
+        sorted = [...shops].sort((a, b) => {
+          const dA =
+            a.latitude != null && a.longitude != null
+              ? calcDistanceMeters(userLoc.lat, userLoc.lng, a.latitude, a.longitude)
+              : Infinity;
+          const dB =
+            b.latitude != null && b.longitude != null
+              ? calcDistanceMeters(userLoc.lat, userLoc.lng, b.latitude, b.longitude)
+              : Infinity;
+          return dA - dB;
+        });
+      }
     }
   }
+
+  // Priorité recherche : les prestataires récompensés (priorite_recherche)
+  // remontent en tête, sans perturber l'ordre relatif (tri stable).
+  if (priorityIds.size === 0) return sorted;
+  return [...sorted].sort((a, b) => {
+    const aPriority = a.merchantId && priorityIds.has(a.merchantId) ? 0 : 1;
+    const bPriority = b.merchantId && priorityIds.has(b.merchantId) ? 0 : 1;
+    return aPriority - bPriority;
+  });
 }
 
 // ── Écran ─────────────────────────────────────────────────────────────────────
@@ -121,6 +143,7 @@ export default function CategoryScreen({
   const [filter, setFilter] = useState<FilterId>('near');
   const [navTab, setNavTab] = useState<NavTab>('home');
   const [shops, setShops] = useState<Shop[]>([]);
+  const [badgeMap, setBadgeMap] = useState<Record<string, RecompenseAttribuee>>({});
   const [loading, setLoading] = useState(true);
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
 
@@ -132,8 +155,11 @@ export default function CategoryScreen({
     try {
       const data = await shopsService.getShopsByCategory(cat);
       setShops(data);
+      const merchantIds = data.map(s => s.merchantId).filter((id): id is string => !!id);
+      setBadgeMap(await getBadgesActifsBatch(merchantIds).catch(() => ({})));
     } catch {
       setShops([]);
+      setBadgeMap({});
     } finally {
       setLoading(false);
     }
@@ -235,14 +261,23 @@ export default function CategoryScreen({
     [shops, subCat, meta.subcats.length],
   );
 
+  // Prestataires avec priorité de recherche active (récompense de classement)
+  const priorityIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const [merchantId, r] of Object.entries(badgeMap)) {
+      if (r.priorite_recherche) ids.add(merchantId);
+    }
+    return ids;
+  }, [badgeMap]);
+
   const filteredShops = useMemo(
-    () => applyFilter(bySubCat, filter, userLoc),
-    [bySubCat, filter, userLoc],
+    () => applyFilter(bySubCat, filter, userLoc, priorityIds),
+    [bySubCat, filter, userLoc, priorityIds],
   );
 
   const shopCards = useMemo(
-    () => filteredShops.map(s => toShopCard(s, userLoc)),
-    [filteredShops, userLoc],
+    () => filteredShops.map(s => toShopCard(s, userLoc, badgeMap)),
+    [filteredShops, userLoc, badgeMap],
   );
 
   const handleShopPress = useCallback(

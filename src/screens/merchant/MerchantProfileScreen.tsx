@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ import useLanguageStore from '../../store/languageStore';
 import { IcoBack } from '../../components/icons';
 import { ProfileOptionRow, profileRowStyles } from '../../components/common/ProfileOptionRow';
 import { ProfileIdCard } from '../../components/common/ProfileIdCard';
+import { getMonCarrouselQuota, getCertificatActif } from '../../services/classementService';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -120,6 +121,36 @@ const IcoWallet = () => (
       stroke={colors.accent}
     />
     <Path d="M20 12h-4a2 2 0 0 0 0 4h4" stroke={colors.accent} />
+  </Svg>
+);
+
+const IcoCrown = () => (
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path d="M3 7l4 4 5-6 5 6 4-4-2 12H5L3 7z" stroke={colors.accent} />
+    <Path d="M5 21h14" stroke={colors.accent} />
+  </Svg>
+);
+
+const IcoAward = () => (
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path d="M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12z" stroke={colors.accent} />
+    <Path d="M8.5 13.5 7 22l5-3 5 3-1.5-8.5" stroke={colors.accent} />
   </Svg>
 );
 
@@ -251,6 +282,8 @@ interface Props {
   onBack?: () => void;
   onStore?: () => void;
   onVisibility?: () => void;
+  onOffreQuartier?: () => void;
+  onCertificat?: () => void;
   onRevenue?: () => void;
   onPayments?: () => void;
   onMyOrders?: () => void;
@@ -263,6 +296,8 @@ export default function MerchantProfileScreen({
   onBack,
   onStore,
   onVisibility,
+  onOffreQuartier,
+  onCertificat,
   onRevenue,
   onPayments,
   onMyOrders,
@@ -278,12 +313,30 @@ export default function MerchantProfileScreen({
   const [showLangModal, setShowLangModal] = useState(false);
   const [showAPropos, setShowAPropos] = useState(false);
   const [showSignaler, setShowSignaler] = useState(false);
+  const [carrouselEligible, setCarrouselEligible] = useState(false);
+  const [certificatEligible, setCertificatEligible] = useState(false);
 
   const user = useAuthStore(s => s.user);
   const updateProfile = useAuthStore(s => s.updateProfile);
   const shopId = useShopStore(s => s.shopId);
   const updateLogo = useShopStore(s => s.updateLogo);
   const isVip = useShopStore(s => s.profile.isVip ?? false);
+
+  // "Offre di Quartier" — visible seulement si une récompense Top 5 mondial active le débloque
+  useEffect(() => {
+    if (!user?.id) return;
+    getMonCarrouselQuota(user.id)
+      .then(quota => setCarrouselEligible(quota !== null))
+      .catch(() => setCarrouselEligible(false));
+  }, [user?.id]);
+
+  // "Mon Certificat" — visible seulement si une récompense certificat=true est active
+  useEffect(() => {
+    if (!user?.id) return;
+    getCertificatActif(user.id)
+      .then(cert => setCertificatEligible(cert !== null))
+      .catch(() => setCertificatEligible(false));
+  }, [user?.id]);
 
   const displayName = user?.name ?? 'Commerçant';
   const displayPhone = user?.phone ? formatPhoneSenegal(user.phone) : '';
@@ -388,8 +441,26 @@ export default function MerchantProfileScreen({
             title="Mes achats"
             subtitle="Commandes passées chez d'autres"
             onPress={onMyOrders}
-            last
+            last={!carrouselEligible && !certificatEligible}
           />
+          {carrouselEligible && (
+            <ProfileOptionRow
+              icon={<IcoCrown />}
+              title="Offre di Quartier"
+              subtitle="Tes produits mis en avant sur l'accueil"
+              onPress={onOffreQuartier}
+              last={!certificatEligible}
+            />
+          )}
+          {certificatEligible && (
+            <ProfileOptionRow
+              icon={<IcoAward />}
+              title="Mon Certificat"
+              subtitle="Ton certificat officiel à partager"
+              onPress={onCertificat}
+              last
+            />
+          )}
         </View>
 
         <Text style={profileRowStyles.secLbl}>{t.profile.preferences}</Text>

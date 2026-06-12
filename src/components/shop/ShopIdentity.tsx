@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import Avatar from '../Avatar';
+import BadgeRecompenseDore from '../BadgeRecompenseDore';
 
 const IcoStar = () => (
   <Svg width={10} height={10} viewBox="0 0 24 24">
@@ -15,9 +16,10 @@ interface Props {
   logoUrl?: string;
   isVip: boolean;
   isOpen: boolean;
+  badge?: string | null;
 }
 
-export default function ShopIdentity({ initial, logoUrl, isVip, isOpen }: Props) {
+export default function ShopIdentity({ initial, logoUrl, isVip, isOpen, badge }: Props) {
   return (
     // -42 : la moitié du logo (84px) chevauche la bannière du dessus
     <View style={styles.row}>
@@ -26,6 +28,7 @@ export default function ShopIdentity({ initial, logoUrl, isVip, isOpen }: Props)
 
       <View style={styles.meta}>
         <View style={styles.badges}>
+          {!!badge && <BadgeRecompenseDore label={badge} />}
           {isVip && (
             <View style={styles.badgeVip}>
               <IcoStar />
