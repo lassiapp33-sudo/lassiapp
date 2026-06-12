@@ -20,7 +20,9 @@ import HomeNavigator     from './src/screens/home/HomeNavigator';
 import MerchantNavigator from './src/screens/merchant/MerchantNavigator';
 import ErrorBoundary     from './src/components/common/ErrorBoundary';
 import OfflineBanner     from './src/components/common/OfflineBanner';
+import AnnonceModal      from './src/components/common/AnnonceModal';
 import { useConnectionWatcher } from './src/hooks/useConnectionWatcher';
+import { useAnnonces } from './src/hooks/useAnnonces';
 import useAuthStore            from './src/store/authStore';
 import useShopStore             from './src/store/shopStore';
 import useOrdersStore           from './src/store/ordersStore';
@@ -71,6 +73,10 @@ function handleNotifData(data: Record<string, any> | undefined | null) {
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('splash');
+  const userId = useAuthStore(s => s.user?.id ?? null);
+
+  // Annonces système (modale plein écran type "patch notes", une fois par compte)
+  const { annonceCourante, nbRestantes, marquerLue } = useAnnonces(userId);
 
   // Enregistre le token push dès que l'utilisateur est connecté
   usePushToken();
@@ -203,6 +209,7 @@ export default function App() {
     <View style={styles.root} onLayout={onLayout}>
       <StatusBar style="light" />
       <OfflineBanner />
+      <AnnonceModal annonce={annonceCourante} nbRestantes={nbRestantes} onFermer={marquerLue} />
 
       <ErrorBoundary>
       {screen === 'splash' && (
