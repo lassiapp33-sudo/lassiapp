@@ -1,7 +1,7 @@
 /**
  * admin-attribuer-recompense — Edge Function sécurisée pour l'attribution
  * manuelle de récompenses de classement (badge, certificat, priorité
- * recherche, crédit Lassi, carrousel "Offre di Quartier", Top VIP) à un
+ * recherche, crédit Lassi, carrousel "Offre du Quartier", Top VIP) à un
  * prestataire ou un client.
  * Seul un compte avec is_admin = true peut appeler cette fonction.
  */
@@ -24,7 +24,7 @@ function describeRecompenses(row: {
   if (row.certificat) items.push('un certificat de reconnaissance partageable')
   if (row.priorite_recherche) items.push('une priorité dans les résultats de recherche')
   if (row.credit_lassi > 0) items.push(`${row.credit_lassi} FCFA de crédit LASSI`)
-  if (row.carrousel_produits > 0) items.push(`${row.carrousel_produits} emplacement${row.carrousel_produits > 1 ? 's' : ''} dans l'Offre di Quartier`)
+  if (row.carrousel_produits > 0) items.push(`${row.carrousel_produits} emplacement${row.carrousel_produits > 1 ? 's' : ''} dans l'Offre du Quartier`)
   if (row.top_vip) items.push("une mise en avant Top VIP sur la page d'accueil")
   return items.length > 0 ? items.join(', ') : 'un avantage spécial sur votre profil'
 }

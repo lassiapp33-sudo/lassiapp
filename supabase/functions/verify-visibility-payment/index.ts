@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
       user_id: user.id,
       type:    'vip',
       title:   '🎉 Félicitations pour votre achat !',
-      body:    `Grâce à votre achat du forfait « ${sub.plan.label} » (${sub.amount.toLocaleString('fr-FR')} FCFA), vous avez obtenu une mise en avant de votre boutique dans l'Offre di Quartier jusqu'au ${expiryFr}. Profitez-en pour attirer encore plus de nouveaux clients !`,
+      body:    `Grâce à votre achat du forfait « ${sub.plan.label} » (${sub.amount.toLocaleString('fr-FR')} FCFA), vous avez obtenu une mise en avant de votre boutique dans l'Offre du Quartier jusqu'au ${expiryFr}. Profitez-en pour attirer encore plus de nouveaux clients !`,
       data:    { subscription_id: sub.id },
     })
 

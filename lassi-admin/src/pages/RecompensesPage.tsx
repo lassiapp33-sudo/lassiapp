@@ -201,7 +201,7 @@ export default function RecompensesPage() {
           <h1 className="text-2xl font-title font-bold text-white">Récompenses</h1>
           <p className="text-muted text-sm mt-0.5">
             Attribue manuellement badge, certificat, priorité recherche, crédit Lassi,
-            carrousel « Offre di Quartier » ou Top VIP à un prestataire ou un client.
+            carrousel « Offre du Quartier » ou Top VIP à un prestataire ou un client.
           </p>
         </div>
         <button
@@ -428,7 +428,7 @@ export default function RecompensesPage() {
             {form.targetType === 'prestataire' && (
               <div>
                 <label className="flex items-center gap-1.5 text-xs text-muted font-medium mb-1.5 uppercase tracking-wide">
-                  <Megaphone size={14} /> Produits dans le carrousel « Offre di Quartier »
+                  <Megaphone size={14} /> Produits dans le carrousel « Offre du Quartier »
                 </label>
                 <input
                   type="number" min={0} max={5} step={1}
