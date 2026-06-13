@@ -72,7 +72,7 @@ export default function ClassementScreen({ variant, onBack }: Props) {
     variant === 'prestataire'
       ? [
           ...(sousCategorie ? [{ key: 'categorie' as TabKey, label: 'Ma catégorie' }] : []),
-          { key: 'mondial' as TabKey, label: '🌍 Mondial' },
+          { key: 'mondial' as TabKey, label: '🏆 National' },
         ]
       : [
           { key: 'quartier' as TabKey, label: '📍 Mon quartier' },
@@ -85,7 +85,7 @@ export default function ClassementScreen({ variant, onBack }: Props) {
     onglet === 'categorie'
       ? '🏅 Le Top 3 gagne le podium VIP cette semaine !'
       : onglet === 'mondial'
-        ? '👑 Le Top 5 mondial débloque "Offre du Quartier" + récompenses !'
+        ? '👑 Le Top 5 national débloque "Offre du Quartier" + récompenses !'
         : onglet === 'quartier'
           ? '🏅 Le quartier en tête fait la fierté de tous ses commerçants !'
           : '🎖️ Le client n°1 du mois reçoit le badge Supporter n°1 !';

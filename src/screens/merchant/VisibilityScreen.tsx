@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Linking,
+  Modal,
+} from 'react-native';
+import Svg, { Path, Polyline } from 'react-native-svg';
 
 import VisibilityHeader from '../../components/visibility/VisibilityHeader';
 import HeroCard from '../../components/visibility/HeroCard';
@@ -11,9 +20,15 @@ import PayFooter, { PayFooterUnavailable } from '../../components/visibility/Pay
 import ActiveSubCard, { computeSubCardProps } from '../../components/visibility/ActiveSubCard';
 import StatsGrid from '../../components/visibility/StatsGrid';
 import { colors, fonts, radius } from '../../theme';
+import { IcoChevron } from '../../components/icons';
 import useShopStore from '../../store/shopStore';
 import { getProducts } from '../../services/products';
 import { StoreProduct } from '../../types/store';
+import { formatPrice } from '../../utils/format';
+import {
+  PRICE_INCREMENT_PER_EXTRA_PRODUCT,
+  FREE_PRODUCTS_THRESHOLD,
+} from '../../utils/offreQuartierPricing';
 import {
   VisibilityPlan,
   ActiveSub,
@@ -23,7 +38,58 @@ import {
   createVisibilityPayment,
   verifyVisibilityPayment,
   checkPaymentAvailability,
+  getPlanPriceFor,
 } from '../../services/visibilityPayment';
+
+// ─── Les trois offres de visibilité ───────────────────────────────────────────
+
+type OfferType = 'quartier' | 'recherche' | 'carte';
+
+const OFFER_ORDER: OfferType[] = ['quartier', 'recherche', 'carte'];
+
+const OFFER_LABELS: Record<OfferType, string> = {
+  quartier: 'Offre du quartier',
+  recherche: 'Booster ma position dans les recherches',
+  carte: 'Apparaître sur la carte en priorité (épingle dorée)',
+};
+
+// Forfaits "Booster recherche" et "Épingle dorée" — même tarif pour les deux,
+// pas encore branchés à un paiement réel (PayFooterUnavailable).
+const BOOST_PLANS: VisibilityPlan[] = [
+  {
+    id: '1m',
+    label: '1 mois',
+    desc: 'Paiement unique',
+    price: 500,
+    durationMonths: 1,
+    durationDays: 30,
+    oldPrice: null,
+    perLabel: '500 F/mois',
+    popular: false,
+  },
+  {
+    id: '3m',
+    label: '3 mois',
+    desc: 'Économise 500 F',
+    price: 1000,
+    durationMonths: 3,
+    durationDays: 90,
+    oldPrice: 1500,
+    perLabel: '333 F/mois',
+    popular: true,
+  },
+  {
+    id: '6m',
+    label: '6 mois',
+    desc: 'Économise 500 F',
+    price: 2500,
+    durationMonths: 6,
+    durationDays: 180,
+    oldPrice: 3000,
+    perLabel: '417 F/mois',
+    popular: false,
+  },
+];
 
 // ─── Sous-composant renouvellement ────────────────────────────────────────────
 
@@ -78,6 +144,62 @@ function PendingPaymentBanner({ onVerify, loading }: { onVerify: () => void; loa
   );
 }
 
+// ─── Sélecteur d'offre (liste déroulante) ─────────────────────────────────────
+
+const IcoCheck = () => (
+  <Svg
+    width={16}
+    height={16}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Polyline points="20 6 9 17 4 12" stroke={colors.accent} />
+  </Svg>
+);
+
+function OfferPickerModal({
+  visible,
+  selected,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  selected: OfferType;
+  onSelect: (offer: OfferType) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+        <View style={styles.modalCard} onStartShouldSetResponder={() => true}>
+          <Text style={styles.modalTitle}>Choisis ton offre</Text>
+          {OFFER_ORDER.map((offer, i) => (
+            <React.Fragment key={offer}>
+              {i > 0 && <View style={styles.modalSep} />}
+              <TouchableOpacity
+                style={[styles.modalRow, selected === offer && styles.modalRowActive]}
+                onPress={() => {
+                  onSelect(offer);
+                  onClose();
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalLbl, selected === offer && styles.modalLblActive]}>
+                  {OFFER_LABELS[offer]}
+                </Text>
+                {selected === offer ? <IcoCheck /> : <View style={styles.modalCheckPlaceholder} />}
+              </TouchableOpacity>
+            </React.Fragment>
+          ))}
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
 // ─── Types d'état de paiement ─────────────────────────────────────────────────
 
 type PayState =
@@ -99,6 +221,8 @@ interface Props {
 export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: Props) {
   const shopId = useShopStore(s => s.shopId);
 
+  const [offerType, setOfferType] = useState<OfferType>('quartier');
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [view, setView] = useState<VisibilityView>(initialView);
   const [plans, setPlans] = useState<VisibilityPlan[]>([]);
   const [activeSub, setActiveSub] = useState<ActiveSub | null>(null);
@@ -114,7 +238,25 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
     orange_money: boolean;
   } | null>(null);
 
-  const selectedPlan = plans.find(p => p.id === selectedId) ?? plans[1] ?? null;
+  // "Offre du quartier" charge ses forfaits depuis la DB, les deux autres
+  // offres utilisent des forfaits fixes (même tarif pour les deux).
+  const plansForOffer = offerType === 'quartier' ? plans : BOOST_PLANS;
+  const selectedPlan =
+    plansForOffer.find(p => p.id === selectedId) ?? plansForOffer[1] ?? plansForOffer[0] ?? null;
+
+  // Pricing dynamique "Offre du quartier" : le tarif de base couvre 1 ou 2
+  // produits, chaque produit supplémentaire augmente le prix (cf.
+  // offreQuartierPricing.ts). Sans effet sur les autres offres (tarif fixe).
+  const nbProduits = featuredAllProducts ? products.length : selectedProductIds.length;
+  const withDynamicPrice = (plan: VisibilityPlan): VisibilityPlan =>
+    offerType === 'quartier' ? { ...plan, ...getPlanPriceFor(plan, nbProduits) } : plan;
+
+  // ── Changer d'offre depuis la liste déroulante ────────────────────────────
+  const selectOffer = (offer: OfferType) => {
+    setOfferType(offer);
+    setSelectedId('3m');
+    if (offer !== 'quartier') setView('subscribe');
+  };
 
   // ── Chargement initial : plans + abonnement actif ─────────────────────────
   const init = useCallback(async () => {
@@ -156,7 +298,7 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
     setFeaturedAllProducts(prev => !prev);
   };
 
-  // ── Lancer le paiement ────────────────────────────────────────────────────
+  // ── Lancer le paiement (Offre du quartier uniquement) ─────────────────────
   const handlePay = async () => {
     if (!selectedPlan || !shopId) return;
 
@@ -244,27 +386,49 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
     }
   };
 
-  // ── Vue "Déjà abonné" ─────────────────────────────────────────────────────
-  if (view === 'subscribed' && activeSub) {
-    const cardProps = computeSubCardProps({
-      planLabel: activeSub.planLabel,
-      startedAt: activeSub.startedAt,
-      expiresAt: activeSub.expiresAt,
-    });
+  const isPending = payState.type === 'pending';
+  const isVerifying = payState.type === 'verifying';
+  const isPayLoading = payState.type === 'loading';
 
-    return (
-      <View style={styles.root}>
-        <VisibilityHeader title="Offre du quartier" onBack={onBack} />
+  // "Déjà abonné" ne concerne que l'Offre du quartier (seule offre suivie en DB)
+  const showSubscribed = offerType === 'quartier' && view === 'subscribed' && activeSub;
+
+  return (
+    <View style={styles.root}>
+      <VisibilityHeader title="Visibilité" onBack={onBack} />
+
+      {/* Sélecteur d'offre — liste déroulante des 3 offres disponibles */}
+      <View style={styles.selectorWrap}>
+        <Text style={styles.selectorLabel}>Choisis ton offre</Text>
+        <TouchableOpacity
+          style={styles.selector}
+          onPress={() => setPickerOpen(true)}
+          activeOpacity={0.82}
+        >
+          <Text style={styles.selectorTxt} numberOfLines={1}>
+            {OFFER_LABELS[offerType]}
+          </Text>
+          <IcoChevron />
+        </TouchableOpacity>
+      </View>
+
+      {initLoading ? (
+        <View style={styles.loadingWrap}>
+          <Text style={styles.loadingTxt}>Chargement…</Text>
+        </View>
+      ) : showSubscribed && activeSub ? (
+        // ── Vue "Déjà abonné" ───────────────────────────────────────────────
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
           <ActiveSubCard
-            planLabel={cardProps.planLabel}
-            daysLeft={cardProps.daysLeft}
-            expiryDate={cardProps.expiryDate}
-            progress={cardProps.progress}
+            {...computeSubCardProps({
+              planLabel: activeSub.planLabel,
+              startedAt: activeSub.startedAt,
+              expiresAt: activeSub.expiresAt,
+            })}
             productName={activeSub.productName}
             productEmoji={activeSub.productEmoji}
             productCount={activeSub.productCount}
@@ -280,81 +444,87 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
 
           <View style={{ height: 28 }} />
         </ScrollView>
-      </View>
-    );
-  }
-
-  // ── Vue "Souscription" ────────────────────────────────────────────────────
-  if (initLoading || !selectedPlan) {
-    return (
-      <View style={styles.root}>
-        <VisibilityHeader title="Offre du quartier" onBack={onBack} />
+      ) : !selectedPlan ? (
         <View style={styles.loadingWrap}>
           <Text style={styles.loadingTxt}>Chargement…</Text>
         </View>
-      </View>
-    );
-  }
+      ) : (
+        // ── Vue "Souscription" ──────────────────────────────────────────────
+        <>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
+            <HeroCard variant={offerType} />
+            <BenefitsList variant={offerType} />
 
-  const isPending = payState.type === 'pending';
-  const isVerifying = payState.type === 'verifying';
-  const isLoading = payState.type === 'loading';
+            {offerType === 'quartier' && (
+              <>
+                <Text style={styles.secLabel}>Choisis ce que tu veux mettre en avant</Text>
+                <ProductPicker
+                  products={products}
+                  selectedIds={selectedProductIds}
+                  allProducts={featuredAllProducts}
+                  onToggleProduct={toggleProduct}
+                  onToggleAllProducts={toggleAllProducts}
+                />
+                {nbProduits > FREE_PRODUCTS_THRESHOLD && (
+                  <Text style={styles.pricingHint}>
+                    +{formatPrice(PRICE_INCREMENT_PER_EXTRA_PRODUCT)} par produit au-delà de{' '}
+                    {FREE_PRODUCTS_THRESHOLD} — prix mis à jour ci-dessous.
+                  </Text>
+                )}
+              </>
+            )}
 
-  return (
-    <View style={styles.root}>
-      <VisibilityHeader title="Offre du quartier" onBack={onBack} />
+            <Text style={styles.secLabel}>Choisis ton forfait</Text>
+            {plansForOffer.map(plan => (
+              <PlanCard
+                key={plan.id}
+                plan={withDynamicPrice(plan)}
+                selected={plan.id === selectedId}
+                onSelect={() => setSelectedId(plan.id)}
+              />
+            ))}
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <HeroCard />
-        <BenefitsList />
+            {/* Bandeau affiché quand un paiement est en attente */}
+            {offerType === 'quartier' && isPending && (
+              <View style={styles.bannerWrap}>
+                <PendingPaymentBanner onVerify={handleVerify} loading={isVerifying} />
+              </View>
+            )}
 
-        <Text style={styles.secLabel}>Choisis ce que tu veux mettre en avant</Text>
-        <ProductPicker
-          products={products}
-          selectedIds={selectedProductIds}
-          allProducts={featuredAllProducts}
-          onToggleProduct={toggleProduct}
-          onToggleAllProducts={toggleAllProducts}
-        />
+            <View style={{ height: 14 }} />
+          </ScrollView>
 
-        <Text style={styles.secLabel}>Choisis ton forfait</Text>
-        {plans.map(plan => (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            selected={plan.id === selectedId}
-            onSelect={() => setSelectedId(plan.id)}
-          />
-        ))}
+          {/* Footer : indisponible pour les nouvelles offres et si clés non configurées */}
+          {offerType === 'quartier' ? (
+            !isPending &&
+            !isVerifying &&
+            (keysAvailable?.[payMethod] ? (
+              <PayFooter
+                plan={withDynamicPrice(selectedPlan)}
+                payMethod={payMethod}
+                onMethodChange={setPayMethod}
+                onPay={handlePay}
+                loading={isPayLoading}
+              />
+            ) : (
+              <PayFooterUnavailable plan={withDynamicPrice(selectedPlan)} />
+            ))
+          ) : (
+            <PayFooterUnavailable plan={selectedPlan} />
+          )}
+        </>
+      )}
 
-        {/* Bandeau affiché quand un paiement est en attente */}
-        {isPending && (
-          <View style={styles.bannerWrap}>
-            <PendingPaymentBanner onVerify={handleVerify} loading={isVerifying} />
-          </View>
-        )}
-
-        <View style={{ height: 14 }} />
-      </ScrollView>
-
-      {/* Footer : indisponible si clés non configurées, masqué si paiement en attente */}
-      {!isPending &&
-        !isVerifying &&
-        (keysAvailable?.[payMethod] ? (
-          <PayFooter
-            plan={selectedPlan}
-            payMethod={payMethod}
-            onMethodChange={setPayMethod}
-            onPay={handlePay}
-            loading={isLoading}
-          />
-        ) : (
-          <PayFooterUnavailable plan={selectedPlan} />
-        ))}
+      <OfferPickerModal
+        visible={pickerOpen}
+        selected={offerType}
+        onSelect={selectOffer}
+        onClose={() => setPickerOpen(false)}
+      />
     </View>
   );
 }
@@ -364,12 +534,105 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingTop: 4, flexGrow: 1 },
 
+  // Sélecteur d'offre
+  selectorWrap: { paddingHorizontal: 18, marginBottom: 16 },
+  selectorLabel: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  selector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  selectorTxt: {
+    flex: 1,
+    color: colors.white,
+    fontFamily: fonts.title,
+    fontSize: 14,
+  },
+
+  // Modal sélecteur d'offre
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.xl,
+    paddingVertical: 8,
+    overflow: 'hidden',
+  },
+  modalTitle: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 12,
+  },
+  modalSep: {
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  modalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  modalRowActive: {
+    backgroundColor: 'rgba(253,207,52,0.06)',
+  },
+  modalLbl: {
+    flex: 1,
+    color: colors.white,
+    fontFamily: fonts.ui,
+    fontSize: 14,
+  },
+  modalLblActive: {
+    color: colors.accent,
+  },
+  modalCheckPlaceholder: {
+    width: 16,
+    height: 16,
+  },
+
   secLabel: {
     color: colors.white,
     fontFamily: fonts.title,
     fontSize: 16,
     paddingHorizontal: 18,
     paddingBottom: 14,
+  },
+
+  pricingHint: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 11,
+    paddingHorizontal: 18,
+    marginTop: -4,
+    marginBottom: 14,
   },
 
   renewWrap: { paddingHorizontal: 18 },

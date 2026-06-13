@@ -19,27 +19,10 @@ const IcoTrend = () => (
   </Svg>
 );
 
-export default function HeroCard() {
-  return (
-    <View style={styles.card}>
-      {/* Icône */}
-      <View style={styles.iconWrap}>
-        <IcoTrend />
-      </View>
+export type HeroVariant = 'quartier' | 'recherche' | 'carte';
 
-      {/* Titre */}
-      <Text style={styles.title}>Sois vu partout à Dakar</Text>
-
-      {/* Corps */}
-      <Text style={styles.body}>
-        {'Mets un produit en avant dans '}
-        <Text style={styles.accent}>Offre du quartier</Text>
-        {", sur la page d'accueil de tous les clients à proximité. Attire jusqu'à "}
-        <Text style={styles.accent}>5× plus de clients</Text>
-        {'.'}
-      </Text>
-    </View>
-  );
+interface Props {
+  variant?: HeroVariant;
 }
 
 const styles = StyleSheet.create({
@@ -83,3 +66,61 @@ const styles = StyleSheet.create({
     fontFamily: fonts.title,
   },
 });
+
+const CONTENT: Record<HeroVariant, { title: string; body: React.ReactNode }> = {
+  quartier: {
+    title: 'Sois vu partout à Dakar',
+    body: (
+      <>
+        {'Mets un produit en avant dans '}
+        <Text style={styles.accent}>Offre du quartier</Text>
+        {", sur la page d'accueil de tous les clients à proximité. Attire jusqu'à "}
+        <Text style={styles.accent}>5× plus de clients</Text>
+        {'.'}
+      </>
+    ),
+  },
+  recherche: {
+    title: 'Sois en tête des recherches',
+    body: (
+      <>
+        {'Avec '}
+        <Text style={styles.accent}>Booster recherche</Text>
+        {", ta boutique remonte en haut des résultats dès qu'un client cherche dans ta catégorie. Gagne en "}
+        <Text style={styles.accent}>visibilité instantanée</Text>
+        {'.'}
+      </>
+    ),
+  },
+  carte: {
+    title: 'Brille sur la carte',
+    body: (
+      <>
+        {'Avec '}
+        <Text style={styles.accent}>l'épingle dorée</Text>
+        {', ta boutique se démarque en priorité sur la carte de tous les clients à proximité. '}
+        <Text style={styles.accent}>Repérée en un coup d'œil</Text>
+        {'.'}
+      </>
+    ),
+  },
+};
+
+export default function HeroCard({ variant = 'quartier' }: Props) {
+  const { title, body } = CONTENT[variant];
+
+  return (
+    <View style={styles.card}>
+      {/* Icône */}
+      <View style={styles.iconWrap}>
+        <IcoTrend />
+      </View>
+
+      {/* Titre */}
+      <Text style={styles.title}>{title}</Text>
+
+      {/* Corps */}
+      <Text style={styles.body}>{body}</Text>
+    </View>
+  );
+}

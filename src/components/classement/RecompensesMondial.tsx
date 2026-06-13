@@ -29,5 +29,5 @@ const items: RecompenseItem[] = PALIERS_MONDIAL.map(p => ({
 // ─── Liste déroulante des récompenses du Top 40 mondial ──────────────────────
 
 export default function RecompensesMondial() {
-  return <RecompensesAccordion title="🎁 Récompenses du Top 40 Mondial" items={items} />;
+  return <RecompensesAccordion title="🎁 Récompenses du Top 40 National" items={items} />;
 }

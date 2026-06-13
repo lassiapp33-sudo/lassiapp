@@ -170,7 +170,7 @@ export default function OffreQuartierScreen({ onBack }: Props) {
           <Text style={styles.emptyEmoji}>👑</Text>
           <Text style={styles.emptyTitle}>Pas encore débloqué</Text>
           <Text style={styles.emptyTxt}>
-            Termine dans le Top 5 du classement mondial pour débloquer un emplacement dans le
+            Termine dans le Top 5 du classement national pour débloquer un emplacement dans le
             carrousel "Offre du Quartier", mis en avant sur l'accueil de tous les clients.
           </Text>
         </View>
@@ -178,7 +178,9 @@ export default function OffreQuartierScreen({ onBack }: Props) {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           <View style={styles.banner}>
             <Text style={styles.bannerTitle}>
-              {quota.type_classement === 'bienvenue' ? '🎁 Cadeau de bienvenue' : `Top ${quota.rang} mondial 🎉`}
+              {quota.type_classement === 'bienvenue'
+                ? '🎁 Cadeau de bienvenue'
+                : `Top ${quota.rang} national 🎉`}
             </Text>
             <Text style={styles.bannerTxt}>
               Choisis jusqu'à {quotaN} produit{quotaN > 1 ? 's' : ''} à mettre en avant dans le

@@ -19,7 +19,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 1,
     rangMax: 1,
-    badge: '👑 Champion Mondial',
+    badge: '👑 Champion National',
     certificat: true,
     prioriteRecherche: true,
     notifVille: true,
@@ -41,7 +41,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 3,
     rangMax: 3,
-    badge: '🥉 3e Mondial',
+    badge: '🥉 3e National',
     certificat: true,
     prioriteRecherche: true,
     notifVille: true,
@@ -52,7 +52,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 4,
     rangMax: 4,
-    badge: '🏅 Top 4 Mondial',
+    badge: '🏅 Top 4 National',
     certificat: true,
     prioriteRecherche: true,
     notifVille: false,
@@ -63,7 +63,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 5,
     rangMax: 5,
-    badge: '🏅 Top 5 Mondial',
+    badge: '🏅 Top 5 National',
     certificat: true,
     prioriteRecherche: true,
     notifVille: false,
@@ -74,7 +74,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 6,
     rangMax: 10,
-    badge: '⭐ Top 10 Mondial',
+    badge: '⭐ Top 10 National',
     certificat: true,
     prioriteRecherche: true,
     notifVille: false,
@@ -85,7 +85,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 11,
     rangMax: 20,
-    badge: '📈 Top 20 Mondial',
+    badge: '📈 Top 20 National',
     certificat: true,
     prioriteRecherche: false,
     notifVille: false,
@@ -96,7 +96,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 21,
     rangMax: 40,
-    badge: '📋 Top 40 Mondial',
+    badge: '📋 Top 40 National',
     certificat: false,
     prioriteRecherche: false,
     notifVille: false,

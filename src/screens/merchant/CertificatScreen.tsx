@@ -92,7 +92,7 @@ export default function CertificatScreen({ onBack }: Props) {
           <Text style={styles.emptyEmoji}>🏆</Text>
           <Text style={styles.emptyTitle}>Pas encore débloqué</Text>
           <Text style={styles.emptyTxt}>
-            Termine dans le Top 20 du classement mondial pour débloquer ton certificat officiel
+            Termine dans le Top 20 du classement national pour débloquer ton certificat officiel
             partageable.
           </Text>
         </View>

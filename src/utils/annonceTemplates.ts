@@ -47,14 +47,14 @@ export const ANNONCE_TEMPLATES: Record<AnnonceTemplateKey, AnnonceTemplate> = {
   },
   TOP40_MOIS_RESULTATS: {
     titre: '🌍 Résultats du Top 40 du mois',
-    corps: 'Le classement mondial du mois de {periode} est disponible. Découvre les 40 meilleurs prestataires de LASSI.',
+    corps: 'Le classement national du mois de {periode} est disponible. Découvre les 40 meilleurs prestataires de LASSI.',
     icone: '🌍',
     tag: 'classement',
     audience: 'tous',
   },
   TOP40_MOIS_PRESTATAIRE: {
     titre: '🥇 Tu fais partie du Top 40 !',
-    corps: 'Bravo, tu termines {rang}ᵉ au classement mondial de {periode}. Ton profil gagne en visibilité auprès de tous les clients.',
+    corps: 'Bravo, tu termines {rang}ᵉ au classement national de {periode}. Ton profil gagne en visibilité auprès de tous les clients.',
     icone: '🥇',
     tag: 'classement',
     audience: 'prestataires',

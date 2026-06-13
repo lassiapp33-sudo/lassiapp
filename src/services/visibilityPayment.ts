@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { formatPrice } from '../utils/format';
+import { calculateOffreQuartierPrice } from '../utils/offreQuartierPricing';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;
@@ -180,6 +181,22 @@ export async function createVisibilityPayment(params: {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? 'Erreur de paiement');
   return data as CreatePaymentResult;
+}
+
+// ─── Prix dynamique selon le nombre de produits mis en avant ─────────────────
+// Le tarif de base d'un forfait (plan.price / plan.oldPrice) couvre 1 ou 2
+// produits ; chaque produit supplémentaire ajoute un surcoût fixe (cf.
+// offreQuartierPricing.ts). Le même surcoût est appliqué au prix barré pour
+// préserver l'économie affichée ("Économise X F").
+
+export function getPlanPriceFor(
+  plan: VisibilityPlan,
+  nbProduits: number,
+): { price: number; oldPrice: number | null } {
+  return {
+    price: calculateOffreQuartierPrice(plan.price, nbProduits),
+    oldPrice: plan.oldPrice != null ? calculateOffreQuartierPrice(plan.oldPrice, nbProduits) : null,
+  };
 }
 
 // ─── Vérifier un paiement ─────────────────────────────────────────────────────
