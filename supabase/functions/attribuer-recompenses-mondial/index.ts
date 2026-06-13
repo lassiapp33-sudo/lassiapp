@@ -37,7 +37,7 @@ function describeRecompenses(p: typeof PALIERS[number]): string {
   if (p.certificat) items.push('un certificat de reconnaissance partageable')
   if (p.priorite) items.push('une priorité dans les résultats de recherche')
   if (p.credit > 0) items.push(`${p.credit} FCFA de crédit LASSI`)
-  if (p.carrousel > 0) items.push(`${p.carrousel} emplacement${p.carrousel > 1 ? 's' : ''} dans l'Offre di Quartier`)
+  if (p.carrousel > 0) items.push(`${p.carrousel} emplacement${p.carrousel > 1 ? 's' : ''} dans l'Offre du Quartier`)
   if (p.newsletter) items.push('une mise en avant dans notre newsletter')
   return items.join(', ')
 }

@@ -133,10 +133,11 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
 
   const [filter, setFilter] = useState<FavFilter>('all');
   const [favShops, setFavShops] = useState<Shop[]>([]);
-  const [shopsLoading, setShopsLoading] = useState(false);
+  const [shopsLoading, setShopsLoading] = useState(true);
   const [shopsError, setShopsError] = useState(false);
 
   const favorites = useFavoritesStore(s => s.favorites);
+  const favLoading = useFavoritesStore(s => s.loading);
   const loadFavorites = useFavoritesStore(s => s.loadFavorites);
 
   useEffect(() => {
@@ -147,6 +148,7 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
   const loadFavShops = React.useCallback(() => {
     if (favorites.length === 0) {
       setFavShops([]);
+      setShopsLoading(false);
       return;
     }
     setShopsLoading(true);
@@ -173,6 +175,11 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
     () => (filter === 'all' ? favShops : favShops.filter(s => toFavFilter(s.category) === filter)),
     [favShops, filter],
   );
+
+  // Tant que la liste des favoris (store) ou les détails des commerces ne sont
+  // pas prêts, on affiche le loader — jamais "Aucun favori" en transition.
+  const isLoading =
+    favLoading || shopsLoading || (favorites.length > 0 && favShops.length === 0 && !shopsError);
 
   return (
     <LassiScreen
@@ -215,7 +222,7 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}
       >
-        {shopsLoading ? (
+        {isLoading ? (
           <View style={styles.loader}>
             <ActivityIndicator color={colors.accent} />
           </View>

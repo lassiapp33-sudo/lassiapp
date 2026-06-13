@@ -11,7 +11,7 @@ export interface PalierRecompense {
   prioriteRecherche: boolean;
   notifVille: boolean;
   creditLassi: number; // FCFA de crédit interne
-  carrouselProduits: number; // nb produits dans Offre di Quartier (0 = pas d'accès)
+  carrouselProduits: number; // nb produits dans Offre du Quartier (0 = pas d'accès)
   newsletter: boolean;
 }
 

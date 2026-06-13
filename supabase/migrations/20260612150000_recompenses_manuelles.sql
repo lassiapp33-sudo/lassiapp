@@ -5,7 +5,7 @@
 -- Permet à un admin (lassi-admin) d'attribuer manuellement à un
 -- prestataire ou un client n'importe quelle récompense du système de
 -- classement (badge, certificat, priorité recherche, crédit Lassi,
--- carrousel "Offre di Quartier", Top VIP), via une ligne
+-- carrousel "Offre du Quartier", Top VIP), via une ligne
 -- recompenses_attribuees avec type_classement = 'manuel', rang = 0.
 -- L'insertion/désactivation se fait via l'Edge Function
 -- admin-attribuer-recompense (service_role) — aucune nouvelle policy
@@ -13,7 +13,7 @@
 -- publique (recompenses_public_read).
 --
 -- carrousel_presta_manage (20260611150000_classements_securite.sql)
--- n'autorisait la gestion du carrousel "Offre di Quartier" qu'aux
+-- n'autorisait la gestion du carrousel "Offre du Quartier" qu'aux
 -- prestataires détenant une récompense active type_classement='mondial'
 -- avec carrousel_produits > 0. On élargit pour accepter aussi
 -- type_classement='manuel', afin qu'un prestataire ayant reçu un quota

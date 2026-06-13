@@ -19,7 +19,7 @@ import useShopStore from '../../store/shopStore';
 import { getProducts } from '../../services/products';
 import { getTerrainsByMerchant } from '../../services/terrains';
 import { StoreProduct } from '../../types/store';
-import { Terrain, SportType, SPORT_EMOJI } from '../../types/terrain';
+import { Terrain, SPORT_EMOJI } from '../../types/terrain';
 import {
   getMonCarrouselQuota,
   getMesProduitsCarrousel,
@@ -28,16 +28,16 @@ import {
 } from '../../services/classementService';
 import { getErrorMessage, notifyError } from '../../utils/errorUtils';
 
-// Sport pour lequel ce prestataire peut mettre un terrain en avant dans le
-// carrousel (à la place d'un produit) — uniquement réservation foot/basket.
-const TERRAIN_SPORT_BY_SUBCAT: Record<string, SportType> = {
-  reservation_terrain_foot: 'football',
-  reservation_terrain_basket: 'basketball',
-};
+// Sports terrain éligibles à une mise en avant carrousel (emoji ⚽/🏀 à la place d'une photo)
+const TERRAIN_SPORTS_ELIGIBLES = ['football', 'basketball'] as const;
 
-type EligibleItem =
-  | { kind: 'product'; id: string; nom: string; prix: number; photoUrl: string }
-  | { kind: 'terrain'; id: string; nom: string; prix: number; emoji: string };
+interface EligibleItem {
+  kind: 'product' | 'terrain';
+  id: string;
+  nom: string;
+  prix: number;
+  image: string; // URL http(s) ou emoji
+}
 
 const IcoCheck = () => (
   <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" strokeWidth={3}>
@@ -52,13 +52,6 @@ interface Props {
 export default function OffreQuartierScreen({ onBack }: Props) {
   const userId = useAuthStore(s => s.user?.id);
   const shopId = useShopStore(s => s.shopId);
-  const shopSubcategories = useShopStore(s => s.context.subcategories);
-
-  // Réservation de terrain foot/basket → les terrains actifs sont éligibles
-  const terrainSport: SportType | null =
-    shopSubcategories
-      .map(s => TERRAIN_SPORT_BY_SUBCAT[s])
-      .find((sport): sport is SportType => !!sport) ?? null;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -78,42 +71,47 @@ export default function OffreQuartierScreen({ onBack }: Props) {
         getMonCarrouselQuota(userId),
         getMesProduitsCarrousel(userId),
         getProducts(shopId),
-        terrainSport ? getTerrainsByMerchant(userId) : Promise.resolve([]),
+        getTerrainsByMerchant(userId),
       ]);
       setQuota(reward);
       setProducts(allProducts);
-      setTerrains(myTerrains.filter(t => t.actif && t.sport_type === terrainSport));
+      setTerrains(
+        myTerrains.filter(
+          t => t.actif && (TERRAIN_SPORTS_ELIGIBLES as readonly string[]).includes(t.sport_type),
+        ),
+      );
       setSelectedIds(
         mine.map(item => item.product_id ?? item.terrain_id).filter((id): id is string => !!id),
       );
     } catch (e) {
-      notifyError(getErrorMessage(e, 'Impossible de charger ton "Offre di Quartier"'));
+      notifyError(getErrorMessage(e, 'Impossible de charger ton "Offre du Quartier"'));
     } finally {
       setLoading(false);
     }
-  }, [userId, shopId, terrainSport]);
+  }, [userId, shopId]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const quotaN = quota?.carrousel_produits ?? 0;
+  // Éligible : produit en stock avec photo OU emoji, ou terrain foot/basket actif
   const eligibleItems: EligibleItem[] = [
     ...products
-      .filter(p => p.photoUrl && p.stock === 'in')
+      .filter(p => (p.photoUrl || p.emoji) && p.stock === 'in')
       .map(p => ({
         kind: 'product' as const,
         id: p.id,
         nom: p.name,
         prix: calculerPrixClient(p.price),
-        photoUrl: p.photoUrl!,
+        image: p.photoUrl || p.emoji,
       })),
     ...terrains.map(t => ({
       kind: 'terrain' as const,
       id: t.id,
       nom: t.nom,
       prix: calculerPrixClient(t.prix_horaire),
-      emoji: SPORT_EMOJI[t.sport_type],
+      image: SPORT_EMOJI[t.sport_type],
     })),
   ];
 
@@ -142,11 +140,11 @@ export default function OffreQuartierScreen({ onBack }: Props) {
           terrainId: item.kind === 'terrain' ? item.id : null,
           nom: item.nom,
           prix: item.prix,
-          imageUrl: item.kind === 'product' ? item.photoUrl : item.emoji,
+          imageUrl: item.image,
         };
       });
       await setCarrouselSelection(userId, quota.periode, quota.rang, items);
-      Alert.alert('Enregistré', 'Ta sélection "Offre di Quartier" a été mise à jour.');
+      Alert.alert('Enregistré', 'Ta sélection "Offre du Quartier" a été mise à jour.');
     } catch (e) {
       notifyError(getErrorMessage(e, "Impossible d'enregistrer ta sélection"));
     } finally {
@@ -160,7 +158,7 @@ export default function OffreQuartierScreen({ onBack }: Props) {
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.75}>
           <IcoBack />
         </TouchableOpacity>
-        <Text style={styles.title}>👑 Offre di Quartier</Text>
+        <Text style={styles.title}>👑 Offre du Quartier</Text>
       </View>
 
       {loading ? (
@@ -173,7 +171,7 @@ export default function OffreQuartierScreen({ onBack }: Props) {
           <Text style={styles.emptyTitle}>Pas encore débloqué</Text>
           <Text style={styles.emptyTxt}>
             Termine dans le Top 5 du classement mondial pour débloquer un emplacement dans le
-            carrousel "Offre di Quartier", mis en avant sur l'accueil de tous les clients.
+            carrousel "Offre du Quartier", mis en avant sur l'accueil de tous les clients.
           </Text>
         </View>
       ) : (
@@ -184,7 +182,7 @@ export default function OffreQuartierScreen({ onBack }: Props) {
             </Text>
             <Text style={styles.bannerTxt}>
               Choisis jusqu'à {quotaN} produit{quotaN > 1 ? 's' : ''} à mettre en avant dans le
-              carrousel "Offre di Quartier".
+              carrousel "Offre du Quartier".
             </Text>
             <Text style={styles.counter}>
               {selectedIds.length}/{quotaN} sélectionné{selectedIds.length > 1 ? 's' : ''}
@@ -194,8 +192,8 @@ export default function OffreQuartierScreen({ onBack }: Props) {
           {eligibleItems.length === 0 ? (
             <View style={styles.emptyProducts}>
               <Text style={styles.emptyTxt}>
-                Ajoute une photo à au moins un produit en stock de ta vitrine pour pouvoir le mettre
-                en avant ici.
+                Ajoute un produit en stock (avec photo ou emoji) à ta vitrine, ou enregistre un
+                terrain foot/basket, pour pouvoir le mettre en avant ici.
               </Text>
             </View>
           ) : (
@@ -212,15 +210,11 @@ export default function OffreQuartierScreen({ onBack }: Props) {
                     <View style={[styles.checkbox, selected && styles.checkboxSel]}>
                       {selected && <IcoCheck />}
                     </View>
-                    {item.kind === 'product' ? (
-                      <Image
-                        source={{ uri: item.photoUrl }}
-                        style={styles.img}
-                        contentFit="cover"
-                      />
+                    {item.image.startsWith('http') ? (
+                      <Image source={{ uri: item.image }} style={styles.img} contentFit="cover" />
                     ) : (
                       <View style={[styles.img, styles.emojiBox]}>
-                        <Text style={styles.emojiTxt}>{item.emoji}</Text>
+                        <Text style={styles.emojiTxt}>{item.image}</Text>
                       </View>
                     )}
                     <View style={styles.info}>

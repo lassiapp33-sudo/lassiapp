@@ -1,5 +1,5 @@
 -- ============================================================
--- Carrousel "Offre di Quartier" — éligibilité des terrains
+-- Carrousel "Offre du Quartier" — éligibilité des terrains
 -- ============================================================
 -- Les prestataires "réservation de terrain" (foot/basket) peuvent
 -- mettre en avant un de leurs terrains dans le carrousel, en plus de

@@ -5,6 +5,8 @@ import LassiScreen from '../../components/LassiScreen';
 import { IcoBack } from '../../components/icons';
 import PodiumClassement from '../../components/classement/PodiumClassement';
 import ListeClassement from '../../components/classement/ListeClassement';
+import RecompensesMondial from '../../components/classement/RecompensesMondial';
+import RecompensesSousCategorie from '../../components/classement/RecompensesSousCategorie';
 import {
   getClassementSousCategorie,
   getClassementMondial,
@@ -83,7 +85,7 @@ export default function ClassementScreen({ variant, onBack }: Props) {
     onglet === 'categorie'
       ? '🏅 Le Top 3 gagne le podium VIP cette semaine !'
       : onglet === 'mondial'
-        ? '👑 Le Top 5 mondial débloque "Offre di Quartier" + récompenses !'
+        ? '👑 Le Top 5 mondial débloque "Offre du Quartier" + récompenses !'
         : onglet === 'quartier'
           ? '🏅 Le quartier en tête fait la fierté de tous ses commerçants !'
           : '🎖️ Le client n°1 du mois reçoit le badge Supporter n°1 !';
@@ -132,6 +134,9 @@ export default function ClassementScreen({ variant, onBack }: Props) {
             ) : (
               <PodiumClassement top3={top3} variant={avatarVariant} />
             )}
+
+            {onglet === 'categorie' && <RecompensesSousCategorie />}
+            {onglet === 'mondial' && <RecompensesMondial />}
           </View>
         }
         ListFooterComponent={entries.length > 0 ? <Text style={styles.hint}>{hint}</Text> : null}

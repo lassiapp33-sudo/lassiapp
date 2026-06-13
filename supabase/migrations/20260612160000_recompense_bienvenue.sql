@@ -6,7 +6,7 @@
 -- on attribue automatiquement :
 --   - une récompense recompenses_attribuees (type_classement='bienvenue',
 --     rang=0, carrousel_produits=4, est_actif=true) → 4 emplacements
---     offerts dans le carrousel "Offre di Quartier" ;
+--     offerts dans le carrousel "Offre du Quartier" ;
 --   - une notification (type='vip') annonçant ce cadeau, visible dans
 --     l'écran Notifications de l'app.
 --
@@ -36,7 +36,7 @@ BEGIN
 
     INSERT INTO notifications (user_id, type, title, body, data) VALUES (
       NEW.id, 'vip', '🎁 Bienvenue sur LASSI !',
-      'Pour démarrer, tu reçois 4 emplacements offerts dans le carrousel "Offre di Quartier" pour mettre en avant tes produits auprès de tous les clients.',
+      'Pour démarrer, tu reçois 4 emplacements offerts dans le carrousel "Offre du Quartier" pour mettre en avant tes produits auprès de tous les clients.',
       '{}'::jsonb
     );
   END IF;

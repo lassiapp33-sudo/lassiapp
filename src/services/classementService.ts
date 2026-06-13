@@ -178,7 +178,7 @@ export const getBadgesActifsBatch = async (
   return best;
 };
 
-// --- Carrousel Offre di Quartier (top 5 mondial) ---
+// --- Carrousel Offre du Quartier (top 5 mondial) ---
 export const getCarrouselOffreQuartier = async (): Promise<CarrouselItem[]> => {
   const { data, error } = await supabase
     .from('carrousel_offre_quartier')

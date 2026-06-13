@@ -330,7 +330,7 @@ export default function MerchantProfileScreen({
     s => s === 'reservation_terrain_foot' || s === 'reservation_terrain_basket',
   );
 
-  // "Offre di Quartier" — visible seulement si une récompense Top 5 mondial active le débloque
+  // "Offre du Quartier" — visible seulement si une récompense Top 5 mondial active le débloque
   useEffect(() => {
     if (!user?.id) return;
     getMonCarrouselQuota(user.id)
@@ -463,7 +463,7 @@ export default function MerchantProfileScreen({
           {carrouselEligible && (
             <ProfileOptionRow
               icon={<IcoCrown />}
-              title="Offre di Quartier"
+              title="Offre du Quartier"
               subtitle="Tes produits mis en avant sur l'accueil"
               onPress={onOffreQuartier}
               last={!certificatEligible}

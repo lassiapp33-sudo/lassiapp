@@ -10,7 +10,7 @@ interface Props {
 }
 
 // Modal de bienvenue affiché une seule fois, à la création du compte
-// prestataire — annonce le cadeau "Offre di Quartier" (recompense
+// prestataire — annonce le cadeau "Offre du Quartier" (recompense
 // type_classement='bienvenue', voir 20260612160000_recompense_bienvenue.sql).
 export default function WelcomeRewardModal({
   visible,
@@ -27,7 +27,7 @@ export default function WelcomeRewardModal({
           <Text style={s.txt}>
             Pour démarrer, tu reçois {carrouselProduits} emplacement
             {carrouselProduits > 1 ? 's' : ''} offert{carrouselProduits > 1 ? 's' : ''} dans le
-            carrousel "Offre di Quartier" — mets en avant tes meilleurs produits auprès de tous
+            carrousel "Offre du Quartier" — mets en avant tes meilleurs produits auprès de tous
             les clients dès aujourd'hui.
           </Text>
 

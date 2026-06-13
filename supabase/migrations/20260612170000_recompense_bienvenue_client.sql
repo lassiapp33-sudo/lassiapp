@@ -3,7 +3,7 @@
 -- Migration 2026-06-12 (Phase 14 bis)
 -- ============================================================
 -- Étend trg_recompense_bienvenue() (20260612160000_recompense_bienvenue.sql) :
--- en plus du cadeau "Offre di Quartier" pour les nouveaux prestataires,
+-- en plus du cadeau "Offre du Quartier" pour les nouveaux prestataires,
 -- un nouveau compte CLIENT reçoit une notification (type='vip') qui
 -- explique en quelques points l'essentiel de LASSI (découvrir les
 -- commerces du quartier, commander, suivre la commande, discuter avec
@@ -30,7 +30,7 @@ BEGIN
 
       INSERT INTO notifications (user_id, type, title, body, data) VALUES (
         NEW.id, 'vip', '🎁 Bienvenue sur LASSI !',
-        'Pour démarrer, tu reçois 4 emplacements offerts dans le carrousel "Offre di Quartier" pour mettre en avant tes produits auprès de tous les clients.',
+        'Pour démarrer, tu reçois 4 emplacements offerts dans le carrousel "Offre du Quartier" pour mettre en avant tes produits auprès de tous les clients.',
         '{}'::jsonb
       );
     END IF;

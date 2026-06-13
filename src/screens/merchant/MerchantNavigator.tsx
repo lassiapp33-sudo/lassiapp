@@ -304,7 +304,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
               setScreen('classement');
               return;
             }
-            // Cadeau (bienvenue, manuel, mérite mondial) → où l'appliquer : Offre di Quartier
+            // Cadeau (bienvenue, manuel, mérite mondial) → où l'appliquer : Offre du Quartier
             setScreen('offre_quartier');
           }
         }}

@@ -19,7 +19,7 @@
 --
 -- 2) carrousel_presta_manage (20260611_classements.sql) permettait à
 --    n'importe quel prestataire d'insérer ses propres produits dans le
---    carrousel public "Offre di Quartier", sans vérifier qu'il fait
+--    carrousel public "Offre du Quartier", sans vérifier qu'il fait
 --    partie du top 5 mondial du mois en cours.
 --    -> on exige désormais une récompense active
 --       (recompenses_attribuees.type_classement='mondial', est_actif=true,

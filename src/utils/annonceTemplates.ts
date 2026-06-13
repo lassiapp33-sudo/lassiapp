@@ -75,21 +75,21 @@ export const ANNONCE_TEMPLATES: Record<AnnonceTemplateKey, AnnonceTemplate> = {
   },
   OFFRE_ACTIVEE: {
     titre: '✨ Offre du Quartier activée',
-    corps: 'Tu as droit à {nbProduits} emplacement{plurielProduits} dans le carrousel "Offre di Quartier". Choisis tes produits pour gagner en visibilité.',
+    corps: 'Tu as droit à {nbProduits} emplacement{plurielProduits} dans le carrousel "Offre du Quartier". Choisis tes produits pour gagner en visibilité.',
     icone: '✨',
     tag: 'offre',
     audience: 'prestataires',
   },
   OFFRE_EXPIRE_BIENTOT: {
     titre: '⏳ Ton offre expire bientôt',
-    corps: 'Ta place dans "Offre di Quartier" expire dans {jours} jour{plurielJours}. Profite des derniers jours de visibilité !',
+    corps: 'Ta place dans "Offre du Quartier" expire dans {jours} jour{plurielJours}. Profite des derniers jours de visibilité !',
     icone: '⏳',
     tag: 'offre',
     audience: 'prestataires',
   },
   OFFRE_EXPIREE: {
     titre: '📭 Ton offre a expiré',
-    corps: 'Ta place dans "Offre di Quartier" est arrivée à expiration. Continue de progresser dans le classement pour y revenir !',
+    corps: 'Ta place dans "Offre du Quartier" est arrivée à expiration. Continue de progresser dans le classement pour y revenir !',
     icone: '📭',
     tag: 'offre',
     audience: 'prestataires',
@@ -110,7 +110,7 @@ export const ANNONCE_TEMPLATES: Record<AnnonceTemplateKey, AnnonceTemplate> = {
   },
   BIENVENUE_PRESTATAIRE: {
     titre: '🎁 Bienvenue sur LASSI !',
-    corps: 'Pour démarrer, tu reçois 4 emplacements offerts dans le carrousel "Offre di Quartier" pour mettre en avant tes produits auprès de tous les clients.',
+    corps: 'Pour démarrer, tu reçois 4 emplacements offerts dans le carrousel "Offre du Quartier" pour mettre en avant tes produits auprès de tous les clients.',
     icone: '🎁',
     tag: 'bienvenue',
     audience: 'prestataires',

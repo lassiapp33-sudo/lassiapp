@@ -15,7 +15,7 @@ interface Props {
   onPress?: (item: CarrouselItem) => void;
 }
 
-export default function OffreDiQuartier({ onPress }: Props) {
+export default function OffreDuQuartier({ onPress }: Props) {
   const [produits, setProduits] = useState<CarrouselItem[]>([]);
   const listRef = useRef<FlatList<CarrouselItem>>(null);
   const indexRef = useRef(0);
@@ -40,7 +40,7 @@ export default function OffreDiQuartier({ onPress }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>✨ Offre di Quartier</Text>
+      <Text style={styles.title}>✨ Offre du Quartier</Text>
       <FlatList
         ref={listRef}
         data={produits}

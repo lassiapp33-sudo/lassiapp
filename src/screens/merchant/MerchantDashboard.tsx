@@ -100,7 +100,7 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
     refreshLocation(); // vraie position GPS dès le montage
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cadeau de bienvenue (4 emplacements "Offre di Quartier") — affiché une
+  // Cadeau de bienvenue (4 emplacements "Offre du Quartier") — affiché une
   // seule fois, mémorisé par compte via AsyncStorage.
   useEffect(() => {
     if (!userId) return;
@@ -114,7 +114,7 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
           setWelcomeReward({ carrouselProduits: reward.carrousel_produits });
         }
       } catch {
-        // silencieux — le cadeau reste consultable depuis Offre di Quartier
+        // silencieux — le cadeau reste consultable depuis Offre du Quartier
       }
     })();
   }, [userId]);
