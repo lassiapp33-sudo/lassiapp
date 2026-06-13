@@ -17,7 +17,9 @@ import { calculerPrixClient } from '../../config/payment';
 import useAuthStore from '../../store/authStore';
 import useShopStore from '../../store/shopStore';
 import { getProducts } from '../../services/products';
+import { getTerrainsByMerchant } from '../../services/terrains';
 import { StoreProduct } from '../../types/store';
+import { Terrain, SportType, SPORT_EMOJI } from '../../types/terrain';
 import {
   getMonCarrouselQuota,
   getMesProduitsCarrousel,
@@ -25,6 +27,17 @@ import {
   RecompenseAttribuee,
 } from '../../services/classementService';
 import { getErrorMessage, notifyError } from '../../utils/errorUtils';
+
+// Sport pour lequel ce prestataire peut mettre un terrain en avant dans le
+// carrousel (à la place d'un produit) — uniquement réservation foot/basket.
+const TERRAIN_SPORT_BY_SUBCAT: Record<string, SportType> = {
+  reservation_terrain_foot: 'football',
+  reservation_terrain_basket: 'basketball',
+};
+
+type EligibleItem =
+  | { kind: 'product'; id: string; nom: string; prix: number; photoUrl: string }
+  | { kind: 'terrain'; id: string; nom: string; prix: number; emoji: string };
 
 const IcoCheck = () => (
   <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" strokeWidth={3}>
@@ -39,11 +52,19 @@ interface Props {
 export default function OffreQuartierScreen({ onBack }: Props) {
   const userId = useAuthStore(s => s.user?.id);
   const shopId = useShopStore(s => s.shopId);
+  const shopSubcategories = useShopStore(s => s.context.subcategories);
+
+  // Réservation de terrain foot/basket → les terrains actifs sont éligibles
+  const terrainSport: SportType | null =
+    shopSubcategories
+      .map(s => TERRAIN_SPORT_BY_SUBCAT[s])
+      .find((sport): sport is SportType => !!sport) ?? null;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [quota, setQuota] = useState<RecompenseAttribuee | null>(null);
   const [products, setProducts] = useState<StoreProduct[]>([]);
+  const [terrains, setTerrains] = useState<Terrain[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const load = useCallback(async () => {
@@ -53,27 +74,48 @@ export default function OffreQuartierScreen({ onBack }: Props) {
     }
     setLoading(true);
     try {
-      const [reward, mine, allProducts] = await Promise.all([
+      const [reward, mine, allProducts, myTerrains] = await Promise.all([
         getMonCarrouselQuota(userId),
         getMesProduitsCarrousel(userId),
         getProducts(shopId),
+        terrainSport ? getTerrainsByMerchant(userId) : Promise.resolve([]),
       ]);
       setQuota(reward);
       setProducts(allProducts);
-      setSelectedIds(mine.map(item => item.product_id).filter((id): id is string => !!id));
+      setTerrains(myTerrains.filter(t => t.actif && t.sport_type === terrainSport));
+      setSelectedIds(
+        mine.map(item => item.product_id ?? item.terrain_id).filter((id): id is string => !!id),
+      );
     } catch (e) {
       notifyError(getErrorMessage(e, 'Impossible de charger ton "Offre di Quartier"'));
     } finally {
       setLoading(false);
     }
-  }, [userId, shopId]);
+  }, [userId, shopId, terrainSport]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const quotaN = quota?.carrousel_produits ?? 0;
-  const eligibleProducts = products.filter(p => p.photoUrl && p.stock === 'in');
+  const eligibleItems: EligibleItem[] = [
+    ...products
+      .filter(p => p.photoUrl && p.stock === 'in')
+      .map(p => ({
+        kind: 'product' as const,
+        id: p.id,
+        nom: p.name,
+        prix: calculerPrixClient(p.price),
+        photoUrl: p.photoUrl!,
+      })),
+    ...terrains.map(t => ({
+      kind: 'terrain' as const,
+      id: t.id,
+      nom: t.nom,
+      prix: calculerPrixClient(t.prix_horaire),
+      emoji: SPORT_EMOJI[t.sport_type],
+    })),
+  ];
 
   const toggle = (id: string) => {
     setSelectedIds(prev => {
@@ -94,12 +136,13 @@ export default function OffreQuartierScreen({ onBack }: Props) {
     setSaving(true);
     try {
       const items = selectedIds.map(id => {
-        const p = eligibleProducts.find(prod => prod.id === id)!;
+        const item = eligibleItems.find(it => it.id === id)!;
         return {
-          productId: p.id,
-          nom: p.name,
-          prix: calculerPrixClient(p.price),
-          imageUrl: p.photoUrl!,
+          productId: item.kind === 'product' ? item.id : null,
+          terrainId: item.kind === 'terrain' ? item.id : null,
+          nom: item.nom,
+          prix: item.prix,
+          imageUrl: item.kind === 'product' ? item.photoUrl : item.emoji,
         };
       });
       await setCarrouselSelection(userId, quota.periode, quota.rang, items);
@@ -148,7 +191,7 @@ export default function OffreQuartierScreen({ onBack }: Props) {
             </Text>
           </View>
 
-          {eligibleProducts.length === 0 ? (
+          {eligibleItems.length === 0 ? (
             <View style={styles.emptyProducts}>
               <Text style={styles.emptyTxt}>
                 Ajoute une photo à au moins un produit en stock de ta vitrine pour pouvoir le mettre
@@ -157,24 +200,34 @@ export default function OffreQuartierScreen({ onBack }: Props) {
             </View>
           ) : (
             <View style={styles.list}>
-              {eligibleProducts.map(p => {
-                const selected = selectedIds.includes(p.id);
+              {eligibleItems.map(item => {
+                const selected = selectedIds.includes(item.id);
                 return (
                   <TouchableOpacity
-                    key={p.id}
+                    key={item.id}
                     style={[styles.card, selected && styles.cardSel]}
-                    onPress={() => toggle(p.id)}
+                    onPress={() => toggle(item.id)}
                     activeOpacity={0.82}
                   >
                     <View style={[styles.checkbox, selected && styles.checkboxSel]}>
                       {selected && <IcoCheck />}
                     </View>
-                    <Image source={{ uri: p.photoUrl }} style={styles.img} contentFit="cover" />
+                    {item.kind === 'product' ? (
+                      <Image
+                        source={{ uri: item.photoUrl }}
+                        style={styles.img}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <View style={[styles.img, styles.emojiBox]}>
+                        <Text style={styles.emojiTxt}>{item.emoji}</Text>
+                      </View>
+                    )}
                     <View style={styles.info}>
                       <Text style={styles.name} numberOfLines={1}>
-                        {p.name}
+                        {item.nom}
                       </Text>
-                      <Text style={styles.price}>{formatPrice(calculerPrixClient(p.price))}</Text>
+                      <Text style={styles.price}>{formatPrice(item.prix)}</Text>
                     </View>
                   </TouchableOpacity>
                 );
@@ -326,6 +379,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     flexShrink: 0,
   },
+  emojiBox: {
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emojiTxt: { fontSize: 22 },
 
   info: { flex: 1 },
   name: {

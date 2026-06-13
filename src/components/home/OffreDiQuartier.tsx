@@ -57,12 +57,18 @@ export default function OffreDiQuartier({ onPress }: Props) {
             activeOpacity={0.85}
             onPress={() => onPress?.(item)}
           >
-            <Image
-              source={{ uri: item.image_url }}
-              style={styles.img}
-              contentFit="cover"
-              transition={150}
-            />
+            {item.image_url.startsWith('http') ? (
+              <Image
+                source={{ uri: item.image_url }}
+                style={styles.img}
+                contentFit="cover"
+                transition={150}
+              />
+            ) : (
+              <View style={[styles.img, styles.emojiBox]}>
+                <Text style={styles.emojiTxt}>{item.image_url}</Text>
+              </View>
+            )}
             <View style={styles.overlay}>
               <Text style={styles.nom} numberOfLines={1}>
                 {item.nom}
@@ -100,6 +106,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   img: { width: '100%', height: '100%' },
+  emojiBox: { alignItems: 'center', justifyContent: 'center' },
+  emojiTxt: { fontSize: 64 },
   overlay: {
     position: 'absolute',
     bottom: 0,
