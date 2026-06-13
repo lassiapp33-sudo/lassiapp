@@ -5,8 +5,7 @@ interface Props {
   width: number;
 }
 
-// Reflet doré diagonal en boucle — même animation que LassiRoiScintillant
-// (sweep rapide puis retour lent hors-champ).
+// Reflet doré diagonal en boucle (sweep rapide puis retour lent hors-champ).
 export default function ShimmerOverlay({ width }: Props) {
   const sheenX = useRef(new Animated.Value(-width * 1.2)).current;
 

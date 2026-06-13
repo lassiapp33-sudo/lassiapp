@@ -16,6 +16,8 @@ interface Props {
   children: React.ReactNode;
   /** Style supplémentaire sur le conteneur racine */
   style?: ViewStyle;
+  /** Désactive le fondu superposé en haut de la zone défilante */
+  hideTopFade?: boolean;
 }
 
 /**
@@ -28,7 +30,7 @@ interface Props {
  * Le fondu est rendu EN DERNIER dans l'arbre JSX → peint par-dessus
  * la FlatList/ScrollView native sur iOS sans zIndex hack.
  */
-export default function LassiScreen({ header, footer, children, style }: Props) {
+export default function LassiScreen({ header, footer, children, style, hideTopFade }: Props) {
   const [headerH, setHeaderH] = useState(0);
 
   return (
@@ -43,7 +45,7 @@ export default function LassiScreen({ header, footer, children, style }: Props) 
       {footer}
 
       {/* ── Fondu haut — rendu après tout le reste → toujours au-dessus ─── */}
-      {headerH > 0 && (
+      {headerH > 0 && !hideTopFade && (
         <View style={[s.topFade, { top: headerH }]} pointerEvents="none">
           {TOP_FADE_ROWS}
         </View>

@@ -90,7 +90,7 @@ export default function ClassementScreen({ variant, onBack }: Props) {
 
   if (loading) {
     return (
-      <LassiScreen header={<Header onBack={onBack} />}>
+      <LassiScreen header={<Header onBack={onBack} />} hideTopFade>
         <View style={styles.loader}>
           <ActivityIndicator color={colors.accent} />
         </View>
@@ -99,7 +99,7 @@ export default function ClassementScreen({ variant, onBack }: Props) {
   }
 
   return (
-    <LassiScreen header={<Header onBack={onBack} />}>
+    <LassiScreen header={<Header onBack={onBack} />} hideTopFade>
       <ListeClassement
         entries={reste}
         monId={userId}

@@ -220,7 +220,7 @@ export default function QuickActions({
           badge={undefined}
           onPress={() => onPress?.('avis')}
         />
-        {showTerrains && !isSlotShop && (
+        {showTerrains && !isSlotShop ? (
           <ActionCard
             Icon={IcoGrid}
             iconBg="rgba(95,211,138,.13)"
@@ -229,18 +229,29 @@ export default function QuickActions({
             desc="Gérer, réservations, scanner QR"
             onPress={() => onPress?.('terrains')}
           />
+        ) : (
+          <ActionCard
+            Icon={IcoTrophy}
+            iconBg="rgba(253,207,52,.13)"
+            iconStroke={colors.accent}
+            title="Classement"
+            desc="Ma position cette semaine"
+            onPress={() => onPress?.('classement')}
+          />
         )}
       </View>
-      <View style={styles.row}>
-        <ActionCard
-          Icon={IcoTrophy}
-          iconBg="rgba(253,207,52,.13)"
-          iconStroke={colors.accent}
-          title="Classement"
-          desc="Ma position cette semaine"
-          onPress={() => onPress?.('classement')}
-        />
-      </View>
+      {showTerrains && !isSlotShop && (
+        <View style={styles.row}>
+          <ActionCard
+            Icon={IcoTrophy}
+            iconBg="rgba(253,207,52,.13)"
+            iconStroke={colors.accent}
+            title="Classement"
+            desc="Ma position cette semaine"
+            onPress={() => onPress?.('classement')}
+          />
+        </View>
+      )}
     </View>
   );
 }

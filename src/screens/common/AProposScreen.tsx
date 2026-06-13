@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import Constants from 'expo-constants';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import LassiLogo from '../../components/LassiLogo';
-import LassiRoiScintillant from '../../components/LassiRoiScintillant';
 import LassiScreen from '../../components/LassiScreen';
 import MascoHomeBtn from '../../components/MascoHomeBtn';
 import { contacterServiceClient } from '../../config/contact';
@@ -72,7 +71,11 @@ export default function AProposScreen({ onBack }: Props) {
       >
         {/* ── Logo + mascotte ───────────────────────────────────────────── */}
         <View style={s.hero}>
-          <LassiRoiScintillant />
+          <Image
+            source={require('../../../assets/mascotte/lassi-roi-couronne.png')}
+            style={s.mascotte}
+            resizeMode="contain"
+          />
           <LassiLogo width={160} style={s.logo} />
           <Text style={s.slogan}>Ton quartier dans ta poche</Text>
         </View>
@@ -168,6 +171,10 @@ const s = StyleSheet.create({
     paddingTop: 32,
     paddingBottom: 8,
     gap: 12,
+  },
+  mascotte: {
+    width: 190,
+    height: 190,
   },
   logo: {
     marginTop: 4,

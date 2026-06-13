@@ -2,6 +2,7 @@ import React, { useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   FlatList,
   TouchableOpacity,
@@ -14,7 +15,8 @@ import {
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { colors, fonts, radius, spacing } from '../theme';
 import LassiLogo from '../components/LassiLogo';
-import { LassiMascotte } from '../components/LassiMascotte';
+
+const MASCOTTE_ROI = require('../../assets/mascotte/lassi-roi-salut.png');
 
 // LayoutAnimation Android
 if (Platform.OS === 'android') {
@@ -172,7 +174,7 @@ export default function OnboardingScreen({ onFinish }: Props) {
             {/* Carte illustration — mascotte sur le premier slide */}
             <View style={[styles.illusCard, index === 0 && styles.illusCardMascotte]}>
               {index === 0 ? (
-                <LassiMascotte forme="welcome" taille={120} actif={currentIndex === 0} />
+                <Image source={MASCOTTE_ROI} style={styles.mascotteRoi} resizeMode="contain" />
               ) : (
                 item.icon
               )}
@@ -250,6 +252,10 @@ const styles = StyleSheet.create({
   illusCardMascotte: {
     backgroundColor: 'transparent',
     borderColor: 'transparent',
+  },
+  mascotteRoi: {
+    width: 120,
+    height: 180,
   },
 
   slideTitle: {

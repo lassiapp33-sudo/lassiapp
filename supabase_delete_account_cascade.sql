@@ -77,6 +77,36 @@ ALTER TABLE messages
   ADD  CONSTRAINT messages_conversation_id_fkey
        FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE;
 
+-- ─── 12. Profil → Récompenses attribuées (prestataire) ───────────────────────
+ALTER TABLE recompenses_attribuees
+  DROP CONSTRAINT IF EXISTS recompenses_attribuees_prestataire_id_fkey,
+  ADD  CONSTRAINT recompenses_attribuees_prestataire_id_fkey
+       FOREIGN KEY (prestataire_id) REFERENCES profiles(id) ON DELETE CASCADE;
+
+-- ─── 13. Profil → Récompenses attribuées (client) ─────────────────────────────
+ALTER TABLE recompenses_attribuees
+  DROP CONSTRAINT IF EXISTS recompenses_attribuees_client_id_fkey,
+  ADD  CONSTRAINT recompenses_attribuees_client_id_fkey
+       FOREIGN KEY (client_id) REFERENCES profiles(id) ON DELETE CASCADE;
+
+-- ─── 14. Profil → Classements (prestataire) ───────────────────────────────────
+ALTER TABLE classements
+  DROP CONSTRAINT IF EXISTS classements_prestataire_id_fkey,
+  ADD  CONSTRAINT classements_prestataire_id_fkey
+       FOREIGN KEY (prestataire_id) REFERENCES profiles(id) ON DELETE CASCADE;
+
+-- ─── 15. Profil → Classements (client) ─────────────────────────────────────────
+ALTER TABLE classements
+  DROP CONSTRAINT IF EXISTS classements_client_id_fkey,
+  ADD  CONSTRAINT classements_client_id_fkey
+       FOREIGN KEY (client_id) REFERENCES profiles(id) ON DELETE CASCADE;
+
+-- ─── 16. Profil → Score client (prestataire préféré, SET NULL) ────────────────
+ALTER TABLE client_scores
+  DROP CONSTRAINT IF EXISTS client_scores_prestataire_prefere_id_fkey,
+  ADD  CONSTRAINT client_scores_prestataire_prefere_id_fkey
+       FOREIGN KEY (prestataire_prefere_id) REFERENCES profiles(id) ON DELETE SET NULL;
+
 -- ─── Vérification (optionnel) ─────────────────────────────────────────────────
 -- SELECT conname, confdeltype
 -- FROM pg_constraint
@@ -86,6 +116,7 @@ ALTER TABLE messages
 --     'conversations'::regclass, 'messages'::regclass,
 --     'products'::regclass, 'orders'::regclass,
 --     'order_items'::regclass, 'debts'::regclass,
---     'debt_transactions'::regclass
+--     'debt_transactions'::regclass, 'recompenses_attribuees'::regclass,
+--     'classements'::regclass, 'client_scores'::regclass
 --   );
 -- confdeltype = 'c' → CASCADE, 'n' → SET NULL

@@ -281,6 +281,7 @@ const IcoTrash = () => (
 interface Props {
   onBack?: () => void;
   onStore?: () => void;
+  onTerrains?: () => void;
   onVisibility?: () => void;
   onOffreQuartier?: () => void;
   onCertificat?: () => void;
@@ -295,6 +296,7 @@ interface Props {
 export default function MerchantProfileScreen({
   onBack,
   onStore,
+  onTerrains,
   onVisibility,
   onOffreQuartier,
   onCertificat,
@@ -321,6 +323,12 @@ export default function MerchantProfileScreen({
   const shopId = useShopStore(s => s.shopId);
   const updateLogo = useShopStore(s => s.updateLogo);
   const isVip = useShopStore(s => s.profile.isVip ?? false);
+  const shopSubcategories = useShopStore(s => s.context.subcategories);
+
+  // Terrains (foot/basket) : "Ma vitrine" est remplacée par "Mes terrains"
+  const isSlotShop = shopSubcategories.some(
+    s => s === 'reservation_terrain_foot' || s === 'reservation_terrain_basket',
+  );
 
   // "Offre di Quartier" — visible seulement si une récompense Top 5 mondial active le débloque
   useEffect(() => {
@@ -412,12 +420,21 @@ export default function MerchantProfileScreen({
 
         <Text style={profileRowStyles.secLbl}>{t.profile.myBusiness}</Text>
         <View style={profileRowStyles.grp}>
-          <ProfileOptionRow
-            icon={<IcoGrid />}
-            title={t.profile.myStore}
-            subtitle={t.profile.myStoreSub}
-            onPress={onStore}
-          />
+          {isSlotShop ? (
+            <ProfileOptionRow
+              icon={<IcoGrid />}
+              title="Mes terrains"
+              subtitle="Gérer, réservations, scanner QR"
+              onPress={onTerrains}
+            />
+          ) : (
+            <ProfileOptionRow
+              icon={<IcoGrid />}
+              title={t.profile.myStore}
+              subtitle={t.profile.myStoreSub}
+              onPress={onStore}
+            />
+          )}
           <ProfileOptionRow
             icon={<IcoTrend />}
             title={t.profile.myVisibility}

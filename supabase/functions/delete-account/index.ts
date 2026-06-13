@@ -69,7 +69,8 @@ serve(async (req) => {
     }
 
     // ── 4. Supprimer le profil ─────────────────────────────────────────────
-    // CASCADE couvre : notifications, favorites, conversations (client).
+    // CASCADE couvre : notifications, favorites, conversations (client),
+    // recompenses_attribuees, classements (prestataire + client).
     const { error: profileErr } = await sb
       .from('profiles')
       .delete()

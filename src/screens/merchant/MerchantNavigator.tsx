@@ -345,6 +345,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
       <MerchantProfileScreen
         onBack={() => setScreen('dashboard')}
         onStore={() => setScreen('store')}
+        onTerrains={() => setScreen('terrains')}
         onVisibility={() => setScreen('visibility')}
         onOffreQuartier={() => setScreen('offre_quartier')}
         onCertificat={() => setScreen('certificat')}
