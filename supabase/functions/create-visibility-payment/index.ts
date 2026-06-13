@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID, isSafeString, isBoolean } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
+import { calculateOffreQuartierPrice } from '../_shared/offreQuartierPricing.ts'
 
 const PLAN_ID_RE = /^[a-z0-9]+$/i
 const MAX_FEATURED_PRODUCTS = 50
@@ -102,8 +103,9 @@ Deno.serve(async (req) => {
 
     if (!shop) return json({ error: 'Boutique introuvable' }, 404)
 
-    // ⑤ Charger le forfait depuis la DB — prix officiel côté serveur
-    //    (on n'accepte jamais un prix envoyé par le client)
+    // ⑤ Charger le forfait depuis la DB — prix de base officiel côté serveur
+    //    (on n'accepte jamais un prix envoyé par le client ; le prix final
+    //    tenant compte du nombre de produits est calculé en ⑤ter)
     const { data: plan } = await admin
       .from('visibility_plans')
       .select('id, label, price, duration_months, duration_days')
@@ -129,6 +131,19 @@ Deno.serve(async (req) => {
       featuredProductIds.push(...uniqueIds)
     }
 
+    // ⑤ter Prix dynamique selon le nombre de produits mis en avant
+    //     ("toute la vitrine" = nombre total de produits de la boutique).
+    //     Calculé ici, jamais à partir d'une valeur envoyée par le client.
+    let nbProduits = featuredProductIds.length
+    if (wantsAllProducts) {
+      const { count } = await admin
+        .from('products')
+        .select('id', { count: 'exact', head: true })
+        .eq('shop_id', shop.id)
+      nbProduits = count ?? 0
+    }
+    const finalPrice = calculateOffreQuartierPrice(plan.price, nbProduits)
+
     // ⑥ Vérifier l'absence d'un abonnement déjà actif
     const now = new Date().toISOString()
     const { data: existing } = await admin
@@ -151,7 +166,7 @@ Deno.serve(async (req) => {
         product_id:   featuredProductIds[0] ?? null,  // legacy : 1er produit pour affichage simple
         product_ids:  featuredProductIds,
         all_products: wantsAllProducts,
-        amount:       plan.price,  // prix chargé depuis la DB, pas depuis le client
+        amount:       finalPrice,  // prix de base (DB) + surcoût produits, jamais depuis le client
         pay_method:   payMethod,
         status:       'pending',
       })
@@ -175,7 +190,7 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           currency:         'XOF',
-          amount:           String(plan.price),
+          amount:           String(finalPrice),
           merchant_id:      WAVE_MERCHANT_ID,
           success_url:      `${APP_BASE_URL}/visibility-success?sub=${sub.id}`,
           error_url:        `${APP_BASE_URL}/visibility-error?sub=${sub.id}`,
@@ -202,7 +217,7 @@ Deno.serve(async (req) => {
             merchant_key: OM_MERCHANT_ID,
             currency:     'OUV',
             order_id:     sub.id,
-            amount:       plan.price,
+            amount:       finalPrice,
             return_url:   `${APP_BASE_URL}/visibility-success`,
             cancel_url:   `${APP_BASE_URL}/visibility-error`,
             notif_url:    `${Deno.env.get('SUPABASE_URL')}/functions/v1/verify-visibility-payment`,
