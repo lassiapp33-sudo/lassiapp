@@ -6,6 +6,7 @@ import { Users, Search, Trash2, AlertTriangle, X } from 'lucide-react'
 import Badge      from '../components/Badge'
 import EmptyState from '../components/EmptyState'
 import { SkeletonRow } from '../components/Skeleton'
+import { supabase } from '../lib/supabase'
 import { getProfiles, getUserStats, deleteUser, type AdminProfile } from '../services/users'
 
 // ─── Modal de confirmation de suppression ─────────────────────────────────────
@@ -102,6 +103,19 @@ export default function UsersPage() {
   }
 
   useEffect(() => { loadData() }, [])
+
+  // Realtime : reflète instantanément les inscriptions/suppressions de comptes
+  // faites depuis l'app (table profiles), sans recharger la page.
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin:profiles')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        loadData()
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [])
 
   const filtered = profiles.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.phone.includes(search)
