@@ -243,6 +243,24 @@ Deno.serve(async (req) => {
 
     if (insertErr) throw insertErr
 
+    // Créditer le portefeuille LASSI de la boutique du prestataire — ce crédit
+    // pourra être dépensé immédiatement pour acheter un forfait de visibilité
+    // réel (Offre du Quartier / Booster recherche / Épingle dorée).
+    if (hasPresta && row.credit_lassi > 0) {
+      const { data: prestaShop } = await admin
+        .from('shops')
+        .select('id')
+        .eq('merchant_id', prestataireId)
+        .maybeSingle()
+
+      if (prestaShop) {
+        await admin.rpc('increment_shop_credit', {
+          p_shop_id: prestaShop.id,
+          p_amount: row.credit_lassi,
+        })
+      }
+    }
+
     // Notification "cadeau de l'équipe LASSI" au destinataire
     await admin.from('notifications').insert({
       user_id: targetId,
