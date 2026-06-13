@@ -128,9 +128,9 @@ Deno.serve(async (req) => {
     })
     await admin.from('notifications').insert({
       user_id: user.id,
-      type:    'visibility',
-      title:   'Offre du quartier activée ✅',
-      body:    `Ton forfait ${sub.plan.label} est actif jusqu'au ${expiryFr}.`,
+      type:    'vip',
+      title:   '🎉 Félicitations pour votre achat !',
+      body:    `Grâce à votre achat du forfait « ${sub.plan.label} » (${sub.amount.toLocaleString('fr-FR')} FCFA), vous avez obtenu une mise en avant de votre boutique dans l'Offre du quartier jusqu'au ${expiryFr}. Profitez-en pour attirer encore plus de nouveaux clients !`,
       data:    { subscription_id: sub.id },
     })
 

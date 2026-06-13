@@ -10,6 +10,25 @@ import { isUUID, isBoolean, isISODateString, isSafeString, isNonNegativeInt } fr
 import { logAuditEvent } from '../_shared/audit.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 
+// Description FR des avantages accordés, pour la notification "cadeau LASSI"
+function describeRecompenses(row: {
+  badge: string | null
+  certificat: boolean
+  priorite_recherche: boolean
+  credit_lassi: number
+  carrousel_produits: number
+  top_vip: boolean
+}): string {
+  const items: string[] = []
+  if (row.badge) items.push(`le badge ${row.badge}`)
+  if (row.certificat) items.push('un certificat de reconnaissance partageable')
+  if (row.priorite_recherche) items.push('une priorité dans les résultats de recherche')
+  if (row.credit_lassi > 0) items.push(`${row.credit_lassi} FCFA de crédit LASSI`)
+  if (row.carrousel_produits > 0) items.push(`${row.carrousel_produits} emplacement${row.carrousel_produits > 1 ? 's' : ''} dans l'Offre di Quartier`)
+  if (row.top_vip) items.push("une mise en avant Top VIP sur la page d'accueil")
+  return items.length > 0 ? items.join(', ') : 'un avantage spécial sur votre profil'
+}
+
 Deno.serve(async (req) => {
   const CORS = corsHeaders(req)
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
@@ -223,6 +242,15 @@ Deno.serve(async (req) => {
       .single()
 
     if (insertErr) throw insertErr
+
+    // Notification "cadeau de l'équipe LASSI" au destinataire
+    await admin.from('notifications').insert({
+      user_id: targetId,
+      type: 'vip',
+      title: "🎁 Un cadeau de la part de l'équipe LASSI !",
+      body: `Bonjour ! L'équipe LASSI a le plaisir de vous offrir ${describeRecompenses(row)}. Merci pour votre engagement sur la plateforme, et à très vite pour de nouvelles surprises !`,
+      data: { recompense_id: inserted.id, type_classement: 'manuel' },
+    })
 
     await admin.from('admin_actions_log').insert({
       admin_id: user.id,
