@@ -100,6 +100,23 @@ Deno.serve(async (req) => {
 
       if (updateErr) throw updateErr
 
+      // Retirer le crédit LASSI déjà transféré sur le portefeuille du prestataire
+      if (before.est_actif && before.credit_lassi > 0 && before.prestataire_id) {
+        const { data: prestaShop } = await admin
+          .from('shops')
+          .select('id')
+          .eq('merchant_id', before.prestataire_id)
+          .maybeSingle()
+
+        if (prestaShop) {
+          const { error: decrError } = await admin.rpc('decrement_shop_credit_clamped', {
+            p_shop_id: prestaShop.id,
+            p_amount: before.credit_lassi,
+          })
+          if (decrError) throw decrError
+        }
+      }
+
       await admin.from('admin_actions_log').insert({
         admin_id: user.id,
         action: 'revoquer_recompense',
@@ -186,6 +203,11 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
     }
+    if (hasClient && (creditLassi ?? 0) > 0) {
+      return new Response(JSON.stringify({ error: 'Le crédit LASSI ne peut être attribué qu\'à un prestataire' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
     if (carrouselProduits !== undefined && !isNonNegativeInt(carrouselProduits, 5)) {
       return new Response(JSON.stringify({ error: 'carrouselProduits invalide (0 à 5)' }), {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
@@ -214,6 +236,25 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Profil introuvable' }), {
         status: 404, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
+    }
+
+    // Le crédit LASSI nécessite une boutique prestataire existante — vérifié
+    // avant l'insertion pour ne pas créer une récompense "fantôme" si la
+    // boutique est introuvable (prestataire sans shop, race TOCTOU).
+    let prestaShopId: string | null = null
+    if (hasPresta && (creditLassi ?? 0) > 0) {
+      const { data: prestaShop } = await admin
+        .from('shops')
+        .select('id')
+        .eq('merchant_id', prestataireId)
+        .maybeSingle()
+
+      if (!prestaShop) {
+        return new Response(JSON.stringify({ error: 'Boutique introuvable pour ce prestataire' }), {
+          status: 404, headers: { ...CORS, 'Content-Type': 'application/json' },
+        })
+      }
+      prestaShopId = prestaShop.id
     }
 
     const now = new Date()
@@ -246,19 +287,12 @@ Deno.serve(async (req) => {
     // Créditer le portefeuille LASSI de la boutique du prestataire — ce crédit
     // pourra être dépensé immédiatement pour acheter un forfait de visibilité
     // réel (Offre du Quartier / Booster recherche / Épingle dorée).
-    if (hasPresta && row.credit_lassi > 0) {
-      const { data: prestaShop } = await admin
-        .from('shops')
-        .select('id')
-        .eq('merchant_id', prestataireId)
-        .maybeSingle()
-
-      if (prestaShop) {
-        await admin.rpc('increment_shop_credit', {
-          p_shop_id: prestaShop.id,
-          p_amount: row.credit_lassi,
-        })
-      }
+    if (prestaShopId) {
+      const { error: creditErr } = await admin.rpc('increment_shop_credit', {
+        p_shop_id: prestaShopId,
+        p_amount: row.credit_lassi,
+      })
+      if (creditErr) throw creditErr
     }
 
     // Notification "cadeau de l'équipe LASSI" au destinataire

@@ -165,6 +165,10 @@ Deno.serve(async (req) => {
     // ⑥ Activer le forfait — application immédiate, sans attente de webhook
     const now = new Date()
     const expiresAt = new Date(now.getTime() + durationDays * 86_400_000)
+    // Pour 'recherche'/'carte', les RPC grant_* prolongent depuis l'expiration
+    // existante (cumul) — la vraie date renvoyée par RETURNING peut différer
+    // du calcul ci-dessus. Mis à jour plus bas si un boost était déjà actif.
+    let responseExpiresAt = expiresAt
 
     if (offerType === 'quartier') {
       const { data: sub, error: subError } = await admin
@@ -186,7 +190,15 @@ Deno.serve(async (req) => {
         .select('id')
         .single()
 
-      if (subError) throw subError
+      if (subError) {
+        if (subError.code === '23505') {
+          // Un abonnement actif a été créé entre-temps (double-clic/retry) —
+          // rembourser le crédit déjà débité par spend_shop_credit ci-dessus.
+          await admin.rpc('increment_shop_credit', { p_shop_id: shop.id, p_amount: price })
+          return json({ error: 'Un abonnement actif existe déjà' }, 409)
+        }
+        throw subError
+      }
 
       await admin
         .from('shops')
@@ -207,32 +219,34 @@ Deno.serve(async (req) => {
       })
 
     } else if (offerType === 'recherche') {
-      const { error: rpcError } = await admin.rpc('grant_recherche_boost', {
+      const { data: newUntil, error: rpcError } = await admin.rpc('grant_recherche_boost', {
         p_shop_id: shop.id,
         p_days: durationDays,
       })
       if (rpcError) throw rpcError
+      if (newUntil) responseExpiresAt = new Date(newUntil as string)
 
       await admin.from('notifications').insert({
         user_id: user.id,
         type:    'vip',
         title:   '🎉 Forfait activé avec ton crédit LASSI !',
-        body:    `Ton crédit LASSI a été utilisé pour activer « ${planLabel} » de ${OFFER_LABELS.recherche} jusqu'au ${expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}. Il te reste ${newBalance.toLocaleString('fr-FR')} FCFA de crédit.`,
+        body:    `Ton crédit LASSI a été utilisé pour activer « ${planLabel} » de ${OFFER_LABELS.recherche} jusqu'au ${responseExpiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}. Il te reste ${newBalance.toLocaleString('fr-FR')} FCFA de crédit.`,
         data:    { offer_type: 'recherche' },
       })
 
     } else {
-      const { error: rpcError } = await admin.rpc('grant_carte_pin', {
+      const { data: newUntil, error: rpcError } = await admin.rpc('grant_carte_pin', {
         p_shop_id: shop.id,
         p_days: durationDays,
       })
       if (rpcError) throw rpcError
+      if (newUntil) responseExpiresAt = new Date(newUntil as string)
 
       await admin.from('notifications').insert({
         user_id: user.id,
         type:    'vip',
         title:   '🎉 Forfait activé avec ton crédit LASSI !',
-        body:    `Ton crédit LASSI a été utilisé pour activer « ${planLabel} » de ${OFFER_LABELS.carte} jusqu'au ${expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}. Il te reste ${newBalance.toLocaleString('fr-FR')} FCFA de crédit.`,
+        body:    `Ton crédit LASSI a été utilisé pour activer « ${planLabel} » de ${OFFER_LABELS.carte} jusqu'au ${responseExpiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}. Il te reste ${newBalance.toLocaleString('fr-FR')} FCFA de crédit.`,
         data:    { offer_type: 'carte' },
       })
     }
@@ -240,7 +254,7 @@ Deno.serve(async (req) => {
     return json({
       status:      'active',
       offerType,
-      expiresAt:   expiresAt.toISOString(),
+      expiresAt:   responseExpiresAt.toISOString(),
       amountSpent: price,
       newBalance,
     })

@@ -164,7 +164,7 @@ export default function RecompensesPage() {
         certificat:        form.certificat,
         prioriteRecherche: form.prioriteRecherche,
         topVip:            form.topVip,
-        creditLassi:       credit,
+        creditLassi:       form.target.type === 'prestataire' ? credit : 0,
         carrouselProduits: form.target.type === 'prestataire' ? carrousel : 0,
         validUntil,
         note:              form.note.trim() || null,
@@ -412,17 +412,19 @@ export default function RecompensesPage() {
               />
             </div>
 
-            {/* Crédit Lassi */}
-            <div>
-              <label className="block text-xs text-muted font-medium mb-1.5 uppercase tracking-wide">Crédit Lassi (FCFA)</label>
-              <input
-                type="number" min={0} step={100}
-                value={form.creditLassi}
-                onChange={e => setForm(f => ({ ...f, creditLassi: e.target.value }))}
-                className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm
-                           focus:outline-none focus:border-accent"
-              />
-            </div>
+            {/* Crédit Lassi — prestataire uniquement (les clients n'ont pas de boutique/portefeuille) */}
+            {form.targetType === 'prestataire' && (
+              <div>
+                <label className="block text-xs text-muted font-medium mb-1.5 uppercase tracking-wide">Crédit Lassi (FCFA)</label>
+                <input
+                  type="number" min={0} step={100}
+                  value={form.creditLassi}
+                  onChange={e => setForm(f => ({ ...f, creditLassi: e.target.value }))}
+                  className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm
+                             focus:outline-none focus:border-accent"
+                />
+              </div>
+            )}
 
             {/* Carrousel — prestataire uniquement */}
             {form.targetType === 'prestataire' && (
