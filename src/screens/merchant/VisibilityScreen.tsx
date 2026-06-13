@@ -16,7 +16,8 @@ import HeroCard from '../../components/visibility/HeroCard';
 import BenefitsList from '../../components/visibility/BenefitsList';
 import PlanCard from '../../components/visibility/PlanCard';
 import ProductPicker from '../../components/visibility/ProductPicker';
-import PayFooter, { PayFooterUnavailable } from '../../components/visibility/PayFooter';
+import PayFooter from '../../components/visibility/PayFooter';
+import PayFooterCredit from '../../components/visibility/PayFooterCredit';
 import ActiveSubCard, { computeSubCardProps } from '../../components/visibility/ActiveSubCard';
 import StatsGrid from '../../components/visibility/StatsGrid';
 import { colors, fonts, radius } from '../../theme';
@@ -24,7 +25,7 @@ import { IcoChevron } from '../../components/icons';
 import useShopStore from '../../store/shopStore';
 import { getProducts } from '../../services/products';
 import { StoreProduct } from '../../types/store';
-import { formatPrice } from '../../utils/format';
+import { formatPrice, formatDateLong } from '../../utils/format';
 import {
   PRICE_INCREMENT_PER_EXTRA_PRODUCT,
   FREE_PRODUCTS_THRESHOLD,
@@ -32,10 +33,11 @@ import {
 import {
   VisibilityPlan,
   ActiveSub,
-  PayMethod,
+  WaveOrangeMethod,
   getVisibilityPlans,
   getActiveSub,
   createVisibilityPayment,
+  createCreditPurchase,
   verifyVisibilityPayment,
   checkPaymentAvailability,
   getPlanPriceFor,
@@ -53,8 +55,8 @@ const OFFER_LABELS: Record<OfferType, string> = {
   carte: 'Apparaître sur la carte en priorité (épingle dorée)',
 };
 
-// Forfaits "Booster recherche" et "Épingle dorée" — même tarif pour les deux,
-// pas encore branchés à un paiement réel (PayFooterUnavailable).
+// Forfaits "Booster recherche" et "Épingle dorée" — même tarif pour les deux
+// (miroir de _shared/boostPlansPricing.ts, payables avec le crédit LASSI).
 const BOOST_PLANS: VisibilityPlan[] = [
   {
     id: '1m',
@@ -144,6 +146,18 @@ function PendingPaymentBanner({ onVerify, loading }: { onVerify: () => void; loa
   );
 }
 
+// ─── Bandeau "forfait activé avec le crédit LASSI" ────────────────────────────
+
+function BoostActivatedBanner({ expiresAt }: { expiresAt: string }) {
+  return (
+    <View style={styles.activatedBanner}>
+      <Text style={styles.activatedTxt}>
+        ✅ Forfait activé jusqu'au {formatDateLong(expiresAt)} !
+      </Text>
+    </View>
+  );
+}
+
 // ─── Sélecteur d'offre (liste déroulante) ─────────────────────────────────────
 
 const IcoCheck = () => (
@@ -220,6 +234,8 @@ interface Props {
 
 export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: Props) {
   const shopId = useShopStore(s => s.shopId);
+  const creditBalance = useShopStore(s => s.profile?.creditBalance ?? 0);
+  const loadMyShop = useShopStore(s => s.loadMyShop);
 
   const [offerType, setOfferType] = useState<OfferType>('quartier');
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -230,8 +246,12 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [featuredAllProducts, setFeaturedAllProducts] = useState(false);
-  const [payMethod, setPayMethod] = useState<PayMethod>('wave');
+  const [payMethod, setPayMethod] = useState<WaveOrangeMethod>('wave');
   const [payState, setPayState] = useState<PayState>({ type: 'idle' });
+  const [creditPayLoading, setCreditPayLoading] = useState(false);
+  const [boostExpiry, setBoostExpiry] = useState<{ offer: OfferType; expiresAt: string } | null>(
+    null,
+  );
   const [initLoading, setInitLoading] = useState(true);
   const [keysAvailable, setKeysAvailable] = useState<{
     wave: boolean;
@@ -255,6 +275,7 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
   const selectOffer = (offer: OfferType) => {
     setOfferType(offer);
     setSelectedId('3m');
+    setBoostExpiry(null);
     if (offer !== 'quartier') setView('subscribe');
   };
 
@@ -386,6 +407,49 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
     }
   };
 
+  // ── Payer avec le crédit LASSI — activation immédiate (3 offres) ──────────
+  const handlePayWithCredit = async () => {
+    if (!selectedPlan || !shopId) return;
+
+    if (offerType === 'quartier' && !featuredAllProducts && selectedProductIds.length === 0) {
+      Alert.alert(
+        'Produit requis',
+        'Choisis au moins un produit (ou toute ta vitrine) à mettre en avant avant de payer.',
+      );
+      return;
+    }
+
+    setCreditPayLoading(true);
+    try {
+      const result = await createCreditPurchase({
+        offerType,
+        planId: selectedPlan.id,
+        productIds: offerType === 'quartier' ? selectedProductIds : undefined,
+        allProducts: offerType === 'quartier' ? featuredAllProducts : undefined,
+      });
+
+      await loadMyShop(); // rafraîchit creditBalance + hasGoldenPin / hasRechercheBoost
+
+      if (offerType === 'quartier') {
+        const sub = shopId ? await getActiveSub(shopId) : null;
+        setActiveSub(sub);
+        setView('subscribed');
+      } else {
+        setBoostExpiry({ offer: offerType, expiresAt: result.expiresAt });
+      }
+
+      Alert.alert(
+        'Forfait activé !',
+        `Ton crédit LASSI a été utilisé pour activer ce forfait. Il te reste ${formatPrice(result.newBalance)} de crédit.`,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur inattendue';
+      Alert.alert('Erreur', msg);
+    } finally {
+      setCreditPayLoading(false);
+    }
+  };
+
   const isPending = payState.type === 'pending';
   const isVerifying = payState.type === 'verifying';
   const isPayLoading = payState.type === 'loading';
@@ -495,10 +559,17 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
               </View>
             )}
 
+            {/* Confirmation après achat avec le crédit LASSI (recherche / carte) */}
+            {offerType !== 'quartier' && boostExpiry?.offer === offerType && (
+              <View style={styles.bannerWrap}>
+                <BoostActivatedBanner expiresAt={boostExpiry.expiresAt} />
+              </View>
+            )}
+
             <View style={{ height: 14 }} />
           </ScrollView>
 
-          {/* Footer : indisponible pour les nouvelles offres et si clés non configurées */}
+          {/* Footer : Wave/OM si configuré, sinon paiement par crédit LASSI */}
           {offerType === 'quartier' ? (
             !isPending &&
             !isVerifying &&
@@ -511,10 +582,20 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
                 loading={isPayLoading}
               />
             ) : (
-              <PayFooterUnavailable plan={withDynamicPrice(selectedPlan)} />
+              <PayFooterCredit
+                plan={withDynamicPrice(selectedPlan)}
+                creditBalance={creditBalance}
+                onPay={handlePayWithCredit}
+                loading={creditPayLoading}
+              />
             ))
           ) : (
-            <PayFooterUnavailable plan={selectedPlan} />
+            <PayFooterCredit
+              plan={selectedPlan}
+              creditBalance={creditBalance}
+              onPay={handlePayWithCredit}
+              loading={creditPayLoading}
+            />
           )}
         </>
       )}
@@ -682,6 +763,19 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 12,
     marginBottom: 10,
+  },
+  activatedBanner: {
+    backgroundColor: 'rgba(253,207,52,.08)',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    padding: 16,
+  },
+  activatedTxt: {
+    color: colors.accent,
+    fontFamily: fonts.title,
+    fontSize: 13,
+    textAlign: 'center',
   },
   verifyBtn: {
     height: 46,

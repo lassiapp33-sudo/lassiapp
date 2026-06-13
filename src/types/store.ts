@@ -51,6 +51,8 @@ export interface StoreProfile {
   logoUrl?: string;
   coverUrl?: string;
   isVip?: boolean;
+  /** Solde de crédit LASSI dépensable (dons admin + futurs achats). */
+  creditBalance?: number;
 }
 
 /** Contexte vitrine enrichi stocké dans shopStore. */

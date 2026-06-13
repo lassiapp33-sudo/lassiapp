@@ -19,7 +19,10 @@ async function authHeaders(): Promise<Record<string, string>> {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type PayMethod = 'wave' | 'orange_money';
+export type PayMethod = 'wave' | 'orange_money' | 'credit';
+
+/** Méthodes affichées par le sélecteur Wave/OM de PayFooter (hors crédit LASSI, géré par PayFooterCredit). */
+export type WaveOrangeMethod = 'wave' | 'orange_money';
 
 // Interface locale pour la ligne Supabase (visibility_subscriptions avec join plan + produit)
 interface VisibilitySubRow {
@@ -181,6 +184,36 @@ export async function createVisibilityPayment(params: {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? 'Erreur de paiement');
   return data as CreatePaymentResult;
+}
+
+// ─── Acheter un forfait avec le crédit LASSI ──────────────────────────────────
+// Active immédiatement le forfait (pas d'attente de webhook) en débitant
+// shops.credit_balance. Utilisable pour les 3 offres (quartier/recherche/carte).
+
+export interface CreditPurchaseResult {
+  status: 'active';
+  offerType: 'quartier' | 'recherche' | 'carte';
+  expiresAt: string;
+  amountSpent: number;
+  newBalance: number;
+}
+
+export async function createCreditPurchase(params: {
+  offerType: 'quartier' | 'recherche' | 'carte';
+  planId: string;
+  /** Produits choisis (offre "quartier" uniquement, ignoré si allProducts === true). */
+  productIds?: string[];
+  /** Mettre en avant toute la vitrine plutôt que des produits précis (offre "quartier"). */
+  allProducts?: boolean;
+}): Promise<CreditPurchaseResult> {
+  const res = await fetch(`${FUNCTIONS_BASE}/create-credit-purchase`, {
+    method: 'POST',
+    headers: await authHeaders(),
+    body: JSON.stringify(params),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? 'Erreur de paiement');
+  return data as CreditPurchaseResult;
 }
 
 // ─── Prix dynamique selon le nombre de produits mis en avant ─────────────────

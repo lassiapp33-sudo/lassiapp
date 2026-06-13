@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
+import { formatPrice } from '../../utils/format';
 
 const IcoBell = () => (
   <Svg
@@ -30,6 +31,8 @@ interface Props {
   isVip?: boolean;
   notifCount?: number;
   zoneName?: string;
+  /** Solde de crédit LASSI dépensable — toujours affiché, "0 F" si vide. */
+  creditBalance?: number;
   onNotifPress?: () => void;
   onLocation?: () => void;
 }
@@ -39,6 +42,7 @@ export default function DashHeader({
   isVip,
   notifCount = 0,
   zoneName,
+  creditBalance = 0,
   onNotifPress,
   onLocation,
 }: Props) {
@@ -59,15 +63,22 @@ export default function DashHeader({
         ) : null}
       </View>
 
-      {/* Cloche de notification */}
-      <TouchableOpacity style={styles.bell} onPress={onNotifPress} activeOpacity={0.8}>
-        {notifCount > 0 && (
-          <View style={[styles.badge, notifCount > 9 && styles.badgeWide]}>
-            <Text style={styles.badgeTxt}>{notifCount > 99 ? '99+' : notifCount}</Text>
-          </View>
-        )}
-        <IcoBell />
-      </TouchableOpacity>
+      <View style={styles.rightCol}>
+        {/* Solde de crédit LASSI */}
+        <View style={styles.creditPill}>
+          <Text style={styles.creditTxt}>Crédit : {formatPrice(creditBalance)}</Text>
+        </View>
+
+        {/* Cloche de notification */}
+        <TouchableOpacity style={styles.bell} onPress={onNotifPress} activeOpacity={0.8}>
+          {notifCount > 0 && (
+            <View style={[styles.badge, notifCount > 9 && styles.badgeWide]}>
+              <Text style={styles.badgeTxt}>{notifCount > 99 ? '99+' : notifCount}</Text>
+            </View>
+          )}
+          <IcoBell />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -102,6 +113,21 @@ const styles = StyleSheet.create({
   locTxt: {
     color: colors.muted,
     fontFamily: fonts.body,
+    fontSize: 11,
+  },
+  rightCol: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+  creditPill: {
+    backgroundColor: 'rgba(253,207,52,.15)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  creditTxt: {
+    color: colors.accent,
+    fontFamily: fonts.ui,
     fontSize: 11,
   },
   bell: {

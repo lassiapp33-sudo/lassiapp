@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
-import { VisibilityPlan, type PayMethod } from '../../services/visibilityPayment';
+import { VisibilityPlan, type WaveOrangeMethod } from '../../services/visibilityPayment';
 import { formatPrice } from '../../utils/format';
 
 const IcoCard = () => (
@@ -44,15 +44,15 @@ const IcoClock = () => (
 
 const BOTTOM_PAD = Platform.OS === 'ios' ? 20 : 4;
 
-const METHOD_LABELS: Record<PayMethod, string> = {
+const METHOD_LABELS: Record<WaveOrangeMethod, string> = {
   wave: 'Wave',
   orange_money: 'Orange Money',
 };
 
 interface Props {
   plan: VisibilityPlan;
-  payMethod: PayMethod;
-  onMethodChange: (m: PayMethod) => void;
+  payMethod: WaveOrangeMethod;
+  onMethodChange: (m: WaveOrangeMethod) => void;
   onPay: () => void;
   loading?: boolean;
 }
@@ -70,7 +70,7 @@ export default function PayFooter({ plan, payMethod, onMethodChange, onPay, load
 
       {/* Sélecteur de méthode de paiement */}
       <View style={styles.methods}>
-        {(['wave', 'orange_money'] as PayMethod[]).map(m => (
+        {(['wave', 'orange_money'] as WaveOrangeMethod[]).map(m => (
           <TouchableOpacity
             key={m}
             style={[styles.method, payMethod === m && styles.methodSel]}

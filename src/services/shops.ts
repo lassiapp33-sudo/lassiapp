@@ -25,6 +25,12 @@ export interface Shop {
   galleryUrls: string[];
   isVip: boolean;
   vipRank: number | null; // 1, 2, 3 dans le podium — null si pas VIP
+  /** "Épingle dorée" — pin mis en avant sur la carte (offre "carte" active). */
+  hasGoldenPin: boolean;
+  /** "Booster recherche" — priorité dans les résultats de recherche (offre "recherche" active). */
+  hasRechercheBoost: boolean;
+  /** Solde de crédit LASSI dépensable (dons admin + futurs achats). */
+  creditBalance: number;
   rating: number;
   reviewsCount: number;
   ordersCount: number;
@@ -62,6 +68,10 @@ function rowToShop(row: Record<string, any>): Shop {
     galleryUrls: Array.isArray(row.gallery_urls) ? row.gallery_urls : [],
     isVip: !isExclu && (Boolean(row.is_vip) || isVipManual),
     vipRank: isExclu ? null : (row.vip_rank ?? null),
+    hasGoldenPin: row.carte_pin_until != null && new Date(row.carte_pin_until) > now,
+    hasRechercheBoost:
+      row.recherche_boost_until != null && new Date(row.recherche_boost_until) > now,
+    creditBalance: Number(row.credit_balance ?? 0),
     rating: Number(row.rating ?? 0),
     reviewsCount: Number(row.reviews_count ?? 0),
     ordersCount: Number(row.orders_count ?? 0),

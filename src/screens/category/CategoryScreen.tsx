@@ -139,7 +139,9 @@ export default function CategoryScreen({
   const t = useT();
 
   const [catId, setCatId] = useState<CatId>(initialCatId);
-  const [subCat, setSubCat] = useState<string>(initialSubCatId ?? getCatMeta(initialCatId).subcats[0].id);
+  const [subCat, setSubCat] = useState<string>(
+    initialSubCatId ?? getCatMeta(initialCatId).subcats[0].id,
+  );
   const [filter, setFilter] = useState<FilterId>('near');
   const [navTab, setNavTab] = useState<NavTab>('home');
   const [shops, setShops] = useState<Shop[]>([]);
@@ -180,20 +182,28 @@ export default function CategoryScreen({
       .subscribe();
 
     channelRef.current = ch;
-    return () => { ch.unsubscribe(); };
+    return () => {
+      ch.unsubscribe();
+    };
   }, [catId, loadShops]);
 
-  const handleCatChange = useCallback((id: CatId) => {
-    const firstSub = getCatMeta(id).subcats[0].id;
-    setCatId(id);
-    setSubCat(firstSub);
-    onCatStateChange?.(id, firstSub);
-  }, [onCatStateChange]);
+  const handleCatChange = useCallback(
+    (id: CatId) => {
+      const firstSub = getCatMeta(id).subcats[0].id;
+      setCatId(id);
+      setSubCat(firstSub);
+      onCatStateChange?.(id, firstSub);
+    },
+    [onCatStateChange],
+  );
 
-  const handleSubCatChange = useCallback((id: string) => {
-    setSubCat(id);
-    onCatStateChange?.(catId, id);
-  }, [catId, onCatStateChange]);
+  const handleSubCatChange = useCallback(
+    (id: string) => {
+      setSubCat(id);
+      onCatStateChange?.(catId, id);
+    },
+    [catId, onCatStateChange],
+  );
 
   const handleNavPress = (t: NavTab) => {
     setNavTab(t);
@@ -261,14 +271,18 @@ export default function CategoryScreen({
     [shops, subCat, meta.subcats.length],
   );
 
-  // Prestataires avec priorité de recherche active (récompense de classement)
+  // Prestataires avec priorité de recherche active (récompense de classement
+  // OU offre "Booster recherche" achetée — shops.recherche_boost_until)
   const priorityIds = useMemo(() => {
     const ids = new Set<string>();
     for (const [merchantId, r] of Object.entries(badgeMap)) {
       if (r.priorite_recherche) ids.add(merchantId);
     }
+    for (const s of shops) {
+      if (s.hasRechercheBoost && s.merchantId) ids.add(s.merchantId);
+    }
     return ids;
-  }, [badgeMap]);
+  }, [badgeMap, shops]);
 
   const filteredShops = useMemo(
     () => applyFilter(bySubCat, filter, userLoc, priorityIds),

@@ -81,6 +81,7 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
   // Shop
   const shopId = useShopStore(s => s.shopId);
   const shopIsVip = useShopStore(s => s.profile?.isVip ?? false);
+  const creditBalance = useShopStore(s => s.profile?.creditBalance ?? 0);
   const shopType = useShopStore(s => s.context.shopType);
   const shopSubcategories = useShopStore(s => s.context.subcategories);
   const loadMyShop = useShopStore(s => s.loadMyShop);
@@ -174,6 +175,7 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
           isVip={shopIsVip}
           notifCount={notifCount}
           zoneName={zoneName}
+          creditBalance={creditBalance}
           onNotifPress={onNotifPress}
           onLocation={refreshLocation}
         />

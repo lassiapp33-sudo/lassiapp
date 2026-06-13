@@ -97,18 +97,21 @@ function renderShops(shops){
   shops.forEach(s=>{
     const slat=s.latitude||FB_LAT;const slng=s.longitude||FB_LNG;
     const v=s.isVip;
+    const pin=s.hasGoldenPin;
+    const gold=v||pin;
     const sel=s.id===selId;
     const initial=escapeHtml((s.name||'?').charAt(0).toUpperCase());
-    const txtColor=v?'#14152A':'#FDCF34';
+    const txtColor=gold?'#14152A':'#FDCF34';
     const content=s.logoUrl
       ?'<img src="'+escapeHtml(s.logoUrl)+'" style="'+IMG_STYLE+'">'
       :'<span style="color:'+txtColor+';font-weight:700;font-size:18px;font-family:sans-serif;line-height:1;">'+initial+'</span>';
+    const topIcon=v?'👑':(pin?'📌':'');
     const html='<div class="lp">'
-      +(v?'<div class="lp-crown">👑</div>':'')
-      +'<div class="lp-b '+(v?'vip':'std')+(sel?' sel':'')+'">'+content+'</div>'
-      +'<div class="lp-t '+(v?'vip':'std')+'"></div></div>';
+      +(topIcon?'<div class="lp-crown">'+topIcon+'</div>':'')
+      +'<div class="lp-b '+(gold?'vip':'std')+(sel?' sel':'')+'">'+content+'</div>'
+      +'<div class="lp-t '+(gold?'vip':'std')+'"></div></div>';
     const ico=L.divIcon({html,iconSize:[40,52],iconAnchor:[20,52],className:''});
-    const m=L.marker([slat,slng],{icon:ico,zIndexOffset:v?1000:100});
+    const m=L.marker([slat,slng],{icon:ico,zIndexOffset:gold?1000:100});
     m.on('click',function(){selId=s.id;renderShops(lastShops);sendRN({type:'shopPress',shopId:s.id});});
     m.addTo(map);
     mkrs[s.id]=m;
@@ -206,6 +209,7 @@ function MapShopSheet({ shop, distanceM, zone, onView, onRoute }: SheetProps) {
               {shop.name}
             </Text>
             {shop.isVip && <Text style={styles.vipBadge}>🏆 VIP</Text>}
+            {shop.hasGoldenPin && <Text style={styles.pinBadge}>📌 Épinglé</Text>}
           </View>
           <View style={styles.sheetMeta}>
             <Text style={styles.sheetMetaTxt}>⭐ {shop.rating.toFixed(1)}</Text>
@@ -713,6 +717,15 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   vipBadge: {
+    color: colors.accent,
+    fontFamily: fonts.ui,
+    fontSize: 9,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    backgroundColor: 'rgba(253,207,52,.15)',
+    borderRadius: 6,
+  },
+  pinBadge: {
     color: colors.accent,
     fontFamily: fonts.ui,
     fontSize: 9,
