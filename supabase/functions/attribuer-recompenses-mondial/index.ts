@@ -27,6 +27,21 @@ const PALIERS = [
   { min: 21, max: 40, badge: '📋 Top 40 Mondial',   certificat: false, priorite: false, notif: false, credit: 0,    carrousel: 0, newsletter: false },
 ]
 
+function ordinal(rang: number): string {
+  return rang === 1 ? '1er' : `${rang}e`
+}
+
+// Description FR des avantages d'un palier, pour la notification "mérite"
+function describeRecompenses(p: typeof PALIERS[number]): string {
+  const items: string[] = [`le badge ${p.badge}`]
+  if (p.certificat) items.push('un certificat de reconnaissance partageable')
+  if (p.priorite) items.push('une priorité dans les résultats de recherche')
+  if (p.credit > 0) items.push(`${p.credit} FCFA de crédit LASSI`)
+  if (p.carrousel > 0) items.push(`${p.carrousel} emplacement${p.carrousel > 1 ? 's' : ''} dans l'Offre di Quartier`)
+  if (p.newsletter) items.push('une mise en avant dans notre newsletter')
+  return items.join(', ')
+}
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -108,6 +123,7 @@ Deno.serve(async (req: Request) => {
   validJusqua.setMonth(validJusqua.getMonth() + 1)
 
   const messagesVille: string[] = []
+  const notificationsMerite: { user_id: string; type: string; title: string; body: string; data: Record<string, unknown> }[] = []
 
   for (const entry of classement) {
     const palier = PALIERS.find(p => entry.rang >= p.min && entry.rang <= p.max)
@@ -130,11 +146,24 @@ Deno.serve(async (req: Request) => {
       est_actif: true,
     })
 
+    // Notification personnelle "mérite" — tout le top 40 reçoit son palier
+    notificationsMerite.push({
+      user_id: entry.prestataire_id,
+      type: 'vip',
+      title: '🏆 Félicitations pour votre classement mondial !',
+      body: `Grâce à votre travail et à la confiance de vos clients, vous terminez ${ordinal(entry.rang)} au classement Mondial LASSI de ce mois-ci. Vous obtenez ${describeRecompenses(palier)}. Continuez sur cette lancée pour gagner encore plus de récompenses le mois prochain !`,
+      data: { type_classement: 'mondial', periode, rang: entry.rang },
+    })
+
     // Notification ville (top 3)
     if (palier.notif) {
       const nom = entry.nom_affiche ?? 'Un prestataire'
       messagesVille.push(`${nom} est ${palier.badge} ce mois-ci ! 🎉`)
     }
+  }
+
+  if (notificationsMerite.length > 0) {
+    await supabase.from('notifications').insert(notificationsMerite)
   }
 
   // --- Diffuser les notifs ville à tous les utilisateurs avec un push token Expo ---
@@ -167,5 +196,5 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  return jsonResponse({ success: true, attribues: classement.length, notifications: notifsEnvoyees })
+  return jsonResponse({ success: true, attribues: classement.length, notifsMerite: notificationsMerite.length, notifications: notifsEnvoyees })
 })
