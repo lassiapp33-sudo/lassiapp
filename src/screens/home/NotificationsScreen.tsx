@@ -66,7 +66,7 @@ function NotifCard({ notif, onPress }: { notif: Notif; onPress: () => void }) {
 
 interface Props {
   onBack: () => void;
-  onNavigate?: (type: NotifType, targetId?: string) => void;
+  onNavigate?: (type: NotifType, targetId?: string, data?: Record<string, unknown>) => void;
 }
 
 export default function NotificationsScreen({ onBack, onNavigate }: Props) {
@@ -93,7 +93,7 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
   const handlePress = useCallback(
     (n: Notif) => {
       markRead(n.id);
-      onNavigate?.(n.type, n.targetId);
+      onNavigate?.(n.type, n.targetId, n.data);
     },
     [markRead, onNavigate],
   );

@@ -45,6 +45,7 @@ export function rowToNotif(row: Record<string, any>): Notif {
     unread: !row.is_read,
     group: toGroup(row.created_at),
     targetId: data.conversation_id ?? data.order_id ?? undefined,
+    data,
   };
 }
 

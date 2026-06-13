@@ -89,6 +89,9 @@ export default function MerchantNavigator({ onLogout }: Props) {
   // Persiste le filtre/recherche de la carte entre navigations
   const [mapFilter, setMapFilter] = useState('all');
   const [mapSearch, setMapSearch] = useState('');
+
+  // Mémorise l'écran d'origine de "Mes terrains" pour le retour
+  const [terrainsFrom, setTerrainsFrom] = useState<'dashboard' | 'profile'>('dashboard');
   const userId = useAuthStore(s => s.user?.id ?? null);
   const addNotif = useNotificationsStore(s => s.addNotif);
 
@@ -279,14 +282,31 @@ export default function MerchantNavigator({ onLogout }: Props) {
     return (
       <NotificationsScreen
         onBack={() => setScreen('dashboard')}
-        onNavigate={(type, targetId) => {
+        onNavigate={(type, targetId, data) => {
           if (type === 'msg' && targetId) {
             // 1 tap → directement dans la bonne conversation
             setScreen({ id: 'chat', conversationId: targetId });
             return;
           }
-          if (type === 'order' || type === 'pay') setScreen('orders');
-          if (type === 'vip') setScreen('messages');
+          if (type === 'order' || type === 'pay') {
+            setScreen('orders');
+            return;
+          }
+          if (type === 'vip') {
+            const d = data ?? {};
+            // Achat "Offre du quartier" → écran de gestion de l'abonnement
+            if (d.subscription_id) {
+              setScreen('visibility');
+              return;
+            }
+            // Mise à jour de classement (hebdo ou mérite sous-catégorie) → écran Classement
+            if (d.sous_categorie || d.type_classement === 'sous_categorie') {
+              setScreen('classement');
+              return;
+            }
+            // Cadeau (bienvenue, manuel, mérite mondial) → où l'appliquer : Offre di Quartier
+            setScreen('offre_quartier');
+          }
         }}
       />
     );
@@ -309,7 +329,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
   if (screen === 'terrains')
     return (
       <TerrainScreen
-        onBack={() => setScreen('dashboard')}
+        onBack={() => setScreen(terrainsFrom)}
         onAddTerrain={() => setScreen({ id: 'terrain_edit' })}
         onEditTerrain={t => setScreen({ id: 'terrain_edit', terrain: t })}
         onTerrainReservations={t => setScreen({ id: 'terrain_reservations', terrain: t })}
@@ -345,7 +365,10 @@ export default function MerchantNavigator({ onLogout }: Props) {
       <MerchantProfileScreen
         onBack={() => setScreen('dashboard')}
         onStore={() => setScreen('store')}
-        onTerrains={() => setScreen('terrains')}
+        onTerrains={() => {
+          setTerrainsFrom('profile');
+          setScreen('terrains');
+        }}
         onVisibility={() => setScreen('visibility')}
         onOffreQuartier={() => setScreen('offre_quartier')}
         onCertificat={() => setScreen('certificat')}
@@ -369,7 +392,10 @@ export default function MerchantNavigator({ onLogout }: Props) {
         if (dest === 'assistant') setScreen('assistant');
         if (dest === 'aroundme') setScreen('aroundme');
         if (dest === 'avis') setScreen('avis');
-        if (dest === 'terrains') setScreen('terrains');
+        if (dest === 'terrains') {
+          setTerrainsFrom('dashboard');
+          setScreen('terrains');
+        }
         if (dest === 'classement') setScreen('classement');
         if (dest === 'offre_quartier') setScreen('offre_quartier');
       }}

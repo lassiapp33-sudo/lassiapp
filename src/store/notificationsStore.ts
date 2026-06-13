@@ -13,6 +13,7 @@ export interface Notif {
   unread: boolean;
   group: 'today' | 'week';
   targetId?: string;
+  data?: Record<string, unknown>;
 }
 
 interface NotifState {
