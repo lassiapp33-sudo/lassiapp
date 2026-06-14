@@ -295,6 +295,8 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   // true = le commerce a des coords mais l'user n'a pas activé le GPS
   const noGps = shopHasCoords && !userCoords;
 
+  const selectedOrder = useCartStore(s => s.orderType);
+
   // ── Options "Sur place / À emporter" — masquées pour bakery et stores ────
   const shopCategory = shopData?.category ?? '';
   const noOrderOptions = ['bakery', 'stores'].includes(shopCategory);
@@ -359,7 +361,6 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const cartItems = useCartStore(s => s.items);
   const addItem = useCartStore(s => s.addItem);
   const removeItem = useCartStore(s => s.removeItem);
-  const selectedOrder = useCartStore(s => s.orderType);
   const setCartOrder = useCartStore(s => s.setOrderType);
 
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
