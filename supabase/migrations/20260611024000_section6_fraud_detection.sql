@@ -346,7 +346,7 @@ $$;
 -- ─── 6. Pattern attaquant : bruteforce + manipulation de montant ─────────────
 -- Si un paiement est "disputed" (montant reçu ≠ montant attendu — Section 3.2)
 -- ET que ce client a récemment été bloqué pour bruteforce sur la connexion
--- (Section 5, rate_limits 'login:phone:...'), c'est un faisceau d'indices
+-- (Section 5, rate_limit_buckets 'login:phone:...'), c'est un faisceau d'indices
 -- d'attaque coordonnée → flag critique + suspension temporaire 24h du compte.
 
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS suspended_until TIMESTAMPTZ;
@@ -369,7 +369,7 @@ BEGIN
 
   IF v_phone IS NOT NULL THEN
     SELECT EXISTS (
-      SELECT 1 FROM public.rate_limits
+      SELECT 1 FROM public.rate_limit_buckets
       WHERE key = 'login:phone:' || v_phone
         AND blocked_until IS NOT NULL
         AND blocked_until > now() - INTERVAL '1 hour'

@@ -217,14 +217,14 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_row public.rate_limits;
+  v_row public.rate_limit_buckets;
   v_now TIMESTAMPTZ := now();
 BEGIN
-  INSERT INTO public.rate_limits (key, count, window_start)
+  INSERT INTO public.rate_limit_buckets (key, count, window_start)
   VALUES (p_key, 0, v_now)
   ON CONFLICT (key) DO NOTHING;
 
-  SELECT * INTO v_row FROM public.rate_limits WHERE key = p_key FOR UPDATE;
+  SELECT * INTO v_row FROM public.rate_limit_buckets WHERE key = p_key FOR UPDATE;
 
   -- Blocage explicite encore actif
   IF v_row.blocked_until IS NOT NULL AND v_row.blocked_until > v_now THEN
@@ -238,7 +238,7 @@ BEGIN
 
   -- Fenêtre expirée → nouvelle fenêtre
   IF v_row.window_start <= v_now - (p_window_seconds || ' seconds')::INTERVAL THEN
-    UPDATE public.rate_limits
+    UPDATE public.rate_limit_buckets
        SET count = 1, window_start = v_now, blocked_until = NULL
      WHERE key = p_key;
     RETURN jsonb_build_object('allowed', true, 'blocked', false, 'count', 1, 'retry_after', 0);
@@ -246,7 +246,7 @@ BEGIN
 
   -- Limite atteinte dans la fenêtre courante → blocage
   IF v_row.count >= p_max_attempts THEN
-    UPDATE public.rate_limits
+    UPDATE public.rate_limit_buckets
        SET count = count + 1,
            blocked_until = CASE WHEN p_block_seconds > 0
                                  THEN v_now + (p_block_seconds || ' seconds')::INTERVAL
@@ -266,7 +266,7 @@ BEGIN
   END IF;
 
   -- Dans les clous : incrémenter
-  UPDATE public.rate_limits SET count = count + 1 WHERE key = p_key;
+  UPDATE public.rate_limit_buckets SET count = count + 1 WHERE key = p_key;
 
   -- Section 8 : la limite vient d'être atteinte sur CETTE tentative (encore
   -- autorisée) → journaliser maintenant, pendant que la transaction committe
@@ -274,7 +274,7 @@ BEGIN
   -- ci-dessus, qui ne committe jamais.
   IF v_row.count + 1 >= p_max_attempts THEN
     PERFORM public.log_audit_event(
-      'rate_limit_reached', 'rate_limits', p_key, NULL,
+      'rate_limit_reached', 'rate_limit_buckets', p_key, NULL,
       jsonb_build_object('count', v_row.count + 1, 'max_attempts', p_max_attempts,
                           'window_seconds', p_window_seconds, 'block_seconds', p_block_seconds),
       NULL
@@ -312,7 +312,7 @@ BEGIN
 
   IF v_phone IS NOT NULL THEN
     SELECT EXISTS (
-      SELECT 1 FROM public.rate_limits
+      SELECT 1 FROM public.rate_limit_buckets
       WHERE key = 'login:phone:' || v_phone
         AND blocked_until IS NOT NULL
         AND blocked_until > now() - INTERVAL '1 hour'

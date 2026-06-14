@@ -1,7 +1,10 @@
 -- ===========================================================================
 -- LASSI — Section 5 : Rate limiting (anti-bruteforce, anti-spam)
 -- ---------------------------------------------------------------------------
--- Table générique rate_limits + fonction SECURITY DEFINER check_rate_limit()
+-- Table générique rate_limit_buckets + fonction SECURITY DEFINER check_rate_limit()
+-- (nommée "_buckets" pour ne pas entrer en collision avec une ancienne table
+-- public.rate_limits préexistante, à schéma incompatible et non utilisée par
+-- les Edge Functions déployées — laissée intacte par cette migration)
 -- utilisée pour limiter :
 --   1. Authentification   : 5 tentatives / 15 min, blocage 30 min (téléphone + IP)
 --   2. Création de compte : 3 inscriptions / heure / IP
@@ -13,9 +16,9 @@
 -- HTTP 429 (Too Many Requests) au client (RPC ou insert direct).
 -- ===========================================================================
 
--- ─── 1. Table rate_limits ─────────────────────────────────────────────────────
+-- ─── 1. Table rate_limit_buckets ──────────────────────────────────────────────
 
-CREATE TABLE IF NOT EXISTS public.rate_limits (
+CREATE TABLE IF NOT EXISTS public.rate_limit_buckets (
   key           TEXT PRIMARY KEY,
   count         INTEGER NOT NULL DEFAULT 0,
   window_start  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -24,7 +27,7 @@ CREATE TABLE IF NOT EXISTS public.rate_limits (
 
 -- RLS activé sans policy : aucun accès direct (anon/authenticated via PostgREST).
 -- Seules les fonctions SECURITY DEFINER (propriétaire postgres) y accèdent.
-ALTER TABLE public.rate_limits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.rate_limit_buckets ENABLE ROW LEVEL SECURITY;
 
 -- ─── 2. Fonction check_rate_limit ─────────────────────────────────────────────
 -- Compteur glissant atomique : incrémente `count` dans la fenêtre
@@ -44,14 +47,14 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_row public.rate_limits;
+  v_row public.rate_limit_buckets;
   v_now TIMESTAMPTZ := now();
 BEGIN
-  INSERT INTO public.rate_limits (key, count, window_start)
+  INSERT INTO public.rate_limit_buckets (key, count, window_start)
   VALUES (p_key, 0, v_now)
   ON CONFLICT (key) DO NOTHING;
 
-  SELECT * INTO v_row FROM public.rate_limits WHERE key = p_key FOR UPDATE;
+  SELECT * INTO v_row FROM public.rate_limit_buckets WHERE key = p_key FOR UPDATE;
 
   -- Blocage explicite encore actif
   IF v_row.blocked_until IS NOT NULL AND v_row.blocked_until > v_now THEN
@@ -65,7 +68,7 @@ BEGIN
 
   -- Fenêtre expirée → nouvelle fenêtre
   IF v_row.window_start <= v_now - (p_window_seconds || ' seconds')::INTERVAL THEN
-    UPDATE public.rate_limits
+    UPDATE public.rate_limit_buckets
        SET count = 1, window_start = v_now, blocked_until = NULL
      WHERE key = p_key;
     RETURN jsonb_build_object('allowed', true, 'blocked', false, 'count', 1, 'retry_after', 0);
@@ -73,7 +76,7 @@ BEGIN
 
   -- Limite atteinte dans la fenêtre courante → blocage
   IF v_row.count >= p_max_attempts THEN
-    UPDATE public.rate_limits
+    UPDATE public.rate_limit_buckets
        SET count = count + 1,
            blocked_until = CASE WHEN p_block_seconds > 0
                                  THEN v_now + (p_block_seconds || ' seconds')::INTERVAL
@@ -93,7 +96,7 @@ BEGIN
   END IF;
 
   -- Dans les clous : incrémenter
-  UPDATE public.rate_limits SET count = count + 1 WHERE key = p_key;
+  UPDATE public.rate_limit_buckets SET count = count + 1 WHERE key = p_key;
   RETURN jsonb_build_object('allowed', true, 'blocked', false, 'count', v_row.count + 1, 'retry_after', 0);
 END;
 $$;
@@ -115,7 +118,7 @@ LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  DELETE FROM public.rate_limits
+  DELETE FROM public.rate_limit_buckets
   WHERE window_start < now() - INTERVAL '24 hours'
     AND (blocked_until IS NULL OR blocked_until < now());
 $$;
