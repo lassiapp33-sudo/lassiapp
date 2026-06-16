@@ -10,10 +10,12 @@ DO $$ BEGIN
   PERFORM cron.unschedule('expire-visibility');
 EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
-DO $$ BEGIN
-  PERFORM cron.schedule(
-    'expire-visibility',
-    '0 1 * * *',  -- tous les jours a 1h00
-    'SELECT public.expire_visibility_subscriptions()'
-  );
-EXCEPTION WHEN OTHERS THEN NULL; END $$;
+-- Le bloc schedule ne doit PAS avaler les exceptions : si pg_cron n'est pas
+-- installé ou si le schedule échoue, la migration doit échouer visiblement
+-- pour que l'opérateur soit prévenu (sinon les abonnements expirés restent
+-- actifs à vie et bloquent tout nouvel achat).
+SELECT cron.schedule(
+  'expire-visibility',
+  '0 1 * * *',  -- tous les jours a 1h00
+  'SELECT public.expire_visibility_subscriptions()'
+);

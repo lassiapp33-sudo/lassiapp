@@ -113,7 +113,14 @@ Deno.serve(async (req) => {
             p_shop_id: prestaShop.id,
             p_amount: before.credit_lassi,
           })
-          if (decrError) throw decrError
+          if (decrError) {
+            // Restaurer est_actif=true pour que la révocation soit retentable
+            // (si on laisse est_actif=false, before.est_actif sera false au
+            //  prochain appel et le débit sera silencieusement ignoré).
+            await admin.from('recompenses_attribuees')
+              .update({ est_actif: true }).eq('id', recompenseId)
+            throw decrError
+          }
         }
       }
 
@@ -324,8 +331,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true, recompense: inserted }), {
       status: 200, headers: { ...CORS, 'Content-Type': 'application/json' },
     })
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message ?? 'Erreur interne' }), {
+  } catch (err: unknown) {
+    console.error('[admin-attribuer-recompense]', err instanceof Error ? err.message : err)
+    return new Response(JSON.stringify({ error: 'Erreur interne' }), {
       status: 500, headers: { ...CORS, 'Content-Type': 'application/json' },
     })
   }

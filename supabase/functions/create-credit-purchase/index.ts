@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { isUUID, isSafeString, isBoolean } from '../_shared/validation.ts'
+import { isUUID, isSafeString } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { calculateOffreQuartierPrice } from '../_shared/offreQuartierPricing.ts'
 import { findBoostPlan } from '../_shared/boostPlansPricing.ts'
@@ -13,7 +13,7 @@ import { findBoostPlan } from '../_shared/boostPlansPricing.ts'
 
 const PLAN_ID_RE = /^[a-z0-9]+$/i
 const MAX_FEATURED_PRODUCTS = 50
-const BOOST_PLAN_IDS = new Set(['1m', '3m', '6m'])
+const BOOST_DURATION_LABELS: Record<string, string> = { '1m': '1 mois', '3m': '3 mois', '6m': '6 mois' }
 
 type OfferType = 'quartier' | 'recherche' | 'carte'
 
@@ -56,16 +56,12 @@ Deno.serve(async (req) => {
     }
 
     const wantsAllProducts = allProducts === true
-    if (offerType === 'quartier') {
-      if (!wantsAllProducts) {
-        if (!Array.isArray(productIds) || productIds.length === 0) {
-          return json({ error: 'productIds requis (ou allProducts: true)' }, 400)
-        }
-        if (productIds.length > MAX_FEATURED_PRODUCTS || !productIds.every(isUUID)) {
-          return json({ error: 'productIds invalide' }, 400)
-        }
-      } else if (allProducts !== undefined && !isBoolean(allProducts)) {
-        return json({ error: 'allProducts invalide' }, 400)
+    if (offerType === 'quartier' && !wantsAllProducts) {
+      if (!Array.isArray(productIds) || productIds.length === 0) {
+        return json({ error: 'productIds requis (ou allProducts: true)' }, 400)
+      }
+      if (productIds.length > MAX_FEATURED_PRODUCTS || !productIds.every(isUUID)) {
+        return json({ error: 'productIds invalide' }, 400)
       }
     }
 
@@ -127,25 +123,25 @@ Deno.serve(async (req) => {
       planLabel = plan.label
 
       // Pas de double abonnement actif
-      const now = new Date().toISOString()
+      const nowIso = new Date().toISOString()
       const { data: existing } = await admin
         .from('visibility_subscriptions')
         .select('id')
         .eq('shop_id', shop.id)
         .eq('status', 'active')
-        .gt('expires_at', now)
+        .gt('expires_at', nowIso)
         .maybeSingle()
 
       if (existing) return json({ error: 'Un abonnement actif existe déjà' }, 409)
 
     } else {
-      if (!BOOST_PLAN_IDS.has(planId)) return json({ error: 'Forfait introuvable' }, 404)
+      // findBoostPlan vérifie déjà l'existence du planId — pas besoin de double check
       const plan = findBoostPlan(planId)
       if (!plan) return json({ error: 'Forfait introuvable' }, 404)
 
       price = plan.price
       durationDays = plan.durationDays
-      planLabel = `${durationDays === 30 ? '1 mois' : durationDays === 90 ? '3 mois' : '6 mois'}`
+      planLabel = BOOST_DURATION_LABELS[plan.id] ?? `${durationDays} jours`
     }
 
     // ⑤ Vérifier et débiter le portefeuille — atomique, échoue si solde insuffisant
@@ -159,15 +155,28 @@ Deno.serve(async (req) => {
     })
     if (spendError) throw spendError
     if (newBalance === null) {
-      return json({ error: 'Solde insuffisant', balance: shop.credit_balance, required: price }, 400)
+      // spend_shop_credit retourne NULL si le solde était insuffisant (race condition)
+      return json({ error: 'Solde insuffisant', required: price }, 400)
+    }
+
+    // Helper de remboursement — appelé si l'activation échoue APRÈS le débit.
+    // Le remboursement est best-effort : en cas d'échec, on logue et on laisse
+    // l'opérateur corriger manuellement via le dashboard admin.
+    const doRefund = async () => {
+      const { error: refundErr } = await admin.rpc('increment_shop_credit', {
+        p_shop_id: shop.id,
+        p_amount: price,
+      })
+      if (refundErr) {
+        console.error('[create-credit-purchase] REMBOURSEMENT ÉCHOUÉ — intervention manuelle requise', {
+          shop_id: shop.id, amount: price, error: refundErr.message,
+        })
+      }
     }
 
     // ⑥ Activer le forfait — application immédiate, sans attente de webhook
     const now = new Date()
     const expiresAt = new Date(now.getTime() + durationDays * 86_400_000)
-    // Pour 'recherche'/'carte', les RPC grant_* prolongent depuis l'expiration
-    // existante (cumul) — la vraie date renvoyée par RETURNING peut différer
-    // du calcul ci-dessus. Mis à jour plus bas si un boost était déjà actif.
     let responseExpiresAt = expiresAt
 
     if (offerType === 'quartier') {
@@ -191,16 +200,15 @@ Deno.serve(async (req) => {
         .single()
 
       if (subError) {
+        // Rembourser dans TOUS les cas (23505 = double-clic, autres = erreur inattendue)
+        await doRefund()
         if (subError.code === '23505') {
-          // Un abonnement actif a été créé entre-temps (double-clic/retry) —
-          // rembourser le crédit déjà débité par spend_shop_credit ci-dessus.
-          await admin.rpc('increment_shop_credit', { p_shop_id: shop.id, p_amount: price })
           return json({ error: 'Un abonnement actif existe déjà' }, 409)
         }
         throw subError
       }
 
-      await admin
+      const { error: shopsErr } = await admin
         .from('shops')
         .update({
           is_featured:           true,
@@ -210,6 +218,15 @@ Deno.serve(async (req) => {
         })
         .eq('id', shop.id)
 
+      if (shopsErr) {
+        // Supprimer l'abonnement orphelin (status='active') avant de rembourser,
+        // sinon l'index unique bloque tous les achats futurs pour cette boutique.
+        await admin.from('visibility_subscriptions').delete().eq('id', sub.id)
+        await doRefund()
+        throw shopsErr
+      }
+
+      // Notification best-effort (pas de remboursement si elle échoue)
       await admin.from('notifications').insert({
         user_id: user.id,
         type:    'vip',
@@ -223,8 +240,14 @@ Deno.serve(async (req) => {
         p_shop_id: shop.id,
         p_days: durationDays,
       })
-      if (rpcError) throw rpcError
-      if (newUntil) responseExpiresAt = new Date(newUntil as string)
+      if (rpcError) {
+        await doRefund()
+        throw rpcError
+      }
+      if (newUntil) {
+        const d = new Date(newUntil as string)
+        if (!isNaN(d.getTime())) responseExpiresAt = d
+      }
 
       await admin.from('notifications').insert({
         user_id: user.id,
@@ -239,8 +262,14 @@ Deno.serve(async (req) => {
         p_shop_id: shop.id,
         p_days: durationDays,
       })
-      if (rpcError) throw rpcError
-      if (newUntil) responseExpiresAt = new Date(newUntil as string)
+      if (rpcError) {
+        await doRefund()
+        throw rpcError
+      }
+      if (newUntil) {
+        const d = new Date(newUntil as string)
+        if (!isNaN(d.getTime())) responseExpiresAt = d
+      }
 
       await admin.from('notifications').insert({
         user_id: user.id,
@@ -260,7 +289,7 @@ Deno.serve(async (req) => {
     })
 
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Erreur interne'
-    return json({ error: msg }, 500)
+    console.error('[create-credit-purchase]', err instanceof Error ? err.message : err)
+    return json({ error: 'Erreur interne' }, 500)
   }
 })
