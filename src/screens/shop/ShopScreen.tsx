@@ -13,6 +13,7 @@ import ProductTile, { Product } from '../../components/shop/ProductTile';
 import CartFloating from '../../components/shop/CartFloating';
 import ShopFooter, { FOOTER_HEIGHT } from '../../components/shop/ShopFooter';
 import OpeningHoursCard from '../../components/store/OpeningHoursCard';
+import BoutonSuivi from '../../components/prestataire/BoutonSuivi';
 import { colors, fonts, TOP_INSET, radius } from '../../theme';
 import useCartStore, { OrderType } from '../../store/cartStore';
 import useFavoritesStore from '../../store/favoritesStore';
@@ -338,7 +339,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const shopAddress = shopData?.addressText ?? null;
   const galleryUrls = shopData?.galleryUrls ?? [];
   const hasGallery = galleryUrls.length > 0;
-  const hasInfoSection = !!(shopPhone || shopAddress || shopHours);
+  const hasInfoSection = !!(shopPhone || shopAddress || shopHours || shopHasCoords);
 
   // Index du composant sticky MenuTabs
   const menuTabsStickyIdx = 6 + (hasGallery ? 1 : 0) + (hasInfoSection ? 1 : 0);
@@ -535,6 +536,14 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                   <Text style={styles.hoursTitle}>Horaires</Text>
                   <OpeningHoursCard hours={shopHours} isManuallyClose={manuallyClose} readOnly />
                 </View>
+              )}
+              {(shopHasCoords || !!shopAddress) && (
+                <BoutonSuivi
+                  latitude={shopLat}
+                  longitude={shopLng}
+                  adresse={shopAddress}
+                  nomBoutique={displayName}
+                />
               )}
             </View>
           )}

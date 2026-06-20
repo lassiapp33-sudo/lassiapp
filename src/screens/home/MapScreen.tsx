@@ -2,8 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Image,
-  Linking,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,6 +28,7 @@ import type { Shop } from '../../services/shops';
 import { computeStatus, type WeekHours } from '../../services/hours';
 import { useRealtimeShops } from '../../hooks/useRealtimeShops';
 import { CATEGORIES } from '../../config/categories';
+import { ouvrirNavigation } from '../../utils/navigation';
 
 // ─── HTML Leaflet embarqué (100 % gratuit — tuiles Carto dark) ────────────────
 
@@ -421,16 +420,12 @@ export default function MapScreen({
 
   // ── Itinéraire externe ────────────────────────────────────────────────────
   const openRoute = (shop: Shop) => {
-    if (!shop.latitude || !shop.longitude) return;
-    const url =
-      Platform.OS === 'ios'
-        ? `maps://maps.apple.com/?daddr=${shop.latitude},${shop.longitude}`
-        : `geo:${shop.latitude},${shop.longitude}?q=${encodeURIComponent(shop.name)}`;
-    Linking.openURL(url).catch(() =>
-      Linking.openURL(
-        `https://www.google.com/maps/dir/?api=1&destination=${shop.latitude},${shop.longitude}`,
-      ),
-    );
+    ouvrirNavigation({
+      latitude: shop.latitude,
+      longitude: shop.longitude,
+      adresse: shop.addressText,
+      nomLieu: shop.name,
+    });
   };
 
   // ── Recentrer ────────────────────────────────────────────────────────────
