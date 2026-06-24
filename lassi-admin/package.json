@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Dashboard Admin — LASSİ",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
