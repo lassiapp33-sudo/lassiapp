@@ -9,6 +9,7 @@ interface Props {
   longitude?: number | null;
   adresse?: string | null;
   nomBoutique?: string | null;
+  onSuivi?: () => void;
 }
 
 const IcoNav = () => (
@@ -17,9 +18,13 @@ const IcoNav = () => (
   </Svg>
 );
 
-export default function BoutonSuivi({ latitude, longitude, adresse, nomBoutique }: Props) {
+export default function BoutonSuivi({ latitude, longitude, adresse, nomBoutique, onSuivi }: Props) {
   const handlePress = () => {
-    ouvrirNavigation({ latitude, longitude, adresse, nomLieu: nomBoutique });
+    if (onSuivi && latitude != null && longitude != null) {
+      onSuivi();
+    } else {
+      ouvrirNavigation({ latitude, longitude, adresse, nomLieu: nomBoutique });
+    }
   };
 
   return (

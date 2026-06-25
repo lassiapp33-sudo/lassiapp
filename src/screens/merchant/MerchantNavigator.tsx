@@ -22,6 +22,7 @@ import NotificationsScreen from '../home/NotificationsScreen';
 import ChatScreen from '../chat/ChatScreen';
 import ShopScreen from '../shop/ShopScreen';
 import MapScreen from '../home/MapScreen';
+import SuiviGPSScreen from '../home/SuiviGPSScreen';
 import CartScreen from '../home/CartScreen';
 import PaymentScreen from '../payment/PaymentScreen';
 import ClientOrdersScreen from '../home/ClientOrdersScreen';
@@ -76,7 +77,8 @@ type MerchantScreen =
   | 'terrains'
   | { id: 'terrain_edit'; terrain?: Terrain }
   | { id: 'terrain_reservations'; terrain: Terrain }
-  | 'terrain_scan';
+  | 'terrain_scan'
+  | { id: 'suivi_gps'; shopLat: number; shopLng: number; shopName: string; shopLogoUrl: string | null };
 
 interface Props {
   onLogout: () => void;
@@ -133,6 +135,19 @@ export default function MerchantNavigator({ onLogout }: Props) {
     );
   }
 
+  // ── Suivi GPS en app (prestataire en mode acheteur) ──────────────────────
+  if (typeof screen === 'object' && screen.id === 'suivi_gps') {
+    return (
+      <SuiviGPSScreen
+        shopLat={screen.shopLat}
+        shopLng={screen.shopLng}
+        shopName={screen.shopName}
+        shopLogoUrl={screen.shopLogoUrl}
+        onBack={() => setScreen('aroundme')}
+      />
+    );
+  }
+
   // ── Carte "Autour de moi" ─────────────────────────────────────────────────
   if (screen === 'aroundme') {
     return (
@@ -144,6 +159,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
         initialSearchQuery={mapSearch}
         onFilterChange={setMapFilter}
         onSearchChange={setMapSearch}
+        onRouteSuivi={params => setScreen({ id: 'suivi_gps', ...params })}
       />
     );
   }
@@ -173,6 +189,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
             backTo: screen.backTo,
           })
         }
+        onSuivi={params => setScreen({ id: 'suivi_gps', ...params })}
       />
     );
   }

@@ -35,19 +35,21 @@ export async function createPayment(params: {
   method:       PayMethod;
   merchantName: string;
 }): Promise<PaymentSession> {
-  // Clé d'idempotency : empêche les doublons sur retry ou double-clic
   const idempotencyKey = `pay_${params.ticketId}`;
+  // 'om' dans l'UI → 'orange_money' attendu par l'Edge Function
+  const moyenPaiement = params.method === 'om' ? 'orange_money' : 'wave';
 
   let res: Response;
   try {
-    // Section 10 — retry avec backoff exponentiel : seules les coupures
-    // réseau sont réessayées (idempotencyKey garantit qu'aucun doublon
-    // n'est créé côté Wave/OM).
     res = await retryWithBackoff(async () =>
       fetch(`${FUNCTIONS_BASE}/create-payment`, {
         method: 'POST',
         headers: await authHeaders(),
-        body: JSON.stringify({ ...params, idempotencyKey }),
+        body: JSON.stringify({
+          orderId: params.ticketId,
+          moyenPaiement,
+          idempotencyKey,
+        }),
       }),
     );
   } catch {
@@ -58,7 +60,13 @@ export async function createPayment(params: {
 
   const data = await res.json() as Record<string, unknown>;
   if (!res.ok) throw new Error((data.error as string) ?? 'Erreur de paiement');
-  return data as unknown as PaymentSession;
+
+  const redirectUrl = (data.redirectUrl ?? '') as string;
+  return {
+    paymentUrl:  redirectUrl,
+    reference:   (data.paymentIntentId ?? '') as string,
+    simulation:  data.mode === 'simulation',
+  };
 }
 
 // ─── Vérifier si un paiement a été effectué ───────────────────────────────────
@@ -74,7 +82,8 @@ export async function verifyPayment(params: {
       fetch(`${FUNCTIONS_BASE}/verify-payment`, {
         method: 'POST',
         headers: await authHeaders(),
-        body: JSON.stringify(params),
+        // L'Edge Function attend paymentIntentId (= reference stockée après createPayment)
+        body: JSON.stringify({ paymentIntentId: params.reference }),
       }),
     );
   } catch {
@@ -85,5 +94,5 @@ export async function verifyPayment(params: {
 
   const data = await res.json() as Record<string, unknown>;
   if (!res.ok) throw new Error((data.error as string) ?? 'Erreur vérification');
-  return data.paid === true;
+  return data.confirmed === true;
 }

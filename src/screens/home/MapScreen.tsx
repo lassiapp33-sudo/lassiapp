@@ -30,7 +30,7 @@ import { useRealtimeShops } from '../../hooks/useRealtimeShops';
 import { CATEGORIES } from '../../config/categories';
 import { ouvrirNavigation } from '../../utils/navigation';
 
-// ─── HTML Leaflet embarqué (100 % gratuit — tuiles Carto dark) ────────────────
+// ─── HTML Leaflet embarqué (100 % gratuit — tuiles CARTO dark navy) ──────────
 
 const buildMapHTML = (lat: number, lng: number): string => `
 <!DOCTYPE html>
@@ -43,12 +43,14 @@ const buildMapHTML = (lat: number, lng: number): string => `
     *{margin:0;padding:0;box-sizing:border-box;}
     html,body{width:100%;height:100%;background:#14152A;}
     #map{width:100%;height:100%;}
-    .leaflet-control-attribution{font-size:8px!important;background:rgba(20,21,42,.8)!important;color:#5a5c80!important;border-radius:4px!important;}
+    /* Overlay navy pour un rendu plus proche du dark mode Apple Maps */
+    #map::after{content:'';position:absolute;inset:0;background:rgba(10,12,45,.18);pointer-events:none;z-index:400;}
+    .leaflet-control-attribution{font-size:8px!important;background:rgba(20,21,42,.85)!important;color:#5a5c80!important;border-radius:4px!important;}
     .leaflet-control-attribution a{color:#5a5c80!important;}
     /* Pin */
     .lp{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
     .lp-crown{font-size:11px;line-height:1;margin-bottom:1px;}
-    .lp-b{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 4px 10px rgba(0,0,0,.45);}
+    .lp-b{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 4px 12px rgba(0,0,0,.6);}
     .lp-b.std{background:#1E2040;border:2px solid #2A2C52;}
     .lp-b.vip{background:#FDCF34;border:2px solid #fff;}
     .lp-b.sel{border-color:#FDCF34!important;box-shadow:0 0 0 3px rgba(253,207,52,.4);}
@@ -56,7 +58,7 @@ const buildMapHTML = (lat: number, lng: number): string => `
     .lp-t.std{border-top-color:#2A2C52;}
     .lp-t.vip{border-top-color:#FDCF34;}
     /* Dot utilisateur */
-    .ud{width:18px;height:18px;border-radius:50%;background:#4D9FFF;border:3px solid #fff;box-shadow:0 0 0 14px rgba(77,159,255,.18);}
+    .ud{width:18px;height:18px;border-radius:50%;background:#4D9FFF;border:3px solid #fff;box-shadow:0 0 0 14px rgba(77,159,255,.2);}
   </style>
 </head>
 <body>
@@ -68,7 +70,7 @@ const FB_LAT=${lat};const FB_LNG=${lng};
 const map=L.map('map',{center:[${lat},${lng}],zoom:15,zoomControl:false});
 
 L.tileLayer('https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{
-  attribution:'© OpenStreetMap contributors © CARTO',maxZoom:19
+  attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>',maxZoom:20
 }).addTo(map);
 
 // Marqueur utilisateur
@@ -271,6 +273,7 @@ interface Props {
   initialSearchQuery?: string;
   onFilterChange?: (filter: string) => void;
   onSearchChange?: (query: string) => void;
+  onRouteSuivi?: (params: { shopLat: number; shopLng: number; shopName: string; shopLogoUrl: string | null }) => void;
 }
 
 // Position de secours : Dakar centre
@@ -284,6 +287,7 @@ export default function MapScreen({
   initialSearchQuery,
   onFilterChange,
   onSearchChange,
+  onRouteSuivi,
 }: Props) {
   const wvRef = useRef<WebView>(null);
   const sheetAnim = useRef(new Animated.Value(300)).current;
@@ -418,14 +422,19 @@ export default function MapScreen({
       ? haversineMeters(coords.latitude, coords.longitude, selected.latitude, selected.longitude)
       : null;
 
-  // ── Itinéraire externe ────────────────────────────────────────────────────
+  // ── Itinéraire : suivi en app si coords dispo, sinon navigation externe ──────
   const openRoute = (shop: Shop) => {
-    ouvrirNavigation({
-      latitude: shop.latitude,
-      longitude: shop.longitude,
-      adresse: shop.addressText,
-      nomLieu: shop.name,
-    });
+    if (onRouteSuivi && shop.latitude && shop.longitude) {
+      closeSheet();
+      onRouteSuivi({ shopLat: shop.latitude, shopLng: shop.longitude, shopName: shop.name, shopLogoUrl: shop.logoUrl });
+    } else {
+      ouvrirNavigation({
+        latitude: shop.latitude,
+        longitude: shop.longitude,
+        adresse: shop.addressText,
+        nomLieu: shop.name,
+      });
+    }
   };
 
   // ── Recentrer ────────────────────────────────────────────────────────────

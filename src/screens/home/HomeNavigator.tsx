@@ -12,6 +12,7 @@ import FavoritesScreen from './FavoritesScreen';
 import RecentlyViewedScreen from './RecentlyViewedScreen';
 import CartScreen from './CartScreen';
 import MapScreen from './MapScreen';
+import SuiviGPSScreen from './SuiviGPSScreen';
 import ReceiptScreen from './ReceiptScreen';
 import CategoryScreen from '../category/CategoryScreen';
 import ShopScreen from '../shop/ShopScreen';
@@ -47,6 +48,7 @@ type HomeStack =
   | { id: 'recent' }
   | { id: 'messages' }
   | { id: 'map' }
+  | { id: 'suivi_gps'; shopLat: number; shopLng: number; shopName: string; shopLogoUrl: string | null }
   | { id: 'cart'; shopId: string; shopName: string }
   | { id: 'category'; catId: CatId; title: string; subCatId?: string }
   | { id: 'shop'; shopId: string; shopName: string; targetProductId?: string }
@@ -353,6 +355,7 @@ export default function HomeNavigator({ onLogout }: Props) {
             prixTotal: params.prixTotal,
           })
         }
+        onSuivi={params => push({ id: 'suivi_gps', ...params })}
       />
     );
   }
@@ -403,6 +406,19 @@ export default function HomeNavigator({ onLogout }: Props) {
     return <SearchScreen onBack={pop} onShopPress={pushShop} />;
   }
 
+  // ── Suivi GPS en app ─────────────────────────────────────────────────────
+  if (screen.id === 'suivi_gps') {
+    return (
+      <SuiviGPSScreen
+        shopLat={screen.shopLat}
+        shopLng={screen.shopLng}
+        shopName={screen.shopName}
+        shopLogoUrl={screen.shopLogoUrl}
+        onBack={pop}
+      />
+    );
+  }
+
   // ── Carte ──────────────────────────────────────────────────────────────
   if (screen.id === 'map') {
     return (
@@ -413,6 +429,9 @@ export default function HomeNavigator({ onLogout }: Props) {
         initialSearchQuery={mapSearch}
         onFilterChange={setMapFilter}
         onSearchChange={setMapSearch}
+        onRouteSuivi={params =>
+          push({ id: 'suivi_gps', ...params })
+        }
       />
     );
   }

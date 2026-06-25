@@ -107,7 +107,9 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
         merchantName: order.shopName,
       });
       referenceRef.current = session.reference;
-      await Linking.openURL(session.paymentUrl);
+      if (session.paymentUrl) {
+        await Linking.openURL(session.paymentUrl);
+      }
       setStage('waiting');
     } catch (err) {
       logger.warn('[PaymentScreen] handlePay:', err);
