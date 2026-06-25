@@ -74,11 +74,17 @@ export interface ActiveSub {
 
 export type CreatePaymentResult =
   | { status: 'awaiting_keys'; message: string }
-  | { status: 'pending_payment'; subscriptionId: string; paymentUrl: string; reference: string };
+  | {
+      status:         'pending_payment';
+      subscriptionId: string;
+      paymentUrl:     string;  // Wave: URL checkout / OM: deepLink ouvrant l'app OM
+      qrCode:         string;  // OM: image QR base64 (fallback si deepLink indisponible) / vide pour Wave
+      reference:      string;
+    };
 
 export type VerifyResult =
   | { paid: true; status: 'active'; expiresAt: string }
-  | { paid: false; status: 'pending' | 'awaiting_keys' | string };
+  | { paid: false; status: 'pending' | 'awaiting_keys' | 'failed' | string };
 
 // ─── Charger les plans depuis la DB (avec fallback statique) ─────────────────
 
@@ -232,17 +238,23 @@ export function getPlanPriceFor(
   };
 }
 
-// ─── Vérifier un paiement ─────────────────────────────────────────────────────
+// ─── Vérifier un paiement OM ─────────────────────────────────────────────────
+// Orange Money active l'abonnement via webhook (verify-visibility-payment).
+// L'app lit simplement l'état courant en DB — pas d'appel à une Edge Function.
 
 export async function verifyVisibilityPayment(subscriptionId: string): Promise<VerifyResult> {
-  const res = await fetch(`${FUNCTIONS_BASE}/verify-visibility-payment`, {
-    method: 'POST',
-    headers: await authHeaders(),
-    body: JSON.stringify({ subscriptionId }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? 'Erreur de vérification');
-  return data as VerifyResult;
+  const { data, error } = await supabase
+    .from('visibility_subscriptions')
+    .select('status, expires_at')
+    .eq('id', subscriptionId)
+    .maybeSingle();
+
+  if (error || !data) throw new Error('Abonnement introuvable');
+
+  if (data.status === 'active') {
+    return { paid: true, status: 'active', expiresAt: data.expires_at as string };
+  }
+  return { paid: false, status: data.status as string };
 }
 
 // ─── Description marketing calculée depuis les données de tarif ──────────────

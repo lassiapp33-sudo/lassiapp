@@ -8,6 +8,7 @@ import {
   Alert,
   Linking,
   Modal,
+  Image,
 } from 'react-native';
 import Svg, { Path, Polyline } from 'react-native-svg';
 
@@ -124,14 +125,39 @@ function RenewCard({ onPress }: { onPress: () => void }) {
   );
 }
 
-// ─── Bandeau "paiement en attente de confirmation" ────────────────────────────
+// ─── Bandeau "paiement Orange Money en attente" ───────────────────────────────
 
-function PendingPaymentBanner({ onVerify, loading }: { onVerify: () => void; loading: boolean }) {
+function PendingPaymentBanner({
+  onVerify,
+  loading,
+  qrCode,
+  paymentUrl,
+}: {
+  onVerify: () => void;
+  loading: boolean;
+  qrCode: string;
+  paymentUrl: string;
+}) {
+  const showQr = !!qrCode && !paymentUrl;  // QR uniquement si deep link indisponible
+
   return (
     <View style={styles.pendingBanner}>
-      <Text style={styles.pendingTxt}>
-        Paiement en attente — appuie sur le bouton après avoir payé dans l'app.
-      </Text>
+      {showQr ? (
+        <>
+          <Text style={styles.pendingTxt}>
+            Scanne ce QR code avec l'app Orange Money pour payer.
+          </Text>
+          <Image
+            source={{ uri: `data:image/png;base64,${qrCode}` }}
+            style={styles.qrImage}
+            resizeMode="contain"
+          />
+        </>
+      ) : (
+        <Text style={styles.pendingTxt}>
+          Paiement Orange Money en attente — reviens ici après avoir payé dans l'app.
+        </Text>
+      )}
       <TouchableOpacity
         style={[styles.verifyBtn, loading && { opacity: 0.6 }]}
         onPress={onVerify}
@@ -219,7 +245,7 @@ function OfferPickerModal({
 type PayState =
   | { type: 'idle' }
   | { type: 'loading' }
-  | { type: 'pending'; subscriptionId: string; paymentUrl: string }
+  | { type: 'pending'; subscriptionId: string; paymentUrl: string; qrCode: string }
   | { type: 'verifying' }
   | { type: 'error'; message: string };
 
@@ -350,17 +376,21 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
         return;
       }
 
-      // Paiement initié → ouvrir l'app Wave/OM
+      // Paiement initié → ouvrir l'app Wave / Orange Money via deep link
       setPayState({
-        type: 'pending',
+        type:           'pending',
         subscriptionId: result.subscriptionId,
-        paymentUrl: result.paymentUrl,
+        paymentUrl:     result.paymentUrl,
+        qrCode:         result.qrCode,
       });
 
       if (result.paymentUrl) {
         const canOpen = await Linking.canOpenURL(result.paymentUrl);
         if (canOpen) {
           await Linking.openURL(result.paymentUrl);
+        } else if (payMethod === 'orange_money' && result.qrCode) {
+          // OM : si l'app OM n'est pas installée, le QR code s'affiche dans le bandeau
+          // (cf. PendingPaymentBanner — aucune action supplémentaire nécessaire ici)
         } else {
           Alert.alert(
             'Application introuvable',
@@ -378,7 +408,7 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
   // ── Vérifier le paiement après retour de l'app Wave/OM ───────────────────
   const handleVerify = async () => {
     if (payState.type !== 'pending') return;
-    const { subscriptionId } = payState;
+    const { subscriptionId, paymentUrl, qrCode } = payState;
 
     setPayState({ type: 'verifying' });
     try {
@@ -394,7 +424,8 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
         setPayState({ type: 'idle' });
         Alert.alert('Configuration en cours', 'Les clés API ne sont pas encore configurées.');
       } else {
-        setPayState({ type: 'pending', subscriptionId, paymentUrl: '' });
+        // Préserver le QR code et le lien pour que le bandeau reste affiché
+        setPayState({ type: 'pending', subscriptionId, paymentUrl, qrCode });
         Alert.alert(
           'Paiement non confirmé',
           "Nous n'avons pas encore reçu la confirmation. Réessaie dans quelques secondes.",
@@ -552,10 +583,15 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
               />
             ))}
 
-            {/* Bandeau affiché quand un paiement est en attente */}
-            {offerType === 'quartier' && isPending && (
+            {/* Bandeau affiché quand un paiement OM est en attente */}
+            {offerType === 'quartier' && isPending && payState.type === 'pending' && (
               <View style={styles.bannerWrap}>
-                <PendingPaymentBanner onVerify={handleVerify} loading={isVerifying} />
+                <PendingPaymentBanner
+                  onVerify={handleVerify}
+                  loading={isVerifying}
+                  qrCode={payState.qrCode}
+                  paymentUrl={payState.paymentUrl}
+                />
               </View>
             )}
 
@@ -763,6 +799,14 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 12,
     marginBottom: 10,
+  },
+  qrImage: {
+    width: 200,
+    height: 200,
+    alignSelf: 'center',
+    marginBottom: 14,
+    borderRadius: 8,
+    backgroundColor: '#fff',
   },
   activatedBanner: {
     backgroundColor: 'rgba(253,207,52,.08)',
