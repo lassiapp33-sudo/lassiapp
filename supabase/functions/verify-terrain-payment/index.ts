@@ -1,9 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isSafeString } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
+import { getOmToken, OM_BASE_URL, isOmReady } from '../_shared/omAuth.ts'
 
 const WAVE_SECRET_KEY = Deno.env.get('WAVE_SECRET_KEY') ?? ''
-const OM_API_KEY      = Deno.env.get('OM_API_KEY') ?? ''
 
 Deno.serve(async (req) => {
   const CORS = corsHeaders(req)
@@ -51,14 +51,14 @@ Deno.serve(async (req) => {
       const data = await res.json()
       paid = data.payment_status === 'succeeded'
 
-    } else if ((method === 'om' || method === 'orange_money') && OM_API_KEY) {
+    } else if ((method === 'om' || method === 'orange_money') && isOmReady()) {
+      // Sonatel : GET /api/eWallet/v1/transactions/{transactionId}/status
+      // `reference` = transactionId Orange Money (ex: "MP220928.1029.C58502")
+      const omToken = await getOmToken()
+      const encodedRef = encodeURIComponent(reference)
       const res = await fetch(
-        'https://api.orange.com/orange-money-webpay/sn/v1/transactionstatus',
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${OM_API_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ order_id: reference }),
-        },
+        `${OM_BASE_URL}/api/eWallet/v1/transactions/${encodedRef}/status`,
+        { headers: { Authorization: `Bearer ${omToken}` } },
       )
       const data = await res.json()
       paid = data.status === 'SUCCESS'

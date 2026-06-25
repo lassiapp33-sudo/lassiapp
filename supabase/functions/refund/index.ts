@@ -17,11 +17,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { isUUID, isSafeString } from '../_shared/validation.ts';
 import { corsHeaders as buildCorsHeaders } from '../_shared/cors.ts';
 
-// 🔌 Mêmes clés que create-payment. Sans elles → mode simulation.
-const WAVE_API_KEY     = Deno.env.get('WAVE_API_KEY')     ?? '';
-const OM_API_KEY       = Deno.env.get('OM_API_KEY')       ?? '';
-const OM_MERCHANT_CODE = Deno.env.get('OM_MERCHANT_CODE') ?? '';
-const IS_PRODUCTION    = WAVE_API_KEY !== '' || OM_API_KEY !== '';
+const WAVE_API_KEY  = Deno.env.get('WAVE_API_KEY') ?? '';
+// OM Sonatel n'expose pas d'endpoint de remboursement dans son API v1.
+// Les remboursements OM sont traités manuellement depuis le portail Orange.
+const IS_PRODUCTION = WAVE_API_KEY !== '';
 
 serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
@@ -188,29 +187,20 @@ async function refundWave(params: { paymentIntentId: string; externalRef: string
 }
 
 // ============================================================
-// ORANGE MONEY REFUND
-// 🔌 À compléter par l'ingénieur OM avec leur spec API exacte
+// ORANGE MONEY SONATEL — Remboursement
+// L'API Sonatel v1 ne propose pas d'endpoint de remboursement programmatique.
+// Les remboursements OM sont traités manuellement via le portail partenaire
+// Orange : https://developer.orange-sonatel.com
+// Cette fonction log l'alerte pour suivi manuel.
 // ============================================================
 async function refundOrangeMoney(params: { paymentIntentId: string; externalRef: string | null; montant: number }): Promise<string> {
-  const response = await fetch('https://api.orange.com/orange-money-webpay/dev/v1/refund', {
-    method: 'POST',
-    headers: {
-      'Authorization':   `Bearer ${OM_API_KEY}`,
-      'Content-Type':    'application/json',
-      'Idempotency-Key': `refund_${params.paymentIntentId}`,
-    },
-    body: JSON.stringify({
-      merchant_key: OM_MERCHANT_CODE,
-      pay_token:    params.externalRef,
-      amount:       params.montant,
-    }),
-  });
-
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(`OM refund error: ${JSON.stringify(err)}`);
-  }
-
-  const data = await response.json();
-  return data.transaction_id ?? data.pay_token;
+  console.warn(
+    '[ALERTE REMBOURSEMENT OM] Remboursement manuel requis —',
+    'payment_intent:', params.paymentIntentId,
+    '| transactionId OM:', params.externalRef,
+    '| montant:', params.montant, 'XOF',
+  );
+  // Retourner une référence fictive pour que le flux DB continue
+  // (la décision de remboursement est déjà acté en DB à ce stade)
+  return `MANUAL-OM-REFUND-${params.paymentIntentId.slice(0, 8).toUpperCase()}`;
 }

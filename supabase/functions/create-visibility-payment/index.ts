@@ -2,31 +2,22 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID, isSafeString, isBoolean } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { calculateOffreQuartierPrice } from '../_shared/offreQuartierPricing.ts'
+import { getOmToken, OM_BASE_URL } from '../_shared/omAuth.ts'
 
 const PLAN_ID_RE = /^[a-z0-9]+$/i
 const MAX_FEATURED_PRODUCTS = 50
 
-// ─── Clés API de paiement ─────────────────────────────────────────────────────
-// TODO: remplir ces variables dans le dashboard Supabase
-//       Settings → Edge Functions → Secrets
-//       (ou dans supabase/functions/.env pour le développement local)
-//
-// Variables attendues :
-//   WAVE_API_KEY       = <clé secrète Wave Checkout>
-//   WAVE_MERCHANT_ID   = <identifiant marchand Wave>
-//   OM_API_KEY         = <token Orange Money WebPay>
-//   OM_MERCHANT_ID     = <merchant_key Orange Money>
-//   APP_BASE_URL       = <URL de callback deep-link, ex: lassi://payment>
+const OM_MERCHANT_CODE  = Deno.env.get('OM_MERCHANT_CODE')  ?? ''  // code marchand (6 chiffres)
+const OM_WEBHOOK_SECRET = Deno.env.get('OM_WEBHOOK_SECRET') ?? ''
 
 const WAVE_API_KEY     = Deno.env.get('WAVE_API_KEY')     ?? ''
 const WAVE_MERCHANT_ID = Deno.env.get('WAVE_MERCHANT_ID') ?? ''
-const OM_API_KEY       = Deno.env.get('OM_API_KEY')       ?? ''
-const OM_MERCHANT_ID   = Deno.env.get('OM_MERCHANT_ID')   ?? ''
-const APP_BASE_URL     = Deno.env.get('APP_BASE_URL')     ?? ''
+
+const APP_BASE_URL = Deno.env.get('APP_BASE_URL') ?? 'lassi://'
 
 const KEYS_READY = {
   wave:         !!(WAVE_API_KEY && WAVE_MERCHANT_ID),
-  orange_money: !!(OM_API_KEY   && OM_MERCHANT_ID),
+  orange_money: !!(Deno.env.get('OM_CLIENT_ID') && Deno.env.get('OM_CLIENT_SECRET') && OM_MERCHANT_CODE),
 }
 
 Deno.serve(async (req) => {
@@ -41,13 +32,13 @@ Deno.serve(async (req) => {
 
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
-  // GET : expose la disponibilité des clés (appelé par l'app au chargement de l'écran)
+  // GET : expose la disponibilité des clés (app l'appelle au chargement)
   if (req.method === 'GET') {
     return json({ wave: KEYS_READY.wave, orange_money: KEYS_READY.orange_money })
   }
 
   try {
-    // ① Authentification
+    // ① Authentification utilisateur
     const supabaseUser = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
@@ -85,16 +76,15 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
-    // ③ Si les clés API ne sont pas encore configurées → refuser proprement
-    //    sans créer de ligne en base (évite les lignes orphelines)
+    // ③ Clés non configurées → refuser proprement (pas de ligne orpheline en DB)
     if (!KEYS_READY[payMethod as keyof typeof KEYS_READY]) {
       return json({
         status:  'awaiting_keys',
-        message: 'Le paiement mobile est en cours d\'intégration. Revenez bientôt !',
+        message: "Le paiement mobile est en cours d'intégration. Revenez bientôt !",
       })
     }
 
-    // ④ Vérifier que l'utilisateur possède bien une boutique
+    // ④ Vérifier que l'utilisateur possède une boutique
     const { data: shop } = await admin
       .from('shops')
       .select('id')
@@ -103,9 +93,7 @@ Deno.serve(async (req) => {
 
     if (!shop) return json({ error: 'Boutique introuvable' }, 404)
 
-    // ⑤ Charger le forfait depuis la DB — prix de base officiel côté serveur
-    //    (on n'accepte jamais un prix envoyé par le client ; le prix final
-    //    tenant compte du nombre de produits est calculé en ⑤ter)
+    // ⑤ Charger le forfait depuis la DB (le prix vient toujours du serveur)
     const { data: plan } = await admin
       .from('visibility_plans')
       .select('id, label, price, duration_months, duration_days')
@@ -115,7 +103,7 @@ Deno.serve(async (req) => {
 
     if (!plan) return json({ error: 'Forfait introuvable ou inactif' }, 404)
 
-    // ⑤bis Vérifier que les produits choisis appartiennent bien à cette boutique
+    // ⑤bis Vérifier que les produits appartiennent à cette boutique
     const featuredProductIds: string[] = []
     if (!wantsAllProducts) {
       const uniqueIds = Array.from(new Set(productIds as string[]))
@@ -131,9 +119,7 @@ Deno.serve(async (req) => {
       featuredProductIds.push(...uniqueIds)
     }
 
-    // ⑤ter Prix dynamique selon le nombre de produits mis en avant
-    //     ("toute la vitrine" = nombre total de produits de la boutique).
-    //     Calculé ici, jamais à partir d'une valeur envoyée par le client.
+    // ⑤ter Prix dynamique (jamais accepté depuis le client)
     let nbProduits = featuredProductIds.length
     if (wantsAllProducts) {
       const { count } = await admin
@@ -144,7 +130,7 @@ Deno.serve(async (req) => {
     }
     const finalPrice = calculateOffreQuartierPrice(plan.price, nbProduits)
 
-    // ⑥ Vérifier l'absence d'un abonnement déjà actif
+    // ⑥ Vérifier l'absence d'abonnement actif
     const now = new Date().toISOString()
     const { data: existing } = await admin
       .from('visibility_subscriptions')
@@ -156,17 +142,17 @@ Deno.serve(async (req) => {
 
     if (existing) return json({ error: 'Un abonnement actif existe déjà' }, 409)
 
-    // ⑦ Créer la ligne pending (avant l'appel API pour avoir l'ID de référence)
+    // ⑦ Créer la ligne pending avant l'appel API
     const { data: sub, error: subError } = await admin
       .from('visibility_subscriptions')
       .insert({
         shop_id:      shop.id,
         merchant_id:  user.id,
         plan_id:      plan.id,
-        product_id:   featuredProductIds[0] ?? null,  // legacy : 1er produit pour affichage simple
+        product_id:   featuredProductIds[0] ?? null,
         product_ids:  featuredProductIds,
         all_products: wantsAllProducts,
-        amount:       finalPrice,  // prix de base (DB) + surcoût produits, jamais depuis le client
+        amount:       finalPrice,
         pay_method:   payMethod,
         status:       'pending',
       })
@@ -175,13 +161,13 @@ Deno.serve(async (req) => {
 
     if (subError) throw subError
 
-    // ⑧ Appel à l'API Wave ou Orange Money pour créer la session de paiement
-    let paymentUrl = ''
-    let reference  = sub.id  // sera remplacé par l'ID du provider
+    // ⑧ Appel API de paiement
+    let paymentUrl = ''   // Wave: checkout URL  /  OM: deepLink ouvrant l'app OM
+    let qrCode     = ''   // OM seulement : image QR code base64 (fallback scan)
+    let reference  = sub.id
 
     if (payMethod === 'wave') {
       // ── Wave Checkout ──────────────────────────────────────────────────────
-      // Doc: https://docs.wave.com/business/checkout
       const waveRes = await fetch('https://api.wave.com/v1/checkout/sessions', {
         method:  'POST',
         headers: {
@@ -192,8 +178,8 @@ Deno.serve(async (req) => {
           currency:         'XOF',
           amount:           String(finalPrice),
           merchant_id:      WAVE_MERCHANT_ID,
-          success_url:      `${APP_BASE_URL}/visibility-success?sub=${sub.id}`,
-          error_url:        `${APP_BASE_URL}/visibility-error?sub=${sub.id}`,
+          success_url:      `${APP_BASE_URL}visibility-success?sub=${sub.id}`,
+          error_url:        `${APP_BASE_URL}visibility-error?sub=${sub.id}`,
           client_reference: sub.id,
         }),
       })
@@ -203,34 +189,49 @@ Deno.serve(async (req) => {
       reference  = waveData.id ?? sub.id
 
     } else {
-      // ── Orange Money WebPay ────────────────────────────────────────────────
-      // Doc: https://developer.orange.com/apis/orange-money-webpay-sn
-      const omRes = await fetch(
-        'https://api.orange.com/orange-money-webpay/sn/v1/webpayment',
-        {
-          method:  'POST',
-          headers: {
-            'Authorization': `Bearer ${OM_API_KEY}`,
-            'Content-Type':  'application/json',
-          },
-          body: JSON.stringify({
-            merchant_key: OM_MERCHANT_ID,
-            currency:     'OUV',
-            order_id:     sub.id,
-            amount:       finalPrice,
-            return_url:   `${APP_BASE_URL}/visibility-success`,
-            cancel_url:   `${APP_BASE_URL}/visibility-error`,
-            notif_url:    `${Deno.env.get('SUPABASE_URL')}/functions/v1/verify-visibility-payment`,
-          }),
+      // ── Orange Money Sonatel — QR Code (POST /api/eWallet/v4/qrcode) ──────
+      // Flux : génère un QR + deepLink → l'app ouvre le deepLink (app OM) →
+      // l'utilisateur paie → Orange POST notre webhook → on active l'abonnement.
+      const omToken = await getOmToken()
+
+      // URL webhook : sub_id + secret en query param pour matching et sécurité.
+      // Orange POST cette URL quand le paiement est finalisé (SUCCESS ou FAILED).
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+      const webhookUrl  =
+        `${supabaseUrl}/functions/v1/verify-visibility-payment` +
+        `?sub_id=${encodeURIComponent(sub.id)}` +
+        `&secret=${encodeURIComponent(OM_WEBHOOK_SECRET)}`
+
+      const omRes = await fetch(`${OM_BASE_URL}/api/eWallet/v4/qrcode`, {
+        method:  'POST',
+        headers: {
+          'Authorization':  `Bearer ${omToken}`,
+          'Content-Type':   'application/json',
+          'X-Callback-Url': webhookUrl,
         },
-      )
+        body: JSON.stringify({
+          code:     OM_MERCHANT_CODE,
+          name:     'LASSI',
+          amount:   { value: finalPrice, unit: 'XOF' },
+          validity: 900,  // 15 minutes
+          metadata: { subscription_id: sub.id },
+          // callbackSuccessUrl/callbackCancelUrl omis : Orange rejette supabase.co
+          // Le suivi réel passe par X-Callback-Url (webhook, POST Orange → nous).
+        }),
+      })
+
       const omData = await omRes.json()
-      if (!omRes.ok) throw new Error(omData.message ?? 'Erreur Orange Money')
-      paymentUrl = omData.payment_url ?? ''
-      reference  = omData.pay_token ?? sub.id
+      if (!omRes.ok) {
+        throw new Error(omData.message ?? omData.detail ?? JSON.stringify(omData))
+      }
+
+      paymentUrl = omData.deepLink ?? ''  // deep link → ouvre directement l'app OM
+      qrCode     = omData.qrCode   ?? ''  // base64 : affiché si deep link non dispo
+      // Pas de transaction ID côté Sonatel au moment de la création du QR.
+      // Il arrivera dans la notification webhook (notification.transactionId).
     }
 
-    // ⑨ Enregistrer la référence du provider en base
+    // ⑨ Enregistrer la référence provider (id Wave ou sub.id pour OM)
     await admin
       .from('visibility_subscriptions')
       .update({ transaction_id: reference })
@@ -239,7 +240,8 @@ Deno.serve(async (req) => {
     return json({
       status:         'pending_payment',
       subscriptionId: sub.id,
-      paymentUrl,
+      paymentUrl,   // L'app fait Linking.openURL(paymentUrl) pour les deux méthodes
+      qrCode,       // OM : fallback si deepLink ne s'ouvre pas (vide pour Wave)
       reference,
     })
 

@@ -25,9 +25,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // 🔌 Mêmes clés que create-payment. Sans elles → mode simulation.
 const WAVE_API_KEY     = Deno.env.get('WAVE_API_KEY')     ?? '';
 const WAVE_MERCHANT_ID = Deno.env.get('WAVE_MERCHANT_ID') ?? '';
-const OM_API_KEY       = Deno.env.get('OM_API_KEY')       ?? '';
-const OM_MERCHANT_CODE = Deno.env.get('OM_MERCHANT_CODE') ?? '';
-const IS_PRODUCTION    = WAVE_API_KEY !== '' || OM_API_KEY !== '';
+// OM Sonatel : Cash In vers le prestataire (POST /api/eWallet/v1/cashins)
+// Requiert OM_RETAILER_MSISDN + OM_RETAILER_PIN_ENCRYPTED (PIN de LASSI chiffré RSA)
+const OM_RETAILER_MSISDN      = Deno.env.get('OM_RETAILER_MSISDN')      ?? '';
+const OM_RETAILER_PIN_ENCRYPTED = Deno.env.get('OM_RETAILER_PIN_ENCRYPTED') ?? '';
+const IS_PRODUCTION            = (WAVE_API_KEY !== '' && WAVE_MERCHANT_ID !== '') ||
+                                  (OM_RETAILER_MSISDN !== '' && OM_RETAILER_PIN_ENCRYPTED !== '');
 
 // 🔌 Secret partagé avec le planificateur (cron). Si non configuré, la
 // fonction reste accessible (mode démo) mais un avertissement est loggué.
@@ -209,31 +212,49 @@ async function sendWavePayout(params: { payoutId: string; montant: number; phone
 }
 
 // ============================================================
-// ORANGE MONEY PAYOUT (transfert vers le prestataire)
-// 🔌 À compléter par l'ingénieur OM avec leur spec API exacte (cash-in)
+// ORANGE MONEY SONATEL — Cash In (POST /api/eWallet/v1/cashins)
+// LASSI (retailer/partner) envoie de l'argent vers le prestataire (customer).
+//
+// Prérequis :
+//   OM_RETAILER_MSISDN        = numéro OM de LASSI (9 chiffres, ex: 781234567)
+//   OM_RETAILER_PIN_ENCRYPTED = PIN de LASSI chiffré RSA avec la clé publique
+//                               Orange (GET /api/account/v1/publicKeys)
+//                               Longueur attendue : 344 caractères base64
 // ============================================================
 async function sendOrangeMoneyPayout(params: { payoutId: string; montant: number; phone: string }): Promise<string> {
-  const response = await fetch('https://api.orange.com/orange-money-webpay/dev/v1/transfer', {
+  const { getOmToken, OM_BASE_URL } = await import('../_shared/omAuth.ts');
+  const omToken = await getOmToken();
+
+  const response = await fetch(`${OM_BASE_URL}/api/eWallet/v1/cashins`, {
     method: 'POST',
     headers: {
-      'Authorization':   `Bearer ${OM_API_KEY}`,
-      'Content-Type':    'application/json',
-      'Idempotency-Key': `payout_${params.payoutId}`,
+      'Authorization': `Bearer ${omToken}`,
+      'Content-Type':  'application/json',
     },
     body: JSON.stringify({
-      merchant_key: OM_MERCHANT_CODE,
-      currency:     'OUV',
-      amount:       params.montant,
-      receiver:     `+221${params.phone}`,
-      reference:    params.payoutId,
+      partner: {
+        idType:           'MSISDN',
+        id:               OM_RETAILER_MSISDN,
+        encryptedPinCode: OM_RETAILER_PIN_ENCRYPTED,
+      },
+      customer: {
+        idType: 'MSISDN',
+        id:     params.phone,  // numéro du prestataire (9 chiffres)
+      },
+      amount: {
+        value: params.montant,
+        unit:  'XOF',
+      },
+      reference:           params.payoutId,
+      receiveNotification: false,
     }),
   });
 
   if (!response.ok) {
     const err = await response.json();
-    throw new Error(`OM payout error: ${JSON.stringify(err)}`);
+    throw new Error(`OM payout error (${response.status}): ${err.detail ?? JSON.stringify(err)}`);
   }
 
   const data = await response.json();
-  return data.transaction_id ?? data.pay_token;
+  return data.transactionId ?? data.requestId ?? params.payoutId;
 }

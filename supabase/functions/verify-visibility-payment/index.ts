@@ -1,117 +1,137 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID } from '../_shared/validation.ts'
-import { corsHeaders } from '../_shared/cors.ts'
 
-// ─── Clés API ─────────────────────────────────────────────────────────────────
-// Mêmes variables que create-visibility-payment.
-// TODO: vérifier que WAVE_SECRET_KEY et OM_API_KEY sont configurés avant mise en prod.
+const OM_WEBHOOK_SECRET = Deno.env.get('OM_WEBHOOK_SECRET') ?? ''
 
-const WAVE_SECRET_KEY = Deno.env.get('WAVE_SECRET_KEY') ?? ''  // clé pour vérifier le statut
-const OM_API_KEY      = Deno.env.get('OM_API_KEY')      ?? ''
+// Notification POST par Orange Money Sonatel après paiement QR code.
+// Doc: https://api.sandbox.orange-sonatel.com → /api/eWallet/v4/qrcode callback
+interface OmNotification {
+  amount:         { value: number; unit: string }
+  partner:        { idType: string; id: string }        // id = OM_MERCHANT_CODE
+  customer?:      { idType: string; id: string }        // id = msisdn du payeur
+  reference?:     string
+  type?:          string                                // "MERCHANT_PAYMENT"
+  channel?:       string                                // "API"
+  transactionId?: string                                // ex: "MP220928.1029.C58502"
+  paymentMethod?: string                                // "QRCODE"
+  status:         'SUCCESS' | 'FAILED' | string
+}
 
 Deno.serve(async (req) => {
-  const CORS = corsHeaders(req)
-
   function json(data: unknown, status = 200) {
     return new Response(JSON.stringify(data), {
       status,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
     })
   }
 
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+  // OPTIONS / HEAD : validation de l'URL par Orange avant d'accepter le callback
+  if (req.method === 'OPTIONS' || req.method === 'HEAD') {
+    return new Response(null, { status: 200 })
+  }
+
+  // ── GET : redirect navigateur après paiement Orange (callbackSuccessUrl/Cancel) ──
+  if (req.method === 'GET') {
+    const url    = new URL(req.url)
+    const result = url.searchParams.get('result') ?? 'cancel'
+    const subId  = url.searchParams.get('sub_id') ?? ''
+    const deepLink = result === 'success'
+      ? `lassiapp://visibility-success?sub=${subId}`
+      : `lassiapp://visibility-error?sub=${subId}`
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="0;url=${deepLink}">
+<title>LASSI — Redirection</title></head><body>
+<p>Redirection vers l'application LASSI...</p>
+<a href="${deepLink}">Ouvrir LASSI</a>
+</body></html>`
+    return new Response(html, {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    })
+  }
+
+  // Orange Money ne POST que cette URL — pas de CORS
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
   try {
-    // ① Authentification
-    const supabaseUser = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } },
-    )
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser()
-    if (userError || !user) return json({ error: 'Non autorisé' }, 401)
+    // ① Extraire sub_id + secret depuis l'URL (mis en place dans create-visibility-payment)
+    //    Format: /verify-visibility-payment?sub_id=<uuid>&secret=<OM_WEBHOOK_SECRET>
+    const url    = new URL(req.url)
+    const subId  = url.searchParams.get('sub_id') ?? ''
+    const secret = url.searchParams.get('secret') ?? ''
 
-    const { subscriptionId } = await req.json()
-    if (!subscriptionId) return json({ error: 'subscriptionId requis' }, 400)
-    if (!isUUID(subscriptionId)) return json({ error: 'subscriptionId invalide' }, 400)
+    if (!subId || !isUUID(subId)) {
+      console.error('OM webhook: sub_id invalide —', subId)
+      return json({ error: 'sub_id invalide' }, 400)
+    }
+
+    // Secret obligatoire en production (OM_WEBHOOK_SECRET != '')
+    if (OM_WEBHOOK_SECRET && secret !== OM_WEBHOOK_SECRET) {
+      console.error('OM webhook: secret invalide')
+      return json({ error: 'Non autorisé' }, 401)
+    }
+
+    // ② Parser la notification Orange Money
+    const notification = await req.json() as OmNotification
+    console.log('OM webhook reçu:', JSON.stringify({ subId, status: notification.status, transactionId: notification.transactionId }))
 
     const admin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
-    // ② Charger l'abonnement — vérifier qu'il appartient au caller
+    // ③ Charger l'abonnement avec le plan associé
     const { data: sub } = await admin
       .from('visibility_subscriptions')
       .select('*, plan:plan_id(duration_days, label)')
-      .eq('id', subscriptionId)
-      .eq('merchant_id', user.id)
+      .eq('id', subId)
       .maybeSingle()
 
-    if (!sub) return json({ error: 'Abonnement introuvable' }, 404)
-
-    // Déjà actif → idempotent
-    if (sub.status === 'active') {
-      return json({ paid: true, status: 'active', expiresAt: sub.expires_at })
+    if (!sub) {
+      console.error('OM webhook: abonnement introuvable —', subId)
+      return json({ error: 'Abonnement introuvable' }, 404)
     }
 
-    if (sub.status !== 'pending') {
-      return json({ paid: false, status: sub.status })
+    // Idempotent : déjà traité
+    if (sub.status === 'active') return json({ received: true })
+
+    // ④ Traitement selon le statut Orange Money
+    if (notification.status === 'FAILED') {
+      await admin
+        .from('visibility_subscriptions')
+        .update({ status: 'failed' })
+        .eq('id', subId)
+        .eq('status', 'pending')  // garde contre race condition
+      console.log('OM webhook: paiement FAILED —', subId)
+      return json({ received: true })
     }
 
-    // ③ Vérifier le paiement côté API fournisseur
-    let paid = false
-
-    if (sub.pay_method === 'wave' && WAVE_SECRET_KEY) {
-      // ── Wave : vérification du statut de la session de paiement ───────────
-      // Doc: https://docs.wave.com/business/checkout#retrieve-a-checkout-session
-      const res  = await fetch(
-        `https://api.wave.com/v1/checkout/sessions/${sub.transaction_id}`,
-        { headers: { Authorization: `Bearer ${WAVE_SECRET_KEY}` } },
-      )
-      const data = await res.json()
-      paid = data.payment_status === 'succeeded'
-
-    } else if (sub.pay_method === 'orange_money' && OM_API_KEY) {
-      // ── Orange Money : vérification du statut de la transaction ───────────
-      // Doc: https://developer.orange.com/apis/orange-money-webpay-sn
-      const res  = await fetch(
-        'https://api.orange.com/orange-money-webpay/sn/v1/transactionstatus',
-        {
-          method:  'POST',
-          headers: { Authorization: `Bearer ${OM_API_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ order_id: sub.id }),
-        },
-      )
-      const data = await res.json()
-      paid = data.status === 'SUCCESS'
-
-    } else {
-      // Clés non configurées
-      return json({ paid: false, status: 'awaiting_keys' })
+    // Statuts intermédiaires ignorés (Orange peut envoyer PENDING avant SUCCESS)
+    if (notification.status !== 'SUCCESS') {
+      console.log('OM webhook: statut intermédiaire ignoré —', notification.status)
+      return json({ received: true })
     }
 
-    if (!paid) return json({ paid: false, status: 'pending' })
-
-    // ④ Paiement confirmé → activer l'abonnement
+    // ⑤ Paiement SUCCESS → activer l'abonnement
+    const durationDays: number = sub.plan?.duration_days ?? 30
     const now       = new Date()
-    const startedAt = now.toISOString()
-    const expiresAt = new Date(now.getTime() + sub.plan.duration_days * 86_400_000)
+    const expiresAt = new Date(now.getTime() + durationDays * 86_400_000)
 
     const { error: updateError } = await admin
       .from('visibility_subscriptions')
       .update({
-        status:     'active',
-        started_at: startedAt,
-        expires_at: expiresAt.toISOString(),
-        paid_at:    startedAt,
+        status:         'active',
+        started_at:     now.toISOString(),
+        expires_at:     expiresAt.toISOString(),
+        paid_at:        now.toISOString(),
+        transaction_id: notification.transactionId ?? sub.transaction_id,
       })
-      .eq('id', sub.id)
+      .eq('id', subId)
+      .eq('status', 'pending')  // garde contre double activation
 
     if (updateError) throw updateError
 
-    // ⑤ Activer "Offre du quartier" pour la boutique avec le(s) produit(s) choisi(s)
-    //    — accès immédiat au type d'abonnement payé (1 produit / plusieurs / vitrine entière)
+    // ⑥ Activer "Offre du quartier" sur la boutique
     await admin
       .from('shops')
       .update({
@@ -122,22 +142,30 @@ Deno.serve(async (req) => {
       })
       .eq('id', sub.shop_id)
 
-    // ⑥ Notification in-app au marchand
+    // ⑦ Notification in-app au marchand
     const expiryFr = expiresAt.toLocaleDateString('fr-FR', {
       day: 'numeric', month: 'long', year: 'numeric',
     })
+    const planLabel  = sub.plan?.label ?? ''
+    const amountFCFA = (sub.amount as number)?.toLocaleString('fr-FR') ?? ''
+
     await admin.from('notifications').insert({
-      user_id: user.id,
+      user_id: sub.merchant_id,
       type:    'vip',
       title:   '🎉 Félicitations pour votre achat !',
-      body:    `Grâce à votre achat du forfait « ${sub.plan.label} » (${sub.amount.toLocaleString('fr-FR')} FCFA), vous avez obtenu une mise en avant de votre boutique dans l'Offre du Quartier jusqu'au ${expiryFr}. Profitez-en pour attirer encore plus de nouveaux clients !`,
+      body:    `Grâce à votre achat du forfait « ${planLabel} » (${amountFCFA} FCFA), ` +
+               `vous avez obtenu une mise en avant de votre boutique dans l'Offre du Quartier ` +
+               `jusqu'au ${expiryFr}. Profitez-en pour attirer encore plus de clients !`,
       data:    { subscription_id: sub.id },
     })
 
-    return json({ paid: true, status: 'active', expiresAt: expiresAt.toISOString() })
+    console.log('OM webhook: abonnement activé —', subId, 'expires', expiresAt.toISOString())
+    return json({ received: true })
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Erreur interne'
+    console.error('OM webhook erreur:', msg)
+    // Retourner 500 pour qu'Orange retry (elle réessaie sur 5xx)
     return json({ error: msg }, 500)
   }
 })

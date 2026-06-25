@@ -27,33 +27,111 @@ serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
+  const url  = new URL(req.url);
+
+  // OPTIONS / HEAD : validation de l'URL par Orange avant d'accepter le callback
+  if (req.method === 'OPTIONS' || req.method === 'HEAD') {
+    return new Response(null, { status: 200 })
+  }
+
+  // ── Redirects navigateur Orange (callbackSuccessUrl / callbackCancelUrl) ──
+  // Orange redirige le navigateur sur ces URLs après le paiement web.
+  // On renvoie une page HTML qui redirige vers l'app LASSI via deep link.
+  if (req.method === 'GET') {
+    const result = url.searchParams.get('result') ?? 'cancel';
+    const piId   = url.searchParams.get('pi_id') ?? '';
+    const deepLink = result === 'success'
+      ? `lassiapp://paiement/succes?pi=${piId}`
+      : `lassiapp://paiement/echec?pi=${piId}`;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="0;url=${deepLink}">
+<title>LASSI — Redirection</title></head><body>
+<p>Redirection vers l'application LASSI...</p>
+<a href="${deepLink}">Ouvrir LASSI</a>
+</body></html>`;
+    return new Response(html, {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
+  }
+
   const body = await req.text();
 
-  // ── 1. Détermination de la source via les en-têtes de signature ──────────
-  // Rejet explicite si aucun en-tête connu → pas de fallback silencieux
-  const waveSignature = req.headers.get('X-Wave-Signature');
-  const omSignature   = req.headers.get('X-OM-Signature');
+  // ── Détection source : Sonatel OM (query param) ou Wave (HMAC header) ────
+  const sourceParam    = url.searchParams.get('source');          // "om" si Sonatel
+  const waveSignature  = req.headers.get('X-Wave-Signature');
 
-  let source: 'wave' | 'orange_money';
-  let signature: string;
-  let secret: string;
+  // ── Chemin Orange Money Sonatel ──────────────────────────────────────────
+  // Auth : secret en query param (pas de HMAC — API Sonatel n'en propose pas)
+  // URL format : /webhook-payment?source=om&pi_id={uuid}&secret={OM_WEBHOOK_SECRET}
+  if (sourceParam === 'om') {
+    const piId    = url.searchParams.get('pi_id')  ?? '';
+    const secret  = url.searchParams.get('secret') ?? '';
 
-  if (waveSignature) {
-    source    = 'wave';
-    signature = waveSignature;
-    secret    = WAVE_WEBHOOK_SECRET;
-  } else if (omSignature) {
-    source    = 'orange_money';
-    signature = omSignature;
-    secret    = OM_WEBHOOK_SECRET;
-  } else {
-    console.error('[webhook] En-tête de signature absent (X-Wave-Signature ou X-OM-Signature requis)');
+    if (!isUUID(piId)) {
+      console.error('[webhook-om] pi_id invalide dans l\'URL');
+      return new Response('pi_id invalide', { status: 400 });
+    }
+    if (OM_WEBHOOK_SECRET && secret !== OM_WEBHOOK_SECRET) {
+      console.error('[webhook-om] secret invalide');
+      return new Response('Non autorisé', { status: 401 });
+    }
+
+    let omPayload: Record<string, unknown>;
+    try {
+      omPayload = JSON.parse(body);
+    } catch {
+      return new Response('Body invalide', { status: 400 });
+    }
+
+    // Format notification Sonatel : { status, transactionId, amount, partner, customer, ... }
+    const externalStatus = omPayload.status as string | undefined;
+    const isSuccess      = externalStatus === 'SUCCESS';
+    const externalRef    = omPayload.transactionId as string | undefined;
+    const rawAmount      = (omPayload.amount as Record<string, unknown> | undefined)?.value;
+    const receivedAmount = rawAmount !== undefined && Number.isFinite(Number(rawAmount))
+      ? Math.round(Number(rawAmount)) : null;
+
+    const externalEventId = `${externalRef ?? piId}:${externalStatus ?? 'unknown'}`;
+
+    console.log('[webhook-om] notification reçue:', JSON.stringify({ piId, externalStatus, externalRef }));
+
+    const { data: result, error: rpcError } = await supabase.rpc('process_payment_webhook', {
+      p_external_event_id: externalEventId,
+      p_payment_intent_id: piId,
+      p_source:            'orange_money',
+      p_external_status:   externalStatus ?? '',
+      p_external_ref:      externalRef ?? null,
+      p_received_amount:   receivedAmount,
+      p_is_success:        isSuccess,
+      p_raw_payload:       omPayload,
+    });
+
+    if (rpcError) {
+      console.error('[webhook-om] process_payment_webhook erreur DB:', rpcError.message);
+      return new Response('Erreur serveur', { status: 500 });
+    }
+
+    if (result?.disputed) {
+      console.error('[ALERTE PAIEMENT OM] montant incohérent — pi', piId, JSON.stringify(result));
+    }
+
+    // Orange attend toujours 200 (sinon elle retry en boucle)
+    return new Response('OK', { status: 200 });
+  }
+
+  // ── Chemin Wave (HMAC) ───────────────────────────────────────────────────
+  if (!waveSignature) {
+    console.error('[webhook] En-tête de signature absent (X-Wave-Signature requis) et source!=om');
     return new Response('Signature manquante', { status: 401 });
   }
 
-  // ── Vérification HMAC (rejet si secret non configuré) ────────────────────
+  const source    = 'wave' as const;
+  const signature = waveSignature;
+  const secret    = WAVE_WEBHOOK_SECRET;
+
   if (!secret) {
-    console.error(`[webhook] Secret ${source} non configuré — WAVE_WEBHOOK_SECRET / OM_WEBHOOK_SECRET requis`);
+    console.error('[webhook] WAVE_WEBHOOK_SECRET non configuré');
     return new Response('Configuration manquante', { status: 500 });
   }
 
@@ -66,7 +144,7 @@ serve(async (req) => {
 
   const sigNorm = signature.startsWith('sha256=') ? signature.slice(7) : signature;
   if (!timingSafeEqual(expected, sigNorm)) {
-    console.error('[webhook] Signature invalide — tentative rejetée');
+    console.error('[webhook] Signature Wave invalide — tentative rejetée');
     await logAuditEvent(supabase, {
       action:      'webhook_invalid_signature',
       targetTable: 'payment_intents',
@@ -83,18 +161,15 @@ serve(async (req) => {
     return new Response('Body invalide', { status: 400 });
   }
 
-  // ── Validation du payment_intent_id (rejet si absent) ─────────────────────
   const piId: unknown = payload.client_reference ?? payload.order_id ?? (payload.metadata as Record<string, unknown> | undefined)?.pi_id;
   if (!isUUID(piId)) {
-    // Section 9 : ne jamais logger le payload complet (peut contenir des
-    // données client Wave/OM) — seules les clés reçues aident au diagnostic.
-    console.error('[webhook] payment_intent_id absent ou invalide dans le payload — clés reçues:', Object.keys(payload));
+    console.error('[webhook] payment_intent_id absent ou invalide — clés reçues:', Object.keys(payload));
     return new Response('payment_intent_id manquant', { status: 400 });
   }
 
   const externalStatus = (payload.payment_status ?? payload.status) as string | undefined;
   const isSuccess      = ['succeeded', 'completed', 'success', 'SUCCESSFUL', 'SUCCESSFULL'].includes(externalStatus ?? '');
-  const externalRef    = (payload.id ?? payload.transaction_id ?? payload.pay_token ?? payload.notif_token) as string | undefined;
+  const externalRef    = (payload.id ?? payload.transaction_id) as string | undefined;
 
   // 3. ID d'événement pour la déduplication (un même événement Wave/OM peut
   // être renvoyé plusieurs fois). 🔌 À ajuster avec l'ingénieur Wave/OM si un

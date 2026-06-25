@@ -12,24 +12,24 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { isUUID } from '../_shared/validation.ts';
 import { corsHeaders as buildCorsHeaders } from '../_shared/cors.ts';
+import { getOmToken, OM_BASE_URL, isOmReady } from '../_shared/omAuth.ts';
 
 // ============================================================
-// 🔌 POINT D'ENTRÉE POUR L'INGÉNIEUR WAVE/OM
-// Ces 4 variables suffisent pour activer le paiement réel :
+// 🔌 POINT D'ENTRÉE — activer le paiement réel :
 //
-// WAVE_API_KEY=your_wave_api_key_here
-// WAVE_MERCHANT_ID=your_wave_merchant_id_here
-// OM_API_KEY=your_orange_money_api_key_here
-// OM_MERCHANT_CODE=your_om_merchant_code_here
+// WAVE_API_KEY=...  WAVE_MERCHANT_ID=...
+// OM_CLIENT_ID=...  OM_CLIENT_SECRET=...  OM_MERCHANT_CODE=...
+// OM_BASE_URL=https://api.sandbox.orange-sonatel.com  (sandbox)
+// OM_WEBHOOK_SECRET=...  (secret pour authentifier le callback OM)
 //
 // Sans ces clés → mode simulation automatique (démo fonctionnelle)
 // ============================================================
-const WAVE_API_KEY    = Deno.env.get('WAVE_API_KEY')    ?? '';
+const WAVE_API_KEY     = Deno.env.get('WAVE_API_KEY')     ?? '';
 const WAVE_MERCHANT_ID = Deno.env.get('WAVE_MERCHANT_ID') ?? '';
-const OM_API_KEY      = Deno.env.get('OM_API_KEY')      ?? '';
 const OM_MERCHANT_CODE = Deno.env.get('OM_MERCHANT_CODE') ?? '';
+const OM_WEBHOOK_SECRET = Deno.env.get('OM_WEBHOOK_SECRET') ?? '';
 
-const IS_PRODUCTION = WAVE_API_KEY !== '' || OM_API_KEY !== '';
+const IS_PRODUCTION = (WAVE_API_KEY !== '' && WAVE_MERCHANT_ID !== '') || isOmReady();
 
 serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
@@ -129,7 +129,7 @@ serve(async (req) => {
       } else {
         // ======================================================
         // MODE PRODUCTION — ORANGE MONEY
-        // 🔌 L'ingénieur OM active cette branche en ajoutant OM_API_KEY
+        // 🔌 L'ingénieur OM active cette branche en configurant OM_CLIENT_ID + OM_MERCHANT_CODE
         // ======================================================
         paymentResult = await initiateOrangeMoneyPayment({
           piId, montantTotal, prixBase, commission, prestataireId,
@@ -273,46 +273,53 @@ async function initiateWavePayment(params: {
 }
 
 // ============================================================
-// ORANGE MONEY PAYMENT INTEGRATION
-// 🔌 À compléter par l'ingénieur OM avec leur spec API exacte
+// ORANGE MONEY SONATEL — QR Code (POST /api/eWallet/v4/qrcode)
+// Auth : OAuth2 via getOmToken() (credentials dans le body, pas Basic Auth)
+// Le deepLink retourné ouvre directement l'app Orange Money du client.
+// Orange POST notre webhook (webhook-payment?source=om&pi_id=...&secret=...)
+// quand le paiement est finalisé.
 // ============================================================
 async function initiateOrangeMoneyPayment(params: {
   piId: string; montantTotal: number; prixBase: number;
   commission: number; prestataireId: string;
 }) {
-  const response = await fetch('https://api.orange.com/orange-money-webpay/dev/v1/webpayment', {
+  const omToken = await getOmToken();
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+
+  // Webhook URL : pi_id + secret en query param pour matching et sécurité
+  const callbackUrl =
+    `${supabaseUrl}/functions/v1/webhook-payment` +
+    `?source=om&pi_id=${encodeURIComponent(params.piId)}` +
+    `&secret=${encodeURIComponent(OM_WEBHOOK_SECRET)}`;
+
+  const response = await fetch(`${OM_BASE_URL}/api/eWallet/v4/qrcode`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${OM_API_KEY}`,
-      'Content-Type': 'application/json',
-      // Idempotence côté fournisseur : un retry réseau de notre part ne doit
-      // jamais créer deux sessions de paiement pour le même payment_intent.
-      'Idempotency-Key': params.piId,
+      'Authorization':  `Bearer ${omToken}`,
+      'Content-Type':   'application/json',
+      'X-Callback-Url': callbackUrl,
     },
     body: JSON.stringify({
-      merchant_key: OM_MERCHANT_CODE,
-      currency:     'OUV',
-      order_id:     params.piId,
-      amount:       params.montantTotal,
-      return_url:   `lassiapp://paiement/succes?pi=${params.piId}`,
-      cancel_url:   'lassiapp://paiement/echec',
-      notif_url:    `${Deno.env.get('SUPABASE_URL')}/functions/v1/webhook-payment`,
-      split: {
-        recipient_id:     params.prestataireId,
-        recipient_amount: params.prixBase,
-      },
+      code:     OM_MERCHANT_CODE,
+      name:     'LASSI',
+      amount:   { value: params.montantTotal, unit: 'XOF' },
+      validity: 900,  // 15 minutes
+      metadata: { pi_id: params.piId },
+      // callbackSuccessUrl/callbackCancelUrl omis : Orange rejette supabase.co
+      // Le suivi réel passe par X-Callback-Url (webhook, POST Orange → nous).
     }),
   });
 
   if (!response.ok) {
     const err = await response.json();
-    throw new Error(`OM error: ${JSON.stringify(err)}`);
+    throw new Error(`OM erreur: ${err.message ?? JSON.stringify(err)}`);
   }
 
   const data = await response.json();
   return {
-    ref:         data.pay_token ?? data.notif_token,
-    redirectUrl: data.payment_url,
-    status:      data.status,
+    ref:         params.piId,      // référence interne (le transactionId OM arrive via webhook)
+    redirectUrl: data.deepLink ?? data.qrCode ?? null,  // deepLink → Linking.openURL()
+    qrCode:      data.qrCode  ?? null,
+    status:      'initiated',
   };
 }
