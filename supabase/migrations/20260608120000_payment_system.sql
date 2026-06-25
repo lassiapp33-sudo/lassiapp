@@ -14,12 +14,14 @@ CREATE TABLE IF NOT EXISTS payment_intents (
   prestataire_id UUID NOT NULL REFERENCES profiles(id),
 
   -- Montants (TOUJOURS en FCFA entier, JAMAIS de virgule)
-  prix_base INTEGER NOT NULL,         -- prix de base du prestataire (avant frais Wave sortie ~1%)
-  commission_lassi INTEGER NOT NULL,  -- 1% du prix_base, arrondi au FCFA supérieur (profit net LASSİ)
-  montant_total INTEGER NOT NULL,     -- prix_base + commission_lassi = ce que le client paie
+  prix_base INTEGER NOT NULL,         -- prix fixé par le prestataire (ce qu'il doit recevoir avant frais opérateur)
+  commission_lassi INTEGER NOT NULL,  -- 1% du prix_base, arrondi au FCFA supérieur — supporté par le CLIENT
+  montant_total INTEGER NOT NULL,     -- prix_base + commission_lassi = ce que le client paie à LASSI
   -- Invariant serveur : commission_lassi = CEIL(prix_base * 0.01)
   -- Invariant serveur : montant_total = prix_base + commission_lassi
-  -- Le prestataire reçoit effectivement prix_base × 0.99 (Wave prend ~1% à la sortie)
+  -- Frais opérateur (séparés, hors commission LASSI) :
+  --   Wave  : ~1% à l'entrée (sur montant_total) + ~1% à la sortie (sur prix_base) → prestataire reçoit ~prix_base × 0.99
+  --   OM    : 1% prélevé par OM sur le client + 0.5% prélevé par OM sur le prestataire → prestataire reçoit ~prix_base × 0.995
 
   -- Paiement
   moyen_paiement TEXT NOT NULL CHECK (moyen_paiement IN ('wave', 'orange_money')),
