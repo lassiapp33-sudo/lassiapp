@@ -4,7 +4,7 @@ import {
   Star, Plus, Minus, ChevronRight, Coins,
 } from 'lucide-react'
 import EmptyState from '../components/EmptyState'
-import { getShops, getProfiles, type AdminShop, type AdminProfile } from '../services/users'
+import { getProfiles, type AdminProfile } from '../services/users'
 import {
   getRecompensesManuelles, attribuerRecompense, revoquerRecompense,
   type RecompenseManuelle,
@@ -114,7 +114,7 @@ export default function RecompensesPage() {
   const [showForm,  setShowForm]  = useState(false)
   const [form,      setForm]      = useState<FormState>(EMPTY_FORM)
   const [search,    setSearch]    = useState('')
-  const [results,   setResults]   = useState<(AdminShop | AdminProfile)[]>([])
+  const [results,   setResults]   = useState<AdminProfile[]>([])
   const [searching, setSearching] = useState(false)
   const [saving,    setSaving]    = useState(false)
 
@@ -135,13 +135,12 @@ export default function RecompensesPage() {
 
     setSearching(true)
     const timeout = setTimeout(() => {
-      const query = form.targetType === 'prestataire' ? getShops(term) : getProfiles(term)
-      query
+      getProfiles(term)
         .then(rows => {
           if (form.targetType === 'client') {
-            setResults((rows as AdminProfile[]).filter(p => p.role === 'client'))
+            setResults(rows.filter(p => p.role === 'client'))
           } else {
-            setResults((rows as AdminShop[]).filter(s => s.merchantId))
+            setResults(rows.filter(p => p.role === 'merchant'))
           }
         })
         .catch(() => setResults([]))
@@ -160,15 +159,16 @@ export default function RecompensesPage() {
     setShowForm(true)
   }
 
-  function selectTarget(row: AdminShop | AdminProfile) {
-    if (form.targetType === 'prestataire') {
-      const shop = row as AdminShop
-      if (!shop.merchantId) return
-      setForm(f => ({ ...f, target: { type: 'prestataire', id: shop.merchantId!, name: shop.name } }))
-    } else {
-      const profile = row as AdminProfile
-      setForm(f => ({ ...f, target: { type: 'client', id: profile.id, name: profile.name } }))
-    }
+  function selectTarget(row: AdminProfile) {
+    const profile = row as AdminProfile
+    setForm(f => ({
+      ...f,
+      target: {
+        type: form.targetType,
+        id:   profile.id,
+        name: profile.name,
+      },
+    }))
     setResults([])
     setSearch('')
   }
@@ -428,9 +428,9 @@ export default function RecompensesPage() {
                     {results.length > 0 && (
                       <div className="mt-1.5 border border-border rounded-xl overflow-hidden max-h-44 overflow-y-auto">
                         {results.map(row => {
-                          const isShop = form.targetType === 'prestataire'
-                          const name   = isShop ? (row as AdminShop).name : (row as AdminProfile).name
-                          const sub    = isShop ? (row as AdminShop).zone : (row as AdminProfile).phone
+                          const profile = row as AdminProfile
+                          const name    = profile.name
+                          const sub     = profile.phone
                           return (
                             <button
                               key={row.id}
