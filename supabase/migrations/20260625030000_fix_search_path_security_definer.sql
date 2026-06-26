@@ -145,7 +145,7 @@ GRANT  EXECUTE ON FUNCTION public.initiate_order_payment(UUID, UUID, TEXT) TO se
 
 -- ─── 3. normalize_senegal_phone ──────────────────────────────────────────────
 
-CREATE OR REPLACE FUNCTION public.normalize_senegal_phone(phone TEXT)
+CREATE OR REPLACE FUNCTION public.normalize_senegal_phone(p_phone TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
 STABLE
@@ -155,11 +155,11 @@ AS $$
 DECLARE
   v_clean TEXT;
 BEGIN
-  IF phone IS NULL OR phone = '' THEN
+  IF p_phone IS NULL OR p_phone = '' THEN
     RETURN NULL;
   END IF;
   -- Supprimer espaces, tirets, +221
-  v_clean := regexp_replace(phone, '[\s\-\(\)]', '', 'g');
+  v_clean := regexp_replace(p_phone, '[\s\-\(\)]', '', 'g');
   v_clean := regexp_replace(v_clean, '^\+221', '');
   v_clean := regexp_replace(v_clean, '^00221', '');
   v_clean := regexp_replace(v_clean, '^221',   '');

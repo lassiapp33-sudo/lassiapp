@@ -7,16 +7,18 @@
 -- Fix : accès réservé à service_role uniquement (Edge Functions internes).
 -- ===========================================================================
 
+-- Signature réelle : (TEXT, TEXT, TEXT, JSONB, JSONB, JSONB, UUID, TEXT)
+-- (p_action, p_target_table, p_target_id TEXT, p_before, p_after, p_metadata, p_actor_id UUID, p_actor_role)
 REVOKE EXECUTE ON FUNCTION public.log_audit_event(
-  TEXT, TEXT, UUID, JSONB, JSONB, JSONB
+  TEXT, TEXT, TEXT, JSONB, JSONB, JSONB, UUID, TEXT
 ) FROM authenticated;
 
 REVOKE EXECUTE ON FUNCTION public.log_audit_event(
-  TEXT, TEXT, UUID, JSONB, JSONB, JSONB
+  TEXT, TEXT, TEXT, JSONB, JSONB, JSONB, UUID, TEXT
 ) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.log_audit_event(
-  TEXT, TEXT, UUID, JSONB, JSONB, JSONB
+  TEXT, TEXT, TEXT, JSONB, JSONB, JSONB, UUID, TEXT
 ) TO service_role;
 
 -- ===========================================================================
