@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getInitials } from '../utils/getInitials';
+import useCartStore from './cartStore';
+import useDebtsStore from './debtsStore';
 
 export type UserRole = 'client' | 'merchant';
 
@@ -39,16 +41,22 @@ const useAuthStore = create<AuthState>()(
       isLoading: true, // démarrage = en attente de la vérif session
       hasSeenOnboarding: false,
 
-      setUser: user =>
-        set({
-          user,
-          isAuthenticated: !!user,
-          isLoading: false,
-        }),
+      setUser: user => {
+        const currentId = get().user?.id;
+        // Vider le panier si l'utilisateur change (autre compte sur même appareil)
+        if (currentId && user?.id && currentId !== user.id) {
+          useCartStore.getState().clearCart();
+        }
+        set({ user, isAuthenticated: !!user, isLoading: false });
+      },
 
       setLoading: isLoading => set({ isLoading }),
 
-      logout: () => set({ user: null, isAuthenticated: false }),
+      logout: () => {
+        useCartStore.getState().clearCart();
+        useDebtsStore.getState().reset();
+        set({ user: null, isAuthenticated: false });
+      },
 
       updateProfile: updates => {
         const user = get().user;

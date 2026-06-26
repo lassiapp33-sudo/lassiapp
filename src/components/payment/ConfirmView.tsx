@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, Share, Alert } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { OrderInfo, PayMethod } from '../../types/payment';
@@ -75,11 +75,10 @@ interface Props {
 }
 
 export default function ConfirmView({ order, method, onBackToChat }: Props) {
-  // Stable à chaque render — généré une seule fois à l'affichage de la confirmation
-  const [receiptId] = useState(
-    () =>
-      `${order.orderId.replace('#', '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
-  );
+  // Utiliser les 8 premiers caractères de l'UUID de commande (traceable en DB)
+  const receiptId = order.ticketId
+    ? order.ticketId.replace(/-/g, '').slice(0, 8).toUpperCase()
+    : order.orderId.replace('#', '');
 
   return (
     <ScrollView
@@ -123,9 +122,25 @@ export default function ConfirmView({ order, method, onBackToChat }: Props) {
         <TouchableOpacity style={styles.btnPrimary} onPress={onBackToChat} activeOpacity={0.85}>
           <Text style={styles.btnPrimaryTxt}>Retour à la conversation</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.btnSecondary} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.btnSecondary}
+          activeOpacity={0.8}
+          onPress={() => {
+            const content = [
+              `Reçu LASSI — #${receiptId}`,
+              `Boutique : ${order.shopName}`,
+              `Montant  : ${formatPrice(order.total)}`,
+              `Méthode  : ${METHOD_LABEL[method]}`,
+              `Date     : ${formatDate()}`,
+              `Statut   : ✓ Confirmé`,
+            ].join('\n');
+            Share.share({ message: content, title: `Reçu LASSI #${receiptId}` }).catch(() =>
+              Alert.alert('Partage', 'Impossible de partager le reçu.')
+            );
+          }}
+        >
           <IcoDownload />
-          <Text style={styles.btnSecondaryTxt}>Télécharger le reçu</Text>
+          <Text style={styles.btnSecondaryTxt}>Partager le reçu</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

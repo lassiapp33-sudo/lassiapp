@@ -95,9 +95,13 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
   const [processing, setProcessing] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const referenceRef = useRef<string>('');
+  // Garde synchrone anti-double-tap : useRef se met à jour immédiatement,
+  // contrairement à useState qui est stale dans la closure du premier appel.
+  const processingRef = useRef(false);
 
   const handlePay = async () => {
-    if (processing) return;
+    if (processingRef.current) return;
+    processingRef.current = true;
     setProcessing(true);
     try {
       const session = await payService.createPayment({
@@ -115,6 +119,7 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
       logger.warn('[PaymentScreen] handlePay:', err);
       Alert.alert('Erreur', "Impossible d'initier le paiement. Réessaie dans un instant.");
     } finally {
+      processingRef.current = false;
       setProcessing(false);
     }
   };

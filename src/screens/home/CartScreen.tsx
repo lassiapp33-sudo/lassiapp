@@ -18,6 +18,7 @@ import { OrderInfo } from '../../types/payment';
 import useCartStore from '../../store/cartStore';
 import Avatar from '../../components/Avatar';
 import { validateCartAvailability } from '../../services/products';
+import { createOrderSecure } from '../../services/orders';
 import * as promosService from '../../services/promotions';
 import { AppliedDiscount } from '../../types/promotions';
 import { IcoBack } from '../../components/icons';
@@ -181,17 +182,29 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
       const freshShopInfo = freshStore.shopInfo;
       const freshOrderType = freshStore.orderType;
 
+      // Créer la commande en DB AVANT d'ouvrir l'écran de paiement.
+      // Le ticketId (UUID réel) est requis par l'Edge Function create-payment.
+      // La note est transmise ici — seul endroit où elle est disponible.
+      const rawItems = freshStore.items.map(i => ({ productId: i.id, qty: i.qty }));
+      const orderType = freshShopInfo?.showOrderType ? freshOrderType : undefined;
+      const { orderId: realOrderId } = await createOrderSecure(
+        sid,
+        rawItems,
+        note.trim() || undefined,
+        orderType,
+      );
+
       freshStore.clearCart();
       onCheckout({
-        ticketId: 'cart',
-        orderId: '#' + Math.random().toString(36).substr(2, 4).toUpperCase(),
+        ticketId: realOrderId,
+        orderId: '#' + realOrderId.slice(0, 8).toUpperCase(),
         shopInitial: freshShopInfo?.initial ?? shopName.charAt(0).toUpperCase(),
         shopName: freshShopInfo?.name ?? shopName,
         shopLocation: freshShopInfo?.location ?? '',
         items: orderItems,
         total: freshTotalClient,
         commission: freshCommission,
-        orderType: freshShopInfo?.showOrderType ? freshOrderType : undefined,
+        orderType: orderType,
       });
     } catch {
       notifyError('Une erreur est survenue. Réessaie dans un instant.');

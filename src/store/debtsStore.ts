@@ -31,6 +31,7 @@ interface DebtsState {
   removeDebtor: (debtorId: string) => Promise<void>;
 
   setLoading: (v: boolean) => void;
+  reset: () => void;
 }
 
 const useDebtsStore = create<DebtsState>()((set, get) => ({
@@ -40,6 +41,8 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
   fromCache: false,
 
   setLoading: v => set({ loading: v }),
+
+  reset: () => set({ debtors: [], shopId: null, loading: false, fromCache: false }),
 
   loadDebts: async shopId => {
     set({ loading: true, shopId });

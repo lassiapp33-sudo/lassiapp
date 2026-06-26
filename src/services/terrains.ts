@@ -255,9 +255,10 @@ async function authHeaders(): Promise<Record<string, string>> {
   const {
     data: { session },
   } = await supabase.auth.getSession();
+  if (!session) throw new Error('Session expirée — reconnecte-toi');
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${session?.access_token ?? ''}`,
+    Authorization: `Bearer ${session.access_token}`,
     apikey: ANON_KEY,
   };
 }

@@ -162,9 +162,13 @@ export default function TerrainPaymentScreen({
   const [processing, setProcessing] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const referenceRef = useRef('');
+  // Garde synchrone anti-double-tap : useRef se met à jour immédiatement,
+  // contrairement à useState qui est stale dans la closure du premier appel.
+  const processingRef = useRef(false);
 
   const handlePay = async () => {
-    if (processing || !clientId) return;
+    if (processingRef.current || !clientId) return;
+    processingRef.current = true;
     setProcessing(true);
     try {
       // 1. Ouvrir SenePay (pas de réservation avant paiement confirmé)
@@ -181,6 +185,7 @@ export default function TerrainPaymentScreen({
       logger.warn('[TerrainPayment] handlePay:', err);
       Alert.alert('Erreur', "Impossible d'initier le paiement. Réessaie.");
     } finally {
+      processingRef.current = false;
       setProcessing(false);
     }
   };

@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
-import { VisibilityPlan, type WaveOrangeMethod } from '../../services/visibilityPayment';
+import { VisibilityPlan, type PayMethod, type WaveOrangeMethod } from '../../services/visibilityPayment';
 import { formatPrice } from '../../utils/format';
 
 const IcoCard = () => (
@@ -24,6 +24,22 @@ const IcoCard = () => (
   >
     <Rect x={2} y={5} width={20} height={14} rx={2} stroke={colors.bg} />
     <Path d="M2 10h20" stroke={colors.bg} />
+  </Svg>
+);
+
+const IcoWallet = ({ muted }: { muted?: boolean }) => (
+  <Svg
+    width={20}
+    height={20}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={2.2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Rect x={2} y={6} width={20} height={13} rx={2} stroke={muted ? colors.muted : colors.bg} />
+    <Path d="M2 10h20" stroke={muted ? colors.muted : colors.bg} />
+    <Circle cx={17} cy={14.5} r={1.4} fill={muted ? colors.muted : colors.bg} stroke="none" />
   </Svg>
 );
 
@@ -44,20 +60,40 @@ const IcoClock = () => (
 
 const BOTTOM_PAD = Platform.OS === 'ios' ? 20 : 4;
 
-const METHOD_LABELS: Record<WaveOrangeMethod, string> = {
+const METHOD_LABELS: Record<PayMethod, string> = {
   wave: 'Wave',
   orange_money: 'Orange Money',
+  credit: 'Crédit LASSI',
 };
 
 interface Props {
   plan: VisibilityPlan;
-  payMethod: WaveOrangeMethod;
-  onMethodChange: (m: WaveOrangeMethod) => void;
+  payMethod: PayMethod;
+  onMethodChange: (m: PayMethod) => void;
   onPay: () => void;
   loading?: boolean;
+  keysAvailable?: { wave: boolean; orange_money: boolean };
+  creditBalance: number;
 }
 
-export default function PayFooter({ plan, payMethod, onMethodChange, onPay, loading }: Props) {
+export default function PayFooter({
+  plan,
+  payMethod,
+  onMethodChange,
+  onPay,
+  loading,
+  keysAvailable,
+  creditBalance,
+}: Props) {
+  const mobileMethods = (['wave', 'orange_money'] as WaveOrangeMethod[]).filter(
+    m => !keysAvailable || keysAvailable[m],
+  );
+  const allMethods: PayMethod[] = [...mobileMethods, 'credit'];
+
+  const isCredit = payMethod === 'credit';
+  const canAfford = creditBalance >= plan.price;
+  const isDisabled = loading || (isCredit && !canAfford);
+
   return (
     <View style={[styles.footer, { paddingBottom: BOTTOM_PAD }]}>
       {/* Résumé sélection */}
@@ -70,7 +106,7 @@ export default function PayFooter({ plan, payMethod, onMethodChange, onPay, load
 
       {/* Sélecteur de méthode de paiement */}
       <View style={styles.methods}>
-        {(['wave', 'orange_money'] as WaveOrangeMethod[]).map(m => (
+        {allMethods.map(m => (
           <TouchableOpacity
             key={m}
             style={[styles.method, payMethod === m && styles.methodSel]}
@@ -84,22 +120,49 @@ export default function PayFooter({ plan, payMethod, onMethodChange, onPay, load
         ))}
       </View>
 
+      {/* Solde crédit LASSI (affiché seulement quand crédit sélectionné) */}
+      {isCredit && (
+        <View style={styles.balanceRow}>
+          <Text style={styles.balanceLabel}>Ton crédit LASSI</Text>
+          <Text style={[styles.balanceAmount, !canAfford && styles.balanceLow]}>
+            {formatPrice(creditBalance)}
+          </Text>
+        </View>
+      )}
+
       {/* Bouton paiement */}
       <TouchableOpacity
-        style={[styles.btn, loading && styles.btnLoading]}
+        style={[
+          styles.btn,
+          loading && styles.btnLoading,
+          isCredit && !canAfford && styles.btnInsufficient,
+        ]}
         onPress={onPay}
         activeOpacity={0.85}
-        disabled={loading}
+        disabled={isDisabled}
       >
         {loading ? (
           <ActivityIndicator color={colors.bg} size="small" />
+        ) : isCredit && !canAfford ? (
+          <>
+            <IcoWallet muted />
+            <Text style={styles.btnInsufficientTxt}>Crédit insuffisant</Text>
+          </>
         ) : (
           <>
-            <IcoCard />
-            <Text style={styles.btnTxt}>Payer via {METHOD_LABELS[payMethod]}</Text>
+            {isCredit ? <IcoWallet /> : <IcoCard />}
+            <Text style={styles.btnTxt}>
+              {isCredit ? 'Payer avec mon crédit LASSI' : `Payer via ${METHOD_LABELS[payMethod]}`}
+            </Text>
           </>
         )}
       </TouchableOpacity>
+
+      {isCredit && !canAfford && (
+        <Text style={styles.unavailDesc}>
+          Il te manque {formatPrice(plan.price - creditBalance)} de crédit LASSI.
+        </Text>
+      )}
     </View>
   );
 }
@@ -184,6 +247,33 @@ const styles = StyleSheet.create({
     fontFamily: fonts.title,
   },
 
+  // Solde crédit
+  balanceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  balanceLabel: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+  },
+  balanceAmount: {
+    color: colors.accent,
+    fontFamily: fonts.title,
+    fontSize: 14,
+  },
+  balanceLow: {
+    color: colors.danger,
+  },
+
   // Bouton payer
   btn: {
     height: 55,
@@ -197,13 +287,25 @@ const styles = StyleSheet.create({
   btnLoading: {
     opacity: 0.7,
   },
+  btnInsufficient: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    marginBottom: 6,
+  },
   btnTxt: {
     color: colors.bg,
     fontFamily: fonts.titleXL,
     fontSize: 16,
   },
+  btnInsufficientTxt: {
+    color: colors.muted,
+    fontFamily: fonts.title,
+    fontSize: 15,
+  },
 
-  // État indisponible
+  // État indisponible Wave/OM (PayFooterUnavailable)
   btnUnavail: {
     height: 55,
     borderRadius: radius.lg,

@@ -18,7 +18,6 @@ import BenefitsList from '../../components/visibility/BenefitsList';
 import PlanCard from '../../components/visibility/PlanCard';
 import ProductPicker from '../../components/visibility/ProductPicker';
 import PayFooter from '../../components/visibility/PayFooter';
-import PayFooterCredit from '../../components/visibility/PayFooterCredit';
 import ActiveSubCard, { computeSubCardProps } from '../../components/visibility/ActiveSubCard';
 import StatsGrid from '../../components/visibility/StatsGrid';
 import { colors, fonts, radius } from '../../theme';
@@ -34,6 +33,7 @@ import {
 import {
   VisibilityPlan,
   ActiveSub,
+  PayMethod,
   WaveOrangeMethod,
   getVisibilityPlans,
   getActiveSub,
@@ -272,7 +272,7 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [featuredAllProducts, setFeaturedAllProducts] = useState(false);
-  const [payMethod, setPayMethod] = useState<WaveOrangeMethod>('wave');
+  const [payMethod, setPayMethod] = useState<PayMethod>('orange_money');
   const [payState, setPayState] = useState<PayState>({ type: 'idle' });
   const [creditPayLoading, setCreditPayLoading] = useState(false);
   const [boostExpiry, setBoostExpiry] = useState<{ offer: OfferType; expiresAt: string } | null>(
@@ -317,6 +317,14 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
       ]);
       setPlans(loadedPlans);
       setKeysAvailable(keys);
+      // Méthode par défaut : OM si dispo, sinon Wave, sinon crédit
+      if (keys.orange_money) {
+        setPayMethod('orange_money');
+      } else if (keys.wave) {
+        setPayMethod('wave');
+      } else {
+        setPayMethod('credit');
+      }
       setProducts(loadedProducts);
       const defaultProduct = loadedProducts.find(p => p.stock === 'in') ?? loadedProducts[0];
       setSelectedProductIds(defaultProduct ? [defaultProduct.id] : []);
@@ -345,11 +353,11 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
     setFeaturedAllProducts(prev => !prev);
   };
 
-  // ── Lancer le paiement (Offre du quartier uniquement) ─────────────────────
+  // ── Lancer le paiement (Wave / Orange Money / Crédit LASSI) ─────────────────
   const handlePay = async () => {
     if (!selectedPlan || !shopId) return;
 
-    if (!featuredAllProducts && selectedProductIds.length === 0) {
+    if (offerType === 'quartier' && !featuredAllProducts && selectedProductIds.length === 0) {
       Alert.alert(
         'Produit requis',
         'Choisis au moins un produit (ou toute ta vitrine) à mettre en avant avant de payer.',
@@ -357,17 +365,24 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
       return;
     }
 
+    // ── Crédit LASSI — activation immédiate ───────────────────────────────────
+    if (payMethod === 'credit') {
+      await handlePayWithCredit();
+      return;
+    }
+
+    // ── Wave / Orange Money ───────────────────────────────────────────────────
     setPayState({ type: 'loading' });
     try {
       const result = await createVisibilityPayment({
         planId: selectedPlan.id,
-        payMethod,
-        productIds: selectedProductIds,
-        allProducts: featuredAllProducts,
+        payMethod: payMethod as WaveOrangeMethod,
+        offerType,
+        productIds: offerType === 'quartier' ? selectedProductIds : [],
+        allProducts: offerType === 'quartier' ? featuredAllProducts : false,
       });
 
       if (result.status === 'awaiting_keys') {
-        // Clés API non encore configurées → basculer le footer sur "Bientôt disponible"
         setPayState({ type: 'idle' });
         setKeysAvailable(prev => ({
           ...(prev ?? { wave: false, orange_money: false }),
@@ -376,7 +391,6 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
         return;
       }
 
-      // Paiement initié → ouvrir l'app Wave / Orange Money via deep link
       setPayState({
         type:           'pending',
         subscriptionId: result.subscriptionId,
@@ -389,8 +403,7 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
         if (canOpen) {
           await Linking.openURL(result.paymentUrl);
         } else if (payMethod === 'orange_money' && result.qrCode) {
-          // OM : si l'app OM n'est pas installée, le QR code s'affiche dans le bandeau
-          // (cf. PendingPaymentBanner — aucune action supplémentaire nécessaire ici)
+          // QR code affiché dans le bandeau PendingPaymentBanner
         } else {
           Alert.alert(
             'Application introuvable',
@@ -583,8 +596,8 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
               />
             ))}
 
-            {/* Bandeau affiché quand un paiement OM est en attente */}
-            {offerType === 'quartier' && isPending && payState.type === 'pending' && (
+            {/* Bandeau affiché quand un paiement Wave/OM est en attente */}
+            {isPending && payState.type === 'pending' && (
               <View style={styles.bannerWrap}>
                 <PendingPaymentBanner
                   onVerify={handleVerify}
@@ -605,32 +618,16 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
             <View style={{ height: 14 }} />
           </ScrollView>
 
-          {/* Footer : Wave/OM si configuré, sinon paiement par crédit LASSI */}
-          {offerType === 'quartier' ? (
-            !isPending &&
-            !isVerifying &&
-            (keysAvailable?.[payMethod] ? (
-              <PayFooter
-                plan={withDynamicPrice(selectedPlan)}
-                payMethod={payMethod}
-                onMethodChange={setPayMethod}
-                onPay={handlePay}
-                loading={isPayLoading}
-              />
-            ) : (
-              <PayFooterCredit
-                plan={withDynamicPrice(selectedPlan)}
-                creditBalance={creditBalance}
-                onPay={handlePayWithCredit}
-                loading={creditPayLoading}
-              />
-            ))
-          ) : (
-            <PayFooterCredit
-              plan={selectedPlan}
+          {/* Footer : OM / Wave / Crédit LASSI */}
+          {!isPending && !isVerifying && (
+            <PayFooter
+              plan={withDynamicPrice(selectedPlan)}
+              payMethod={payMethod}
+              onMethodChange={setPayMethod}
+              onPay={handlePay}
+              loading={isPayLoading || creditPayLoading}
+              keysAvailable={keysAvailable ?? undefined}
               creditBalance={creditBalance}
-              onPay={handlePayWithCredit}
-              loading={creditPayLoading}
             />
           )}
         </>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
@@ -42,8 +42,6 @@ const DURATIONS: { label: string; value: number }[] = [
   { label: '3h', value: 180 },
 ];
 
-const DATES = generateDates(14);
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface BookingParams {
@@ -69,7 +67,8 @@ interface Props {
 // ─── Ecran ────────────────────────────────────────────────────────────────────
 
 export default function TerrainBookingScreen({ terrain, prestataireName, onBack, onBook }: Props) {
-  const [selectedDate, setSelectedDate] = useState<Date>(DATES[0]);
+  const DATES = useMemo(() => generateDates(14), []);
+  const [selectedDate, setSelectedDate] = useState<Date>(() => generateDates(1)[0]);
   const [selectedDuration, setSelectedDuration] = useState<number>(60);
   const [horaires, setHoraires] = useState<TerrainHoraire[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<{ debut: string; fin: string; duree: number } | null>(null);
