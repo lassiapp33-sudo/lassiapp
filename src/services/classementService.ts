@@ -121,13 +121,15 @@ export const getClassementClients = async (periode: string): Promise<ClassementE
   return data ?? [];
 };
 
-// --- Mes récompenses (prestataire) ---
+// --- Mes récompenses actives (prestataire) — exclut les expirées ---
 export const getMesRecompenses = async (prestataireId: string): Promise<RecompenseAttribuee[]> => {
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from('recompenses_attribuees')
     .select('*')
     .eq('prestataire_id', prestataireId)
     .eq('est_actif', true)
+    .or(`valide_jusqu_a.is.null,valide_jusqu_a.gt.${now}`)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -135,12 +137,13 @@ export const getMesRecompenses = async (prestataireId: string): Promise<Recompen
 
 // --- Badges actifs d'un prestataire (vitrine) ---
 export const getBadgesActifs = async (prestataireId: string): Promise<RecompenseAttribuee[]> => {
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from('recompenses_attribuees')
     .select('*')
     .eq('prestataire_id', prestataireId)
     .eq('est_actif', true)
-    .gt('valide_jusqu_a', new Date().toISOString())
+    .or(`valide_jusqu_a.is.null,valide_jusqu_a.gt.${now}`)
     .order('rang');
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -162,12 +165,13 @@ export const getBadgesActifsBatch = async (
   const ids = [...new Set(prestataireIds)];
   if (ids.length === 0) return {};
 
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from('recompenses_attribuees')
     .select('*')
     .in('prestataire_id', ids)
     .eq('est_actif', true)
-    .gt('valide_jusqu_a', new Date().toISOString())
+    .or(`valide_jusqu_a.is.null,valide_jusqu_a.gt.${now}`)
     .order('rang');
   if (error) throw new Error(error.message);
 

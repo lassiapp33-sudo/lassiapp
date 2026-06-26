@@ -178,9 +178,10 @@ export async function checkPaymentAvailability(): Promise<{
 export async function createVisibilityPayment(params: {
   planId: string;
   payMethod: PayMethod;
-  /** Produits choisis (ignoré si allProducts === true). */
+  offerType: 'quartier' | 'recherche' | 'carte';
+  /** Produits choisis (ignoré si offerType !== 'quartier'). */
   productIds: string[];
-  /** Mettre en avant toute la vitrine plutôt que des produits précis. */
+  /** Mettre en avant toute la vitrine plutôt que des produits précis (quartier uniquement). */
   allProducts: boolean;
 }): Promise<CreatePaymentResult> {
   const res = await fetch(`${FUNCTIONS_BASE}/create-visibility-payment`, {

@@ -24,6 +24,7 @@ import LassiScreen from '../../components/LassiScreen';
 import { contacterServiceClient } from '../../config/contact';
 import AProposScreen from '../common/AProposScreen';
 import SignalerProblemeScreen from '../common/SignalerProblemeScreen';
+import ClientPaymentsScreen from './ClientPaymentsScreen';
 import { useT } from '../../i18n';
 import useLanguageStore from '../../store/languageStore';
 import { IcoBack } from '../../components/icons';
@@ -277,6 +278,7 @@ export default function ClientProfileScreen({
   const [showLangModal, setShowLangModal] = useState(false);
   const [showAPropos, setShowAPropos] = useState(false);
   const [showSignaler, setShowSignaler] = useState(false);
+  const [showPayments, setShowPayments] = useState(false);
 
   const user = useAuthStore(s => s.user);
   const updateProfile = useAuthStore(s => s.updateProfile);
@@ -328,6 +330,7 @@ export default function ClientProfileScreen({
     }
   };
 
+  if (showPayments) return <ClientPaymentsScreen onBack={() => setShowPayments(false)} />;
   if (showHelp) return <HelpScreen onBack={() => setShowHelp(false)} role="client" />;
   if (showAPropos) return <AProposScreen onBack={() => setShowAPropos(false)} />;
   if (showSignaler)
@@ -393,7 +396,7 @@ export default function ClientProfileScreen({
             title={t.profile.myPayments}
             subtitle={t.profile.myPaymentsSub}
             last
-            onPress={() => Alert.alert(t.common.comingSoon, t.common.paymentsComingSoon)}
+            onPress={() => setShowPayments(true)}
           />
         </View>
 

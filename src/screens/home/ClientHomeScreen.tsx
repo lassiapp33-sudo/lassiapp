@@ -16,6 +16,7 @@ import TabSelector, { HomeTab } from '../../components/home/TabSelector';
 import CategoryGrid from '../../components/home/CategoryGrid';
 import { CatId } from '../../components/category/CatNavBar';
 import PromoBanner from '../../components/home/PromoBanner';
+import OffreDuQuartier from '../../components/home/OffreDuQuartier';
 import NearbyCard, { NearbyPlace } from '../../components/home/NearbyCard';
 import BottomNav, { NavTab, NAV_HEIGHT } from '../../components/home/BottomNav';
 import WelcomeClientModal from '../../components/home/WelcomeClientModal';
@@ -229,6 +230,9 @@ export default function ClientHomeScreen({
 
         {/* Produits en vitrine — carrousel auto-défilant avec indicateurs */}
         <PromoBanner onPress={onShopItemPress} />
+
+        {/* Offre du Quartier — top marchands */}
+        <OffreDuQuartier />
 
         {/* Boutiques à proximité */}
         <View style={styles.px}>

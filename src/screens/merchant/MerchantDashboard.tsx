@@ -7,6 +7,7 @@ import EarningsCard from '../../components/merchant/EarningsCard';
 import QuickActions from '../../components/merchant/QuickActions';
 import OrderCard, { MerchantOrder } from '../../components/merchant/OrderCard';
 import WelcomeRewardModal from '../../components/merchant/WelcomeRewardModal';
+import MesRecompensesCard from '../../components/merchant/MesRecompensesCard';
 import MerchantBottomNav, {
   MerchantTab,
   MERCHANT_NAV_HEIGHT,
@@ -193,7 +194,10 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
           debts={totalDebt}
         />
 
-        {/* ③ 4 actions rapides — compteurs réels */}
+        {/* ③ Récompenses actives */}
+        {!!userId && <MesRecompensesCard userId={userId} />}
+
+        {/* ④ 4 actions rapides — compteurs réels */}
         <QuickActions
           onPress={key => onNavigate?.(key as NavDest)}
           debtCount={debtorsWithDebt}
@@ -203,7 +207,7 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
           )}
         />
 
-        {/* ④ Commandes en cours */}
+        {/* ⑤ Commandes en cours */}
         <SectionHeader
           title="Commandes en cours"
           linkLabel="Tout voir"

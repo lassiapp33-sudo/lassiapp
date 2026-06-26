@@ -144,7 +144,9 @@ export default function OffreQuartierScreen({ onBack }: Props) {
         };
       });
       await setCarrouselSelection(userId, quota.periode, quota.rang, items);
-      Alert.alert('Enregistré', 'Ta sélection "Offre du Quartier" a été mise à jour.');
+      Alert.alert('Enregistré', 'Ta sélection "Offre du Quartier" a été mise à jour.', [
+        { text: 'OK', onPress: onBack },
+      ]);
     } catch (e) {
       notifyError(getErrorMessage(e, "Impossible d'enregistrer ta sélection"));
     } finally {

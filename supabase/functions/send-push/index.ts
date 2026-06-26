@@ -25,13 +25,14 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
-    // 1. Authentification — seul un appel interne (service_role) est autorisé
+    // 1. Authentification — réservé aux appels internes (service_role uniquement)
+    // Les utilisateurs de l'app mobile ne doivent jamais pouvoir appeler cet endpoint
+    // directement (risque de spam de notifications vers n'importe qui).
     const token = req.headers.get('Authorization')?.replace('Bearer ', '');
-    const sb    = createClient(SUPABASE_URL, SUPABASE_SRK);
-
-    // Vérification : le caller doit être authentifié (utilisateur ou appel interne)
-    const { data: { user } } = await sb.auth.getUser(token);
-    if (!user) return fail('Non autorisé', 401);
+    if (!SUPABASE_SRK || token !== SUPABASE_SRK) {
+      return fail('Non autorisé', 401);
+    }
+    const sb = createClient(SUPABASE_URL, SUPABASE_SRK);
 
     // 2. Paramètres
     const { targetUserId, type, title, body, data } = await req.json() as {
@@ -55,63 +56,66 @@ serve(async (req) => {
       return fail('Titre ou corps trop longs', 400);
     }
 
-    // 3. Rate limiting : max 60 notifications / heure par émetteur
-    const { data: rateOk } = await sb.rpc('check_rate_limit', {
-      p_user_id: user.id,
-      p_action:  'send_push',
-      p_max:     60,
-      p_window:  '1 hour',
+    // 3. Rate limiting : max 60 notifications / heure vers le même destinataire
+    const { data: rl } = await sb.rpc('check_rate_limit', {
+      p_key:            `push:${targetUserId}`,
+      p_max_attempts:   60,
+      p_window_seconds: 3600,
+      p_block_seconds:  0,
     });
-    if (!rateOk) return fail('Trop de notifications envoyées.', 429);
+    if (rl?.allowed === false) return fail('Trop de notifications envoyées.', 429);
 
-    // 4. Récupérer le push token du destinataire
-    const { data: profile, error: profErr } = await sb
-      .from('profiles')
-      .select('push_token')
-      .eq('id', targetUserId)
-      .single();
+    // 4. Récupérer les push tokens du destinataire (table push_tokens — multi-device)
+    // IMPORTANT : profiles.push_token n'est jamais alimenté par l'app. La table
+    // push_tokens est la seule source fiable des tokens Expo.
+    const { data: tokenRows, error: tokenErr } = await sb
+      .from('push_tokens')
+      .select('token')
+      .eq('user_id', targetUserId);
 
-    if (profErr) throw new Error(profErr.message);
+    if (tokenErr) throw new Error(tokenErr.message);
 
-    // Si l'utilisateur n'a pas de token, ce n'est pas une erreur — il a refusé les notifs
-    if (!profile?.push_token) {
+    const pushTokens = (tokenRows ?? [])
+      .map(r => r.token as string)
+      .filter(t => t.startsWith('ExponentPushToken[') || t.startsWith('ExpoPushToken['));
+
+    if (pushTokens.length === 0) {
       return ok({ sent: false, reason: 'Pas de token push enregistré.' });
     }
 
-    // 5. Vérifier que le token est un token Expo valide
-    const pushToken = profile.push_token as string;
-    if (!pushToken.startsWith('ExponentPushToken[') && !pushToken.startsWith('ExpoPushToken[')) {
-      return ok({ sent: false, reason: 'Token non Expo — ignoré.' });
-    }
-
-    // 6. Envoyer via Expo Push API
+    // 5. Envoyer via Expo Push API (tous les appareils du destinataire)
     const expoRes = await fetch(EXPO_PUSH_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({
-        to:    pushToken,
+      body: JSON.stringify(pushTokens.map(to => ({
+        to,
         title,
         body,
         data:  data ?? {},
         sound: 'default',
-        // Icône + couleur configurées dans app.json
-      }),
+      }))),
     });
 
     const expoData = await expoRes.json();
 
-    // Expo peut retourner 200 même si la notif est en erreur (ex: token invalide)
-    const ticket = expoData.data;
-    if (ticket?.status === 'error') {
-      console.warn('[send-push] Expo error:', ticket.details);
-      // Token invalide → le nettoyer pour ne plus l'utiliser
-      if (ticket.details?.error === 'DeviceNotRegistered') {
-        await sb.from('profiles').update({ push_token: null }).eq('id', targetUserId);
+    // 6. Nettoyer les tokens expirés signalés par Expo
+    const tickets: Array<Record<string, unknown>> = Array.isArray(expoData.data)
+      ? expoData.data
+      : [expoData.data].filter(Boolean);
+
+    const expiredTokens: string[] = [];
+    for (let i = 0; i < tickets.length; i++) {
+      const ticket = tickets[i];
+      if (ticket?.status === 'error' && (ticket.details as Record<string, unknown>)?.error === 'DeviceNotRegistered') {
+        expiredTokens.push(pushTokens[i]);
       }
-      return ok({ sent: false, reason: ticket.message });
+    }
+    if (expiredTokens.length > 0) {
+      await sb.from('push_tokens').delete().in('token', expiredTokens);
     }
 
-    return ok({ sent: true, ticketId: ticket?.id });
+    const sent = tickets.some(t => t?.status === 'ok');
+    return ok({ sent, sentCount: pushTokens.length, expiredCleaned: expiredTokens.length });
 
   } catch (e) {
     console.error('[send-push]', e);
