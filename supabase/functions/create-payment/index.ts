@@ -199,15 +199,18 @@ serve(async (req) => {
 // ============================================================
 function mapInitiateError(err: string | undefined): { message: string; status: number } {
   switch (err) {
-    case 'order_not_found':   return { message: 'Commande introuvable', status: 404 };
-    case 'forbidden':         return { message: 'Cette commande ne vous appartient pas', status: 403 };
-    case 'order_not_payable': return { message: 'Cette commande n\'est plus en attente de paiement', status: 409 };
-    case 'already_paid':      return { message: 'Cette commande a déjà été payée', status: 409 };
-    case 'invalid_method':    return { message: 'Moyen de paiement invalide', status: 400 };
-    case 'invalid_amount':    return { message: 'Montant de commande invalide', status: 422 };
-    case 'amount_mismatch':   return { message: 'Incohérence détectée sur cette commande, contactez le support', status: 409 };
-    case 'shop_not_found':    return { message: 'Boutique introuvable', status: 500 };
-    default:                  return { message: 'Paiement impossible', status: 400 };
+    case 'order_not_found':                return { message: 'Commande introuvable', status: 404 };
+    case 'forbidden':                      return { message: 'Cette commande ne vous appartient pas', status: 403 };
+    case 'order_not_payable':              return { message: 'Cette commande n\'est plus en attente de paiement', status: 409 };
+    case 'already_paid':                   return { message: 'Cette commande a déjà été payée', status: 409 };
+    case 'already_paid_or_invalid_status': return { message: 'Cette commande ne peut plus être payée', status: 409 };
+    case 'payment_intent_already_exists':  return { message: 'Un paiement est déjà en cours pour cette commande', status: 409 };
+    case 'rate_limited':                   return { message: 'Trop de tentatives. Attends quelques minutes.', status: 429 };
+    case 'invalid_method':                 return { message: 'Moyen de paiement invalide', status: 400 };
+    case 'invalid_amount':                 return { message: 'Montant de commande invalide', status: 422 };
+    case 'amount_mismatch':                return { message: 'Incohérence détectée sur cette commande, contactez le support', status: 409 };
+    case 'shop_not_found':                 return { message: 'Boutique introuvable', status: 500 };
+    default:                               return { message: 'Paiement impossible', status: 400 };
   }
 }
 

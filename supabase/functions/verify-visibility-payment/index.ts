@@ -156,7 +156,8 @@ Deno.serve(async (req) => {
     }
 
     // ⑥ Montant vérifié → activer l'abonnement
-    const durationDays: number = sub.plan?.duration_days ?? 30
+    // plan_duration_days est stocké sur l'abonnement pour recherche/carte (pas de plan en DB)
+    const durationDays: number = sub.plan_duration_days ?? sub.plan?.duration_days ?? 30
     const now       = new Date()
     const expiresAt = new Date(now.getTime() + durationDays * 86_400_000)
 
@@ -174,16 +175,33 @@ Deno.serve(async (req) => {
 
     if (updateError) throw updateError
 
-    // ⑦ Activer "Offre du quartier" sur la boutique
-    await admin
-      .from('shops')
-      .update({
-        is_featured:           true,
-        featured_product_id:   sub.all_products ? null : (sub.product_ids?.[0] ?? sub.product_id ?? null),
-        featured_product_ids:  sub.all_products ? [] : (sub.product_ids ?? []),
-        featured_all_products: !!sub.all_products,
+    // ⑦ Activer l'offre selon le type
+    const offerType: string = sub.offer_type ?? 'quartier'
+
+    if (offerType === 'recherche') {
+      const { error: rpcError } = await admin.rpc('grant_recherche_boost', {
+        p_shop_id: sub.shop_id,
+        p_days: durationDays,
       })
-      .eq('id', sub.shop_id)
+      if (rpcError) throw rpcError
+    } else if (offerType === 'carte') {
+      const { error: rpcError } = await admin.rpc('grant_carte_pin', {
+        p_shop_id: sub.shop_id,
+        p_days: durationDays,
+      })
+      if (rpcError) throw rpcError
+    } else {
+      // quartier : mise en avant des produits
+      await admin
+        .from('shops')
+        .update({
+          is_featured:           true,
+          featured_product_id:   sub.all_products ? null : (sub.product_ids?.[0] ?? sub.product_id ?? null),
+          featured_product_ids:  sub.all_products ? [] : (sub.product_ids ?? []),
+          featured_all_products: !!sub.all_products,
+        })
+        .eq('id', sub.shop_id)
+    }
 
     // ⑧ Notification in-app au marchand
     const expiryFr = expiresAt.toLocaleDateString('fr-FR', {
@@ -192,14 +210,21 @@ Deno.serve(async (req) => {
     const planLabel  = sub.plan?.label ?? ''
     const amountFCFA = (sub.amount as number)?.toLocaleString('fr-FR') ?? ''
 
+    const OFFER_LABELS: Record<string, string> = {
+      quartier:  "l'Offre du Quartier",
+      recherche: 'Booster recherche',
+      carte:     'Épingle dorée (carte)',
+    }
+    const offerLabel = OFFER_LABELS[offerType] ?? offerType
+
     await admin.from('notifications').insert({
       user_id: sub.merchant_id,
       type:    'vip',
       title:   '🎉 Félicitations pour votre achat !',
       body:    `Grâce à votre achat du forfait « ${planLabel} » (${amountFCFA} FCFA), ` +
-               `vous avez obtenu une mise en avant de votre boutique dans l'Offre du Quartier ` +
-               `jusqu'au ${expiryFr}. Profitez-en pour attirer encore plus de clients !`,
-      data:    { subscription_id: sub.id },
+               `vous avez activé ${offerLabel} jusqu'au ${expiryFr}. ` +
+               `Profitez-en pour attirer encore plus de clients !`,
+      data:    { subscription_id: sub.id, offer_type: offerType },
     })
 
     console.log('OM webhook: abonnement activé —', subId, 'expires', expiresAt.toISOString())

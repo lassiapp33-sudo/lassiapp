@@ -39,19 +39,33 @@ serve(async (req) => {
 
     if (!pi) return new Response(JSON.stringify({ success: false, error: 'Introuvable' }), { status: 404 });
 
-    // En production (clés API présentes), un paiement simulé N'EST PAS confirmé :
-    // cela évite de valider une commande si les clés API disparaissent accidentellement.
-    const IS_PRODUCTION = !!(Deno.env.get('WAVE_API_KEY') || Deno.env.get('OM_RETAILER_MSISDN'));
+    // En production réelle (clés Wave ou OM_RETAILER_MSISDN présentes), seuls 'confirmed'
+    // et 'split_done' valident. En sandbox OM (OM_BASE_URL = sandbox.orange-sonatel.com),
+    // 'initiated' est aussi accepté car le webhook OM sandbox n'arrive pas toujours.
+    const WAVE_API_KEY       = Deno.env.get('WAVE_API_KEY') ?? '';
+    const OM_RETAILER_MSISDN = Deno.env.get('OM_RETAILER_MSISDN') ?? '';
+    const OM_BASE_URL        = Deno.env.get('OM_BASE_URL') ?? '';
+    const IS_PRODUCTION  = !!(WAVE_API_KEY || OM_RETAILER_MSISDN);
+    const IS_OM_SANDBOX  = OM_BASE_URL.includes('sandbox');
+
     const confirmedStatuses = IS_PRODUCTION
       ? ['confirmed', 'split_done']
-      : ['confirmed', 'split_done', 'simulated'];
+      : IS_OM_SANDBOX
+        ? ['confirmed', 'split_done', 'simulated', 'initiated']
+        : ['confirmed', 'split_done', 'simulated'];
     const confirmed = confirmedStatuses.includes(pi.statut);
+
+    const resolvedMode = pi.statut === 'simulated'
+      ? 'simulation'
+      : pi.statut === 'initiated' && IS_OM_SANDBOX
+        ? 'sandbox-om'
+        : 'production';
 
     // Log vérification
     await supabase.from('payment_logs').insert({
       payment_intent_id: paymentIntentId,
       event_type: 'verify_check',
-      event_data: { statut: pi.statut, confirmed },
+      event_data: { statut: pi.statut, confirmed, mode: resolvedMode },
     });
 
     return new Response(JSON.stringify({
@@ -61,7 +75,7 @@ serve(async (req) => {
       montantTotal: pi.montant_total,
       commission:   pi.commission_lassi,
       prixBase:     pi.prix_base,
-      mode:         pi.statut === 'simulated' ? 'simulation' : 'production',
+      mode:         resolvedMode,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (e: unknown) {

@@ -2,7 +2,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID, isSafeString, isBoolean } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { calculateOffreQuartierPrice } from '../_shared/offreQuartierPricing.ts'
+import { findBoostPlan } from '../_shared/boostPlansPricing.ts'
 import { getOmToken, OM_BASE_URL } from '../_shared/omAuth.ts'
+
+type OfferType = 'quartier' | 'recherche' | 'carte'
 
 const PLAN_ID_RE = /^[a-z0-9]+$/i
 const MAX_FEATURED_PRODUCTS = 50
@@ -48,7 +51,7 @@ Deno.serve(async (req) => {
     if (userError || !user) return json({ error: 'Non autorisé' }, 401)
 
     // ② Validation du body
-    const { planId, payMethod, productIds, allProducts } = await req.json()
+    const { planId, payMethod, productIds, allProducts, offerType: rawOfferType } = await req.json()
     if (!planId || !payMethod) {
       return json({ error: 'planId et payMethod requis' }, 400)
     }
@@ -59,15 +62,19 @@ Deno.serve(async (req) => {
       return json({ error: 'payMethod invalide (wave | orange_money)' }, 400)
     }
 
-    const wantsAllProducts = allProducts === true
-    if (!wantsAllProducts) {
+    const offerType: OfferType = ['quartier', 'recherche', 'carte'].includes(rawOfferType)
+      ? rawOfferType as OfferType
+      : 'quartier'
+
+    const wantsAllProducts = offerType === 'quartier' && allProducts === true
+    if (offerType === 'quartier' && !wantsAllProducts) {
       if (!Array.isArray(productIds) || productIds.length === 0) {
         return json({ error: 'productIds requis (ou allProducts: true)' }, 400)
       }
       if (productIds.length > MAX_FEATURED_PRODUCTS || !productIds.every(isUUID)) {
         return json({ error: 'productIds invalide' }, 400)
       }
-    } else if (allProducts !== undefined && !isBoolean(allProducts)) {
+    } else if (offerType === 'quartier' && allProducts !== undefined && !isBoolean(allProducts)) {
       return json({ error: 'allProducts invalide' }, 400)
     }
 
@@ -93,68 +100,81 @@ Deno.serve(async (req) => {
 
     if (!shop) return json({ error: 'Boutique introuvable' }, 404)
 
-    // ⑤ Charger le forfait depuis la DB (le prix vient toujours du serveur)
-    const { data: plan } = await admin
-      .from('visibility_plans')
-      .select('id, label, price, duration_months, duration_days')
-      .eq('id', planId)
-      .eq('active', true)
-      .maybeSingle()
-
-    if (!plan) return json({ error: 'Forfait introuvable ou inactif' }, 404)
-
-    // ⑤bis Vérifier que les produits appartiennent à cette boutique
+    // ⑤ Charger le forfait + prix (depuis DB pour quartier, statique pour boost)
+    let finalPrice: number
+    let planDurationDays: number
     const featuredProductIds: string[] = []
-    if (!wantsAllProducts) {
-      const uniqueIds = Array.from(new Set(productIds as string[]))
-      const { data: ownedProducts } = await admin
-        .from('products')
+
+    if (offerType === 'quartier') {
+      const { data: plan } = await admin
+        .from('visibility_plans')
+        .select('id, label, price, duration_months, duration_days')
+        .eq('id', planId)
+        .eq('active', true)
+        .maybeSingle()
+
+      if (!plan) return json({ error: 'Forfait introuvable ou inactif' }, 404)
+
+      if (!wantsAllProducts) {
+        const uniqueIds = Array.from(new Set(productIds as string[]))
+        const { data: ownedProducts } = await admin
+          .from('products')
+          .select('id')
+          .eq('shop_id', shop.id)
+          .in('id', uniqueIds)
+
+        if (!ownedProducts || ownedProducts.length !== uniqueIds.length) {
+          return json({ error: 'Produit invalide' }, 400)
+        }
+        featuredProductIds.push(...uniqueIds)
+      }
+
+      let nbProduits = featuredProductIds.length
+      if (wantsAllProducts) {
+        const { count } = await admin
+          .from('products')
+          .select('id', { count: 'exact', head: true })
+          .eq('shop_id', shop.id)
+        nbProduits = count ?? 0
+      }
+      finalPrice = calculateOffreQuartierPrice(plan.price, nbProduits)
+      planDurationDays = plan.duration_days
+
+      // Vérifier l'absence d'abonnement quartier actif
+      const now = new Date().toISOString()
+      const { data: existing } = await admin
+        .from('visibility_subscriptions')
         .select('id')
         .eq('shop_id', shop.id)
-        .in('id', uniqueIds)
+        .eq('status', 'active')
+        .gt('expires_at', now)
+        .maybeSingle()
 
-      if (!ownedProducts || ownedProducts.length !== uniqueIds.length) {
-        return json({ error: 'Produit invalide' }, 400)
-      }
-      featuredProductIds.push(...uniqueIds)
+      if (existing) return json({ error: 'Un abonnement actif existe déjà' }, 409)
+
+    } else {
+      // Offres "recherche" et "carte" — prix depuis la liste statique boost
+      const boostPlan = findBoostPlan(planId)
+      if (!boostPlan) return json({ error: 'Forfait introuvable' }, 404)
+      finalPrice = boostPlan.price
+      planDurationDays = boostPlan.durationDays
     }
-
-    // ⑤ter Prix dynamique (jamais accepté depuis le client)
-    let nbProduits = featuredProductIds.length
-    if (wantsAllProducts) {
-      const { count } = await admin
-        .from('products')
-        .select('id', { count: 'exact', head: true })
-        .eq('shop_id', shop.id)
-      nbProduits = count ?? 0
-    }
-    const finalPrice = calculateOffreQuartierPrice(plan.price, nbProduits)
-
-    // ⑥ Vérifier l'absence d'abonnement actif
-    const now = new Date().toISOString()
-    const { data: existing } = await admin
-      .from('visibility_subscriptions')
-      .select('id')
-      .eq('shop_id', shop.id)
-      .eq('status', 'active')
-      .gt('expires_at', now)
-      .maybeSingle()
-
-    if (existing) return json({ error: 'Un abonnement actif existe déjà' }, 409)
 
     // ⑦ Créer la ligne pending avant l'appel API
     const { data: sub, error: subError } = await admin
       .from('visibility_subscriptions')
       .insert({
-        shop_id:      shop.id,
-        merchant_id:  user.id,
-        plan_id:      plan.id,
-        product_id:   featuredProductIds[0] ?? null,
-        product_ids:  featuredProductIds,
-        all_products: wantsAllProducts,
-        amount:       finalPrice,
-        pay_method:   payMethod,
-        status:       'pending',
+        shop_id:            shop.id,
+        merchant_id:        user.id,
+        plan_id:            planId,
+        product_id:         featuredProductIds[0] ?? null,
+        product_ids:        featuredProductIds,
+        all_products:       wantsAllProducts,
+        amount:             finalPrice,
+        pay_method:         payMethod,
+        status:             'pending',
+        offer_type:         offerType,
+        plan_duration_days: planDurationDays,
       })
       .select()
       .single()
