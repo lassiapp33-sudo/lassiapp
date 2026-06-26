@@ -136,7 +136,8 @@ Deno.serve(async (req) => {
       status: 200, headers: { ...CORS, 'Content-Type': 'application/json' },
     })
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message ?? 'Erreur interne' }), {
+    console.error('[delete-account]', err.message ?? err)
+    return new Response(JSON.stringify({ error: 'Erreur lors de la suppression du compte. Contacte le support.' }), {
       status: 500, headers: { ...CORS, 'Content-Type': 'application/json' },
     })
   }

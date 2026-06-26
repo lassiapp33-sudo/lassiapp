@@ -34,15 +34,18 @@ Deno.serve(async (req) => {
   if (req.method === 'GET') {
     const url    = new URL(req.url)
     const result = url.searchParams.get('result') ?? 'cancel'
-    const subId  = url.searchParams.get('sub_id') ?? ''
+    const subIdRaw = url.searchParams.get('sub_id') ?? ''
+    // Valider UUID avant injection dans HTML (protection XSS)
+    const subId = isUUID(subIdRaw) ? subIdRaw : ''
     const deepLink = result === 'success'
-      ? `lassiapp://visibility-success?sub=${subId}`
-      : `lassiapp://visibility-error?sub=${subId}`
+      ? `lassiapp://visibility-success?sub=${encodeURIComponent(subId)}`
+      : `lassiapp://visibility-error?sub=${encodeURIComponent(subId)}`
+    const deepLinkEncoded = deepLink.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="0;url=${deepLink}">
+<meta http-equiv="refresh" content="0;url=${deepLinkEncoded}">
 <title>LASSI — Redirection</title></head><body>
 <p>Redirection vers l'application LASSI...</p>
-<a href="${deepLink}">Ouvrir LASSI</a>
+<a href="${deepLinkEncoded}">Ouvrir LASSI</a>
 </body></html>`
     return new Response(html, {
       status: 200,
@@ -65,8 +68,12 @@ Deno.serve(async (req) => {
       return json({ error: 'sub_id invalide' }, 400)
     }
 
-    // Secret obligatoire en production (OM_WEBHOOK_SECRET != '')
-    if (OM_WEBHOOK_SECRET && secret !== OM_WEBHOOK_SECRET) {
+    // Secret obligatoire — jamais de fallback permissif sur un endpoint financier
+    if (!OM_WEBHOOK_SECRET) {
+      console.error('OM webhook: OM_WEBHOOK_SECRET non configuré — webhook désactivé par sécurité')
+      return json({ error: 'Configuration manquante' }, 503)
+    }
+    if (secret !== OM_WEBHOOK_SECRET) {
       console.error('OM webhook: secret invalide')
       return json({ error: 'Non autorisé' }, 401)
     }
@@ -112,7 +119,43 @@ Deno.serve(async (req) => {
       return json({ received: true })
     }
 
-    // ⑤ Paiement SUCCESS → activer l'abonnement
+    // ⑤ Vérifier que le montant reçu correspond au montant attendu (au centime près)
+    const receivedAmount = notification.amount?.value !== undefined
+      ? Math.round(Number(notification.amount.value))
+      : null
+
+    if (receivedAmount === null) {
+      console.error('OM webhook: montant absent dans la notification —', subId)
+      await admin.from('visibility_subscriptions')
+        .update({ status: 'failed' })
+        .eq('id', subId)
+        .eq('status', 'pending')
+      return json({ received: true })
+    }
+
+    const expectedAmount = Math.round(Number(sub.amount))
+    if (receivedAmount !== expectedAmount) {
+      console.error('[ALERTE PAIEMENT] montant incohérent — sub', subId,
+        { reçu: receivedAmount, attendu: expectedAmount })
+      await admin.from('visibility_subscriptions')
+        .update({ status: 'failed' })
+        .eq('id', subId)
+        .eq('status', 'pending')
+      // Log d'audit pour investigation
+      await admin.from('payment_logs').insert({
+        payment_intent_id: null,
+        event_type: 'visibility_amount_mismatch',
+        event_data: {
+          subscription_id: subId,
+          received: receivedAmount,
+          expected: expectedAmount,
+          transaction_id: notification.transactionId,
+        },
+      }).catch(() => null)
+      return json({ received: true })
+    }
+
+    // ⑥ Montant vérifié → activer l'abonnement
     const durationDays: number = sub.plan?.duration_days ?? 30
     const now       = new Date()
     const expiresAt = new Date(now.getTime() + durationDays * 86_400_000)
@@ -131,7 +174,7 @@ Deno.serve(async (req) => {
 
     if (updateError) throw updateError
 
-    // ⑥ Activer "Offre du quartier" sur la boutique
+    // ⑦ Activer "Offre du quartier" sur la boutique
     await admin
       .from('shops')
       .update({
@@ -142,7 +185,7 @@ Deno.serve(async (req) => {
       })
       .eq('id', sub.shop_id)
 
-    // ⑦ Notification in-app au marchand
+    // ⑧ Notification in-app au marchand
     const expiryFr = expiresAt.toLocaleDateString('fr-FR', {
       day: 'numeric', month: 'long', year: 'numeric',
     })

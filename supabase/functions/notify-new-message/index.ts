@@ -64,13 +64,16 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
-    // ① Récupérer la conversation
+    // ① Récupérer la conversation + boutique en une passe
     const { data: conv } = await admin
       .from('conversations')
-      .select('client_id, shop_id')
+      .select('client_id, shop_id, shops(merchant_id)')
       .eq('id', conversationId)
       .single()
     if (!conv) throw new Error('Conversation introuvable')
+
+    const merchantId = (conv.shops as any)?.merchant_id ?? null
+    if (!merchantId) throw new Error('Boutique introuvable')
 
     // ② Profil de l'expéditeur
     const { data: senderProfile } = await admin
@@ -79,20 +82,24 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single()
 
-    // ③ Déterminer le destinataire
+    // ③ Vérifier que l'appelant est bien participant de cette conversation.
+    //    Sans ce contrôle, tout utilisateur authentifié connaissant un conversationId
+    //    pourrait envoyer des push notifications arbitraires à n'importe qui.
     let recipientId: string
     if (senderProfile?.role === 'merchant') {
-      // Prestataire → client
+      if (merchantId !== user.id) {
+        return new Response(JSON.stringify({ error: 'Non autorisé — vous n\'êtes pas le prestataire de cette conversation' }), {
+          status: 403, headers: { ...CORS, 'Content-Type': 'application/json' },
+        })
+      }
       recipientId = conv.client_id
     } else {
-      // Client → prestataire (propriétaire de la boutique)
-      const { data: shop } = await admin
-        .from('shops')
-        .select('merchant_id')
-        .eq('id', conv.shop_id)
-        .single()
-      if (!shop?.merchant_id) throw new Error('Boutique introuvable')
-      recipientId = shop.merchant_id
+      if (conv.client_id !== user.id) {
+        return new Response(JSON.stringify({ error: 'Non autorisé — vous n\'êtes pas le client de cette conversation' }), {
+          status: 403, headers: { ...CORS, 'Content-Type': 'application/json' },
+        })
+      }
+      recipientId = merchantId
     }
 
     // Pas de notification à soi-même

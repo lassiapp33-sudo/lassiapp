@@ -59,8 +59,11 @@ export const STATUS_LABELS: Record<DisputeStatus, string> = {
 
 // ─── Lecture des litiges ─────────────────────────────────────────────────────
 
+const DISPUTES_PAGE_SIZE = 100
+
 export async function getDisputes(
-  status?: DisputeStatus | 'all'
+  status?: DisputeStatus | 'all',
+  page = 0,
 ): Promise<Dispute[]> {
   let query = supabase
     .from('disputes')
@@ -73,6 +76,7 @@ export async function getDisputes(
       shops(name)
     `)
     .order('created_at', { ascending: false })
+    .range(page * DISPUTES_PAGE_SIZE, (page + 1) * DISPUTES_PAGE_SIZE - 1)
 
   if (status && status !== 'all') {
     query = query.eq('status', status)

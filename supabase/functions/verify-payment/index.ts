@@ -39,7 +39,13 @@ serve(async (req) => {
 
     if (!pi) return new Response(JSON.stringify({ success: false, error: 'Introuvable' }), { status: 404 });
 
-    const confirmed = ['confirmed', 'split_done', 'simulated'].includes(pi.statut);
+    // En production (clés API présentes), un paiement simulé N'EST PAS confirmé :
+    // cela évite de valider une commande si les clés API disparaissent accidentellement.
+    const IS_PRODUCTION = !!(Deno.env.get('WAVE_API_KEY') || Deno.env.get('OM_RETAILER_MSISDN'));
+    const confirmedStatuses = IS_PRODUCTION
+      ? ['confirmed', 'split_done']
+      : ['confirmed', 'split_done', 'simulated'];
+    const confirmed = confirmedStatuses.includes(pi.statut);
 
     // Log vérification
     await supabase.from('payment_logs').insert({
@@ -60,6 +66,9 @@ serve(async (req) => {
 
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Erreur serveur';
-    return new Response(JSON.stringify({ success: false, error: msg }), { status: 500 });
+    return new Response(JSON.stringify({ success: false, error: msg }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

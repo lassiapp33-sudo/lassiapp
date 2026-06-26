@@ -71,12 +71,32 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ── 4. Récupérer le profil cible (pour le log) ────────────────────────────
+    // ── 4. Récupérer le profil cible (pour le log + guard admin) ─────────────
     const { data: targetProfile } = await admin
       .from('profiles')
-      .select('name, phone, role')
+      .select('name, phone, role, is_admin')
       .eq('id', targetUserId)
       .maybeSingle()
+
+    // Empêcher la suppression d'un autre compte admin (escalade de privilèges)
+    if (targetProfile?.is_admin) {
+      return new Response(JSON.stringify({ error: 'Impossible de supprimer un compte administrateur.' }), {
+        status: 403, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // ── 4b. Refuser si des reversements sont en attente (H6) ─────────────────
+    const { count: pendingPayouts } = await admin
+      .from('payout_queue')
+      .select('id', { count: 'exact', head: true })
+      .eq('prestataire_id', targetUserId)
+      .in('statut', ['queued', 'processing'])
+
+    if (pendingPayouts && pendingPayouts > 0) {
+      return new Response(JSON.stringify({
+        error: `Impossible de supprimer ce compte : ${pendingPayouts} reversement(s) en attente (queued/processing). Attendez leur résolution ou annulez-les manuellement.`,
+      }), { status: 409, headers: { ...CORS, 'Content-Type': 'application/json' } })
+    }
 
     // ── 5. Logger AVANT suppression (service_role contourne les RLS) ──────────
     await admin.from('admin_actions_log').insert({

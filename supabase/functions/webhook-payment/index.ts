@@ -39,15 +39,18 @@ serve(async (req) => {
   // On renvoie une page HTML qui redirige vers l'app LASSI via deep link.
   if (req.method === 'GET') {
     const result = url.searchParams.get('result') ?? 'cancel';
-    const piId   = url.searchParams.get('pi_id') ?? '';
+    const piIdRaw = url.searchParams.get('pi_id') ?? '';
+    // Valider UUID avant toute injection dans HTML (protection XSS)
+    const piId = isUUID(piIdRaw) ? piIdRaw : '';
     const deepLink = result === 'success'
-      ? `lassiapp://paiement/succes?pi=${piId}`
-      : `lassiapp://paiement/echec?pi=${piId}`;
+      ? `lassiapp://paiement/succes?pi=${encodeURIComponent(piId)}`
+      : `lassiapp://paiement/echec?pi=${encodeURIComponent(piId)}`;
+    const deepLinkEncoded = deepLink.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="0;url=${deepLink}">
+<meta http-equiv="refresh" content="0;url=${deepLinkEncoded}">
 <title>LASSI — Redirection</title></head><body>
 <p>Redirection vers l'application LASSI...</p>
-<a href="${deepLink}">Ouvrir LASSI</a>
+<a href="${deepLinkEncoded}">Ouvrir LASSI</a>
 </body></html>`;
     return new Response(html, {
       status: 200,
@@ -72,7 +75,12 @@ serve(async (req) => {
       console.error('[webhook-om] pi_id invalide dans l\'URL');
       return new Response('pi_id invalide', { status: 400 });
     }
-    if (OM_WEBHOOK_SECRET && secret !== OM_WEBHOOK_SECRET) {
+    // Toujours rejeter si secret absent (jamais de fallback permissif sur un endpoint financier)
+    if (!OM_WEBHOOK_SECRET) {
+      console.error('[webhook-om] OM_WEBHOOK_SECRET non configuré — webhook désactivé par sécurité');
+      return new Response('Configuration manquante', { status: 503 });
+    }
+    if (secret !== OM_WEBHOOK_SECRET) {
       console.error('[webhook-om] secret invalide');
       return new Response('Non autorisé', { status: 401 });
     }

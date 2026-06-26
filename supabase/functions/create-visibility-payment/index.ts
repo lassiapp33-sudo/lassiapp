@@ -171,12 +171,13 @@ Deno.serve(async (req) => {
       const waveRes = await fetch('https://api.wave.com/v1/checkout/sessions', {
         method:  'POST',
         headers: {
-          'Authorization': `Bearer ${WAVE_API_KEY}`,
-          'Content-Type':  'application/json',
+          'Authorization':   `Bearer ${WAVE_API_KEY}`,
+          'Content-Type':    'application/json',
+          'Idempotency-Key': sub.id,
         },
         body: JSON.stringify({
           currency:         'XOF',
-          amount:           String(finalPrice),
+          amount:           finalPrice,
           merchant_id:      WAVE_MERCHANT_ID,
           success_url:      `${APP_BASE_URL}visibility-success?sub=${sub.id}`,
           error_url:        `${APP_BASE_URL}visibility-error?sub=${sub.id}`,

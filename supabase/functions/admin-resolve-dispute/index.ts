@@ -72,8 +72,8 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Mettre à jour le litige
-    const { error: updateErr } = await admin
+    // Mettre à jour le litige et vérifier qu'il existe
+    const { data: updated, error: updateErr } = await admin
       .from('disputes')
       .update({
         status,
@@ -82,8 +82,14 @@ Deno.serve(async (req) => {
         resolved_at: ['resolved', 'rejected'].includes(status) ? new Date().toISOString() : null,
       })
       .eq('id', disputeId)
+      .select('id')
 
     if (updateErr) throw updateErr
+    if (!updated || updated.length === 0) {
+      return new Response(JSON.stringify({ error: 'Litige introuvable' }), {
+        status: 404, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
 
     // Ajouter un message admin si fourni
     if (message?.trim()) {

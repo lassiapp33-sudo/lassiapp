@@ -341,7 +341,9 @@ export default function UsersPage() {
                     {p.email && <p className="text-muted text-xs">{p.email}</p>}
                     {p.isAdmin && <span className="text-xs text-accent">🛡 Admin</span>}
                   </td>
-                  <td className="px-4 py-3 text-muted font-mono text-xs">{p.phone || '—'}</td>
+                  <td className="px-4 py-3 text-muted font-mono text-xs">
+                    {p.phone || '—'}
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <Badge variant={p.role as any} />
                   </td>

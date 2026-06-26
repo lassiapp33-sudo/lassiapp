@@ -32,8 +32,8 @@ const OM_RETAILER_PIN_ENCRYPTED = Deno.env.get('OM_RETAILER_PIN_ENCRYPTED') ?? '
 const IS_PRODUCTION            = (WAVE_API_KEY !== '' && WAVE_MERCHANT_ID !== '') ||
                                   (OM_RETAILER_MSISDN !== '' && OM_RETAILER_PIN_ENCRYPTED !== '');
 
-// 🔌 Secret partagé avec le planificateur (cron). Si non configuré, la
-// fonction reste accessible (mode démo) mais un avertissement est loggué.
+// Secret partagé avec le planificateur (cron). OBLIGATOIRE en production.
+// Si absent, l'endpoint répond 503 et refuse toute exécution.
 const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
 
 const BATCH_LIMIT = 20;
@@ -42,12 +42,14 @@ const BATCH_LIMIT = 20;
 const PHONE_RE = /^7[05678][0-9]{7}$/;
 
 serve(async (req) => {
-  if (CRON_SECRET) {
-    if (req.headers.get('X-Cron-Secret') !== CRON_SECRET) {
-      return new Response('Non autorisé', { status: 401 });
-    }
-  } else {
-    console.warn('[process-payouts] CRON_SECRET non configuré — endpoint non protégé');
+  // Endpoint financier critique : accès interdit si CRON_SECRET absent ou incorrect.
+  // Ne jamais laisser passer une requête non authentifiée sur un endpoint de virement.
+  if (!CRON_SECRET) {
+    console.error('[process-payouts] CRON_SECRET non configuré — endpoint désactivé par sécurité');
+    return new Response('Service non disponible (configuration manquante)', { status: 503 });
+  }
+  if (req.headers.get('X-Cron-Secret') !== CRON_SECRET) {
+    return new Response('Non autorisé', { status: 401 });
   }
 
   const supabase = createClient(
@@ -157,10 +159,19 @@ serve(async (req) => {
       continue;
     }
 
-    if (!markResult?.ok && markResult?.statut === 'cancelled') {
-      // Le reversement a été annulé (remboursement concurrent) APRÈS l'envoi
-      // effectif des fonds au prestataire : récupération manuelle nécessaire.
+    // Race condition : payout annulé par process_refund APRÈS l'envoi des fonds.
+    // L'événement 'payout_sent_after_cancel' est déjà créé dans payment_logs par
+    // payout_queue_mark_paid. On logue ici pour visibilité dans les logs Edge Function.
+    if (markResult?.error === 'payout_sent_after_cancel') {
       console.error('[ALERTE PAIEMENT] payout', payout.id, 'envoyé (ref', payoutRef, ') mais annulé entre-temps — récupération manuelle requise');
+      results.failed++;
+      continue;
+    }
+
+    if (!markResult?.ok) {
+      console.error('[process-payouts] payout_queue_mark_paid état inattendu pour', payout.id, JSON.stringify(markResult));
+      results.failed++;
+      continue;
     }
 
     results.paid++;

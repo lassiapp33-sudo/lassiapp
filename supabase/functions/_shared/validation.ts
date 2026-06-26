@@ -72,7 +72,10 @@ export function isBoolean(v: unknown): v is boolean {
 
 /** Vérifie qu'une valeur est une chaîne de date/heure ISO 8601 valide. */
 export function isISODateString(v: unknown): v is string {
-  return typeof v === 'string' && v.length > 0 && !Number.isNaN(Date.parse(v));
+  if (typeof v !== 'string' || v.length === 0) return false;
+  // Regex stricte ISO 8601 : YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss[.ms][Z|±HH:mm]
+  const ISO_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/;
+  return ISO_RE.test(v) && !Number.isNaN(Date.parse(v));
 }
 
 /**
