@@ -30,9 +30,14 @@ import { OrderInfo } from '../../types/payment';
 import { Terrain, SportType } from '../../types/terrain';
 import useAuthStore from '../../store/authStore';
 import useNotificationsStore from '../../store/notificationsStore';
+import useNotifPopupStore from '../../store/notifPopupStore';
 import usePendingNavStore from '../../store/pendingNavStore';
 import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
 import { recordView } from '../../services/recentlyViewed';
+
+function shouldShowCard(type: string): boolean {
+  return type === 'vip' || type === 'pay' || type === 'ann';
+}
 
 // ─── Stack de navigation client ───────────────────────────────────────────────
 
@@ -124,12 +129,31 @@ export default function HomeNavigator({ onLogout }: Props) {
     push({ id: 'shop', shopId, shopName, targetProductId: productId });
   };
 
-  // Abonnement Realtime toujours actif — met à jour le badge cloche en temps réel
-  const userId = useAuthStore(s => s.user?.id ?? null);
-  const addNotif = useNotificationsStore(s => s.addNotif);
-  const pendingNav = usePendingNavStore(s => s.pendingNav);
+  // Abonnement Realtime + carte rich au démarrage
+  const userId       = useAuthStore(s => s.user?.id ?? null);
+  const addNotif     = useNotificationsStore(s => s.addNotif);
+  const enqueueCard  = useNotifPopupStore(s => s.enqueue);
+  const cardReady    = useNotifPopupStore(s => s.ready);
+  const pendingNav   = usePendingNavStore(s => s.pendingNav);
   const clearPending = usePendingNavStore(s => s.clearPendingNav);
-  useRealtimeNotifications(userId, addNotif);
+
+  // Realtime : badge + carte pour les notifs importantes
+  useRealtimeNotifications(userId, notif => {
+    addNotif(notif);
+    if (shouldShowCard(notif.type)) enqueueCard(notif);
+  });
+
+  // Démarrage : badge + cartes pour les notifs non lues importantes (un seul appel DB)
+  useEffect(() => {
+    if (!userId || !cardReady) return;
+    useNotificationsStore.getState().loadNotifications().then(() => {
+      const notifs = useNotificationsStore.getState().notifications;
+      // Oldest-first → la plus ancienne s'affiche en premier
+      [...notifs].reverse().forEach(n => {
+        if (n.unread && shouldShowCard(n.type)) enqueueCard(n);
+      });
+    }).catch(() => {});
+  }, [userId, cardReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Deep link depuis notification push (app fermée / arrière-plan)
   useEffect(() => {
@@ -137,6 +161,8 @@ export default function HomeNavigator({ onLogout }: Props) {
     clearPending();
     if (pendingNav.type === 'home') {
       setHistory([{ id: 'main' }]);
+    } else if (pendingNav.type === 'notifications') {
+      push({ id: 'notifications' });
     } else if (pendingNav.type === 'msg') {
       setHistory([
         { id: 'main' },

@@ -32,14 +32,23 @@ const IcoMsg = ({ color }: { color: string }) => (
   </Svg>
 );
 
+// Mégaphone — annonces admin
+const IcoAnn = ({ color }: { color: string }) => (
+  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>
+    <Path d="M18 8a2 2 0 0 1 0 4" stroke={color} />
+    <Path d="M3 9v6h3l7 4V5L6 9H3z" stroke={color} strokeLinejoin="round" />
+  </Svg>
+);
+
 const TYPE_CONFIG: Record<
   NotifType,
   { Icon: React.FC<{ color: string }>; color: string; bg: string }
 > = {
-  order: { Icon: IcoOrder, color: colors.accent, bg: 'rgba(253,207,52,.13)' },
-  pay: { Icon: IcoPay, color: colors.success, bg: 'rgba(95,211,138,.13)' },
-  vip: { Icon: IcoStar, color: colors.orange, bg: 'rgba(240,168,71,.13)' },
-  msg: { Icon: IcoMsg, color: colors.accent, bg: 'rgba(253,207,52,.13)' },
+  order: { Icon: IcoOrder, color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+  pay:   { Icon: IcoPay,   color: colors.success, bg: 'rgba(95,211,138,.13)' },
+  vip:   { Icon: IcoStar,  color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
+  msg:   { Icon: IcoMsg,   color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+  ann:   { Icon: IcoAnn,   color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
 };
 
 function NotifCard({ notif, onPress }: { notif: Notif; onPress: () => void }) {
@@ -75,10 +84,9 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
   const markAllRead = useNotificationsStore(s => s.markAllRead);
   const loadNotifications = useNotificationsStore(s => s.loadNotifications);
 
-  // Montage seul — chargement + marquage lu une seule fois à l'ouverture de l'écran
+  // Charge les notifications (incl. annonces) puis marque tout comme lu
   useEffect(() => {
-    loadNotifications();
-    markAllRead(); // toutes les notifs marquées lues → badge retombe à 0
+    loadNotifications().then(() => markAllRead());
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sections = useMemo(() => {

@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import DashHeader from '../../components/merchant/DashHeader';
 import EarningsCard from '../../components/merchant/EarningsCard';
 import QuickActions from '../../components/merchant/QuickActions';
 import OrderCard, { MerchantOrder } from '../../components/merchant/OrderCard';
-import WelcomeRewardModal from '../../components/merchant/WelcomeRewardModal';
 import MesRecompensesCard from '../../components/merchant/MesRecompensesCard';
 import MerchantBottomNav, {
   MerchantTab,
@@ -19,7 +17,6 @@ import useOrdersStore from '../../store/ordersStore';
 import useDebtsStore from '../../store/debtsStore';
 import useNotificationsStore from '../../store/notificationsStore';
 import useLocationStore from '../../store/locationStore';
-import { getRecompenseBienvenue } from '../../services/classementService';
 
 // ─── Sous-composant section header ────────────────────────────────────────────
 
@@ -69,7 +66,6 @@ interface Props {
 
 export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
   const [activeTab, setActiveTab] = useState<MerchantTab>('dashboard');
-  const [welcomeReward, setWelcomeReward] = useState<{ carrouselProduits: number } | null>(null);
 
   // Auth
   const userId = useAuthStore(s => s.user?.id);
@@ -101,30 +97,6 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
     loadNotifications();
     refreshLocation(); // vraie position GPS dès le montage
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Cadeau de bienvenue (4 emplacements "Offre du Quartier") — affiché une
-  // seule fois, mémorisé par compte via AsyncStorage.
-  useEffect(() => {
-    if (!userId) return;
-    const seenKey = `welcome_reward_seen_${userId}`;
-    (async () => {
-      try {
-        const seen = await AsyncStorage.getItem(seenKey);
-        if (seen) return;
-        const reward = await getRecompenseBienvenue(userId);
-        if (reward?.est_actif) {
-          setWelcomeReward({ carrouselProduits: reward.carrousel_produits });
-        }
-      } catch {
-        // silencieux — le cadeau reste consultable depuis Offre du Quartier
-      }
-    })();
-  }, [userId]);
-
-  const dismissWelcomeReward = () => {
-    setWelcomeReward(null);
-    if (userId) AsyncStorage.setItem(`welcome_reward_seen_${userId}`, '1').catch(() => {});
-  };
 
   useEffect(() => {
     if (!shopId) return;
@@ -223,16 +195,6 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
       </ScrollView>
 
       <MerchantBottomNav active={activeTab} onPress={handleNavPress} />
-
-      <WelcomeRewardModal
-        visible={!!welcomeReward}
-        carrouselProduits={welcomeReward?.carrouselProduits ?? 4}
-        onClose={dismissWelcomeReward}
-        onDiscover={() => {
-          dismissWelcomeReward();
-          onNavigate?.('offre_quartier');
-        }}
-      />
     </View>
   );
 }

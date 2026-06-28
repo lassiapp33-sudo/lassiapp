@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import * as notifsService from '../services/notifications';
 import logger from '../utils/logger';
 
-export type NotifType = 'order' | 'pay' | 'vip' | 'msg';
+export type NotifType = 'order' | 'pay' | 'vip' | 'msg' | 'ann';
 
 export interface Notif {
   id: string;
@@ -12,6 +12,7 @@ export interface Notif {
   time: string;
   unread: boolean;
   group: 'today' | 'week';
+  createdAt: string;
   targetId?: string;
   data?: Record<string, unknown>;
 }

@@ -31,9 +31,14 @@ import ClassementScreen from '../classement/ClassementScreen';
 import useShopStore from '../../store/shopStore';
 import useAuthStore from '../../store/authStore';
 import useNotificationsStore from '../../store/notificationsStore';
+import useNotifPopupStore from '../../store/notifPopupStore';
 import usePendingNavStore from '../../store/pendingNavStore';
 import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
 import { OrderInfo } from '../../types/payment';
+
+function shouldShowCard(type: string): boolean {
+  return type === 'vip' || type === 'pay' || type === 'ann';
+}
 
 // Navigateur du cockpit prestataire — tous les modules sont câblés ici.
 type MerchantScreen =
@@ -94,14 +99,30 @@ export default function MerchantNavigator({ onLogout }: Props) {
 
   // Mémorise l'écran d'origine de "Mes terrains" pour le retour
   const [terrainsFrom, setTerrainsFrom] = useState<'dashboard' | 'profile'>('dashboard');
-  const userId = useAuthStore(s => s.user?.id ?? null);
-  const addNotif = useNotificationsStore(s => s.addNotif);
+  const userId      = useAuthStore(s => s.user?.id ?? null);
+  const addNotif    = useNotificationsStore(s => s.addNotif);
+  const enqueueCard = useNotifPopupStore(s => s.enqueue);
+  const cardReady   = useNotifPopupStore(s => s.ready);
 
-  const pendingNav = usePendingNavStore(s => s.pendingNav);
+  const pendingNav   = usePendingNavStore(s => s.pendingNav);
   const clearPending = usePendingNavStore(s => s.clearPendingNav);
 
-  // Abonnement Realtime toujours actif — met à jour le badge immédiatement
-  useRealtimeNotifications(userId, addNotif);
+  // Realtime : badge + carte pour les notifs importantes
+  useRealtimeNotifications(userId, notif => {
+    addNotif(notif);
+    if (shouldShowCard(notif.type)) enqueueCard(notif);
+  });
+
+  // Démarrage : badge + cartes pour les notifs non lues importantes (un seul appel DB)
+  useEffect(() => {
+    if (!userId || !cardReady) return;
+    useNotificationsStore.getState().loadNotifications().then(() => {
+      const notifs = useNotificationsStore.getState().notifications;
+      [...notifs].reverse().forEach(n => {
+        if (n.unread && shouldShowCard(n.type)) enqueueCard(n);
+      });
+    }).catch(() => {});
+  }, [userId, cardReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Deep link depuis notification push ou retour paiement
   useEffect(() => {
@@ -109,6 +130,8 @@ export default function MerchantNavigator({ onLogout }: Props) {
     clearPending();
     if (pendingNav.type === 'home') {
       setScreen('dashboard');
+    } else if (pendingNav.type === 'notifications') {
+      setScreen('notifications');
     } else if (pendingNav.type === 'msg') {
       setScreen({ id: 'chat', conversationId: pendingNav.conversationId });
     } else if (pendingNav.type === 'order') {

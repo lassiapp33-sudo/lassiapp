@@ -20,15 +20,15 @@ import HomeNavigator     from './src/screens/home/HomeNavigator';
 import MerchantNavigator from './src/screens/merchant/MerchantNavigator';
 import ErrorBoundary     from './src/components/common/ErrorBoundary';
 import OfflineBanner     from './src/components/common/OfflineBanner';
-import AnnonceModal      from './src/components/common/AnnonceModal';
+import NotifCardModal    from './src/components/common/NotifCardModal';
 import { useConnectionWatcher } from './src/hooks/useConnectionWatcher';
-import { useAnnonces } from './src/hooks/useAnnonces';
 import useAuthStore            from './src/store/authStore';
 import useShopStore             from './src/store/shopStore';
 import useOrdersStore           from './src/store/ordersStore';
 import useDebtsStore            from './src/store/debtsStore';
 import useFavoritesStore        from './src/store/favoritesStore';
 import useNotificationsStore    from './src/store/notificationsStore';
+import useNotifPopupStore       from './src/store/notifPopupStore';
 import useCartStore             from './src/store/cartStore';
 import * as authService         from './src/services/auth';
 import { usePushToken, removeCurrentDeviceToken } from './src/hooks/usePushToken';
@@ -74,9 +74,11 @@ function handleNotifData(data: Record<string, any> | undefined | null) {
 export default function App() {
   const [screen, setScreen] = useState<Screen>('splash');
   const userId = useAuthStore(s => s.user?.id ?? null);
+  const setPendingNav = usePendingNavStore(s => s.setPendingNav);
 
-  // Annonces système (modale plein écran type "patch notes", une fois par compte)
-  const { annonceCourante, nbRestantes, marquerLue } = useAnnonces(userId);
+  // Charge les IDs de cartes déjà affichées (AsyncStorage) au démarrage
+  const loadSeenIds = useNotifPopupStore(s => s.loadSeenIds);
+  useEffect(() => { loadSeenIds(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Enregistre le token push dès que l'utilisateur est connecté
   usePushToken();
@@ -209,7 +211,9 @@ export default function App() {
     <View style={styles.root} onLayout={onLayout}>
       <StatusBar style="light" />
       <OfflineBanner />
-      <AnnonceModal annonce={annonceCourante} nbRestantes={nbRestantes} onFermer={marquerLue} />
+
+      {/* Carte rich-notification (style image1) — affichée une seule fois par notif */}
+      <NotifCardModal onView={() => setPendingNav({ type: 'notifications' })} />
 
       <ErrorBoundary>
       {screen === 'splash' && (
