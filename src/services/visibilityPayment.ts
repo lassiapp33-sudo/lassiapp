@@ -65,6 +65,8 @@ export interface ActiveSub {
   paidAt: string | null;
   payMethod: PayMethod;
   productId: string | null;
+  /** IDs des produits sélectionnés (null si allProducts). */
+  productIds: string[] | null;
   productName: string | null;
   productEmoji: string | null;
   /** Nombre de produits mis en avant (0 si allProducts). */
@@ -116,9 +118,12 @@ export async function getVisibilityPlans(): Promise<VisibilityPlan[]> {
 
 // ─── Charger l'abonnement actif du shop courant ───────────────────────────────
 
-export async function getActiveSub(shopId: string): Promise<ActiveSub | null> {
+export async function getActiveSub(
+  shopId: string,
+  offerType?: 'quartier' | 'recherche' | 'carte',
+): Promise<ActiveSub | null> {
   const now = new Date().toISOString();
-  const { data } = await supabase
+  let query = supabase
     .from('visibility_subscriptions')
     .select(
       'id, plan_id, amount, status, started_at, expires_at, paid_at, pay_method, ' +
@@ -127,7 +132,13 @@ export async function getActiveSub(shopId: string): Promise<ActiveSub | null> {
     )
     .eq('shop_id', shopId)
     .eq('status', 'active')
-    .gt('expires_at', now)
+    .gt('expires_at', now);
+
+  if (offerType) {
+    query = query.eq('offer_type', offerType);
+  }
+
+  const { data } = await query
     .order('expires_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -146,6 +157,7 @@ export async function getActiveSub(shopId: string): Promise<ActiveSub | null> {
     paidAt: row.paid_at,
     payMethod: row.pay_method as PayMethod,
     productId: row.product_id,
+    productIds: row.product_ids,
     productName: row.all_products ? null : (row.product?.name ?? null),
     productEmoji: row.all_products ? null : (row.product?.emoji ?? null),
     productCount: row.product_ids?.length ?? (row.product_id ? 1 : 0),
@@ -257,6 +269,18 @@ export async function verifyVisibilityPayment(subscriptionId: string): Promise<V
     return { paid: true, status: 'active', expiresAt: data.expires_at as string };
   }
   return { paid: false, status: data.status as string };
+}
+
+// ─── Modifier les produits sélectionnés d'un abonnement Offre du Quartier ────
+
+export async function updateSubProducts(productIds: string[]): Promise<void> {
+  const res = await fetch(`${FUNCTIONS_BASE}/update-visibility-products`, {
+    method: 'POST',
+    headers: await authHeaders(),
+    body: JSON.stringify({ productIds }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? 'Erreur de mise à jour');
 }
 
 // ─── Description marketing calculée depuis les données de tarif ──────────────
