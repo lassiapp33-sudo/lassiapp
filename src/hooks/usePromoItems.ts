@@ -21,7 +21,7 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
 
     (async () => {
       try {
-        // ① Commerces avec une "Offre du quartier" effective (don admin ou abonnement payé)
+        // ① Commerces avec une "Offre du quartier" effective (don admin OU abonnement payé)
         const { data: shops } = await supabase
           .from('shops_effective')
           .select('id, name, category, featured_product_id, featured_product_ids, featured_all_products')
@@ -51,14 +51,6 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
           for (const id of ids) shopByProductId.set(id, s);
         }
         const specificIds = Array.from(shopByProductId.keys());
-
-        if (specificIds.length === 0 && allProductsShops.length === 0) {
-          if (!cancelled) {
-            setRaw([]);
-            setLoading(false);
-          }
-          return;
-        }
 
         const [specificRes, allProductsRes] = await Promise.all([
           specificIds.length > 0
@@ -95,7 +87,7 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
           shopId: shop.id,
         });
 
-        const items: PromoItem[] = [
+        const paidItems: PromoItem[] = [
           ...(specificRes.data ?? [])
             .filter((row: any) => shopByProductId.has(row.id))
             .map((row: any) => toItem(row, shopByProductId.get(row.id)!)),
@@ -104,8 +96,62 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
             .map((row: any) => toItem(row, shopById.get(row.shop_id)!)),
         ];
 
-        setRaw(items);
-        setLoading(false);
+        // ③ Produits gagnés via récompenses classement (carrousel_offre_quartier)
+        const { data: carrouselData } = await supabase
+          .from('carrousel_offre_quartier')
+          .select('id, prestataire_id, product_id, nom, prix, image_url')
+          .eq('est_actif', true)
+          .order('ordre')
+          .limit(25);
+
+        type RewardRow = {
+          id: string;
+          prestataire_id: string;
+          product_id: string | null;
+          nom: string;
+          prix: number;
+          image_url: string;
+        };
+        const rewardRows = (carrouselData ?? []) as RewardRow[];
+
+        let rewardItems: PromoItem[] = [];
+        if (rewardRows.length > 0) {
+          const merchantIds = [...new Set(rewardRows.map(r => r.prestataire_id).filter(Boolean))];
+          const { data: rewardShops } = await supabase
+            .from('shops')
+            .select('id, name, category, merchant_id')
+            .in('merchant_id', merchantIds);
+
+          type RewardShop = { id: string; name: string; category: string; merchant_id: string };
+          const shopByMerchant = new Map<string, RewardShop>(
+            (rewardShops ?? []).map((s: any) => [s.merchant_id, s]),
+          );
+
+          // Dédupliquer : ne pas afficher deux fois un produit déjà dans paidItems
+          const paidProductIds = new Set(paidItems.map(i => i.id));
+
+          rewardItems = rewardRows
+            .filter(r => r.product_id && !paidProductIds.has(r.product_id))
+            .map(r => {
+              const shop = shopByMerchant.get(r.prestataire_id);
+              const isUrl = typeof r.image_url === 'string' && r.image_url.startsWith('http');
+              return {
+                id: r.product_id!,
+                name: r.nom,
+                price: r.prix,
+                emoji: isUrl ? '' : (r.image_url ?? ''),
+                photoUrl: isUrl ? r.image_url : undefined,
+                shopName: shop?.name ?? '',
+                shopCategory: shop?.category ?? '',
+                shopId: shop?.id ?? '',
+              };
+            });
+        }
+
+        if (!cancelled) {
+          setRaw([...paidItems, ...rewardItems]);
+          setLoading(false);
+        }
       } catch {
         if (!cancelled) setLoading(false);
       }

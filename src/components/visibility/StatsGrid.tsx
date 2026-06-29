@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
+import { formatPrice } from '../../utils/format';
+import { VisibilityStats } from '../../services/visibilityPayment';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -33,47 +35,68 @@ const IcoCoin = ({ color }: { color: string }) => (
   </Svg>
 );
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+// ─── Props ────────────────────────────────────────────────────────────────────
 
-const STATS = [
-  { Icon: IcoEye, color: colors.accent, iconBg: 'rgba(253,207,52,.12)', label: 'Vues ce mois' },
-  {
-    Icon: IcoClick,
-    color: colors.success,
-    iconBg: 'rgba(95,211,138,.12)',
-    label: 'Clics vers ta boutique',
-  },
-  {
-    Icon: IcoChat,
-    color: colors.accent,
-    iconBg: 'rgba(253,207,52,.12)',
-    label: 'Discussions lancées',
-  },
-  {
-    Icon: IcoCoin,
-    color: colors.success,
-    iconBg: 'rgba(95,211,138,.12)',
-    label: 'Ventes générées (F)',
-  },
-];
+interface Props {
+  stats: VisibilityStats | null;
+  loading?: boolean;
+}
 
 // ─── Composant ────────────────────────────────────────────────────────────────
 
-export default function StatsGrid() {
-  const pairs = [STATS.slice(0, 2), STATS.slice(2, 4)];
+export default function StatsGrid({ stats, loading = false }: Props) {
+  const dash = loading ? null : '—';
+
+  const boxes = [
+    {
+      Icon: IcoEye,
+      color: colors.accent,
+      iconBg: 'rgba(253,207,52,.12)',
+      label: 'Vues ce mois',
+      value: stats != null ? String(stats.viewsThisMonth) : dash,
+    },
+    {
+      Icon: IcoClick,
+      color: colors.success,
+      iconBg: 'rgba(95,211,138,.12)',
+      label: 'Clics vers ta boutique',
+      value: stats != null ? String(stats.visitsSinceSub) : dash,
+    },
+    {
+      Icon: IcoChat,
+      color: colors.accent,
+      iconBg: 'rgba(253,207,52,.12)',
+      label: 'Commandes ce mois',
+      value: stats != null ? String(stats.ordersThisMonth) : dash,
+    },
+    {
+      Icon: IcoCoin,
+      color: colors.success,
+      iconBg: 'rgba(95,211,138,.12)',
+      label: 'Ventes générées (F)',
+      value: stats != null ? formatPrice(stats.revenueThisMonth) : dash,
+    },
+  ];
+
+  const pairs = [boxes.slice(0, 2), boxes.slice(2, 4)];
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.soon}>Statistiques détaillées bientôt disponibles</Text>
       {pairs.map((row, ri) => (
         <View key={ri} style={styles.row}>
-          {row.map((stat, si) => (
+          {row.map((box, si) => (
             <View key={si} style={styles.box}>
-              <View style={[styles.iconBox, { backgroundColor: stat.iconBg }]}>
-                <stat.Icon color={stat.color} />
+              <View style={[styles.iconBox, { backgroundColor: box.iconBg }]}>
+                <box.Icon color={box.color} />
               </View>
-              <Text style={styles.value}>—</Text>
-              <Text style={styles.label}>{stat.label}</Text>
+              {loading ? (
+                <ActivityIndicator size="small" color={colors.muted} style={styles.loader} />
+              ) : (
+                <Text style={[styles.value, box.value === '—' && styles.valueMuted]}>
+                  {box.value}
+                </Text>
+              )}
+              <Text style={styles.label}>{box.label}</Text>
             </View>
           ))}
         </View>
@@ -87,13 +110,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 18,
     marginBottom: 18,
     gap: 11,
-  },
-  soon: {
-    color: colors.muted,
-    fontFamily: fonts.body,
-    fontSize: 11.5,
-    textAlign: 'center',
-    marginBottom: 4,
   },
   row: {
     flexDirection: 'row',
@@ -115,10 +131,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 10,
   },
+  loader: {
+    marginBottom: 4,
+    alignSelf: 'flex-start',
+  },
   value: {
-    color: colors.muted,
+    color: colors.white,
     fontFamily: fonts.titleXL,
-    fontSize: 24,
+    fontSize: 22,
+    marginBottom: 2,
+  },
+  valueMuted: {
+    color: colors.muted,
   },
   label: {
     color: colors.muted,

@@ -16,12 +16,12 @@ import { usePromoItems, PromoItem } from '../../hooks/usePromoItems';
 // ─── Constantes de mise en page ───────────────────────────────────────────────
 
 const W = Dimensions.get('window').width;
-// marginH:16×2=32 | padding:14×2=28 | gap:10×2=20 → total hors cartes = 80
-const CARD_WIDTH = Math.floor((W - 80) / 3);
-const CARD_GAP = 10;
+// wrapper: marginH 16×2=32, padding 14×2=28, gap 12 entre 2 cartes → 32+28+12=72
+const CARD_WIDTH = Math.floor((W - 72) / 2);
+const CARD_GAP = 12;
 const ITEM_STRIDE = CARD_WIDTH + CARD_GAP;
-const IMG_SIZE = Math.floor(CARD_WIDTH * 0.38); // ~38% de la largeur de carte
-const INTERVAL_MS = 2800;
+const IMG_H = Math.floor(CARD_WIDTH * 0.58); // proportion image réduite
+const INTERVAL_MS = 3000;
 
 // ─── Indicateurs de page ─────────────────────────────────────────────────────
 
@@ -44,7 +44,7 @@ const dot = StyleSheet.create({
     marginTop: 12,
   },
   d: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#2a3470' },
-  active: { width: 16, backgroundColor: '#FBBF24', borderRadius: 3 },
+  active: { width: 18, backgroundColor: '#FBBF24', borderRadius: 3 },
 });
 
 // ─── Carte produit ────────────────────────────────────────────────────────────
@@ -90,11 +90,11 @@ interface Props {
 export default function PromoBanner({ onPress }: Props) {
   const { items } = usePromoItems();
   const N = items.length;
-  const totalPages = Math.ceil(N / 3);
+  const totalPages = Math.ceil(N / 2);
 
   // Liste triplée : copy1 | copy2 (départ) | copy3 (buffer boucle)
   const looped = useMemo(
-    () => (N >= 3 ? [...items, ...items, ...items] : []),
+    () => (N >= 2 ? [...items, ...items, ...items] : []),
     [items, N],
   );
 
@@ -104,7 +104,7 @@ export default function PromoBanner({ onPress }: Props) {
   const [page, setPage] = useState(0);
 
   useEffect(() => {
-    if (N < 3) return;
+    if (N < 2) return;
 
     idxRef.current = N;
     setPage(0);
@@ -118,7 +118,7 @@ export default function PromoBanner({ onPress }: Props) {
       const idx = idxRef.current;
 
       scrollRef.current?.scrollTo({ x: idx * ITEM_STRIDE, animated: true });
-      setPage(Math.floor(((idx - N) % N) / 3));
+      setPage(Math.floor(((idx - N) % N) / 2));
 
       // Arrivé sur copy3[0] (= copy2[0] visuellement) → retour silencieux
       if (idx === N * 2) {
@@ -144,8 +144,8 @@ export default function PromoBanner({ onPress }: Props) {
       {/* Label section */}
       <Text style={styles.label}>🔥 Offres du quartier</Text>
 
-      {N < 3 ? (
-        // Peu d'annonceurs actifs : rangée statique, sans boucle ni dots
+      {N < 2 ? (
+        // Un seul produit : carte centrée sans boucle
         <View style={styles.staticRow}>
           {items.map(item => (
             <PromoCard
@@ -201,72 +201,63 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  // Rangée statique (1 ou 2 annonceurs actifs)
-  // Pas de `gap` ici : chaque carte a déjà `marginRight: CARD_GAP`.
+  // Rangée statique (1 seul produit actif)
   staticRow: {
     flexDirection: 'row',
   },
 
-  // Carte — layout row : image gauche + texte droite
+  // Carte — layout vertical : image en haut, texte en bas
   card: {
     width: CARD_WIDTH,
     backgroundColor: '#1a2452',
-    borderRadius: 12,
-    padding: 10,
+    borderRadius: 14,
     marginRight: CARD_GAP,
     borderWidth: 1,
     borderColor: '#2a3470',
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    minHeight: 82,
+    overflow: 'hidden',
   },
 
-  // Carré image / emoji
+  // Zone image (haut de la carte)
   imgBox: {
-    width: IMG_SIZE,
-    height: IMG_SIZE,
-    borderRadius: 8,
+    width: CARD_WIDTH,
+    height: IMG_H,
     backgroundColor: '#0d1228',
     justifyContent: 'center',
     alignItems: 'center',
-    flexShrink: 0,
   },
   img: {
-    width: IMG_SIZE,
-    height: IMG_SIZE,
-    borderRadius: 8,
+    width: CARD_WIDTH,
+    height: IMG_H,
     resizeMode: 'cover',
   },
-  emoji: { fontSize: Math.floor(IMG_SIZE * 0.62) },
+  emoji: { fontSize: Math.floor(IMG_H * 0.52) },
 
-  // Zone texte
+  // Zone texte (bas de la carte)
   cardText: {
-    flex: 1,
-    justifyContent: 'space-between',
-    gap: 3,
+    padding: 10,
+    gap: 4,
   },
   cardShop: {
     color: '#FBBF24',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
   },
   cardItem: {
     color: '#E2E8F8',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '500',
-    lineHeight: 13,
-    flexShrink: 1,
+    lineHeight: 15,
   },
   cardPrice: {
     backgroundColor: '#FBBF24',
     color: '#12193a',
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '800',
-    borderRadius: 5,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     alignSelf: 'flex-start',
     overflow: 'hidden',
+    marginTop: 2,
   },
 });

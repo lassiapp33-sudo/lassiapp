@@ -22,6 +22,7 @@ export interface PaymentResult {
   commission?: number;
   prixBase?: number;
   redirectUrl?: string;
+  qrCode?: string | null;   // OM seulement : base64 affiché si deepLink non dispo
   mode?: 'simulation' | 'production';
   error?: string;
 }
@@ -77,6 +78,7 @@ export const initierPaiement = async (params: {
     commission:      data.commission,
     prixBase:        data.prixBase,
     redirectUrl:     data.redirectUrl ?? data.paymentUrl,
+    qrCode:          (data.qrCode ?? null) as string | null,
     mode:            (data.mode ?? (data.simulation ? 'simulation' : 'production')) as 'simulation' | 'production',
   };
 };

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
@@ -27,6 +28,7 @@ interface Props {
 export default function CheckoutPayment({ orderId, prestataireId, prixBase, onSuccess }: Props) {
   const [moyen, setMoyen] = useState<MoyenPaiement>('wave');
   const [loading, setLoading] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
 
   const prixClient = calculerPrixClient(prixBase);
   const commission = calculerCommission(prixBase);
@@ -51,8 +53,15 @@ export default function CheckoutPayment({ orderId, prestataireId, prixBase, onSu
       }
 
       if (result.redirectUrl) {
-        await Linking.openURL(result.redirectUrl);
-        // Vérification au retour via deep link : lassiapp://paiement/succes?pi=...
+        const canOpen = await Linking.canOpenURL(result.redirectUrl);
+        if (canOpen) {
+          await Linking.openURL(result.redirectUrl);
+          // Vérification au retour via deep link : lassiapp://paiement/succes?pi=...
+        } else if (moyen === 'orange_money' && result.qrCode) {
+          setQrCode(result.qrCode);
+        } else {
+          Alert.alert('Erreur', "Impossible d'ouvrir l'application de paiement. Vérifie que Wave ou Orange Money est installé.");
+        }
       }
     } catch (e: unknown) {
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Erreur inattendue');
@@ -107,11 +116,23 @@ export default function CheckoutPayment({ orderId, prestataireId, prixBase, onSu
         )}
       </TouchableOpacity>
 
-      {PAYMENT_CONFIG.MODE === 'simulation' && (
+      {qrCode ? (
+        <View style={styles.qrContainer}>
+          <Text style={styles.qrLabel}>Scanne ce QR code avec l'app Orange Money</Text>
+          <Image
+            source={{ uri: `data:image/png;base64,${qrCode}` }}
+            style={styles.qrImage}
+            resizeMode="contain"
+          />
+          <TouchableOpacity onPress={() => setQrCode(null)}>
+            <Text style={styles.qrClose}>Fermer</Text>
+          </TouchableOpacity>
+        </View>
+      ) : PAYMENT_CONFIG.MODE === 'simulation' ? (
         <Text style={styles.simNote}>
           🔶 Mode démo — Le paiement est simulé. Branchement Wave/OM en cours.
         </Text>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -188,5 +209,29 @@ const styles = StyleSheet.create({
     marginTop: 14,
     fontSize: 12,
     opacity: 0.7,
+  },
+  qrContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+    backgroundColor: '#1E2040',
+    borderRadius: 18,
+    padding: 20,
+  },
+  qrLabel: {
+    color: '#EDEEF7',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  qrImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 8,
+  },
+  qrClose: {
+    color: '#FDCF34',
+    marginTop: 14,
+    fontSize: 14,
+    fontFamily: 'PoppinsSemiBold',
   },
 });

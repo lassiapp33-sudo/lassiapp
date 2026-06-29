@@ -26,6 +26,7 @@ async function authHeaders(): Promise<Record<string, string>> {
 
 export interface PaymentSession {
   paymentUrl:  string;
+  qrCode:      string;   // OM seulement : base64 affiché si deepLink non dispo
   reference:   string;
   simulation?: boolean; // true en mode démo (sans clés API)
 }
@@ -59,12 +60,17 @@ export async function createPayment(params: {
   }
   useConnectionStore.getState().setOffline(false);
 
+  if (!res.ok) {
+    let errMsg = 'Erreur de paiement';
+    try { const e = await res.json() as Record<string, unknown>; errMsg = (e.error as string) ?? errMsg; } catch {}
+    throw new Error(errMsg);
+  }
   const data = await res.json() as Record<string, unknown>;
-  if (!res.ok) throw new Error((data.error as string) ?? 'Erreur de paiement');
 
   const redirectUrl = (data.redirectUrl ?? '') as string;
   return {
     paymentUrl:  redirectUrl,
+    qrCode:      (data.qrCode ?? '') as string,
     reference:   (data.paymentIntentId ?? '') as string,
     simulation:  data.mode === 'simulation',
   };
@@ -93,7 +99,11 @@ export async function verifyPayment(params: {
   }
   useConnectionStore.getState().setOffline(false);
 
+  if (!res.ok) {
+    let errMsg = 'Erreur vérification';
+    try { const e = await res.json() as Record<string, unknown>; errMsg = (e.error as string) ?? errMsg; } catch {}
+    throw new Error(errMsg);
+  }
   const data = await res.json() as Record<string, unknown>;
-  if (!res.ok) throw new Error((data.error as string) ?? 'Erreur vérification');
   return data.confirmed === true;
 }

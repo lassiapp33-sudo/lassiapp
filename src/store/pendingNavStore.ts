@@ -8,6 +8,7 @@ export type PendingNav =
   | { type: 'msg'; conversationId: string }
   | { type: 'order'; orderId: string }
   | { type: 'home' }
+  | { type: 'notifications' }
   | { type: 'payment_success'; paymentIntentId: string }
   | { type: 'payment_failed' };
 

@@ -201,8 +201,12 @@ export async function createVisibilityPayment(params: {
     headers: await authHeaders(),
     body: JSON.stringify(params),
   });
+  if (!res.ok) {
+    let errMsg = 'Erreur de paiement';
+    try { const e = await res.json(); errMsg = e.error ?? errMsg; } catch {}
+    throw new Error(errMsg);
+  }
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? 'Erreur de paiement');
   return data as CreatePaymentResult;
 }
 
@@ -231,8 +235,12 @@ export async function createCreditPurchase(params: {
     headers: await authHeaders(),
     body: JSON.stringify(params),
   });
+  if (!res.ok) {
+    let errMsg = 'Erreur de paiement';
+    try { const e = await res.json(); errMsg = e.error ?? errMsg; } catch {}
+    throw new Error(errMsg);
+  }
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? 'Erreur de paiement');
   return data as CreditPurchaseResult;
 }
 
@@ -279,8 +287,43 @@ export async function updateSubProducts(productIds: string[]): Promise<void> {
     headers: await authHeaders(),
     body: JSON.stringify({ productIds }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? 'Erreur de mise à jour');
+  if (!res.ok) {
+    let errMsg = 'Erreur de mise à jour';
+    try { const e = await res.json(); errMsg = e.error ?? errMsg; } catch {}
+    throw new Error(errMsg);
+  }
+}
+
+// ─── Statistiques de visibilité réelles ──────────────────────────────────────
+
+export interface VisibilityStats {
+  /** Visiteurs uniques de la boutique ce mois-ci (recently_viewed). */
+  viewsThisMonth: number;
+  /** Visiteurs uniques depuis le début de l'abonnement actif. */
+  visitsSinceSub: number;
+  /** Commandes reçues ce mois (discussions lancées). */
+  ordersThisMonth: number;
+  /** CA des commandes "done" ce mois (en FCFA). */
+  revenueThisMonth: number;
+}
+
+export async function getVisibilityStats(shopId: string): Promise<VisibilityStats> {
+  const { data, error } = await supabase.rpc('get_shop_visibility_stats', {
+    p_shop_id: shopId,
+  });
+  if (error) throw new Error(error.message);
+  const row = data as {
+    views_this_month: number;
+    visits_since_sub: number;
+    orders_this_month: number;
+    revenue_this_month: number;
+  };
+  return {
+    viewsThisMonth: row.views_this_month ?? 0,
+    visitsSinceSub: row.visits_since_sub ?? 0,
+    ordersThisMonth: row.orders_this_month ?? 0,
+    revenueThisMonth: row.revenue_this_month ?? 0,
+  };
 }
 
 // ─── Description marketing calculée depuis les données de tarif ──────────────

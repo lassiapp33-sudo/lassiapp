@@ -125,7 +125,7 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
   };
 
   const handleVerify = async () => {
-    if (verifying) return;
+    if (verifying || !referenceRef.current) return;
     setVerifying(true);
     try {
       const paid = await payService.verifyPayment({
