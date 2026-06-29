@@ -184,6 +184,7 @@ serve(async (req) => {
       prixBase,
       paymentRef:      paymentResult.ref,
       redirectUrl:     paymentResult.redirectUrl ?? null,
+      qrCode:          paymentResult?.qrCode ?? null,  // OM seulement : base64 affiché si deepLink non dispo
       mode:            IS_PRODUCTION ? 'production' : 'simulation',
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
@@ -319,10 +320,13 @@ async function initiateOrangeMoneyPayment(params: {
   }
 
   const data = await response.json();
+  // deepLinks.OM cible l'app Orange Money (vs deepLinks.MAXIT).
+  // deepLink (racine) est un alias mais peut varier selon la config Orange.
+  const deepLink = data.deepLinks?.OM ?? data.deepLink ?? null;
   return {
-    ref:         params.piId,      // référence interne (le transactionId OM arrive via webhook)
-    redirectUrl: data.deepLink ?? data.qrCode ?? null,  // deepLink → Linking.openURL()
-    qrCode:      data.qrCode  ?? null,
+    ref:         params.piId,
+    redirectUrl: deepLink,
+    qrCode:      data.qrCode ?? null,
     status:      'initiated',
   };
 }

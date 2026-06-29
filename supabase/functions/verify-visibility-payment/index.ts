@@ -156,8 +156,11 @@ Deno.serve(async (req) => {
     }
 
     // ⑥ Montant vérifié → activer l'abonnement
-    // plan_duration_days est stocké sur l'abonnement pour recherche/carte (pas de plan en DB)
     const durationDays: number = sub.plan_duration_days ?? sub.plan?.duration_days ?? 30
+    if (!Number.isFinite(durationDays) || durationDays <= 0) {
+      console.error('OM webhook: durationDays invalide —', durationDays, 'pour sub', subId)
+      return json({ error: 'Configuration forfait invalide' }, 500)
+    }
     const now       = new Date()
     const expiresAt = new Date(now.getTime() + durationDays * 86_400_000)
 

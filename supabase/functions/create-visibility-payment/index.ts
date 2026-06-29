@@ -246,8 +246,8 @@ Deno.serve(async (req) => {
         throw new Error(omData.message ?? omData.detail ?? JSON.stringify(omData))
       }
 
-      paymentUrl = omData.deepLink ?? ''  // deep link → ouvre directement l'app OM
-      qrCode     = omData.qrCode   ?? ''  // base64 : affiché si deep link non dispo
+      paymentUrl = omData.deepLinks?.OM ?? omData.deepLink ?? ''  // deepLinks.OM cible l'app OM (vs MAXIT)
+      qrCode     = omData.qrCode   ?? ''  // base64 PNG : affiché si deep link non dispo
       // Pas de transaction ID côté Sonatel au moment de la création du QR.
       // Il arrivera dans la notification webhook (notification.transactionId).
     }
