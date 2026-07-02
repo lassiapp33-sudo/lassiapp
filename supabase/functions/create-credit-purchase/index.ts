@@ -122,12 +122,13 @@ Deno.serve(async (req) => {
       durationDays = plan.duration_days
       planLabel = plan.label
 
-      // Pas de double abonnement actif
+      // Pas de double abonnement actif pour ce type d'offre
       const nowIso = new Date().toISOString()
       const { data: existing } = await admin
         .from('visibility_subscriptions')
         .select('id')
         .eq('shop_id', shop.id)
+        .eq('offer_type', 'quartier')
         .eq('status', 'active')
         .gt('expires_at', nowIso)
         .maybeSingle()
@@ -224,6 +225,47 @@ Deno.serve(async (req) => {
         await admin.from('visibility_subscriptions').delete().eq('id', sub.id)
         await doRefund()
         throw shopsErr
+      }
+
+      // Alimenter le carrousel "Offre du Quartier" (best-effort)
+      if (!wantsAllProducts && featuredProductIds.length > 0) {
+        const { data: prodDetails } = await admin
+          .from('products')
+          .select('id, name, price, emoji, photo_url')
+          .in('id', featuredProductIds)
+
+        if (prodDetails && prodDetails.length > 0) {
+          await admin.from('carrousel_offre_quartier').delete()
+            .eq('prestataire_id', user.id).eq('is_paid_pack', true)
+
+          const rows = featuredProductIds
+            .map((id, index) => {
+              const p = prodDetails.find((pr: { id: string }) => pr.id === id)
+              if (!p) return null
+              const imageUrl =
+                typeof (p as { photo_url?: string }).photo_url === 'string' &&
+                (p as { photo_url: string }).photo_url.startsWith('http')
+                  ? (p as { photo_url: string }).photo_url
+                  : ((p as { emoji?: string }).emoji ?? '')
+              return {
+                prestataire_id: user.id,
+                product_id:     id,
+                nom:            (p as { name: string }).name,
+                prix:           (p as { price: number }).price,
+                image_url:      imageUrl,
+                rang_prestataire: null,
+                ordre:          index,
+                periode:        'paid',
+                est_actif:      true,
+                is_paid_pack:   true,
+              }
+            })
+            .filter(Boolean)
+
+          if (rows.length > 0) {
+            await admin.from('carrousel_offre_quartier').insert(rows).catch(() => null)
+          }
+        }
       }
 
       // Notification best-effort (pas de remboursement si elle échoue)

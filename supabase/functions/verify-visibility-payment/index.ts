@@ -204,6 +204,48 @@ Deno.serve(async (req) => {
           featured_all_products: !!sub.all_products,
         })
         .eq('id', sub.shop_id)
+
+      // Alimenter le carrousel "Offre du Quartier" (best-effort)
+      const paidProductIds: string[] = sub.all_products ? [] : (sub.product_ids ?? [])
+      if (paidProductIds.length > 0) {
+        const { data: prodDetails } = await admin
+          .from('products')
+          .select('id, name, price, emoji, photo_url')
+          .in('id', paidProductIds)
+
+        if (prodDetails && prodDetails.length > 0) {
+          await admin.from('carrousel_offre_quartier').delete()
+            .eq('prestataire_id', sub.merchant_id).eq('is_paid_pack', true)
+
+          const rows = paidProductIds
+            .map((id: string, index: number) => {
+              const p = prodDetails.find((pr: { id: string }) => pr.id === id)
+              if (!p) return null
+              const imageUrl =
+                typeof (p as { photo_url?: string }).photo_url === 'string' &&
+                (p as { photo_url: string }).photo_url.startsWith('http')
+                  ? (p as { photo_url: string }).photo_url
+                  : ((p as { emoji?: string }).emoji ?? '')
+              return {
+                prestataire_id:   sub.merchant_id,
+                product_id:       id,
+                nom:              (p as { name: string }).name,
+                prix:             (p as { price: number }).price,
+                image_url:        imageUrl,
+                rang_prestataire: null,
+                ordre:            index,
+                periode:          'paid',
+                est_actif:        true,
+                is_paid_pack:     true,
+              }
+            })
+            .filter(Boolean)
+
+          if (rows.length > 0) {
+            await admin.from('carrousel_offre_quartier').insert(rows).catch(() => null)
+          }
+        }
+      }
     }
 
     // ⑧ Notification in-app au marchand

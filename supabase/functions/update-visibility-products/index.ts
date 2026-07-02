@@ -70,7 +70,8 @@ Deno.serve(async (req) => {
     }
 
     // ⑤ Respecter le quota d'origine (nombre de slots achetés)
-    const maxProducts = (sub.product_ids as string[] | null)?.length ?? 1
+    const currentIds = (sub.product_ids as string[] | null) ?? []
+    const maxProducts = Math.max(1, currentIds.length)
     const uniqueIds = Array.from(new Set(productIds as string[]))
     if (uniqueIds.length > maxProducts) {
       return json({ error: `Maximum ${maxProducts} produit(s) pour cet abonnement` }, 400)
@@ -100,6 +101,50 @@ Deno.serve(async (req) => {
       .update({ featured_product_id: uniqueIds[0] ?? null, featured_product_ids: uniqueIds })
       .eq('id', shop.id)
     if (shopError) throw shopError
+
+    // ⑨ Mettre à jour le carrousel "Offre du Quartier" (même source que les récompenses classement)
+    const { data: prodDetails } = await admin
+      .from('products')
+      .select('id, name, price, emoji, photo_url')
+      .in('id', uniqueIds)
+
+    if (prodDetails && prodDetails.length > 0) {
+      // Supprimer les anciennes entrées payantes du marchand
+      await admin
+        .from('carrousel_offre_quartier')
+        .delete()
+        .eq('prestataire_id', user.id)
+        .eq('is_paid_pack', true)
+
+      // Insérer les nouvelles entrées
+      const rows = uniqueIds
+        .map((id, index) => {
+          const p = prodDetails.find((pr: { id: string }) => pr.id === id)
+          if (!p) return null
+          const imageUrl =
+            typeof (p as { photo_url?: string }).photo_url === 'string' &&
+            (p as { photo_url: string }).photo_url.startsWith('http')
+              ? (p as { photo_url: string }).photo_url
+              : ((p as { emoji?: string }).emoji ?? '')
+          return {
+            prestataire_id: user.id,
+            product_id:     id,
+            nom:            (p as { name: string }).name,
+            prix:           (p as { price: number }).price,
+            image_url:      imageUrl,
+            rang_prestataire: null,
+            ordre:          index,
+            periode:        'paid',
+            est_actif:      true,
+            is_paid_pack:   true,
+          }
+        })
+        .filter(Boolean)
+
+      if (rows.length > 0) {
+        await admin.from('carrousel_offre_quartier').insert(rows)
+      }
+    }
 
     return json({ status: 'updated', productIds: uniqueIds })
 
