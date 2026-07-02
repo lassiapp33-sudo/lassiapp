@@ -490,7 +490,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Que veut dire le badge "Nouveau" ?',
     motsCles: ['badge nouveau', 'nouveau commerce', 'pas d avis', 'badge'],
     reponse:
-      'Le badge "Nouveau" signale un commerce qui n\'a pas encore reçu d\'avis. Sois le premier à le tester et à le noter ! 🆕',
+      'Le badge "Nouveau" s\'affiche pendant la 1ère semaine d\'activité d\'un commerce. Sois le premier à le tester et à le noter ! 🆕',
   },
   {
     id: 49,

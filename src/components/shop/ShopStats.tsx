@@ -17,8 +17,8 @@ const StarEmpty = () => (
 
 const Divider = () => <View style={styles.div} />;
 
-// Seuil : 4 mois en millisecondes
-const MATURE_MS = 4 * 30 * 24 * 60 * 60 * 1000;
+// Seuil : 7 jours — aligne sur la durée du cadeau de bienvenue
+const MATURE_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface Props {
   rating: number;
@@ -43,8 +43,8 @@ export default function ShopStats({
   const isMature = Date.now() - new Date(createdAt).getTime() >= MATURE_MS;
 
   // Logique d'affichage de la réputation :
-  //   "Nouveau"  → âge < 4 mois ET aucune commande ni avis
-  //   "Établi"   → âge >= 4 mois ET aucune activité (note invisible)
+  //   "Nouveau"  → âge < 7 jours ET aucune commande ni avis
+  //   "Établi"   → âge >= 7 jours ET aucune activité (note invisible)
   //   Note réelle → commandes validées OU vrais avis
   const hasActivity = ordersCount > 0 || reviewsCount > 0;
   const showNouveauBadge = !isMature && !hasActivity;
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
   },
 
-  // Badge "Nouveau" (< 4 mois, 0 commande, 0 avis)
+  // Badge "Nouveau" (< 7 jours, 0 commande, 0 avis)
   newBadge: {
     backgroundColor: 'rgba(253,207,52,0.12)',
     borderWidth: 1,
