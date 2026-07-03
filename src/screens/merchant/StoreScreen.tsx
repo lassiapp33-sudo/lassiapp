@@ -649,19 +649,12 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
             {/* ── Onglet Produits (fitness uniquement) — réutilise le catalogue ─ */}
             {context.shopType === 'memberships' && fitnessTab === 'produits' && (
               <>
-                <CategoryTabs
-                  categories={categories}
-                  active={activeCat}
-                  onSelect={setActiveCat}
-                  onAddCat={addCategory}
-                  onDeleteCat={handleDeleteCat}
-                />
                 <SectionHead
-                  title={activeCatData?.label ?? ''}
-                  count={filtered.length}
+                  title="Produits"
+                  count={products.length}
                   itemLabel="produit"
                 />
-                {filtered.map(product => (
+                {products.map(product => (
                   <ProductRow
                     key={product.id}
                     product={product}

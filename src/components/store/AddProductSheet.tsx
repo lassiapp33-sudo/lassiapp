@@ -25,6 +25,79 @@ import {
 import * as storageService from '../../services/storage';
 import useShopStore from '../../store/shopStore';
 
+// ─── Placeholders adaptatifs ──────────────────────────────────────────────────
+
+function getPlaceholders(
+  category: string,
+  subcategories: string[],
+  shopType: string,
+): { namePH: string; descPH: string } {
+  const sub = subcategories[0] ?? '';
+
+  if (shopType === 'memberships') {
+    if (sub === 'reservation_terrain_foot')
+      return { namePH: 'Ex : Terrain foot 1h', descPH: 'Ex : Terrain synthétique 11v11, éclairage inclus' };
+    if (sub === 'reservation_terrain_basket')
+      return { namePH: 'Ex : Terrain basket 1h', descPH: 'Ex : Terrain couvert, éclairage, 5v5' };
+    if (sub === 'arts_martiaux')
+      return { namePH: 'Ex : Cours boxe débutant', descPH: 'Ex : 1h par séance, gants fournis' };
+    // musculation / fitness (défaut memberships)
+    return { namePH: 'Ex : Abonnement mensuel', descPH: 'Ex : Accès illimité salle, vestiaires inclus' };
+  }
+
+  if (shopType === 'services') {
+    if (sub === 'femmes')
+      return { namePH: 'Ex : Tresses vanilles', descPH: 'Ex : Tresses longues, pose ~4h' };
+    if (sub === 'esthetique')
+      return { namePH: 'Ex : Pose ongles gel', descPH: 'Ex : Pose complète gel, vernis au choix' };
+    // hommes (défaut services)
+    return { namePH: 'Ex : Coupe + dégradé', descPH: 'Ex : Coupe propre, dégradé bas, finition rasoir' };
+  }
+
+  // shopType === 'products' — selon la catégorie principale
+  if (category === 'tangana') {
+    if (sub === 'ndeki')
+      return { namePH: 'Ex : Pain Thon Mayo', descPH: 'Ex : Pain garni thon, mayonnaise, oignons' };
+    if (sub === 'soupe')
+      return { namePH: 'Ex : Soupe kandia', descPH: 'Ex : Soupe gombo, huile de palme, crevettes' };
+    return { namePH: 'Ex : Café Touba + Pain', descPH: 'Ex : Café Touba chaud, 1 pain beurré' };
+  }
+  if (category === 'bakery') {
+    if (sub === 'patisserie')
+      return { namePH: 'Ex : Gâteau au beurre', descPH: 'Ex : Moelleux chocolat, 6 parts' };
+    return { namePH: 'Ex : Baguette tradition', descPH: 'Ex : Baguette croustillante, 250g' };
+  }
+  if (category === 'food') {
+    if (sub === 'fastfood')
+      return { namePH: 'Ex : Shawarma poulet', descPH: 'Ex : Wrap poulet grillé, sauce blanche, crudités' };
+    if (sub === 'malibu')
+      return { namePH: 'Ex : Poisson braisé sauce piment', descPH: 'Ex : Carpe braisée, sauce piment maison' };
+    if (sub === 'dibiterie')
+      return { namePH: 'Ex : Dibi 500g', descPH: 'Ex : Agneau grillé, oignons, moutarde' };
+    if (sub === 'seras')
+      return { namePH: 'Ex : Agneau grillé 500g', descPH: 'Ex : Viande grillée, oignons, moutarde' };
+    if (sub === 'jus')
+      return { namePH: 'Ex : Jus de bouye', descPH: 'Ex : Baobab frais, sucré, 50cl' };
+    if (sub === 'snack')
+      return { namePH: 'Ex : Kinder Bueno', descPH: 'Ex : Snacks emballés, biscuits, confiseries' };
+    // restaurant (défaut food)
+    return { namePH: 'Ex : Thiébou dieun', descPH: 'Ex : Riz au poisson, sauce tomate, légumes' };
+  }
+  if (category === 'fruiterie') {
+    if (sub === 'fruits_marines')
+      return { namePH: 'Ex : Mangue marinée piment', descPH: 'Ex : Coupé, mariné vinaigre + piment, 200g' };
+    return { namePH: 'Ex : Mangues fraîches', descPH: 'Ex : Mangues, bananes, papayes de saison' };
+  }
+  if (category === 'stores') {
+    if (sub === 'quincaillerie')
+      return { namePH: 'Ex : Marteau 500g', descPH: 'Ex : Marteau acier forgé, manche bois' };
+    return { namePH: 'Ex : Riz parfumé 5kg', descPH: 'Ex : Riz long grain importé, sac 5kg' };
+  }
+
+  // Fallback générique
+  return { namePH: 'Ex : Nom du produit', descPH: 'Ex : Description courte du produit' };
+}
+
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
 const IcoCamera = () => (
@@ -126,6 +199,9 @@ export default function AddProductSheet({
 }: Props) {
   const shopId = useShopStore(s => s.shopId);
   const shopType = useShopStore(s => s.context.shopType);
+  const shopCategory = useShopStore(s => s.context.category);
+  const shopSubcategories = useShopStore(s => s.context.subcategories);
+  const { namePH, descPH } = getPlaceholders(shopCategory, shopSubcategories, shopType);
 
   // Dériver l'itemType depuis le shopType
   const itemType =
@@ -384,7 +460,7 @@ export default function AddProductSheet({
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
-                placeholder="Ex : Pain Œuf Mayo"
+                placeholder={namePH}
                 placeholderTextColor="#5a5c80"
                 returnKeyType="next"
                 onFocus={() => scrollToField(nameY)}
@@ -398,7 +474,7 @@ export default function AddProductSheet({
                 style={[styles.input, { marginBottom: 14 }]}
                 value={desc}
                 onChangeText={setDesc}
-                placeholder="Ex : Pain croustillant, 2 œufs"
+                placeholder={descPH}
                 placeholderTextColor="#5a5c80"
                 returnKeyType="next"
                 onFocus={() => scrollToField(descY)}
