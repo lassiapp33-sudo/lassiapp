@@ -572,15 +572,17 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
             {/* ── Onglet Formules (existant) OU catalogue non-fitness ───────── */}
             {(context.shopType !== 'memberships' || fitnessTab === 'formules') && (
               <>
-                <CategoryTabs
-                  categories={categories}
-                  active={activeCat}
-                  onSelect={setActiveCat}
-                  onAddCat={addCategory}
-                  onDeleteCat={handleDeleteCat}
-                />
+                {context.shopType !== 'memberships' && (
+                  <CategoryTabs
+                    categories={categories}
+                    active={activeCat}
+                    onSelect={setActiveCat}
+                    onAddCat={addCategory}
+                    onDeleteCat={handleDeleteCat}
+                  />
+                )}
                 <SectionHead
-                  title={activeCatData?.label ?? ''}
+                  title={context.shopType === 'memberships' ? 'Formules' : (activeCatData?.label ?? '')}
                   count={filtered.length}
                   itemLabel={itemLabel}
                 />
