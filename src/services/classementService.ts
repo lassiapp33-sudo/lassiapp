@@ -139,6 +139,13 @@ export const getClassementLiveMondial = async (): Promise<ClassementEntry[]> => 
   return (data ?? []) as unknown as ClassementEntry[];
 };
 
+// --- Classement LIVE clients (client_scores, avant snapshot pg_cron) ---
+export const getClassementLiveClients = async (): Promise<ClassementEntry[]> => {
+  const { data, error } = await supabase.rpc('get_classement_live_clients');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as ClassementEntry[];
+};
+
 // --- Mes récompenses actives (prestataire) — exclut les expirées ---
 export const getMesRecompenses = async (prestataireId: string): Promise<RecompenseAttribuee[]> => {
   const now = new Date().toISOString();
