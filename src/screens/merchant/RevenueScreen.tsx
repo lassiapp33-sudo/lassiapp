@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -11,6 +11,7 @@ import { getErrorMessage } from '../../utils/errorUtils';
 import { IcoBack } from '../../components/icons';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { RevenueMonthBarItem, MonthBar6 } from '../../components/merchant/RevenueMonthBarItem';
+import { supabase } from '../../lib/supabase';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -178,6 +179,7 @@ interface Props {
 
 export default function RevenueScreen({ onBack }: Props) {
   const shopId = useShopStore(s => s.shopId);
+  const loadMyShop = useShopStore(s => s.loadMyShop);
 
   const [orders, setOrders] = useState<RevenueOrder[]>([]);
   const [debtors, setDebtors] = useState<Debtor[]>([]);
@@ -186,6 +188,11 @@ export default function RevenueScreen({ onBack }: Props) {
   const [error, setError] = useState<string | null>(null);
   // 0 = mois actuel, -1 = mois précédent, ..., -5 = il y a 5 mois
   const [monthOffset, setMonthOffset] = useState(0);
+
+  // S'assure que shopId est disponible même si on arrive directement sur cet écran
+  useEffect(() => {
+    if (!shopId) loadMyShop();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = useCallback(
     async (silent = false) => {
@@ -215,6 +222,23 @@ export default function RevenueScreen({ onBack }: Props) {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Temps réel : nouvelle commande → rafraîchit automatiquement sans intervention
+  const loadRef = useRef(load);
+  useEffect(() => { loadRef.current = load; }, [load]);
+
+  useEffect(() => {
+    if (!shopId) return;
+    const channel = supabase
+      .channel(`revenue_orders_${shopId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders', filter: `shop_id=eq.${shopId}` },
+        () => { loadRef.current(true); },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [shopId]);
 
   const onRefresh = () => {
     setRefreshing(true);
