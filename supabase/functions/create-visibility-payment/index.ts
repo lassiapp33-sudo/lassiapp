@@ -4,6 +4,7 @@ import { corsHeaders } from '../_shared/cors.ts'
 import { calculateOffreQuartierPrice } from '../_shared/offreQuartierPricing.ts'
 import { findBoostPlan } from '../_shared/boostPlansPricing.ts'
 import { getOmToken, OM_BASE_URL } from '../_shared/omAuth.ts'
+import { buildWaveSignature } from '../_shared/waveSign.ts'
 
 type OfferType = 'quartier' | 'recherche' | 'carte'
 
@@ -18,6 +19,8 @@ const WAVE_MERCHANT_ID = Deno.env.get('WAVE_MERCHANT_ID') ?? ''
 
 const APP_BASE_URL = Deno.env.get('APP_BASE_URL') ?? 'lassi://'
 
+// ⚠️ wave conditionné à WAVE_MERCHANT_ID (champ hors-spec Checkout API officielle).
+// Si confirmé non requis par Wave, simplifier en : wave: !!WAVE_API_KEY
 const KEYS_READY = {
   wave:         !!(WAVE_API_KEY && WAVE_MERCHANT_ID),
   orange_money: !!(Deno.env.get('OM_CLIENT_ID') && Deno.env.get('OM_CLIENT_SECRET') && OM_MERCHANT_CODE),
@@ -188,21 +191,28 @@ Deno.serve(async (req) => {
 
     if (payMethod === 'wave') {
       // ── Wave Checkout ──────────────────────────────────────────────────────
+      // amount doit être une string selon la spec Wave (cf. doc Checkout API)
+      const waveBody = JSON.stringify({
+        currency:         'XOF',
+        amount:           String(finalPrice),
+        merchant_id:      WAVE_MERCHANT_ID,   // ⚠️ hors-spec officielle — à confirmer avec Wave
+        success_url:      `${APP_BASE_URL}visibility-success?sub=${sub.id}`,
+        error_url:        `${APP_BASE_URL}visibility-error?sub=${sub.id}`,
+        client_reference: sub.id,
+      })
+
+      const waveHeaders: Record<string, string> = {
+        'Authorization':   `Bearer ${WAVE_API_KEY}`,
+        'Content-Type':    'application/json',
+        'Idempotency-Key': sub.id,
+      }
+      const waveSig = await buildWaveSignature(waveBody)
+      if (waveSig) waveHeaders['Wave-Signature'] = waveSig
+
       const waveRes = await fetch('https://api.wave.com/v1/checkout/sessions', {
         method:  'POST',
-        headers: {
-          'Authorization':   `Bearer ${WAVE_API_KEY}`,
-          'Content-Type':    'application/json',
-          'Idempotency-Key': sub.id,
-        },
-        body: JSON.stringify({
-          currency:         'XOF',
-          amount:           finalPrice,
-          merchant_id:      WAVE_MERCHANT_ID,
-          success_url:      `${APP_BASE_URL}visibility-success?sub=${sub.id}`,
-          error_url:        `${APP_BASE_URL}visibility-error?sub=${sub.id}`,
-          client_reference: sub.id,
-        }),
+        headers: waveHeaders,
+        body:    waveBody,
       })
       const waveData = await waveRes.json()
       if (!waveRes.ok) throw new Error(waveData.message ?? 'Erreur Wave')
@@ -214,6 +224,12 @@ Deno.serve(async (req) => {
       // Flux : génère un QR + deepLink → l'app ouvre le deepLink (app OM) →
       // l'utilisateur paie → Orange POST notre webhook → on active l'abonnement.
       const omToken = await getOmToken()
+
+      // Sans OM_WEBHOOK_SECRET, le QR serait créé avec un webhook non sécurisé
+      // (secret vide) — toutes les notifications Orange seraient rejetées en 503.
+      if (!OM_WEBHOOK_SECRET) {
+        throw new Error('OM_WEBHOOK_SECRET non configuré — paiement OM impossible')
+      }
 
       // URL webhook : sub_id + secret en query param pour matching et sécurité.
       // Orange POST cette URL quand le paiement est finalisé (SUCCESS ou FAILED).

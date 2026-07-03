@@ -62,7 +62,7 @@ serve(async (req) => {
 
   // ── Détection source : Sonatel OM (query param) ou Wave (HMAC header) ────
   const sourceParam    = url.searchParams.get('source');          // "om" si Sonatel
-  const waveSignature  = req.headers.get('X-Wave-Signature');
+  const waveSignature  = req.headers.get('Wave-Signature');       // Wave-Signature: t={ts},v1={hmac}
 
   // ── Chemin Orange Money Sonatel ──────────────────────────────────────────
   // Auth : secret en query param (pas de HMAC — API Sonatel n'en propose pas)
@@ -129,29 +129,55 @@ serve(async (req) => {
   }
 
   // ── Chemin Wave (HMAC) ───────────────────────────────────────────────────
+  // Format attendu : Wave-Signature: t={timestamp},v1={hmac_sha256}
+  // Payload signé  : timestamp (string) + raw body
+  // Anti-rejeu     : timestamp rejeté si > 5 min dans le passé ou > 30 s dans le futur
   if (!waveSignature) {
-    console.error('[webhook] En-tête de signature absent (X-Wave-Signature requis) et source!=om');
+    console.error('[webhook] En-tête Wave-Signature absent et source!=om');
     return new Response('Signature manquante', { status: 401 });
   }
 
-  const source    = 'wave' as const;
-  const signature = waveSignature;
-  const secret    = WAVE_WEBHOOK_SECRET;
+  const source = 'wave' as const;
 
-  if (!secret) {
+  if (!WAVE_WEBHOOK_SECRET) {
     console.error('[webhook] WAVE_WEBHOOK_SECRET non configuré');
     return new Response('Configuration manquante', { status: 500 });
   }
 
+  // Parser "t=1639081943,v1=942119ae..."
+  const sigParts   = waveSignature.split(',');
+  const tPart      = sigParts.find(p => p.startsWith('t='));
+  const v1Part     = sigParts.find(p => p.startsWith('v1='));
+  const sigTs      = tPart  ? parseInt(tPart.slice(2),  10) : NaN;
+  const sigReceived = v1Part ? v1Part.slice(3) : '';
+
+  if (isNaN(sigTs) || !sigReceived) {
+    console.error('[webhook] Format Wave-Signature invalide:', waveSignature.slice(0, 80));
+    return new Response('Signature invalide', { status: 401 });
+  }
+
+  // Validation anti-rejeu (tolérance : 5 min passé, 30 s futur)
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (nowSec - sigTs > 300 || sigTs - nowSec > 30) {
+    console.error('[webhook] Timestamp Wave-Signature expiré — anti-rejeu', { sigTs, nowSec });
+    await logAuditEvent(supabase, {
+      action:      'webhook_expired_timestamp',
+      targetTable: 'payment_intents',
+      metadata:    { source, sigTs },
+    });
+    return new Response('Signature expirée', { status: 401 });
+  }
+
+  // HMAC-SHA256 sur payload = timestamp + raw body
   const key = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(secret),
+    'raw', new TextEncoder().encode(WAVE_WEBHOOK_SECRET),
     { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
   );
-  const mac      = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
-  const expected = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const wavePayload = `${sigTs}${body}`;
+  const mac         = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(wavePayload));
+  const expected    = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-  const sigNorm = signature.startsWith('sha256=') ? signature.slice(7) : signature;
-  if (!timingSafeEqual(expected, sigNorm)) {
+  if (!timingSafeEqual(expected, sigReceived)) {
     console.error('[webhook] Signature Wave invalide — tentative rejetée');
     await logAuditEvent(supabase, {
       action:      'webhook_invalid_signature',
@@ -176,7 +202,7 @@ serve(async (req) => {
   }
 
   const externalStatus = (payload.payment_status ?? payload.status) as string | undefined;
-  const isSuccess      = ['succeeded', 'completed', 'success', 'SUCCESSFUL', 'SUCCESSFULL'].includes(externalStatus ?? '');
+  const isSuccess      = ['succeeded', 'completed', 'success', 'SUCCESSFUL'].includes(externalStatus ?? '');
   const externalRef    = (payload.id ?? payload.transaction_id) as string | undefined;
 
   // 3. ID d'événement pour la déduplication (un même événement Wave/OM peut

@@ -79,7 +79,14 @@ Deno.serve(async (req) => {
     }
 
     // ② Parser la notification Orange Money
-    const notification = await req.json() as OmNotification
+    // 400 (pas de retry) si JSON malformé, 500 (retry) si erreur serveur
+    let notification: OmNotification
+    try {
+      notification = await req.json() as OmNotification
+    } catch {
+      console.error('OM webhook: body JSON invalide — pas de retry')
+      return json({ error: 'Body invalide' }, 400)
+    }
     console.log('OM webhook reçu:', JSON.stringify({ subId, status: notification.status, transactionId: notification.transactionId }))
 
     const admin = createClient(

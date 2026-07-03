@@ -21,16 +21,33 @@
 // ============================================================
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { buildWaveSignature } from '../_shared/waveSign.ts';
 
-// 🔌 Mêmes clés que create-payment. Sans elles → mode simulation.
-const WAVE_API_KEY     = Deno.env.get('WAVE_API_KEY')     ?? '';
-const WAVE_MERCHANT_ID = Deno.env.get('WAVE_MERCHANT_ID') ?? '';
+// Payout API Wave : seul WAVE_API_KEY est nécessaire (pas de WAVE_MERCHANT_ID)
+const WAVE_API_KEY = Deno.env.get('WAVE_API_KEY') ?? '';
 // OM Sonatel : Cash In vers le prestataire (POST /api/eWallet/v1/cashins)
 // Requiert OM_RETAILER_MSISDN + OM_RETAILER_PIN_ENCRYPTED (PIN de LASSI chiffré RSA)
-const OM_RETAILER_MSISDN      = Deno.env.get('OM_RETAILER_MSISDN')      ?? '';
+const OM_RETAILER_MSISDN        = Deno.env.get('OM_RETAILER_MSISDN')        ?? '';
 const OM_RETAILER_PIN_ENCRYPTED = Deno.env.get('OM_RETAILER_PIN_ENCRYPTED') ?? '';
-const IS_PRODUCTION            = (WAVE_API_KEY !== '' && WAVE_MERCHANT_ID !== '') ||
+const IS_PRODUCTION             = WAVE_API_KEY !== '' ||
                                   (OM_RETAILER_MSISDN !== '' && OM_RETAILER_PIN_ENCRYPTED !== '');
+
+// Erreurs Wave qui ne bénéficient pas d'un retry — terminal = true
+const TERMINAL_WAVE_ERRORS = new Set([
+  'country-mismatch', 'currency-mismatch', 'idempotency-mismatch',
+  'insufficient-funds', 'invalid-aggregated-merchant-id', 'aggregated-merchant-required',
+  'recipient-minor', 'recipient-account-blocked', 'recipient-account-inactive',
+  'recipient-limit-exceeded', 'request-not-json', 'request-parsing-error',
+  'request-validation-error',
+]);
+
+class WavePayoutError extends Error {
+  isTerminal: boolean;
+  constructor(message: string, isTerminal: boolean) {
+    super(message);
+    this.isTerminal = isTerminal;
+  }
+}
 
 // Secret partagé avec le planificateur (cron). OBLIGATOIRE en production.
 // Si absent, l'endpoint répond 503 et refuse toute exécution.
@@ -136,14 +153,16 @@ serve(async (req) => {
         payoutRef = await sendOrangeMoneyPayout({ payoutId: payout.id, montant: payout.montant, phone });
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur fournisseur de paiement';
+      const msg        = err instanceof Error ? err.message : 'Erreur fournisseur de paiement';
+      const isTerminal = err instanceof WavePayoutError ? err.isTerminal : false;
       console.error('[process-payouts] échec appel fournisseur, payout', payout.id, msg);
       await supabase.rpc('payout_queue_mark_failure', {
         p_payout_id: payout.id,
         p_error:     msg,
-        p_terminal:  false,
+        p_terminal:  isTerminal,
       });
-      results.retried++;
+      if (isTerminal) results.failed++;
+      else            results.retried++;
       continue;
     }
 
@@ -191,35 +210,61 @@ async function simulatePayout(payoutId: string, _montant: number): Promise<strin
 }
 
 // ============================================================
-// WAVE PAYOUT (transfert vers le prestataire)
-// 🔌 À compléter par l'ingénieur Wave avec leur spec API exacte (B2C/payout)
+// WAVE PAYOUT — POST /v1/payout (Payout API)
+// Champs doc : receive_amount (string), mobile (E.164), client_reference
+// Pas de merchant_id dans la Payout API.
+// Deux types d'erreurs à gérer (doc Wave) :
+//   1. HTTP non-200 → body { code, message }
+//   2. HTTP 200 + payout_error → payout exécuté mais échoué
 // ============================================================
 async function sendWavePayout(params: { payoutId: string; montant: number; phone: string }): Promise<string> {
-  const response = await fetch('https://api.wave.com/v1/payout', {
-    method: 'POST',
-    headers: {
-      'Authorization':   `Bearer ${WAVE_API_KEY}`,
-      'Content-Type':    'application/json',
-      // Idempotence côté fournisseur : un retry réseau ne doit jamais
-      // déclencher un second envoi pour le même payout.
-      'Idempotency-Key': `payout_${params.payoutId}`,
-    },
-    body: JSON.stringify({
-      currency:    'XOF',
-      amount:      params.montant,
-      merchant_id: WAVE_MERCHANT_ID,
-      receiver:    `+221${params.phone}`,
-      client_reference: params.payoutId,
-    }),
+  const payoutBody = JSON.stringify({
+    currency:         'XOF',
+    receive_amount:   String(params.montant),       // string selon spec Wave
+    mobile:           `+221${params.phone}`,        // E.164
+    client_reference: params.payoutId,
   });
 
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(`Wave payout error: ${JSON.stringify(err)}`);
-  }
+  const payoutHeaders: Record<string, string> = {
+    'Authorization':   `Bearer ${WAVE_API_KEY}`,
+    'Content-Type':    'application/json',
+    // Idempotence : même clé → Wave ne recrée jamais un second virement
+    'Idempotency-Key': `payout_${params.payoutId}`,
+  };
+  const waveSig = await buildWaveSignature(payoutBody);
+  if (waveSig) payoutHeaders['Wave-Signature'] = waveSig;
+
+  const response = await fetch('https://api.wave.com/v1/payout', {
+    method:  'POST',
+    headers: payoutHeaders,
+    body:    payoutBody,
+  });
 
   const data = await response.json();
-  return data.id ?? data.transaction_id;
+
+  // Erreur HTTP (4xx/5xx) — body contient { code, message }
+  if (!response.ok) {
+    const code       = (data.code ?? data.error ?? 'unknown') as string;
+    const isTerminal = TERMINAL_WAVE_ERRORS.has(code);
+    throw new WavePayoutError(
+      `Wave payout error ${code}: ${data.message ?? JSON.stringify(data)}`,
+      isTerminal,
+    );
+  }
+
+  // HTTP 200 mais payout échoué (status: 'failed' + payout_error)
+  // La doc impose de vérifier ce cas séparément des erreurs HTTP
+  if (data.status === 'failed' || data.payout_error) {
+    const code       = (data.payout_error?.error_code ?? 'unknown') as string;
+    const isTerminal = TERMINAL_WAVE_ERRORS.has(code);
+    throw new WavePayoutError(
+      `Wave payout failed: ${code} — ${data.payout_error?.error_message ?? ''}`,
+      isTerminal,
+    );
+  }
+
+  // id commence par "pt-" selon la doc (ex: "pt-185b5e4b8100c")
+  return data.id;
 }
 
 // ============================================================

@@ -16,6 +16,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { isUUID, isSafeString } from '../_shared/validation.ts';
 import { corsHeaders as buildCorsHeaders } from '../_shared/cors.ts';
+import { buildWaveSignature } from '../_shared/waveSign.ts';
 
 const WAVE_API_KEY  = Deno.env.get('WAVE_API_KEY') ?? '';
 // OM Sonatel n'expose pas d'endpoint de remboursement dans son API v1.
@@ -165,16 +166,29 @@ async function simulateRefund(paymentIntentId: string): Promise<string> {
 // 🔌 À compléter par l'ingénieur Wave avec leur spec API exacte
 // ============================================================
 async function refundWave(params: { paymentIntentId: string; externalRef: string | null; montant: number }): Promise<string> {
+  // externalRef absent = session Wave jamais créée (paiement échoué avant l'appel Wave)
+  // → rien à rembourser côté Wave, le remboursement DB est déjà acté.
+  if (!params.externalRef) {
+    throw new Error('Wave refund impossible : pas de session Wave (externalRef absent)');
+  }
+
+  // amount en string selon la spec Wave Checkout API
+  const refundBody = JSON.stringify({ amount: String(params.montant) });
+
+  const refundHeaders: Record<string, string> = {
+    'Authorization':   `Bearer ${WAVE_API_KEY}`,
+    'Content-Type':    'application/json',
+    // Idempotence côté fournisseur : un retry réseau ne doit jamais
+    // déclencher un second remboursement pour le même payment_intent.
+    'Idempotency-Key': `refund_${params.paymentIntentId}`,
+  };
+  const waveSig = await buildWaveSignature(refundBody);
+  if (waveSig) refundHeaders['Wave-Signature'] = waveSig;
+
   const response = await fetch(`https://api.wave.com/v1/checkout/sessions/${params.externalRef}/refund`, {
-    method: 'POST',
-    headers: {
-      'Authorization':   `Bearer ${WAVE_API_KEY}`,
-      'Content-Type':    'application/json',
-      // Idempotence côté fournisseur : un retry réseau ne doit jamais
-      // déclencher un second remboursement pour le même payment_intent.
-      'Idempotency-Key': `refund_${params.paymentIntentId}`,
-    },
-    body: JSON.stringify({ amount: params.montant }),
+    method:  'POST',
+    headers: refundHeaders,
+    body:    refundBody,
   });
 
   if (!response.ok) {

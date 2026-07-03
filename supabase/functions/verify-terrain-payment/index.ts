@@ -2,8 +2,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isSafeString } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { getOmToken, OM_BASE_URL, isOmReady } from '../_shared/omAuth.ts'
+import { buildWaveSignature } from '../_shared/waveSign.ts'
 
-const WAVE_SECRET_KEY = Deno.env.get('WAVE_SECRET_KEY') ?? ''
+// Même clé que pour les appels POST (une seule API key Wave selon la doc)
+const WAVE_API_KEY = Deno.env.get('WAVE_API_KEY') ?? ''
 
 Deno.serve(async (req) => {
   const CORS = corsHeaders(req)
@@ -33,7 +35,9 @@ Deno.serve(async (req) => {
     }
     // reference est interpolée dans l'URL appelée chez Wave/OM : on restreint
     // strictement son alphabet pour empêcher toute manipulation de la requête sortante.
-    if (!isSafeString(reference, { maxLen: 128, pattern: /^[A-Za-z0-9_-]+$/ })) {
+    // Les IDs de transaction OM contiennent des points (ex: MP220928.1029.C58502)
+    // et des tirets — le pattern doit les autoriser.
+    if (!isSafeString(reference, { maxLen: 128, pattern: /^[A-Za-z0-9._-]+$/ })) {
       return json({ error: 'reference invalide' }, 400)
     }
     if (!['wave', 'om', 'orange_money'].includes(method)) {
@@ -43,10 +47,17 @@ Deno.serve(async (req) => {
     // ② Vérifier le statut du paiement côté opérateur
     let paid = false
 
-    if (method === 'wave' && WAVE_SECRET_KEY) {
+    if (method === 'wave' && WAVE_API_KEY) {
+      // GET sans body : payload de signature = timestamp seul (chaîne vide pour le body)
+      const waveGetHeaders: Record<string, string> = {
+        Authorization: `Bearer ${WAVE_API_KEY}`,
+      }
+      const waveSig = await buildWaveSignature('')
+      if (waveSig) waveGetHeaders['Wave-Signature'] = waveSig
+
       const res  = await fetch(
         `https://api.wave.com/v1/checkout/sessions/${reference}`,
-        { headers: { Authorization: `Bearer ${WAVE_SECRET_KEY}` } },
+        { headers: waveGetHeaders },
       )
       const data = await res.json()
       paid = data.payment_status === 'succeeded'

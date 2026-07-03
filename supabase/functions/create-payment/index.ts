@@ -13,6 +13,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { isUUID } from '../_shared/validation.ts';
 import { corsHeaders as buildCorsHeaders } from '../_shared/cors.ts';
 import { getOmToken, OM_BASE_URL, isOmReady } from '../_shared/omAuth.ts';
+import { buildWaveSignature } from '../_shared/waveSign.ts';
 
 // ============================================================
 // 🔌 POINT D'ENTRÉE — activer le paiement réel :
@@ -29,6 +30,9 @@ const WAVE_MERCHANT_ID = Deno.env.get('WAVE_MERCHANT_ID') ?? '';
 const OM_MERCHANT_CODE = Deno.env.get('OM_MERCHANT_CODE') ?? '';
 const OM_WEBHOOK_SECRET = Deno.env.get('OM_WEBHOOK_SECRET') ?? '';
 
+// ⚠️ IS_PRODUCTION conditionne Wave à WAVE_MERCHANT_ID. Si ce champ n'est pas
+// requis par la Checkout API Wave (non documenté), changer la condition en :
+//   const IS_PRODUCTION = WAVE_API_KEY !== '' || isOmReady();
 const IS_PRODUCTION = (WAVE_API_KEY !== '' && WAVE_MERCHANT_ID !== '') || isOmReady();
 
 serve(async (req) => {
@@ -239,28 +243,41 @@ async function initiateWavePayment(params: {
   // Le merchant principal (LASSİ) reçoit montantTotal
   // puis Wave split : prixBase → prestataire, commission → LASSİ
 
-  const response = await fetch('https://api.wave.com/v1/checkout/sessions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${WAVE_API_KEY}`,
-      'Content-Type': 'application/json',
-      // Idempotence côté fournisseur : un retry réseau de notre part ne doit
-      // jamais créer deux sessions de paiement pour le même payment_intent.
-      'Idempotency-Key': params.piId,
+  // amount doit être une string selon la spec Wave (cf. doc Checkout API)
+  //
+  // ⚠️ À CONFIRMER AVEC WAVE :
+  //   - merchant_id     : non mentionné dans la doc officielle Checkout API.
+  //                       Si Wave rejette les champs inconnus → retirer ce champ.
+  //   - split_config    : idem — à remplacer par le mécanisme officiel Wave si
+  //                       une feature de split existe pour votre compte Business.
+  const waveBody = JSON.stringify({
+    currency:         'XOF',
+    amount:           String(params.montantTotal),
+    merchant_id:      WAVE_MERCHANT_ID,       // ⚠️ hors-spec — voir ci-dessus
+    error_url:        `lassiapp://paiement/echec?pi=${params.piId}`,
+    success_url:      `lassiapp://paiement/succes?pi=${params.piId}`,
+    split_config: {                            // ⚠️ hors-spec — voir ci-dessus
+      beneficiaire_prestataire: params.prestataireId,
+      montant_prestataire:      String(params.prixBase),
+      montant_lassi:            String(params.commission),
     },
-    body: JSON.stringify({
-      currency:     'XOF',
-      amount:       params.montantTotal,
-      merchant_id:  WAVE_MERCHANT_ID,
-      error_url:    'lassiapp://paiement/echec',
-      success_url:  `lassiapp://paiement/succes?pi=${params.piId}`,
-      split_config: {
-        beneficiaire_prestataire: params.prestataireId,
-        montant_prestataire:      params.prixBase,
-        montant_lassi:            params.commission,
-      },
-      client_reference: params.piId,
-    }),
+    client_reference: params.piId,
+  });
+
+  const waveHeaders: Record<string, string> = {
+    'Authorization':   `Bearer ${WAVE_API_KEY}`,
+    'Content-Type':    'application/json',
+    // Idempotence côté fournisseur : un retry réseau de notre part ne doit
+    // jamais créer deux sessions de paiement pour le même payment_intent.
+    'Idempotency-Key': params.piId,
+  };
+  const waveSig = await buildWaveSignature(waveBody);
+  if (waveSig) waveHeaders['Wave-Signature'] = waveSig;
+
+  const response = await fetch('https://api.wave.com/v1/checkout/sessions', {
+    method:  'POST',
+    headers: waveHeaders,
+    body:    waveBody,
   });
 
   if (!response.ok) {
@@ -287,6 +304,12 @@ async function initiateOrangeMoneyPayment(params: {
   piId: string; montantTotal: number; prixBase: number;
   commission: number; prestataireId: string;
 }) {
+  // Sans OM_WEBHOOK_SECRET, le QR serait créé avec un webhook non sécurisé
+  // (secret vide en query param) — toutes les notifications seraient rejetées en 503.
+  if (!OM_WEBHOOK_SECRET) {
+    throw new Error('OM_WEBHOOK_SECRET non configuré — paiement OM impossible');
+  }
+
   const omToken = await getOmToken();
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 
