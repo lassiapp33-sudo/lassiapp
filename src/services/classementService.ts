@@ -121,6 +121,24 @@ export const getClassementClients = async (periode: string): Promise<ClassementE
   return data ?? [];
 };
 
+// --- Classement LIVE sous-catégorie (prestataire_scores, avant snapshot pg_cron) ---
+export const getClassementLiveSousCategorie = async (
+  sousCategorie: string,
+): Promise<ClassementEntry[]> => {
+  const { data, error } = await supabase.rpc('get_classement_live_sous_categorie', {
+    p_sous_categorie: sousCategorie,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as ClassementEntry[];
+};
+
+// --- Classement LIVE mondial (prestataire_scores, avant snapshot pg_cron) ---
+export const getClassementLiveMondial = async (): Promise<ClassementEntry[]> => {
+  const { data, error } = await supabase.rpc('get_classement_live_mondial');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as ClassementEntry[];
+};
+
 // --- Mes récompenses actives (prestataire) — exclut les expirées ---
 export const getMesRecompenses = async (prestataireId: string): Promise<RecompenseAttribuee[]> => {
   const now = new Date().toISOString();
@@ -212,12 +230,13 @@ export const getRecompenseBienvenue = async (
   return recompenses.find(r => r.type_classement === 'bienvenue') ?? null;
 };
 
-// --- Ma sélection actuelle pour le carrousel ---
+// --- Ma sélection actuelle pour le carrousel (récompenses classement uniquement, hors pack payant) ---
 export const getMesProduitsCarrousel = async (prestataireId: string): Promise<CarrouselItem[]> => {
   const { data, error } = await supabase
     .from('carrousel_offre_quartier')
     .select('*')
     .eq('prestataire_id', prestataireId)
+    .eq('is_paid_pack', false)
     .order('ordre');
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -231,7 +250,7 @@ export interface CarrouselSelectionItem {
   imageUrl: string;
 }
 
-// --- Remplace ma sélection de produits mis en avant dans le carrousel ---
+// --- Remplace ma sélection de produits mis en avant dans le carrousel (classement uniquement) ---
 export const setCarrouselSelection = async (
   prestataireId: string,
   periode: string,
@@ -241,7 +260,8 @@ export const setCarrouselSelection = async (
   const { error: delError } = await supabase
     .from('carrousel_offre_quartier')
     .delete()
-    .eq('prestataire_id', prestataireId);
+    .eq('prestataire_id', prestataireId)
+    .eq('is_paid_pack', false);
   if (delError) throw new Error(delError.message);
 
   if (items.length === 0) return;

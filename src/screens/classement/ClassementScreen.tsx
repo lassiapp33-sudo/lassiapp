@@ -12,6 +12,8 @@ import {
   getClassementMondial,
   getClassementQuartiers,
   getClassementClients,
+  getClassementLiveSousCategorie,
+  getClassementLiveMondial,
   getPeriodeSemaine,
   getPeriodeMois,
   ClassementEntry,
@@ -30,10 +32,16 @@ interface Props {
 
 export default function ClassementScreen({ variant, onBack }: Props) {
   const userId = useAuthStore(s => s.user?.id);
-  const sousCategorie = useShopStore(s => s.context.subcategories[0]);
+  useShopStore(s => s.shopId); // conservé pour déclencher le re-render si la boutique change
+  const subcategories = useShopStore(s => s.context.subcategories);
+  const shopCategory = useShopStore(s => s.context.category);
+  // Clé de classement : sous-catégorie si dispo, sinon catégorie principale
+  const classeKey = subcategories[0] ?? shopCategory;
+  // prestataire_id et client_id dans classements = profiles.id = userId
+  const monId = userId;
 
   const [onglet, setOnglet] = useState<TabKey>(
-    variant === 'prestataire' ? (sousCategorie ? 'categorie' : 'mondial') : 'quartier',
+    variant === 'prestataire' ? 'categorie' : 'quartier',
   );
   const [entries, setEntries] = useState<ClassementEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,10 +50,14 @@ export default function ClassementScreen({ variant, onBack }: Props) {
     setLoading(true);
     try {
       let data: ClassementEntry[];
-      if (onglet === 'categorie' && sousCategorie) {
-        data = await getClassementSousCategorie(sousCategorie, getPeriodeSemaine());
+      if (onglet === 'categorie' && classeKey) {
+        data = await getClassementSousCategorie(classeKey, getPeriodeSemaine());
+        // Fallback live si pg_cron n'a pas encore tourné pour cette semaine
+        if (data.length === 0) data = await getClassementLiveSousCategorie(classeKey);
       } else if (onglet === 'mondial') {
         data = await getClassementMondial(getPeriodeMois(), 0, 40);
+        // Fallback live si pg_cron n'a pas encore tourné pour ce mois
+        if (data.length === 0) data = await getClassementLiveMondial();
       } else if (onglet === 'quartier') {
         data = await getClassementQuartiers(getPeriodeMois());
       } else {
@@ -58,7 +70,7 @@ export default function ClassementScreen({ variant, onBack }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [onglet, sousCategorie]);
+  }, [onglet, classeKey]);
 
   useEffect(() => {
     load();
@@ -71,7 +83,7 @@ export default function ClassementScreen({ variant, onBack }: Props) {
   const tabs: { key: TabKey; label: string }[] =
     variant === 'prestataire'
       ? [
-          ...(sousCategorie ? [{ key: 'categorie' as TabKey, label: 'Ma catégorie' }] : []),
+          { key: 'categorie' as TabKey, label: 'Ma catégorie' },
           { key: 'mondial' as TabKey, label: '🏆 National' },
         ]
       : [
@@ -104,7 +116,7 @@ export default function ClassementScreen({ variant, onBack }: Props) {
     <LassiScreen header={<Header onBack={onBack} />} hideTopFade>
       <ListeClassement
         entries={reste}
-        monId={userId}
+        monId={monId}
         variant={avatarVariant}
         ListHeaderComponent={
           <View>
