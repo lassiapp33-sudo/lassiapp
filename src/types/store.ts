@@ -62,4 +62,6 @@ export interface ShopContext {
   isManuallyClose: boolean;
   galleryUrls: string[];
   subcategories: string[];
+  /** Catégorie principale du shop (ex: 'resto', 'hair') — fallback pour le classement. */
+  category: string;
 }

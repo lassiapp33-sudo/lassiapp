@@ -62,6 +62,7 @@ const DEFAULT_CONTEXT: ShopContext = {
   isManuallyClose: false,
   galleryUrls: [],
   subcategories: [],
+  category: '',
 };
 
 const useShopStore = create<ShopState>()((set, get) => ({
@@ -133,6 +134,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
           isManuallyClose: shop.isManuallyClose,
           galleryUrls: shop.galleryUrls,
           subcategories: shop.subcategories ?? [],
+          category: shop.category ?? '',
         },
         categories,
         products,

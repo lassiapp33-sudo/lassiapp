@@ -12,7 +12,7 @@ const IS_EXPO_GO = Constants.executionEnvironment === 'storeClient';
 
 type N = typeof import('expo-notifications');
 const getN = (): N | null => {
-  if (IS_EXPO_GO) return null;
+  if (IS_EXPO_GO || Platform.OS === 'web') return null;
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   return require('expo-notifications') as N;
 };

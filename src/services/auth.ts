@@ -182,7 +182,7 @@ export async function registerMerchant(params: RegisterMerchantParams): Promise<
       latitude: params.latitude ?? null,
       longitude: params.longitude ?? null,
       zone: params.zone ?? '',
-      is_open: false,
+      is_open: true,
       opening_hours: params.openingHours ?? null,
     })
     .select('id')
@@ -328,13 +328,15 @@ export function onAuthStateChange(callback: (user: AuthUser | null) => void): ()
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // INITIAL_SESSION doit être ignoré EN PREMIER — sur web un nouveau listener
+    // reçoit immédiatement INITIAL_SESSION (parfois avec session null) ce qui
+    // déclencherait callback(null) et déconnecterait l'utilisateur.
+    if (event === 'INITIAL_SESSION') return;
     // TOKEN_REFRESHED_FAILED ou SIGNED_OUT : session terminée
     if (!session?.user) {
       callback(null);
       return;
     }
-    // Ignore INITIAL_SESSION — géré par getSessionUser au démarrage
-    if (event === 'INITIAL_SESSION') return;
     const profile = await getProfileById(session.user.id).catch(() => null);
     callback(profile);
   });

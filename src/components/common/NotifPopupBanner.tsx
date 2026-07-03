@@ -111,7 +111,7 @@ export default function NotifPopupBanner({ onView }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id]);
 
-  if (!current) return null;
+  if (!current || (current.type !== 'order' && current.type !== 'msg')) return null;
 
   const color = COLOR[current.type];
   const bg    = BG[current.type];

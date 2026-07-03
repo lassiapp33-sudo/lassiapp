@@ -1,5 +1,9 @@
-// Polyfill URL requis par Supabase dans React Native (doit être le premier import)
-import 'react-native-url-polyfill/auto';
+// Polyfill URL requis par Supabase dans React Native (inutile sur web)
+import { Platform } from 'react-native';
+if (Platform.OS !== 'web') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('react-native-url-polyfill/auto');
+}
 
 import { createClient } from '@supabase/supabase-js';
 import logger from '../utils/logger';
@@ -19,6 +23,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
     storage: secureStorage,
     autoRefreshToken: true, // renouvelle le token silencieusement avant expiration
     persistSession: true, // sauvegarde la session sur le téléphone
-    detectSessionInUrl: false, // désactivé : on est en React Native, pas dans un navigateur
+    detectSessionInUrl: Platform.OS === 'web',
   },
 });

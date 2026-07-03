@@ -133,14 +133,18 @@ export default function OnboardingScreen({ onFinish }: Props) {
 
   const goNext = () => {
     if (currentIndex < SLIDES.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
+      const next = currentIndex + 1;
+      flatListRef.current?.scrollToIndex({ index: next, animated: true });
+      setCurrentIndex(next);
     } else {
       onFinish();
     }
   };
 
   const skipToLast = () => {
-    flatListRef.current?.scrollToIndex({ index: SLIDES.length - 1, animated: true });
+    const last = SLIDES.length - 1;
+    flatListRef.current?.scrollToIndex({ index: last, animated: true });
+    setCurrentIndex(last);
   };
 
   const isLast = currentIndex === SLIDES.length - 1;
@@ -159,32 +163,44 @@ export default function OnboardingScreen({ onFinish }: Props) {
         </TouchableOpacity>
       )}
 
-      {/* Slides swipables */}
-      <FlatList
-        ref={flatListRef}
-        data={SLIDES}
-        keyExtractor={item => item.key}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig.current}
-        renderItem={({ item, index }) => (
-          <View style={styles.slide}>
-            {/* Carte illustration — mascotte sur le premier slide */}
-            <View style={[styles.illusCard, index === 0 && styles.illusCardMascotte]}>
-              {index === 0 ? (
-                <Image source={MASCOTTE_ROI} style={styles.mascotteRoi} resizeMode="contain" />
-              ) : (
-                item.icon
-              )}
-            </View>
-
-            <Text style={styles.slideTitle}>{item.title}</Text>
-            <Text style={styles.slideDesc}>{item.desc}</Text>
+      {/* Slides swipables — FlatList sur natif, rendu direct sur web */}
+      {Platform.OS === 'web' ? (
+        <View style={[styles.slide, { overflow: 'hidden' }]}>
+          <View style={[styles.illusCard, currentIndex === 0 && styles.illusCardMascotte]}>
+            {currentIndex === 0 ? (
+              <Image source={MASCOTTE_ROI} style={styles.mascotteRoi} resizeMode="contain" />
+            ) : (
+              SLIDES[currentIndex].icon
+            )}
           </View>
-        )}
-      />
+          <Text style={styles.slideTitle}>{SLIDES[currentIndex].title}</Text>
+          <Text style={styles.slideDesc}>{SLIDES[currentIndex].desc}</Text>
+        </View>
+      ) : (
+        <FlatList
+          ref={flatListRef}
+          data={SLIDES}
+          keyExtractor={item => item.key}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig.current}
+          renderItem={({ item, index }) => (
+            <View style={styles.slide}>
+              <View style={[styles.illusCard, index === 0 && styles.illusCardMascotte]}>
+                {index === 0 ? (
+                  <Image source={MASCOTTE_ROI} style={styles.mascotteRoi} resizeMode="contain" />
+                ) : (
+                  item.icon
+                )}
+              </View>
+              <Text style={styles.slideTitle}>{item.title}</Text>
+              <Text style={styles.slideDesc}>{item.desc}</Text>
+            </View>
+          )}
+        />
+      )}
 
       {/* Zone bas : dots + bouton */}
       <View style={styles.bottom}>

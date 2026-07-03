@@ -166,16 +166,43 @@ Deno.serve(async (req: Request) => {
     await supabase.from('notifications').insert(notificationsMerite)
   }
 
-  // --- Diffuser les notifs ville à tous les utilisateurs avec un push token Expo ---
+  // --- Push individuel pour chaque prestataire récompensé (top 40) ---
+  for (const notif of notificationsMerite) {
+    try {
+      const { data: tokenRows } = await supabase
+        .from('push_tokens')
+        .select('token')
+        .eq('user_id', notif.user_id)
+      const tokens = ((tokenRows ?? []) as { token: string }[])
+        .map(r => r.token)
+        .filter(t => t.startsWith('ExponentPushToken[') || t.startsWith('ExpoPushToken['))
+      if (tokens.length > 0) {
+        await fetch(EXPO_PUSH_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(tokens.map(to => ({
+            to,
+            title: notif.title,
+            body: notif.body,
+            data: notif.data,
+            sound: 'default',
+          }))),
+        })
+      }
+    } catch {
+      // best-effort par destinataire
+    }
+  }
+
+  // --- Push ville (top 3) vers tous les tokens — utilise push_tokens (pas profiles.push_token) ---
   let notifsEnvoyees = 0
   if (messagesVille.length > 0) {
-    const { data: tokens } = await supabase
-      .from('profiles')
-      .select('push_token')
-      .not('push_token', 'is', null)
+    const { data: tokenRows } = await supabase
+      .from('push_tokens')
+      .select('token')
 
-    const pushTokens = (tokens ?? [])
-      .map(t => t.push_token as string)
+    const pushTokens = ((tokenRows ?? []) as { token: string }[])
+      .map(r => r.token)
       .filter(t => t.startsWith('ExponentPushToken[') || t.startsWith('ExpoPushToken['))
 
     for (const message of messagesVille) {

@@ -51,7 +51,7 @@ export default function NotifCardModal({ onView }: Props) {
   const handleCompris = useCallback(() => dismiss(), [dismiss]);
   const handleView    = useCallback(() => { dismiss(); onView(); }, [dismiss, onView]);
 
-  if (!current) return null;
+  if (!current || current.type === 'order' || current.type === 'msg') return null;
 
   const tag   = TAG_LABEL[current.type]  ?? 'LASSI';
   const emoji = LARGE_EMOJI[current.type] ?? '📬';

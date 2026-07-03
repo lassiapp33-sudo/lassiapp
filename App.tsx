@@ -21,6 +21,9 @@ import MerchantNavigator from './src/screens/merchant/MerchantNavigator';
 import ErrorBoundary     from './src/components/common/ErrorBoundary';
 import OfflineBanner     from './src/components/common/OfflineBanner';
 import NotifCardModal    from './src/components/common/NotifCardModal';
+import NotifPopupBanner  from './src/components/common/NotifPopupBanner';
+import AnnonceModal      from './src/components/common/AnnonceModal';
+import { useAnnonces }   from './src/hooks/useAnnonces';
 import { useConnectionWatcher } from './src/hooks/useConnectionWatcher';
 import useAuthStore            from './src/store/authStore';
 import useShopStore             from './src/store/shopStore';
@@ -40,18 +43,15 @@ import {
   hasInactivityTimeoutElapsed,
 } from './src/lib/sessionTimeout';
 
-// ─── Détection Expo Go ────────────────────────────────────────────────────────
+// ─── Détection Expo Go / Web ──────────────────────────────────────────────────
 // SDK 53+ : les push notifications Android ne fonctionnent plus dans Expo Go.
-// Le simple import de 'expo-notifications' déclenche TokenAutoRegistration
-// au chargement du module → erreur console. On utilise require() LAZY pour
-// que le module ne se charge jamais dans Expo Go.
+// Sur web, expo-notifications n'est pas disponible non plus.
+// On utilise require() LAZY pour que le module ne se charge jamais dans ces cas.
 const IS_EXPO_GO = Constants.executionEnvironment === 'storeClient';
 
-// Chargement paresseux : le module expo-notifications n'est jamais évalué
-// dans Expo Go, ce qui empêche TokenAutoRegistration de tourner.
 type N = typeof import('expo-notifications');
 const getN = (): N | null => {
-  if (IS_EXPO_GO) return null;
+  if (IS_EXPO_GO || Platform.OS === 'web') return null;
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   return require('expo-notifications') as N;
 };
@@ -80,6 +80,9 @@ export default function App() {
   const loadSeenIds = useNotifPopupStore(s => s.loadSeenIds);
   useEffect(() => { loadSeenIds(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Annonces admin non lues (table annonces, get_annonces_non_lues)
+  const { annonceCourante, nbRestantes, marquerLue } = useAnnonces(userId);
+
   // Enregistre le token push dès que l'utilisateur est connecté
   usePushToken();
   // Écoute les retours Wave/OM via deep link
@@ -95,8 +98,13 @@ export default function App() {
     Poppins_300Light,
   });
 
+  // Sur web, onLayout ne re-déclenche pas quand fontsLoaded change → on cache le splash via effet
+  useEffect(() => {
+    if (fontsLoaded) ExpoSplashScreen.hideAsync().catch(() => {});
+  }, [fontsLoaded]);
+
   const onLayout = useCallback(async () => {
-    if (fontsLoaded) await ExpoSplashScreen.hideAsync();
+    if (fontsLoaded && Platform.OS !== 'web') await ExpoSplashScreen.hideAsync();
   }, [fontsLoaded]);
 
   // Déconnexion : supprime le token push, Supabase + tous les stores + retour à l'auth
@@ -205,15 +213,22 @@ export default function App() {
     return () => sub.remove();
   }, [handleLogout]);
 
-  if (!fontsLoaded) return null;
+  // Sur web, les polices chargent en arrière-plan via CSS — on ne bloque pas le rendu
+  if (!fontsLoaded && Platform.OS !== 'web') return null;
 
   return (
     <View style={styles.root} onLayout={onLayout}>
       <StatusBar style="light" />
       <OfflineBanner />
 
-      {/* Carte rich-notification (style image1) — affichée une seule fois par notif */}
+      {/* Bannière slide-top pour commandes et messages (auto-dismiss 5s) */}
+      <NotifPopupBanner onView={() => setPendingNav({ type: 'notifications' })} />
+
+      {/* Carte rich-notification pour récompenses, paiements, annonces-notif */}
       <NotifCardModal onView={() => setPendingNav({ type: 'notifications' })} />
+
+      {/* Annonces système admin (table annonces) — une seule fois par annonce */}
+      <AnnonceModal annonce={annonceCourante} nbRestantes={nbRestantes} onFermer={marquerLue} />
 
       <ErrorBoundary>
       {screen === 'splash' && (
