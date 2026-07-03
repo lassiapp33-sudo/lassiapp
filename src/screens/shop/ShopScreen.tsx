@@ -41,6 +41,8 @@ import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { calculerPrixClient } from '../../config/payment';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import * as fitnessService from '../../services/fitnessAbonnements';
+import { FitnessOffre } from '../../services/fitnessAbonnements';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -151,11 +153,12 @@ interface Props {
   onBookTerrain?: (params: TerrainBookingParams) => void;
   onBookTerrainDirect?: (params: TerrainDirectBookParams) => void;
   onSuivi?: (params: { shopLat: number; shopLng: number; shopName: string; shopLogoUrl: string | null }) => void;
+  onFitnessAboPayment?: (offre: FitnessOffre, fitnessName: string, shopId: string) => void;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
-export default function ShopScreen({ shopId = '', shopName, targetProductId, onBack, onChat, onCheckout, onBookTerrain, onBookTerrainDirect, onSuivi }: Props) {
+export default function ShopScreen({ shopId = '', shopName, targetProductId, onBack, onChat, onCheckout, onBookTerrain, onBookTerrainDirect, onSuivi, onFitnessAboPayment }: Props) {
   const [shopData, setShopData] = useState<Shop | null>(null);
   const [realProducts, setRealProducts] = useState<StoreProduct[]>([]);
   const [terrains, setTerrains] = useState<Terrain[]>([]);
@@ -164,6 +167,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const [activeTab, setActiveTab] = useState<MenuTabId>('all');
   const [resolvedZone, setResolvedZone] = useState<string>('');
   const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [fitnessOffres, setFitnessOffres] = useState<FitnessOffre[]>([]);
 
   const scrollRef = useRef<ScrollView>(null);
   const productSectionY = useRef(0);
@@ -204,6 +208,11 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
       if ((shop?.shopType === 'terrains' || isSlotCat) && shop?.merchantId) {
         const terrainList = await terrainsService.getTerrainsByMerchant(shop.merchantId).catch(() => []);
         setTerrains(terrainList);
+      }
+      if (shop?.shopType === 'memberships' && shop?.merchantId) {
+        fitnessService.getOffresActives(shop.merchantId)
+          .then(setFitnessOffres)
+          .catch(() => setFitnessOffres([]));
       }
       if (shop?.zone) {
         setResolvedZone(shop.zone);
@@ -622,6 +631,65 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                 </View>
               )}
             </View>
+          ) : shopType === 'memberships' ? (
+            <View>
+              {/* Abonnements */}
+              {fitnessOffres.length > 0 ? (
+                <View>
+                  <Text style={styles.catTitle}>Abonnements disponibles</Text>
+                  {fitnessOffres.map(offre => (
+                    <View key={offre.id} style={styles.aboCard}>
+                      <View style={styles.aboInfo}>
+                        <Text style={styles.aboNom}>{offre.nom}</Text>
+                        {offre.description ? (
+                          <Text style={styles.aboDesc} numberOfLines={3}>{offre.description}</Text>
+                        ) : null}
+                        <View style={styles.aboMeta}>
+                          <Text style={styles.aboDuree}>⏱ {offre.dureeJours} jours</Text>
+                          <Text style={styles.aboPrix}>{formatPrice(calculerPrixClient(offre.prix))}</Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.aboBtn}
+                        activeOpacity={0.85}
+                        onPress={() => onFitnessAboPayment?.(offre, displayName, shopId)}
+                      >
+                        <Text style={styles.aboBtnTxt}>S'abonner</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+              {/* Formules (produits) */}
+              {realProducts.length > 0 ? (
+                <View onLayout={e => { productSectionY.current = e.nativeEvent.layout.y; }}>
+                  <Text style={styles.catTitle}>Formules</Text>
+                  <View style={styles.grid}>
+                    {toPairs(realProducts).map((pair, i) => (
+                      <View key={i} style={styles.gridRow}>
+                        {pair.map(product => (
+                          <View key={product.id} style={styles.tileWrapper}>
+                            <ProductTile
+                              product={storeProductToProduct(product)}
+                              qty={product.stock === 'out' ? 0 : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)}
+                              onAdd={() => addToCart(product)}
+                              onRemove={() => removeItem(product.id)}
+                              promoInfo={productPromoMap[product.id]}
+                            />
+                          </View>
+                        ))}
+                        {pair.length === 1 && <View style={styles.tileSpacer} />}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+              {fitnessOffres.length === 0 && realProducts.length === 0 ? (
+                <View style={styles.emptyProducts}>
+                  <Text style={styles.emptyTxt}>Aucune formule disponible pour l'instant.</Text>
+                </View>
+              ) : null}
+            </View>
           ) : realProducts.length === 0 ? (
             <View style={styles.emptyProducts}>
               <Text style={styles.emptyTxt}>{emptyLabel}</Text>
@@ -985,5 +1053,56 @@ const styles = StyleSheet.create({
     color: colors.bg,
     fontFamily: fonts.title,
     fontSize: 15,
+  },
+
+  // Fitness abonnements (client view)
+  aboCard: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: 16,
+  },
+  aboInfo: { marginBottom: 14 },
+  aboNom: {
+    color: colors.white,
+    fontFamily: fonts.title,
+    fontSize: 15,
+    marginBottom: 4,
+  },
+  aboDesc: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  aboMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  aboDuree: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+  },
+  aboPrix: {
+    color: colors.accent,
+    fontFamily: fonts.titleXL,
+    fontSize: 16,
+  },
+  aboBtn: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  aboBtnTxt: {
+    color: colors.bg,
+    fontFamily: fonts.title,
+    fontSize: 14,
   },
 });

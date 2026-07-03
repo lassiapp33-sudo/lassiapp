@@ -25,6 +25,9 @@ import TerrainsListScreen from '../terrain/TerrainsListScreen';
 import TerrainDetailScreen from '../terrain/TerrainDetailScreen';
 import TerrainMyReservationsScreen from '../terrain/TerrainMyReservationsScreen';
 import ClassementScreen from '../classement/ClassementScreen';
+import FitnessAbonnementPaymentScreen from '../fitness/FitnessAbonnementPaymentScreen';
+import ClientAbonnementsScreen from '../fitness/ClientAbonnementsScreen';
+import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { CatId } from '../../components/category/CatNavBar';
 import { OrderInfo } from '../../types/payment';
 import { Terrain, SportType } from '../../types/terrain';
@@ -36,7 +39,7 @@ import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
 import { recordView } from '../../services/recentlyViewed';
 
 function shouldShowCard(type: string): boolean {
-  return type === 'vip' || type === 'pay' || type === 'ann';
+  return type === 'vip' || type === 'pay' || type === 'ann' || type === 'order' || type === 'msg';
 }
 
 // ─── Stack de navigation client ───────────────────────────────────────────────
@@ -100,7 +103,9 @@ type HomeStack =
       heureFin: string;
       prestataireName: string;
       prixTotal: number;
-    };
+    }
+  | { id: 'mes_abonnements' }
+  | { id: 'fitness_abo_payment'; offre: FitnessOffre; fitnessName: string; shopId: string };
 
 interface Props {
   onLogout: () => void;
@@ -341,6 +346,29 @@ export default function HomeNavigator({ onLogout }: Props) {
     );
   }
 
+  // ── Mes abonnements fitness ───────────────────────────────────────────────
+  if (screen.id === 'mes_abonnements') {
+    return <ClientAbonnementsScreen onBack={pop} />;
+  }
+
+  // ── Paiement abonnement fitness ───────────────────────────────────────────
+  if (screen.id === 'fitness_abo_payment') {
+    return (
+      <FitnessAbonnementPaymentScreen
+        offre={screen.offre}
+        fitnessName={screen.fitnessName}
+        onBack={pop}
+        onSuccess={() => {
+          // Retour à la vitrine + ouvre mes abonnements
+          setHistory(h => [
+            ...h.slice(0, -1),
+            { id: 'mes_abonnements' },
+          ]);
+        }}
+      />
+    );
+  }
+
   // ── Vitrine prestataire ───────────────────────────────────────────────────
   if (screen.id === 'shop') {
     return (
@@ -382,6 +410,9 @@ export default function HomeNavigator({ onLogout }: Props) {
           })
         }
         onSuivi={params => push({ id: 'suivi_gps', ...params })}
+        onFitnessAboPayment={(offre, fitnessName) =>
+          push({ id: 'fitness_abo_payment', offre, fitnessName, shopId: screen.shopId })
+        }
       />
     );
   }
@@ -524,6 +555,7 @@ export default function HomeNavigator({ onLogout }: Props) {
         onFavorites={() => push({ id: 'favorites' })}
         onTerrainReservations={() => push({ id: 'terrain_my_reservations' })}
         onClassement={() => push({ id: 'classement' })}
+        onAbonnements={() => push({ id: 'mes_abonnements' })}
         onLogout={onLogout}
       />
     );

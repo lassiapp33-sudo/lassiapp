@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,8 @@ import CategoryTabs from '../../components/store/CategoryTabs';
 import ProductRow from '../../components/store/ProductRow';
 import AddProductSheet from '../../components/store/AddProductSheet';
 import OpeningHoursCard from '../../components/store/OpeningHoursCard';
+import AbonnementOffreRow from '../../components/fitness/AbonnementOffreRow';
+import AddAbonnementOffreSheet from '../../components/fitness/AddAbonnementOffreSheet';
 import { colors, fonts, radius } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import { StoreProduct } from '../../types/store';
@@ -30,6 +32,8 @@ import useAuthStore from '../../store/authStore';
 import { getCurrentLocation, reverseGeocode } from '../../services/location';
 import * as storageService from '../../services/storage';
 import * as promoService from '../../services/promotions';
+import * as fitnessService from '../../services/fitnessAbonnements';
+import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { getErrorMessage } from '../../utils/errorUtils';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
@@ -78,13 +82,14 @@ interface Props {
   onBack: () => void;
   onPreview?: () => void;
   onPromos?: () => void;
+  onAbonnes?: () => void;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
 const MAX_GALLERY = 5;
 
-export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
+export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: Props) {
   const profileRaw = useShopStore(s => s.profile);
   const avatarUrl = useAuthStore(s => s.user?.avatarUrl);
   const profile = { ...profileRaw, logoUrl: avatarUrl ?? profileRaw.logoUrl ?? undefined };
@@ -113,6 +118,16 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
 
   // ── Promos actives (pour badges sur les produits) ─────────────────────────
   const [promoMap, setPromoMap] = useState<Record<string, ProductPromoInfo>>({});
+
+  // ── Onglets fitness (uniquement pour shopType === 'memberships') ───────────
+  // 'formules' = catalogue existant | 'abonnements' = nouveau | 'produits' = nouveau
+  type FitnessTab = 'formules' | 'abonnements' | 'produits';
+  const [fitnessTab, setFitnessTab] = useState<FitnessTab>('formules');
+  const [offres,     setOffres]     = useState<FitnessOffre[]>([]);
+  const [offresLoading, setOffresLoading] = useState(false);
+  const [editOffre, setEditOffre] = useState<FitnessOffre | null>(null);
+  const [showOffreSheet, setShowOffreSheet] = useState(false);
+  const userId = useAuthStore(s => s.user?.id);
 
   // ── Géolocalisation ────────────────────────────────────────────────────────
   const [locLoading, setLocLoading] = useState(false);
@@ -157,6 +172,23 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
       setActiveCat(categories[0].id);
     }
   }, [categories, activeCat]);
+
+  const loadOffres = useCallback(async () => {
+    if (!userId || context.shopType !== 'memberships') return;
+    setOffresLoading(true);
+    try {
+      const list = await fitnessService.getMesOffres(userId);
+      setOffres(list);
+    } catch {
+      // Silencieux : les offres restent vides
+    } finally {
+      setOffresLoading(false);
+    }
+  }, [userId, context.shopType]);
+
+  useEffect(() => {
+    if (fitnessTab === 'abonnements') loadOffres();
+  }, [fitnessTab, loadOffres]);
 
   const activeCatData = categories.find(c => c.id === activeCat);
   const filtered = products.filter(p => p.category === activeCat);
@@ -306,6 +338,40 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
         },
       },
     ]);
+  };
+
+  // ── Handlers offres abonnement fitness ────────────────────────────────────
+
+  const handleSaveOffre = async (data: {
+    nom: string; description: string; prix: number; dureeJours: number;
+  }) => {
+    if (!userId) return;
+    if (editOffre) {
+      await fitnessService.updateOffre(editOffre.id, data);
+    } else {
+      await fitnessService.createOffre(userId, data);
+    }
+    await loadOffres();
+  };
+
+  const handleDeleteOffre = async () => {
+    if (!editOffre) return;
+    try {
+      await fitnessService.deleteOffre(editOffre.id);
+      setShowOffreSheet(false);
+      await loadOffres();
+    } catch {
+      Alert.alert('Erreur', 'Impossible de supprimer. Des abonnements actifs y font peut-être référence.');
+    }
+  };
+
+  const handleToggleOffreActif = async (offre: FitnessOffre) => {
+    try {
+      await fitnessService.updateOffre(offre.id, { actif: !offre.actif });
+      setOffres(prev => prev.map(o => o.id === offre.id ? { ...o, actif: !o.actif } : o));
+    } catch {
+      Alert.alert('Erreur', 'Impossible de modifier le statut. Réessaie.');
+    }
   };
 
   // ── Rendu ─────────────────────────────────────────────────────────────────
@@ -485,41 +551,137 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
               />
             </View>
 
-            {/* ── Catalogue ────────────────────────────────────────────────── */}
-            <CategoryTabs
-              categories={categories}
-              active={activeCat}
-              onSelect={setActiveCat}
-              onAddCat={addCategory}
-              onDeleteCat={handleDeleteCat}
-            />
+            {/* ── Sélecteur d'onglets fitness (uniquement pour memberships) ── */}
+            {context.shopType === 'memberships' && (
+              <View style={styles.fitnessTabBar}>
+                {(['formules', 'abonnements', 'produits'] as const).map(tab => (
+                  <TouchableOpacity
+                    key={tab}
+                    style={[styles.fitnessTab, fitnessTab === tab && styles.fitnessTabActive]}
+                    onPress={() => setFitnessTab(tab)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.fitnessTabTxt, fitnessTab === tab && styles.fitnessTabTxtActive]}>
+                      {tab === 'formules' ? 'Formules' : tab === 'abonnements' ? 'Abonnements' : 'Produits'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
-            <SectionHead
-              title={activeCatData?.label ?? ''}
-              count={filtered.length}
-              itemLabel={itemLabel}
-            />
+            {/* ── Onglet Formules (existant) OU catalogue non-fitness ───────── */}
+            {(context.shopType !== 'memberships' || fitnessTab === 'formules') && (
+              <>
+                <CategoryTabs
+                  categories={categories}
+                  active={activeCat}
+                  onSelect={setActiveCat}
+                  onAddCat={addCategory}
+                  onDeleteCat={handleDeleteCat}
+                />
+                <SectionHead
+                  title={activeCatData?.label ?? ''}
+                  count={filtered.length}
+                  itemLabel={itemLabel}
+                />
+                {filtered.map(product => (
+                  <ProductRow
+                    key={product.id}
+                    product={product}
+                    promoInfo={promoMap[product.id]}
+                    onEdit={() => openEdit(product)}
+                    onToggleStock={async () => {
+                      try {
+                        await toggleStock(product.id);
+                      } catch {
+                        Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
+                      }
+                    }}
+                  />
+                ))}
+                <TouchableOpacity style={styles.addProd} onPress={openAdd} activeOpacity={0.8}>
+                  <IcoPlus />
+                  <Text style={styles.addProdTxt}>{addItemLabel}</Text>
+                </TouchableOpacity>
+              </>
+            )}
 
-            {filtered.map(product => (
-              <ProductRow
-                key={product.id}
-                product={product}
-                promoInfo={promoMap[product.id]}
-                onEdit={() => openEdit(product)}
-                onToggleStock={async () => {
-                  try {
-                    await toggleStock(product.id);
-                  } catch {
-                    Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
-                  }
-                }}
-              />
-            ))}
+            {/* ── Onglet Abonnements (fitness uniquement) ───────────────────── */}
+            {context.shopType === 'memberships' && fitnessTab === 'abonnements' && (
+              <>
+                <SectionHead
+                  title="Offres d'abonnement"
+                  count={offres.length}
+                  itemLabel="offre"
+                />
+                {offresLoading ? (
+                  <ActivityIndicator color={colors.accent} style={{ marginVertical: 20 }} />
+                ) : (
+                  offres.map(offre => (
+                    <AbonnementOffreRow
+                      key={offre.id}
+                      offre={offre}
+                      onEdit={() => { setEditOffre(offre); setShowOffreSheet(true); }}
+                      onToggleActif={() => handleToggleOffreActif(offre)}
+                    />
+                  ))
+                )}
+                <TouchableOpacity
+                  style={styles.addProd}
+                  onPress={() => { setEditOffre(null); setShowOffreSheet(true); }}
+                  activeOpacity={0.8}
+                >
+                  <IcoPlus />
+                  <Text style={styles.addProdTxt}>Ajouter un abonnement</Text>
+                </TouchableOpacity>
+                {onAbonnes && (
+                  <TouchableOpacity
+                    style={[styles.addProd, { marginTop: 8, backgroundColor: 'rgba(253,207,52,.08)', borderColor: 'rgba(253,207,52,.3)' }]}
+                    onPress={onAbonnes}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.addProdTxt, { color: colors.accent }]}>Voir mes abonnés →</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
 
-            <TouchableOpacity style={styles.addProd} onPress={openAdd} activeOpacity={0.8}>
-              <IcoPlus />
-              <Text style={styles.addProdTxt}>{addItemLabel}</Text>
-            </TouchableOpacity>
+            {/* ── Onglet Produits (fitness uniquement) — réutilise le catalogue ─ */}
+            {context.shopType === 'memberships' && fitnessTab === 'produits' && (
+              <>
+                <CategoryTabs
+                  categories={categories}
+                  active={activeCat}
+                  onSelect={setActiveCat}
+                  onAddCat={addCategory}
+                  onDeleteCat={handleDeleteCat}
+                />
+                <SectionHead
+                  title={activeCatData?.label ?? ''}
+                  count={filtered.length}
+                  itemLabel="produit"
+                />
+                {filtered.map(product => (
+                  <ProductRow
+                    key={product.id}
+                    product={product}
+                    promoInfo={promoMap[product.id]}
+                    onEdit={() => openEdit(product)}
+                    onToggleStock={async () => {
+                      try {
+                        await toggleStock(product.id);
+                      } catch {
+                        Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
+                      }
+                    }}
+                  />
+                ))}
+                <TouchableOpacity style={styles.addProd} onPress={openAdd} activeOpacity={0.8}>
+                  <IcoPlus />
+                  <Text style={styles.addProdTxt}>Ajouter un produit</Text>
+                </TouchableOpacity>
+              </>
+            )}
 
             {/* ── Géolocalisation ──────────────────────────────────────────── */}
             <TouchableOpacity
@@ -549,6 +711,14 @@ export default function StoreScreen({ onBack, onPreview, onPromos }: Props) {
         onSave={saveProduct}
         onDelete={editTarget ? () => handleDeleteProduct(editTarget.id) : undefined}
         onClose={() => setShowSheet(false)}
+      />
+
+      <AddAbonnementOffreSheet
+        visible={showOffreSheet}
+        offre={editOffre}
+        onSave={handleSaveOffre}
+        onDelete={editOffre ? handleDeleteOffre : undefined}
+        onClose={() => setShowOffreSheet(false)}
       />
     </LassiScreen>
     </KeyboardAvoidingView>
@@ -714,6 +884,36 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addProdTxt: { color: colors.accent, fontFamily: fonts.title, fontSize: 14 },
+
+  // Onglets fitness
+  fitnessTabBar: {
+    flexDirection: 'row',
+    marginHorizontal: 18,
+    marginBottom: 4,
+    marginTop: 6,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 3,
+  },
+  fitnessTab: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  fitnessTabActive: {
+    backgroundColor: colors.accent,
+  },
+  fitnessTabTxt: {
+    color: colors.muted,
+    fontFamily: fonts.title,
+    fontSize: 12.5,
+  },
+  fitnessTabTxtActive: {
+    color: colors.bg,
+  },
 
   locBtn: {
     marginHorizontal: 18,

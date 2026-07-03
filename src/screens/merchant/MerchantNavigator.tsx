@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import MerchantDashboard from './MerchantDashboard';
 import MerchantProfileScreen from './MerchantProfileScreen';
 import MerchantMessagesScreen from './MerchantMessagesScreen';
@@ -17,6 +18,7 @@ import TerrainScreen from './TerrainScreen';
 import TerrainEditScreen from './TerrainEditScreen';
 import TerrainReservationsScreen from './TerrainReservationsScreen';
 import TerrainScanScreen from './TerrainScanScreen';
+import MerchantAbonnementsScreen from '../fitness/MerchantAbonnementsScreen';
 import { Terrain } from '../../types/terrain';
 import NotificationsScreen from '../home/NotificationsScreen';
 import ChatScreen from '../chat/ChatScreen';
@@ -28,16 +30,18 @@ import PaymentScreen from '../payment/PaymentScreen';
 import ClientOrdersScreen from '../home/ClientOrdersScreen';
 import LassiAssistantScreen from '../home/LassiAssistantScreen';
 import ClassementScreen from '../classement/ClassementScreen';
+import WelcomeRewardModal from '../../components/merchant/WelcomeRewardModal';
 import useShopStore from '../../store/shopStore';
 import useAuthStore from '../../store/authStore';
 import useNotificationsStore from '../../store/notificationsStore';
 import useNotifPopupStore from '../../store/notifPopupStore';
 import usePendingNavStore from '../../store/pendingNavStore';
 import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
+import { getRecompenseBienvenue } from '../../services/classementService';
 import { OrderInfo } from '../../types/payment';
 
 function shouldShowCard(type: string): boolean {
-  return type === 'vip' || type === 'pay' || type === 'ann';
+  return type === 'vip' || type === 'pay' || type === 'ann' || type === 'order' || type === 'msg';
 }
 
 // Navigateur du cockpit prestataire — tous les modules sont câblés ici.
@@ -83,7 +87,8 @@ type MerchantScreen =
   | { id: 'terrain_edit'; terrain?: Terrain }
   | { id: 'terrain_reservations'; terrain: Terrain }
   | 'terrain_scan'
-  | { id: 'suivi_gps'; shopLat: number; shopLng: number; shopName: string; shopLogoUrl: string | null };
+  | { id: 'suivi_gps'; shopLat: number; shopLng: number; shopName: string; shopLogoUrl: string | null }
+  | 'fitness_abonnements';
 
 interface Props {
   onLogout: () => void;
@@ -106,6 +111,33 @@ export default function MerchantNavigator({ onLogout }: Props) {
 
   const pendingNav   = usePendingNavStore(s => s.pendingNav);
   const clearPending = usePendingNavStore(s => s.clearPendingNav);
+
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [welcomeCarrousel, setWelcomeCarrousel] = useState(4);
+
+  // Affiche la modal de bienvenue une seule fois (cadeau Offre du Quartier)
+  useEffect(() => {
+    if (!userId) return;
+    const key = `lassi_welcome_shown_${userId}`;
+    AsyncStorage.getItem(key).then(val => {
+      if (val) return;
+      getRecompenseBienvenue(userId).then(r => {
+        if (!r || !r.est_actif) return;
+        setWelcomeCarrousel(r.carrousel_produits > 0 ? r.carrousel_produits : 4);
+        setShowWelcomeModal(true);
+      }).catch(() => {});
+    }).catch(() => {});
+  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleWelcomeClose = () => {
+    setShowWelcomeModal(false);
+    if (userId) AsyncStorage.setItem(`lassi_welcome_shown_${userId}`, '1').catch(() => {});
+  };
+
+  const handleWelcomeDiscover = () => {
+    handleWelcomeClose();
+    setScreen('offre_quartier');
+  };
 
   // Realtime : badge + carte pour les notifs importantes
   useRealtimeNotifications(userId, notif => {
@@ -383,12 +415,16 @@ export default function MerchantNavigator({ onLogout }: Props) {
     return <ClassementScreen variant="prestataire" onBack={() => setScreen('dashboard')} />;
   if (screen === 'debts') return <DebtsScreen onBack={() => setScreen('dashboard')} />;
   if (screen === 'promotions') return <PromotionsScreen onBack={() => setScreen('store')} />;
+  if (screen === 'fitness_abonnements')
+    return <MerchantAbonnementsScreen onBack={() => setScreen('store')} />;
+
   if (screen === 'store')
     return (
       <StoreScreen
         onBack={() => setScreen('dashboard')}
         onPreview={() => setScreen('preview')}
         onPromos={() => setScreen('promotions')}
+        onAbonnes={() => setScreen('fitness_abonnements')}
       />
     );
   if (screen === 'orders') return <OrdersScreen onBack={() => setScreen('dashboard')} />;
@@ -420,26 +456,34 @@ export default function MerchantNavigator({ onLogout }: Props) {
     );
 
   return (
-    <MerchantDashboard
-      onNavigate={dest => {
-        if (dest === 'debts') setScreen('debts');
-        if (dest === 'store') setScreen('store');
-        if (dest === 'orders') setScreen('orders');
-        if (dest === 'messages') setScreen('messages');
-        if (dest === 'visibility') setScreen('visibility');
-        if (dest === 'profile') setScreen('profile');
-        if (dest === 'notifications') setScreen('notifications');
-        if (dest === 'assistant') setScreen('assistant');
-        if (dest === 'aroundme') setScreen('aroundme');
-        if (dest === 'avis') setScreen('avis');
-        if (dest === 'terrains') {
-          setTerrainsFrom('dashboard');
-          setScreen('terrains');
-        }
-        if (dest === 'classement') setScreen('classement');
-        if (dest === 'offre_quartier') setScreen('offre_quartier');
-      }}
-      onNotifPress={() => setScreen('notifications')}
-    />
+    <>
+      <MerchantDashboard
+        onNavigate={dest => {
+          if (dest === 'debts') setScreen('debts');
+          if (dest === 'store') setScreen('store');
+          if (dest === 'orders') setScreen('orders');
+          if (dest === 'messages') setScreen('messages');
+          if (dest === 'visibility') setScreen('visibility');
+          if (dest === 'profile') setScreen('profile');
+          if (dest === 'notifications') setScreen('notifications');
+          if (dest === 'assistant') setScreen('assistant');
+          if (dest === 'aroundme') setScreen('aroundme');
+          if (dest === 'avis') setScreen('avis');
+          if (dest === 'terrains') {
+            setTerrainsFrom('dashboard');
+            setScreen('terrains');
+          }
+          if (dest === 'classement') setScreen('classement');
+          if (dest === 'offre_quartier') setScreen('offre_quartier');
+        }}
+        onNotifPress={() => setScreen('notifications')}
+      />
+      <WelcomeRewardModal
+        visible={showWelcomeModal}
+        carrouselProduits={welcomeCarrousel}
+        onClose={handleWelcomeClose}
+        onDiscover={handleWelcomeDiscover}
+      />
+    </>
   );
 }

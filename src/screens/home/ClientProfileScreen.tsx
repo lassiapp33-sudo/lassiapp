@@ -197,6 +197,20 @@ const IcoTerrain = () => (
   </Svg>
 );
 
+const IcoFitness = () => (
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path d="M6.5 6.5h11M6.5 17.5h11M3 12h18M7 9l-1.5-2.5M7 15l-1.5 2.5M17 9l1.5-2.5M17 15l1.5 2.5" stroke={colors.accent} />
+  </Svg>
+);
+
 const IcoTrophy = () => (
   <Svg
     width={18}
@@ -255,6 +269,7 @@ interface Props {
   onFavorites?: () => void;
   onTerrainReservations?: () => void;
   onClassement?: () => void;
+  onAbonnements?: () => void;
   onLogout?: () => void;
 }
 
@@ -266,6 +281,7 @@ export default function ClientProfileScreen({
   onFavorites,
   onTerrainReservations,
   onClassement,
+  onAbonnements,
   onLogout,
 }: Props) {
   const t = useT();
@@ -384,6 +400,12 @@ export default function ClientProfileScreen({
             title="Mes terrains réservés"
             subtitle="Football, basketball & plus"
             onPress={onTerrainReservations}
+          />
+          <ProfileOptionRow
+            icon={<IcoFitness />}
+            title="Mes abonnements fitness"
+            subtitle="Salle de sport & musculation"
+            onPress={onAbonnements}
           />
           <ProfileOptionRow
             icon={<IcoTrophy />}
