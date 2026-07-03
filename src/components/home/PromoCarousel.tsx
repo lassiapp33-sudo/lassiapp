@@ -10,6 +10,7 @@ import {
 import { radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
 import { calculerPrixClient } from '../../config/payment';
+import { calcPromoClientPrice } from '../../services/promotions';
 import { usePromoItems, PromoItem } from '../../hooks/usePromoItems';
 
 const W = Dimensions.get('window').width;
@@ -45,6 +46,9 @@ function PromoCard({
   item: PromoItem;
   onPress?: () => void;
 }) {
+  const prixTotal = calculerPrixClient(item.price);
+  const prixPromo = calcPromoClientPrice(item.price, item.promoInfo);
+
   return (
     <TouchableOpacity
       style={styles.promoCard}
@@ -57,7 +61,14 @@ function PromoCard({
       <Text style={styles.cardItem} numberOfLines={2}>
         {item.name}
       </Text>
-      <Text style={styles.cardPrice}>{formatPrice(calculerPrixClient(item.price))}</Text>
+      {prixPromo !== null ? (
+        <View style={styles.cardPriceRow}>
+          <Text style={styles.cardPriceOld}>{formatPrice(prixTotal)}</Text>
+          <Text style={styles.cardPrice}>{formatPrice(prixPromo)}</Text>
+        </View>
+      ) : (
+        <Text style={styles.cardPrice}>{formatPrice(prixTotal)}</Text>
+      )}
     </TouchableOpacity>
   );
 }
@@ -194,6 +205,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginVertical: 4,
     flex: 1,
+  },
+  cardPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexWrap: 'wrap',
+  },
+  cardPriceOld: {
+    color: '#8892b0',
+    fontSize: 9,
+    fontWeight: '600',
+    textDecorationLine: 'line-through',
   },
   cardPrice: {
     backgroundColor: '#FBBF24',

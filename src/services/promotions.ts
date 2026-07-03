@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { Promotion, AppliedDiscount, ProductPromoInfo } from '../types/promotions';
 import { CartItem } from '../store/cartStore';
 import { formatPrice } from '../utils/format';
+import { calculerPrixClient } from '../config/payment';
 
 // ─── Mapping DB → TS ─────────────────────────────────────────────────────────
 
@@ -206,9 +207,9 @@ export function buildProductPromoMap(promos: Promotion[]): Record<string, Produc
     if (existing) continue; // garder la première (tri par date desc depuis l'API)
 
     if (promo.type === 'pourcentage') {
-      map[promo.cibleId] = { badge: `-${promo.valeur}%` };
+      map[promo.cibleId] = { badge: `-${promo.valeur}%`, discountPct: promo.valeur };
     } else if (promo.type === 'montant_fixe') {
-      map[promo.cibleId] = { badge: `-${formatPrice(promo.valeur)}` };
+      map[promo.cibleId] = { badge: `-${formatPrice(promo.valeur)}`, discountFixed: promo.valeur };
     } else if (promo.type === 'quantite_offerte') {
       map[promo.cibleId] = { badge: `${promo.valeur}+1` };
     } else if (promo.type === 'prix_barre') {
@@ -221,4 +222,24 @@ export function buildProductPromoMap(promos: Promotion[]): Record<string, Produc
 /** Renvoie true si le shop a au moins une promo de portée vitrine ou catégorie active. */
 export function hasShopWidePromo(promos: Promotion[]): boolean {
   return promos.some(p => p.cibleType === 'vitrine' || p.cibleType === 'categorie');
+}
+
+/**
+ * Calcule le prix promo client (après commission LASSI + réduction promo).
+ * Retourne null si la promo ne change pas le prix unitaire (ex: quantite_offerte).
+ * prixBase = prix vendeur brut (avant commission LASSI).
+ */
+export function calcPromoClientPrice(prixBase: number, promoInfo?: ProductPromoInfo): number | null {
+  if (!promoInfo) return null;
+  const prixTotal = calculerPrixClient(prixBase);
+  if (promoInfo.discountPct !== undefined) {
+    return Math.round(prixTotal * (1 - promoInfo.discountPct / 100));
+  }
+  if (promoInfo.discountFixed !== undefined) {
+    return Math.max(0, prixTotal - promoInfo.discountFixed);
+  }
+  if (promoInfo.promoPrice !== undefined) {
+    return calculerPrixClient(promoInfo.promoPrice);
+  }
+  return null;
 }

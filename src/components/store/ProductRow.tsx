@@ -5,6 +5,9 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { StoreProduct, StockStatus } from '../../types/store';
 import { formatPrice } from '../../utils/format';
+import { ProductPromoInfo } from '../../types/promotions';
+import { calculerPrixClient } from '../../config/payment';
+import { calcPromoClientPrice } from '../../services/promotions';
 
 // ─── Icône crayon ────────────────────────────────────────────────────────────
 
@@ -28,11 +31,12 @@ interface Props {
   product: StoreProduct;
   onEdit: () => void;
   onToggleStock: () => void;
-  promoInfo?: { badge: string };
+  promoInfo?: ProductPromoInfo;
 }
 
 export default function ProductRow({ product, onEdit, onToggleStock, promoInfo }: Props) {
   const sc = STOCK_CONFIG[product.stock];
+  const prixPromo = calcPromoClientPrice(product.price, promoInfo);
 
   return (
     <View style={styles.card}>
@@ -59,7 +63,14 @@ export default function ProductRow({ product, onEdit, onToggleStock, promoInfo }
           {product.desc}
         </Text>
         <View style={styles.priceRow}>
-          <Text style={styles.price}>{formatPrice(product.price)}</Text>
+          {prixPromo !== null ? (
+            <>
+              <Text style={styles.priceOld}>{formatPrice(calculerPrixClient(product.price))}</Text>
+              <Text style={styles.price}>{formatPrice(prixPromo)}</Text>
+            </>
+          ) : (
+            <Text style={styles.price}>{formatPrice(calculerPrixClient(product.price))}</Text>
+          )}
           {promoInfo && (
             <View style={styles.promoBadge}>
               <Text style={styles.promoBadgeTxt}>{promoInfo.badge}</Text>
@@ -142,6 +153,12 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontFamily: fonts.titleXL,
     fontSize: 13.5,
+  },
+  priceOld: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 11,
+    textDecorationLine: 'line-through',
   },
   promoBadge: {
     backgroundColor: 'rgba(253,207,52,.18)',

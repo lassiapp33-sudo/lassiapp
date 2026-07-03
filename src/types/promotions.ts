@@ -42,6 +42,8 @@ export interface AppliedDiscount {
 
 /** Info promo attachée à un product tile pour l'affichage vitrine. */
 export interface ProductPromoInfo {
-  badge: string; // ex: "−20%" ou "Promo"
-  promoPrice?: number; // si prix_barre : nouveau prix
+  badge: string;         // ex: "-20%" ou "Promo"
+  promoPrice?: number;   // prix_barre : nouveau prix de base vendeur (avant commission LASSI)
+  discountPct?: number;  // pourcentage : ex. 2 pour -2% appliqué sur le prix client total
+  discountFixed?: number; // montant_fixe : réduction en FCFA sur le prix client total
 }

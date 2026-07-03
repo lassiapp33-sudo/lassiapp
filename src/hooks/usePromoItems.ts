@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import { ProductPromoInfo, Promotion } from '../types/promotions';
+import { buildProductPromoMap } from '../services/promotions';
 
 export interface PromoItem {
   id: string;
@@ -10,6 +12,7 @@ export interface PromoItem {
   shopName: string;
   shopCategory: string;
   shopId: string;
+  promoInfo?: ProductPromoInfo;
 }
 
 export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
@@ -148,8 +151,49 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
             });
         }
 
+        // Récupérer les promos actives pour tous les produits du carousel
+        const allItems = [...paidItems, ...rewardItems];
+        const productIds = allItems.map(i => i.id).filter(Boolean);
+        let promoMap: Record<string, ProductPromoInfo> = {};
+
+        if (productIds.length > 0) {
+          const nowIso = new Date().toISOString();
+          const { data: promoData } = await supabase
+            .from('promotions')
+            .select('*')
+            .in('cible_id', productIds)
+            .eq('cible_type', 'produit')
+            .eq('actif', true)
+            .or(`date_debut.is.null,date_debut.lte.${nowIso}`)
+            .or(`date_fin.is.null,date_fin.gte.${nowIso}`);
+
+          if (promoData && promoData.length > 0) {
+            promoMap = buildProductPromoMap(
+              (promoData as Record<string, unknown>[]).map((r): Promotion => ({
+                id: r.id as string,
+                shopId: r.shop_id as string,
+                titre: r.titre as string,
+                type: r.type as Promotion['type'],
+                valeur: Number(r.valeur),
+                cibleType: r.cible_type as Promotion['cibleType'],
+                cibleId: (r.cible_id as string | null) ?? undefined,
+                montantMin: Number(r.montant_min ?? 0),
+                dateDebut: (r.date_debut as string | null) ?? undefined,
+                dateFin: (r.date_fin as string | null) ?? undefined,
+                actif: r.actif as boolean,
+                createdAt: r.created_at as string,
+              })),
+            );
+          }
+        }
+
+        const itemsWithPromo = allItems.map(item => ({
+          ...item,
+          promoInfo: promoMap[item.id],
+        }));
+
         if (!cancelled) {
-          setRaw([...paidItems, ...rewardItems]);
+          setRaw(itemsWithPromo);
           setLoading(false);
         }
       } catch {
