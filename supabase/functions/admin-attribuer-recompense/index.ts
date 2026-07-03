@@ -9,6 +9,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID, isBoolean, isISODateString, isSafeString, isNonNegativeInt } from '../_shared/validation.ts'
 import { logAuditEvent } from '../_shared/audit.ts'
 import { corsHeaders } from '../_shared/cors.ts'
+import { sendPushToUser } from '../_shared/push.ts'
 
 // Description FR des avantages accordés, pour la notification "cadeau LASSI"
 function describeRecompenses(row: {
@@ -302,13 +303,23 @@ Deno.serve(async (req) => {
       if (creditErr) throw creditErr
     }
 
+    const notifTitle = "🎁 Un cadeau de la part de l'équipe LASSI !"
+    const notifBody  = `Bonjour ! L'équipe LASSI a le plaisir de vous offrir ${describeRecompenses(row)}. Merci pour votre engagement sur la plateforme, et à très vite pour de nouvelles surprises !`
+
     // Notification "cadeau de l'équipe LASSI" au destinataire
     await admin.from('notifications').insert({
       user_id: targetId,
       type: 'vip',
-      title: "🎁 Un cadeau de la part de l'équipe LASSI !",
-      body: `Bonjour ! L'équipe LASSI a le plaisir de vous offrir ${describeRecompenses(row)}. Merci pour votre engagement sur la plateforme, et à très vite pour de nouvelles surprises !`,
+      title: notifTitle,
+      body: notifBody,
       data: { recompense_id: inserted.id, type_classement: 'manuel' },
+    })
+
+    // Push (best-effort) — reçu même si l'app est fermée
+    await sendPushToUser(admin, targetId, {
+      title: notifTitle,
+      body: notifBody,
+      data: { type: 'vip', recompense_id: inserted.id, type_classement: 'manuel' },
     })
 
     await admin.from('admin_actions_log').insert({

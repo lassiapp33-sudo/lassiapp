@@ -17,6 +17,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { crypto } from 'https://deno.land/std@0.177.0/crypto/mod.ts';
 import { isUUID } from '../_shared/validation.ts';
 import { logAuditEvent } from '../_shared/audit.ts';
+import { sendPushToUser } from '../_shared/push.ts';
 
 const WAVE_WEBHOOK_SECRET = Deno.env.get('WAVE_WEBHOOK_SECRET') ?? '';
 const OM_WEBHOOK_SECRET   = Deno.env.get('OM_WEBHOOK_SECRET')   ?? '';
@@ -265,7 +266,32 @@ serve(async (req) => {
     }
   }
 
-  // 7. Répondre 200 OK rapidement à Wave/OM dans tous les cas gérés
+  // 7. Push de confirmation au client (best-effort — ne bloque jamais la réponse)
+  if (result?.ok && !result?.already_processed && !result?.ignored && !result?.disputed) {
+    try {
+      const { data: pi } = await supabase
+        .from('payment_intents')
+        .select('client_id, amount')
+        .eq('id', piId)
+        .maybeSingle()
+
+      if (pi?.client_id) {
+        const montant = pi.amount ? `${Number(pi.amount).toLocaleString('fr-FR')} FCFA` : ''
+        await sendPushToUser(supabase, pi.client_id, {
+          title: '✅ Paiement confirmé',
+          body: montant
+            ? `Votre paiement de ${montant} a bien été reçu.`
+            : 'Votre paiement a bien été reçu.',
+          data: { type: 'pay', pi_id: String(piId) },
+          channelId: 'commandes',
+        })
+      }
+    } catch {
+      // best-effort
+    }
+  }
+
+  // 8. Répondre 200 OK rapidement à Wave/OM dans tous les cas gérés
   // (idempotence, anti-rejeu, échec, dispute, succès) : le retraitement se
   // ferait en double sinon. Seule une vraie erreur serveur (ci-dessus) renvoie 500.
   return new Response('OK', { status: 200 });
