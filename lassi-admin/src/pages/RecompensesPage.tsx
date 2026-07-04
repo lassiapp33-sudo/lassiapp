@@ -57,8 +57,8 @@ const EMPTY_FORM: FormState = {
   topVip:            false,
   creditLassi:       '0',
   carrouselProduits: 0,
-  days:              null,
-  daysTouched:       false,
+  days:              30,
+  daysTouched:       true,
   note:              '',
 }
 
@@ -68,35 +68,40 @@ function RewardSummary({ form }: { form: FormState }) {
   const credit    = parseInt(form.creditLassi, 10) || 0
   const items: string[] = []
 
-  if (form.badge.trim())           items.push(`Badge : ${form.badge.trim()}`)
-  if (form.certificat)             items.push('Certificat officiel')
-  if (form.prioriteRecherche)      items.push('Priorité dans la recherche')
-  if (form.topVip)                 items.push('Top VIP')
-  if (credit > 0)                  items.push(`${credit.toLocaleString('fr-FR')} F crédit LASSI`)
-  if (form.carrouselProduits > 0)  items.push(`${form.carrouselProduits} produit${form.carrouselProduits > 1 ? 's' : ''} en carrousel`)
+  const nonCreditItems: string[] = []
+  if (form.badge.trim())           nonCreditItems.push(`Badge : ${form.badge.trim()}`)
+  if (form.certificat)             nonCreditItems.push('Certificat officiel')
+  if (form.prioriteRecherche)      nonCreditItems.push('Priorité dans la recherche')
+  if (form.topVip)                 nonCreditItems.push('Top VIP')
+  if (form.carrouselProduits > 0)  nonCreditItems.push(`${form.carrouselProduits} produit${form.carrouselProduits > 1 ? 's' : ''} en carrousel`)
 
-  if (items.length === 0) return null
+  if (nonCreditItems.length === 0 && credit === 0) return null
 
-  const durationLabel = !form.daysTouched
-    ? null
-    : form.days === null
-      ? 'Illimité'
-      : DURATIONS.find(d => d.days === form.days)?.label ?? `${form.days}j`
+  const durationLabel = form.days === null
+    ? 'Illimité'
+    : DURATIONS.find(d => d.days === form.days)?.label ?? `${form.days}j`
 
   return (
     <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 space-y-2">
       <p className="text-xs text-accent font-semibold uppercase tracking-wider">Récapitulatif</p>
       <ul className="space-y-1">
-        {items.map(item => (
+        {nonCreditItems.map(item => (
           <li key={item} className="flex items-center gap-2 text-sm text-white">
             <Check size={12} className="text-accent flex-shrink-0" />
             {item}
           </li>
         ))}
+        {credit > 0 && (
+          <li className="flex items-center gap-2 text-sm text-white">
+            <Check size={12} className="text-accent flex-shrink-0" />
+            {credit.toLocaleString('fr-FR')} F crédit LASSI
+            <span className="text-xs text-muted ml-1">(jusqu'à épuisement)</span>
+          </li>
+        )}
       </ul>
-      {durationLabel && (
+      {nonCreditItems.length > 0 && (
         <p className="text-xs text-muted pt-1 border-t border-accent/10">
-          Durée : <span className="text-white">{durationLabel}</span>
+          Durée des avantages : <span className="text-white">{durationLabel}</span>
         </p>
       )}
     </div>
@@ -182,10 +187,6 @@ export default function RecompensesPage() {
       setError('Choisis un prestataire ou un client.')
       return
     }
-    if (!form.daysTouched) {
-      setError('Sélectionne une durée.')
-      return
-    }
     const credit   = parseInt(form.creditLassi, 10)
     if (!Number.isFinite(credit) || credit < 0) {
       setError('Crédit LASSI invalide.')
@@ -236,7 +237,7 @@ export default function RecompensesPage() {
   const credit   = parseInt(form.creditLassi, 10) || 0
   const hasItems = form.badge.trim() || form.certificat || form.prioriteRecherche
     || form.topVip || credit > 0 || form.carrouselProduits > 0
-  const canSave  = !!form.target && form.daysTouched && !!hasItems
+  const canSave  = !!form.target && !!hasItems
 
   return (
     <div className="p-6 space-y-6">
@@ -537,7 +538,7 @@ export default function RecompensesPage() {
                   </div>
                   {credit > 0 && (
                     <p className="text-xs text-muted mt-1.5 pl-1">
-                      ≈ {credit.toLocaleString('fr-FR')} F ajoutés au portefeuille du prestataire.
+                      ≈ {credit.toLocaleString('fr-FR')} F ajoutés au portefeuille du prestataire — <span className="text-white">permanent, jusqu'à épuisement du crédit.</span>
                     </p>
                   )}
                 </Section>
@@ -602,9 +603,7 @@ export default function RecompensesPage() {
                     </button>
                   ))}
                 </div>
-                {!form.daysTouched && (
-                  <p className="text-xs text-muted mt-1.5 pl-0.5">Sélectionne une durée pour continuer.</p>
-                )}
+                <p className="text-xs text-muted mt-1.5 pl-0.5">Durée par défaut : 1 mois. Ne s'applique pas au crédit LASSI.</p>
               </Section>
 
               {/* 6 — Note interne */}
