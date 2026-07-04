@@ -107,6 +107,14 @@ export async function deleteProduct(productId: string): Promise<void> {
 // ─── Validation panier avant commande ────────────────────────────────────────
 // Retourne les articles devenus indisponibles depuis l'ajout au panier.
 
+export async function getProductRawPricesByIds(ids: string[]): Promise<Record<string, number>> {
+  if (ids.length === 0) return {};
+  const { data } = await supabase.from('products').select('id, price').in('id', ids);
+  const map: Record<string, number> = {};
+  for (const row of (data ?? [])) map[row.id as string] = row.price as number;
+  return map;
+}
+
 export async function validateCartAvailability(
   shopId: string,
   itemIds: string[],

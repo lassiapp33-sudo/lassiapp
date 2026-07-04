@@ -532,7 +532,7 @@ export default function AddProductSheet({
               <View style={{ marginTop: 14 }}>
                 <FieldLabel>Période de la formule</FieldLabel>
                 <View style={styles.periodRow}>
-                  {(Object.entries(FORMULA_PERIOD_LABELS) as [FormulaPeriod, string][]).map(
+                  {(Object.entries(FORMULA_PERIOD_LABELS) as [FormulaPeriod, string | undefined][]).filter(([, label]) => label !== undefined).map(
                     ([key, label]) => {
                       const on = formulaPeriod === key;
                       return (

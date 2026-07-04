@@ -19,7 +19,6 @@ import PlanCard from '../../components/visibility/PlanCard';
 import ProductPicker from '../../components/visibility/ProductPicker';
 import PayFooter from '../../components/visibility/PayFooter';
 import ActiveSubCard, { computeSubCardProps } from '../../components/visibility/ActiveSubCard';
-import StatsGrid from '../../components/visibility/StatsGrid';
 import { colors, fonts, radius } from '../../theme';
 import { IcoChevron } from '../../components/icons';
 import useShopStore from '../../store/shopStore';
@@ -32,13 +31,11 @@ import {
 } from '../../utils/offreQuartierPricing';
 import {
   VisibilityPlan,
-  VisibilityStats,
   ActiveSub,
   PayMethod,
   WaveOrangeMethod,
   getVisibilityPlans,
   getActiveSub,
-  getVisibilityStats,
   createVisibilityPayment,
   createCreditPurchase,
   verifyVisibilityPayment,
@@ -285,9 +282,6 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
     wave: boolean;
     orange_money: boolean;
   } | null>(null);
-  const [stats, setStats] = useState<VisibilityStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(false);
-
   // "Offre du quartier" charge ses forfaits depuis la DB, les deux autres
   // offres utilisent des forfaits fixes (même tarif pour les deux).
   const plansForOffer = offerType === 'quartier' ? plans : BOOST_PLANS;
@@ -335,14 +329,6 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
       if (sub) {
         setActiveSub(sub);
         setView('subscribed');
-        // Charger les stats en arrière-plan sans bloquer l'affichage
-        if (shopId) {
-          setStatsLoading(true);
-          getVisibilityStats(shopId)
-            .then(setStats)
-            .catch(() => {})
-            .finally(() => setStatsLoading(false));
-        }
       }
     } catch {
       // Silencieux : la liste de fallback est dans getVisibilityPlans
@@ -554,9 +540,6 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
             productCount={activeSub.productCount}
             allProducts={activeSub.allProducts}
           />
-
-          <Text style={styles.secLabel}>Ce que ton forfait t'a rapporté</Text>
-          <StatsGrid stats={stats} loading={statsLoading} />
 
           <View style={styles.renewWrap}>
             <RenewCard onPress={() => setView('subscribe')} />

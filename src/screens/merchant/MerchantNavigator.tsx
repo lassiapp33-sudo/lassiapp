@@ -102,8 +102,10 @@ export default function MerchantNavigator({ onLogout }: Props) {
   const [mapFilter, setMapFilter] = useState('all');
   const [mapSearch, setMapSearch] = useState('');
 
-  // Mémorise l'écran d'origine de "Mes terrains" pour le retour
+  // Mémorise l'écran d'origine de "Mes terrains" et "Ma vitrine" pour le retour
   const [terrainsFrom, setTerrainsFrom] = useState<'dashboard' | 'profile'>('dashboard');
+  const [storeFrom,      setStoreFrom]      = useState<'dashboard' | 'profile'>('dashboard');
+  const [visibilityFrom, setVisibilityFrom] = useState<'dashboard' | 'profile'>('dashboard');
   const userId      = useAuthStore(s => s.user?.id ?? null);
   const addNotif    = useNotificationsStore(s => s.addNotif);
   const enqueueCard = useNotifPopupStore(s => s.enqueue);
@@ -421,7 +423,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
   if (screen === 'store')
     return (
       <StoreScreen
-        onBack={() => setScreen('dashboard')}
+        onBack={() => setScreen(storeFrom)}
         onPreview={() => setScreen('preview')}
         onPromos={() => setScreen('promotions')}
         onAbonnes={() => setScreen('fitness_abonnements')}
@@ -430,7 +432,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
   if (screen === 'orders') return <OrdersScreen onBack={() => setScreen('dashboard')} />;
   if (screen === 'messages')
     return <MerchantMessagesScreen onBack={() => setScreen('dashboard')} />;
-  if (screen === 'visibility') return <VisibilityScreen onBack={() => setScreen('dashboard')} />;
+  if (screen === 'visibility') return <VisibilityScreen onBack={() => setScreen(visibilityFrom)} />;
   if (screen === 'offre_quartier')
     return <OffreQuartierScreen onBack={() => setScreen('profile')} />;
   if (screen === 'certificat') return <CertificatScreen onBack={() => setScreen('profile')} />;
@@ -440,14 +442,13 @@ export default function MerchantNavigator({ onLogout }: Props) {
     return (
       <MerchantProfileScreen
         onBack={() => setScreen('dashboard')}
-        onStore={() => setScreen('store')}
+        onStore={() => { setStoreFrom('profile'); setScreen('store'); }}
         onTerrains={() => {
           setTerrainsFrom('profile');
           setScreen('terrains');
         }}
-        onVisibility={() => setScreen('visibility')}
+        onVisibility={() => { setVisibilityFrom('profile'); setScreen('visibility'); }}
         onOffreQuartier={() => setScreen('offre_quartier')}
-        onCertificat={() => setScreen('certificat')}
         onRevenue={() => setScreen('revenue')}
         onPayments={() => setScreen('payments')}
         onMyOrders={() => setScreen('myorders')}
@@ -460,10 +461,10 @@ export default function MerchantNavigator({ onLogout }: Props) {
       <MerchantDashboard
         onNavigate={dest => {
           if (dest === 'debts') setScreen('debts');
-          if (dest === 'store') setScreen('store');
+          if (dest === 'store') { setStoreFrom('dashboard'); setScreen('store'); }
           if (dest === 'orders') setScreen('orders');
           if (dest === 'messages') setScreen('messages');
-          if (dest === 'visibility') setScreen('visibility');
+          if (dest === 'visibility') { setVisibilityFrom('dashboard'); setScreen('visibility'); }
           if (dest === 'profile') setScreen('profile');
           if (dest === 'notifications') setScreen('notifications');
           if (dest === 'assistant') setScreen('assistant');

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo, useState } from 'react';
+import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
 import { calculerPrixClient } from '../../config/payment';
+import { calcPromoClientPrice } from '../../services/promotions';
 import { usePromoItems, PromoItem } from '../../hooks/usePromoItems';
 
 // ─── Constantes de mise en page ───────────────────────────────────────────────
@@ -56,6 +57,9 @@ function PromoCard({
   item: PromoItem;
   onPress?: () => void;
 }) {
+  const prixTotal = calculerPrixClient(item.price);
+  const prixPromo = calcPromoClientPrice(item.price, item.promoInfo);
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       {/* Image / emoji du produit */}
@@ -75,7 +79,14 @@ function PromoCard({
         <Text style={styles.cardItem} numberOfLines={2}>
           {item.name}
         </Text>
-        <Text style={styles.cardPrice}>{formatPrice(calculerPrixClient(item.price))}</Text>
+        {prixPromo !== null ? (
+          <View style={styles.priceRow}>
+            <Text style={styles.cardPriceOld}>{formatPrice(prixTotal)}</Text>
+            <Text style={styles.cardPrice}>{formatPrice(prixPromo)}</Text>
+          </View>
+        ) : (
+          <Text style={styles.cardPrice}>{formatPrice(prixTotal)}</Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -101,41 +112,68 @@ export default function PromoBanner({ onPress }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   const idxRef = useRef(N);
   const jumpRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const resumeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nRef = useRef(N);
   const [page, setPage] = useState(0);
 
-  useEffect(() => {
-    if (N < 2) return;
+  // Garder nRef à jour sans recréer les callbacks
+  useEffect(() => { nRef.current = N; }, [N]);
 
-    idxRef.current = N;
-    setPage(0);
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (resumeRef.current) { clearTimeout(resumeRef.current); resumeRef.current = null; }
+  }, []);
 
-    const init = setTimeout(() => {
-      scrollRef.current?.scrollTo({ x: N * ITEM_STRIDE, animated: false });
-    }, 100);
-
-    const timer = setInterval(() => {
+  const startTimer = useCallback(() => {
+    stopTimer();
+    timerRef.current = setInterval(() => {
+      const n = nRef.current;
       idxRef.current += 1;
       const idx = idxRef.current;
-
       scrollRef.current?.scrollTo({ x: idx * ITEM_STRIDE, animated: true });
-      setPage(Math.floor(((idx - N) % N) / 2));
-
-      // Arrivé sur copy3[0] (= copy2[0] visuellement) → retour silencieux
-      if (idx === N * 2) {
+      setPage(Math.floor(((idx - n) % n) / 2));
+      if (idx === n * 2) {
         jumpRef.current = setTimeout(() => {
-          idxRef.current = N;
+          idxRef.current = n;
           setPage(0);
-          scrollRef.current?.scrollTo({ x: N * ITEM_STRIDE, animated: false });
+          scrollRef.current?.scrollTo({ x: n * ITEM_STRIDE, animated: false });
         }, 400);
       }
     }, INTERVAL_MS);
+  }, [stopTimer]);
 
+  // Appelé quand le scroll manuel s'arrête : normalise la position et relance le timer
+  const handleScrollEnd = useCallback((rawIdx: number) => {
+    const n = nRef.current;
+    let idx = rawIdx;
+    if (rawIdx < n) {
+      idx = n + ((rawIdx % n) + n) % n;
+      scrollRef.current?.scrollTo({ x: idx * ITEM_STRIDE, animated: false });
+    } else if (rawIdx >= n * 2) {
+      idx = n + ((rawIdx - n) % n);
+      scrollRef.current?.scrollTo({ x: idx * ITEM_STRIDE, animated: false });
+    }
+    idxRef.current = idx;
+    setPage(Math.floor(((idx - n) % n) / 2));
+    if (resumeRef.current) clearTimeout(resumeRef.current);
+    resumeRef.current = setTimeout(startTimer, 800);
+  }, [startTimer]);
+
+  useEffect(() => {
+    if (N < 2) return;
+    idxRef.current = N;
+    setPage(0);
+    const init = setTimeout(() => {
+      scrollRef.current?.scrollTo({ x: N * ITEM_STRIDE, animated: false });
+      startTimer();
+    }, 100);
     return () => {
       clearTimeout(init);
-      clearInterval(timer);
+      stopTimer();
       if (jumpRef.current) clearTimeout(jumpRef.current);
     };
-  }, [N]);
+  }, [N, startTimer, stopTimer]);
 
   if (N === 0) return null;
 
@@ -157,12 +195,23 @@ export default function PromoBanner({ onPress }: Props) {
         </View>
       ) : (
         <>
-          {/* Carrousel */}
+          {/* Carrousel — scroll manuel activé, auto-défilement reprend après 2,5 s */}
           <ScrollView
             ref={scrollRef}
             horizontal
-            scrollEnabled={false}
+            scrollEnabled
+            snapToInterval={ITEM_STRIDE}
+            decelerationRate="fast"
             showsHorizontalScrollIndicator={false}
+            onScrollBeginDrag={stopTimer}
+            onMomentumScrollEnd={e => {
+              const idx = Math.round(e.nativeEvent.contentOffset.x / ITEM_STRIDE);
+              handleScrollEnd(idx);
+            }}
+            onScrollEndDrag={() => {
+              // Fallback si pas de momentum (simple effleurement)
+              handleScrollEnd(idxRef.current);
+            }}
           >
             {looped.map((item, i) => (
               <PromoCard
@@ -248,6 +297,19 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 15,
   },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    marginTop: 2,
+  },
+  cardPriceOld: {
+    color: '#8892b0',
+    fontSize: 9,
+    fontWeight: '600',
+    textDecorationLine: 'line-through',
+  },
   cardPrice: {
     backgroundColor: '#FBBF24',
     color: '#12193a',
@@ -258,6 +320,5 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     alignSelf: 'flex-start',
     overflow: 'hidden',
-    marginTop: 2,
   },
 });

@@ -332,7 +332,12 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
 
   // ── Catalogue ─────────────────────────────────────────────────────────────
   const catIds = [...new Set(realProducts.map(p => p.category))];
-  const tabs = [{ id: 'all', label: 'Tout' }, ...catIds.map(id => ({ id, label: capitalize(id) }))];
+  const hasAvisTab = !isSlotShop && !isTerrainShop && catIds.length > 0;
+  const tabs = [
+    { id: 'all', label: 'Tout' },
+    ...catIds.map(id => ({ id, label: capitalize(id) })),
+    ...(hasAvisTab ? [{ id: 'avis', label: 'Avis' }] : []),
+  ];
   const sections = catIds.map(id => ({ id, label: capitalize(id) }));
 
   const visibleSections = activeTab === 'all' ? sections : sections.filter(s => s.id === activeTab);
@@ -737,7 +742,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
           )}
 
           {/* 10 — Avis clients */}
-          {stableId && (
+          {stableId && (!hasAvisTab || activeTab === 'avis') && (
             <AvisSection
               shopId={stableId}
               shopName={displayName}

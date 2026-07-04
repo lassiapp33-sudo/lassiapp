@@ -27,7 +27,9 @@ import useLanguageStore from '../../store/languageStore';
 import { IcoBack } from '../../components/icons';
 import { ProfileOptionRow, profileRowStyles } from '../../components/common/ProfileOptionRow';
 import { ProfileIdCard } from '../../components/common/ProfileIdCard';
-import { getMonCarrouselQuota, getCertificatActif } from '../../services/classementService';
+import { getMonCarrouselQuota } from '../../services/classementService';
+import StatsGrid from '../../components/visibility/StatsGrid';
+import { VisibilityStats, getVisibilityStats, getActiveSub } from '../../services/visibilityPayment';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -284,7 +286,6 @@ interface Props {
   onTerrains?: () => void;
   onVisibility?: () => void;
   onOffreQuartier?: () => void;
-  onCertificat?: () => void;
   onRevenue?: () => void;
   onPayments?: () => void;
   onMyOrders?: () => void;
@@ -299,7 +300,6 @@ export default function MerchantProfileScreen({
   onTerrains,
   onVisibility,
   onOffreQuartier,
-  onCertificat,
   onRevenue,
   onPayments,
   onMyOrders,
@@ -316,7 +316,9 @@ export default function MerchantProfileScreen({
   const [showAPropos, setShowAPropos] = useState(false);
   const [showSignaler, setShowSignaler] = useState(false);
   const [carrouselEligible, setCarrouselEligible] = useState(false);
-  const [certificatEligible, setCertificatEligible] = useState(false);
+  const [hasActiveSub, setHasActiveSub] = useState(false);
+  const [stats, setStats] = useState<VisibilityStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   const user = useAuthStore(s => s.user);
   const updateProfile = useAuthStore(s => s.updateProfile);
@@ -338,13 +340,21 @@ export default function MerchantProfileScreen({
       .catch(() => setCarrouselEligible(false));
   }, [user?.id]);
 
-  // "Mon Certificat" — visible seulement si une récompense certificat=true est active
+  // Stats du forfait de visibilité — s'affiche seulement si un forfait est actif
   useEffect(() => {
-    if (!user?.id) return;
-    getCertificatActif(user.id)
-      .then(cert => setCertificatEligible(cert !== null))
-      .catch(() => setCertificatEligible(false));
-  }, [user?.id]);
+    if (!shopId) return;
+    getActiveSub(shopId)
+      .then(sub => {
+        if (!sub) return;
+        setHasActiveSub(true);
+        setStatsLoading(true);
+        getVisibilityStats(shopId)
+          .then(setStats)
+          .catch(() => {})
+          .finally(() => setStatsLoading(false));
+      })
+      .catch(() => {});
+  }, [shopId]);
 
   const displayName = user?.name ?? 'Commerçant';
   const displayPhone = user?.phone ? formatPhoneSenegal(user.phone) : '';
@@ -458,7 +468,7 @@ export default function MerchantProfileScreen({
             title="Mes achats"
             subtitle="Commandes passées chez d'autres"
             onPress={onMyOrders}
-            last={!carrouselEligible && !certificatEligible}
+            last={!carrouselEligible}
           />
           {carrouselEligible && (
             <ProfileOptionRow
@@ -466,19 +476,17 @@ export default function MerchantProfileScreen({
               title="Offre du Quartier"
               subtitle="Tes produits mis en avant sur l'accueil"
               onPress={onOffreQuartier}
-              last={!certificatEligible}
-            />
-          )}
-          {certificatEligible && (
-            <ProfileOptionRow
-              icon={<IcoAward />}
-              title="Mon Certificat"
-              subtitle="Ton certificat officiel à partager"
-              onPress={onCertificat}
               last
             />
           )}
         </View>
+
+        {hasActiveSub && (
+          <>
+            <Text style={profileRowStyles.secLbl}>Résultat forfait</Text>
+            <StatsGrid stats={stats} loading={statsLoading} />
+          </>
+        )}
 
         <Text style={profileRowStyles.secLbl}>{t.profile.preferences}</Text>
         <View style={profileRowStyles.grp}>

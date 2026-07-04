@@ -4,6 +4,14 @@ import { Image } from 'expo-image';
 import { colors, fonts, radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
 import { getCarrouselOffreQuartier, CarrouselItem } from '../../services/classementService';
+import { getPromosByProductIds, buildProductPromoMap, calcPromoClientPrice } from '../../services/promotions';
+import { getProductRawPricesByIds } from '../../services/products';
+import { ProductPromoInfo } from '../../types/promotions';
+
+interface EnrichedCarrouselItem extends CarrouselItem {
+  prixPromo?: number;
+  promoBadge?: string;
+}
 
 const { width } = Dimensions.get('window');
 const CARD_W = width * 0.7;
@@ -16,14 +24,42 @@ interface Props {
 }
 
 export default function OffreDuQuartier({ onPress }: Props) {
-  const [produits, setProduits] = useState<CarrouselItem[]>([]);
-  const listRef = useRef<FlatList<CarrouselItem>>(null);
+  const [produits, setProduits] = useState<EnrichedCarrouselItem[]>([]);
+  const listRef = useRef<FlatList<EnrichedCarrouselItem>>(null);
   const indexRef = useRef(0);
 
   useEffect(() => {
-    getCarrouselOffreQuartier()
-      .then(setProduits)
-      .catch(() => setProduits([]));
+    let cancelled = false;
+    (async () => {
+      try {
+        const items = await getCarrouselOffreQuartier();
+        if (cancelled) return;
+
+        const productIds = items.map(p => p.product_id).filter((id): id is string => !!id);
+        if (productIds.length === 0) { setProduits(items); return; }
+
+        const [rawPrices, promos] = await Promise.all([
+          getProductRawPricesByIds(productIds),
+          getPromosByProductIds(productIds),
+        ]);
+        if (cancelled) return;
+
+        const promoMap = buildProductPromoMap(promos);
+        const enriched: EnrichedCarrouselItem[] = items.map(item => {
+          if (!item.product_id) return item;
+          const rawPrice = rawPrices[item.product_id];
+          const promoInfo: ProductPromoInfo | undefined = rawPrice != null ? promoMap[item.product_id] : undefined;
+          const prixPromo = promoInfo != null && rawPrice != null
+            ? calcPromoClientPrice(rawPrice, promoInfo) ?? undefined
+            : undefined;
+          return { ...item, prixPromo, promoBadge: promoInfo?.badge };
+        });
+        setProduits(enriched);
+      } catch {
+        if (!cancelled) setProduits([]);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Défilement automatique
@@ -73,7 +109,21 @@ export default function OffreDuQuartier({ onPress }: Props) {
               <Text style={styles.nom} numberOfLines={1}>
                 {item.nom}
               </Text>
-              <Text style={styles.prix}>{formatPrice(item.prix)}</Text>
+              <View style={styles.priceRow}>
+                {item.prixPromo != null ? (
+                  <>
+                    <Text style={styles.prixOld}>{formatPrice(item.prix)}</Text>
+                    <Text style={styles.prix}>{formatPrice(item.prixPromo)}</Text>
+                  </>
+                ) : (
+                  <Text style={styles.prix}>{formatPrice(item.prix)}</Text>
+                )}
+                {item.promoBadge != null && (
+                  <View style={styles.promoBadge}>
+                    <Text style={styles.promoBadgeTxt}>{item.promoBadge}</Text>
+                  </View>
+                )}
+              </View>
             </View>
             {!!item.rang_prestataire && (
               <View style={styles.badge}>
@@ -117,7 +167,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(20,21,42,0.85)',
   },
   nom: { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
-  prix: { color: colors.accent, fontFamily: fonts.title, fontSize: 14, marginTop: 2 },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' },
+  prix: { color: colors.accent, fontFamily: fonts.title, fontSize: 14 },
+  prixOld: { color: 'rgba(255,255,255,0.5)', fontFamily: fonts.body, fontSize: 11, textDecorationLine: 'line-through' },
+  promoBadge: {
+    backgroundColor: 'rgba(253,207,52,.25)',
+    borderRadius: 5,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  promoBadgeTxt: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 9 },
   badge: {
     position: 'absolute',
     top: 10,

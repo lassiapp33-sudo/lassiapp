@@ -28,6 +28,8 @@ import {
 } from '../../services/classementService';
 import { getActiveSub, updateSubProducts, ActiveSub } from '../../services/visibilityPayment';
 import { getErrorMessage, notifyError } from '../../utils/errorUtils';
+import { getActivePromos, buildProductPromoMap, calcPromoClientPrice } from '../../services/promotions';
+import { Promotion, ProductPromoInfo } from '../../types/promotions';
 
 const TERRAIN_SPORTS_ELIGIBLES = ['football', 'basketball'] as const;
 
@@ -37,6 +39,8 @@ interface EligibleItem {
   nom: string;
   prix: number;
   image: string;
+  prixPromo?: number;
+  promoBadge?: string;
 }
 
 const IcoCheck = () => (
@@ -95,7 +99,21 @@ function ProductList({ items, selectedIds, onToggle, quotaN }: ProductListProps)
             )}
             <View style={styles.info}>
               <Text style={styles.name} numberOfLines={1}>{item.nom}</Text>
-              <Text style={styles.price}>{formatPrice(item.prix)}</Text>
+              <View style={styles.priceRow}>
+                {item.prixPromo != null ? (
+                  <>
+                    <Text style={styles.priceOld}>{formatPrice(item.prix)}</Text>
+                    <Text style={styles.price}>{formatPrice(item.prixPromo)}</Text>
+                  </>
+                ) : (
+                  <Text style={styles.price}>{formatPrice(item.prix)}</Text>
+                )}
+                {item.promoBadge != null && (
+                  <View style={styles.promoBadge}>
+                    <Text style={styles.promoBadgeTxt}>{item.promoBadge}</Text>
+                  </View>
+                )}
+              </View>
             </View>
           </TouchableOpacity>
         );
@@ -121,21 +139,24 @@ export default function OffreQuartierScreen({ onBack }: Props) {
   const [terrains, setTerrains] = useState<Terrain[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [paidSelectedIds, setPaidSelectedIds] = useState<string[]>([]);
+  const [promoMap, setPromoMap] = useState<Record<string, ProductPromoInfo>>({});
 
   const load = useCallback(async () => {
     if (!userId || !shopId) { setLoading(false); return; }
     setLoading(true);
     try {
-      const [reward, mine, allProducts, myTerrains, sub] = await Promise.all([
+      const [reward, mine, allProducts, myTerrains, sub, activePromos] = await Promise.all([
         getMonCarrouselQuota(userId),
         getMesProduitsCarrousel(userId),
         getProducts(shopId),
         getTerrainsByMerchant(userId),
         getActiveSub(shopId, 'quartier'),
+        getActivePromos(shopId),
       ]);
       setQuota(reward);
       setActiveSub(sub);
       setProducts(allProducts);
+      setPromoMap(buildProductPromoMap(activePromos));
       setTerrains(
         myTerrains.filter(
           t => t.actif && (TERRAIN_SPORTS_ELIGIBLES as readonly string[]).includes(t.sport_type),
@@ -163,13 +184,19 @@ export default function OffreQuartierScreen({ onBack }: Props) {
   const eligibleItems: EligibleItem[] = [
     ...products
       .filter(p => (p.photoUrl || p.emoji) && p.stock === 'in')
-      .map(p => ({
-        kind: 'product' as const,
-        id: p.id,
-        nom: p.name,
-        prix: calculerPrixClient(p.price),
-        image: p.photoUrl || p.emoji,
-      })),
+      .map(p => {
+        const promoInfo = promoMap[p.id];
+        const prixPromo = promoInfo ? (calcPromoClientPrice(p.price, promoInfo) ?? undefined) : undefined;
+        return {
+          kind: 'product' as const,
+          id: p.id,
+          nom: p.name,
+          prix: calculerPrixClient(p.price),
+          image: p.photoUrl || p.emoji,
+          prixPromo,
+          promoBadge: promoInfo?.badge,
+        };
+      }),
     ...terrains.map(t => ({
       kind: 'terrain' as const,
       id: t.id,
@@ -182,13 +209,19 @@ export default function OffreQuartierScreen({ onBack }: Props) {
   // Produits uniquement (section payante — le pack ne gère pas les terrains)
   const paidEligibleItems: EligibleItem[] = products
     .filter(p => (p.photoUrl || p.emoji) && p.stock === 'in')
-    .map(p => ({
-      kind: 'product' as const,
-      id: p.id,
-      nom: p.name,
-      prix: calculerPrixClient(p.price),
-      image: p.photoUrl || p.emoji,
-    }));
+    .map(p => {
+      const promoInfo = promoMap[p.id];
+      const prixPromo = promoInfo ? (calcPromoClientPrice(p.price, promoInfo) ?? undefined) : undefined;
+      return {
+        kind: 'product' as const,
+        id: p.id,
+        nom: p.name,
+        prix: calculerPrixClient(p.price),
+        image: p.photoUrl || p.emoji,
+        prixPromo,
+        promoBadge: promoInfo?.badge,
+      };
+    });
 
   const toggleAdmin = (id: string) => {
     setSelectedIds(prev => {
@@ -537,7 +570,18 @@ const styles = StyleSheet.create({
 
   info: { flex: 1 },
   name: { color: colors.white, fontFamily: fonts.title, fontSize: 13.5 },
-  price: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 13, marginTop: 2 },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  price: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 13 },
+  priceOld: { color: colors.muted, fontFamily: fonts.body, fontSize: 11, textDecorationLine: 'line-through' },
+  promoBadge: {
+    backgroundColor: 'rgba(253,207,52,.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(253,207,52,.4)',
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  promoBadgeTxt: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 9 },
 
   // ── Save buttons ────────────────────────────────────────────────────────────
   saveBtn: {

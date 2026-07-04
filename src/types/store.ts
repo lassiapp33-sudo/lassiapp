@@ -8,13 +8,11 @@ export type StockStatus = 'in' | 'out';
 /** Période d'une formule d'abonnement (salles de sport). */
 export type FormulaPeriod = 'seance' | 'jour' | 'semaine' | 'mois' | 'trimestre' | 'annee';
 
-export const FORMULA_PERIOD_LABELS: Record<FormulaPeriod, string> = {
+export const FORMULA_PERIOD_LABELS: Partial<Record<FormulaPeriod, string>> = {
   seance: 'Séance',
   jour: 'Par jour',
   semaine: 'Par semaine',
   mois: 'Par mois',
-  trimestre: 'Trimestre',
-  annee: 'Par an',
 };
 
 export interface StoreCategory {

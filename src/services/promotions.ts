@@ -50,6 +50,21 @@ export async function getActivePromos(shopId: string): Promise<Promotion[]> {
   return (data ?? []).map(rowToPromo);
 }
 
+/** Promos actives pour une liste de product IDs (affichage carrousel). */
+export async function getPromosByProductIds(productIds: string[]): Promise<Promotion[]> {
+  if (productIds.length === 0) return [];
+  const now = new Date().toISOString();
+  const { data } = await supabase
+    .from('promotions')
+    .select('*')
+    .in('cible_id', productIds)
+    .eq('cible_type', 'produit')
+    .eq('actif', true)
+    .or(`date_debut.is.null,date_debut.lte.${now}`)
+    .or(`date_fin.is.null,date_fin.gte.${now}`);
+  return (data ?? []).map(rowToPromo);
+}
+
 /** Crée une promo. */
 export async function createPromo(
   shopId: string,
