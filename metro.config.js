@@ -12,9 +12,18 @@ config.serializer.polyfillModuleNames = [
 // ── Forcer Zustand vers CJS sur web (évite import.meta dans les ESM) ──────────
 // Zustand exporte ./esm/*.mjs (avec import.meta) quand Metro résout avec la
 // condition "import". Les fichiers CJS (.js) n'ont pas ce problème.
+// Supabase >= 2.100 inclut un import(variable) OTEL dans index.mjs incompatible avec Hermes.
+// On force le CJS (index.cjs) qui utilise require() à la place.
+const supabaseCjsPackages = new Set(['@supabase/supabase-js']);
+
 const zustandDir = path.resolve(__dirname, 'node_modules/zustand');
 const originalResolver = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (supabaseCjsPackages.has(moduleName)) {
+    const pkgDir = path.dirname(require.resolve(`${moduleName}/package.json`));
+    const cjsPath = path.join(pkgDir, 'dist', 'index.cjs');
+    return { filePath: cjsPath, type: 'sourceFile' };
+  }
   if (platform === 'web') {
     // Redirect zustand/* imports to their CJS equivalents
     if (moduleName === 'zustand' || moduleName === 'zustand/') {
