@@ -37,7 +37,7 @@ module.exports = {
       predictiveBackGestureEnabled: false,
       package: "com.lassiapp.lassiapp",
       googleServicesFile:
-        process.env.GOOGLE_SERVICES_JSON ?? "./android/app/google-services.json",
+        process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
       permissions: [
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_FINE_LOCATION",
