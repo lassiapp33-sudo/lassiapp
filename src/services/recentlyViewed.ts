@@ -113,6 +113,50 @@ export async function recordView(shopId: string): Promise<void> {
   if (error) await enqueue(user.id, shopId); // réseau absent → file locale
 }
 
+/** Enregistre un clic sur un produit du carrousel (sans contrainte d'unicité). */
+export async function recordCarouselClick(shopId: string, productId: string): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from('carrousel_clics').insert({
+    client_id: user.id,
+    shop_id: shopId,
+    product_id: productId,
+  });
+}
+
+/** Enregistre un passage d'un produit devant le client dans le carrousel (impression). */
+export async function recordCarouselVue(shopId: string, productId: string): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from('carrousel_vues').insert({
+    client_id: user.id,
+    shop_id: shopId,
+    product_id: productId,
+  });
+}
+
+/** Enregistre un clic depuis la recherche sur une boutique boostée. */
+export async function recordRechercheClick(shopId: string): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from('recherche_clics').insert({ client_id: user.id, shop_id: shopId });
+}
+
+/** Enregistre un clic depuis la carte sur une boutique épinglée. */
+export async function recordCarteClick(shopId: string): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from('carte_clics').insert({ client_id: user.id, shop_id: shopId });
+}
+
 /** Retourne les commerces vus récemment depuis Supabase (données en direct). */
 export async function getRecentlyViewed(limit = 20): Promise<RecentShop[]> {
   const {

@@ -184,6 +184,7 @@ interface Props {
   visible: boolean;
   product: StoreProduct | null; // null = nouveau produit
   categories: StoreCategory[];
+  defaultCatId?: string;
   onSave: (p: StoreProduct) => Promise<void>;
   onDelete?: () => void;
   onClose: () => void;
@@ -193,6 +194,7 @@ export default function AddProductSheet({
   visible,
   product,
   categories,
+  defaultCatId,
   onSave,
   onDelete,
   onClose,
@@ -250,13 +252,13 @@ export default function AddProductSheet({
       setName('');
       setDesc('');
       setPrice('');
-      setCatId(categories[0]?.id ?? '');
+      setCatId(defaultCatId ?? categories[0]?.id ?? '');
       setDuration('');
-      setFormulaPeriod('mois');
+      setFormulaPeriod('seance');
     }
     setShowEmojiPicker(false);
     setUploading(false);
-  }, [visible, product]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visible, product, defaultCatId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sélection et upload de photo ────────────────────────────────────────────
   const handlePickPhoto = async (source: 'gallery' | 'camera') => {
@@ -315,6 +317,8 @@ export default function AddProductSheet({
 
   // Catégorie actuelle
   const currentCat = categories.find(c => c.id === catId) ?? categories[0];
+  // Pour les boutiques fitness, Formules et Produits ont des comportements différents
+  const isFormuleMode = itemType !== 'membership' || catId === 'formules';
 
   // Cycle vers la catégorie suivante (picker simple)
   const cycleCat = () => {
@@ -345,7 +349,7 @@ export default function AddProductSheet({
       stock: product?.stock ?? 'in',
       itemType,
       duration: itemType === 'service' && duration ? parseInt(duration, 10) : undefined,
-      formulaPeriod: itemType === 'membership' ? formulaPeriod : undefined,
+      formulaPeriod: isFormuleMode && itemType === 'membership' ? formulaPeriod : undefined,
     };
     setSaving(true);
     try {
@@ -384,12 +388,12 @@ export default function AddProductSheet({
               {product
                 ? itemType === 'service'
                   ? 'Modifier la prestation'
-                  : itemType === 'membership'
+                  : isFormuleMode
                     ? 'Modifier la formule'
                     : 'Modifier le produit'
                 : itemType === 'service'
                   ? 'Nouvelle prestation'
-                  : itemType === 'membership'
+                  : isFormuleMode
                     ? 'Nouvelle formule'
                     : 'Nouveau produit'}
             </Text>
@@ -527,8 +531,8 @@ export default function AddProductSheet({
               </View>
             )}
 
-            {/* Période — uniquement pour les formules d'abonnement */}
-            {itemType === 'membership' && (
+            {/* Période — uniquement pour les formules (pas les produits) */}
+            {isFormuleMode && itemType === 'membership' && (
               <View style={{ marginTop: 14 }}>
                 <FieldLabel>Période de la formule</FieldLabel>
                 <View style={styles.periodRow}>

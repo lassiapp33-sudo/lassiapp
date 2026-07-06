@@ -25,37 +25,59 @@ interface Props {
   onClose: () => void;
 }
 
-export default function AddAbonnementOffreSheet({ visible, offre, onSave, onDelete, onClose }: Props) {
-  const [nom,         setNom]         = useState('');
-  const [description, setDescription] = useState('');
-  const [prixStr,     setPrixStr]     = useState('');
-  const [saving,      setSaving]      = useState(false);
+const PRESETS = [7, 15, 30, 60, 90];
 
-  // Durée fixée à 30 jours en V1 (mensuel)
-  const DUREE_JOURS = 30;
+function labelDuree(j: number): string {
+  if (j === 7)  return 'hebdomadaire';
+  if (j === 15) return 'bi-mensuel';
+  if (j === 30) return 'mensuel';
+  if (j === 60) return 'bimestriel';
+  if (j === 90) return 'trimestriel';
+  if (j === 365) return 'annuel';
+  return `${j} jours`;
+}
+
+export default function AddAbonnementOffreSheet({ visible, offre, onSave, onDelete, onClose }: Props) {
+  const [nom,           setNom]           = useState('');
+  const [description,   setDescription]   = useState('');
+  const [prixStr,       setPrixStr]       = useState('');
+  const [dureeJours,    setDureeJours]    = useState(30);
+  const [dureeCustom,   setDureeCustom]   = useState('');
+  const [customMode,    setCustomMode]    = useState(false);
+  const [saving,        setSaving]        = useState(false);
 
   useEffect(() => {
     if (visible && offre) {
       setNom(offre.nom);
       setDescription(offre.description ?? '');
       setPrixStr(String(offre.prix));
+      const preset = PRESETS.includes(offre.dureeJours);
+      setDureeJours(offre.dureeJours);
+      setCustomMode(!preset);
+      setDureeCustom(preset ? '' : String(offre.dureeJours));
     } else if (visible) {
       setNom('');
       setDescription('');
       setPrixStr('');
+      setDureeJours(30);
+      setDureeCustom('');
+      setCustomMode(false);
     }
   }, [visible, offre]);
 
   const prix = parseInt(prixStr, 10) || 0;
   const prixClient = prix > 0 ? calculerPrixClient(prix) : 0;
 
+  const dureeFinale = customMode ? (parseInt(dureeCustom, 10) || 0) : dureeJours;
+
   const handleSave = async () => {
-    if (!nom.trim())  return Alert.alert('Champ manquant', 'Le nom est obligatoire.');
-    if (prix <= 0)    return Alert.alert('Prix invalide', 'Le prix doit être supérieur à 0.');
+    if (!nom.trim())       return Alert.alert('Champ manquant', 'Le nom est obligatoire.');
+    if (prix <= 0)         return Alert.alert('Prix invalide', 'Le prix doit être supérieur à 0.');
+    if (dureeFinale <= 0)  return Alert.alert('Durée invalide', 'La durée doit être supérieure à 0.');
 
     setSaving(true);
     try {
-      await onSave({ nom: nom.trim(), description: description.trim(), prix, dureeJours: DUREE_JOURS });
+      await onSave({ nom: nom.trim(), description: description.trim(), prix, dureeJours: dureeFinale });
       onClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -134,14 +156,45 @@ export default function AddAbonnementOffreSheet({ visible, offre, onSave, onDele
                 </Text>
               )}
 
-              {/* Durée (V1 = mensuel fixe) */}
-              <View style={styles.dureeBadge}>
-                <Text style={styles.dureeIcon}>📅</Text>
-                <View>
-                  <Text style={styles.dureeLabel}>Durée : 30 jours (mensuel)</Text>
-                  <Text style={styles.dureeHint}>Durée personnalisable dans une future version</Text>
-                </View>
+              {/* Durée — sélecteur */}
+              <Text style={[styles.label, { marginTop: 18 }]}>Durée de l'abonnement *</Text>
+              <View style={styles.dureeChips}>
+                {PRESETS.map(j => (
+                  <TouchableOpacity
+                    key={j}
+                    style={[styles.chip, !customMode && dureeJours === j && styles.chipActive]}
+                    onPress={() => { setDureeJours(j); setCustomMode(false); }}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.chipTxt, !customMode && dureeJours === j && styles.chipTxtActive]}>
+                      {j}j
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity
+                  style={[styles.chip, customMode && styles.chipActive]}
+                  onPress={() => setCustomMode(true)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.chipTxt, customMode && styles.chipTxtActive]}>Autre</Text>
+                </TouchableOpacity>
               </View>
+              {customMode && (
+                <TextInput
+                  style={[styles.input, { marginTop: 8 }]}
+                  value={dureeCustom}
+                  onChangeText={t => setDureeCustom(t.replace(/[^0-9]/g, ''))}
+                  placeholder="Nombre de jours (ex : 45)"
+                  placeholderTextColor={colors.muted}
+                  keyboardType="number-pad"
+                  returnKeyType="done"
+                />
+              )}
+              {dureeFinale > 0 && (
+                <Text style={styles.hint}>
+                  Durée : {dureeFinale} jours ({labelDuree(dureeFinale)})
+                </Text>
+              )}
 
               {/* Bouton sauvegarder */}
               <TouchableOpacity
@@ -233,28 +286,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 5,
   },
-  dureeBadge: {
+  dureeChips: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 18,
-    backgroundColor: colors.bg,
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 2,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.sm,
-    padding: 12,
+    backgroundColor: colors.bg,
   },
-  dureeIcon: { fontSize: 24 },
-  dureeLabel: {
-    color: colors.white,
+  chipActive: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accent,
+  },
+  chipTxt: {
+    color: colors.muted,
     fontFamily: fonts.title,
     fontSize: 13,
   },
-  dureeHint: {
-    color: colors.muted,
-    fontFamily: fonts.body,
-    fontSize: 10.5,
-    marginTop: 2,
+  chipTxtActive: {
+    color: colors.bg,
   },
   saveBtn: {
     marginTop: 22,

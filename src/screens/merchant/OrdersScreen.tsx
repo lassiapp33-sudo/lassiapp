@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import OrderCard from '../../components/orders/OrderCard';
 import PrepTimeSheet from '../../components/orders/PrepTimeSheet';
 import RefuseSheet from '../../components/orders/RefuseSheet';
 import VerifyReceiptSheet from './VerifyReceiptSheet';
+import RatingPromptModal from '../../components/avis/RatingPromptModal';
 import { colors, fonts } from '../../theme';
 import { IncomingOrder, MerchantTab, OrderStatus } from '../../types/orders';
 import useOrdersStore from '../../store/ordersStore';
@@ -105,10 +106,18 @@ export default function OrdersScreen({ onBack }: Props) {
   const [showVerify, setShowVerify] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [ratingTarget, setRatingTarget] = useState<IncomingOrder | null>(null);
+  const ratingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (shopId) loadOrders(shopId);
   }, [shopId, loadOrders]);
+
+  useEffect(() => {
+    return () => {
+      if (ratingTimerRef.current) clearTimeout(ratingTimerRef.current);
+    };
+  }, []);
 
   const handleRefresh = useCallback(async () => {
     if (!shopId) return;
@@ -123,6 +132,9 @@ export default function OrdersScreen({ onBack }: Props) {
       addOrder(order);
       Vibration.vibrate(400);
       setActiveTab('new');
+      // Proposer de noter le client 2 s après (laisser l'écran se stabiliser)
+      if (ratingTimerRef.current) clearTimeout(ratingTimerRef.current);
+      ratingTimerRef.current = setTimeout(() => setRatingTarget(order), 2000);
     },
     [addOrder],
   );
@@ -276,6 +288,14 @@ export default function OrdersScreen({ onBack }: Props) {
           // Recharge les commandes pour refléter le statut 'done'
           if (shopId) loadOrders(shopId).catch(() => {});
         }}
+      />
+
+      <RatingPromptModal
+        visible={ratingTarget !== null}
+        orderId={ratingTarget?.id ?? ''}
+        direction="merchant_to_client"
+        targetName={ratingTarget?.clientName ?? ''}
+        onDismiss={() => setRatingTarget(null)}
       />
     </View>
   );

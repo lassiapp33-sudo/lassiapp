@@ -115,6 +115,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
   const [activeCat, setActiveCat] = useState('petitdej');
   const [editTarget, setEditTarget] = useState<StoreProduct | null>(null);
   const [showSheet, setShowSheet] = useState(false);
+  const [sheetDefaultCat, setSheetDefaultCat] = useState<string | undefined>(undefined);
 
   // ── Promos actives (pour badges sur les produits) ─────────────────────────
   const [promoMap, setPromoMap] = useState<Record<string, ProductPromoInfo>>({});
@@ -193,11 +194,13 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
   const activeCatData = categories.find(c => c.id === activeCat);
   const filtered = products.filter(p => p.category === activeCat);
   const openEdit = (p: StoreProduct) => {
+    setSheetDefaultCat(undefined);
     setEditTarget(p);
     setShowSheet(true);
   };
-  const openAdd = () => {
+  const openAdd = (defaultCat?: string) => {
     setEditTarget(null);
+    setSheetDefaultCat(defaultCat);
     setShowSheet(true);
   };
 
@@ -601,7 +604,11 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
                     }}
                   />
                 ))}
-                <TouchableOpacity style={styles.addProd} onPress={openAdd} activeOpacity={0.8}>
+                <TouchableOpacity
+                  style={styles.addProd}
+                  onPress={() => openAdd(context.shopType === 'memberships' ? 'formules' : undefined)}
+                  activeOpacity={0.8}
+                >
                   <IcoPlus />
                   <Text style={styles.addProdTxt}>{addItemLabel}</Text>
                 </TouchableOpacity>
@@ -651,27 +658,34 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
             {/* ── Onglet Produits (fitness uniquement) — réutilise le catalogue ─ */}
             {context.shopType === 'memberships' && fitnessTab === 'produits' && (
               <>
-                <SectionHead
-                  title="Produits"
-                  count={products.length}
-                  itemLabel="produit"
-                />
-                {products.map(product => (
-                  <ProductRow
-                    key={product.id}
-                    product={product}
-                    promoInfo={promoMap[product.id]}
-                    onEdit={() => openEdit(product)}
-                    onToggleStock={async () => {
-                      try {
-                        await toggleStock(product.id);
-                      } catch {
-                        Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
-                      }
-                    }}
-                  />
-                ))}
-                <TouchableOpacity style={styles.addProd} onPress={openAdd} activeOpacity={0.8}>
+                {(() => {
+                  const produitsFiltered = products.filter(p => p.category === 'produits');
+                  return (
+                    <>
+                      <SectionHead
+                        title="Produits"
+                        count={produitsFiltered.length}
+                        itemLabel="produit"
+                      />
+                      {produitsFiltered.map(product => (
+                        <ProductRow
+                          key={product.id}
+                          product={product}
+                          promoInfo={promoMap[product.id]}
+                          onEdit={() => openEdit(product)}
+                          onToggleStock={async () => {
+                            try {
+                              await toggleStock(product.id);
+                            } catch {
+                              Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
+                            }
+                          }}
+                        />
+                      ))}
+                    </>
+                  );
+                })()}
+                <TouchableOpacity style={styles.addProd} onPress={() => openAdd('produits')} activeOpacity={0.8}>
                   <IcoPlus />
                   <Text style={styles.addProdTxt}>Ajouter un produit</Text>
                 </TouchableOpacity>
@@ -703,6 +717,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
         visible={showSheet}
         product={editTarget}
         categories={categories}
+        defaultCatId={sheetDefaultCat}
         onSave={saveProduct}
         onDelete={editTarget ? () => handleDeleteProduct(editTarget.id) : undefined}
         onClose={() => setShowSheet(false)}

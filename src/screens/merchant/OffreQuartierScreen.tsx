@@ -162,8 +162,12 @@ export default function OffreQuartierScreen({ onBack }: Props) {
           t => t.actif && (TERRAIN_SPORTS_ELIGIBLES as readonly string[]).includes(t.sport_type),
         ),
       );
+      const maxProduits = reward?.carrousel_produits ?? 0;
       setSelectedIds(
-        mine.map(item => item.product_id ?? item.terrain_id).filter((id): id is string => !!id),
+        mine
+          .map(item => item.product_id ?? item.terrain_id)
+          .filter((id): id is string => !!id)
+          .slice(0, maxProduits),
       );
       if (sub && !sub.allProducts) {
         setPaidSelectedIds(sub.productIds ?? (sub.productId ? [sub.productId] : []));

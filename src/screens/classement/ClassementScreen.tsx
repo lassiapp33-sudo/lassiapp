@@ -14,6 +14,7 @@ import {
   getClassementClients,
   getClassementLiveSousCategorie,
   getClassementLiveMondial,
+  getClassementLiveQuartiers,
   getClassementLiveClients,
   getPeriodeSemaine,
   getPeriodeMois,
@@ -61,6 +62,7 @@ export default function ClassementScreen({ variant, onBack }: Props) {
         if (data.length === 0) data = await getClassementLiveMondial();
       } else if (onglet === 'quartier') {
         data = await getClassementQuartiers(getPeriodeMois());
+        if (data.length === 0) data = await getClassementLiveQuartiers();
       } else {
         data = await getClassementClients(getPeriodeMois());
         if (data.length === 0) data = await getClassementLiveClients();

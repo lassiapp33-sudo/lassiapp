@@ -332,9 +332,13 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
 
   // ── Catalogue ─────────────────────────────────────────────────────────────
   const catIds = [...new Set(realProducts.map(p => p.category))];
-  const hasAvisTab = !isSlotShop && !isTerrainShop && catIds.length > 0;
+  const hasAvisTab = !isSlotShop && !isTerrainShop && (catIds.length > 0 || shopType === 'memberships');
+  const membershipAboTab = shopType === 'memberships' && fitnessOffres.length > 0
+    ? [{ id: 'abonnements', label: 'Abonnements' }]
+    : [];
   const tabs = [
     { id: 'all', label: 'Tout' },
+    ...membershipAboTab,
     ...catIds.map(id => ({ id, label: capitalize(id) })),
     ...(hasAvisTab ? [{ id: 'avis', label: 'Avis' }] : []),
   ];
@@ -397,7 +401,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   };
 
   const CART_BAR_H = 56;
-  const scrollBotPad = FOOTER_HEIGHT + (cartCount > 0 ? CART_BAR_H + 16 : 0) + 28;
+  const scrollBotPad = FOOTER_HEIGHT + (cartCount > 0 ? CART_BAR_H + 16 : 0) + 64;
   const cartBottom = FOOTER_HEIGHT + 8;
 
   if (loadError) {
@@ -638,8 +642,8 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
             </View>
           ) : shopType === 'memberships' ? (
             <View>
-              {/* Abonnements */}
-              {fitnessOffres.length > 0 ? (
+              {/* Abonnements — visible si onglet Tout ou Abonnements */}
+              {(activeTab === 'all' || activeTab === 'abonnements') && fitnessOffres.length > 0 ? (
                 <View>
                   <Text style={styles.catTitle}>Abonnements disponibles</Text>
                   {fitnessOffres.map(offre => (
@@ -665,30 +669,39 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                   ))}
                 </View>
               ) : null}
-              {/* Formules (produits) */}
-              {realProducts.length > 0 ? (
-                <View onLayout={e => { productSectionY.current = e.nativeEvent.layout.y; }}>
-                  <Text style={styles.catTitle}>Formules</Text>
-                  <View style={styles.grid}>
-                    {toPairs(realProducts).map((pair, i) => (
-                      <View key={i} style={styles.gridRow}>
-                        {pair.map(product => (
-                          <View key={product.id} style={styles.tileWrapper}>
-                            <ProductTile
-                              product={storeProductToProduct(product)}
-                              qty={product.stock === 'out' ? 0 : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)}
-                              onAdd={() => addToCart(product)}
-                              onRemove={() => removeItem(product.id)}
-                              promoInfo={productPromoMap[product.id]}
-                            />
+              {/* Formules et Produits — filtrées selon l'onglet actif */}
+              {[
+                { id: 'formules', label: 'Formules' },
+                { id: 'produits', label: 'Produits' },
+              ]
+                .filter(section => activeTab === 'all' || activeTab === section.id)
+                .map(section => {
+                  const sectionItems = realProducts.filter(p => p.category === section.id);
+                  if (sectionItems.length === 0) return null;
+                  return (
+                    <View key={section.id} onLayout={section.id === 'formules' ? e => { productSectionY.current = e.nativeEvent.layout.y; } : undefined}>
+                      <Text style={styles.catTitle}>{section.label}</Text>
+                      <View style={styles.grid}>
+                        {toPairs(sectionItems).map((pair, i) => (
+                          <View key={i} style={styles.gridRow}>
+                            {pair.map(product => (
+                              <View key={product.id} style={styles.tileWrapper}>
+                                <ProductTile
+                                  product={storeProductToProduct(product)}
+                                  qty={product.stock === 'out' ? 0 : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)}
+                                  onAdd={() => addToCart(product)}
+                                  onRemove={() => removeItem(product.id)}
+                                  promoInfo={productPromoMap[product.id]}
+                                />
+                              </View>
+                            ))}
+                            {pair.length === 1 && <View style={styles.tileSpacer} />}
                           </View>
                         ))}
-                        {pair.length === 1 && <View style={styles.tileSpacer} />}
                       </View>
-                    ))}
-                  </View>
-                </View>
-              ) : null}
+                    </View>
+                  );
+                })}
               {fitnessOffres.length === 0 && realProducts.length === 0 ? (
                 <View style={styles.emptyProducts}>
                   <Text style={styles.emptyTxt}>Aucune formule disponible pour l'instant.</Text>

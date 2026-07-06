@@ -36,7 +36,7 @@ import useNotificationsStore from '../../store/notificationsStore';
 import useNotifPopupStore from '../../store/notifPopupStore';
 import usePendingNavStore from '../../store/pendingNavStore';
 import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
-import { recordView } from '../../services/recentlyViewed';
+import { recordView, recordCarouselClick, recordCarouselVue } from '../../services/recentlyViewed';
 
 function shouldShowCard(type: string): boolean {
   return type === 'vip' || type === 'pay' || type === 'ann' || type === 'order' || type === 'msg';
@@ -131,7 +131,13 @@ export default function HomeNavigator({ onLogout }: Props) {
   // Navigation depuis PromoBanner — ouvre la vitrine et pointe l'article cliqué
   const pushShopItem = (shopId: string, shopName: string, productId: string) => {
     recordView(shopId).catch(err => logger.warn('[HomeNavigator] recordView:', err));
+    recordCarouselClick(shopId, productId).catch(err => logger.warn('[HomeNavigator] recordCarouselClick:', err));
     push({ id: 'shop', shopId, shopName, targetProductId: productId });
+  };
+
+  // Vue carrousel — produit défilé devant le client (impression, fire-and-forget)
+  const onShopItemView = (shopId: string, productId: string) => {
+    recordCarouselVue(shopId, productId).catch(() => {});
   };
 
   // Abonnement Realtime + carte rich au démarrage
@@ -567,6 +573,7 @@ export default function HomeNavigator({ onLogout }: Props) {
       onCategoryPress={(catId, title) => push({ id: 'category', catId, title })}
       onShopPress={pushShop}
       onShopItemPress={pushShopItem}
+      onShopItemView={onShopItemView}
       onSearch={() => push({ id: 'search' })}
       onVoice={() => push({ id: 'voice' })}
       onFavorites={() => push({ id: 'favorites' })}

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { IncomingOrder, OrderStatus } from '../types/orders';
+import { Platform } from 'react-native';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -47,6 +48,7 @@ function rowToOrder(row: Record<string, any>): IncomingOrder {
     prepTime: row.prep_time ?? undefined,
     orderType: row.order_type === 'emporter' ? 'emporter' : row.order_type === 'place' ? 'place' : null,
     refusalReason: row.refusal_reason ?? null,
+    voiceNoteUrl: row.voice_note_url ?? null,
   };
 }
 
@@ -102,12 +104,33 @@ export interface SecureOrderItem {
   qty: number;
 }
 
+// ─── Upload message vocal (Supabase Storage) ─────────────────────────────────
+
+export async function uploadVoiceNote(uri: string): Promise<string | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+    const ext = uri.split('.').pop()?.toLowerCase() ?? (Platform.OS === 'ios' ? 'm4a' : 'mp4');
+    const path = `${session.user.id}/${Date.now()}.${ext}`;
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const { data, error } = await supabase.storage
+      .from('voice-notes')
+      .upload(path, blob, { contentType: 'audio/m4a', upsert: false });
+    if (error) return null;
+    return data.path;
+  } catch {
+    return null;
+  }
+}
+
 export async function createOrderSecure(
   shopId: string,
   items: SecureOrderItem[],
   note?: string,
   orderType?: 'place' | 'emporter',
   idempotencyKey?: string,
+  voiceNoteUrl?: string,
 ): Promise<{ orderId: string; total: number }> {
   const {
     data: { session },
@@ -127,6 +150,7 @@ export async function createOrderSecure(
       note,
       orderType: orderType ?? null,
       idempotencyKey,
+      voiceNoteUrl: voiceNoteUrl ?? null,
     }),
   });
 

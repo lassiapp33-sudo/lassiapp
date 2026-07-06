@@ -43,6 +43,7 @@ interface Props {
   onMap?: () => void;
   onTerrains?: () => void;
   onShopItemPress?: (shopId: string, shopName: string, productId: string) => void;
+  onShopItemView?: (shopId: string, productId: string) => void;
 }
 
 export default function ClientHomeScreen({
@@ -58,6 +59,7 @@ export default function ClientHomeScreen({
   onMap,
   onTerrains,
   onShopItemPress,
+  onShopItemView,
 }: Props) {
   const t = useT();
 
@@ -228,7 +230,7 @@ export default function ClientHomeScreen({
         </View>
 
         {/* Produits en vitrine — carrousel auto-défilant avec indicateurs */}
-        <PromoBanner onPress={onShopItemPress} />
+        <PromoBanner onPress={onShopItemPress} onView={onShopItemView} />
 
         {/* Boutiques à proximité */}
         <View style={styles.px}>

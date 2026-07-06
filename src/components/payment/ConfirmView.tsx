@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, Share, Alert } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { OrderInfo, PayMethod } from '../../types/payment';
 import { LassiMascotte } from '../LassiMascotte';
 import { formatPrice } from '../../utils/format';
+import RatingPromptModal from '../avis/RatingPromptModal';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -75,12 +76,23 @@ interface Props {
 }
 
 export default function ConfirmView({ order, method, onBackToChat }: Props) {
+  const [showRating, setShowRating] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    timerRef.current = setTimeout(() => setShowRating(true), 1500);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   // Utiliser les 8 premiers caractères de l'UUID de commande (traceable en DB)
   const receiptId = order.ticketId
     ? order.ticketId.replace(/-/g, '').slice(0, 8).toUpperCase()
     : order.orderId.replace('#', '');
 
   return (
+    <>
     <ScrollView
       contentContainerStyle={[styles.container, { paddingBottom: BOTTOM_PAD }]}
       showsVerticalScrollIndicator={false}
@@ -144,6 +156,15 @@ export default function ConfirmView({ order, method, onBackToChat }: Props) {
         </TouchableOpacity>
       </View>
     </ScrollView>
+
+    <RatingPromptModal
+      visible={showRating}
+      orderId={order.ticketId}
+      direction="client_to_merchant"
+      targetName={order.shopName}
+      onDismiss={() => setShowRating(false)}
+    />
+    </>
   );
 }
 

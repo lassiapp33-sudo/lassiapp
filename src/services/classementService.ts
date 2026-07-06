@@ -116,7 +116,7 @@ export const getClassementClients = async (periode: string): Promise<ClassementE
     .eq('periode', periode)
     .eq('est_actif', true)
     .order('rang')
-    .limit(10);
+    .limit(100);
   if (error) throw new Error(error.message);
   return data ?? [];
 };
@@ -135,6 +135,13 @@ export const getClassementLiveSousCategorie = async (
 // --- Classement LIVE mondial (prestataire_scores, avant snapshot pg_cron) ---
 export const getClassementLiveMondial = async (): Promise<ClassementEntry[]> => {
   const { data, error } = await supabase.rpc('get_classement_live_mondial');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as ClassementEntry[];
+};
+
+// --- Classement LIVE quartiers (avant snapshot pg_cron) ---
+export const getClassementLiveQuartiers = async (): Promise<ClassementEntry[]> => {
+  const { data, error } = await supabase.rpc('get_classement_live_quartiers');
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as ClassementEntry[];
 };

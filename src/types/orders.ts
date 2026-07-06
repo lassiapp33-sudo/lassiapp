@@ -31,4 +31,5 @@ export interface IncomingOrder {
   prepTime?: string; // "5-10 min" — défini à l'acceptation
   orderType?: 'place' | 'emporter' | null;
   refusalReason?: string | null;
+  voiceNoteUrl?: string | null; // chemin Supabase Storage du message vocal client
 }

@@ -5,6 +5,7 @@ import * as Speech from 'expo-speech';
 import { colors, fonts } from '../../theme';
 import { IncomingOrder } from '../../types/orders';
 import Avatar from '../Avatar';
+import VoiceNotePlayer from '../VoiceNotePlayer';
 import { IcoClose, IcoPlay, IcoStop } from '../icons';
 import { formatPrice } from '../../utils/format';
 import { buildOrderAnnouncement } from '../../utils/orderSpeech';
@@ -184,6 +185,11 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
           </View>
         </View>
       </View>
+
+      {/* ── Message vocal du client ─────────────────────────────────────────── */}
+      {order.voiceNoteUrl && (
+        <VoiceNotePlayer storagePath={order.voiceNoteUrl} />
+      )}
 
       {/* ── Raison de refus ─────────────────────────────────────────────────── */}
       {order.status === 'refused' && order.refusalReason && (

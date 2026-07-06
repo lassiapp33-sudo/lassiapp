@@ -247,12 +247,27 @@ export async function login(params: LoginParams): Promise<AuthUser> {
     password: params.password,
   });
 
-  if (loginError) throw new Error(traduireErreur(loginError.message));
+  if (loginError) {
+    // Enregistrer l'échec et lire le résultat pour afficher le bon message immédiatement
+    const { data: lockResult } = await supabase.rpc('record_login_failure', { p_phone: cleanPhone });
+    if (lockResult?.status === 'permanently_blocked') {
+      throw new Error('Compte bloqué suite à trop de tentatives. Contacte le support LASSI.');
+    }
+    if (lockResult?.status === 'locked') {
+      throw new Error(
+        `Trop de tentatives. Compte bloqué pendant ${lockResult.locked_min} minute(s).`,
+      );
+    }
+    throw new Error(traduireErreur(loginError.message));
+  }
   if (!data.user) throw new Error('Connexion impossible. Réessaie.');
 
   // 3 — Récupérer le profil complet
   const profile = await getProfileById(data.user.id);
   if (!profile) throw new Error('Profil introuvable. Contacte le support LASSİ.');
+
+  // Réinitialiser le compteur d'échecs (best-effort)
+  void supabase.rpc('record_login_success', { p_phone: cleanPhone });
 
   // Section 8 : trace la connexion réussie (best-effort, non bloquant)
   void supabase.rpc('log_audit_event', { p_action: 'login_success' }).then(

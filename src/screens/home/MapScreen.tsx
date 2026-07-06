@@ -18,6 +18,7 @@ import { IcoBack, IcoSearch } from '../../components/icons';
 import Avatar from '../../components/Avatar';
 import useLocationStore from '../../store/locationStore';
 import * as shopsService from '../../services/shops';
+import { recordCarteClick } from '../../services/recentlyViewed';
 import {
   haversineMeters,
   formatDistance,
@@ -552,6 +553,7 @@ export default function MapScreen({
             distanceM={distanceM}
             zone={selectedZone}
             onView={() => {
+              if (selected.hasGoldenPin) recordCarteClick(selected.id).catch(() => {});
               closeSheet();
               onShopPress?.(selected.id, selected.name);
             }}

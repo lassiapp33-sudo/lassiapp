@@ -11,8 +11,6 @@ export type FormulaPeriod = 'seance' | 'jour' | 'semaine' | 'mois' | 'trimestre'
 export const FORMULA_PERIOD_LABELS: Partial<Record<FormulaPeriod, string>> = {
   seance: 'Séance',
   jour: 'Par jour',
-  semaine: 'Par semaine',
-  mois: 'Par mois',
 };
 
 export interface StoreCategory {

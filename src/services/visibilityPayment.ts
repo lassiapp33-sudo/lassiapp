@@ -35,6 +35,7 @@ interface VisibilitySubRow {
   expires_at: string;
   paid_at: string | null;
   pay_method: string;
+  offer_type: 'quartier' | 'recherche' | 'carte' | null;
   product_id: string | null;
   product_ids: string[] | null;
   all_products: boolean;
@@ -64,6 +65,7 @@ export interface ActiveSub {
   expiresAt: string;
   paidAt: string | null;
   payMethod: PayMethod;
+  offerType: 'quartier' | 'recherche' | 'carte';
   productId: string | null;
   /** IDs des produits sélectionnés (null si allProducts). */
   productIds: string[] | null;
@@ -126,7 +128,7 @@ export async function getActiveSub(
   let query = supabase
     .from('visibility_subscriptions')
     .select(
-      'id, plan_id, amount, status, started_at, expires_at, paid_at, pay_method, ' +
+      'id, plan_id, amount, status, started_at, expires_at, paid_at, pay_method, offer_type, ' +
         'product_id, product_ids, all_products, ' +
         'plan:plan_id(label), product:product_id(name, emoji, photo_url)',
     )
@@ -162,6 +164,7 @@ export async function getActiveSub(
     productEmoji: row.all_products ? null : (row.product?.emoji ?? null),
     productCount: row.product_ids?.length ?? (row.product_id ? 1 : 0),
     allProducts: row.all_products,
+    offerType: row.offer_type ?? 'quartier',
   };
 }
 
@@ -307,10 +310,12 @@ export interface VisibilityStats {
   revenueThisMonth: number;
 }
 
-export async function getVisibilityStats(shopId: string): Promise<VisibilityStats> {
-  const { data, error } = await supabase.rpc('get_shop_visibility_stats', {
-    p_shop_id: shopId,
-  });
+export async function getVisibilityStats(
+  shopId: string,
+  offerType: 'quartier' | 'recherche' | 'carte' = 'quartier',
+): Promise<VisibilityStats> {
+  const rpcParams = { p_shop_id: shopId, p_offer_type: offerType };
+  const { data, error } = await supabase.rpc('get_shop_visibility_stats', rpcParams);
   if (error) throw new Error(error.message);
   const row = data as {
     views_this_month: number;

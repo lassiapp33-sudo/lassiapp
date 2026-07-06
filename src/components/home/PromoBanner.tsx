@@ -96,9 +96,10 @@ function PromoCard({
 
 interface Props {
   onPress?: (shopId: string, shopName: string, productId: string) => void;
+  onView?: (shopId: string, productId: string) => void;
 }
 
-export default function PromoBanner({ onPress }: Props) {
+export default function PromoBanner({ onPress, onView }: Props) {
   const { items } = usePromoItems();
   const N = items.length;
   const totalPages = Math.ceil(N / 2);
@@ -117,6 +118,12 @@ export default function PromoBanner({ onPress }: Props) {
   const nRef = useRef(N);
   const [page, setPage] = useState(0);
 
+  // Refs stables pour les callbacks (évitent les closures périmées)
+  const onViewRef = useRef(onView);
+  const loopedRef = useRef(looped);
+  useEffect(() => { onViewRef.current = onView; }, [onView]);
+  useEffect(() => { loopedRef.current = looped; }, [looped]);
+
   // Garder nRef à jour sans recréer les callbacks
   useEffect(() => { nRef.current = N; }, [N]);
 
@@ -133,6 +140,15 @@ export default function PromoBanner({ onPress }: Props) {
       const idx = idxRef.current;
       scrollRef.current?.scrollTo({ x: idx * ITEM_STRIDE, animated: true });
       setPage(Math.floor(((idx - n) % n) / 2));
+      // Vue pour les 2 cartes désormais visibles
+      const vFn = onViewRef.current;
+      if (vFn) {
+        const ll = loopedRef.current;
+        const a = ll[idx];
+        const b = ll[idx + 1];
+        if (a) vFn(a.shopId, a.id);
+        if (b) vFn(b.shopId, b.id);
+      }
       if (idx === n * 2) {
         jumpRef.current = setTimeout(() => {
           idxRef.current = n;
@@ -156,6 +172,15 @@ export default function PromoBanner({ onPress }: Props) {
     }
     idxRef.current = idx;
     setPage(Math.floor(((idx - n) % n) / 2));
+    // Vue pour les 2 cartes visibles après scroll manuel
+    const vFn = onViewRef.current;
+    if (vFn) {
+      const ll = loopedRef.current;
+      const a = ll[idx];
+      const b = ll[idx + 1];
+      if (a) vFn(a.shopId, a.id);
+      if (b) vFn(b.shopId, b.id);
+    }
     if (resumeRef.current) clearTimeout(resumeRef.current);
     resumeRef.current = setTimeout(startTimer, 800);
   }, [startTimer]);
@@ -167,6 +192,13 @@ export default function PromoBanner({ onPress }: Props) {
     const init = setTimeout(() => {
       scrollRef.current?.scrollTo({ x: N * ITEM_STRIDE, animated: false });
       startTimer();
+      // Vues initiales pour les 2 cartes visibles au démarrage
+      const vFn = onViewRef.current;
+      const ll = loopedRef.current;
+      if (vFn && ll.length > N + 1) {
+        vFn(ll[N].shopId, ll[N].id);
+        vFn(ll[N + 1].shopId, ll[N + 1].id);
+      }
     }, 100);
     return () => {
       clearTimeout(init);
@@ -174,6 +206,14 @@ export default function PromoBanner({ onPress }: Props) {
       if (jumpRef.current) clearTimeout(jumpRef.current);
     };
   }, [N, startTimer, stopTimer]);
+
+  // Cas produit unique (N=1) : vue au montage
+  useEffect(() => {
+    if (N !== 1 || items.length === 0) return;
+    const vFn = onViewRef.current;
+    const item = items[0];
+    if (vFn && item) vFn(item.shopId, item.id);
+  }, [N, items]);
 
   if (N === 0) return null;
 

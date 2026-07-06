@@ -15,7 +15,10 @@ function getDefaultCats(
   shopType: 'products' | 'services' | 'memberships' | 'terrains',
 ): StoreCategory[] {
   if (shopType === 'services') return [{ id: 'prestations', label: 'Prestations', emoji: '✂️' }];
-  if (shopType === 'memberships') return [{ id: 'formules', label: 'Formules', emoji: '🏋️' }];
+  if (shopType === 'memberships') return [
+    { id: 'formules', label: 'Formules', emoji: '🏋️' },
+    { id: 'produits', label: 'Produits', emoji: '🛍️' },
+  ];
   if (shopType === 'terrains') return [];
   return [{ id: 'catalogue', label: 'Catalogue', emoji: '📦' }];
 }
@@ -99,6 +102,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
         catalogue: { label: 'Catalogue', emoji: '📦' },
         prestations: { label: 'Prestations', emoji: '✂️' },
         formules: { label: 'Formules', emoji: '🏋️' },
+        produits: { label: 'Produits', emoji: '🛍️' },
       };
       const categories: StoreCategory[] =
         catIds.length > 0

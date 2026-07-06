@@ -348,7 +348,7 @@ export default function MerchantProfileScreen({
         if (!sub) return;
         setHasActiveSub(true);
         setStatsLoading(true);
-        getVisibilityStats(shopId)
+        getVisibilityStats(shopId, sub.offerType)
           .then(setStats)
           .catch(() => {})
           .finally(() => setStatsLoading(false));
@@ -468,9 +468,9 @@ export default function MerchantProfileScreen({
             title="Mes achats"
             subtitle="Commandes passées chez d'autres"
             onPress={onMyOrders}
-            last={!carrouselEligible}
+            last={!carrouselEligible && !hasActiveSub}
           />
-          {carrouselEligible && (
+          {(carrouselEligible || hasActiveSub) && (
             <ProfileOptionRow
               icon={<IcoCrown />}
               title="Offre du Quartier"

@@ -18,7 +18,8 @@ import { OrderInfo } from '../../types/payment';
 import useCartStore from '../../store/cartStore';
 import Avatar from '../../components/Avatar';
 import { validateCartAvailability } from '../../services/products';
-import { createOrderSecure } from '../../services/orders';
+import { createOrderSecure, uploadVoiceNote } from '../../services/orders';
+import VoiceNoteRecorder from '../../components/VoiceNoteRecorder';
 import * as promosService from '../../services/promotions';
 import { AppliedDiscount } from '../../types/promotions';
 import { IcoBack } from '../../components/icons';
@@ -74,6 +75,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
   const updateQty = useCartStore(s => s.updateQty);
 
   const [note, setNote] = useState('');
+  const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [discounts, setDiscounts] = useState<AppliedDiscount[]>([]);
 
@@ -184,14 +186,24 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
 
       // Créer la commande en DB AVANT d'ouvrir l'écran de paiement.
       // Le ticketId (UUID réel) est requis par l'Edge Function create-payment.
-      // La note est transmise ici — seul endroit où elle est disponible.
+      // La note et le message vocal sont transmis ici — seul endroit où ils sont disponibles.
       const rawItems = freshStore.items.map(i => ({ productId: i.id, qty: i.qty }));
       const orderType = freshShopInfo?.showOrderType ? freshOrderType : undefined;
+
+      // Upload du message vocal avant création commande (best-effort)
+      let voiceNotePath: string | undefined;
+      if (voiceNoteUri) {
+        const path = await uploadVoiceNote(voiceNoteUri);
+        if (path) voiceNotePath = path;
+      }
+
       const { orderId: realOrderId } = await createOrderSecure(
         sid,
         rawItems,
         note.trim() || undefined,
         orderType,
+        undefined,
+        voiceNotePath,
       );
 
       freshStore.clearCart();
@@ -300,6 +312,11 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
               onChangeText={setNote}
               multiline
             />
+          </View>
+
+          {/* Message vocal optionnel */}
+          <View style={styles.voiceField}>
+            <VoiceNoteRecorder onRecordingComplete={setVoiceNoteUri} />
           </View>
 
           {/* Résumé de commande */}
@@ -497,7 +514,7 @@ const styles = StyleSheet.create({
   noteField: {
     marginHorizontal: 18,
     marginTop: 6,
-    marginBottom: 18,
+    marginBottom: 10,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -507,6 +524,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
+  },
+  voiceField: {
+    marginHorizontal: 18,
+    marginBottom: 18,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 13,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   noteInput: {
     flex: 1,

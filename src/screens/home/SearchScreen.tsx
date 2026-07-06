@@ -10,6 +10,7 @@ import { useT } from '../../i18n';
 import { LassiMascotte, MASCOTTE_NOM } from '../../components/LassiMascotte';
 import Svg, { Path } from 'react-native-svg';
 import { IcoBack, IcoSearch } from '../../components/icons';
+import { recordRechercheClick } from '../../services/recentlyViewed';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -167,7 +168,10 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
           <>
             <GroupLabel emoji="🏆" label={`Top VIP`} vip />
             {vipShops.map(s => (
-              <ResultCard key={s.id} shop={s} onPress={() => onShopPress(s.id, s.name)} />
+              <ResultCard key={s.id} shop={s} onPress={() => {
+                if (s.hasRechercheBoost) recordRechercheClick(s.id).catch(() => {});
+                onShopPress(s.id, s.name);
+              }} />
             ))}
           </>
         )}
@@ -179,7 +183,10 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
               label={q ? t.home.allResults.replace('📋 ', '') : t.home.nearby.replace('📍 ', '')}
             />
             {otherShops.map(s => (
-              <ResultCard key={s.id} shop={s} onPress={() => onShopPress(s.id, s.name)} />
+              <ResultCard key={s.id} shop={s} onPress={() => {
+                if (s.hasRechercheBoost) recordRechercheClick(s.id).catch(() => {});
+                onShopPress(s.id, s.name);
+              }} />
             ))}
           </>
         )}
