@@ -19,7 +19,8 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "LASSİ utilise ta position pour te montrer les commerces autour de toi.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "LASSİ utilise ta position pour te montrer les commerces autour de toi.",
-        "NSCameraUsageDescription": "LASSİ accède à ta caméra pour scanner les QR codes de réservation terrain."
+        "NSCameraUsageDescription": "LASSİ accède à ta caméra pour scanner les QR codes de réservation terrain.",
+        "NSMicrophoneUsageDescription": "LASSİ utilise le micro pour enregistrer un message vocal joint à ta commande."
       }
     },
     "android": {
@@ -30,7 +31,6 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.lassiapp.lassiapp",
-      "googleServicesFile": "./android/app/google-services.json",
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_FINE_LOCATION",
