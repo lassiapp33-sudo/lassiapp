@@ -1,0 +1,102 @@
+-- ─── Table carrousel_clics ────────────────────────────────────────────────────
+-- Chaque clic sur un produit du carrousel (PromoBanner) est inséré ici.
+-- Pas de contrainte UNIQUE : un même client peut cliquer plusieurs fois.
+
+CREATE TABLE IF NOT EXISTS carrousel_clics (
+  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  client_id  UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  shop_id    UUID NOT NULL REFERENCES shops(id)       ON DELETE CASCADE,
+  product_id UUID                                     REFERENCES products(id) ON DELETE SET NULL,
+  clicked_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS carrousel_clics_shop_clicked_idx
+  ON carrousel_clics(shop_id, clicked_at);
+
+ALTER TABLE carrousel_clics ENABLE ROW LEVEL SECURITY;
+
+-- Les clients authentifiés peuvent insérer leurs propres clics
+CREATE POLICY "client_insert_own_click" ON carrousel_clics
+  FOR INSERT TO authenticated
+  WITH CHECK (client_id = auth.uid());
+
+-- ─── Mise à jour du RPC get_shop_visibility_stats ─────────────────────────────
+-- visits_since_sub : on compte maintenant depuis carrousel_clics
+-- (clics réels, plusieurs par client autorisés).
+-- views_this_month : on garde recently_viewed (visiteurs uniques ce mois).
+
+CREATE OR REPLACE FUNCTION get_shop_visibility_stats(p_shop_id UUID)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_merchant_id    UUID;
+  v_started_at     TIMESTAMPTZ;
+  v_month_start    TIMESTAMPTZ := date_trunc('month', NOW());
+  v_views_month    BIGINT := 0;
+  v_visits_since   BIGINT := 0;
+  v_orders_month   BIGINT := 0;
+  v_revenue_month  BIGINT := 0;
+BEGIN
+  -- 1. Vérifier que l'appelant est bien le marchand de cette boutique
+  SELECT merchant_id INTO v_merchant_id
+  FROM shops
+  WHERE id = p_shop_id;
+
+  IF v_merchant_id IS NULL THEN
+    RAISE EXCEPTION 'Boutique introuvable';
+  END IF;
+
+  IF v_merchant_id <> auth.uid() THEN
+    RAISE EXCEPTION 'Accès refusé';
+  END IF;
+
+  -- 2. Date de début de l'abonnement actif (Offre du quartier)
+  SELECT started_at INTO v_started_at
+  FROM visibility_subscriptions
+  WHERE shop_id = p_shop_id
+    AND status  = 'active'
+  ORDER BY started_at DESC
+  LIMIT 1;
+
+  IF v_started_at IS NULL THEN
+    v_started_at := v_month_start;
+  END IF;
+
+  -- 3. Visiteurs uniques ce mois (recently_viewed, 1 ligne max par client)
+  SELECT COUNT(*) INTO v_views_month
+  FROM recently_viewed
+  WHERE shop_id  = p_shop_id
+    AND viewed_at >= v_month_start;
+
+  -- 4. Clics carrousel depuis le début de l'abonnement (tous les clics, pas uniques)
+  SELECT COUNT(*) INTO v_visits_since
+  FROM carrousel_clics
+  WHERE shop_id  = p_shop_id
+    AND clicked_at >= v_started_at;
+
+  -- 5. Commandes reçues ce mois
+  SELECT COUNT(*) INTO v_orders_month
+  FROM orders
+  WHERE shop_id   = p_shop_id
+    AND created_at >= v_month_start;
+
+  -- 6. Revenus des commandes terminées ce mois
+  SELECT COALESCE(SUM(total), 0) INTO v_revenue_month
+  FROM orders
+  WHERE shop_id   = p_shop_id
+    AND status     = 'done'
+    AND created_at >= v_month_start;
+
+  RETURN json_build_object(
+    'views_this_month',   v_views_month,
+    'visits_since_sub',   v_visits_since,
+    'orders_this_month',  v_orders_month,
+    'revenue_this_month', v_revenue_month
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_shop_visibility_stats(UUID) TO authenticated;
