@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { shopId, items, note, orderType, idempotencyKey } = await req.json()
+    const { shopId, items, note, orderType, idempotencyKey, voiceNoteUrl } = await req.json()
     if (!shopId || !Array.isArray(items) || items.length === 0) {
       return new Response(JSON.stringify({ error: 'shopId et items requis' }), {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
@@ -200,6 +200,16 @@ Deno.serve(async (req) => {
       !isSafeString(idempotencyKey, { maxLen: 200, pattern: /^[A-Za-z0-9_:.-]+$/ })
     ) {
       return new Response(JSON.stringify({ error: 'idempotencyKey invalide' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // voiceNoteUrl : chemin Storage optionnel (ex: {uuid}/{ts}.m4a)
+    if (
+      voiceNoteUrl !== undefined && voiceNoteUrl !== null &&
+      (typeof voiceNoteUrl !== 'string' || voiceNoteUrl.length > 300 || !/^[a-zA-Z0-9_\-/.]+$/.test(voiceNoteUrl))
+    ) {
+      return new Response(JSON.stringify({ error: 'voiceNoteUrl invalide' }), {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
     }
@@ -324,7 +334,12 @@ Deno.serve(async (req) => {
 
     const orderId = (orderResult as any).id as string
 
-    // ⑧ Push au prestataire — best-effort, ne bloque pas la réponse au client
+    // ⑧ bis — Sauvegarder le chemin du message vocal (best-effort)
+    if (voiceNoteUrl) {
+      await admin.from('orders').update({ voice_note_url: voiceNoteUrl }).eq('id', orderId)
+    }
+
+    // ⑨ Push au prestataire — best-effort, ne bloque pas la réponse au client
     try {
       const { data: shop } = await admin
         .from('shops')
@@ -341,7 +356,8 @@ Deno.serve(async (req) => {
         const tokens: string[] = (tokenRows ?? []).map((r: any) => r.token)
         const clientName = profile?.name ?? 'Un client'
         const totalFr    = `${Number(total).toLocaleString('fr-FR')} FCFA`
-        const notifBody  = `${clientName} vient de passer une commande de ${totalFr}.`
+        const voiceSuffix = voiceNoteUrl ? ' 🎙️ Message vocal joint.' : ''
+        const notifBody  = `${clientName} vient de passer une commande de ${totalFr}.${voiceSuffix}`
 
         if (tokens.length > 0) {
           await fetch('https://exp.host/--/api/v2/push/send', {

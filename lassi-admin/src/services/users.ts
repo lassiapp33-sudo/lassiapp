@@ -26,6 +26,8 @@ export interface AdminShop {
   rating:     number
   merchantId: string | null
   merchantName: string | null
+  latitude:   number | null
+  longitude:  number | null
 }
 
 const PAGE_SIZE = 200
@@ -65,7 +67,7 @@ export async function getShops(search?: string, page = 0): Promise<AdminShop[]> 
     .from('shops')
     .select(`
       id, name, category, zone, logo_url, is_open, is_vip,
-      vip_manual, rating, merchant_id,
+      vip_manual, rating, merchant_id, latitude, longitude,
       profiles!merchant_id(name)
     `)
     .order('name')
@@ -90,7 +92,17 @@ export async function getShops(search?: string, page = 0): Promise<AdminShop[]> 
     rating:       Number(row.rating),
     merchantId:   row.merchant_id,
     merchantName: (row.profiles as any)?.name ?? null,
+    latitude:     row.latitude ?? null,
+    longitude:    row.longitude ?? null,
   }))
+}
+
+export async function updateShopCoords(shopId: string, latitude: number, longitude: number): Promise<void> {
+  const { error } = await supabase
+    .from('shops')
+    .update({ latitude, longitude })
+    .eq('id', shopId)
+  if (error) throw new Error(error.message)
 }
 
 // ─── Statistiques globales ────────────────────────────────────────────────────
