@@ -35,6 +35,7 @@ interface Props {
   onShopPress?: (shopId: string, shopName: string) => void;
   onSearch?: () => void;
   onVoice?: () => void;
+  onClassement?: () => void;
   onFavorites?: () => void;
   onRecent?: () => void;
   onMessages?: () => void;
@@ -51,6 +52,7 @@ export default function ClientHomeScreen({
   onShopPress,
   onSearch,
   onVoice,
+  onClassement,
   onFavorites,
   onRecent,
   onMessages,
@@ -203,7 +205,7 @@ export default function ClientHomeScreen({
             />
           </View>
           <View style={styles.px}>
-            <SearchBar value="" onChangeText={() => {}} onPress={onSearch} onMicPress={onVoice} />
+            <SearchBar value="" onChangeText={() => {}} onPress={onSearch} onMicPress={onClassement} />
           </View>
           <View style={styles.px}>
             <TabSelector
@@ -222,7 +224,7 @@ export default function ClientHomeScreen({
         contentContainerStyle={{ paddingBottom: NAV_HEIGHT + 16, flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.sectionHead}>
+        <View style={[styles.sectionHead, { marginTop: 16 }]}>
           <Text style={styles.secTitle}>{t.home.explore}</Text>
         </View>
         <View style={styles.px}>

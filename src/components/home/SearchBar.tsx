@@ -1,6 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Animated, Easing } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { View, TextInput, TouchableOpacity, StyleSheet, Animated, Easing, Image } from 'react-native';
 import { colors, fonts } from '../../theme';
 import { IcoSearch } from '../icons';
 
@@ -11,21 +10,7 @@ interface Props {
   onPress?: () => void; // si fourni → barre en lecture seule, appui navigue vers SearchScreen
 }
 
-const IconMic = () => (
-  <Svg
-    width={22}
-    height={22}
-    viewBox="0 0 24 24"
-    fill="none"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <Path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" stroke={colors.bg} />
-    <Path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke={colors.bg} />
-    <Path d="M12 19v3" stroke={colors.bg} />
-  </Svg>
-);
+const TROPHY = require('../../../assets/trophy-gold.png');
 
 export default function SearchBar({ value, onChangeText, onMicPress, onPress }: Props) {
   const pulseScale = useRef(new Animated.Value(1)).current;
@@ -84,7 +69,7 @@ export default function SearchBar({ value, onChangeText, onMicPress, onPress }: 
           style={[styles.ring, { transform: [{ scale: pulseScale }], opacity: pulseOpacity }]}
         />
         <TouchableOpacity style={styles.mic} onPress={onMicPress} activeOpacity={0.85}>
-          <IconMic />
+          <Image source={TROPHY} style={styles.trophyImg} resizeMode="contain" />
         </TouchableOpacity>
       </View>
     </View>
@@ -144,5 +129,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 8,
+  },
+  trophyImg: {
+    width: MIC_SIZE - 4,
+    height: MIC_SIZE - 4,
   },
 });

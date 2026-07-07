@@ -576,6 +576,7 @@ export default function HomeNavigator({ onLogout }: Props) {
       onShopItemView={onShopItemView}
       onSearch={() => push({ id: 'search' })}
       onVoice={() => push({ id: 'voice' })}
+      onClassement={() => push({ id: 'classement' })}
       onFavorites={() => push({ id: 'favorites' })}
       onRecent={() => push({ id: 'recent' })}
       onMessages={() => push({ id: 'messages' })}

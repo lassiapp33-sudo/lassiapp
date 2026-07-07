@@ -82,7 +82,7 @@ export default function ClassementScreen({ variant, onBack }: Props) {
 
   const top3 = entries.slice(0, 3);
   const reste = entries.slice(3);
-  const avatarVariant = variant === 'prestataire' ? 'shop' : 'user';
+  const avatarVariant = (variant === 'prestataire' || onglet === 'mondial') ? 'shop' : 'user';
 
   const tabs: { key: TabKey; label: string }[] =
     variant === 'prestataire'
@@ -93,6 +93,7 @@ export default function ClassementScreen({ variant, onBack }: Props) {
       : [
           { key: 'quartier' as TabKey, label: '📍 Mon quartier' },
           { key: 'clients' as TabKey, label: '🏆 Top clients' },
+          { key: 'mondial' as TabKey, label: '🌍 Top national' },
         ];
 
   const periodeLabel = onglet === 'categorie' ? '📅 Cette semaine' : '📅 Ce mois-ci';
@@ -101,7 +102,9 @@ export default function ClassementScreen({ variant, onBack }: Props) {
     onglet === 'categorie'
       ? '🏅 Le Top 3 gagne le podium VIP cette semaine !'
       : onglet === 'mondial'
-        ? '👑 Le Top 5 national débloque "Offre du Quartier" + récompenses !'
+        ? variant === 'prestataire'
+          ? '👑 Le Top 5 national débloque "Offre du Quartier" + récompenses !'
+          : '👑 Les meilleurs prestataires du Sénégal ce mois-ci !'
         : onglet === 'quartier'
           ? '🏅 Le quartier en tête fait la fierté de tous ses commerçants !'
           : '🎖️ Le client n°1 du mois reçoit le badge Supporter n°1 !';
@@ -152,7 +155,7 @@ export default function ClassementScreen({ variant, onBack }: Props) {
             )}
 
             {onglet === 'categorie' && <RecompensesSousCategorie />}
-            {onglet === 'mondial' && <RecompensesMondial />}
+            {onglet === 'mondial' && variant === 'prestataire' && <RecompensesMondial />}
           </View>
         }
         ListFooterComponent={entries.length > 0 ? <Text style={styles.hint}>{hint}</Text> : null}
@@ -204,7 +207,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  tabText: { color: colors.white, fontFamily: fonts.ui, fontSize: 14 },
+  tabText: { color: colors.white, fontFamily: fonts.ui, fontSize: 12.5, textAlign: 'center' },
   tabTextActive: { color: colors.bg },
 
   periode: { color: colors.muted, fontSize: 13, marginBottom: 8 },
