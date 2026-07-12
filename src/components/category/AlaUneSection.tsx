@@ -12,15 +12,15 @@ import {
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import Avatar from '../Avatar';
-import { getBlocsAlaUneParCategorie, buildShareMessage } from '../../services/aLaUne';
-import type { AlaUneBloc, AlaUneElement } from '../../types/aLaUne';
+import { getBlocsActifs, buildShareMessage } from '../../services/aLaUne';
+import type { BlocALaUne, ElementALaUne } from '../../types/aLaUne';
 import { supabase } from '../../lib/supabase';
 import { formatPrice } from '../../utils/format';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
-const IcoFlame = ({ size = 14 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+const IcoFlame = () => (
+  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
     <Path
       d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
       stroke={colors.accent}
@@ -36,11 +36,10 @@ const IcoShare = () => (
   </Svg>
 );
 
-// ─── Countdown ────────────────────────────────────────────────────────────────
+// ─── Countdown live ───────────────────────────────────────────────────────────
 
 function useCountdown(expireAt: string): string {
   const [label, setLabel] = useState('');
-
   useEffect(() => {
     const calc = () => {
       const ms = new Date(expireAt).getTime() - Date.now();
@@ -53,15 +52,14 @@ function useCountdown(expireAt: string): string {
     const id = setInterval(calc, 60_000);
     return () => clearInterval(id);
   }, [expireAt]);
-
   return label;
 }
 
-// ─── Carte d'un élément partageable ──────────────────────────────────────────
+// ─── Carte élément partageable ────────────────────────────────────────────────
 
 interface ElCardProps {
-  el: AlaUneElement;
-  bloc: AlaUneBloc;
+  el: ElementALaUne;
+  bloc: BlocALaUne;
 }
 
 function ElCard({ el, bloc }: ElCardProps) {
@@ -70,29 +68,24 @@ function ElCard({ el, bloc }: ElCardProps) {
     elementPrix: el.prix,
     blocTitre: bloc.titre,
     blocDescription: bloc.description,
-    shopName: bloc.shopName ?? 'Boutique',
+    shopName: bloc.shop_name ?? 'Boutique',
     blocId: bloc.id,
-    expireAt: bloc.expireAt,
+    expireAt: bloc.expire_at,
   });
 
   const handleShare = async () => {
     const encoded = encodeURIComponent(message);
     try {
       const can = await Linking.canOpenURL('whatsapp://send?text=a');
-      if (can) {
-        await Linking.openURL(`whatsapp://send?text=${encoded}`);
-        return;
-      }
+      if (can) { await Linking.openURL(`whatsapp://send?text=${encoded}`); return; }
     } catch {}
     Share.share({ message });
   };
 
   return (
     <View style={styles.elCard}>
-      <View style={styles.elCardInner}>
-        <Text style={styles.elNom} numberOfLines={2}>{el.nom}</Text>
-        <Text style={styles.elPrix}>{formatPrice(el.prix)}</Text>
-      </View>
+      <Text style={styles.elNom} numberOfLines={2}>{el.nom}</Text>
+      <Text style={styles.elPrix}>{formatPrice(el.prix)}</Text>
       <TouchableOpacity onPress={handleShare} style={styles.elShareBtn} activeOpacity={0.7}>
         <IcoShare />
         <Text style={styles.elShareTxt}>Partager</Text>
@@ -101,23 +94,22 @@ function ElCard({ el, bloc }: ElCardProps) {
   );
 }
 
-// ─── Carte d'un bloc ──────────────────────────────────────────────────────────
+// ─── Carte bloc ───────────────────────────────────────────────────────────────
 
-function BlocCard({ bloc }: { bloc: AlaUneBloc }) {
-  const countdown = useCountdown(bloc.expireAt);
+function BlocCard({ bloc }: { bloc: BlocALaUne }) {
+  const countdown = useCountdown(bloc.expire_at);
 
   return (
     <View style={styles.blocCard}>
-      {/* En-tête : avatar + nom boutique + countdown */}
       <View style={styles.blocHeader}>
         <Avatar
-          name={bloc.shopName ?? '?'}
-          imageUrl={bloc.shopLogoUrl ?? null}
+          name={bloc.shop_name ?? '?'}
+          imageUrl={bloc.shop_logo_url ?? null}
           size={34}
           variant="shop"
         />
         <View style={styles.blocHeaderText}>
-          <Text style={styles.shopName} numberOfLines={1}>{bloc.shopName ?? 'Boutique'}</Text>
+          <Text style={styles.shopName} numberOfLines={1}>{bloc.shop_name ?? 'Boutique'}</Text>
           <Text style={styles.blocTitre} numberOfLines={1}>{bloc.titre}</Text>
         </View>
         <View style={styles.countdownPill}>
@@ -129,7 +121,6 @@ function BlocCard({ bloc }: { bloc: AlaUneBloc }) {
         <Text style={styles.blocDesc} numberOfLines={2}>{bloc.description}</Text>
       ) : null}
 
-      {/* Éléments */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -151,13 +142,13 @@ interface Props {
 }
 
 export default function AlaUneSection({ catId, subCatId }: Props) {
-  const [blocs, setBlocs] = useState<AlaUneBloc[]>([]);
+  const [blocs, setBlocs] = useState<BlocALaUne[]>([]);
   const [loading, setLoading] = useState(true);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const load = async () => {
     try {
-      const data = await getBlocsAlaUneParCategorie(catId, subCatId);
+      const data = await getBlocsActifs(catId, subCatId);
       setBlocs(data);
     } catch {
       setBlocs([]);
@@ -180,9 +171,7 @@ export default function AlaUneSection({ catId, subCatId }: Props) {
       .subscribe();
 
     channelRef.current = ch;
-    return () => {
-      ch.unsubscribe();
-    };
+    return () => { ch.unsubscribe(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catId, subCatId]);
 
@@ -201,7 +190,9 @@ export default function AlaUneSection({ catId, subCatId }: Props) {
       <View style={styles.sectionHeader}>
         <IcoFlame />
         <Text style={styles.sectionTitle}>À la une</Text>
-        <Text style={styles.sectionCount}>{blocs.length}</Text>
+        <View style={styles.countBadge}>
+          <Text style={styles.countBadgeTxt}>{blocs.length}</Text>
+        </View>
       </View>
 
       <ScrollView
@@ -222,9 +213,7 @@ export default function AlaUneSection({ catId, subCatId }: Props) {
 const styles = StyleSheet.create({
   loadingBox: { paddingVertical: 12, alignItems: 'center' },
 
-  section: {
-    marginBottom: 4,
-  },
+  section: { marginBottom: 4 },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -233,15 +222,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 14, flex: 1 },
-  sectionCount: {
+  countBadge: {
     backgroundColor: colors.accent + '22',
-    color: colors.accent,
-    fontFamily: fonts.ui,
-    fontSize: 11,
     borderRadius: radius.pill,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
+  countBadgeTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 11 },
 
   blocsList: { paddingHorizontal: 20, gap: 12, paddingBottom: 4 },
 
@@ -279,9 +266,8 @@ const styles = StyleSheet.create({
     padding: 10,
     width: 130,
   },
-  elCardInner: { marginBottom: 8 },
-  elNom: { color: colors.white, fontFamily: fonts.label, fontSize: 12 },
-  elPrix: { color: colors.accent, fontFamily: fonts.ui, fontSize: 12, marginTop: 2 },
+  elNom: { color: colors.white, fontFamily: fonts.label, fontSize: 12, marginBottom: 2 },
+  elPrix: { color: colors.accent, fontFamily: fonts.ui, fontSize: 12, marginBottom: 8 },
   elShareBtn: {
     flexDirection: 'row',
     alignItems: 'center',

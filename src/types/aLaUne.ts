@@ -1,20 +1,21 @@
-export interface AlaUneElement {
+export interface ElementALaUne {
   id: string;
   nom: string;
   prix: number;
 }
 
-export interface AlaUneBloc {
+export interface BlocALaUne {
   id: string;
-  prestataireId: string;
+  prestataire_id: string;
   titre: string;
   description: string | null;
-  categorieId: string;
-  sousCategorieId: string | null;
-  elements: AlaUneElement[];
+  categorie_id: string;
+  sous_categorie_id: string | null;
+  elements: ElementALaUne[];
   actif: boolean;
-  createdAt: string;
-  expireAt: string;
-  shopName?: string;
-  shopLogoUrl?: string | null;
+  created_at: string;
+  expire_at: string;
+  // enrichi côté client par getBlocsActifs
+  shop_name?: string;
+  shop_logo_url?: string | null;
 }

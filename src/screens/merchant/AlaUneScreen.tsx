@@ -13,22 +13,20 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
-  FlatList,
 } from 'react-native';
-import Svg, { Path, Rect, Circle } from 'react-native-svg';
+import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
-import { getErrorMessage } from '../../utils/errorUtils';
 import useShopStore from '../../store/shopStore';
 import {
-  getMesBlocsAlaUne,
-  creerBlocAlaUne,
-  reactiverBlocAlaUne,
-  getQuotaRestant,
+  getMesBlocs,
+  creerBloc,
+  reactiverBloc,
+  getQuotaDuJour,
   buildShareMessage,
 } from '../../services/aLaUne';
-import type { AlaUneBloc, AlaUneElement } from '../../types/aLaUne';
+import type { BlocALaUne, ElementALaUne } from '../../types/aLaUne';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -91,19 +89,15 @@ function formatCountdown(expireAt: string): string {
   return `${m} min`;
 }
 
-function isActifEtNonExpire(b: AlaUneBloc): boolean {
-  return b.actif && new Date(b.expireAt).getTime() > Date.now();
-}
+// ─── Partage par élément ──────────────────────────────────────────────────────
 
-// ─── Composant : carte partage par élément ────────────────────────────────────
-
-interface ElementRowProps {
-  el: AlaUneElement;
-  bloc: AlaUneBloc;
+interface ElementShareRowProps {
+  el: ElementALaUne;
+  bloc: BlocALaUne;
   shopName: string;
 }
 
-function ElementShareRow({ el, bloc, shopName }: ElementRowProps) {
+function ElementShareRow({ el, bloc, shopName }: ElementShareRowProps) {
   const message = buildShareMessage({
     elementNom: el.nom,
     elementPrix: el.prix,
@@ -111,17 +105,14 @@ function ElementShareRow({ el, bloc, shopName }: ElementRowProps) {
     blocDescription: bloc.description,
     shopName,
     blocId: bloc.id,
-    expireAt: bloc.expireAt,
+    expireAt: bloc.expire_at,
   });
 
   const shareToWhatsApp = async () => {
     const encoded = encodeURIComponent(message);
     try {
       const can = await Linking.canOpenURL('whatsapp://send?text=a');
-      if (can) {
-        await Linking.openURL(`whatsapp://send?text=${encoded}`);
-        return;
-      }
+      if (can) { await Linking.openURL(`whatsapp://send?text=${encoded}`); return; }
     } catch {}
     Share.share({ message });
   };
@@ -135,33 +126,19 @@ function ElementShareRow({ el, bloc, shopName }: ElementRowProps) {
         <Text style={styles.elPrix}>{formatPrice(el.prix)}</Text>
       </View>
       <View style={styles.elShare}>
-        <TouchableOpacity onPress={shareToWhatsApp} style={styles.shareBtn}>
-          <IcoWhatsApp />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={shareGeneric} style={styles.shareBtn}>
-          <IcoFacebook />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={shareGeneric} style={styles.shareBtn}>
-          <IcoInstagram />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={shareGeneric} style={styles.shareBtn}>
-          <IcoTikTok />
-        </TouchableOpacity>
+        <TouchableOpacity onPress={shareToWhatsApp} style={styles.shareBtn}><IcoWhatsApp /></TouchableOpacity>
+        <TouchableOpacity onPress={shareGeneric} style={styles.shareBtn}><IcoFacebook /></TouchableOpacity>
+        <TouchableOpacity onPress={shareGeneric} style={styles.shareBtn}><IcoInstagram /></TouchableOpacity>
+        <TouchableOpacity onPress={shareGeneric} style={styles.shareBtn}><IcoTikTok /></TouchableOpacity>
       </View>
     </View>
   );
 }
 
-// ─── Composant : carte bloc actif ────────────────────────────────────────────
+// ─── Carte bloc actif ─────────────────────────────────────────────────────────
 
-interface BlocActifCardProps {
-  bloc: AlaUneBloc;
-  shopName: string;
-}
-
-function BlocActifCard({ bloc, shopName }: BlocActifCardProps) {
-  const [tick, setTick] = useState(0);
-
+function BlocActifCard({ bloc, shopName }: { bloc: BlocALaUne; shopName: string }) {
+  const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 60_000);
     return () => clearInterval(id);
@@ -175,16 +152,14 @@ function BlocActifCard({ bloc, shopName }: BlocActifCardProps) {
           {bloc.description ? <Text style={styles.blocDesc}>{bloc.description}</Text> : null}
         </View>
         <View style={styles.countdownChip}>
-          <Text style={styles.countdownTxt}>⏳ {formatCountdown(bloc.expireAt)}</Text>
+          <Text style={styles.countdownTxt}>⏳ {formatCountdown(bloc.expire_at)}</Text>
         </View>
       </View>
-
       <View style={styles.elList}>
         {bloc.elements.map(el => (
           <ElementShareRow key={el.id} el={el} bloc={bloc} shopName={shopName} />
         ))}
       </View>
-
       <View style={styles.lassiTag}>
         <Text style={styles.lassiTagTxt}>✨ Message généré par LASSİ · non modifiable</Text>
       </View>
@@ -192,23 +167,19 @@ function BlocActifCard({ bloc, shopName }: BlocActifCardProps) {
   );
 }
 
-// ─── Composant : item historique ──────────────────────────────────────────────
+// ─── Item historique ──────────────────────────────────────────────────────────
 
 interface HistoItemProps {
-  bloc: AlaUneBloc;
-  quotaRestant: number;
+  bloc: BlocALaUne;
+  restants: number;
   onReactiver: (id: string) => void;
   loading: boolean;
 }
 
-function HistoItem({ bloc, quotaRestant, onReactiver, loading }: HistoItemProps) {
-  const date = new Date(bloc.createdAt).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
+function HistoItem({ bloc, restants, onReactiver, loading }: HistoItemProps) {
+  const date = new Date(bloc.created_at).toLocaleDateString('fr-FR', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
   });
-
   return (
     <View style={styles.histoCard}>
       <View style={styles.histoTop}>
@@ -219,36 +190,34 @@ function HistoItem({ bloc, quotaRestant, onReactiver, loading }: HistoItemProps)
         {bloc.elements.length} élément{bloc.elements.length > 1 ? 's' : ''} · {bloc.elements.map(e => e.nom).join(', ')}
       </Text>
       <TouchableOpacity
-        style={[styles.reactiverBtn, (quotaRestant === 0 || loading) && styles.btnDisabled]}
+        style={[styles.reactiverBtn, (restants === 0 || loading) && styles.btnDisabled]}
         onPress={() => onReactiver(bloc.id)}
-        disabled={quotaRestant === 0 || loading}
+        disabled={restants === 0 || loading}
         activeOpacity={0.8}
       >
         {loading ? (
           <ActivityIndicator color={colors.bg} size="small" />
         ) : (
-          <Text style={styles.reactiverTxt}>
-            {quotaRestant === 0 ? 'Quota atteint' : 'Réactiver (1 quota)'}
-          </Text>
+          <Text style={styles.reactiverTxt}>{restants === 0 ? 'Quota atteint' : 'Réactiver (1 quota)'}</Text>
         )}
       </TouchableOpacity>
     </View>
   );
 }
 
-// ─── Formulaire de création ────────────────────────────────────────────────────
+// ─── Modal de création ────────────────────────────────────────────────────────
 
 interface CreerModalProps {
   visible: boolean;
   onClose: () => void;
-  onCreer: (titre: string, desc: string, elements: AlaUneElement[]) => Promise<void>;
+  onCreer: (titre: string, desc: string, elements: ElementALaUne[]) => Promise<void>;
   loading: boolean;
 }
 
 function CreerModal({ visible, onClose, onCreer, loading }: CreerModalProps) {
   const [titre, setTitre] = useState('');
   const [desc, setDesc] = useState('');
-  const [elements, setElements] = useState<AlaUneElement[]>([
+  const [elements, setElements] = useState<ElementALaUne[]>([
     { id: `el-${Date.now()}`, nom: '', prix: 0 },
   ]);
 
@@ -258,47 +227,35 @@ function CreerModal({ visible, onClose, onCreer, loading }: CreerModalProps) {
     setElements([{ id: `el-${Date.now()}`, nom: '', prix: 0 }]);
   };
 
-  const handleClose = () => {
-    reset();
-    onClose();
-  };
+  const handleClose = () => { reset(); onClose(); };
 
   const addElement = () => {
     if (elements.length >= 20) return;
     setElements(els => [...els, { id: `el-${Date.now()}`, nom: '', prix: 0 }]);
   };
 
-  const updateElement = (id: string, field: 'nom' | 'prix', value: string) => {
+  const updateEl = (id: string, field: 'nom' | 'prix', value: string) => {
     setElements(els =>
       els.map(e => (e.id === id ? { ...e, [field]: field === 'prix' ? Number(value) || 0 : value } : e)),
     );
   };
 
-  const removeElement = (id: string) => {
+  const removeEl = (id: string) => {
     if (elements.length <= 1) return;
     setElements(els => els.filter(e => e.id !== id));
   };
 
   const handleSubmit = async () => {
-    if (!titre.trim()) {
-      Alert.alert('Titre requis', 'Donnez un titre à votre bloc À la une.');
-      return;
-    }
-    const validEls = elements.filter(e => e.nom.trim());
-    if (validEls.length === 0) {
-      Alert.alert('Éléments requis', 'Ajoutez au moins un élément avec un nom.');
-      return;
-    }
-    await onCreer(titre.trim(), desc.trim(), validEls.map(e => ({ ...e, nom: e.nom.trim() })));
+    if (!titre.trim()) { Alert.alert('Titre requis', 'Donnez un titre à votre bloc.'); return; }
+    const valid = elements.filter(e => e.nom.trim());
+    if (valid.length === 0) { Alert.alert('Éléments requis', 'Ajoutez au moins un élément.'); return; }
+    await onCreer(titre.trim(), desc.trim(), valid.map(e => ({ ...e, nom: e.nom.trim() })));
     reset();
   };
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        style={styles.modalOverlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.modalSheet}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Nouveau bloc À la une</Text>
@@ -348,27 +305,26 @@ function CreerModal({ visible, onClose, onCreer, loading }: CreerModalProps) {
                   <TextInput
                     style={styles.elInputNom}
                     value={el.nom}
-                    onChangeText={v => updateElement(el.id, 'nom', v)}
+                    onChangeText={v => updateEl(el.id, 'nom', v)}
                     placeholder={`Élément ${idx + 1}`}
                     placeholderTextColor={colors.muted}
                   />
                   <TextInput
                     style={styles.elInputPrix}
                     value={el.prix > 0 ? String(el.prix) : ''}
-                    onChangeText={v => updateElement(el.id, 'prix', v)}
+                    onChangeText={v => updateEl(el.id, 'prix', v)}
                     placeholder="Prix (F)"
                     placeholderTextColor={colors.muted}
                     keyboardType="numeric"
                   />
                 </View>
                 {elements.length > 1 && (
-                  <TouchableOpacity onPress={() => removeElement(el.id)} style={styles.elRemoveBtn}>
+                  <TouchableOpacity onPress={() => removeEl(el.id)} style={styles.elRemoveBtn}>
                     <IcoTrash stroke={colors.danger} />
                   </TouchableOpacity>
                 )}
               </View>
             ))}
-
             <View style={{ height: 20 }} />
           </ScrollView>
 
@@ -378,11 +334,7 @@ function CreerModal({ visible, onClose, onCreer, loading }: CreerModalProps) {
             disabled={loading}
             activeOpacity={0.8}
           >
-            {loading ? (
-              <ActivityIndicator color={colors.bg} />
-            ) : (
-              <Text style={styles.submitTxt}>Publier le bloc (24h)</Text>
-            )}
+            {loading ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.submitTxt}>Publier le bloc (24h)</Text>}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -400,83 +352,68 @@ export default function AlaUneScreen({ onBack }: Props) {
   const shopName = useShopStore(s => s.profile?.name ?? 'Ma boutique');
   const shopCategorieId = useShopStore(s => s.context.category ?? '');
 
-  const [blocs, setBlocs] = useState<AlaUneBloc[]>([]);
-  const [quotaRestant, setQuotaRestant] = useState(10);
+  const [actifs, setActifs] = useState<BlocALaUne[]>([]);
+  const [historique, setHistorique] = useState<BlocALaUne[]>([]);
+  const [quota, setQuota] = useState<{ utilises: number; restants: number }>({ utilises: 0, restants: 10 });
   const [loading, setLoading] = useState(true);
   const [showCreer, setShowCreer] = useState(false);
-  const [creatingId, setCreatingId] = useState<string | null>(null);
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
-      const [myBlocs, quota] = await Promise.all([getMesBlocsAlaUne(), getQuotaRestant()]);
-      setBlocs(myBlocs);
-      setQuotaRestant(quota);
-    } catch (e) {
-      Alert.alert('Erreur', getErrorMessage(e));
+      const [blocs, q] = await Promise.all([getMesBlocs(), getQuotaDuJour()]);
+      setActifs(blocs.actifs);
+      setHistorique(blocs.historique);
+      setQuota(q);
+    } catch {
+      // silencieux
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const blocsActifs = blocs.filter(isActifEtNonExpire);
-  const blocsHistorique = blocs.filter(b => !isActifEtNonExpire(b));
-
-  const handleCreer = async (titre: string, desc: string, elements: AlaUneElement[]) => {
+  const handleCreer = async (titre: string, desc: string, elements: ElementALaUne[]) => {
     if (!shopCategorieId) {
       Alert.alert('Boutique manquante', 'Configurez votre boutique avant de créer un bloc.');
       return;
     }
     setSubmitting(true);
-    try {
-      await creerBlocAlaUne({
-        titre,
-        description: desc || undefined,
-        categorieId: shopCategorieId,
-        elements,
-      });
-      setShowCreer(false);
-      await refresh();
-    } catch (e) {
-      const msg = getErrorMessage(e);
-      if (msg.includes('QUOTA_ATTEINT')) {
-        Alert.alert('Quota atteint', 'Vous avez atteint la limite de 10 blocs pour aujourd\'hui.');
-      } else {
-        Alert.alert('Erreur', msg);
-      }
-    } finally {
-      setSubmitting(false);
+    const result = await creerBloc({
+      titre,
+      description: desc || undefined,
+      categorieId: shopCategorieId,
+      elements,
+    });
+    setSubmitting(false);
+    if (!result.success) {
+      Alert.alert('Impossible de créer', result.error ?? 'Erreur inconnue.');
+      return;
     }
+    setShowCreer(false);
+    await refresh();
   };
 
-  const handleReactiver = async (blocId: string) => {
-    if (quotaRestant === 0) return;
+  const handleReactiver = (blocId: string) => {
+    if (quota.restants === 0) return;
     Alert.alert(
       'Réactiver ce bloc ?',
-      'Le bloc sera republié pour 24h. Cela consomme 1 quota du jour.',
+      'Le bloc sera republié pour 24h et consomme 1 quota du jour.',
       [
         { text: 'Annuler', style: 'cancel' },
         {
           text: 'Réactiver',
           onPress: async () => {
-            setCreatingId(blocId);
-            try {
-              await reactiverBlocAlaUne(blocId);
-              await refresh();
-            } catch (e) {
-              const msg = getErrorMessage(e);
-              if (msg.includes('QUOTA_ATTEINT')) {
-                Alert.alert('Quota atteint', 'Limite de 10 blocs par jour atteinte.');
-              } else {
-                Alert.alert('Erreur', msg);
-              }
-            } finally {
-              setCreatingId(null);
+            setReactivatingId(blocId);
+            const result = await reactiverBloc(blocId);
+            setReactivatingId(null);
+            if (!result.success) {
+              Alert.alert('Impossible', result.error ?? 'Erreur.');
+              return;
             }
+            await refresh();
           },
         },
       ],
@@ -495,7 +432,7 @@ export default function AlaUneScreen({ onBack }: Props) {
           <Text style={styles.headerTitle}>À la une</Text>
         </View>
         <View style={styles.quotaBadge}>
-          <Text style={styles.quotaTxt}>{quotaRestant}/10</Text>
+          <Text style={styles.quotaTxt}>{quota.restants}/10</Text>
         </View>
       </View>
 
@@ -511,34 +448,34 @@ export default function AlaUneScreen({ onBack }: Props) {
         >
           {/* CTA Créer */}
           <TouchableOpacity
-            style={[styles.createBtn, quotaRestant === 0 && styles.btnDisabled]}
+            style={[styles.createBtn, quota.restants === 0 && styles.btnDisabled]}
             onPress={() => setShowCreer(true)}
-            disabled={quotaRestant === 0}
+            disabled={quota.restants === 0}
             activeOpacity={0.8}
           >
-            <IcoPlus stroke={quotaRestant === 0 ? colors.muted : colors.bg} />
-            <Text style={[styles.createBtnTxt, quotaRestant === 0 && { color: colors.muted }]}>
-              {quotaRestant === 0 ? 'Quota journalier atteint' : 'Créer un bloc À la une'}
+            <IcoPlus stroke={quota.restants === 0 ? colors.muted : colors.bg} />
+            <Text style={[styles.createBtnTxt, quota.restants === 0 && { color: colors.muted }]}>
+              {quota.restants === 0 ? 'Quota journalier atteint' : 'Créer un bloc À la une'}
             </Text>
           </TouchableOpacity>
 
-          {quotaRestant < 10 && (
+          {quota.utilises > 0 && (
             <Text style={styles.quotaInfo}>
-              {quotaRestant} bloc{quotaRestant > 1 ? 's' : ''} restant{quotaRestant > 1 ? 's' : ''} aujourd'hui (réactivation = 1 quota)
+              {quota.utilises} bloc{quota.utilises > 1 ? 's' : ''} créé{quota.utilises > 1 ? 's' : ''} aujourd'hui · {quota.restants} restant{quota.restants > 1 ? 's' : ''} (réactivation = 1 quota)
             </Text>
           )}
 
           {/* Blocs actifs */}
-          {blocsActifs.length > 0 && (
+          {actifs.length > 0 && (
             <>
               <Text style={styles.sectionTitle}>En cours</Text>
-              {blocsActifs.map(b => (
+              {actifs.map(b => (
                 <BlocActifCard key={b.id} bloc={b} shopName={shopName} />
               ))}
             </>
           )}
 
-          {blocsActifs.length === 0 && !loading && (
+          {actifs.length === 0 && (
             <View style={styles.emptyBox}>
               <Text style={styles.emptyIcon}>🌟</Text>
               <Text style={styles.emptyTxt}>
@@ -548,16 +485,16 @@ export default function AlaUneScreen({ onBack }: Props) {
           )}
 
           {/* Historique */}
-          {blocsHistorique.length > 0 && (
+          {historique.length > 0 && (
             <>
               <Text style={styles.sectionTitle}>Historique</Text>
-              {blocsHistorique.map(b => (
+              {historique.map(b => (
                 <HistoItem
                   key={b.id}
                   bloc={b}
-                  quotaRestant={quotaRestant}
+                  restants={quota.restants}
                   onReactiver={handleReactiver}
-                  loading={creatingId === b.id}
+                  loading={reactivatingId === b.id}
                 />
               ))}
             </>
@@ -588,7 +525,6 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    backgroundColor: colors.bg,
   },
   backBtn: { padding: 4 },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 12 },
@@ -635,7 +571,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  // Bloc actif
   blocActifCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -683,7 +618,6 @@ const styles = StyleSheet.create({
   },
   lassiTagTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 10.5, fontStyle: 'italic' },
 
-  // Historique
   histoCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -711,7 +645,6 @@ const styles = StyleSheet.create({
   },
   reactiverTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 12 },
 
-  // Vide
   emptyBox: { alignItems: 'center', paddingVertical: 36 },
   emptyIcon: { fontSize: 36, marginBottom: 12 },
   emptyTxt: {
@@ -722,7 +655,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // Modal
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#00000080' },
   modalSheet: {
     backgroundColor: colors.surface,
@@ -757,7 +689,13 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   textArea: { height: 80, textAlignVertical: 'top' },
-  charCount: { color: colors.muted, fontFamily: fonts.body, fontSize: 10, textAlign: 'right', marginBottom: 14 },
+  charCount: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 10,
+    textAlign: 'right',
+    marginBottom: 14,
+  },
 
   elHeaderRow: {
     flexDirection: 'row',
@@ -768,12 +706,7 @@ const styles = StyleSheet.create({
   addElBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   addElTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 12 },
 
-  elInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
+  elInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   elInputLeft: { flex: 1, flexDirection: 'row', gap: 8 },
   elInputNom: {
     flex: 2,
