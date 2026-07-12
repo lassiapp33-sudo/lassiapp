@@ -621,8 +621,6 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 14,
     paddingBottom: 20,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
     backgroundColor: 'rgba(20,21,42,.97)',
   },
   payBtn: {

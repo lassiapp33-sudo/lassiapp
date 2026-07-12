@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Image,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -74,9 +75,9 @@ L.tileLayer('https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{
   attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>',maxZoom:20
 }).addTo(map);
 
-// Marqueur utilisateur
+// Marqueur utilisateur — zIndex bas pour ne pas couvrir les pins de prestataires
 const uIco=L.divIcon({html:'<div class="ud"></div>',iconSize:[18,18],iconAnchor:[9,9],className:''});
-let uMarker=L.marker([${lat},${lng}],{icon:uIco,zIndexOffset:2000}).addTo(map);
+let uMarker=L.marker([${lat},${lng}],{icon:uIco,zIndexOffset:50}).addTo(map);
 
 // Marqueurs commerces
 const mkrs={};
@@ -97,7 +98,9 @@ function renderShops(shops){
   Object.values(mkrs).forEach(m=>map.removeLayer(m));
   Object.keys(mkrs).forEach(k=>delete mkrs[k]);
   shops.forEach(s=>{
-    const slat=s.latitude||FB_LAT;const slng=s.longitude||FB_LNG;
+    // Ignorer les shops sans coordonnées GPS — ils ne peuvent pas être localisés sur la carte
+    if(!s.latitude||!s.longitude)return;
+    const slat=s.latitude;const slng=s.longitude;
     const v=s.isVip;
     const pin=s.hasGoldenPin;
     const gold=v||pin;
@@ -187,9 +190,10 @@ interface SheetProps {
   zone: string;
   onView: () => void;
   onRoute: () => void;
+  onClose: () => void;
 }
 
-function MapShopSheet({ shop, distanceM, zone, onView, onRoute }: SheetProps) {
+function MapShopSheet({ shop, distanceM, zone, onView, onRoute, onClose }: SheetProps) {
   const distStr = distanceM !== null ? formatDistance(distanceM) : null;
   const walkStr = distanceM !== null ? walkMinutes(distanceM) : null;
   const { isOpen } = computeStatus(
@@ -197,12 +201,26 @@ function MapShopSheet({ shop, distanceM, zone, onView, onRoute }: SheetProps) {
     shop.isManuallyClose ?? false,
   );
 
+  // Adresse la plus précise disponible : texte saisi > geocodage inverse
+  const adresse = shop.addressText?.trim() || zone;
+
+  const callPhone = () => {
+    if (shop.phone) Linking.openURL(`tel:${shop.phone}`);
+  };
+
   return (
     <View style={styles.sheet}>
-      <View style={styles.grab} />
+      <View style={styles.grabRow}>
+        <View style={styles.grab} />
+        <TouchableOpacity style={styles.closeBtn} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7}>
+          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2.5} strokeLinecap="round">
+            <Path d="M18 6 6 18M6 6l12 12" stroke={colors.muted} />
+          </Svg>
+        </TouchableOpacity>
+      </View>
 
+      {/* Ligne principale : logo + nom + distance */}
       <View style={styles.sheetCard}>
-        {/* Logo boutique — Avatar unique, source de vérité shops.logo_url */}
         <Avatar imageUrl={shop.logoUrl} name={shop.name} size={52} variant="shop" />
 
         <View style={styles.sheetInfo}>
@@ -211,14 +229,13 @@ function MapShopSheet({ shop, distanceM, zone, onView, onRoute }: SheetProps) {
               {shop.name}
             </Text>
             {shop.isVip && <Text style={styles.vipBadge}>🏆 VIP</Text>}
-            {shop.hasGoldenPin && <Text style={styles.pinBadge}>📌 Épinglé</Text>}
+            {shop.hasGoldenPin && <Text style={styles.pinBadge}>📌</Text>}
           </View>
           <View style={styles.sheetMeta}>
             <Text style={styles.sheetMetaTxt}>⭐ {shop.rating.toFixed(1)}</Text>
             <Text style={[styles.sheetMetaTxt, { color: isOpen ? colors.success : colors.danger }]}>
               ● {isOpen ? 'Ouvert' : 'Fermé'}
             </Text>
-            {zone ? <Text style={styles.sheetMetaTxt}>{zone}</Text> : null}
           </View>
         </View>
 
@@ -229,6 +246,35 @@ function MapShopSheet({ shop, distanceM, zone, onView, onRoute }: SheetProps) {
           </View>
         ) : null}
       </View>
+
+      {/* Bloc localisation exacte */}
+      {adresse ? (
+        <View style={styles.locRow}>
+          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M12 21C12 21 5 13.5 5 9a7 7 0 1 1 14 0c0 4.5-7 12-7 12z" stroke={colors.accent} />
+            <SvgCircle cx={12} cy={9} r={2.5} stroke={colors.accent} />
+          </Svg>
+          <Text style={styles.locTxt} numberOfLines={2}>{adresse}</Text>
+        </View>
+      ) : null}
+
+      {/* Zone (quartier) séparée si on a aussi une adresse texte */}
+      {zone && shop.addressText?.trim() && zone !== shop.addressText.trim() ? (
+        <View style={styles.locRow}>
+          <Text style={styles.zoneTxt}>📍 {zone}</Text>
+        </View>
+      ) : null}
+
+      {/* Téléphone cliquable */}
+      {shop.phone ? (
+        <TouchableOpacity style={styles.phoneRow} onPress={callPhone} activeOpacity={0.75}>
+          <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 3.08 4.18 2 2 0 0 1 5.09 2h3a2 2 0 0 1 2 1.72 12.05 12.05 0 0 0 .57 2.57 2 2 0 0 1-.45 2.11l-1.27 1.27a16 16 0 0 0 6.29 6.29l1.27-1.27a2 2 0 0 1 2.11-.45 12.05 12.05 0 0 0 2.57.57A2 2 0 0 1 22 16.92z" stroke={colors.accent} />
+          </Svg>
+          <Text style={styles.phoneTxt}>{shop.phone}</Text>
+          <Text style={styles.phoneCallTxt}>Appeler</Text>
+        </TouchableOpacity>
+      ) : null}
 
       <View style={styles.sheetActions}>
         <TouchableOpacity style={styles.btnGo} onPress={onView} activeOpacity={0.85}>
@@ -303,6 +349,7 @@ export default function MapScreen({
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery ?? '');
   const [loading, setLoading] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(0);
 
   // Position initiale (vraie ou Dakar en fallback)
   const initLat = coords?.latitude ?? DAKAR.latitude;
@@ -355,6 +402,8 @@ export default function MapScreen({
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(s => s.name.toLowerCase().includes(q));
     }
+    // Compte uniquement ceux avec des coordonnées GPS réelles (affichés sur la carte)
+    setVisibleCount(filtered.filter(s => s.latitude && s.longitude).length);
     sendToWebView({ type: 'shops', shops: filtered });
   }, [allShops, activeFilter, mapReady, searchQuery, excludeShopId]);
 
@@ -530,8 +579,13 @@ export default function MapScreen({
         </View>
       )}
 
-      {/* ── État vide ────────────────────────────────────────────────────── */}
-      {!loading && mapReady && allShops.length === 0 && (
+      {/* ── Compteur / état vide ────────────────────────────────────────── */}
+      {!loading && mapReady && !selected && visibleCount > 0 && (
+        <View style={styles.countBadge}>
+          <Text style={styles.countTxt}>📍 {visibleCount} commerce{visibleCount > 1 ? 's' : ''} sur la carte</Text>
+        </View>
+      )}
+      {!loading && mapReady && !selected && allShops.length === 0 && (
         <View style={styles.emptyBadge}>
           <LassiMascotte forme="explorer" taille={110} glow={false} />
           <Text style={styles.emptyTxt}>
@@ -543,15 +597,11 @@ export default function MapScreen({
       {/* ── Bottom sheet (tap sur un pin) ─────────────────────────────────── */}
       {selected && (
         <Animated.View style={[styles.sheetWrap, { transform: [{ translateY: sheetAnim }] }]}>
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={closeSheet}
-          />
           <MapShopSheet
             shop={selected}
             distanceM={distanceM}
             zone={selectedZone}
+            onClose={closeSheet}
             onView={() => {
               if (selected.hasGoldenPin) recordCarteClick(selected.id).catch(() => {});
               closeSheet();
@@ -661,6 +711,23 @@ const styles = StyleSheet.create({
     top: TOP_INSET + 108,
     zIndex: 30,
   },
+  countBadge: {
+    position: 'absolute',
+    bottom: 30,
+    alignSelf: 'center',
+    zIndex: 30,
+    backgroundColor: 'rgba(20,21,42,.92)',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 20,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+  },
+  countTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+  },
   emptyBadge: {
     position: 'absolute',
     bottom: 200,
@@ -704,14 +771,31 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 20,
   },
+  grabRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    marginBottom: 14,
+    position: 'relative',
+  },
   grab: {
     width: 38,
     height: 5,
     borderRadius: 3,
     backgroundColor: colors.border,
-    alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 16,
+  },
+  closeBtn: {
+    position: 'absolute',
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sheetCard: { flexDirection: 'row', alignItems: 'center', gap: 13 },
   sheetInfo: { flex: 1, minWidth: 0 },
@@ -751,6 +835,56 @@ const styles = StyleSheet.create({
   sheetDist: { alignItems: 'flex-end', flexShrink: 0 },
   sheetDistKm: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 15 },
   sheetDistWalk: { color: colors.muted, fontFamily: fonts.body, fontSize: 9.5, marginTop: 2 },
+
+  // Localisation & téléphone
+  locRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 7,
+    marginTop: 11,
+    paddingTop: 11,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  locTxt: {
+    flex: 1,
+    color: colors.white,
+    fontFamily: fonts.body,
+    fontSize: 12.5,
+    lineHeight: 18,
+  },
+  zoneTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 11.5,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 9,
+    paddingTop: 9,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  phoneTxt: {
+    flex: 1,
+    color: colors.white,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    letterSpacing: 0.3,
+  },
+  phoneCallTxt: {
+    color: colors.accent,
+    fontFamily: fonts.ui,
+    fontSize: 11.5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(253,207,52,.12)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(253,207,52,.25)',
+  },
 
   sheetActions: { flexDirection: 'row', gap: 10, marginTop: 15 },
   btnGo: {
