@@ -26,6 +26,8 @@ import {
   getQuotaDuJour,
   buildShareMessage,
 } from '../../services/aLaUne';
+import { genererTextePartage } from '../../utils/deepLinks';
+import { getCatConfig, type CatId } from '../../config/categories';
 import type { BlocALaUne, ElementALaUne } from '../../types/aLaUne';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -101,6 +103,7 @@ function ElementShareRow({ el, bloc, shopName }: ElementShareRowProps) {
   const message = buildShareMessage({
     elementNom: el.nom,
     elementPrix: el.prix,
+    elementId: el.id,
     blocTitre: bloc.titre,
     blocDescription: bloc.description,
     shopName,
@@ -137,12 +140,37 @@ function ElementShareRow({ el, bloc, shopName }: ElementShareRowProps) {
 
 // ─── Carte bloc actif ─────────────────────────────────────────────────────────
 
-function BlocActifCard({ bloc, shopName }: { bloc: BlocALaUne; shopName: string }) {
+interface BlocActifCardProps {
+  bloc: BlocALaUne;
+  shopName: string;
+  categorieId: string;
+  nomCategorie: string;
+}
+
+function BlocActifCard({ bloc, shopName, categorieId, nomCategorie }: BlocActifCardProps) {
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 60_000);
     return () => clearInterval(id);
   }, []);
+
+  const handleShareBloc = async () => {
+    const message = genererTextePartage({
+      titre: bloc.titre,
+      description: bloc.description ?? undefined,
+      elements: bloc.elements,
+      blocId: bloc.id,
+      categorieId,
+      nomCategorie,
+      expireAt: bloc.expire_at,
+    });
+    const encoded = encodeURIComponent(message);
+    try {
+      const can = await Linking.canOpenURL('whatsapp://send?text=a');
+      if (can) { await Linking.openURL(`whatsapp://send?text=${encoded}`); return; }
+    } catch {}
+    Share.share({ message });
+  };
 
   return (
     <View style={styles.blocActifCard}>
@@ -160,6 +188,9 @@ function BlocActifCard({ bloc, shopName }: { bloc: BlocALaUne; shopName: string 
           <ElementShareRow key={el.id} el={el} bloc={bloc} shopName={shopName} />
         ))}
       </View>
+      <TouchableOpacity onPress={handleShareBloc} style={styles.shareBlocBtn} activeOpacity={0.8}>
+        <Text style={styles.shareBlocTxt}>📤 Partager le bloc complet</Text>
+      </TouchableOpacity>
       <View style={styles.lassiTag}>
         <Text style={styles.lassiTagTxt}>✨ Message généré par LASSİ · non modifiable</Text>
       </View>
@@ -351,6 +382,7 @@ interface Props {
 export default function AlaUneScreen({ onBack }: Props) {
   const shopName = useShopStore(s => s.profile?.name ?? 'Ma boutique');
   const shopCategorieId = useShopStore(s => s.context.category ?? '');
+  const nomCategorie = getCatConfig(shopCategorieId as CatId)?.label ?? shopCategorieId;
 
   const [actifs, setActifs] = useState<BlocALaUne[]>([]);
   const [historique, setHistorique] = useState<BlocALaUne[]>([]);
@@ -470,7 +502,13 @@ export default function AlaUneScreen({ onBack }: Props) {
             <>
               <Text style={styles.sectionTitle}>En cours</Text>
               {actifs.map(b => (
-                <BlocActifCard key={b.id} bloc={b} shopName={shopName} />
+                <BlocActifCard
+                  key={b.id}
+                  bloc={b}
+                  shopName={shopName}
+                  categorieId={shopCategorieId}
+                  nomCategorie={nomCategorie}
+                />
               ))}
             </>
           )}
@@ -610,8 +648,19 @@ const styles = StyleSheet.create({
   elShare: { flexDirection: 'row', gap: 6 },
   shareBtn: { padding: 2 },
 
-  lassiTag: {
+  shareBlocBtn: {
     marginTop: 12,
+    backgroundColor: colors.bg,
+    borderRadius: radius.sm,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  shareBlocTxt: { color: colors.white, fontFamily: fonts.ui, fontSize: 12.5 },
+
+  lassiTag: {
+    marginTop: 8,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingTop: 8,

@@ -66,6 +66,7 @@ function ElCard({ el, bloc }: ElCardProps) {
   const message = buildShareMessage({
     elementNom: el.nom,
     elementPrix: el.prix,
+    elementId: el.id,
     blocTitre: bloc.titre,
     blocDescription: bloc.description,
     shopName: bloc.shop_name ?? 'Boutique',

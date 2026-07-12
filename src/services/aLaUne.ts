@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type { BlocALaUne, ElementALaUne } from '../types/aLaUne';
+import { lienElement } from '../utils/deepLinks';
 
 // ─── Créer un bloc ────────────────────────────────────────────────────────────
 
@@ -121,9 +122,11 @@ export const getQuotaDuJour = async (): Promise<{ utilises: number; restants: nu
 
 // ─── Message de partage généré par LASSİ (non modifiable) ────────────────────
 
+/** Message de partage par élément — lien web (compatible sans app). */
 export function buildShareMessage(params: {
   elementNom: string;
   elementPrix: number;
+  elementId: string;
   blocTitre: string;
   blocDescription: string | null;
   shopName: string;
@@ -134,7 +137,8 @@ export function buildShareMessage(params: {
     1,
     Math.ceil((new Date(params.expireAt).getTime() - Date.now()) / 3_600_000),
   );
-  const prix = params.elementPrix.toLocaleString('fr-FR') + ' F';
+  const prix = params.elementPrix.toLocaleString('fr-FR') + ' F CFA';
+  const link = lienElement(params.blocId, params.elementId);
   const lines = [
     `✨ *${params.elementNom}* — ${prix}`,
     `📌 ${params.blocTitre} · ${params.shopName}`,
@@ -143,8 +147,7 @@ export function buildShareMessage(params: {
   lines.push(
     '',
     `⏳ Offre valable encore ${hoursLeft}h`,
-    `📲 Commande sur LASSİ :`,
-    `lassiapp://a_la_une/${params.blocId}`,
+    `👉 ${link}`,
     '',
     '─────────────────────',
     'Propulsé par LASSİ 🇸🇳',
