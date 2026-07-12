@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,15 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Share,
-  Linking,
 } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import Avatar from '../Avatar';
-import { getBlocsActifs, buildShareMessage } from '../../services/aLaUne';
+import { getBlocsActifs } from '../../services/aLaUne';
 import type { BlocALaUne, ElementALaUne } from '../../types/aLaUne';
-import { supabase } from '../../lib/supabase';
 import { formatPrice } from '../../utils/format';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -25,14 +22,6 @@ const IcoFlame = () => (
       d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
       stroke={colors.accent}
     />
-  </Svg>
-);
-
-const IcoShare = () => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" stroke={colors.muted} />
-    <Path d="M16 6l-4-4-4 4" stroke={colors.muted} />
-    <Path d="M12 2v13" stroke={colors.muted} />
   </Svg>
 );
 
@@ -55,68 +44,54 @@ function useCountdown(expireAt: string): string {
   return label;
 }
 
-// ─── Carte élément partageable ────────────────────────────────────────────────
+// ─── Carte élément ────────────────────────────────────────────────────────────
 
 interface ElCardProps {
   el: ElementALaUne;
-  bloc: BlocALaUne;
+  onPress?: () => void;
 }
 
-function ElCard({ el, bloc }: ElCardProps) {
-  const message = buildShareMessage({
-    elementNom: el.nom,
-    elementPrix: el.prix,
-    elementId: el.id,
-    blocTitre: bloc.titre,
-    blocDescription: bloc.description,
-    shopName: bloc.shop_name ?? 'Boutique',
-    blocId: bloc.id,
-    expireAt: bloc.expire_at,
-  });
-
-  const handleShare = async () => {
-    const encoded = encodeURIComponent(message);
-    try {
-      const can = await Linking.canOpenURL('whatsapp://send?text=a');
-      if (can) { await Linking.openURL(`whatsapp://send?text=${encoded}`); return; }
-    } catch {}
-    Share.share({ message });
-  };
-
+function ElCard({ el, onPress }: ElCardProps) {
   return (
-    <View style={styles.elCard}>
+    <TouchableOpacity style={styles.elCard} onPress={onPress} activeOpacity={0.8}>
       <Text style={styles.elNom} numberOfLines={2}>{el.nom}</Text>
       <Text style={styles.elPrix}>{formatPrice(el.prix)}</Text>
-      <TouchableOpacity onPress={handleShare} style={styles.elShareBtn} activeOpacity={0.7}>
-        <IcoShare />
-        <Text style={styles.elShareTxt}>Partager</Text>
-      </TouchableOpacity>
-    </View>
+      <View style={styles.elVoirRow}>
+        <Text style={styles.elVoirTxt}>Voir →</Text>
+      </View>
+    </TouchableOpacity>
   );
 }
 
 // ─── Carte bloc ───────────────────────────────────────────────────────────────
 
-function BlocCard({ bloc }: { bloc: BlocALaUne }) {
+interface BlocCardProps {
+  bloc: BlocALaUne;
+  onBlocPress?: (blocId: string, elementId?: string) => void;
+}
+
+function BlocCard({ bloc, onBlocPress }: BlocCardProps) {
   const countdown = useCountdown(bloc.expire_at);
 
   return (
     <View style={styles.blocCard}>
-      <View style={styles.blocHeader}>
-        <Avatar
-          name={bloc.shop_name ?? '?'}
-          imageUrl={bloc.shop_logo_url ?? null}
-          size={34}
-          variant="shop"
-        />
-        <View style={styles.blocHeaderText}>
-          <Text style={styles.shopName} numberOfLines={1}>{bloc.shop_name ?? 'Boutique'}</Text>
-          <Text style={styles.blocTitre} numberOfLines={1}>{bloc.titre}</Text>
+      <TouchableOpacity onPress={() => onBlocPress?.(bloc.id)} activeOpacity={0.7}>
+        <View style={styles.blocHeader}>
+          <Avatar
+            name={bloc.shop_name ?? '?'}
+            imageUrl={bloc.shop_logo_url ?? null}
+            size={34}
+            variant="shop"
+          />
+          <View style={styles.blocHeaderText}>
+            <Text style={styles.shopName} numberOfLines={1}>{bloc.shop_name ?? 'Boutique'}</Text>
+            <Text style={styles.blocTitre} numberOfLines={1}>{bloc.titre}</Text>
+          </View>
+          <View style={styles.countdownPill}>
+            <Text style={styles.countdownTxt}>⏳ {countdown}</Text>
+          </View>
         </View>
-        <View style={styles.countdownPill}>
-          <Text style={styles.countdownTxt}>⏳ {countdown}</Text>
-        </View>
-      </View>
+      </TouchableOpacity>
 
       {bloc.description ? (
         <Text style={styles.blocDesc} numberOfLines={2}>{bloc.description}</Text>
@@ -128,7 +103,7 @@ function BlocCard({ bloc }: { bloc: BlocALaUne }) {
         contentContainerStyle={styles.elRow}
       >
         {bloc.elements.map(el => (
-          <ElCard key={el.id} el={el} bloc={bloc} />
+          <ElCard key={el.id} el={el} onPress={() => onBlocPress?.(bloc.id, el.id)} />
         ))}
       </ScrollView>
     </View>
@@ -140,40 +115,19 @@ function BlocCard({ bloc }: { bloc: BlocALaUne }) {
 interface Props {
   catId: string;
   subCatId?: string;
+  onBlocPress?: (blocId: string, elementId?: string) => void;
 }
 
-export default function AlaUneSection({ catId, subCatId }: Props) {
+export default function AlaUneSection({ catId, subCatId, onBlocPress }: Props) {
   const [blocs, setBlocs] = useState<BlocALaUne[]>([]);
   const [loading, setLoading] = useState(true);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-
-  const load = async () => {
-    try {
-      const data = await getBlocsActifs(catId, subCatId);
-      setBlocs(data);
-    } catch {
-      setBlocs([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     setLoading(true);
-    load();
-
-    const ch = supabase
-      .channel(`alaune-cat-${catId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'a_la_une', filter: `categorie_id=eq.${catId}` },
-        () => load(),
-      )
-      .subscribe();
-
-    channelRef.current = ch;
-    return () => { ch.unsubscribe(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    getBlocsActifs(catId, subCatId)
+      .then(setBlocs)
+      .catch(() => setBlocs([]))
+      .finally(() => setLoading(false));
   }, [catId, subCatId]);
 
   if (loading) {
@@ -202,7 +156,7 @@ export default function AlaUneSection({ catId, subCatId }: Props) {
         contentContainerStyle={styles.blocsList}
       >
         {blocs.map(b => (
-          <BlocCard key={b.id} bloc={b} />
+          <BlocCard key={b.id} bloc={b} onBlocPress={onBlocPress} />
         ))}
       </ScrollView>
     </View>
@@ -269,13 +223,10 @@ const styles = StyleSheet.create({
   },
   elNom: { color: colors.white, fontFamily: fonts.label, fontSize: 12, marginBottom: 2 },
   elPrix: { color: colors.accent, fontFamily: fonts.ui, fontSize: 12, marginBottom: 8 },
-  elShareBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  elVoirRow: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingTop: 6,
   },
-  elShareTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 10.5 },
+  elVoirTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 10.5 },
 });

@@ -117,6 +117,7 @@ interface Props {
   initialSubCatId?: string;
   onBack: () => void;
   onShopPress?: (shopId: string, shopName: string) => void;
+  onBlocPress?: (blocId: string, elementId?: string) => void;
   onCatStateChange?: (catId: CatId, subCatId: string) => void;
   onSearch?: () => void;
   onFavorites?: () => void;
@@ -130,6 +131,7 @@ export default function CategoryScreen({
   initialSubCatId,
   onBack,
   onShopPress,
+  onBlocPress,
   onCatStateChange,
   onSearch,
   onFavorites,
@@ -322,7 +324,11 @@ export default function CategoryScreen({
           renewIn="7j"
           onPress={handleVipPress}
         />
-        <AlaUneSection catId={catId} subCatId={meta.subcats.length > 1 ? subCat : undefined} />
+        <AlaUneSection
+          catId={catId}
+          subCatId={meta.subcats.length > 1 ? subCat : undefined}
+          onBlocPress={onBlocPress}
+        />
         <FilterBar active={filter} onChange={setFilter} />
         <View style={styles.px}>
           <View style={styles.listHead}>
@@ -347,6 +353,7 @@ export default function CategoryScreen({
       filter,
       t,
       filteredShops.length,
+      onBlocPress,
       handleCatChange,
       handleSubCatChange,
       handleVipPress,

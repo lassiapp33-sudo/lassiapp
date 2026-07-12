@@ -223,6 +223,7 @@ export default function HomeNavigator({ onLogout }: Props) {
         initialCatId={screen.categorieId as CatId}
         onBack={pop}
         onShopPress={pushShop}
+        onBlocPress={(blocId, elementId) => push({ id: 'a_la_une_bloc', blocId, produitId: elementId })}
         onSearch={() => setHistory([{ id: 'main' }, { id: 'search' }])}
         onFavorites={() => setHistory([{ id: 'main' }, { id: 'favorites' }])}
         onMessages={() => setHistory([{ id: 'main' }, { id: 'messages' }])}
@@ -466,6 +467,7 @@ export default function HomeNavigator({ onLogout }: Props) {
         initialSubCatId={screen.subCatId}
         onBack={pop}
         onShopPress={pushShop}
+        onBlocPress={(blocId, elementId) => push({ id: 'a_la_une_bloc', blocId, produitId: elementId })}
         onCatStateChange={(catId, subCatId) =>
           setHistory(h => {
             const last = h[h.length - 1];
