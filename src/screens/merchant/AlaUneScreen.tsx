@@ -222,31 +222,36 @@ function HistoItem({ bloc, restants, onReactiver, loading }: HistoItemProps) {
 
 // ─── Modal de création ────────────────────────────────────────────────────────
 
+function shortId(): string {
+  return Math.random().toString(36).slice(2, 8);
+}
+
 interface CreerModalProps {
   visible: boolean;
   onClose: () => void;
   onCreer: (titre: string, desc: string, elements: ElementALaUne[]) => Promise<void>;
   loading: boolean;
+  quotaRestants: number;
 }
 
-function CreerModal({ visible, onClose, onCreer, loading }: CreerModalProps) {
+function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: CreerModalProps) {
   const [titre, setTitre] = useState('');
   const [desc, setDesc] = useState('');
   const [elements, setElements] = useState<ElementALaUne[]>([
-    { id: `el-${Date.now()}`, nom: '', prix: 0 },
+    { id: shortId(), nom: '', prix: 0 },
   ]);
 
   const reset = () => {
     setTitre('');
     setDesc('');
-    setElements([{ id: `el-${Date.now()}`, nom: '', prix: 0 }]);
+    setElements([{ id: shortId(), nom: '', prix: 0 }]);
   };
 
   const handleClose = () => { reset(); onClose(); };
 
   const addElement = () => {
     if (elements.length >= 20) return;
-    setElements(els => [...els, { id: `el-${Date.now()}`, nom: '', prix: 0 }]);
+    setElements(els => [...els, { id: shortId(), nom: '', prix: 0 }]);
   };
 
   const updateEl = (id: string, field: 'nom' | 'prix', value: string) => {
@@ -278,6 +283,9 @@ function CreerModal({ visible, onClose, onCreer, loading }: CreerModalProps) {
               <Text style={styles.modalCloseTxt}>✕</Text>
             </TouchableOpacity>
           </View>
+          <Text style={[styles.modalQuotaInfo, { color: quotaRestants === 0 ? colors.danger : colors.accent }]}>
+            Il vous reste {quotaRestants}/10 blocs aujourd'hui
+          </Text>
 
           <ScrollView showsVerticalScrollIndicator={false} style={styles.modalBody}>
             <Text style={styles.fieldLabel}>Titre *</Text>
@@ -529,6 +537,7 @@ export default function AlaUneScreen({ onBack }: Props) {
         onClose={() => setShowCreer(false)}
         onCreer={handleCreer}
         loading={submitting}
+        quotaRestants={quota.restants}
       />
     </View>
   );
@@ -705,6 +714,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 16 },
+  modalQuotaInfo: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    textAlign: 'center' as const,
+    marginBottom: 16,
+  },
   modalClose: { padding: 4 },
   modalCloseTxt: { color: colors.muted, fontSize: 18 },
   modalBody: { flexGrow: 0 },
