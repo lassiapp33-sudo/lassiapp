@@ -223,7 +223,7 @@ function HistoItem({ bloc, restants, onReactiver, loading }: HistoItemProps) {
 // ─── Modal de création ────────────────────────────────────────────────────────
 
 function shortId(): string {
-  return Math.random().toString(36).slice(2, 8);
+  return Math.random().toString(36).slice(2, 10);
 }
 
 interface CreerModalProps {
