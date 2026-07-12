@@ -42,12 +42,20 @@ export const reactiverBloc = async (
   return { success: true, blocId: data as string };
 };
 
+// ─── Cache mémoire 5 min pour getBlocsActifs ─────────────────────────────────
+
+const CACHE_TTL = 5 * 60 * 1000;
+const blocsCache = new Map<string, { data: BlocALaUne[]; ts: number }>();
+
 // ─── Blocs actifs d'une catégorie (clients) ───────────────────────────────────
 
 export const getBlocsActifs = async (
   categorieId: string,
   sousCategorieId?: string,
 ): Promise<BlocALaUne[]> => {
+  const cacheKey = `${categorieId}:${sousCategorieId ?? ''}`;
+  const hit = blocsCache.get(cacheKey);
+  if (hit && Date.now() - hit.ts < CACHE_TTL) return hit.data;
   let query = supabase
     .from('a_la_une')
     .select('*')
@@ -65,7 +73,10 @@ export const getBlocsActifs = async (
   if (error) return [];
   const blocs = (data ?? []) as BlocALaUne[];
 
-  if (blocs.length === 0) return blocs;
+  if (blocs.length === 0) {
+    blocsCache.set(cacheKey, { data: [], ts: Date.now() });
+    return [];
+  }
 
   // Enrichir avec le nom et le logo de la boutique
   const prestataireIds = [...new Set(blocs.map(b => b.prestataire_id))];
@@ -79,11 +90,13 @@ export const getBlocsActifs = async (
     shopMap[s.merchant_id] = { name: s.name, logo_url: s.logo_url ?? null };
   }
 
-  return blocs.map(b => ({
+  const result = blocs.map(b => ({
     ...b,
     shop_name: shopMap[b.prestataire_id]?.name,
     shop_logo_url: shopMap[b.prestataire_id]?.logo_url ?? null,
   }));
+  blocsCache.set(cacheKey, { data: result, ts: Date.now() });
+  return result;
 };
 
 // ─── Mes blocs (prestataire) : actifs + historique ───────────────────────────
