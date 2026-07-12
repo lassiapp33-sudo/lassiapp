@@ -26,6 +26,7 @@ import TerrainDetailScreen from '../terrain/TerrainDetailScreen';
 import TerrainMyReservationsScreen from '../terrain/TerrainMyReservationsScreen';
 import ClassementScreen from '../classement/ClassementScreen';
 import FitnessAbonnementPaymentScreen from '../fitness/FitnessAbonnementPaymentScreen';
+import BlocAlaUneScreen from './BlocAlaUneScreen';
 import ClientAbonnementsScreen from '../fitness/ClientAbonnementsScreen';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { CatId } from '../../components/category/CatNavBar';
@@ -105,7 +106,9 @@ type HomeStack =
       prixTotal: number;
     }
   | { id: 'mes_abonnements' }
-  | { id: 'fitness_abo_payment'; offre: FitnessOffre; fitnessName: string; shopId: string };
+  | { id: 'fitness_abo_payment'; offre: FitnessOffre; fitnessName: string; shopId: string }
+  | { id: 'a_la_une_bloc'; blocId: string; produitId?: string }
+  | { id: 'a_la_une_categorie'; categorieId: string };
 
 interface Props {
   onLogout: () => void;
@@ -194,8 +197,40 @@ export default function HomeNavigator({ onLogout }: Props) {
         'Paiement échoué',
         "Le paiement n'a pas pu être confirmé. Réessaie ou contacte le support.",
       );
+    } else if (pendingNav.type === 'a_la_une_bloc') {
+      push({ id: 'a_la_une_bloc', blocId: pendingNav.blocId, produitId: pendingNav.produitId });
+    } else if (pendingNav.type === 'a_la_une_categorie') {
+      push({ id: 'a_la_une_categorie', categorieId: pendingNav.categorieId });
     }
   }, [pendingNav, clearPending]);
+
+  // ── Bloc À la une (deep link produit) ────────────────────────────────────
+  if (screen.id === 'a_la_une_bloc') {
+    return (
+      <BlocAlaUneScreen
+        blocId={screen.blocId}
+        produitId={screen.produitId}
+        onBack={pop}
+        onShopPress={pushShop}
+      />
+    );
+  }
+
+  // ── Catégorie À la une (deep link catégorie) ──────────────────────────────
+  if (screen.id === 'a_la_une_categorie') {
+    return (
+      <CategoryScreen
+        initialCatId={screen.categorieId as CatId}
+        onBack={pop}
+        onShopPress={pushShop}
+        onSearch={() => setHistory([{ id: 'main' }, { id: 'search' }])}
+        onFavorites={() => setHistory([{ id: 'main' }, { id: 'favorites' }])}
+        onMessages={() => setHistory([{ id: 'main' }, { id: 'messages' }])}
+        onProfile={() => setHistory([{ id: 'main' }, { id: 'profile' }])}
+        onVoice={() => setHistory([{ id: 'main' }, { id: 'voice' }])}
+      />
+    );
+  }
 
   // ── Paiement ──────────────────────────────────────────────────────────────
   if (screen.id === 'payment') {

@@ -20,6 +20,7 @@ import TerrainReservationsScreen from './TerrainReservationsScreen';
 import TerrainScanScreen from './TerrainScanScreen';
 import MerchantAbonnementsScreen from '../fitness/MerchantAbonnementsScreen';
 import AlaUneScreen from './AlaUneScreen';
+import BlocAlaUneScreen from '../home/BlocAlaUneScreen';
 import { Terrain } from '../../types/terrain';
 import NotificationsScreen from '../home/NotificationsScreen';
 import ChatScreen from '../chat/ChatScreen';
@@ -90,7 +91,8 @@ type MerchantScreen =
   | 'terrain_scan'
   | { id: 'suivi_gps'; shopLat: number; shopLng: number; shopName: string; shopLogoUrl: string | null }
   | 'fitness_abonnements'
-  | 'a_la_une';
+  | 'a_la_une'
+  | { id: 'a_la_une_bloc'; blocId: string; produitId?: string };
 
 interface Props {
   onLogout: () => void;
@@ -180,6 +182,11 @@ export default function MerchantNavigator({ onLogout }: Props) {
         "Le paiement n'a pas pu être confirmé. Réessayez ou choisissez un autre moyen de paiement.",
       );
       setScreen('payments');
+    } else if (pendingNav.type === 'a_la_une_bloc') {
+      setScreen({ id: 'a_la_une_bloc', blocId: pendingNav.blocId, produitId: pendingNav.produitId });
+    } else if (pendingNav.type === 'a_la_une_categorie') {
+      // Pour le prestataire en mode acheteur, on revient au dashboard
+      setScreen('dashboard');
     }
   }, [pendingNav, clearPending]);
 
@@ -422,6 +429,15 @@ export default function MerchantNavigator({ onLogout }: Props) {
   if (screen === 'fitness_abonnements')
     return <MerchantAbonnementsScreen onBack={() => setScreen('store')} />;
   if (screen === 'a_la_une') return <AlaUneScreen onBack={() => setScreen('dashboard')} />;
+  if (typeof screen === 'object' && screen.id === 'a_la_une_bloc')
+    return (
+      <BlocAlaUneScreen
+        blocId={screen.blocId}
+        produitId={screen.produitId}
+        onBack={() => setScreen('dashboard')}
+        onShopPress={(sid, sname) => setScreen({ id: 'buyerShop', shopId: sid, shopName: sname })}
+      />
+    );
 
   if (screen === 'store')
     return (
