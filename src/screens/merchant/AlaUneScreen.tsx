@@ -26,7 +26,7 @@ import {
   getQuotaDuJour,
   buildShareMessage,
 } from '../../services/aLaUne';
-import { genererTextePartage } from '../../utils/deepLinks';
+import { partagerBloc } from '../../utils/aLaUneLinks';
 import { getCatConfig, type CatId } from '../../config/categories';
 import type { BlocALaUne, ElementALaUne } from '../../types/aLaUne';
 
@@ -154,23 +154,7 @@ function BlocActifCard({ bloc, shopName, categorieId, nomCategorie }: BlocActifC
     return () => clearInterval(id);
   }, []);
 
-  const handleShareBloc = async () => {
-    const message = genererTextePartage({
-      titre: bloc.titre,
-      description: bloc.description ?? undefined,
-      elements: bloc.elements,
-      blocId: bloc.id,
-      categorieId,
-      nomCategorie,
-      expireAt: bloc.expire_at,
-    });
-    const encoded = encodeURIComponent(message);
-    try {
-      const can = await Linking.canOpenURL('whatsapp://send?text=a');
-      if (can) { await Linking.openURL(`whatsapp://send?text=${encoded}`); return; }
-    } catch {}
-    Share.share({ message });
-  };
+  const handleShareBloc = () => partagerBloc(bloc, nomCategorie);
 
   return (
     <View style={styles.blocActifCard}>
