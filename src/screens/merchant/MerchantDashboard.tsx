@@ -55,7 +55,8 @@ type NavDest =
   | 'avis'
   | 'terrains'
   | 'classement'
-  | 'offre_quartier';
+  | 'offre_quartier'
+  | 'a_la_une';
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 

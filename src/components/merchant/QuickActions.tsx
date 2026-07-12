@@ -83,6 +83,23 @@ const IcoStar = ({ stroke }: { stroke: string }) => (
   </Svg>
 );
 
+const IcoFlame = ({ stroke }: { stroke: string }) => (
+  <Svg
+    width={21}
+    height={21}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path
+      d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
+      stroke={stroke}
+    />
+  </Svg>
+);
+
 const IcoTrophy = ({ stroke }: { stroke: string }) => (
   <Svg
     width={21}
@@ -252,6 +269,16 @@ export default function QuickActions({
           />
         </View>
       )}
+      <View style={styles.row}>
+        <ActionCard
+          Icon={IcoFlame}
+          iconBg="rgba(253,207,52,.13)"
+          iconStroke={colors.accent}
+          title="À la une"
+          desc="Blocs 24h · partage & ventes"
+          onPress={() => onPress?.('a_la_une')}
+        />
+      </View>
     </View>
   );
 }

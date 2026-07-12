@@ -12,6 +12,7 @@ import BottomNav, { NavTab, NAV_HEIGHT } from '../../components/home/BottomNav';
 import { colors, fonts } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import * as shopsService from '../../services/shops';
+import AlaUneSection from '../../components/category/AlaUneSection';
 import { Shop, calcDistanceMeters, calcDistance, getUserLocation } from '../../services/shops';
 import { getBadgesActifsBatch, RecompenseAttribuee } from '../../services/classementService';
 import { computeStatus, WeekHours } from '../../services/hours';
@@ -321,6 +322,7 @@ export default function CategoryScreen({
           renewIn="7j"
           onPress={handleVipPress}
         />
+        <AlaUneSection catId={catId} subCatId={meta.subcats.length > 1 ? subCat : undefined} />
         <FilterBar active={filter} onChange={setFilter} />
         <View style={styles.px}>
           <View style={styles.listHead}>
@@ -349,6 +351,7 @@ export default function CategoryScreen({
       handleSubCatChange,
       handleVipPress,
       setFilter,
+      meta.subcats.length,
     ],
   );
 

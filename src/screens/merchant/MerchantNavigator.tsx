@@ -19,6 +19,7 @@ import TerrainEditScreen from './TerrainEditScreen';
 import TerrainReservationsScreen from './TerrainReservationsScreen';
 import TerrainScanScreen from './TerrainScanScreen';
 import MerchantAbonnementsScreen from '../fitness/MerchantAbonnementsScreen';
+import AlaUneScreen from './AlaUneScreen';
 import { Terrain } from '../../types/terrain';
 import NotificationsScreen from '../home/NotificationsScreen';
 import ChatScreen from '../chat/ChatScreen';
@@ -88,7 +89,8 @@ type MerchantScreen =
   | { id: 'terrain_reservations'; terrain: Terrain }
   | 'terrain_scan'
   | { id: 'suivi_gps'; shopLat: number; shopLng: number; shopName: string; shopLogoUrl: string | null }
-  | 'fitness_abonnements';
+  | 'fitness_abonnements'
+  | 'a_la_une';
 
 interface Props {
   onLogout: () => void;
@@ -419,6 +421,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
   if (screen === 'promotions') return <PromotionsScreen onBack={() => setScreen('store')} />;
   if (screen === 'fitness_abonnements')
     return <MerchantAbonnementsScreen onBack={() => setScreen('store')} />;
+  if (screen === 'a_la_une') return <AlaUneScreen onBack={() => setScreen('dashboard')} />;
 
   if (screen === 'store')
     return (
@@ -476,6 +479,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
           }
           if (dest === 'classement') setScreen('classement');
           if (dest === 'offre_quartier') setScreen('offre_quartier');
+          if (dest === 'a_la_une') setScreen('a_la_une');
         }}
         onNotifPress={() => setScreen('notifications')}
       />
