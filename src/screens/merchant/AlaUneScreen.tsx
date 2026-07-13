@@ -15,6 +15,7 @@ import {
   Platform,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import * as Clipboard from 'expo-clipboard';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
@@ -111,6 +112,7 @@ function ElementShareRow({ el, bloc, shopName }: ElementShareRowProps) {
     expireAt: bloc.expire_at,
   });
 
+  // WhatsApp : lien direct avec texte pré-rempli
   const shareToWhatsApp = async () => {
     const encoded = encodeURIComponent(message);
     try {
@@ -120,7 +122,51 @@ function ElementShareRow({ el, bloc, shopName }: ElementShareRowProps) {
     Share.share({ message });
   };
 
-  const shareGeneric = () => Share.share({ message });
+  // IG / TikTok / FB : copie auto dans le presse-papiers + ouverture directe
+  const openWithCopy = async (
+    appUrl: string,
+    webUrl: string,
+    appName: string,
+    hint: string,
+  ) => {
+    await Clipboard.setStringAsync(message);
+    const can = await Linking.canOpenURL(appUrl);
+    Alert.alert(
+      `Partager sur ${appName}`,
+      `✅ Texte copié !\n\n${hint}`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: `Ouvrir ${appName}`,
+          onPress: () => Linking.openURL(can ? appUrl : webUrl),
+        },
+      ],
+    );
+  };
+
+  const shareToFacebook = () =>
+    openWithCopy(
+      'fb://',
+      'https://www.facebook.com',
+      'Facebook',
+      'Allez dans Stories → icône "Texte" et collez (appui long).',
+    );
+
+  const shareToInstagram = () =>
+    openWithCopy(
+      'instagram://story-camera',
+      'https://www.instagram.com',
+      'Instagram',
+      'Story ouverte → appuyez sur "Aa" et collez votre texte.',
+    );
+
+  const shareToTikTok = () =>
+    openWithCopy(
+      'tiktok://',
+      'https://www.tiktok.com',
+      'TikTok',
+      'Appuyez sur "+" → "Texte" et collez votre texte.',
+    );
 
   return (
     <View style={styles.elRow}>
@@ -130,9 +176,9 @@ function ElementShareRow({ el, bloc, shopName }: ElementShareRowProps) {
       </View>
       <View style={styles.elShare}>
         <TouchableOpacity onPress={shareToWhatsApp} style={styles.shareBtn}><IcoWhatsApp /></TouchableOpacity>
-        <TouchableOpacity onPress={shareGeneric} style={styles.shareBtn}><IcoFacebook /></TouchableOpacity>
-        <TouchableOpacity onPress={shareGeneric} style={styles.shareBtn}><IcoInstagram /></TouchableOpacity>
-        <TouchableOpacity onPress={shareGeneric} style={styles.shareBtn}><IcoTikTok /></TouchableOpacity>
+        <TouchableOpacity onPress={shareToFacebook} style={styles.shareBtn}><IcoFacebook /></TouchableOpacity>
+        <TouchableOpacity onPress={shareToInstagram} style={styles.shareBtn}><IcoInstagram /></TouchableOpacity>
+        <TouchableOpacity onPress={shareToTikTok} style={styles.shareBtn}><IcoTikTok /></TouchableOpacity>
       </View>
     </View>
   );
