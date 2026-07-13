@@ -26,18 +26,22 @@ CREATE INDEX IF NOT EXISTS idx_alaune_prestataire
 ALTER TABLE public.a_la_une ENABLE ROW LEVEL SECURITY;
 
 -- Tout le monde peut LIRE les blocs actifs non expirés
+DROP POLICY IF EXISTS "lecture blocs actifs" ON public.a_la_une;
 CREATE POLICY "lecture blocs actifs" ON public.a_la_une
   FOR SELECT USING (actif = true AND expire_at > now());
 
 -- Le prestataire peut lire TOUS ses propres blocs (même expirés = historique)
+DROP POLICY IF EXISTS "prestataire lit ses blocs" ON public.a_la_une;
 CREATE POLICY "prestataire lit ses blocs" ON public.a_la_une
   FOR SELECT USING (auth.uid() = prestataire_id);
 
 -- Le prestataire crée ses propres blocs
+DROP POLICY IF EXISTS "prestataire cree bloc" ON public.a_la_une;
 CREATE POLICY "prestataire cree bloc" ON public.a_la_une
   FOR INSERT WITH CHECK (auth.uid() = prestataire_id);
 
 -- Le prestataire modifie ses propres blocs
+DROP POLICY IF EXISTS "prestataire modifie bloc" ON public.a_la_une;
 CREATE POLICY "prestataire modifie bloc" ON public.a_la_une
   FOR UPDATE USING (auth.uid() = prestataire_id);
 
@@ -130,6 +134,10 @@ $$;
 -- ============================================
 -- pg_cron : désactiver les blocs expirés (toutes les 10 min)
 -- ============================================
+DO $$ BEGIN
+  PERFORM cron.unschedule('expire-a-la-une');
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 SELECT cron.schedule(
   'expire-a-la-une',
   '*/10 * * * *',
