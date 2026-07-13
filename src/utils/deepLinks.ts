@@ -1,33 +1,27 @@
 const WEB_FALLBACK = 'https://lassi.sn';
 
-/**
- * Lien profond vers un ÉLÉMENT précis d'un bloc À la une.
- * Utilise le domaine web pour la compatibilité cross-plateforme
- * (fonctionne même sans l'app installée).
- */
-export const lienElement = (blocId: string, elementId: string): string =>
-  `${WEB_FALLBACK}/a-la-une/${blocId}?produit=${elementId}`;
+// https://lassi.sn/b/x7k9mq/2  (code bloc + index élément)
+export const lienElement = (blocCode: string, elementIndex: number): string =>
+  `${WEB_FALLBACK}/b/${blocCode}/${elementIndex}`;
 
-/**
- * Lien général vers tous les "À la une" d'une catégorie.
- */
+// https://lassi.sn/b/x7k9mq  (code bloc seul)
+export const lienBloc = (blocCode: string): string =>
+  `${WEB_FALLBACK}/b/${blocCode}`;
+
+// https://lassi.sn/a-la-une/categorie/cat-id  (inchangé)
 export const lienCategorie = (categorieId: string): string =>
   `${WEB_FALLBACK}/a-la-une/categorie/${categorieId}`;
 
-/**
- * Génère le texte de partage complet du bloc (tous éléments + message LASSİ).
- * Non modifiable par le prestataire.
- */
 export const genererTextePartage = (params: {
   titre: string;
   description?: string;
-  elements: { id: string; nom: string; prix: number }[];
-  blocId: string;
+  elements: { nom: string; prix: number }[];
+  blocCode: string;
   categorieId: string;
   nomCategorie: string;
   expireAt: string;
 }): string => {
-  const { titre, description, elements, blocId, categorieId, nomCategorie, expireAt } = params;
+  const { titre, description, elements, blocCode, categorieId, nomCategorie, expireAt } = params;
 
   const hoursLeft = Math.max(
     1,
@@ -36,8 +30,8 @@ export const genererTextePartage = (params: {
 
   let texte = `*${titre}*\n\n`;
 
-  elements.forEach(el => {
-    const lien = lienElement(blocId, el.id);
+  elements.forEach((el, index) => {
+    const lien = lienElement(blocCode, index);
     texte += `• ${el.nom} : ${el.prix.toLocaleString('fr-FR')} F CFA\n  👉 ${lien}\n`;
   });
 

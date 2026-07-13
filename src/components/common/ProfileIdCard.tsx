@@ -4,6 +4,15 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import Avatar from '../Avatar';
 
+const IcoStarFilled = () => (
+  <Svg width={11} height={11} viewBox="0 0 24 24">
+    <Path
+      d="M12 17.8 5.8 21 7 14.1 2 9.3l7-1L12 2l3 6.3 7 1-5 4.8 1.2 6.9z"
+      fill={colors.accent}
+    />
+  </Svg>
+);
+
 const IcoEdit = () => (
   <Svg
     width={16}
@@ -29,6 +38,8 @@ export interface ProfileIdCardProps {
   onEditAvatar: () => void;
   chipLabel: string;
   bottomSpacing?: number;
+  starRating?: number | null;
+  starCount?: number;
 }
 
 export function ProfileIdCard({
@@ -41,6 +52,8 @@ export function ProfileIdCard({
   onEditAvatar,
   chipLabel,
   bottomSpacing = 24,
+  starRating,
+  starCount,
 }: ProfileIdCardProps) {
   return (
     <View style={[styles.card, { marginBottom: bottomSpacing }]}>
@@ -56,8 +69,19 @@ export function ProfileIdCard({
       <View style={styles.info}>
         <Text style={styles.name}>{name}</Text>
         {phone ? <Text style={styles.phone}>🇸🇳 +221 {phone}</Text> : null}
-        <View style={styles.chip}>
-          <Text style={styles.chipTxt}>{chipLabel}</Text>
+        <View style={styles.chipRow}>
+          <View style={styles.chip}>
+            <Text style={styles.chipTxt}>{chipLabel}</Text>
+          </View>
+          {starRating != null && starRating > 0 && (
+            <View style={styles.ratingBadge}>
+              <IcoStarFilled />
+              <Text style={styles.ratingTxt}>
+                {starRating.toFixed(1)}
+                {starCount ? ` (${starCount})` : ''}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
       <TouchableOpacity style={styles.editBtn} onPress={onEditAvatar} activeOpacity={0.7}>
@@ -91,9 +115,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 3,
   },
-  chip: {
-    alignSelf: 'flex-start',
+  chipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
     marginTop: 8,
+  },
+  chip: {
     backgroundColor: 'rgba(253,207,52,.12)',
     borderWidth: 1,
     borderColor: 'rgba(253,207,52,.3)',
@@ -102,6 +131,22 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   chipTxt: {
+    color: colors.accent,
+    fontFamily: fonts.ui,
+    fontSize: 10,
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(253,207,52,.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(253,207,52,.2)',
+    borderRadius: radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  ratingTxt: {
     color: colors.accent,
     fontFamily: fonts.ui,
     fontSize: 10,

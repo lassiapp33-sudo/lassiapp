@@ -30,23 +30,24 @@ export function usePaymentDeepLink() {
         return;
       }
 
+      // ── À la une — lien court : /b/{code}/{elementIndex} ─────────────────
+      // https://lassi.sn/b/x7k9mq/2
+      if (url.includes('/b/')) {
+        const afterB = url.split('/b/')[1]?.split('?')[0] ?? '';
+        const parts = afterB.split('/');
+        const blocCode = parts[0];
+        const rawIndex = parts[1] !== undefined ? parseInt(parts[1], 10) : NaN;
+        const elementIndex = isNaN(rawIndex) ? undefined : rawIndex;
+        if (blocCode) setPendingNav({ type: 'a_la_une_bloc', blocCode, elementIndex });
+        return;
+      }
+
       // ── À la une — catégorie ───────────────────────────────────────────────
       // lassiapp://a-la-une/categorie/{catId}
       // https://lassi.sn/a-la-une/categorie/{catId}
       if (url.includes('/a-la-une/categorie/')) {
         const categorieId = url.split('/a-la-une/categorie/')[1]?.split('?')[0]?.split('/')[0];
         if (categorieId) setPendingNav({ type: 'a_la_une_categorie', categorieId });
-        return;
-      }
-
-      // ── À la une — bloc précis ─────────────────────────────────────────────
-      // lassiapp://a-la-une/{blocId}?produit={elementId}
-      // https://lassi.sn/a-la-une/{blocId}?produit={elementId}
-      if (url.includes('/a-la-une/')) {
-        const afterSlash = url.split('/a-la-une/')[1];
-        const blocId = afterSlash?.split('?')[0]?.split('/')[0];
-        const produitId = parseParam(url, 'produit') ?? undefined;
-        if (blocId) setPendingNav({ type: 'a_la_une_bloc', blocId, produitId });
         return;
       }
     };

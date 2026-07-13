@@ -27,8 +27,9 @@ import {
   getQuotaDuJour,
   buildShareMessage,
 } from '../../services/aLaUne';
-import { partagerBloc } from '../../utils/aLaUneLinks';
-import { getCatConfig, type CatId } from '../../config/categories';
+import StoryShareModal from '../../components/alaune/StoryShareModal';
+import { computeStatus } from '../../services/hours';
+import type { WeekHours } from '../../services/hours';
 import type { BlocALaUne, ElementALaUne } from '../../types/aLaUne';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -104,11 +105,11 @@ function ElementShareRow({ el, bloc, shopName }: ElementShareRowProps) {
   const message = buildShareMessage({
     elementNom: el.nom,
     elementPrix: el.prix,
-    elementId: el.id,
+    elementIndex: bloc.elements.findIndex(e => e.id === el.id),
     blocTitre: bloc.titre,
     blocDescription: bloc.description,
     shopName,
-    blocId: bloc.id,
+    blocCode: bloc.code ?? bloc.id,
     expireAt: bloc.expire_at,
   });
 
@@ -189,42 +190,62 @@ function ElementShareRow({ el, bloc, shopName }: ElementShareRowProps) {
 interface BlocActifCardProps {
   bloc: BlocALaUne;
   shopName: string;
-  categorieId: string;
-  nomCategorie: string;
+  shopLogoUrl: string | null;
+  shopPhone: string | null;
+  isShopOpen: boolean;
 }
 
-function BlocActifCard({ bloc, shopName, categorieId, nomCategorie }: BlocActifCardProps) {
+function BlocActifCard({ bloc, shopName, shopLogoUrl, shopPhone, isShopOpen }: BlocActifCardProps) {
   const [, setTick] = useState(0);
+  const [showStory, setShowStory] = useState(false);
+
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 60_000);
     return () => clearInterval(id);
   }, []);
 
-  const handleShareBloc = () => partagerBloc(bloc, nomCategorie);
+  const countdown = formatCountdown(bloc.expire_at);
 
   return (
-    <View style={styles.blocActifCard}>
-      <View style={styles.blocActifHeader}>
-        <View style={styles.blocActifLeft}>
-          <Text style={styles.blocTitre}>{bloc.titre}</Text>
-          {bloc.description ? <Text style={styles.blocDesc}>{bloc.description}</Text> : null}
+    <>
+      <View style={styles.blocActifCard}>
+        <View style={styles.blocActifHeader}>
+          <View style={styles.blocActifLeft}>
+            <Text style={styles.blocTitre}>{bloc.titre}</Text>
+            {bloc.description ? <Text style={styles.blocDesc}>{bloc.description}</Text> : null}
+          </View>
+          <View style={styles.countdownChip}>
+            <Text style={styles.countdownTxt}>⏳ {countdown}</Text>
+          </View>
         </View>
-        <View style={styles.countdownChip}>
-          <Text style={styles.countdownTxt}>⏳ {formatCountdown(bloc.expire_at)}</Text>
+        <View style={styles.elList}>
+          {bloc.elements.map(el => (
+            <ElementShareRow key={el.id} el={el} bloc={bloc} shopName={shopName} />
+          ))}
+        </View>
+        <TouchableOpacity
+          onPress={() => setShowStory(true)}
+          style={styles.shareBlocBtn}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.shareBlocTxt}>📤 Partager le bloc complet</Text>
+        </TouchableOpacity>
+        <View style={styles.lassiTag}>
+          <Text style={styles.lassiTagTxt}>✨ Message généré par LASSİ · non modifiable</Text>
         </View>
       </View>
-      <View style={styles.elList}>
-        {bloc.elements.map(el => (
-          <ElementShareRow key={el.id} el={el} bloc={bloc} shopName={shopName} />
-        ))}
-      </View>
-      <TouchableOpacity onPress={handleShareBloc} style={styles.shareBlocBtn} activeOpacity={0.8}>
-        <Text style={styles.shareBlocTxt}>📤 Partager le bloc complet</Text>
-      </TouchableOpacity>
-      <View style={styles.lassiTag}>
-        <Text style={styles.lassiTagTxt}>✨ Message généré par LASSİ · non modifiable</Text>
-      </View>
-    </View>
+
+      <StoryShareModal
+        visible={showStory}
+        onClose={() => setShowStory(false)}
+        bloc={bloc}
+        shopName={shopName}
+        shopLogoUrl={shopLogoUrl}
+        shopPhone={shopPhone}
+        isShopOpen={isShopOpen}
+        countdown={countdown}
+      />
+    </>
   );
 }
 
@@ -419,8 +440,12 @@ interface Props {
 
 export default function AlaUneScreen({ onBack }: Props) {
   const shopName = useShopStore(s => s.profile?.name ?? 'Ma boutique');
+  const shopLogoUrl = useShopStore(s => s.profile?.logoUrl ?? null);
+  const shopPhone = useShopStore(s => s.profile?.phone ?? null);
+  const openingHours = useShopStore(s => s.context.openingHours);
+  const isManuallyClose = useShopStore(s => s.context.isManuallyClose);
+  const isShopOpen = computeStatus(openingHours as WeekHours | null, isManuallyClose).isOpen;
   const shopCategorieId = useShopStore(s => s.context.category ?? '');
-  const nomCategorie = getCatConfig(shopCategorieId as CatId)?.label ?? shopCategorieId;
 
   const [actifs, setActifs] = useState<BlocALaUne[]>([]);
   const [historique, setHistorique] = useState<BlocALaUne[]>([]);
@@ -544,8 +569,9 @@ export default function AlaUneScreen({ onBack }: Props) {
                   key={b.id}
                   bloc={b}
                   shopName={shopName}
-                  categorieId={shopCategorieId}
-                  nomCategorie={nomCategorie}
+                  shopLogoUrl={shopLogoUrl}
+                  shopPhone={shopPhone}
+                  isShopOpen={isShopOpen}
                 />
               ))}
             </>

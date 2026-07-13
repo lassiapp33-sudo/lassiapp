@@ -11,8 +11,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import StarRating from './StarRating';
+import VoiceRatingRecorder from './VoiceRatingRecorder';
 import { colors, fonts, radius } from '../../theme';
-import { soumettreNote, RatingDirection } from '../../services/orderRating';
+import { soumettreNote, uploadVocalRating, RatingDirection } from '../../services/orderRating';
 import { notifyError } from '../../utils/errorUtils';
 
 interface Props {
@@ -32,6 +33,7 @@ export default function RatingPromptModal({
 }: Props) {
   const [note, setNote] = useState(0);
   const [commentaire, setCommentaire] = useState('');
+  const [vocalUri, setVocalUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const isClient = direction === 'client_to_merchant';
@@ -42,7 +44,11 @@ export default function RatingPromptModal({
     if (note === 0 || loading) return;
     setLoading(true);
     try {
-      await soumettreNote(orderId, direction, note, commentaire.trim() || undefined);
+      let vocalUrl: string | undefined;
+      if (vocalUri) {
+        vocalUrl = await uploadVocalRating(orderId, direction, vocalUri);
+      }
+      await soumettreNote(orderId, direction, note, commentaire.trim() || undefined, vocalUrl);
     } catch {
       notifyError('Impossible d\'enregistrer ta note. Réessaie plus tard.');
     } finally {
@@ -55,6 +61,7 @@ export default function RatingPromptModal({
   const reset = () => {
     setNote(0);
     setCommentaire('');
+    setVocalUri(null);
   };
 
   const handleDismiss = () => {
@@ -96,6 +103,8 @@ export default function RatingPromptModal({
             numberOfLines={3}
             textAlignVertical="top"
           />
+
+          <VoiceRatingRecorder onUri={setVocalUri} />
 
           <View style={styles.btns}>
             <TouchableOpacity

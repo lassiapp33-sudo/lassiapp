@@ -11,7 +11,7 @@ export type PendingNav =
   | { type: 'notifications' }
   | { type: 'payment_success'; paymentIntentId: string }
   | { type: 'payment_failed' }
-  | { type: 'a_la_une_bloc'; blocId: string; produitId?: string }
+  | { type: 'a_la_une_bloc'; blocCode: string; elementIndex?: number }
   | { type: 'a_la_une_categorie'; categorieId: string };
 
 interface PendingNavState {

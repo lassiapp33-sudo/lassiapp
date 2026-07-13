@@ -117,7 +117,7 @@ interface Props {
   initialSubCatId?: string;
   onBack: () => void;
   onShopPress?: (shopId: string, shopName: string) => void;
-  onBlocPress?: (blocId: string, elementId?: string) => void;
+  onBlocPress?: (blocCode: string, elementIndex?: number) => void;
   onCatStateChange?: (catId: CatId, subCatId: string) => void;
   onSearch?: () => void;
   onFavorites?: () => void;

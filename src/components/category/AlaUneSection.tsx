@@ -67,7 +67,7 @@ function ElCard({ el, onPress }: ElCardProps) {
 
 interface BlocCardProps {
   bloc: BlocALaUne;
-  onBlocPress?: (blocId: string, elementId?: string) => void;
+  onBlocPress?: (blocCode: string, elementIndex?: number) => void;
 }
 
 function BlocCard({ bloc, onBlocPress }: BlocCardProps) {
@@ -75,7 +75,7 @@ function BlocCard({ bloc, onBlocPress }: BlocCardProps) {
 
   return (
     <View style={styles.blocCard}>
-      <TouchableOpacity onPress={() => onBlocPress?.(bloc.id)} activeOpacity={0.7}>
+      <TouchableOpacity onPress={() => onBlocPress?.(bloc.code ?? bloc.id)} activeOpacity={0.7}>
         <View style={styles.blocHeader}>
           <Avatar
             name={bloc.shop_name ?? '?'}
@@ -103,7 +103,7 @@ function BlocCard({ bloc, onBlocPress }: BlocCardProps) {
         contentContainerStyle={styles.elRow}
       >
         {bloc.elements.map(el => (
-          <ElCard key={el.id} el={el} onPress={() => onBlocPress?.(bloc.id, el.id)} />
+          <ElCard key={el.id} el={el} onPress={() => onBlocPress?.(bloc.code ?? bloc.id, bloc.elements.indexOf(el))} />
         ))}
       </ScrollView>
     </View>
@@ -115,7 +115,7 @@ function BlocCard({ bloc, onBlocPress }: BlocCardProps) {
 interface Props {
   catId: string;
   subCatId?: string;
-  onBlocPress?: (blocId: string, elementId?: string) => void;
+  onBlocPress?: (blocCode: string, elementIndex?: number) => void;
 }
 
 export default function AlaUneSection({ catId, subCatId, onBlocPress }: Props) {

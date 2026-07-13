@@ -15,6 +15,7 @@ export interface BlocALaUne {
   actif: boolean;
   created_at: string;
   expire_at: string;
+  code?: string;
   // enrichi côté client par getBlocsActifs
   shop_name?: string;
   shop_logo_url?: string | null;

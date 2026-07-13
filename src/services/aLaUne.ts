@@ -135,15 +135,15 @@ export const getQuotaDuJour = async (): Promise<{ utilises: number; restants: nu
 
 // ─── Message de partage généré par LASSİ (non modifiable) ────────────────────
 
-/** Message de partage par élément — lien web (compatible sans app). */
+/** Message de partage par élément — lien court (lassi.sn/b/code/index). */
 export function buildShareMessage(params: {
   elementNom: string;
   elementPrix: number;
-  elementId: string;
+  elementIndex: number;
   blocTitre: string;
   blocDescription: string | null;
   shopName: string;
-  blocId: string;
+  blocCode: string;
   expireAt: string;
 }): string {
   const hoursLeft = Math.max(
@@ -151,7 +151,7 @@ export function buildShareMessage(params: {
     Math.ceil((new Date(params.expireAt).getTime() - Date.now()) / 3_600_000),
   );
   const prix = params.elementPrix.toLocaleString('fr-FR') + ' F CFA';
-  const link = lienElement(params.blocId, params.elementId);
+  const link = lienElement(params.blocCode, params.elementIndex);
   const lines = [
     `✨ *${params.elementNom}* — ${prix}`,
     `📌 ${params.blocTitre} · ${params.shopName}`,

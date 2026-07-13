@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import LassiScreen from '../../components/LassiScreen';
 import { contacterServiceClient } from '../../config/contact';
 import AProposScreen from '../common/AProposScreen';
 import SignalerProblemeScreen from '../common/SignalerProblemeScreen';
+import { getMesStatsClient } from '../../services/orderRating';
 import ClientPaymentsScreen from './ClientPaymentsScreen';
 import { useT } from '../../i18n';
 import useLanguageStore from '../../store/languageStore';
@@ -295,6 +296,7 @@ export default function ClientProfileScreen({
   const [showAPropos, setShowAPropos] = useState(false);
   const [showSignaler, setShowSignaler] = useState(false);
   const [showPayments, setShowPayments] = useState(false);
+  const [clientRating, setClientRating] = useState<{ note: number; count: number } | null>(null);
 
   const user = useAuthStore(s => s.user);
   const updateProfile = useAuthStore(s => s.updateProfile);
@@ -302,6 +304,16 @@ export default function ClientProfileScreen({
 
   const displayName = user?.name ?? 'Client';
   const displayPhone = user?.phone ? formatPhoneSenegal(user.phone) : '';
+
+  useEffect(() => {
+    getMesStatsClient()
+      .then(stats => {
+        if (stats.nb_avis > 0) {
+          setClientRating({ note: stats.note_moyenne, count: stats.nb_avis });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const favSubtitle =
     favCount > 0
@@ -372,6 +384,8 @@ export default function ClientProfileScreen({
             onEditAvatar={handleEditAvatar}
             chipLabel={t.profile.client}
             bottomSpacing={24}
+            starRating={clientRating?.note ?? null}
+            starCount={clientRating?.count}
           />
         </View>
       }

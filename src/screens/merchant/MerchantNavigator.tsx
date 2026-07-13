@@ -92,7 +92,7 @@ type MerchantScreen =
   | { id: 'suivi_gps'; shopLat: number; shopLng: number; shopName: string; shopLogoUrl: string | null }
   | 'fitness_abonnements'
   | 'a_la_une'
-  | { id: 'a_la_une_bloc'; blocId: string; produitId?: string };
+  | { id: 'a_la_une_bloc'; blocCode: string; elementIndex?: number };
 
 interface Props {
   onLogout: () => void;
@@ -183,7 +183,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
       );
       setScreen('payments');
     } else if (pendingNav.type === 'a_la_une_bloc') {
-      setScreen({ id: 'a_la_une_bloc', blocId: pendingNav.blocId, produitId: pendingNav.produitId });
+      setScreen({ id: 'a_la_une_bloc', blocCode: pendingNav.blocCode, elementIndex: pendingNav.elementIndex });
     } else if (pendingNav.type === 'a_la_une_categorie') {
       // Pour le prestataire en mode acheteur, on revient au dashboard
       setScreen('dashboard');
@@ -432,8 +432,8 @@ export default function MerchantNavigator({ onLogout }: Props) {
   if (typeof screen === 'object' && screen.id === 'a_la_une_bloc')
     return (
       <BlocAlaUneScreen
-        blocId={screen.blocId}
-        produitId={screen.produitId}
+        blocCode={screen.blocCode}
+        elementIndex={screen.elementIndex}
         onBack={() => setScreen('dashboard')}
         onShopPress={(sid, sname) => setScreen({ id: 'buyerShop', shopId: sid, shopName: sname })}
       />

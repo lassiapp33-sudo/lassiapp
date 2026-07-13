@@ -66,13 +66,13 @@ function ElCard({ el, highlighted, onShop }: ElCardProps) {
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  blocId: string;
-  produitId?: string;
+  blocCode: string;
+  elementIndex?: number;
   onBack: () => void;
   onShopPress: (shopId: string, shopName: string) => void;
 }
 
-export default function BlocAlaUneScreen({ blocId, produitId, onBack, onShopPress }: Props) {
+export default function BlocAlaUneScreen({ blocCode, elementIndex, onBack, onShopPress }: Props) {
   const [bloc, setBloc] = useState<BlocALaUne | null>(null);
   const [shop, setShop] = useState<ShopInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,7 +84,7 @@ export default function BlocAlaUneScreen({ blocId, produitId, onBack, onShopPres
       const { data: blocData } = await supabase
         .from('a_la_une')
         .select('*')
-        .eq('id', blocId)
+        .eq('code', blocCode)
         .single();
 
       if (!blocData) { setLoading(false); return; }
@@ -101,19 +101,18 @@ export default function BlocAlaUneScreen({ blocId, produitId, onBack, onShopPres
       }
       setLoading(false);
     })();
-  }, [blocId]);
+  }, [blocCode]);
 
   // Scroll vers l'élément ciblé une fois les données chargées
   useEffect(() => {
-    if (!produitId || !bloc?.elements) return;
-    const idx = bloc.elements.findIndex(e => e.id === produitId);
-    if (idx > 0) {
+    if (elementIndex === undefined || !bloc?.elements) return;
+    if (elementIndex > 0 && elementIndex < bloc.elements.length) {
       const timer = setTimeout(() => {
-        flatRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.2 });
+        flatRef.current?.scrollToIndex({ index: elementIndex, animated: true, viewPosition: 0.2 });
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [produitId, bloc]);
+  }, [elementIndex, bloc]);
 
   if (loading) {
     return (
@@ -199,10 +198,10 @@ export default function BlocAlaUneScreen({ blocId, produitId, onBack, onShopPres
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         onScrollToIndexFailed={() => {}}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <ElCard
             el={item}
-            highlighted={item.id === produitId}
+            highlighted={index === elementIndex}
             onShop={() => shop && onShopPress(shop.id, shop.name)}
           />
         )}

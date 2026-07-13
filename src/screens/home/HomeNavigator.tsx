@@ -107,7 +107,7 @@ type HomeStack =
     }
   | { id: 'mes_abonnements' }
   | { id: 'fitness_abo_payment'; offre: FitnessOffre; fitnessName: string; shopId: string }
-  | { id: 'a_la_une_bloc'; blocId: string; produitId?: string }
+  | { id: 'a_la_une_bloc'; blocCode: string; elementIndex?: number }
   | { id: 'a_la_une_categorie'; categorieId: string };
 
 interface Props {
@@ -198,7 +198,7 @@ export default function HomeNavigator({ onLogout }: Props) {
         "Le paiement n'a pas pu être confirmé. Réessaie ou contacte le support.",
       );
     } else if (pendingNav.type === 'a_la_une_bloc') {
-      push({ id: 'a_la_une_bloc', blocId: pendingNav.blocId, produitId: pendingNav.produitId });
+      push({ id: 'a_la_une_bloc', blocCode: pendingNav.blocCode, elementIndex: pendingNav.elementIndex });
     } else if (pendingNav.type === 'a_la_une_categorie') {
       push({ id: 'a_la_une_categorie', categorieId: pendingNav.categorieId });
     }
@@ -208,8 +208,8 @@ export default function HomeNavigator({ onLogout }: Props) {
   if (screen.id === 'a_la_une_bloc') {
     return (
       <BlocAlaUneScreen
-        blocId={screen.blocId}
-        produitId={screen.produitId}
+        blocCode={screen.blocCode}
+        elementIndex={screen.elementIndex}
         onBack={pop}
         onShopPress={pushShop}
       />
@@ -223,7 +223,7 @@ export default function HomeNavigator({ onLogout }: Props) {
         initialCatId={screen.categorieId as CatId}
         onBack={pop}
         onShopPress={pushShop}
-        onBlocPress={(blocId, elementId) => push({ id: 'a_la_une_bloc', blocId, produitId: elementId })}
+        onBlocPress={(blocCode, elementIndex) => push({ id: 'a_la_une_bloc', blocCode, elementIndex })}
         onSearch={() => setHistory([{ id: 'main' }, { id: 'search' }])}
         onFavorites={() => setHistory([{ id: 'main' }, { id: 'favorites' }])}
         onMessages={() => setHistory([{ id: 'main' }, { id: 'messages' }])}
@@ -467,7 +467,7 @@ export default function HomeNavigator({ onLogout }: Props) {
         initialSubCatId={screen.subCatId}
         onBack={pop}
         onShopPress={pushShop}
-        onBlocPress={(blocId, elementId) => push({ id: 'a_la_une_bloc', blocId, produitId: elementId })}
+        onBlocPress={(blocCode, elementIndex) => push({ id: 'a_la_une_bloc', blocCode, elementIndex })}
         onCatStateChange={(catId, subCatId) =>
           setHistory(h => {
             const last = h[h.length - 1];
