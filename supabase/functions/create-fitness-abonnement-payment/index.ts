@@ -9,13 +9,12 @@ import { corsHeaders } from '../_shared/cors.ts'
 import { getOmToken, OM_BASE_URL, isOmReady } from '../_shared/omAuth.ts'
 import { buildWaveSignature } from '../_shared/waveSign.ts'
 
-const WAVE_API_KEY     = Deno.env.get('WAVE_API_KEY')     ?? ''
-const WAVE_MERCHANT_ID = Deno.env.get('WAVE_MERCHANT_ID') ?? ''
-const OM_MERCHANT_CODE = Deno.env.get('OM_MERCHANT_CODE') ?? ''
+const WAVE_API_KEY      = Deno.env.get('WAVE_API_KEY')      ?? ''
+const OM_MERCHANT_CODE  = Deno.env.get('OM_MERCHANT_CODE')  ?? ''
 const OM_WEBHOOK_SECRET = Deno.env.get('OM_WEBHOOK_SECRET') ?? ''
-const APP_BASE_URL     = Deno.env.get('APP_BASE_URL') ?? 'lassi://'
+const APP_BASE_URL      = Deno.env.get('APP_BASE_URL') ?? 'lassi://'
 
-const IS_PRODUCTION = (WAVE_API_KEY !== '' && WAVE_MERCHANT_ID !== '') || isOmReady()
+const IS_PRODUCTION = WAVE_API_KEY !== '' || isOmReady()
 
 // Commission LASSI : 1% du prix vendeur (arrondie au FCFA supérieur)
 function calculerPrixClient(prixBase: number): number {
@@ -76,22 +75,18 @@ Deno.serve(async (req) => {
     const dureeJours = (offre.duree_jours as number) || 30
 
     // ④ Créer le payment_intent (même table que les paiements classiques)
+    const idempotencyKey = `fitness-${offre.id}-${user.id}-${Date.now()}`
     const { data: pi, error: piError } = await admin
       .from('payment_intents')
       .insert({
-        client_id:       user.id,
-        prestataire_id:  offre.prestataire_id,
-        montant_total:   prixTotal,
-        commission:      commission,
-        prix_base:       prixBase,
-        statut:          'pending',
-        moyen_paiement:  payMethod,
-        metadata: {
-          type:          'fitness_abonnement',
-          offre_id:      offre.id as string,
-          offre_nom:     offre.nom as string,
-          duree_jours:   dureeJours,
-        },
+        client_id:        user.id,
+        prestataire_id:   offre.prestataire_id,
+        montant_total:    prixTotal,
+        commission_lassi: commission,
+        prix_base:        prixBase,
+        statut:           'pending',
+        moyen_paiement:   payMethod,
+        idempotency_key:  idempotencyKey,
       })
       .select('id')
       .single()
@@ -134,7 +129,6 @@ Deno.serve(async (req) => {
       const waveBody = JSON.stringify({
         currency:         'XOF',
         amount:           String(prixTotal),
-        merchant_id:      WAVE_MERCHANT_ID,
         success_url:      `${APP_BASE_URL}fitness-abo-success?pi=${piId}`,
         error_url:        `${APP_BASE_URL}fitness-abo-error?pi=${piId}`,
         client_reference: piId,

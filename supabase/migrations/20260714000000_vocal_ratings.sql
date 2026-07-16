@@ -141,6 +141,7 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- Seul l'auteur peut uploader dans son dossier
+DROP POLICY IF EXISTS "order_vocals_insert" ON storage.objects;
 CREATE POLICY "order_vocals_insert"
   ON storage.objects FOR INSERT
   TO authenticated
@@ -150,12 +151,14 @@ CREATE POLICY "order_vocals_insert"
   );
 
 -- Tout utilisateur authentifié peut lire (prestataire entend l'avis du client, et vice versa)
+DROP POLICY IF EXISTS "order_vocals_select" ON storage.objects;
 CREATE POLICY "order_vocals_select"
   ON storage.objects FOR SELECT
   TO authenticated
   USING (bucket_id = 'order-vocals');
 
 -- L'auteur peut supprimer ses propres fichiers
+DROP POLICY IF EXISTS "order_vocals_delete" ON storage.objects;
 CREATE POLICY "order_vocals_delete"
   ON storage.objects FOR DELETE
   TO authenticated

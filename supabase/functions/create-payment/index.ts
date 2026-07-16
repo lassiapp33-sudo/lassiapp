@@ -25,15 +25,11 @@ import { buildWaveSignature } from '../_shared/waveSign.ts';
 //
 // Sans ces clés → mode simulation automatique (démo fonctionnelle)
 // ============================================================
-const WAVE_API_KEY     = Deno.env.get('WAVE_API_KEY')     ?? '';
-const WAVE_MERCHANT_ID = Deno.env.get('WAVE_MERCHANT_ID') ?? '';
-const OM_MERCHANT_CODE = Deno.env.get('OM_MERCHANT_CODE') ?? '';
+const WAVE_API_KEY      = Deno.env.get('WAVE_API_KEY')     ?? '';
+const OM_MERCHANT_CODE  = Deno.env.get('OM_MERCHANT_CODE') ?? '';
 const OM_WEBHOOK_SECRET = Deno.env.get('OM_WEBHOOK_SECRET') ?? '';
 
-// ⚠️ IS_PRODUCTION conditionne Wave à WAVE_MERCHANT_ID. Si ce champ n'est pas
-// requis par la Checkout API Wave (non documenté), changer la condition en :
-//   const IS_PRODUCTION = WAVE_API_KEY !== '' || isOmReady();
-const IS_PRODUCTION = (WAVE_API_KEY !== '' && WAVE_MERCHANT_ID !== '') || isOmReady();
+const IS_PRODUCTION = WAVE_API_KEY !== '' || isOmReady();
 
 serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
@@ -239,28 +235,11 @@ async function initiateWavePayment(params: {
   piId: string; montantTotal: number; prixBase: number;
   commission: number; prestataireId: string;
 }) {
-  // Structure du split Wave (à confirmer avec l'ingénieur Wave) :
-  // Le merchant principal (LASSİ) reçoit montantTotal
-  // puis Wave split : prixBase → prestataire, commission → LASSİ
-
-  // amount doit être une string selon la spec Wave (cf. doc Checkout API)
-  //
-  // ⚠️ À CONFIRMER AVEC WAVE :
-  //   - merchant_id     : non mentionné dans la doc officielle Checkout API.
-  //                       Si Wave rejette les champs inconnus → retirer ce champ.
-  //   - split_config    : idem — à remplacer par le mécanisme officiel Wave si
-  //                       une feature de split existe pour votre compte Business.
   const waveBody = JSON.stringify({
     currency:         'XOF',
     amount:           String(params.montantTotal),
-    merchant_id:      WAVE_MERCHANT_ID,       // ⚠️ hors-spec — voir ci-dessus
     error_url:        `lassiapp://paiement/echec?pi=${params.piId}`,
     success_url:      `lassiapp://paiement/succes?pi=${params.piId}`,
-    split_config: {                            // ⚠️ hors-spec — voir ci-dessus
-      beneficiaire_prestataire: params.prestataireId,
-      montant_prestataire:      String(params.prixBase),
-      montant_lassi:            String(params.commission),
-    },
     client_reference: params.piId,
   });
 

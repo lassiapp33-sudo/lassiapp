@@ -134,8 +134,9 @@ serve(async (req) => {
   // Payload signé  : timestamp (string) + raw body
   // Anti-rejeu     : timestamp rejeté si > 5 min dans le passé ou > 30 s dans le futur
   if (!waveSignature) {
-    console.error('[webhook] En-tête Wave-Signature absent et source!=om');
-    return new Response('Signature manquante', { status: 401 });
+    // Ping de santé Wave (pas de signature) — on accuse réception sans traiter
+    console.log('[webhook] Ping santé Wave reçu (pas de Wave-Signature)');
+    return new Response('OK', { status: 200 });
   }
 
   const source = 'wave' as const;
@@ -196,15 +197,22 @@ serve(async (req) => {
     return new Response('Body invalide', { status: 400 });
   }
 
-  const piId: unknown = payload.client_reference ?? payload.order_id ?? (payload.metadata as Record<string, unknown> | undefined)?.pi_id;
+  // Wave envoie { type, data: { ... } } — on normalise vers un objet plat
+  // pour supporter les deux structures (flat et enveloppée).
+  const data = (payload.data && typeof payload.data === 'object')
+    ? payload.data as Record<string, unknown>
+    : payload;
+
+  const piId: unknown = data.client_reference ?? data.order_id ?? (data.metadata as Record<string, unknown> | undefined)?.pi_id;
   if (!isUUID(piId)) {
-    console.error('[webhook] payment_intent_id absent ou invalide — clés reçues:', Object.keys(payload));
-    return new Response('payment_intent_id manquant', { status: 400 });
+    // Événement de test Wave sans client_reference valide — on accuse réception sans traiter
+    console.log('[webhook] événement Wave sans payment_intent_id valide (test/ping) — payload keys:', Object.keys(data));
+    return new Response('OK', { status: 200 });
   }
 
-  const externalStatus = (payload.payment_status ?? payload.status) as string | undefined;
+  const externalStatus = (data.payment_status ?? data.status) as string | undefined;
   const isSuccess      = ['succeeded', 'completed', 'success', 'SUCCESSFUL'].includes(externalStatus ?? '');
-  const externalRef    = (payload.id ?? payload.transaction_id) as string | undefined;
+  const externalRef    = (data.id ?? data.transaction_id) as string | undefined;
 
   // 3. ID d'événement pour la déduplication (un même événement Wave/OM peut
   // être renvoyé plusieurs fois). 🔌 À ajuster avec l'ingénieur Wave/OM si un
@@ -213,7 +221,7 @@ serve(async (req) => {
   const externalEventId = `${externalRef ?? piId}:${externalStatus ?? 'unknown'}`;
 
   // 4. Montant reçu, pour vérification au FCFA près (null si absent du payload)
-  const rawAmount = payload.amount ?? payload.client_amount ?? null;
+  const rawAmount = data.amount ?? data.client_amount ?? null;
   const receivedAmount = rawAmount !== null && rawAmount !== undefined && Number.isFinite(Number(rawAmount))
     ? Math.round(Number(rawAmount))
     : null;
