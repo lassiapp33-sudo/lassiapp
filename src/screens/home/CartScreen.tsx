@@ -245,8 +245,9 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         preMethod: method,
         preInitiatedPiId,
       });
-    } catch {
-      notifyError('Une erreur est survenue. Réessaie dans un instant.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Une erreur est survenue. Réessaie dans un instant.';
+      notifyError(msg);
     } finally {
       if (releaseInFinally) {
         isSubmittingRef.current = false;
