@@ -36,6 +36,7 @@ function mapType(dbType: string): NotifType {
     vip: 'vip',
     message: 'msg',
     debt: 'msg',
+    livraison: 'livraison',
   };
   return (MAP[dbType] as NotifType) ?? 'msg';
 }

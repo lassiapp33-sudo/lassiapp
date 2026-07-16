@@ -83,6 +83,23 @@ const IcoStar = ({ stroke }: { stroke: string }) => (
   </Svg>
 );
 
+const IcoTruck = ({ stroke }: { stroke: string }) => (
+  <Svg
+    width={21}
+    height={21}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path d="M1 3h15v13H1z" stroke={stroke} />
+    <Path d="M16 8h4l3 3v5h-7V8z" stroke={stroke} />
+    <Path d="M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" stroke={stroke} />
+    <Path d="M18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" stroke={stroke} />
+  </Svg>
+);
+
 const IcoFlame = ({ stroke }: { stroke: string }) => (
   <Svg
     width={21}
@@ -277,6 +294,14 @@ export default function QuickActions({
           title="À la une"
           desc="Blocs 24h · partage & ventes"
           onPress={() => onPress?.('a_la_une')}
+        />
+        <ActionCard
+          Icon={IcoTruck}
+          iconBg="rgba(95,211,138,.13)"
+          iconStroke={colors.success}
+          title="Livraison"
+          desc="Envoyer un colis"
+          onPress={() => onPress?.('livraison')}
         />
       </View>
     </View>

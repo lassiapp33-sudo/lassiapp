@@ -5,7 +5,7 @@ import { getInitials } from '../utils/getInitials';
 import useCartStore from './cartStore';
 import useDebtsStore from './debtsStore';
 
-export type UserRole = 'client' | 'merchant';
+export type UserRole = 'client' | 'merchant' | 'livreur';
 
 export interface AuthUser {
   id: string; // UUID Supabase

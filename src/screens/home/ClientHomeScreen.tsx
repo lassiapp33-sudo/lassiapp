@@ -12,7 +12,7 @@ import { useT } from '../../i18n';
 
 import HomeHeader from '../../components/home/HomeHeader';
 import SearchBar from '../../components/home/SearchBar';
-import TabSelector, { HomeTab } from '../../components/home/TabSelector';
+import TabSelector from '../../components/home/TabSelector';
 import CategoryGrid from '../../components/home/CategoryGrid';
 import { CatId } from '../../components/category/CatNavBar';
 import PromoBanner from '../../components/home/PromoBanner';
@@ -43,6 +43,7 @@ interface Props {
   onProfile?: () => void;
   onMap?: () => void;
   onTerrains?: () => void;
+  onAlaUneFeed?: () => void;
   onShopItemPress?: (shopId: string, shopName: string, productId: string) => void;
   onShopItemView?: (shopId: string, productId: string) => void;
 }
@@ -60,12 +61,12 @@ export default function ClientHomeScreen({
   onProfile,
   onMap,
   onTerrains,
+  onAlaUneFeed,
   onShopItemPress,
   onShopItemView,
 }: Props) {
   const t = useT();
 
-  const [tab, setTab] = useState<HomeTab>('nearby');
   const [navTab, setNavTab] = useState<NavTab>('home');
   const [nearby, setNearby] = useState<NearbyPlace[]>([]);
   const [loading, setLoading] = useState(true);
@@ -209,10 +210,9 @@ export default function ClientHomeScreen({
           </View>
           <View style={styles.px}>
             <TabSelector
-              active={tab}
-              onChange={setTab}
               onNearbyPress={onMap}
               onRecentPress={onRecent}
+              onAlaUnePress={onAlaUneFeed}
             />
           </View>
         </View>
@@ -291,17 +291,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     letterSpacing: -0.2,
   },
-  terrainBanner: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: `${colors.accent}40`,
-    borderRadius: 16, padding: 16, marginBottom: 28, marginTop: 8,
-  },
-  terrainBannerLeft: { flex: 1, gap: 4 },
-  terrainBannerEmoji: { fontSize: 22, letterSpacing: 2, marginBottom: 2 },
-  terrainBannerTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
-  terrainBannerSub: { color: colors.muted, fontFamily: fonts.body, fontSize: 12 },
-  terrainBannerArrow: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 20 },
   loader: { paddingVertical: 32, alignItems: 'center' },
   empty: { paddingVertical: 24, alignItems: 'center' },
   emptyTxt: {

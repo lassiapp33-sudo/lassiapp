@@ -8,14 +8,13 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  Share,
-  Linking,
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
-import * as Clipboard from 'expo-clipboard';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
@@ -25,7 +24,7 @@ import {
   creerBloc,
   reactiverBloc,
   getQuotaDuJour,
-  buildShareMessage,
+  uploadBlocImage,
 } from '../../services/aLaUne';
 import StoryShareModal from '../../components/alaune/StoryShareModal';
 import { computeStatus } from '../../services/hours';
@@ -46,41 +45,27 @@ const IcoPlus = ({ stroke }: { stroke: string }) => (
   </Svg>
 );
 
+const IcoCamera = ({ stroke }: { stroke: string }) => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke={stroke} />
+    <Circle cx={12} cy={13} r={4} stroke={stroke} />
+  </Svg>
+);
+
+const IcoGallery = ({ stroke }: { stroke: string }) => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Rect x={3} y={3} width={18} height={18} rx={2} stroke={stroke} />
+    <Circle cx={8.5} cy={8.5} r={1.5} stroke={stroke} />
+    <Path d="M21 15l-5-5L5 21" stroke={stroke} />
+  </Svg>
+);
+
 const IcoTrash = ({ stroke }: { stroke: string }) => (
   <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
     <Path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke={stroke} />
   </Svg>
 );
 
-const IcoWhatsApp = () => (
-  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-    <Circle cx={12} cy={12} r={11} fill="#25D366" />
-    <Path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.7.1-.2.2-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.2-.5 0-.2 0-.4-.1-.5-.1-.2-.7-1.6-.9-2.2-.2-.6-.4-.5-.6-.5h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.1 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 2-1.4.2-.6.2-1.1.2-1.2-.2-.1-.4-.2-.6-.2z" fill="#fff" />
-  </Svg>
-);
-
-const IcoFacebook = () => (
-  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-    <Circle cx={12} cy={12} r={11} fill="#1877F2" />
-    <Path d="M15.5 8H13V6.5c0-.6.4-1 1-1h1.5V3h-2C11.7 3 10.5 4.2 10.5 6v2H9v2.5h1.5V21h3V10.5H15l.5-2.5z" fill="#fff" />
-  </Svg>
-);
-
-const IcoInstagram = () => (
-  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-    <Circle cx={12} cy={12} r={11} fill="#E1306C" />
-    <Rect x={7} y={7} width={10} height={10} rx={3} stroke="#fff" strokeWidth={1.5} />
-    <Circle cx={12} cy={12} r={2.5} stroke="#fff" strokeWidth={1.5} />
-    <Circle cx={15.5} cy={8.5} r={0.8} fill="#fff" />
-  </Svg>
-);
-
-const IcoTikTok = () => (
-  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-    <Circle cx={12} cy={12} r={11} fill="#010101" />
-    <Path d="M16 8.5c-.9-.6-1.5-1.6-1.5-2.7h-2v9.2c0 1-.8 1.8-1.8 1.8s-1.8-.8-1.8-1.8.8-1.8 1.8-1.8c.2 0 .4 0 .5.1V11c-.2 0-.3 0-.5 0-2.1 0-3.8 1.7-3.8 3.8S8.6 18.6 10.7 18.6s3.8-1.7 3.8-3.8V10c.7.5 1.6.8 2.5.8V8.6c-.4 0-.7-.1-1-.1z" fill="#fff" />
-  </Svg>
-);
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
 
@@ -93,94 +78,17 @@ function formatCountdown(expireAt: string): string {
   return `${m} min`;
 }
 
-// ─── Partage par élément ──────────────────────────────────────────────────────
+// ─── Ligne élément ────────────────────────────────────────────────────────────
 
 interface ElementShareRowProps {
   el: ElementALaUne;
-  bloc: BlocALaUne;
-  shopName: string;
 }
 
-function ElementShareRow({ el, bloc, shopName }: ElementShareRowProps) {
-  const message = buildShareMessage({
-    elementNom: el.nom,
-    elementPrix: el.prix,
-    elementIndex: bloc.elements.findIndex(e => e.id === el.id),
-    blocTitre: bloc.titre,
-    blocDescription: bloc.description,
-    shopName,
-    blocCode: bloc.code ?? bloc.id,
-    expireAt: bloc.expire_at,
-  });
-
-  // WhatsApp : lien direct avec texte pré-rempli
-  const shareToWhatsApp = async () => {
-    const encoded = encodeURIComponent(message);
-    try {
-      const can = await Linking.canOpenURL('whatsapp://send?text=a');
-      if (can) { await Linking.openURL(`whatsapp://send?text=${encoded}`); return; }
-    } catch {}
-    Share.share({ message });
-  };
-
-  // IG / TikTok / FB : copie auto dans le presse-papiers + ouverture directe
-  const openWithCopy = async (
-    appUrl: string,
-    webUrl: string,
-    appName: string,
-    hint: string,
-  ) => {
-    await Clipboard.setStringAsync(message);
-    const can = await Linking.canOpenURL(appUrl);
-    Alert.alert(
-      `Partager sur ${appName}`,
-      `✅ Texte copié !\n\n${hint}`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: `Ouvrir ${appName}`,
-          onPress: () => Linking.openURL(can ? appUrl : webUrl),
-        },
-      ],
-    );
-  };
-
-  const shareToFacebook = () =>
-    openWithCopy(
-      'fb://',
-      'https://www.facebook.com',
-      'Facebook',
-      'Allez dans Stories → icône "Texte" et collez (appui long).',
-    );
-
-  const shareToInstagram = () =>
-    openWithCopy(
-      'instagram://story-camera',
-      'https://www.instagram.com',
-      'Instagram',
-      'Story ouverte → appuyez sur "Aa" et collez votre texte.',
-    );
-
-  const shareToTikTok = () =>
-    openWithCopy(
-      'tiktok://',
-      'https://www.tiktok.com',
-      'TikTok',
-      'Appuyez sur "+" → "Texte" et collez votre texte.',
-    );
-
+function ElementShareRow({ el }: ElementShareRowProps) {
   return (
     <View style={styles.elRow}>
-      <View style={styles.elInfo}>
-        <Text style={styles.elNom}>{el.nom}</Text>
-        <Text style={styles.elPrix}>{formatPrice(el.prix)}</Text>
-      </View>
-      <View style={styles.elShare}>
-        <TouchableOpacity onPress={shareToWhatsApp} style={styles.shareBtn}><IcoWhatsApp /></TouchableOpacity>
-        <TouchableOpacity onPress={shareToFacebook} style={styles.shareBtn}><IcoFacebook /></TouchableOpacity>
-        <TouchableOpacity onPress={shareToInstagram} style={styles.shareBtn}><IcoInstagram /></TouchableOpacity>
-        <TouchableOpacity onPress={shareToTikTok} style={styles.shareBtn}><IcoTikTok /></TouchableOpacity>
-      </View>
+      <Text style={styles.elNom}>{el.nom}</Text>
+      <Text style={styles.elPrix}>{formatPrice(el.prix)}</Text>
     </View>
   );
 }
@@ -220,7 +128,7 @@ function BlocActifCard({ bloc, shopName, shopLogoUrl, shopPhone, isShopOpen }: B
         </View>
         <View style={styles.elList}>
           {bloc.elements.map(el => (
-            <ElementShareRow key={el.id} el={el} bloc={bloc} shopName={shopName} />
+            <ElementShareRow key={el.id} el={el} />
           ))}
         </View>
         <TouchableOpacity
@@ -296,7 +204,7 @@ function shortId(): string {
 interface CreerModalProps {
   visible: boolean;
   onClose: () => void;
-  onCreer: (titre: string, desc: string, elements: ElementALaUne[]) => Promise<void>;
+  onCreer: (titre: string, desc: string, elements: ElementALaUne[], imageUri: string | null) => Promise<void>;
   loading: boolean;
   quotaRestants: number;
 }
@@ -307,11 +215,44 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
   const [elements, setElements] = useState<ElementALaUne[]>([
     { id: shortId(), nom: '', prix: 0 },
   ]);
+  const [imageUri, setImageUri] = useState<string | null>(null);
 
   const reset = () => {
     setTitre('');
     setDesc('');
     setElements([{ id: shortId(), nom: '', prix: 0 }]);
+    setImageUri(null);
+  };
+
+  const pickFromGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission refusée', "Autorisez l'accès à la galerie dans les réglages.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const pickFromCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission refusée', "Autorisez l'accès à la caméra dans les réglages.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setImageUri(result.assets[0].uri);
+    }
   };
 
   const handleClose = () => { reset(); onClose(); };
@@ -336,7 +277,7 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
     if (!titre.trim()) { Alert.alert('Titre requis', 'Donnez un titre à votre bloc.'); return; }
     const valid = elements.filter(e => e.nom.trim());
     if (valid.length === 0) { Alert.alert('Éléments requis', 'Ajoutez au moins un élément.'); return; }
-    await onCreer(titre.trim(), desc.trim(), valid.map(e => ({ ...e, nom: e.nom.trim() })));
+    await onCreer(titre.trim(), desc.trim(), valid.map(e => ({ ...e, nom: e.nom.trim() })), imageUri);
     reset();
   };
 
@@ -378,6 +319,28 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
               maxLength={300}
             />
             <Text style={styles.charCount}>{desc.length}/300</Text>
+
+            {/* Image optionnelle */}
+            <Text style={styles.fieldLabel}>Image (optionnel)</Text>
+            {imageUri ? (
+              <View style={styles.imagePreviewBox}>
+                <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="cover" />
+                <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => setImageUri(null)}>
+                  <Text style={styles.imageRemoveTxt}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.imagePickerRow}>
+                <TouchableOpacity style={styles.imagePickerBtn} onPress={pickFromGallery} activeOpacity={0.7}>
+                  <IcoGallery stroke={colors.accent} />
+                  <Text style={styles.imagePickerTxt}>Galerie</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.imagePickerBtn} onPress={pickFromCamera} activeOpacity={0.7}>
+                  <IcoCamera stroke={colors.accent} />
+                  <Text style={styles.imagePickerTxt}>Appareil photo</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             <View style={styles.elHeaderRow}>
               <Text style={styles.fieldLabel}>Éléments ({elements.length}/20)</Text>
@@ -470,17 +433,28 @@ export default function AlaUneScreen({ onBack }: Props) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const handleCreer = async (titre: string, desc: string, elements: ElementALaUne[]) => {
+  const handleCreer = async (titre: string, desc: string, elements: ElementALaUne[], imageUri: string | null) => {
     if (!shopCategorieId) {
       Alert.alert('Boutique manquante', 'Configurez votre boutique avant de créer un bloc.');
       return;
     }
     setSubmitting(true);
+    let imageUrl: string | null = null;
+    if (imageUri) {
+      const uploadResult = await uploadBlocImage(imageUri);
+      if ('error' in uploadResult) {
+        setSubmitting(false);
+        Alert.alert("Erreur d'upload", uploadResult.error);
+        return;
+      }
+      imageUrl = uploadResult.url;
+    }
     const result = await creerBloc({
       titre,
       description: desc || undefined,
       categorieId: shopCategorieId,
       elements,
+      imageUrl,
     });
     setSubmitting(false);
     if (!result.success) {
@@ -699,7 +673,7 @@ const styles = StyleSheet.create({
   },
   countdownTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 11.5 },
 
-  elList: { gap: 8 },
+  elList: { gap: 6 },
   elRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -707,11 +681,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     padding: 10,
   },
-  elInfo: { flex: 1 },
-  elNom: { color: colors.white, fontFamily: fonts.label, fontSize: 13 },
-  elPrix: { color: colors.accent, fontFamily: fonts.ui, fontSize: 12, marginTop: 2 },
-  elShare: { flexDirection: 'row', gap: 6 },
-  shareBtn: { padding: 2 },
+  elNom: { flex: 1, color: colors.white, fontFamily: fonts.label, fontSize: 13 },
+  elPrix: { color: colors.accent, fontFamily: fonts.ui, fontSize: 12 },
 
   shareBlocBtn: {
     marginTop: 12,
@@ -815,6 +786,56 @@ const styles = StyleSheet.create({
     fontSize: 10,
     textAlign: 'right',
     marginBottom: 14,
+  },
+
+  imagePickerRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  imagePickerBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.accent + '60',
+    borderRadius: radius.sm,
+    paddingVertical: 10,
+  },
+  imagePickerTxt: {
+    color: colors.accent,
+    fontFamily: fonts.ui,
+    fontSize: 12.5,
+  },
+  imagePreviewBox: {
+    marginBottom: 16,
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 160,
+    borderRadius: radius.sm,
+  },
+  imageRemoveBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#00000080',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageRemoveTxt: {
+    color: colors.white,
+    fontSize: 12,
+    lineHeight: 14,
   },
 
   elHeaderRow: {

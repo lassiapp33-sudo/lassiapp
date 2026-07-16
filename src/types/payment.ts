@@ -15,6 +15,9 @@ export interface OrderInfo {
   /** Frais de service LASSİ (1%) déjà inclus dans `total`. */
   commission?: number;
   orderType?: 'place' | 'emporter';
+  /** Méthode et piId déjà initiés depuis CartScreen — PaymentScreen démarre en waiting. */
+  preMethod?: PayMethod;
+  preInitiatedPiId?: string;
 }
 
 export type PayMethod = 'wave' | 'om';

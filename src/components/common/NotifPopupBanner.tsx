@@ -11,27 +11,30 @@ import { NotifType } from '../../store/notificationsStore';
 import useNotifPopupStore from '../../store/notifPopupStore';
 
 const EMOJI: Record<NotifType, string> = {
-  order: '🛍️',
-  pay: '✅',
-  vip: '🎁',
-  msg: '💬',
-  ann: '📢',
+  order:     '🛍️',
+  pay:       '✅',
+  vip:       '🎁',
+  msg:       '💬',
+  ann:       '📢',
+  livraison: '🚚',
 };
 
 const COLOR: Record<NotifType, string> = {
-  order: colors.accent,
-  pay: colors.success,
-  vip: colors.orange,
-  msg: colors.accent,
-  ann: colors.accent,
+  order:     colors.accent,
+  pay:       colors.success,
+  vip:       colors.orange,
+  msg:       colors.accent,
+  ann:       colors.accent,
+  livraison: colors.success,
 };
 
 const BG: Record<NotifType, string> = {
-  order: 'rgba(253,207,52,.13)',
-  pay: 'rgba(95,211,138,.13)',
-  vip: 'rgba(240,168,71,.13)',
-  msg: 'rgba(253,207,52,.13)',
-  ann: 'rgba(253,207,52,.13)',
+  order:     'rgba(253,207,52,.13)',
+  pay:       'rgba(95,211,138,.13)',
+  vip:       'rgba(240,168,71,.13)',
+  msg:       'rgba(253,207,52,.13)',
+  ann:       'rgba(253,207,52,.13)',
+  livraison: 'rgba(95,211,138,.13)',
 };
 
 const AUTO_MS = 5000;

@@ -132,9 +132,6 @@ export default function OrdersScreen({ onBack }: Props) {
       addOrder(order);
       Vibration.vibrate(400);
       setActiveTab('new');
-      // Proposer de noter le client 2 s après (laisser l'écran se stabiliser)
-      if (ratingTimerRef.current) clearTimeout(ratingTimerRef.current);
-      ratingTimerRef.current = setTimeout(() => setRatingTarget(order), 2000);
     },
     [addOrder],
   );
@@ -259,6 +256,8 @@ export default function OrdersScreen({ onBack }: Props) {
                 onDone={() => {
                   advance(order.id, 'done');
                   setActiveTab('done');
+                  if (ratingTimerRef.current) clearTimeout(ratingTimerRef.current);
+                  ratingTimerRef.current = setTimeout(() => setRatingTarget(order), 1000);
                 }}
               />
             ))

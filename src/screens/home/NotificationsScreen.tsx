@@ -40,15 +40,26 @@ const IcoAnn = ({ color }: { color: string }) => (
   </Svg>
 );
 
+// Camion — livraisons
+const IcoTruck = ({ color }: { color: string }) => (
+  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>
+    <Path d="M1 3h15v13H1z" stroke={color} />
+    <Path d="M16 8h4l3 3v5h-7V8z" stroke={color} />
+    <Path d="M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" stroke={color} />
+    <Path d="M18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" stroke={color} />
+  </Svg>
+);
+
 const TYPE_CONFIG: Record<
   NotifType,
   { Icon: React.FC<{ color: string }>; color: string; bg: string }
 > = {
-  order: { Icon: IcoOrder, color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
-  pay:   { Icon: IcoPay,   color: colors.success, bg: 'rgba(95,211,138,.13)' },
-  vip:   { Icon: IcoStar,  color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
-  msg:   { Icon: IcoMsg,   color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
-  ann:   { Icon: IcoAnn,   color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+  order:     { Icon: IcoOrder, color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+  pay:       { Icon: IcoPay,   color: colors.success, bg: 'rgba(95,211,138,.13)' },
+  vip:       { Icon: IcoStar,  color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
+  msg:       { Icon: IcoMsg,   color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+  ann:       { Icon: IcoAnn,   color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+  livraison: { Icon: IcoTruck, color: colors.success, bg: 'rgba(95,211,138,.13)' },
 };
 
 function NotifCard({ notif, onPress }: { notif: Notif; onPress: () => void }) {

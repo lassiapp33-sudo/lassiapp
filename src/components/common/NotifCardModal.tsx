@@ -14,19 +14,21 @@ import useNotifPopupStore from '../../store/notifPopupStore';
 // ─── Constantes par type ──────────────────────────────────────────────────────
 
 const TAG_LABEL: Record<NotifType, string> = {
-  vip:   'RÉCOMPENSE',
-  pay:   'PAIEMENT',
-  ann:   'ANNONCE',
-  order: 'COMMANDE',
-  msg:   'MESSAGE',
+  vip:       'RÉCOMPENSE',
+  pay:       'PAIEMENT',
+  ann:       'ANNONCE',
+  order:     'COMMANDE',
+  msg:       'MESSAGE',
+  livraison: 'LIVRAISON',
 };
 
 const LARGE_EMOJI: Record<NotifType, string> = {
-  vip:   '🎁',
-  pay:   '🎉',
-  ann:   '📢',
-  order: '🛍️',
-  msg:   '💬',
+  vip:       '🎁',
+  pay:       '🎉',
+  ann:       '📢',
+  order:     '🛍️',
+  msg:       '💬',
+  livraison: '🚚',
 };
 
 // ─── Composant ────────────────────────────────────────────────────────────────

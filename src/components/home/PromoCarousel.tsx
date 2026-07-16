@@ -12,6 +12,7 @@ import { formatPrice } from '../../utils/format';
 import { calculerPrixClient } from '../../config/payment';
 import { calcPromoClientPrice } from '../../services/promotions';
 import { usePromoItems, PromoItem } from '../../hooks/usePromoItems';
+import { recordCarouselVue } from '../../services/recentlyViewed';
 
 const W = Dimensions.get('window').width;
 // marginHorizontal:16 × 2 = 32 | padding:14 × 2 = 28 | gap:10 × 2 = 20 → 80
@@ -104,6 +105,11 @@ export default function PromoCarousel({ onPress }: Props) {
     // Positionnement initial sur copy2 après layout
     const init = setTimeout(() => {
       scrollRef.current?.scrollTo({ x: N * ITEM_STRIDE, animated: false });
+      // Enregistre les 3 premières cartes visibles au chargement
+      for (let i = 0; i < 3; i++) {
+        const it = looped[N + i];
+        if (it) recordCarouselVue(it.shopId, it.id).catch(() => {});
+      }
     }, 100);
 
     const timer = setInterval(() => {
@@ -112,6 +118,10 @@ export default function PromoCarousel({ onPress }: Props) {
 
       scrollRef.current?.scrollTo({ x: idx * ITEM_STRIDE, animated: true });
       setPage(Math.floor(((idx - N) % N) / 3));
+
+      // Enregistre la nouvelle carte qui entre dans le champ de vision (droite)
+      const newItem = looped[idx + 2];
+      if (newItem) recordCarouselVue(newItem.shopId, newItem.id).catch(() => {});
 
       // Arrivé à copy3[0] (= copy2[0] visuellement) → retour silencieux
       if (idx === N * 2) {
@@ -128,7 +138,7 @@ export default function PromoCarousel({ onPress }: Props) {
       clearInterval(timer);
       if (jumpRef.current) clearTimeout(jumpRef.current);
     };
-  }, [N]);
+  }, [N, looped]);
 
   if (N < 3) return null;
 

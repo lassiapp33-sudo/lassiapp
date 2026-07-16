@@ -18,6 +18,7 @@ import OnboardingScreen  from './src/screens/OnboardingScreen';
 import AuthNavigator     from './src/screens/AuthNavigator';
 import HomeNavigator     from './src/screens/home/HomeNavigator';
 import MerchantNavigator from './src/screens/merchant/MerchantNavigator';
+import LivreurNavigator  from './src/screens/livreur/LivreurNavigator';
 import ErrorBoundary     from './src/components/common/ErrorBoundary';
 import OfflineBanner     from './src/components/common/OfflineBanner';
 import NotifCardModal    from './src/components/common/NotifCardModal';
@@ -58,7 +59,7 @@ const getN = (): N | null => {
 
 ExpoSplashScreen.preventAutoHideAsync();
 
-type Screen = 'splash' | 'onboarding' | 'auth' | 'client' | 'merchant';
+type Screen = 'splash' | 'onboarding' | 'auth' | 'client' | 'merchant' | 'livreur';
 
 // Décode les données d'une notification push et stocke la navigation en attente
 function handleNotifData(data: Record<string, any> | undefined | null) {
@@ -250,7 +251,9 @@ export default function App() {
 
           if (sessionUser) {
             useAuthStore.getState().setUser(sessionUser);
-            setScreen(sessionUser.role === 'merchant' ? 'merchant' : 'client');
+            if (sessionUser.role === 'merchant') setScreen('merchant');
+            else if (sessionUser.role === 'livreur') setScreen('livreur');
+            else setScreen('client');
             return;
           }
 
@@ -267,13 +270,16 @@ export default function App() {
       )}
 
       {screen === 'auth' && (
-        <AuthNavigator onComplete={(role) =>
-          setScreen(role === 'merchant' ? 'merchant' : 'client')
-        } />
+        <AuthNavigator onComplete={(role) => {
+          if (role === 'merchant') setScreen('merchant');
+          else if (role === 'livreur') setScreen('livreur');
+          else setScreen('client');
+        }} />
       )}
 
       {screen === 'client'   && <HomeNavigator     onLogout={handleLogout} />}
       {screen === 'merchant' && <MerchantNavigator onLogout={handleLogout} />}
+      {screen === 'livreur'  && <LivreurNavigator  onLogout={handleLogout} />}
       </ErrorBoundary>
     </View>
   );

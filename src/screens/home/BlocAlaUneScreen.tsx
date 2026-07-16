@@ -2,18 +2,28 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   FlatList,
+  Modal,
+  Linking,
+  Image,
+  Dimensions,
 } from 'react-native';
+
+const SCREEN_W = Dimensions.get('window').width;
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import Avatar from '../../components/Avatar';
 import { formatPrice } from '../../utils/format';
 import { supabase } from '../../lib/supabase';
-import type { BlocALaUne } from '../../types/aLaUne';
+import PayMethodCard from '../../components/payment/PayMethodCard';
+import * as payService from '../../services/payment';
+import { calculerPrixClient, calculerCommission } from '../../config/payment';
+import { notifyError } from '../../utils/errorUtils';
+import type { BlocALaUne, ElementALaUne } from '../../types/aLaUne';
+import type { OrderInfo, PayMethod } from '../../types/payment';
 
 // ─── Types locaux ─────────────────────────────────────────────────────────────
 
@@ -45,21 +55,115 @@ function useCountdown(expireAt: string): string {
 // ─── Carte élément ────────────────────────────────────────────────────────────
 
 interface ElCardProps {
-  el: BlocALaUne['elements'][number];
+  el: ElementALaUne;
   highlighted: boolean;
   onShop: () => void;
+  onCommander: () => void;
 }
 
-function ElCard({ el, highlighted, onShop }: ElCardProps) {
+function ElCard({ el, highlighted, onShop, onCommander }: ElCardProps) {
+  const hasPrix = el.prix > 0;
+  const prixClient = hasPrix ? calculerPrixClient(el.prix) : 0;
+  const commission = hasPrix ? calculerCommission(el.prix) : 0;
+
   return (
     <View style={[styles.elCard, highlighted && styles.elCardHighlight]}>
       {highlighted && <Text style={styles.elHighlightBadge}>👋 Ce produit t'a été recommandé</Text>}
       <Text style={styles.elNom}>{el.nom}</Text>
-      <Text style={styles.elPrix}>{formatPrice(el.prix)}</Text>
-      <TouchableOpacity style={styles.shopBtn} onPress={onShop} activeOpacity={0.8}>
-        <Text style={styles.shopBtnTxt}>Voir la boutique</Text>
-      </TouchableOpacity>
+
+      {hasPrix ? (
+        <>
+          <Text style={styles.elPrix}>{formatPrice(prixClient)}</Text>
+          <Text style={styles.elCommission}>
+            Prix vendeur {formatPrice(el.prix)} · +{formatPrice(commission)} frais LASSI (1%)
+          </Text>
+        </>
+      ) : (
+        <Text style={styles.elPrixNone}>Prix sur demande</Text>
+      )}
+
+      {hasPrix ? (
+        <TouchableOpacity style={styles.shopBtn} onPress={onCommander} activeOpacity={0.8}>
+          <Text style={styles.shopBtnTxt}>Commander</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.shopBtnSecondary} onPress={onShop} activeOpacity={0.8}>
+          <Text style={styles.shopBtnSecondaryTxt}>Voir la boutique</Text>
+        </TouchableOpacity>
+      )}
     </View>
+  );
+}
+
+// ─── Feuille de paiement ──────────────────────────────────────────────────────
+
+interface CheckoutSheetProps {
+  el: ElementALaUne;
+  shopName: string;
+  loading: boolean;
+  onConfirm: (method: PayMethod) => void;
+  onClose: () => void;
+}
+
+function CheckoutSheet({ el, shopName, loading, onConfirm, onClose }: CheckoutSheetProps) {
+  const [method, setMethod] = useState<PayMethod>('wave');
+  const prixClient = calculerPrixClient(el.prix);
+  const commission = calculerCommission(el.prix);
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.csOverlay}>
+        <TouchableOpacity style={styles.csBackdrop} onPress={onClose} activeOpacity={1} />
+        <View style={styles.csSheet}>
+          <View style={styles.csHandle} />
+          <Text style={styles.csTitle}>Commander</Text>
+          <Text style={styles.csSub} numberOfLines={1}>{shopName}</Text>
+
+          {/* Article */}
+          <View style={styles.csItem}>
+            <Text style={styles.csItemName} numberOfLines={2}>{el.nom}</Text>
+          </View>
+
+          {/* Résumé prix */}
+          <View style={styles.csPriceBox}>
+            <View style={styles.csPriceLine}>
+              <Text style={styles.csPriceKey}>Prix prestataire</Text>
+              <Text style={styles.csPriceVal}>{formatPrice(el.prix)}</Text>
+            </View>
+            <View style={styles.csPriceLine}>
+              <Text style={styles.csPriceKey}>Frais LASSI (1%)</Text>
+              <Text style={styles.csPriceVal}>{formatPrice(commission)}</Text>
+            </View>
+            <View style={styles.csSep} />
+            <View style={styles.csPriceLine}>
+              <Text style={styles.csTotalKey}>Total</Text>
+              <Text style={styles.csTotalVal}>{formatPrice(prixClient)}</Text>
+            </View>
+          </View>
+
+          {/* Moyen de paiement */}
+          <Text style={styles.csMethodLabel}>Moyen de paiement</Text>
+          <PayMethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />
+          <PayMethodCard method="om"   selected={method === 'om'}   onSelect={() => setMethod('om')} />
+
+          {/* Bouton payer */}
+          <TouchableOpacity
+            style={[styles.csPayBtn, loading && styles.csPayBtnDisabled]}
+            onPress={() => onConfirm(method)}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.bg} size="small" />
+            ) : (
+              <Text style={styles.csPayBtnTxt}>
+                Payer avec {method === 'wave' ? 'Wave' : 'Orange Money'} · {formatPrice(prixClient)}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -70,12 +174,15 @@ interface Props {
   elementIndex?: number;
   onBack: () => void;
   onShopPress: (shopId: string, shopName: string) => void;
+  onPaymentPress: (order: OrderInfo) => void;
 }
 
-export default function BlocAlaUneScreen({ blocCode, elementIndex, onBack, onShopPress }: Props) {
+export default function BlocAlaUneScreen({ blocCode, elementIndex, onBack, onShopPress, onPaymentPress }: Props) {
   const [bloc, setBloc] = useState<BlocALaUne | null>(null);
   const [shop, setShop] = useState<ShopInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [checkoutTarget, setCheckoutTarget] = useState<ElementALaUne | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const countdown = useCountdown(bloc?.expire_at ?? new Date(Date.now() + 3600000).toISOString());
   const flatRef = useRef<FlatList>(null);
 
@@ -113,6 +220,60 @@ export default function BlocAlaUneScreen({ blocCode, elementIndex, onBack, onSho
       return () => clearTimeout(timer);
     }
   }, [elementIndex, bloc]);
+
+  // ── Commander un article À la une ─────────────────────────────────────────
+
+  const handlePayer = async (method: PayMethod) => {
+    if (!checkoutTarget || !bloc || checkoutLoading) return;
+    setCheckoutLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('creer_commande_alaune', {
+        p_bloc_id:    bloc.id,
+        p_element_id: checkoutTarget.id,
+        p_qty:        1,
+      });
+      if (error) throw new Error(error.message);
+
+      const { orderId, totalClient, commission, elementNom, shopName: rpcShopName } = data as {
+        orderId: string;
+        totalClient: number;
+        commission: number;
+        elementNom: string;
+        shopName: string;
+      };
+
+      // Initier le paiement Wave/OM
+      let preInitiatedPiId: string | undefined;
+      try {
+        const session = await payService.createPayment({
+          ticketId: orderId,
+          amount: totalClient,
+          method,
+          merchantName: rpcShopName,
+        });
+        preInitiatedPiId = session.reference;
+        if (session.paymentUrl) Linking.openURL(session.paymentUrl);
+      } catch {}
+
+      setCheckoutTarget(null);
+      onPaymentPress({
+        ticketId:    orderId,
+        orderId:     '#' + orderId.slice(0, 8).toUpperCase(),
+        shopInitial: (rpcShopName ?? '?').charAt(0).toUpperCase(),
+        shopName:    rpcShopName,
+        shopLocation: '',
+        items: [{ qty: 1, name: elementNom, price: totalClient }],
+        total:       totalClient,
+        commission,
+        preMethod:   method,
+        preInitiatedPiId,
+      });
+    } catch (err: any) {
+      notifyError(err?.message ?? 'Impossible de commander. Réessaie.');
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -183,13 +344,6 @@ export default function BlocAlaUneScreen({ blocCode, elementIndex, onBack, onSho
         )}
       </View>
 
-      {/* Description */}
-      {bloc.description ? (
-        <View style={styles.descBox}>
-          <Text style={styles.descTxt}>{bloc.description}</Text>
-        </View>
-      ) : null}
-
       {/* Éléments */}
       <FlatList
         ref={flatRef}
@@ -198,11 +352,28 @@ export default function BlocAlaUneScreen({ blocCode, elementIndex, onBack, onSho
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         onScrollToIndexFailed={() => {}}
+        ListHeaderComponent={() => (
+          <>
+            {bloc.image_url ? (
+              <Image
+                source={{ uri: bloc.image_url }}
+                style={styles.heroImage}
+                resizeMode="cover"
+              />
+            ) : null}
+            {bloc.description ? (
+              <View style={styles.descBox}>
+                <Text style={styles.descTxt}>{bloc.description}</Text>
+              </View>
+            ) : null}
+          </>
+        )}
         renderItem={({ item, index }) => (
           <ElCard
             el={item}
             highlighted={index === elementIndex}
             onShop={() => shop && onShopPress(shop.id, shop.name)}
+            onCommander={() => !isExpire && setCheckoutTarget(item)}
           />
         )}
         ListFooterComponent={
@@ -217,6 +388,17 @@ export default function BlocAlaUneScreen({ blocCode, elementIndex, onBack, onSho
           ) : null
         }
       />
+
+      {/* Feuille de paiement */}
+      {checkoutTarget && shop && (
+        <CheckoutSheet
+          el={checkoutTarget}
+          shopName={shop.name}
+          loading={checkoutLoading}
+          onConfirm={handlePayer}
+          onClose={() => !checkoutLoading && setCheckoutTarget(null)}
+        />
+      )}
     </View>
   );
 }
@@ -249,9 +431,15 @@ const styles = StyleSheet.create({
   expiredPill: { backgroundColor: colors.danger + '18' },
   countdownTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 11 },
 
+  heroImage: {
+    width: SCREEN_W,
+    height: Math.round(SCREEN_W * (9 / 16)),
+    marginBottom: 14,
+    backgroundColor: colors.surface,
+  },
+
   descBox: {
     marginHorizontal: 20,
-    marginTop: 14,
     marginBottom: 4,
     backgroundColor: colors.surface,
     borderRadius: radius.md,
@@ -259,9 +447,10 @@ const styles = StyleSheet.create({
   },
   descTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 13, lineHeight: 20 },
 
-  list: { padding: 20, gap: 12 },
+  list: { paddingBottom: 20, gap: 12 },
 
   elCard: {
+    marginHorizontal: 20,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -280,7 +469,21 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   elNom: { color: colors.white, fontFamily: fonts.title, fontSize: 17, marginBottom: 4 },
-  elPrix: { color: colors.accent, fontFamily: fonts.ui, fontSize: 16, marginBottom: 14 },
+  elPrix: { color: colors.accent, fontFamily: fonts.ui, fontSize: 18, marginBottom: 2 },
+  elCommission: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 11,
+    marginBottom: 14,
+    lineHeight: 16,
+  },
+  elPrixNone: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    marginBottom: 14,
+    fontStyle: 'italic',
+  },
 
   shopBtn: {
     backgroundColor: colors.accent,
@@ -290,8 +493,19 @@ const styles = StyleSheet.create({
   },
   shopBtnTxt: { color: colors.bg, fontFamily: fonts.title, fontSize: 14 },
 
+  shopBtnSecondary: {
+    backgroundColor: 'transparent',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  shopBtnSecondaryTxt: { color: colors.muted, fontFamily: fonts.title, fontSize: 14 },
+
   voirBoutiqueGlobal: {
     marginTop: 8,
+    marginHorizontal: 20,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -316,4 +530,105 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   retourTxt: { color: colors.white, fontFamily: fonts.ui, fontSize: 14 },
+
+  // ── Checkout Sheet ──────────────────────────────────────────────────────────
+
+  csOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  csBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  csSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderColor: colors.border,
+  },
+  csHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: 18,
+  },
+  csTitle: {
+    color: colors.white,
+    fontFamily: fonts.titleXL,
+    fontSize: 18,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  csSub: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  csItem: {
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: 12,
+    marginBottom: 14,
+  },
+  csItemName: {
+    color: colors.white,
+    fontFamily: fonts.title,
+    fontSize: 15,
+  },
+  csPriceBox: {
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: 12,
+    marginBottom: 16,
+    gap: 6,
+  },
+  csPriceLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  csPriceKey: { color: colors.muted, fontFamily: fonts.body, fontSize: 12 },
+  csPriceVal: { color: colors.white, fontFamily: fonts.ui, fontSize: 12 },
+  csSep: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 4,
+  },
+  csTotalKey: { color: colors.white, fontFamily: fonts.title, fontSize: 14 },
+  csTotalVal: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 16 },
+
+  csMethodLabel: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    marginBottom: 8,
+  },
+
+  csPayBtn: {
+    height: 52,
+    borderRadius: radius.md,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  csPayBtnDisabled: { opacity: 0.5 },
+  csPayBtnTxt: {
+    color: colors.bg,
+    fontFamily: fonts.titleXL,
+    fontSize: 14,
+  },
 });

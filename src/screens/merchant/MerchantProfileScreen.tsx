@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -319,6 +319,7 @@ export default function MerchantProfileScreen({
   const [hasActiveSub, setHasActiveSub] = useState(false);
   const [stats, setStats] = useState<VisibilityStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
+  const activeSubTypeRef = useRef<'quartier' | 'recherche' | 'carte'>('quartier');
 
   const user = useAuthStore(s => s.user);
   const updateProfile = useAuthStore(s => s.updateProfile);
@@ -341,20 +342,26 @@ export default function MerchantProfileScreen({
   }, [user?.id]);
 
   // Stats du forfait de visibilité — s'affiche seulement si un forfait est actif
+  const refreshStats = useCallback(() => {
+    if (!shopId) return;
+    setStatsLoading(true);
+    getVisibilityStats(shopId, activeSubTypeRef.current)
+      .then(setStats)
+      .catch(() => {})
+      .finally(() => setStatsLoading(false));
+  }, [shopId]);
+
   useEffect(() => {
     if (!shopId) return;
     getActiveSub(shopId)
       .then(sub => {
         if (!sub) return;
         setHasActiveSub(true);
-        setStatsLoading(true);
-        getVisibilityStats(shopId, sub.offerType)
-          .then(setStats)
-          .catch(() => {})
-          .finally(() => setStatsLoading(false));
+        activeSubTypeRef.current = sub.offerType;
+        refreshStats();
       })
       .catch(() => {});
-  }, [shopId]);
+  }, [shopId, refreshStats]);
 
   const displayName = user?.name ?? 'Commerçant';
   const displayPhone = user?.phone ? formatPhoneSenegal(user.phone) : '';
@@ -483,7 +490,12 @@ export default function MerchantProfileScreen({
 
         {hasActiveSub && (
           <>
-            <Text style={profileRowStyles.secLbl}>Résultat forfait</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 8, paddingHorizontal: 20 }}>
+              <Text style={[profileRowStyles.secLbl, { marginTop: 0, marginBottom: 0 }]}>Résultat forfait</Text>
+              <TouchableOpacity onPress={refreshStats} disabled={statsLoading} style={{ opacity: statsLoading ? 0.4 : 1 }}>
+                <Text style={{ color: colors.accent, fontSize: 12, fontFamily: fonts.ui }}>↻ Rafraîchir</Text>
+              </TouchableOpacity>
+            </View>
             <StatsGrid stats={stats} loading={statsLoading} />
           </>
         )}

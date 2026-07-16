@@ -8,7 +8,7 @@ import ForgotPasswordScreen from './auth/ForgotPasswordScreen';
 import MerchantShopSetupScreen from './auth/MerchantShopSetupScreen';
 import CGUScreen from './common/CGUScreen';
 import ConfidentialiteScreen from './common/ConfidentialiteScreen';
-import useAuthStore from '../store/authStore';
+import useAuthStore, { UserRole } from '../store/authStore';
 import * as authService from '../services/auth';
 
 type Role = 'client' | 'merchant';
@@ -22,7 +22,7 @@ type StackItem =
   | { id: 'forgotPassword' };
 
 interface Props {
-  onComplete: (role: Role) => void;
+  onComplete: (role: UserRole) => void;
 }
 
 export default function AuthNavigator({ onComplete }: Props) {

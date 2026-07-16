@@ -90,13 +90,11 @@ interface Props {
 }
 
 export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
-  const [stage, setStage] = useState<Stage>('checkout');
-  const [method, setMethod] = useState<PayMethod>('wave');
+  const [stage, setStage] = useState<Stage>(order.preInitiatedPiId ? 'waiting' : 'checkout');
+  const [method, setMethod] = useState<PayMethod>(order.preMethod ?? 'wave');
   const [processing, setProcessing] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const referenceRef = useRef<string>('');
-  // Garde synchrone anti-double-tap : useRef se met à jour immédiatement,
-  // contrairement à useState qui est stale dans la closure du premier appel.
+  const referenceRef = useRef<string>(order.preInitiatedPiId ?? '');
   const processingRef = useRef(false);
 
   const handlePay = async () => {

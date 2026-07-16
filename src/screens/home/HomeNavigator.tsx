@@ -27,6 +27,7 @@ import TerrainMyReservationsScreen from '../terrain/TerrainMyReservationsScreen'
 import ClassementScreen from '../classement/ClassementScreen';
 import FitnessAbonnementPaymentScreen from '../fitness/FitnessAbonnementPaymentScreen';
 import BlocAlaUneScreen from './BlocAlaUneScreen';
+import AlaUneFeedScreen from './AlaUneFeedScreen';
 import ClientAbonnementsScreen from '../fitness/ClientAbonnementsScreen';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { CatId } from '../../components/category/CatNavBar';
@@ -108,7 +109,8 @@ type HomeStack =
   | { id: 'mes_abonnements' }
   | { id: 'fitness_abo_payment'; offre: FitnessOffre; fitnessName: string; shopId: string }
   | { id: 'a_la_une_bloc'; blocCode: string; elementIndex?: number }
-  | { id: 'a_la_une_categorie'; categorieId: string };
+  | { id: 'a_la_une_categorie'; categorieId: string }
+  | { id: 'a_la_une_feed' };
 
 interface Props {
   onLogout: () => void;
@@ -204,6 +206,17 @@ export default function HomeNavigator({ onLogout }: Props) {
     }
   }, [pendingNav, clearPending]);
 
+  // ── Feed À la une (toutes catégories, groupé par prestataire) ────────────
+  if (screen.id === 'a_la_une_feed') {
+    return (
+      <AlaUneFeedScreen
+        onBack={pop}
+        onBlocPress={blocCode => push({ id: 'a_la_une_bloc', blocCode })}
+        onShopPress={pushShop}
+      />
+    );
+  }
+
   // ── Bloc À la une (deep link produit) ────────────────────────────────────
   if (screen.id === 'a_la_une_bloc') {
     return (
@@ -212,6 +225,9 @@ export default function HomeNavigator({ onLogout }: Props) {
         elementIndex={screen.elementIndex}
         onBack={pop}
         onShopPress={pushShop}
+        onPaymentPress={order =>
+          push({ id: 'payment', order, from: 'cart' })
+        }
       />
     );
   }
@@ -614,6 +630,7 @@ export default function HomeNavigator({ onLogout }: Props) {
       onSearch={() => push({ id: 'search' })}
       onVoice={() => push({ id: 'voice' })}
       onClassement={() => push({ id: 'classement' })}
+      onAlaUneFeed={() => push({ id: 'a_la_une_feed' })}
       onFavorites={() => push({ id: 'favorites' })}
       onRecent={() => push({ id: 'recent' })}
       onMessages={() => push({ id: 'messages' })}

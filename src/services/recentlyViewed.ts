@@ -115,12 +115,10 @@ export async function recordView(shopId: string): Promise<void> {
 
 /** Enregistre un clic sur un produit du carrousel (sans contrainte d'unicité). */
 export async function recordCarouselClick(shopId: string, productId: string): Promise<void> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return;
   await supabase.from('carrousel_clics').insert({
-    client_id: user.id,
+    client_id: session.user.id,
     shop_id: shopId,
     product_id: productId,
   });
@@ -128,12 +126,11 @@ export async function recordCarouselClick(shopId: string, productId: string): Pr
 
 /** Enregistre un passage d'un produit devant le client dans le carrousel (impression). */
 export async function recordCarouselVue(shopId: string, productId: string): Promise<void> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!shopId || !productId) return;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return;
   await supabase.from('carrousel_vues').insert({
-    client_id: user.id,
+    client_id: session.user.id,
     shop_id: shopId,
     product_id: productId,
   });

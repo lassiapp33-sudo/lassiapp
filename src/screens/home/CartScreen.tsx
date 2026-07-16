@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -26,6 +27,10 @@ import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { notifyError } from '../../utils/errorUtils';
 import { calculerPrixClient, calculerCommission, PAYMENT_CONFIG } from '../../config/payment';
+import { PayMethod } from '../../types/payment';
+import PayMethodCard from '../../components/payment/PayMethodCard';
+import * as payService from '../../services/payment';
+import LivraisonModal from '../../components/livraison/LivraisonModal';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -78,6 +83,8 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
   const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [discounts, setDiscounts] = useState<AppliedDiscount[]>([]);
+  const [method, setMethod] = useState<PayMethod>('wave');
+  const [showLivraisonModal, setShowLivraisonModal] = useState(false);
 
   // Garde synchrone anti-double-clic — la ref se met à jour immédiatement,
   // sans attendre un cycle de rendu React.
@@ -206,6 +213,24 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         voiceNotePath,
       );
 
+      // Initier le paiement Wave/OM immédiatement après création de la commande
+      let preInitiatedPiId: string | undefined;
+      try {
+        const session = await payService.createPayment({
+          ticketId: realOrderId,
+          amount: freshTotalClient,
+          method,
+          merchantName: freshShopInfo?.name ?? shopName,
+        });
+        preInitiatedPiId = session.reference;
+        if (session.paymentUrl) {
+          Linking.openURL(session.paymentUrl);
+        }
+      } catch {
+        // L'initiation a échoué — on navigue quand même vers PaymentScreen
+        // pour que l'utilisateur puisse réessayer
+      }
+
       freshStore.clearCart();
       onCheckout({
         ticketId: realOrderId,
@@ -217,6 +242,8 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         total: freshTotalClient,
         commission: freshCommission,
         orderType: orderType,
+        preMethod: method,
+        preInitiatedPiId,
       });
     } catch {
       notifyError('Une erreur est survenue. Réessaie dans un instant.');
@@ -319,6 +346,11 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
             <VoiceNoteRecorder onRecordingComplete={setVoiceNoteUri} />
           </View>
 
+          {/* Moyen de paiement */}
+          <Text style={styles.payMethodTitle}>Moyen de paiement</Text>
+          <PayMethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />
+          <PayMethodCard method="om"   selected={method === 'om'}   onSelect={() => setMethod('om')} />
+
           {/* Résumé de commande */}
           <View style={styles.summary}>
             <View style={styles.summaryLine}>
@@ -373,11 +405,34 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
           ) : (
             <>
               <IcoPay />
-              <Text style={styles.payBtnTxt}>Commander · {formatPrice(totalClient)}</Text>
+              <Text style={styles.payBtnTxt}>
+                Payer avec {method === 'wave' ? 'Wave' : 'Orange Money'} · {formatPrice(totalClient)}
+              </Text>
             </>
           )}
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.livraisonBtn, (!hasItems || isSubmitting) && styles.payBtnDisabled]}
+          onPress={() => setShowLivraisonModal(true)}
+          activeOpacity={0.85}
+          disabled={!hasItems || isSubmitting}
+        >
+          <Text style={styles.livraisonBtnTxt}>Commander + Livrer</Text>
+        </TouchableOpacity>
       </View>
+
+      <LivraisonModal
+        visible={showLivraisonModal}
+        shopId={shopId || shopInfo?.id || ''}
+        shopName={displayName}
+        onClose={() => setShowLivraisonModal(false)}
+        onConfirmed={(_livraisonId) => {
+          setShowLivraisonModal(false);
+          // Lancer le paiement de la commande après enregistrement de la livraison
+          handleCheckout();
+        }}
+      />
     </LassiScreen>
   );
 }
@@ -543,6 +598,18 @@ const styles = StyleSheet.create({
     minHeight: 20,
   },
 
+  // Moyen de paiement
+  payMethodTitle: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginHorizontal: 18,
+    marginBottom: 10,
+    marginTop: 4,
+  },
+
   // Résumé
   summary: {
     marginHorizontal: 18,
@@ -637,5 +704,19 @@ const styles = StyleSheet.create({
     color: colors.bg,
     fontFamily: fonts.titleXL,
     fontSize: 16,
+  },
+  livraisonBtn: {
+    height: 46,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  livraisonBtnTxt: {
+    color: colors.accent,
+    fontFamily: fonts.ui,
+    fontSize: 14,
   },
 });

@@ -21,6 +21,7 @@ import TerrainScanScreen from './TerrainScanScreen';
 import MerchantAbonnementsScreen from '../fitness/MerchantAbonnementsScreen';
 import AlaUneScreen from './AlaUneScreen';
 import BlocAlaUneScreen from '../home/BlocAlaUneScreen';
+import MerchantLivraisonScreen from './MerchantLivraisonScreen';
 import { Terrain } from '../../types/terrain';
 import NotificationsScreen from '../home/NotificationsScreen';
 import ChatScreen from '../chat/ChatScreen';
@@ -92,7 +93,8 @@ type MerchantScreen =
   | { id: 'suivi_gps'; shopLat: number; shopLng: number; shopName: string; shopLogoUrl: string | null }
   | 'fitness_abonnements'
   | 'a_la_une'
-  | { id: 'a_la_une_bloc'; blocCode: string; elementIndex?: number };
+  | { id: 'a_la_une_bloc'; blocCode: string; elementIndex?: number }
+  | 'livraison';
 
 interface Props {
   onLogout: () => void;
@@ -429,6 +431,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
   if (screen === 'fitness_abonnements')
     return <MerchantAbonnementsScreen onBack={() => setScreen('store')} />;
   if (screen === 'a_la_une') return <AlaUneScreen onBack={() => setScreen('dashboard')} />;
+  if (screen === 'livraison') return <MerchantLivraisonScreen onBack={() => setScreen('dashboard')} />;
   if (typeof screen === 'object' && screen.id === 'a_la_une_bloc')
     return (
       <BlocAlaUneScreen
@@ -436,6 +439,9 @@ export default function MerchantNavigator({ onLogout }: Props) {
         elementIndex={screen.elementIndex}
         onBack={() => setScreen('dashboard')}
         onShopPress={(sid, sname) => setScreen({ id: 'buyerShop', shopId: sid, shopName: sname })}
+        onPaymentPress={order =>
+          setScreen({ id: 'buyerPayment', order, shopId: '', shopName: order.shopName, from: 'cart' })
+        }
       />
     );
 
@@ -496,6 +502,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
           if (dest === 'classement') setScreen('classement');
           if (dest === 'offre_quartier') setScreen('offre_quartier');
           if (dest === 'a_la_une') setScreen('a_la_une');
+          if (dest === 'livraison') setScreen('livraison');
         }}
         onNotifPress={() => setScreen('notifications')}
       />
