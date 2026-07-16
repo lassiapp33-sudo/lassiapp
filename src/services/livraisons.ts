@@ -127,7 +127,7 @@ export const creerCompteLivreur = async (params: {
 
   if (error || !data?.success)
     return { success: false, error: data?.error ?? 'Erreur création livreur.' };
-  return { success: true, livreurId: data.userId };
+  return { success: true, livreurId: data.livreurId };
 };
 
 // ADMIN : liste des livreurs
