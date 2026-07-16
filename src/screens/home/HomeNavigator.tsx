@@ -638,6 +638,16 @@ export default function HomeNavigator({ onLogout }: Props) {
       onProfile={() => push({ id: 'profile' })}
       onMap={() => push({ id: 'map' })}
       onTerrains={() => push({ id: 'terrain_list' })}
+      onContactShop={(shopId, shopName, shopLogoUrl) =>
+        push({
+          id: 'chat',
+          shopId,
+          shopInitial: shopName.charAt(0).toUpperCase(),
+          shopName,
+          shopLogoUrl,
+          isVip: false,
+        })
+      }
     />
   );
 }

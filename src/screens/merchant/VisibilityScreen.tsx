@@ -19,6 +19,7 @@ import PlanCard from '../../components/visibility/PlanCard';
 import ProductPicker from '../../components/visibility/ProductPicker';
 import PayFooter from '../../components/visibility/PayFooter';
 import ActiveSubCard, { computeSubCardProps } from '../../components/visibility/ActiveSubCard';
+import SponsoredAdPanel from '../../components/visibility/SponsoredAdPanel';
 import { colors, fonts, radius } from '../../theme';
 import { IcoChevron } from '../../components/icons';
 import useShopStore from '../../store/shopStore';
@@ -45,14 +46,15 @@ import {
 
 // ─── Les trois offres de visibilité ───────────────────────────────────────────
 
-type OfferType = 'quartier' | 'recherche' | 'carte';
+type OfferType = 'annonce' | 'quartier' | 'recherche' | 'carte';
 
-const OFFER_ORDER: OfferType[] = ['quartier', 'recherche', 'carte'];
+const OFFER_ORDER: OfferType[] = ['annonce', 'quartier', 'recherche', 'carte'];
 
 const OFFER_LABELS: Record<OfferType, string> = {
-  quartier: 'Offre du quartier',
+  annonce:   'Annonce sponsorisée — Toucher toute la base clients',
+  quartier:  'Offre du quartier',
   recherche: 'Booster ma position dans les recherches',
-  carte: 'Apparaître sur la carte en priorité (épingle dorée)',
+  carte:     'Apparaître sur la carte en priorité (épingle dorée)',
 };
 
 // Forfaits "Booster recherche" et "Épingle dorée" — même tarif pour les deux
@@ -301,6 +303,7 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
     setSelectedId('3m');
     setBoostExpiry(null);
     if (offer !== 'quartier') setView('subscribe');
+    // 'annonce' gère son propre état dans SponsoredAdPanel
   };
 
   // ── Chargement initial : plans + abonnement actif ─────────────────────────
@@ -354,6 +357,7 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
   // ── Lancer le paiement (Wave / Orange Money / Crédit LASSI) ─────────────────
   const handlePay = async () => {
     if (!selectedPlan || !shopId) return;
+    if (offerType === 'annonce') return; // géré par SponsoredAdPanel
 
     if (offerType === 'quartier' && !featuredAllProducts && selectedProductIds.length === 0) {
       Alert.alert(
@@ -452,6 +456,7 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
   // ── Payer avec le crédit LASSI — activation immédiate (3 offres) ──────────
   const handlePayWithCredit = async () => {
     if (!selectedPlan || !shopId) return;
+    if (offerType === 'annonce') return; // géré par SponsoredAdPanel
 
     if (offerType === 'quartier' && !featuredAllProducts && selectedProductIds.length === 0) {
       Alert.alert(
@@ -518,7 +523,15 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
         </TouchableOpacity>
       </View>
 
-      {initLoading ? (
+      {/* Annonce sponsorisée — panel dédié sans état "abonné" */}
+      {offerType === 'annonce' ? (
+        <SponsoredAdPanel
+          onCreated={newBalance => {
+            // loadMyShop est appelé dans SponsoredAdPanel, rien d'autre à faire
+            void newBalance;
+          }}
+        />
+      ) : initLoading ? (
         <View style={styles.loadingWrap}>
           <Text style={styles.loadingTxt}>Chargement…</Text>
         </View>

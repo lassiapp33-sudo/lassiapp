@@ -19,7 +19,7 @@ const IcoTrend = () => (
   </Svg>
 );
 
-export type HeroVariant = 'quartier' | 'recherche' | 'carte';
+export type HeroVariant = 'quartier' | 'recherche' | 'carte' | 'annonce';
 
 interface Props {
   variant?: HeroVariant;
@@ -68,6 +68,18 @@ const styles = StyleSheet.create({
 });
 
 const CONTENT: Record<HeroVariant, { title: string; body: React.ReactNode }> = {
+  annonce: {
+    title: 'Touche toute la base clients',
+    body: (
+      <>
+        {'Lance une '}
+        <Text style={styles.accent}>annonce sponsorisée</Text>
+        {" diffusée directement dans le feed des clients. Deux boutons d'action : "}
+        <Text style={styles.accent}>Contact direct</Text>
+        {' et accès à ta vitrine.'}
+      </>
+    ),
+  },
   quartier: {
     title: 'Sois vu partout à Dakar',
     body: (

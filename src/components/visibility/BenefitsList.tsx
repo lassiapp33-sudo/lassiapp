@@ -33,7 +33,7 @@ const IcoPin = () => (
 
 // ─── Config bénéfices ─────────────────────────────────────────────────────────
 
-export type BenefitsVariant = 'quartier' | 'recherche' | 'carte';
+export type BenefitsVariant = 'quartier' | 'recherche' | 'carte' | 'annonce';
 
 interface Benefit {
   Icon: React.ComponentType;
@@ -42,6 +42,23 @@ interface Benefit {
 }
 
 const BENEFITS_BY_VARIANT: Record<BenefitsVariant, Benefit[]> = {
+  annonce: [
+    {
+      Icon: IcoPulse,
+      title: 'Diffusion globale & ciblée',
+      desc: "Ton annonce s'affiche dans le feed de toute la base clients",
+    },
+    {
+      Icon: IcoStore,
+      title: "Double bouton d'action",
+      desc: 'Contact direct (chat) + Voir la vitrine — conversion maximale',
+    },
+    {
+      Icon: () => <IcoSearch color={colors.accent} />,
+      title: 'Estimation de portée en temps réel',
+      desc: 'Choisis ton budget et vois immédiatement les vues estimées',
+    },
+  ],
   quartier: [
     {
       Icon: IcoStore,

@@ -17,6 +17,8 @@ import CategoryGrid from '../../components/home/CategoryGrid';
 import { CatId } from '../../components/category/CatNavBar';
 import PromoBanner from '../../components/home/PromoBanner';
 import NearbyCard, { NearbyPlace } from '../../components/home/NearbyCard';
+import SponsoredAdCard from '../../components/home/SponsoredAdCard';
+import { SponsoredAd, getActiveSponsoredAds } from '../../services/sponsoredAds';
 import BottomNav, { NavTab, NAV_HEIGHT } from '../../components/home/BottomNav';
 import WelcomeClientModal from '../../components/home/WelcomeClientModal';
 import { colors, fonts, TOP_INSET } from '../../theme';
@@ -46,6 +48,7 @@ interface Props {
   onAlaUneFeed?: () => void;
   onShopItemPress?: (shopId: string, shopName: string, productId: string) => void;
   onShopItemView?: (shopId: string, productId: string) => void;
+  onContactShop?: (shopId: string, shopName: string, shopLogoUrl: string | null) => void;
 }
 
 export default function ClientHomeScreen({
@@ -64,6 +67,7 @@ export default function ClientHomeScreen({
   onAlaUneFeed,
   onShopItemPress,
   onShopItemView,
+  onContactShop,
 }: Props) {
   const t = useT();
 
@@ -72,6 +76,7 @@ export default function ClientHomeScreen({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [sponsoredAds, setSponsoredAds] = useState<SponsoredAd[]>([]);
 
   const userId = useAuthStore(s => s.user?.id);
   const userInitial = useAuthStore(s => s.user?.initial ?? 'A');
@@ -154,6 +159,7 @@ export default function ClientHomeScreen({
     loadFavorites();
     refreshLocation();
     loadShops();
+    getActiveSponsoredAds(3).then(setSponsoredAds).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Message de bienvenue (essentiel de LASSI) — affiché une seule fois,
@@ -233,6 +239,23 @@ export default function ClientHomeScreen({
 
         {/* Produits en vitrine — carrousel auto-défilant avec indicateurs */}
         <PromoBanner onPress={onShopItemPress} onView={onShopItemView} />
+
+        {/* Annonces sponsorisées */}
+        {sponsoredAds.length > 0 && (
+          <>
+            <View style={[styles.sectionHead, { marginBottom: 10 }]}>
+              <Text style={styles.secTitle}>À la une</Text>
+            </View>
+            {sponsoredAds.map(ad => (
+              <SponsoredAdCard
+                key={ad.id}
+                ad={ad}
+                onContact={() => onContactShop?.(ad.shopId, ad.shopName ?? '', ad.shopLogoUrl ?? null)}
+                onViewShop={() => onShopPress?.(ad.shopId, ad.shopName ?? '')}
+              />
+            ))}
+          </>
+        )}
 
         {/* Boutiques à proximité */}
         <View style={styles.px}>

@@ -1,72 +1,50 @@
 import { supabase } from '../lib/supabase';
+import { devisLivraison } from '../config/livraison';
+
+export { devisLivraison };
 
 export interface Livraison {
   id: string;
-  demandeurId: string;
-  demandeurType: 'client' | 'prestataire';
-  orderId?: string;
-  departLabel: string;
-  departLat: number;
-  departLng: number;
-  arriveeLabel: string;
-  arriveeLat: number;
-  arriveeLng: number;
-  contactNom?: string;
-  contactTel?: string;
-  distanceKm: number;
-  prixLivraison: number;
+  demandeur_id: string;
+  demandeur_type: 'client' | 'prestataire';
+  order_id: string | null;
+  depart_label: string;
+  depart_lat: number;
+  depart_lng: number;
+  arrivee_label: string;
+  arrivee_lat: number;
+  arrivee_lng: number;
+  contact_nom: string | null;
+  contact_tel: string | null;
+  distance_km: number;
+  prix_livraison: number;
   statut: 'en_attente' | 'acceptee' | 'terminee' | 'annulee';
-  livreurId?: string;
-  acceptedAt?: string;
-  termineeAt?: string;
-  createdAt: string;
+  livreur_id: string | null;
+  created_at: string;
+  terminee_at: string | null;
 }
 
-function rowToLivraison(row: Record<string, any>): Livraison {
-  return {
-    id:             row.id,
-    demandeurId:    row.demandeur_id,
-    demandeurType:  row.demandeur_type,
-    orderId:        row.order_id ?? undefined,
-    departLabel:    row.depart_label,
-    departLat:      row.depart_lat,
-    departLng:      row.depart_lng,
-    arriveeLabel:   row.arrivee_label,
-    arriveeLat:     row.arrivee_lat,
-    arriveeLng:     row.arrivee_lng,
-    contactNom:     row.contact_nom ?? undefined,
-    contactTel:     row.contact_tel ?? undefined,
-    distanceKm:     Number(row.distance_km),
-    prixLivraison:  row.prix_livraison,
-    statut:         row.statut,
-    livreurId:      row.livreur_id ?? undefined,
-    acceptedAt:     row.accepted_at ?? undefined,
-    termineeAt:     row.terminee_at ?? undefined,
-    createdAt:      row.created_at,
-  };
-}
-
-export interface CreerLivraisonParams {
-  demandeurId: string;
+// Créer une demande de livraison
+export const creerLivraison = async (params: {
   demandeurType: 'client' | 'prestataire';
   orderId?: string;
-  departLabel: string;
-  departLat: number;
-  departLng: number;
-  arriveeLabel: string;
-  arriveeLat: number;
-  arriveeLng: number;
-  contactNom?: string;
-  contactTel?: string;
-  distanceKm: number;
-  prixLivraison: number;
-}
+  departLabel: string; departLat: number; departLng: number;
+  arriveeLabel: string; arriveeLat: number; arriveeLng: number;
+  contactNom?: string; contactTel?: string;
+}): Promise<{ success: true; livraison: Livraison; prix: number } | { success: false; error: string }> => {
+  const devis = devisLivraison(
+    params.departLat, params.departLng,
+    params.arriveeLat, params.arriveeLng,
+  );
+  if (devis.horsZone) return { success: false, error: devis.message ?? 'Zone non couverte.' };
 
-export async function creerLivraison(params: CreerLivraisonParams): Promise<Livraison> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Non connecté.' };
+
   const { data, error } = await supabase
     .from('livraisons')
     .insert({
-      demandeur_id:   params.demandeurId,
+      demandeur_id:   user.id,
       demandeur_type: params.demandeurType,
       order_id:       params.orderId ?? null,
       depart_label:   params.departLabel,
@@ -77,61 +55,92 @@ export async function creerLivraison(params: CreerLivraisonParams): Promise<Livr
       arrivee_lng:    params.arriveeLng,
       contact_nom:    params.contactNom ?? null,
       contact_tel:    params.contactTel ?? null,
-      distance_km:    params.distanceKm,
-      prix_livraison: params.prixLivraison,
+      distance_km:    devis.distanceKm,
+      prix_livraison: devis.prix,
     })
-    .select('*')
+    .select()
     .single();
 
-  if (error) throw new Error(error.message);
-  return rowToLivraison(data);
-}
+  if (error) return { success: false, error: 'Erreur création livraison.' };
+  return { success: true, livraison: data as Livraison, prix: devis.prix };
+};
 
-// Pour le livreur : livraisons en_attente + ses livraisons en cours
-export async function getLivraisonsDisponibles(): Promise<Livraison[]> {
-  const { data, error } = await supabase
+// LIVREUR : livraisons en attente (pool)
+export const getLivraisonsDisponibles = async (): Promise<Livraison[]> => {
+  const { data } = await supabase
     .from('livraisons')
     .select('*')
-    .in('statut', ['en_attente', 'acceptee'])
-    .order('created_at', { ascending: false });
+    .eq('statut', 'en_attente')
+    .order('created_at', { ascending: true })
+    .limit(30);
+  return (data ?? []) as Livraison[];
+};
 
-  if (error) throw new Error(error.message);
-  return (data ?? []).map(rowToLivraison);
-}
-
-// Pour le demandeur : son historique
-export async function getMesLivraisons(): Promise<Livraison[]> {
-  const { data, error } = await supabase
+// LIVREUR : mes livraisons en cours (acceptée par moi)
+export const getMesLivraisons = async (): Promise<Livraison[]> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
     .from('livraisons')
     .select('*')
-    .order('created_at', { ascending: false });
+    .eq('livreur_id', user.id)
+    .eq('statut', 'acceptee')
+    .order('accepted_at', { ascending: false });
+  return (data ?? []) as Livraison[];
+};
 
-  if (error) throw new Error(error.message);
-  return (data ?? []).map(rowToLivraison);
-}
+// LIVREUR : accepter
+export const accepterLivraison = async (
+  livraisonId: string,
+): Promise<{ success: true } | { success: false; error: string }> => {
+  const { error } = await supabase.rpc('accepter_livraison', { p_livraison_id: livraisonId });
+  if (error) {
+    if (error.message.includes('DEJA_PRISE'))
+      return { success: false, error: 'Cette livraison vient d\'être prise par un autre livreur.' };
+    return { success: false, error: 'Impossible d\'accepter.' };
+  }
+  return { success: true };
+};
 
-export async function accepterLivraison(livraisonId: string): Promise<void> {
-  const { error } = await supabase.rpc('accepter_livraison', {
-    p_livraison_id: livraisonId,
+// LIVREUR : terminer
+export const terminerLivraison = async (
+  livraisonId: string,
+): Promise<{ success: true } | { success: false; error: string }> => {
+  const { error } = await supabase.rpc('terminer_livraison', { p_livraison_id: livraisonId });
+  if (error) return { success: false, error: 'Impossible de terminer.' };
+  return { success: true };
+};
+
+// ADMIN : créer un compte livreur via Edge Function (service_role requis)
+export const creerCompteLivreur = async (params: {
+  nomComplet: string;
+  telephone:  string;
+  motDePasse: string;
+}): Promise<{ success: true; livreurId: string } | { success: false; error: string }> => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { success: false, error: 'Non connecté.' };
+
+  const { data, error } = await supabase.functions.invoke('admin-create-livreur', {
+    body: params,
+    headers: { Authorization: `Bearer ${session.access_token}` },
   });
-  if (error) throw new Error(error.message);
-}
 
-export async function terminerLivraison(livraisonId: string): Promise<void> {
-  const { error } = await supabase.rpc('terminer_livraison', {
-    p_livraison_id: livraisonId,
-  });
-  if (error) throw new Error(error.message);
-}
+  if (error || !data?.success)
+    return { success: false, error: data?.error ?? 'Erreur création livreur.' };
+  return { success: true, livreurId: data.userId };
+};
 
-// Pour l'admin
-export async function getToutesLivraisons(): Promise<Livraison[]> {
-  const { data, error } = await supabase
-    .from('livraisons')
+// ADMIN : liste des livreurs
+export const getLivreurs = async () => {
+  const { data } = await supabase
+    .from('livreurs')
     .select('*')
-    .order('created_at', { ascending: false })
-    .limit(200);
+    .order('created_at', { ascending: false });
+  return data ?? [];
+};
 
-  if (error) throw new Error(error.message);
-  return (data ?? []).map(rowToLivraison);
-}
+// ADMIN : activer / désactiver
+export const toggleLivreur = async (livreurId: string, actif: boolean) => {
+  const { error } = await supabase.from('livreurs').update({ actif }).eq('id', livreurId);
+  return { success: !error };
+};

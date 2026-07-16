@@ -13,6 +13,7 @@ import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { formatPrice } from '../../utils/format';
 import {
   getLivraisonsDisponibles,
+  getMesLivraisons,
   accepterLivraison,
   terminerLivraison,
   Livraison,
@@ -25,15 +26,20 @@ interface Props {
 
 export default function LivreurScreen({ onLogout }: Props) {
   const name = useAuthStore(s => s.user?.name ?? 'Livreur');
-  const [livraisons, setLivraisons] = useState<Livraison[]>([]);
+  const [pool, setPool] = useState<Livraison[]>([]);
+  const [enCours, setEnCours] = useState<Livraison[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const data = await getLivraisonsDisponibles();
-      setLivraisons(data);
+      const [disponibles, miennes] = await Promise.all([
+        getLivraisonsDisponibles(),
+        getMesLivraisons(),
+      ]);
+      setPool(disponibles);
+      setEnCours(miennes);
     } catch {
       /* silencieux */
     } finally {
@@ -49,20 +55,19 @@ export default function LivreurScreen({ onLogout }: Props) {
   const handleAccepter = (liv: Livraison) => {
     Alert.alert(
       'Accepter cette livraison ?',
-      `Vers : ${liv.arriveeLabel}\nPrix : ${formatPrice(liv.prixLivraison)}`,
+      `Vers : ${liv.arrivee_label}\nPrix : ${formatPrice(liv.prix_livraison)}`,
       [
         { text: 'Annuler', style: 'cancel' },
         {
           text: 'Accepter',
           onPress: async () => {
             setActionId(liv.id);
-            try {
-              await accepterLivraison(liv.id);
-              await load();
-            } catch (e: any) {
-              Alert.alert('Erreur', e.message ?? 'Impossible d\'accepter.');
-            } finally {
-              setActionId(null);
+            const result = await accepterLivraison(liv.id);
+            setActionId(null);
+            if (!result.success) {
+              Alert.alert('Erreur', result.error);
+            } else {
+              load();
             }
           },
         },
@@ -80,13 +85,12 @@ export default function LivreurScreen({ onLogout }: Props) {
           text: 'Confirmer',
           onPress: async () => {
             setActionId(liv.id);
-            try {
-              await terminerLivraison(liv.id);
-              await load();
-            } catch (e: any) {
-              Alert.alert('Erreur', e.message ?? 'Impossible de terminer.');
-            } finally {
-              setActionId(null);
+            const result = await terminerLivraison(liv.id);
+            setActionId(null);
+            if (!result.success) {
+              Alert.alert('Erreur', result.error);
+            } else {
+              load();
             }
           },
         },
@@ -94,36 +98,32 @@ export default function LivreurScreen({ onLogout }: Props) {
     );
   };
 
-  const renderItem = ({ item }: { item: Livraison }) => {
-    const isMine = item.statut === 'acceptee';
+  const renderItem = ({ item, isMine }: { item: Livraison; isMine: boolean }) => {
     const busy = actionId === item.id;
-
     return (
       <View style={styles.card}>
         <View style={styles.cardTop}>
-          <View style={styles.badge(isMine ? colors.orange : colors.success)}>
+          <View style={[styles.badge, { backgroundColor: (isMine ? colors.orange : colors.success) + '22' }]}>
             <Text style={styles.badgeTxt}>{isMine ? 'Ma livraison' : 'Disponible'}</Text>
           </View>
-          <Text style={styles.prix}>{formatPrice(item.prixLivraison)}</Text>
+          <Text style={styles.prix}>{formatPrice(item.prix_livraison)}</Text>
         </View>
 
         <Text style={styles.label}>Départ</Text>
-        <Text style={styles.value}>{item.departLabel}</Text>
+        <Text style={styles.value}>{item.depart_label}</Text>
         <Text style={styles.label}>Arrivée</Text>
-        <Text style={styles.value}>{item.arriveeLabel}</Text>
+        <Text style={styles.value}>{item.arrivee_label}</Text>
 
-        {item.contactNom ? (
+        {item.contact_nom ? (
           <>
             <Text style={styles.label}>Contact</Text>
             <Text style={styles.value}>
-              {item.contactNom}{item.contactTel ? ` · ${item.contactTel}` : ''}
+              {item.contact_nom}{item.contact_tel ? ` · ${item.contact_tel}` : ''}
             </Text>
           </>
         ) : null}
 
-        <View style={styles.meta}>
-          <Text style={styles.dist}>{item.distanceKm.toFixed(1)} km</Text>
-        </View>
+        <Text style={styles.dist}>{Number(item.distance_km).toFixed(1)} km estimé</Text>
 
         {!isMine && (
           <TouchableOpacity
@@ -132,11 +132,10 @@ export default function LivreurScreen({ onLogout }: Props) {
             disabled={busy}
             activeOpacity={0.85}
           >
-            {busy ? (
-              <ActivityIndicator color={colors.bg} size="small" />
-            ) : (
-              <Text style={styles.btnTxt}>Accepter</Text>
-            )}
+            {busy
+              ? <ActivityIndicator color={colors.bg} size="small" />
+              : <Text style={styles.btnTxt}>Accepter</Text>
+            }
           </TouchableOpacity>
         )}
 
@@ -147,16 +146,20 @@ export default function LivreurScreen({ onLogout }: Props) {
             disabled={busy}
             activeOpacity={0.85}
           >
-            {busy ? (
-              <ActivityIndicator color={colors.bg} size="small" />
-            ) : (
-              <Text style={styles.btnTxt}>Livraison terminée</Text>
-            )}
+            {busy
+              ? <ActivityIndicator color={colors.bg} size="small" />
+              : <Text style={styles.btnTxt}>Livraison terminée</Text>
+            }
           </TouchableOpacity>
         )}
       </View>
     );
   };
+
+  const allItems: Array<{ item: Livraison; isMine: boolean }> = [
+    ...enCours.map(l => ({ item: l, isMine: true })),
+    ...pool.map(l => ({ item: l, isMine: false })),
+  ];
 
   return (
     <View style={styles.root}>
@@ -176,16 +179,12 @@ export default function LivreurScreen({ onLogout }: Props) {
         </View>
       ) : (
         <FlatList
-          data={livraisons}
-          keyExtractor={i => i.id}
-          renderItem={renderItem}
+          data={allItems}
+          keyExtractor={i => i.item.id}
+          renderItem={({ item }) => renderItem(item)}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.accent}
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
           }
           ListEmptyComponent={
             <View style={styles.center}>
@@ -212,7 +211,6 @@ const styles = StyleSheet.create({
   },
   title: { color: colors.white, fontFamily: fonts.titleXL, fontSize: 20 },
   subtitle: { color: colors.muted, fontFamily: fonts.label, fontSize: 13, marginTop: 2 },
-
   logoutBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -223,7 +221,6 @@ const styles = StyleSheet.create({
   logoutTxt: { color: colors.muted, fontFamily: fonts.label, fontSize: 13 },
 
   list: { padding: 16, gap: 12 },
-
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -238,20 +235,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
   },
-  badge: (bg: string) => ({
-    backgroundColor: bg + '22',
-    borderRadius: radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  }),
+  badge: { borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 3 },
   badgeTxt: { color: colors.white, fontFamily: fonts.label, fontSize: 11 },
   prix: { color: colors.accent, fontFamily: fonts.title, fontSize: 18 },
 
   label: { color: colors.muted, fontFamily: fonts.label, fontSize: 11, marginTop: 4 },
   value: { color: colors.white, fontFamily: fonts.body, fontSize: 14 },
-
-  meta: { flexDirection: 'row', marginTop: 8 },
-  dist: { color: colors.muted, fontFamily: fonts.label, fontSize: 12 },
+  dist: { color: colors.muted, fontFamily: fonts.label, fontSize: 12, marginTop: 6 },
 
   btn: {
     backgroundColor: colors.accent,
@@ -265,4 +255,4 @@ const styles = StyleSheet.create({
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   emptyTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 14, textAlign: 'center' },
-} as any);
+});

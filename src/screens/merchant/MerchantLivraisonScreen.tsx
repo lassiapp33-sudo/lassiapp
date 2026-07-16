@@ -23,7 +23,6 @@ import { devisLivraison, LIVRAISON_CONFIG } from '../../utils/haversine';
 import { getCurrentLocation, reverseGeocode } from '../../services/location';
 import { creerLivraison } from '../../services/livraisons';
 import { supabase } from '../../lib/supabase';
-import useAuthStore from '../../store/authStore';
 import useShopStore from '../../store/shopStore';
 
 // Dakar centre — fallback
@@ -35,7 +34,6 @@ interface Props {
 }
 
 export default function MerchantLivraisonScreen({ onBack }: Props) {
-  const user = useAuthStore(s => s.user);
   const shopId = useShopStore(s => s.shopId);
   const shopName = useShopStore(s => s.profile.name);
 
@@ -57,8 +55,6 @@ export default function MerchantLivraisonScreen({ onBack }: Props) {
     coordsArrivee != null
       ? devisLivraison(coordsDepart.lat, coordsDepart.lng, coordsArrivee.lat, coordsArrivee.lng)
       : null;
-  const distanceKm = devis?.distanceKm ?? null;
-  const prix = devis != null && !devis.horsZone ? devis.prix : null;
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -112,38 +108,29 @@ export default function MerchantLivraisonScreen({ onBack }: Props) {
       );
       return;
     }
-    if (prix == null) {
-      Alert.alert('Erreur', 'Prix non calculable. Réessaie.');
+    setSubmitting(true);
+    const result = await creerLivraison({
+      demandeurType: 'prestataire',
+      departLabel,
+      departLat:    coordsDepart.lat,
+      departLng:    coordsDepart.lng,
+      arriveeLabel: arriveeLabel.trim(),
+      arriveeLat:   coordsArrivee.lat,
+      arriveeLng:   coordsArrivee.lng,
+      contactNom:   contactNom.trim() || undefined,
+      contactTel:   contactTel.trim(),
+    });
+    setSubmitting(false);
+
+    if (!result.success) {
+      Alert.alert('Erreur', result.error);
       return;
     }
-    if (!user) return;
-
-    setSubmitting(true);
-    try {
-      await creerLivraison({
-        demandeurId:    user.id,
-        demandeurType:  'prestataire',
-        departLabel,
-        departLat:      coordsDepart.lat,
-        departLng:      coordsDepart.lng,
-        arriveeLabel:   arriveeLabel.trim(),
-        arriveeLat:     coordsArrivee.lat,
-        arriveeLng:     coordsArrivee.lng,
-        contactNom:     contactNom.trim() || undefined,
-        contactTel:     contactTel.trim(),
-        distanceKm:     devis.distanceKm,
-        prixLivraison:  prix,
-      });
-      Alert.alert(
-        'Livraison demandée',
-        `Un livreur va prendre en charge votre colis.\nFrais : ${formatPrice(prix)}`,
-        [{ text: 'OK', onPress: onBack }],
-      );
-    } catch (e: any) {
-      Alert.alert('Erreur', e.message ?? 'Impossible de créer la livraison.');
-    } finally {
-      setSubmitting(false);
-    }
+    Alert.alert(
+      'Livraison demandée',
+      `Un livreur va prendre en charge votre colis.\nFrais : ${formatPrice(result.prix)}`,
+      [{ text: 'OK', onPress: onBack }],
+    );
   };
 
   return (
