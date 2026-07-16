@@ -280,6 +280,24 @@ export async function login(params: LoginParams): Promise<AuthUser> {
   return profile;
 }
 
+// ─── Connexion livreur (email interne @lassi.internal) ──────────────────────
+
+export async function loginLivreur(telephone: string, password: string): Promise<AuthUser> {
+  const tel = telephone.replace(/\D/g, '');
+  const emailInterne = `livreur.${tel}@lassi.internal`;
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: emailInterne,
+    password,
+  });
+  if (error || !data.user) throw new Error('Identifiants incorrects.');
+
+  const profile = await getProfileById(data.user.id);
+  if (!profile) throw new Error('Profil introuvable. Contacte le support LASSİ.');
+
+  return profile;
+}
+
 // ─── Déconnexion ────────────────────────────────────────────────────────────
 
 export async function logout(): Promise<void> {

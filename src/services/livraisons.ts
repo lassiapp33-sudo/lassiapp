@@ -111,6 +111,23 @@ export const terminerLivraison = async (
   return { success: true };
 };
 
+// LIVREUR : connexion par numéro de téléphone
+export const connexionLivreur = async (
+  telephone: string,
+  motDePasse: string,
+): Promise<{ success: true } | { success: false; error: string }> => {
+  const tel = telephone.replace(/\D/g, '');
+  const emailInterne = `livreur.${tel}@lassi.internal`;
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email: emailInterne,
+    password: motDePasse,
+  });
+
+  if (error) return { success: false, error: 'Identifiants incorrects' };
+  return { success: true };
+};
+
 // ADMIN : créer un compte livreur via Edge Function (service_role requis)
 export const creerCompteLivreur = async (params: {
   nomComplet: string;

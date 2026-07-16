@@ -102,9 +102,18 @@ export default function AuthNavigator({ onComplete }: Props) {
         <LoginScreen
           onBack={pop}
           onSuccess={async (phone, password) => {
-            // Appel Supabase — peut rejeter (capturé par LoginScreen)
-            const user = await authService.login({ phone, password });
-            // Synchroniser le store local
+            let user;
+            try {
+              user = await authService.login({ phone, password });
+            } catch (e: unknown) {
+              const msg = e instanceof Error ? e.message : '';
+              // Si le numéro n'existe pas dans les profils normaux, tenter en tant que livreur
+              if (msg.includes('introuvable')) {
+                user = await authService.loginLivreur(phone, password);
+              } else {
+                throw e;
+              }
+            }
             useAuthStore.getState().setUser(user);
             onComplete(user.role);
           }}
