@@ -1,129 +1,75 @@
-// ============================================================
-// EDGE FUNCTION : admin-create-livreur
-// Crée un compte Supabase Auth + profil livreur.
-// Réservé à l'admin (vérifie is_admin sur le profil appelant).
-// ============================================================
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
 
-serve(async (req: Request) => {
-  const cors = corsHeaders(req);
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: cors });
-  }
+serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  const admin = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  );
 
   try {
-    // Vérifier que l'appelant est admin
-    const authHeader = req.headers.get('Authorization') ?? '';
-    const userClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
+    // 1. Vérifier que l'appelant est ADMIN
+    const token = req.headers.get('Authorization')?.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await admin.auth.getUser(token!);
+    if (authError || !user) return err('Non autorisé', 401);
 
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Non authentifié.' }), {
-        status: 401,
-        headers: { ...cors, 'Content-Type': 'application/json' },
-      });
-    }
+    const { data: profile } = await admin
+      .from('profiles').select('role').eq('id', user.id).single();
+    if (profile?.role !== 'admin') return err('Réservé à l\'administrateur', 403);
 
-    // Vérifier is_admin
-    const { data: profile } = await userClient
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
+    // 2. Params
+    const { nomComplet, telephone, motDePasse } = await req.json();
+    if (!nomComplet || !telephone || !motDePasse) return err('Champs manquants', 400);
+    if (motDePasse.length < 8) return err('Mot de passe trop court (8 caractères min)', 400);
 
-    if (!profile?.is_admin) {
-      return new Response(JSON.stringify({ error: 'Accès refusé.' }), {
-        status: 403,
-        headers: { ...cors, 'Content-Type': 'application/json' },
-      });
-    }
+    // 3. Normaliser le téléphone → email interne (Supabase Auth a besoin d'un email)
+    const tel = String(telephone).replace(/\D/g, '');
+    const emailInterne = `livreur.${tel}@lassi.internal`;
 
-    const { nomComplet, telephone, motDePasse } = await req.json() as {
-      nomComplet: string;
-      telephone:  string;
-      motDePasse: string;
-    };
-
-    if (!nomComplet?.trim() || !telephone?.trim() || !motDePasse?.trim()) {
-      return new Response(JSON.stringify({ error: 'Champs requis manquants.' }), {
-        status: 400,
-        headers: { ...cors, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Utiliser le client service_role pour créer le compte
-    const adminClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
-
-    // Générer email technique pour le livreur
-    const cleanPhone = telephone.replace(/\s+/g, '').replace(/^\+?221/, '');
-    const authEmail = `livreur_221${cleanPhone}@lassi.app`;
-
-    // Créer le compte Supabase Auth
-    const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
-      email: authEmail,
+    // 4. Créer l'utilisateur
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email: emailInterne,
       password: motDePasse,
       email_confirm: true,
-      user_metadata: {
-        name: nomComplet,
-        phone: telephone,
-        role: 'livreur',
-      },
+      user_metadata: { nom_complet: nomComplet, telephone: tel, role: 'livreur' },
     });
+    if (createError) return err(createError.message, 400);
 
-    if (createError || !newUser.user) {
-      return new Response(
-        JSON.stringify({ error: createError?.message ?? 'Erreur création compte.' }),
-        { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } },
-      );
-    }
+    const newId = created.user!.id;
 
-    const newUserId = newUser.user.id;
+    // 5. Profil + rôle livreur
+    await admin.from('profiles').upsert({ id: newId, role: 'livreur' });
 
-    // Créer le profil
-    await adminClient.from('profiles').upsert({
-      id:         newUserId,
-      name:       nomComplet,
-      phone:      telephone,
-      auth_email: authEmail,
-      email:      null,
-      role:       'livreur',
-    }, { onConflict: 'id' });
-
-    // Créer la ligne livreurs
-    const { error: livreurError } = await adminClient.from('livreurs').insert({
-      id:          newUserId,
+    // 6. Fiche livreur
+    const { error: livreurError } = await admin.from('livreurs').insert({
+      id: newId,
       nom_complet: nomComplet,
-      telephone:   telephone,
-      actif:       true,
-      cree_par:    user.id,
+      telephone: tel,
+      cree_par: user.id,
+      actif: true,
     });
+    if (livreurError) return err(livreurError.message, 400);
 
-    if (livreurError) {
-      return new Response(
-        JSON.stringify({ error: livreurError.message }),
-        { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } },
-      );
-    }
+    return new Response(JSON.stringify({
+      success: true,
+      livreurId: newId,
+      identifiant: tel,  // le livreur se connecte avec son numéro
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-    return new Response(
-      JSON.stringify({ success: true, userId: newUserId }),
-      { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } },
-    );
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Erreur serveur.';
-    return new Response(
-      JSON.stringify({ error: msg }),
-      { status: 500, headers: { ...corsHeaders(req), 'Content-Type': 'application/json' } },
-    );
+  } catch (e: any) {
+    return err(e.message ?? 'Erreur serveur', 500);
   }
 });
+
+function err(message: string, status: number) {
+  return new Response(JSON.stringify({ success: false, error: message }), {
+    status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
