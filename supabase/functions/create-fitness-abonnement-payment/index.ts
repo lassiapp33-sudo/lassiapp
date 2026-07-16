@@ -7,7 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { getOmToken, OM_BASE_URL, isOmReady } from '../_shared/omAuth.ts'
-import { buildWaveSignature } from '../_shared/waveSign.ts'
+import { callWaveCheckout } from '../_shared/waveProxy.ts'
 
 const WAVE_API_KEY      = Deno.env.get('WAVE_API_KEY')      ?? ''
 const OM_MERCHANT_CODE  = Deno.env.get('OM_MERCHANT_CODE')  ?? ''
@@ -134,17 +134,7 @@ Deno.serve(async (req) => {
         client_reference: piId,
       })
 
-      const waveHeaders: Record<string, string> = {
-        'Authorization':   `Bearer ${WAVE_API_KEY}`,
-        'Content-Type':    'application/json',
-        'Idempotency-Key': piId,
-      }
-      const waveSig = await buildWaveSignature(waveBody)
-      if (waveSig) waveHeaders['Wave-Signature'] = waveSig
-
-      const waveRes = await fetch('https://api.wave.com/v1/checkout/sessions', {
-        method: 'POST', headers: waveHeaders, body: waveBody,
-      })
+      const waveRes = await callWaveCheckout(waveBody, piId)
       const waveData = await waveRes.json()
       if (!waveRes.ok) throw new Error(waveData.message ?? 'Erreur Wave')
 

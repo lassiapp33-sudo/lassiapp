@@ -13,7 +13,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { isUUID } from '../_shared/validation.ts';
 import { corsHeaders as buildCorsHeaders } from '../_shared/cors.ts';
 import { getOmToken, OM_BASE_URL, isOmReady } from '../_shared/omAuth.ts';
-import { buildWaveSignature } from '../_shared/waveSign.ts';
+import { callWaveCheckout } from '../_shared/waveProxy.ts';
 
 // ============================================================
 // 🔌 POINT D'ENTRÉE — activer le paiement réel :
@@ -243,21 +243,7 @@ async function initiateWavePayment(params: {
     client_reference: params.piId,
   });
 
-  const waveHeaders: Record<string, string> = {
-    'Authorization':   `Bearer ${WAVE_API_KEY}`,
-    'Content-Type':    'application/json',
-    // Idempotence côté fournisseur : un retry réseau de notre part ne doit
-    // jamais créer deux sessions de paiement pour le même payment_intent.
-    'Idempotency-Key': params.piId,
-  };
-  const waveSig = await buildWaveSignature(waveBody);
-  if (waveSig) waveHeaders['Wave-Signature'] = waveSig;
-
-  const response = await fetch('https://api.wave.com/v1/checkout/sessions', {
-    method:  'POST',
-    headers: waveHeaders,
-    body:    waveBody,
-  });
+  const response = await callWaveCheckout(waveBody, params.piId);
 
   if (!response.ok) {
     const err = await response.json();
