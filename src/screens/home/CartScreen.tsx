@@ -31,6 +31,9 @@ import { PayMethod } from '../../types/payment';
 import PayMethodCard from '../../components/payment/PayMethodCard';
 import * as payService from '../../services/payment';
 import LivraisonModal from '../../components/livraison/LivraisonModal';
+import { devisLivraison } from '../../config/livraison';
+import { getCurrentLocation } from '../../services/location';
+import { supabase } from '../../lib/supabase';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -85,6 +88,30 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
   const [discounts, setDiscounts] = useState<AppliedDiscount[]>([]);
   const [method, setMethod] = useState<PayMethod>('wave');
   const [showLivraisonModal, setShowLivraisonModal] = useState(false);
+  const [shopCoords, setShopCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [clientCoords, setClientCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Pré-calcul du devis pour affichage sur le bouton (coords chargées en arrière-plan)
+  useEffect(() => {
+    const sid = shopId || shopInfo?.id || '';
+    if (!sid) return;
+    supabase
+      .from('shops')
+      .select('latitude, longitude')
+      .eq('id', sid)
+      .single()
+      .then(({ data }) => {
+        if (data?.latitude && data?.longitude)
+          setShopCoords({ lat: data.latitude, lng: data.longitude });
+      });
+    getCurrentLocation().then(pos => {
+      if (pos) setClientCoords({ lat: pos.latitude, lng: pos.longitude });
+    });
+  }, [shopId, shopInfo?.id]);
+
+  const devisBtn = shopCoords && clientCoords
+    ? devisLivraison(shopCoords.lat, shopCoords.lng, clientCoords.lat, clientCoords.lng)
+    : null;
 
   // Garde synchrone anti-double-clic — la ref se met à jour immédiatement,
   // sans attendre un cycle de rendu React.
@@ -395,32 +422,44 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
 
       {/* Footer fixe — Commander */}
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.payBtn, (!hasItems || isSubmitting) && styles.payBtnDisabled]}
-          onPress={handleCheckout}
-          activeOpacity={0.85}
-          disabled={!hasItems || isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={colors.bg} size="small" />
-          ) : (
-            <>
-              <IcoPay />
-              <Text style={styles.payBtnTxt}>
-                Payer avec {method === 'wave' ? 'Wave' : 'Orange Money'} · {formatPrice(totalClient)}
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
+        <View style={styles.footerRow}>
+          <TouchableOpacity
+            style={[styles.payBtn, (!hasItems || isSubmitting) && styles.payBtnDisabled]}
+            onPress={handleCheckout}
+            activeOpacity={0.85}
+            disabled={!hasItems || isSubmitting}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color={colors.bg} size="small" />
+            ) : (
+              <>
+                <IcoPay />
+                <Text style={styles.payBtnTxt}>
+                  {method === 'wave' ? 'Wave' : 'OM'} · {formatPrice(totalClient)}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.livraisonBtn, (!hasItems || isSubmitting) && styles.payBtnDisabled]}
-          onPress={() => setShowLivraisonModal(true)}
-          activeOpacity={0.85}
-          disabled={!hasItems || isSubmitting}
-        >
-          <Text style={styles.livraisonBtnTxt}>Commander + Livrer</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.livraisonBtn,
+              (!hasItems || isSubmitting || devisBtn?.horsZone === true) && styles.payBtnDisabled,
+            ]}
+            onPress={() => setShowLivraisonModal(true)}
+            activeOpacity={0.85}
+            disabled={!hasItems || isSubmitting || devisBtn?.horsZone === true}
+          >
+            <Text style={styles.livraisonBtnTxt}>Commander + Livrer</Text>
+            <Text style={styles.livraisonBtnSub}>
+              {devisBtn == null
+                ? '…'
+                : devisBtn.horsZone
+                ? 'Hors zone'
+                : `+${formatPrice(devisBtn.prix)}`}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <LivraisonModal
@@ -692,9 +731,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(20,21,42,.97)',
   },
   payBtn: {
+    flex: 1,
     height: 55,
     borderRadius: radius.lg,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -702,22 +744,33 @@ const styles = StyleSheet.create({
   },
   payBtnDisabled: { opacity: 0.4 },
   payBtnTxt: {
-    color: colors.bg,
-    fontFamily: fonts.titleXL,
-    fontSize: 16,
+    color: colors.white,
+    fontFamily: fonts.ui,
+    fontSize: 13,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    gap: 10,
   },
   livraisonBtn: {
-    height: 46,
+    flex: 1.3,
+    height: 55,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.accent,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    paddingHorizontal: 6,
   },
   livraisonBtnTxt: {
-    color: colors.accent,
+    color: colors.bg,
     fontFamily: fonts.ui,
-    fontSize: 14,
+    fontSize: 13,
+  },
+  livraisonBtnSub: {
+    color: colors.bg,
+    fontFamily: fonts.label,
+    fontSize: 11,
+    opacity: 0.8,
+    marginTop: 2,
   },
 });
