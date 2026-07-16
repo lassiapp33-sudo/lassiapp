@@ -2,7 +2,7 @@
  * MerchantLivraisonScreen — Prestataire envoie un colis via un livreur.
  * Calcul à vol d'oiseau (Haversine), même grille tarifaire que le client.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  FlatList,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
@@ -21,7 +23,7 @@ import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { devisLivraison, LIVRAISON_CONFIG } from '../../utils/haversine';
 import { getCurrentLocation, reverseGeocode } from '../../services/location';
-import { creerLivraison } from '../../services/livraisons';
+import { creerLivraison, getLivraisonsDemandeur, Livraison } from '../../services/livraisons';
 import { supabase } from '../../lib/supabase';
 import useShopStore from '../../store/shopStore';
 
@@ -33,9 +35,35 @@ interface Props {
   onBack: () => void;
 }
 
+const STATUT_CONFIG: Record<Livraison['statut'], { label: string; color: string }> = {
+  en_attente: { label: 'En attente',  color: '#FDCF34' },
+  acceptee:   { label: 'En cours',    color: '#5B9EF7' },
+  terminee:   { label: 'Livrée',      color: colors.success },
+  annulee:    { label: 'Annulée',     color: colors.danger },
+};
+
 export default function MerchantLivraisonScreen({ onBack }: Props) {
   const shopId = useShopStore(s => s.shopId);
   const shopName = useShopStore(s => s.profile.name);
+
+  const [onglet, setOnglet] = useState<'new' | 'history'>('new');
+  const [historique, setHistorique] = useState<Livraison[]>([]);
+  const [histLoading, setHistLoading] = useState(false);
+  const [histRefreshing, setHistRefreshing] = useState(false);
+
+  const chargerHistorique = useCallback(async () => {
+    const data = await getLivraisonsDemandeur();
+    setHistorique(data);
+    setHistLoading(false);
+    setHistRefreshing(false);
+  }, []);
+
+  useEffect(() => {
+    if (onglet === 'history' && historique.length === 0) {
+      setHistLoading(true);
+      chargerHistorique();
+    }
+  }, [onglet, historique.length, chargerHistorique]);
 
   const [arriveeLabel, setArriveeLabel] = useState('');
   const [contactNom, setContactNom] = useState('');
@@ -140,11 +168,74 @@ export default function MerchantLivraisonScreen({ onBack }: Props) {
           <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.75}>
             <IcoBack />
           </TouchableOpacity>
-          <Text style={styles.headTitle}>Envoyer un colis</Text>
+          <Text style={styles.headTitle}>Livraison</Text>
+          <View style={styles.tabs}>
+            <TouchableOpacity
+              style={[styles.tab, onglet === 'new' && styles.tabActive]}
+              onPress={() => setOnglet('new')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.tabTxt, onglet === 'new' && styles.tabTxtActive]}>Nouveau</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, onglet === 'history' && styles.tabActive]}
+              onPress={() => setOnglet('history')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.tabTxt, onglet === 'history' && styles.tabTxtActive]}>Historique</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       }
     >
-      <KeyboardAvoidingView
+      {onglet === 'history' && (
+        histLoading ? (
+          <View style={styles.center}>
+            <ActivityIndicator color={colors.accent} size="large" />
+          </View>
+        ) : (
+          <FlatList
+            data={historique}
+            keyExtractor={item => item.id}
+            contentContainerStyle={{ padding: 16, gap: 12 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={histRefreshing}
+                onRefresh={() => { setHistRefreshing(true); chargerHistorique(); }}
+                tintColor={colors.accent}
+              />
+            }
+            ListEmptyComponent={
+              <View style={styles.center}>
+                <Text style={styles.emptyTxt}>Aucune livraison pour l'instant.</Text>
+              </View>
+            }
+            renderItem={({ item }) => {
+              const cfg = STATUT_CONFIG[item.statut];
+              return (
+                <View style={styles.histCard}>
+                  <View style={styles.histTop}>
+                    <View style={[styles.histBadge, { backgroundColor: cfg.color + '22' }]}>
+                      <Text style={[styles.histBadgeTxt, { color: cfg.color }]}>{cfg.label}</Text>
+                    </View>
+                    <Text style={styles.histPrix}>{formatPrice(item.prix_livraison)}</Text>
+                  </View>
+                  <Text style={styles.histLabel}>Vers : <Text style={styles.histVal}>{item.arrivee_label}</Text></Text>
+                  {item.contact_nom ? (
+                    <Text style={styles.histMeta}>{item.contact_nom}{item.contact_tel ? ` · ${item.contact_tel}` : ''}</Text>
+                  ) : null}
+                  <Text style={styles.histMeta}>
+                    {Number(item.distance_km).toFixed(1)} km
+                    {item.created_at ? ` · ${new Date(item.created_at).toLocaleDateString('fr-SN', { day: 'numeric', month: 'short' })}` : ''}
+                  </Text>
+                </View>
+              );
+            }}
+          />
+        )
+      )}
+
+      {onglet === 'new' && (<><KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
@@ -225,20 +316,21 @@ export default function MerchantLivraisonScreen({ onBack }: Props) {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.btn, submitting && styles.btnDisabled]}
-          onPress={handleDemander}
-          disabled={submitting}
-          activeOpacity={0.85}
-        >
-          {submitting ? (
-            <ActivityIndicator color={colors.bg} size="small" />
-          ) : (
-            <Text style={styles.btnTxt}>Demander un livreur</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.btn, submitting && styles.btnDisabled]}
+            onPress={handleDemander}
+            disabled={submitting}
+            activeOpacity={0.85}
+          >
+            {submitting ? (
+              <ActivityIndicator color={colors.bg} size="small" />
+            ) : (
+              <Text style={styles.btnTxt}>Demander un livreur</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </>)}
     </LassiScreen>
   );
 }
@@ -317,6 +409,31 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
+
+  tabs: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  tab: {
+    flex: 1, paddingVertical: 7, borderRadius: radius.md,
+    backgroundColor: colors.bg, alignItems: 'center',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  tabActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+  tabTxt: { color: colors.muted, fontFamily: fonts.label, fontSize: 12 },
+  tabTxtActive: { color: colors.bg },
+
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
+  emptyTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 14, textAlign: 'center' },
+
+  histCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border, padding: 14, gap: 4,
+  },
+  histTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  histBadge: { borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  histBadgeTxt: { fontFamily: fonts.label, fontSize: 10 },
+  histPrix: { color: colors.accent, fontFamily: fonts.title, fontSize: 15 },
+  histLabel: { color: colors.muted, fontFamily: fonts.label, fontSize: 11 },
+  histVal: { color: colors.white, fontFamily: fonts.body },
+  histMeta: { color: colors.muted, fontFamily: fonts.label, fontSize: 11, marginTop: 2 },
 
   footer: {
     position: 'absolute',

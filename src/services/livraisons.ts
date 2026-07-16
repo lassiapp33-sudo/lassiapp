@@ -65,6 +65,19 @@ export const creerLivraison = async (params: {
   return { success: true, livraison: data as Livraison, prix: devis.prix };
 };
 
+// DEMANDEUR (client ou prestataire) : mon historique de livraisons
+export const getLivraisonsDemandeur = async (): Promise<Livraison[]> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
+    .from('livraisons')
+    .select('*')
+    .eq('demandeur_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  return (data ?? []) as Livraison[];
+};
+
 // LIVREUR : livraisons en attente (pool)
 export const getLivraisonsDisponibles = async (): Promise<Livraison[]> => {
   const { data } = await supabase

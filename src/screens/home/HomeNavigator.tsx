@@ -29,6 +29,7 @@ import FitnessAbonnementPaymentScreen from '../fitness/FitnessAbonnementPaymentS
 import BlocAlaUneScreen from './BlocAlaUneScreen';
 import AlaUneFeedScreen from './AlaUneFeedScreen';
 import ClientAbonnementsScreen from '../fitness/ClientAbonnementsScreen';
+import MesLivraisonsScreen from './MesLivraisonsScreen';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { CatId } from '../../components/category/CatNavBar';
 import { OrderInfo } from '../../types/payment';
@@ -107,6 +108,7 @@ type HomeStack =
       prixTotal: number;
     }
   | { id: 'mes_abonnements' }
+  | { id: 'mes_livraisons' }
   | { id: 'fitness_abo_payment'; offre: FitnessOffre; fitnessName: string; shopId: string }
   | { id: 'a_la_une_bloc'; blocCode: string; elementIndex?: number }
   | { id: 'a_la_une_categorie'; categorieId: string }
@@ -409,6 +411,11 @@ export default function HomeNavigator({ onLogout }: Props) {
     return <ClientAbonnementsScreen onBack={pop} />;
   }
 
+  // ── Mes livraisons ────────────────────────────────────────────────────────
+  if (screen.id === 'mes_livraisons') {
+    return <MesLivraisonsScreen onBack={pop} />;
+  }
+
   // ── Paiement abonnement fitness ───────────────────────────────────────────
   if (screen.id === 'fitness_abo_payment') {
     return (
@@ -615,6 +622,7 @@ export default function HomeNavigator({ onLogout }: Props) {
         onTerrainReservations={() => push({ id: 'terrain_my_reservations' })}
         onClassement={() => push({ id: 'classement' })}
         onAbonnements={() => push({ id: 'mes_abonnements' })}
+        onMesLivraisons={() => push({ id: 'mes_livraisons' })}
         onLogout={onLogout}
       />
     );

@@ -230,6 +230,21 @@ const IcoTrophy = () => (
   </Svg>
 );
 
+const IcoTruck = () => (
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z" stroke={colors.muted} />
+    <Path d="M5.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM18.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" stroke={colors.muted} />
+  </Svg>
+);
+
 const IcoLogout = () => (
   <Svg
     width={18}
@@ -271,6 +286,7 @@ interface Props {
   onTerrainReservations?: () => void;
   onClassement?: () => void;
   onAbonnements?: () => void;
+  onMesLivraisons?: () => void;
   onLogout?: () => void;
 }
 
@@ -283,6 +299,7 @@ export default function ClientProfileScreen({
   onTerrainReservations,
   onClassement,
   onAbonnements,
+  onMesLivraisons,
   onLogout,
 }: Props) {
   const t = useT();
@@ -420,6 +437,12 @@ export default function ClientProfileScreen({
             title="Mes abonnements fitness"
             subtitle="Salle de sport & musculation"
             onPress={onAbonnements}
+          />
+          <ProfileOptionRow
+            icon={<IcoTruck />}
+            title="Mes livraisons"
+            subtitle="Historique de vos demandes"
+            onPress={onMesLivraisons}
           />
           <ProfileOptionRow
             icon={<IcoTrophy />}
