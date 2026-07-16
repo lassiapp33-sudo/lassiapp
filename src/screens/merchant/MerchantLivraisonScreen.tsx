@@ -19,7 +19,7 @@ import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
-import { haversineKm, calculerPrixLivraison } from '../../utils/haversine';
+import { devisLivraison, LIVRAISON_CONFIG } from '../../utils/haversine';
 import { getCurrentLocation, reverseGeocode } from '../../services/location';
 import { creerLivraison } from '../../services/livraisons';
 import { supabase } from '../../lib/supabase';
@@ -53,11 +53,12 @@ export default function MerchantLivraisonScreen({ onBack }: Props) {
   const [loadingCoords, setLoadingCoords] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const distanceKm =
+  const devis =
     coordsArrivee != null
-      ? haversineKm(coordsDepart.lat, coordsDepart.lng, coordsArrivee.lat, coordsArrivee.lng)
+      ? devisLivraison(coordsDepart.lat, coordsDepart.lng, coordsArrivee.lat, coordsArrivee.lng)
       : null;
-  const prix = distanceKm != null ? calculerPrixLivraison(distanceKm) : null;
+  const distanceKm = devis?.distanceKm ?? null;
+  const prix = devis != null && !devis.horsZone ? devis.prix : null;
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -100,8 +101,19 @@ export default function MerchantLivraisonScreen({ onBack }: Props) {
       Alert.alert('Téléphone requis', 'Ajoute le numéro du destinataire.');
       return;
     }
-    if (coordsArrivee == null || distanceKm == null || prix == null) {
+    if (coordsArrivee == null || devis == null) {
       Alert.alert('Erreur', 'Position du destinataire non disponible. Active le GPS.');
+      return;
+    }
+    if (devis.horsZone) {
+      Alert.alert(
+        'Zone non couverte',
+        devis.message ?? `Livraison indisponible au-delà de ${LIVRAISON_CONFIG.DISTANCE_MAX_KM} km.`,
+      );
+      return;
+    }
+    if (prix == null) {
+      Alert.alert('Erreur', 'Prix non calculable. Réessaie.');
       return;
     }
     if (!user) return;
@@ -119,7 +131,7 @@ export default function MerchantLivraisonScreen({ onBack }: Props) {
         arriveeLng:     coordsArrivee.lng,
         contactNom:     contactNom.trim() || undefined,
         contactTel:     contactTel.trim(),
-        distanceKm:     Math.round(distanceKm * 100) / 100,
+        distanceKm:     devis.distanceKm,
         prixLivraison:  prix,
       });
       Alert.alert(
@@ -155,13 +167,16 @@ export default function MerchantLivraisonScreen({ onBack }: Props) {
           showsVerticalScrollIndicator={false}
         >
           {/* Tarif estimé */}
-          {prix != null && (
+          {devis != null && !devis.horsZone && (
             <View style={styles.prixBanner}>
               <Text style={styles.prixLabel}>Frais de livraison estimés</Text>
-              <Text style={styles.prixVal}>{formatPrice(prix)}</Text>
-              {distanceKm != null && (
-                <Text style={styles.prixSub}>{distanceKm.toFixed(1)} km à vol d'oiseau</Text>
-              )}
+              <Text style={styles.prixVal}>{formatPrice(devis.prix)}</Text>
+              <Text style={styles.prixSub}>{devis.distanceKm.toFixed(1)} km estimé</Text>
+            </View>
+          )}
+          {devis?.horsZone && (
+            <View style={[styles.prixBanner, styles.horsZoneBanner]}>
+              <Text style={styles.horsZoneTxt}>{devis.message}</Text>
             </View>
           )}
 
@@ -273,6 +288,11 @@ const styles = StyleSheet.create({
   prixLabel: { color: colors.muted, fontFamily: fonts.label, fontSize: 12 },
   prixVal: { color: colors.accent, fontFamily: fonts.title, fontSize: 24, marginTop: 4 },
   prixSub: { color: colors.muted, fontFamily: fonts.label, fontSize: 11, marginTop: 2 },
+  horsZoneBanner: {
+    backgroundColor: colors.danger + '18',
+    borderColor: colors.danger + '44',
+  },
+  horsZoneTxt: { color: colors.danger, fontFamily: fonts.label, fontSize: 12, textAlign: 'center' },
 
   fieldLabel: {
     color: colors.muted,

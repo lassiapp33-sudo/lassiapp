@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
-import { haversineKm, calculerPrixLivraison } from '../../utils/haversine';
+import { devisLivraison, LIVRAISON_CONFIG } from '../../utils/haversine';
 import { getCurrentLocation, reverseGeocode } from '../../services/location';
 import { creerLivraison } from '../../services/livraisons';
 import { supabase } from '../../lib/supabase';
@@ -57,10 +57,11 @@ export default function LivraisonModal({
   const [loadingCoords, setLoadingCoords] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const distanceKm = coordsDepart && coordsArrivee
-    ? haversineKm(coordsDepart.lat, coordsDepart.lng, coordsArrivee.lat, coordsArrivee.lng)
+  const devis = coordsDepart && coordsArrivee
+    ? devisLivraison(coordsDepart.lat, coordsDepart.lng, coordsArrivee.lat, coordsArrivee.lng)
     : null;
-  const prix = distanceKm != null ? calculerPrixLivraison(distanceKm) : null;
+  const distanceKm = devis?.distanceKm ?? null;
+  const prix = devis != null && !devis.horsZone ? devis.prix : null;
 
   // Récupère les coords de la boutique + position GPS du client
   useEffect(() => {
@@ -101,8 +102,16 @@ export default function LivraisonModal({
       Alert.alert('Adresse requise', 'Précise l\'adresse de livraison.');
       return;
     }
-    if (!coordsDepart || !coordsArrivee || distanceKm == null || prix == null) {
+    if (!coordsDepart || !coordsArrivee || devis == null) {
       Alert.alert('Erreur', 'Impossible de calculer la distance. Réessaie.');
+      return;
+    }
+    if (devis.horsZone) {
+      Alert.alert('Zone non couverte', devis.message ?? `Livraison indisponible au-delà de ${LIVRAISON_CONFIG.DISTANCE_MAX_KM} km.`);
+      return;
+    }
+    if (prix == null) {
+      Alert.alert('Erreur', 'Prix non calculable. Réessaie.');
       return;
     }
     if (!user) return;
@@ -121,7 +130,7 @@ export default function LivraisonModal({
         arriveeLng:     coordsArrivee.lng,
         contactNom:     contactNom.trim() || undefined,
         contactTel:     contactTel.trim() || undefined,
-        distanceKm:     Math.round(distanceKm * 100) / 100,
+        distanceKm:     devis.distanceKm,
         prixLivraison:  prix,
       });
       onConfirmed(liv.id);
@@ -153,13 +162,16 @@ export default function LivraisonModal({
               keyboardShouldPersistTaps="handled"
             >
               {/* Tarif */}
-              {prix != null && (
+              {devis != null && !devis.horsZone && (
                 <View style={styles.prixBanner}>
                   <Text style={styles.prixLabel}>Frais de livraison estimés</Text>
-                  <Text style={styles.prixVal}>{formatPrice(prix)}</Text>
-                  {distanceKm != null && (
-                    <Text style={styles.prixSub}>{distanceKm.toFixed(1)} km à vol d'oiseau</Text>
-                  )}
+                  <Text style={styles.prixVal}>{formatPrice(devis.prix)}</Text>
+                  <Text style={styles.prixSub}>{devis.distanceKm.toFixed(1)} km estimé</Text>
+                </View>
+              )}
+              {devis?.horsZone && (
+                <View style={styles.horsZoneBanner}>
+                  <Text style={styles.horsZoneTxt}>{devis.message}</Text>
                 </View>
               )}
 
@@ -271,6 +283,15 @@ const styles = StyleSheet.create({
   prixLabel: { color: colors.muted, fontFamily: fonts.label, fontSize: 12 },
   prixVal: { color: colors.accent, fontFamily: fonts.title, fontSize: 24, marginTop: 4 },
   prixSub: { color: colors.muted, fontFamily: fonts.label, fontSize: 11, marginTop: 2 },
+  horsZoneBanner: {
+    backgroundColor: colors.danger + '18',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.danger + '44',
+    padding: 12,
+    marginBottom: 16,
+  },
+  horsZoneTxt: { color: colors.danger, fontFamily: fonts.label, fontSize: 12, textAlign: 'center' },
 
   fieldLabel: {
     color: colors.muted,
