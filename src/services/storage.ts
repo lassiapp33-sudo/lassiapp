@@ -4,25 +4,25 @@
  * Flux : sélection → compression (max 1080px, 75%) → upload → URL publique.
  * Crucial pour Dakar : images compressées = chargement rapide même sur réseau lent.
  */
-import * as ImageManipulator from 'expo-image-manipulator';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { supabase } from '../lib/supabase';
 
 // ─── Compression ──────────────────────────────────────────────────────────────
 
 /**
  * Redimensionne et compresse une image locale avant upload.
- * Retourne l'URI de l'image compressée.
+ * Retourne l'URI de l'image compressée (nouvelle API expo-image-manipulator v14).
  */
 async function compressImage(localUri: string): Promise<string> {
-  const result = await ImageManipulator.manipulateAsync(
-    localUri,
-    [{ resize: { width: 1080 } }], // max 1080px de large
-    {
-      compress: 0.75, // 75% qualité (bon compromis taille/qualité)
-      format: ImageManipulator.SaveFormat.JPEG,
-    },
-  );
+  const imageRef = await ImageManipulator.manipulate(localUri)
+    .resize({ width: 1080 })
+    .renderAsync();
+  const result = await imageRef.saveAsync({
+    compress: 0.75,
+    format: SaveFormat.JPEG,
+  });
   return result.uri;
 }
 
@@ -91,12 +91,18 @@ export async function uploadImage(
   // 1. Compression avant envoi
   const compressedUri = await compressImage(localUri);
 
-  // 2. Fetch en ArrayBuffer (fiable sur React Native, contrairement à blob)
-  const response = await fetch(compressedUri);
-  const arrayBuffer = await response.arrayBuffer();
+  // 2. Lecture native du fichier en base64 — plus fiable que fetch() sur file:// Android
+  const base64 = await FileSystem.readAsStringAsync(compressedUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
 
   // 3. Upload vers Supabase Storage
-  const { error } = await supabase.storage.from(bucket).upload(path, arrayBuffer, {
+  const { error } = await supabase.storage.from(bucket).upload(path, bytes, {
     contentType: 'image/jpeg',
     upsert: true, // écrase si le fichier existe déjà
   });

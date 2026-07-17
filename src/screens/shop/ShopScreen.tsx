@@ -401,7 +401,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   };
 
   const CART_BAR_H = 56;
-  const scrollBotPad = FOOTER_HEIGHT + (cartCount > 0 ? CART_BAR_H + 16 : 0) + 64;
+  const scrollBotPad = FOOTER_HEIGHT + (cartCount > 0 ? CART_BAR_H + 16 : 0) + 120;
   const cartBottom = FOOTER_HEIGHT + 8;
 
   if (loadError) {
@@ -431,7 +431,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
         <ScrollView
           ref={scrollRef}
           style={styles.scroll}
-          contentContainerStyle={{ paddingBottom: scrollBotPad, flexGrow: 1 }}
+          contentContainerStyle={{ paddingBottom: scrollBotPad, minHeight: '100%' }}
           showsVerticalScrollIndicator={false}
           stickyHeaderIndices={tabs.length > 1 ? [menuTabsStickyIdx] : []}
         >
