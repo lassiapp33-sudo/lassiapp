@@ -1,3 +1,4 @@
+import * as FileSystem from 'expo-file-system';
 import { supabase } from '../lib/supabase';
 
 export type RatingDirection = 'client_to_merchant' | 'merchant_to_client';
@@ -11,12 +12,50 @@ export async function uploadVocalRating(
   if (!user) throw new Error('non authentifié');
 
   const path = `${user.id}/${orderId}_${direction}.m4a`;
-  const response = await fetch(localUri);
-  const arrayBuffer = await response.arrayBuffer();
+
+  // Lecture base64 — plus fiable que fetch() sur file:// Android
+  const base64 = await FileSystem.readAsStringAsync(localUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
 
   const { error } = await supabase.storage
     .from('order-vocals')
-    .upload(path, arrayBuffer, { contentType: 'audio/m4a', upsert: true });
+    .upload(path, bytes, { contentType: 'audio/m4a', upsert: true });
+  if (error) throw new Error(error.message);
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('order-vocals')
+    .getPublicUrl(path);
+  return publicUrl;
+}
+
+export async function uploadVocalAvis(
+  shopId: string,
+  localUri: string,
+): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('non authentifié');
+
+  const path = `${user.id}/avis_${shopId}.m4a`;
+
+  // Lecture base64 — plus fiable que fetch() sur file:// Android
+  const base64 = await FileSystem.readAsStringAsync(localUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  const { error } = await supabase.storage
+    .from('order-vocals')
+    .upload(path, bytes, { contentType: 'audio/m4a', upsert: true });
   if (error) throw new Error(error.message);
 
   const { data: { publicUrl } } = supabase.storage

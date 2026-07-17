@@ -19,7 +19,7 @@ const IcoTrend = () => (
   </Svg>
 );
 
-export type HeroVariant = 'quartier' | 'recherche' | 'carte' | 'annonce';
+export type HeroVariant = 'quartier' | 'recherche' | 'annonce';
 
 interface Props {
   variant?: HeroVariant;
@@ -100,18 +100,6 @@ const CONTENT: Record<HeroVariant, { title: string; body: React.ReactNode }> = {
         <Text style={styles.accent}>Booster recherche</Text>
         {", ta boutique remonte en haut des résultats dès qu'un client cherche dans ta catégorie. Gagne en "}
         <Text style={styles.accent}>visibilité instantanée</Text>
-        {'.'}
-      </>
-    ),
-  },
-  carte: {
-    title: 'Brille sur la carte',
-    body: (
-      <>
-        {'Avec '}
-        <Text style={styles.accent}>l'épingle dorée</Text>
-        {', ta boutique se démarque en priorité sur la carte de tous les clients à proximité. '}
-        <Text style={styles.accent}>Repérée en un coup d'œil</Text>
         {'.'}
       </>
     ),

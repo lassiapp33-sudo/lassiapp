@@ -35,7 +35,7 @@ interface VisibilitySubRow {
   expires_at: string;
   paid_at: string | null;
   pay_method: string;
-  offer_type: 'quartier' | 'recherche' | 'carte' | null;
+  offer_type: 'quartier' | 'recherche' | null;
   product_id: string | null;
   product_ids: string[] | null;
   all_products: boolean;
@@ -65,7 +65,7 @@ export interface ActiveSub {
   expiresAt: string;
   paidAt: string | null;
   payMethod: PayMethod;
-  offerType: 'quartier' | 'recherche' | 'carte';
+  offerType: 'quartier' | 'recherche';
   productId: string | null;
   /** IDs des produits sélectionnés (null si allProducts). */
   productIds: string[] | null;
@@ -122,7 +122,7 @@ export async function getVisibilityPlans(): Promise<VisibilityPlan[]> {
 
 export async function getActiveSub(
   shopId: string,
-  offerType?: 'quartier' | 'recherche' | 'carte',
+  offerType?: 'quartier' | 'recherche',
 ): Promise<ActiveSub | null> {
   const now = new Date().toISOString();
   let query = supabase
@@ -193,7 +193,7 @@ export async function checkPaymentAvailability(): Promise<{
 export async function createVisibilityPayment(params: {
   planId: string;
   payMethod: PayMethod;
-  offerType: 'quartier' | 'recherche' | 'carte';
+  offerType: 'quartier' | 'recherche';
   /** Produits choisis (ignoré si offerType !== 'quartier'). */
   productIds: string[];
   /** Mettre en avant toute la vitrine plutôt que des produits précis (quartier uniquement). */
@@ -219,14 +219,14 @@ export async function createVisibilityPayment(params: {
 
 export interface CreditPurchaseResult {
   status: 'active';
-  offerType: 'quartier' | 'recherche' | 'carte';
+  offerType: 'quartier' | 'recherche';
   expiresAt: string;
   amountSpent: number;
   newBalance: number;
 }
 
 export async function createCreditPurchase(params: {
-  offerType: 'quartier' | 'recherche' | 'carte';
+  offerType: 'quartier' | 'recherche';
   planId: string;
   /** Produits choisis (offre "quartier" uniquement, ignoré si allProducts === true). */
   productIds?: string[];
@@ -312,7 +312,7 @@ export interface VisibilityStats {
 
 export async function getVisibilityStats(
   shopId: string,
-  offerType: 'quartier' | 'recherche' | 'carte' = 'quartier',
+  offerType: 'quartier' | 'recherche' = 'quartier',
 ): Promise<VisibilityStats> {
   const rpcParams = { p_shop_id: shopId, p_offer_type: offerType };
   const { data, error } = await supabase.rpc('get_shop_visibility_stats', rpcParams);

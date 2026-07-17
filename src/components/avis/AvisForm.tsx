@@ -16,9 +16,11 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import StarRating from './StarRating';
+import VoiceRatingRecorder from './VoiceRatingRecorder';
 import { Avis } from '../../types/avis';
 import * as avisService from '../../services/avis';
 import * as storageService from '../../services/storage';
+import { uploadVocalAvis } from '../../services/orderRating';
 import useAuthStore from '../../store/authStore';
 import { IcoClose } from '../icons';
 
@@ -97,6 +99,7 @@ export default function AvisForm({
   const [photoUrl, setPhotoUrl] = useState<string | null>(existingAvis?.photoUrl ?? null);
   // URI locale : photo sélectionnée dans la galerie, pas encore uploadée
   const [photoLocalUri, setPhotoLocalUri] = useState<string | null>(null);
+  const [vocalUri, setVocalUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const isEdit = Boolean(existingAvis);
@@ -146,13 +149,26 @@ export default function AvisForm({
       }
     }
 
-    // ② Appel RPC — si ça échoue, la photo uploadée est supprimée immédiatement
+    // ② Upload vocal si enregistré
+    let finalVocalUrl: string | undefined;
+    if (vocalUri) {
+      try {
+        finalVocalUrl = await uploadVocalAvis(shopId, vocalUri);
+      } catch {
+        Alert.alert('Erreur audio', "Impossible d'envoyer le message vocal. Réessaie.");
+        setSaving(false);
+        return;
+      }
+    }
+
+    // ③ Appel RPC — si ça échoue, la photo uploadée est supprimée immédiatement
     try {
       if (isEdit && existingAvis) {
         await avisService.updateAvis(existingAvis.id, {
           note,
           commentaire: commentaire.trim() || null,
           photoUrl: finalPhotoUrl,
+          vocalUrl: finalVocalUrl ?? existingAvis.vocalUrl,
         });
 
         // Supprimer l'ancienne photo si elle a changé (remplacée OU supprimée)
@@ -169,13 +185,14 @@ export default function AvisForm({
           note,
           commentaire: commentaire.trim() || undefined,
           photoUrl: finalPhotoUrl ?? undefined,
+          vocalUrl: finalVocalUrl,
         });
       }
 
       onSaved();
       onClose();
     } catch (e: unknown) {
-      // ③ Échec RPC → supprimer la photo qu'on venait d'uploader (évite la fuite)
+      // ④ Échec RPC → supprimer la photo qu'on venait d'uploader (évite la fuite)
       if (uploadedPath) {
         storageService.deleteImage('avis', uploadedPath).catch(() => {});
       }
@@ -183,6 +200,8 @@ export default function AvisForm({
       const raw = e instanceof Error ? e.message : '';
       const msg = raw.includes('row-level security')
         ? 'Tu dois avoir effectué une commande chez ce prestataire pour laisser un avis.'
+        : raw.includes('duplicate key')
+        ? 'Tu as déjà laissé un avis pour ce prestataire.'
         : raw || 'Impossible de publier ton avis. Réessaie.';
       Alert.alert('Avis non autorisé', msg);
     } finally {
@@ -285,6 +304,12 @@ export default function AvisForm({
                 <Text style={styles.photoBtnTxt}>Ajouter une photo</Text>
               </TouchableOpacity>
             )}
+
+            {/* ── Message vocal ── */}
+            <Text style={styles.label}>
+              Message vocal <Text style={styles.optional}>(optionnel)</Text>
+            </Text>
+            <VoiceRatingRecorder onUri={setVocalUri} />
 
             {/* ── Actions ── */}
             <TouchableOpacity

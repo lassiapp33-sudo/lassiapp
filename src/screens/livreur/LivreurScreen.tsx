@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   RefreshControl, Alert, Linking,
@@ -29,15 +29,15 @@ export default function LivreurScreen({ onLogout }: Props) {
 
   useEffect(() => { charger(); }, [charger]);
 
-  const handleAccepter = async (id: string) => {
+  const handleAccepter = useCallback(async (id: string) => {
     const r = await accepterLivraison(id);
     if (!r.success) { Alert.alert('Oups', r.error); charger(); return; }
     Alert.alert('Acceptée', 'La livraison est à vous. Bonne route !');
     charger();
     setOnglet('encours');
-  };
+  }, [charger]);
 
-  const handleTerminer = async (id: string) => {
+  const handleTerminer = useCallback((id: string) => {
     Alert.alert('Confirmer', 'Confirmer que la livraison est bien arrivée ?', [
       { text: 'Annuler', style: 'cancel' },
       {
@@ -50,9 +50,12 @@ export default function LivreurScreen({ onLogout }: Props) {
         },
       },
     ]);
-  };
+  }, [charger]);
 
-  const liste = onglet === 'dispo' ? dispos : miennes;
+  const liste = useMemo(
+    () => onglet === 'dispo' ? dispos : miennes,
+    [onglet, dispos, miennes],
+  );
 
   return (
     <View style={s.container}>
@@ -91,6 +94,10 @@ export default function LivreurScreen({ onLogout }: Props) {
           <RefreshControl refreshing={refreshing} onRefresh={charger} tintColor={colors.accent} />
         }
         contentContainerStyle={s.list}
+        removeClippedSubviews
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        initialNumToRender={8}
         ListEmptyComponent={
           <Text style={s.empty}>
             {onglet === 'dispo'
@@ -116,7 +123,7 @@ interface CardProps {
   onTerminer: (id: string) => void;
 }
 
-function LivraisonCard({ item, onglet, onAccepter, onTerminer }: CardProps) {
+const LivraisonCard = memo(function LivraisonCard({ item, onglet, onAccepter, onTerminer }: CardProps) {
   return (
     <View style={s.card}>
       <View style={s.row}>
@@ -156,7 +163,7 @@ function LivraisonCard({ item, onglet, onAccepter, onTerminer }: CardProps) {
       )}
     </View>
   );
-}
+});
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },

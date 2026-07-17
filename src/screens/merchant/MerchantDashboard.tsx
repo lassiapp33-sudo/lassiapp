@@ -63,10 +63,11 @@ type NavDest =
 
 interface Props {
   onNavigate?: (dest: NavDest) => void;
+  onOrderPress?: (orderId: string, tab: 'new' | 'preparing') => void;
   onNotifPress?: () => void;
 }
 
-export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
+export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPress }: Props) {
   const [activeTab, setActiveTab] = useState<MerchantTab>('dashboard');
 
   // Auth
@@ -192,7 +193,13 @@ export default function MerchantDashboard({ onNavigate, onNotifPress }: Props) {
             <Text style={styles.emptyOrdersTxt}>Aucune commande en cours</Text>
           </View>
         ) : (
-          dashOrders.map(order => <OrderCard key={order.id} order={order} />)
+          dashOrders.map(order => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              onPress={() => onOrderPress?.(order.id, order.status)}
+            />
+          ))
         )}
       </ScrollView>
 

@@ -94,7 +94,8 @@ type MerchantScreen =
   | 'fitness_abonnements'
   | 'a_la_une'
   | { id: 'a_la_une_bloc'; blocCode: string; elementIndex?: number }
-  | 'livraison';
+  | 'livraison'
+  | { id: 'orders'; initialTab: 'new' | 'preparing' };
 
 interface Props {
   onLogout: () => void;
@@ -455,6 +456,8 @@ export default function MerchantNavigator({ onLogout }: Props) {
       />
     );
   if (screen === 'orders') return <OrdersScreen onBack={() => setScreen('dashboard')} />;
+  if (typeof screen === 'object' && screen.id === 'orders')
+    return <OrdersScreen initialTab={screen.initialTab} onBack={() => setScreen('dashboard')} />;
   if (screen === 'messages')
     return <MerchantMessagesScreen onBack={() => setScreen('dashboard')} />;
   if (screen === 'visibility') return <VisibilityScreen onBack={() => setScreen(visibilityFrom)} />;
@@ -504,6 +507,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
           if (dest === 'a_la_une') setScreen('a_la_une');
           if (dest === 'livraison') setScreen('livraison');
         }}
+        onOrderPress={(_, tab) => setScreen({ id: 'orders', initialTab: tab })}
         onNotifPress={() => setScreen('notifications')}
       />
       <WelcomeRewardModal

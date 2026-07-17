@@ -59,6 +59,9 @@ export async function getShopOrders(shopId: string): Promise<IncomingOrder[]> {
     .from('orders')
     .select('*, order_items(*)')
     .eq('shop_id', shopId)
+    // Masque les commandes en attente de paiement (pas encore confirmées via webhook)
+    .neq('status', 'new')
+    .neq('status', 'pending')
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []).map(rowToOrder);

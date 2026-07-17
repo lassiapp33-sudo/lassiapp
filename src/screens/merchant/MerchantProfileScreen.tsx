@@ -319,7 +319,7 @@ export default function MerchantProfileScreen({
   const [hasActiveSub, setHasActiveSub] = useState(false);
   const [stats, setStats] = useState<VisibilityStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const activeSubTypeRef = useRef<'quartier' | 'recherche' | 'carte'>('quartier');
+  const activeSubTypeRef = useRef<'quartier' | 'recherche'>('quartier');
 
   const user = useAuthStore(s => s.user);
   const updateProfile = useAuthStore(s => s.updateProfile);

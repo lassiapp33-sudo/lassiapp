@@ -87,9 +87,10 @@ function filterByTab(orders: IncomingOrder[], tab: MerchantTab): IncomingOrder[]
 
 interface Props {
   onBack: () => void;
+  initialTab?: 'new' | 'preparing';
 }
 
-export default function OrdersScreen({ onBack }: Props) {
+export default function OrdersScreen({ onBack, initialTab }: Props) {
   const shopId = useShopStore(s => s.shopId);
   const orders = useOrdersStore(s => s.orders);
   const loading = useOrdersStore(s => s.loading);
@@ -99,7 +100,7 @@ export default function OrdersScreen({ onBack }: Props) {
   const addOrder = useOrdersStore(s => s.addOrder);
   const loadOrders = useOrdersStore(s => s.loadOrders);
 
-  const [activeTab, setActiveTab] = useState<MerchantTab>('new');
+  const [activeTab, setActiveTab] = useState<MerchantTab>(initialTab ?? 'new');
   const [acceptTarget, setAcceptTarget] = useState<IncomingOrder | null>(null);
   const [refuseTarget, setRefuseTarget] = useState<IncomingOrder | null>(null);
   const [showPrep, setShowPrep] = useState(false);

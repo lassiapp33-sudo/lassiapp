@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,10 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
-import { ClientOrder, OrderFilter } from '../../types/clientOrders';
+import { ClientOrder } from '../../types/clientOrders';
 import * as clientOrdersService from '../../services/clientOrders';
+import { Livraison } from '../../services/livraisons';
+import { getLivraisonsDemandeur } from '../../services/livraisons';
 import { prepareReorder } from '../../services/reorder';
 import useAuthStore from '../../store/authStore';
 import useCartStore from '../../store/cartStore';
@@ -23,6 +25,15 @@ import MascoHomeBtn from '../../components/MascoHomeBtn';
 import { IcoBack } from '../../components/icons';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { ClientOrderCard } from '../../components/orders/ClientOrderCard';
+import { LivraisonHistoriqueCard } from '../../components/livraison/LivraisonHistoriqueCard';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type HistoryItem =
+  | { kind: 'order'; data: ClientOrder }
+  | { kind: 'livraison'; data: Livraison };
+
+type HistoryFilter = 'all' | 'orders' | 'livraisons';
 
 // ─── Icône état vide ─────────────────────────────────────────────────────────
 
@@ -34,26 +45,31 @@ const IcoEmpty = () => (
   </Svg>
 );
 
-const FILTER_TABS: { id: OrderFilter; label: string }[] = [
-  { id: 'all', label: 'Toutes' },
-  { id: 'active', label: 'En cours' },
-  { id: 'completed', label: 'Terminées' },
-  { id: 'cancelled', label: 'Annulées' },
+const FILTER_TABS: { id: HistoryFilter; label: string }[] = [
+  { id: 'all', label: 'Tout' },
+  { id: 'orders', label: 'Commandes' },
+  { id: 'livraisons', label: 'Livraisons' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function applyFilter(orders: ClientOrder[], filter: OrderFilter): ClientOrder[] {
-  switch (filter) {
-    case 'active':
-      return orders.filter(o => ['pending', 'in_progress', 'ready'].includes(o.status));
-    case 'completed':
-      return orders.filter(o => o.status === 'completed');
-    case 'cancelled':
-      return orders.filter(o => o.status === 'cancelled');
-    default:
-      return orders;
-  }
+function mergeAndSort(orders: ClientOrder[], livraisons: Livraison[]): HistoryItem[] {
+  const items: HistoryItem[] = [
+    ...orders.map<HistoryItem>(o => ({ kind: 'order', data: o })),
+    ...livraisons.map<HistoryItem>(l => ({ kind: 'livraison', data: l })),
+  ];
+  items.sort((a, b) => {
+    const da = a.kind === 'order' ? a.data.createdAt : a.data.created_at;
+    const db = b.kind === 'order' ? b.data.createdAt : b.data.created_at;
+    return new Date(db).getTime() - new Date(da).getTime();
+  });
+  return items;
+}
+
+function applyFilter(items: HistoryItem[], filter: HistoryFilter): HistoryItem[] {
+  if (filter === 'orders') return items.filter(i => i.kind === 'order');
+  if (filter === 'livraisons') return items.filter(i => i.kind === 'livraison');
+  return items;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
@@ -73,11 +89,11 @@ export default function ClientOrdersScreen({
 }: Props) {
   const user = useAuthStore(s => s.user);
 
-  const [orders, setOrders] = useState<ClientOrder[]>([]);
+  const [allItems, setAllItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<OrderFilter>('all');
+  const [filter, setFilter] = useState<HistoryFilter>('all');
   const [reorderingId, setReorderingId] = useState<string | null>(null);
   const [avisTarget, setAvisTarget] = useState<{
     orderId: string;
@@ -97,10 +113,13 @@ export default function ClientOrdersScreen({
       else setLoading(true);
       setError(null);
       try {
-        const data = await clientOrdersService.getClientOrders(user.id);
-        setOrders(data);
+        const [orders, livraisons] = await Promise.all([
+          clientOrdersService.getClientOrders(user.id),
+          getLivraisonsDemandeur(),
+        ]);
+        setAllItems(mergeAndSort(orders, livraisons));
       } catch {
-        setError('Impossible de charger tes commandes. Tire vers le bas pour réessayer.');
+        setError('Impossible de charger ton historique. Tire vers le bas pour réessayer.');
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -125,8 +144,12 @@ export default function ClientOrdersScreen({
           onPress: async () => {
             try {
               await clientOrdersService.cancelOrder(orderId);
-              setOrders(prev =>
-                prev.map(o => (o.id === orderId ? { ...o, status: 'cancelled' as const } : o)),
+              setAllItems(prev =>
+                prev.map(item =>
+                  item.kind === 'order' && item.data.id === orderId
+                    ? { ...item, data: { ...item.data, status: 'cancelled' as const } }
+                    : item,
+                ),
               );
             } catch {
               Alert.alert('Erreur', "Impossible d'annuler. Réessaie.");
@@ -151,7 +174,6 @@ export default function ClientOrdersScreen({
         return;
       }
 
-      // Construire le nouveau panier
       clearCart();
       for (const item of result.added) {
         addItem(result.shopInfo, {
@@ -163,7 +185,6 @@ export default function ClientOrdersScreen({
         if (item.qty > 1) updateQty(item.id, item.qty);
       }
 
-      // Préparer le message de confirmation
       const lines: string[] = [];
       if (result.removed.length > 0) {
         const unavail = result.removed.filter(r => r.reason === 'unavailable').map(r => r.name);
@@ -198,7 +219,10 @@ export default function ClientOrdersScreen({
     }
   };
 
-  const displayed = applyFilter(orders, filter);
+  const displayed = useMemo(
+    () => applyFilter(allItems, filter),
+    [allItems, filter],
+  );
 
   return (
     <>
@@ -209,7 +233,7 @@ export default function ClientOrdersScreen({
               <TouchableOpacity style={s.backBtn} onPress={onBack} activeOpacity={0.8}>
                 <IcoBack />
               </TouchableOpacity>
-              <Text style={s.title}>Mes commandes</Text>
+              <Text style={s.title}>Mon historique</Text>
               <MascoHomeBtn />
             </View>
             <ScrollView
@@ -248,10 +272,14 @@ export default function ClientOrdersScreen({
         ) : (
           <FlatList
             data={displayed}
-            keyExtractor={item => item.id}
+            keyExtractor={item => `${item.kind}-${item.data.id}`}
             style={s.scroll}
             contentContainerStyle={s.content}
             showsVerticalScrollIndicator={false}
+            removeClippedSubviews
+            maxToRenderPerBatch={6}
+            windowSize={5}
+            initialNumToRender={10}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -260,35 +288,41 @@ export default function ClientOrdersScreen({
                 colors={[colors.accent]}
               />
             }
-            renderItem={({ item: order }) => (
-              <ClientOrderCard
-                order={order}
-                onCancel={handleCancel}
-                onReorder={handleReorder}
-                isReordering={reorderingId === order.id}
-                onViewReceipt={onViewReceipt}
-                onLeaveAvis={
-                  order.status === 'completed' && !order.avisId
-                    ? () => {
-                        setAvisTarget({
-                          orderId: order.id,
-                          shopId: order.shopId,
-                          shopName: order.commerceName,
-                        });
-                      }
-                    : undefined
-                }
-              />
-            )}
+            renderItem={({ item }) => {
+              if (item.kind === 'livraison') {
+                return <LivraisonHistoriqueCard livraison={item.data} />;
+              }
+              const order = item.data;
+              return (
+                <ClientOrderCard
+                  order={order}
+                  onCancel={handleCancel}
+                  onReorder={handleReorder}
+                  isReordering={reorderingId === order.id}
+                  onViewReceipt={onViewReceipt}
+                  onLeaveAvis={
+                    order.status === 'completed' && !order.avisId
+                      ? () => {
+                          setAvisTarget({
+                            orderId: order.id,
+                            shopId: order.shopId,
+                            shopName: order.commerceName,
+                          });
+                        }
+                      : undefined
+                  }
+                />
+              );
+            }}
             ListEmptyComponent={
               <View style={s.empty}>
                 <IcoEmpty />
                 <Text style={s.emptyTitle}>
-                  {orders.length === 0
-                    ? "Tu n'as pas encore de commandes."
-                    : 'Aucune commande dans cette catégorie.'}
+                  {allItems.length === 0
+                    ? "Tu n'as pas encore d'activité."
+                    : 'Aucune entrée dans cette catégorie.'}
                 </Text>
-                {orders.length === 0 && (
+                {allItems.length === 0 && (
                   <>
                     <Text style={s.emptySub}>Découvre les prestataires près de toi !</Text>
                     <TouchableOpacity style={s.exploreBtn} onPress={onExplore} activeOpacity={0.85}>

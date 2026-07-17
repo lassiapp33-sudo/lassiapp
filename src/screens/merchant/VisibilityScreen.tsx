@@ -46,15 +46,14 @@ import {
 
 // ─── Les trois offres de visibilité ───────────────────────────────────────────
 
-type OfferType = 'annonce' | 'quartier' | 'recherche' | 'carte';
+type OfferType = 'annonce' | 'quartier' | 'recherche';
 
-const OFFER_ORDER: OfferType[] = ['annonce', 'quartier', 'recherche', 'carte'];
+const OFFER_ORDER: OfferType[] = ['annonce', 'quartier', 'recherche'];
 
 const OFFER_LABELS: Record<OfferType, string> = {
   annonce:   'Annonce sponsorisée — Toucher toute la base clients',
   quartier:  'Offre du quartier',
   recherche: 'Booster ma position dans les recherches',
-  carte:     'Apparaître sur la carte en priorité (épingle dorée)',
 };
 
 // Forfaits "Booster recherche" et "Épingle dorée" — même tarif pour les deux
@@ -616,7 +615,7 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
               </View>
             )}
 
-            {/* Confirmation après achat avec le crédit LASSI (recherche / carte) */}
+            {/* Confirmation après achat avec le crédit LASSI (recherche) */}
             {offerType !== 'quartier' && boostExpiry?.offer === offerType && (
               <View style={styles.bannerWrap}>
                 <BoostActivatedBanner expiresAt={boostExpiry.expiresAt} />

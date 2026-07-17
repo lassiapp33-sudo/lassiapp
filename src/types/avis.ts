@@ -7,6 +7,7 @@ export interface Avis {
   note: number;
   commentaire: string | null;
   photoUrl: string | null;
+  vocalUrl: string | null;
   reponseCommercant: string | null;
   masque: boolean;
   createdAt: string;
@@ -21,6 +22,7 @@ export interface AvisInput {
   note: number;
   commentaire?: string;
   photoUrl?: string;
+  vocalUrl?: string;
 }
 
 export interface CanLeaveAvisResult {

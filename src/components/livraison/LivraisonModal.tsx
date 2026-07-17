@@ -19,6 +19,8 @@ import { getCurrentLocation, reverseGeocode } from '../../services/location';
 import { creerLivraison } from '../../services/livraisons';
 import { supabase } from '../../lib/supabase';
 import useAuthStore from '../../store/authStore';
+import AddressAutocomplete from './AddressAutocomplete';
+import { DakarAddress } from '../../data/dakarAddresses';
 
 const DAKAR_LAT = 14.6937;
 const DAKAR_LNG = -17.4441;
@@ -159,13 +161,15 @@ export default function LivraisonModal({
                 <Text style={styles.fieldReadonlyTxt}>{departLabel}</Text>
               </View>
 
-              <Text style={styles.fieldLabel}>Adresse de livraison *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ex : Cité Keur Gorgui, apt 3B"
-                placeholderTextColor={colors.muted}
+              <AddressAutocomplete
+                label="Adresse de livraison *"
                 value={arriveeLabel}
+                placeholder="Ex : Guédiawaye Golf Sud, Yoff…"
                 onChangeText={setArriveeLabel}
+                onSelect={(addr: DakarAddress) => {
+                  setArriveeLabel(addr.label);
+                  setCoordsArrivee({ lat: addr.lat, lng: addr.lng });
+                }}
               />
 
               <Text style={styles.fieldLabel}>Nom du destinataire</Text>

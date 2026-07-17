@@ -13,6 +13,7 @@ function rowToAvis(row: Record<string, any>): Avis {
     note: Number(row.note),
     commentaire: row.commentaire ?? null,
     photoUrl: row.photo_url ?? null,
+    vocalUrl: row.vocal_url ?? null,
     reponseCommercant: row.reponse_commercant ?? null,
     masque: Boolean(row.masque),
     createdAt: row.created_at,
@@ -83,6 +84,7 @@ export async function createAvis(input: AvisInput): Promise<Avis> {
       note: input.note,
       commentaire: input.commentaire ?? null,
       photo_url: input.photoUrl ?? null,
+      vocal_url: input.vocalUrl ?? null,
     })
     .select()
     .single();
@@ -92,12 +94,13 @@ export async function createAvis(input: AvisInput): Promise<Avis> {
 
 export async function updateAvis(
   avisId: string,
-  changes: { note?: number; commentaire?: string | null; photoUrl?: string | null },
+  changes: { note?: number; commentaire?: string | null; photoUrl?: string | null; vocalUrl?: string | null },
 ): Promise<void> {
   const patch: Record<string, any> = {};
   if (changes.note !== undefined) patch.note = changes.note;
   if (changes.commentaire !== undefined) patch.commentaire = changes.commentaire;
   if (changes.photoUrl !== undefined) patch.photo_url = changes.photoUrl;
+  if (changes.vocalUrl !== undefined) patch.vocal_url = changes.vocalUrl;
 
   const { error } = await supabase.from('avis').update(patch).eq('id', avisId);
   if (error) throw new Error(error.message);

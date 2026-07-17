@@ -240,7 +240,8 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         voiceNotePath,
       );
 
-      // Initier le paiement Wave/OM immédiatement après création de la commande
+      // Initier le paiement Wave/OM immédiatement après création de la commande.
+      // Si l'initiation échoue → on reste dans CartScreen (l'utilisateur peut réessayer).
       let preInitiatedPiId: string | undefined;
       try {
         const session = await payService.createPayment({
@@ -253,9 +254,9 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         if (session.paymentUrl) {
           Linking.openURL(session.paymentUrl);
         }
-      } catch {
-        // L'initiation a échoué — on navigue quand même vers PaymentScreen
-        // pour que l'utilisateur puisse réessayer
+      } catch (payErr: unknown) {
+        notifyError(payErr instanceof Error ? payErr.message : 'Impossible d\'initier le paiement. Réessaie ou change de moyen.');
+        return; // Reste dans CartScreen — la commande est en attente (invisible au prestataire)
       }
 
       freshStore.clearCart();
