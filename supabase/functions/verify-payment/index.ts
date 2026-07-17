@@ -39,20 +39,27 @@ serve(async (req) => {
 
     if (!pi) return new Response(JSON.stringify({ success: false, error: 'Introuvable' }), { status: 404 });
 
-    // En production réelle (clés Wave ou OM_RETAILER_MSISDN présentes), seuls 'confirmed'
-    // et 'split_done' valident. En sandbox OM (OM_BASE_URL = sandbox.orange-sonatel.com),
-    // 'initiated' est aussi accepté car le webhook OM sandbox n'arrive pas toujours.
-    const WAVE_API_KEY       = Deno.env.get('WAVE_API_KEY') ?? '';
-    const OM_RETAILER_MSISDN = Deno.env.get('OM_RETAILER_MSISDN') ?? '';
-    const OM_BASE_URL        = Deno.env.get('OM_BASE_URL') ?? '';
-    const IS_PRODUCTION  = !!(WAVE_API_KEY || OM_RETAILER_MSISDN);
-    const IS_OM_SANDBOX  = OM_BASE_URL.includes('sandbox');
+    // Même logique que create-payment : IS_PRODUCTION = true dès qu'un fournisseur
+    // réel est configuré. Empêche d'accepter 'initiated' comme confirmé quand OM
+    // sandbox a créé le payment_intent mais aucun vrai paiement n'a eu lieu.
+    const WAVE_API_KEY      = Deno.env.get('WAVE_API_KEY')      ?? '';
+    const WAVE_PROXY_URL    = Deno.env.get('WAVE_PROXY_URL')    ?? '';
+    const OM_CLIENT_ID      = Deno.env.get('OM_CLIENT_ID')      ?? '';
+    const OM_CLIENT_SECRET  = Deno.env.get('OM_CLIENT_SECRET')  ?? '';
+    const OM_MERCHANT_CODE  = Deno.env.get('OM_MERCHANT_CODE')  ?? '';
+    const OM_BASE_URL       = Deno.env.get('OM_BASE_URL')       ?? '';
+    const IS_WAVE_READY = WAVE_API_KEY !== '' || WAVE_PROXY_URL !== '';
+    const IS_OM_READY   = !!(OM_CLIENT_ID && OM_CLIENT_SECRET && OM_MERCHANT_CODE);
+    const IS_PRODUCTION = IS_WAVE_READY || IS_OM_READY;
+    const IS_OM_SANDBOX = OM_BASE_URL.includes('sandbox');
 
+    // 'simulated' = méthode non configurée en prod (démo du flux côté client) → toujours ok.
+    // 'initiated' = paiement envoyé au fournisseur mais webhook non reçu :
+    //   → accepté UNIQUEMENT en mode démo pur (aucun fournisseur configuré)
+    //   → refusé en production pour éviter les confirmations sans vrai paiement.
     const confirmedStatuses = IS_PRODUCTION
-      ? ['confirmed', 'split_done']
-      : IS_OM_SANDBOX
-        ? ['confirmed', 'split_done', 'simulated', 'initiated']
-        : ['confirmed', 'split_done', 'simulated'];
+      ? ['confirmed', 'split_done', 'simulated']
+      : ['confirmed', 'split_done', 'simulated', 'initiated'];
     const confirmed = confirmedStatuses.includes(pi.statut);
 
     const resolvedMode = pi.statut === 'simulated'
@@ -60,6 +67,13 @@ serve(async (req) => {
       : pi.statut === 'initiated' && IS_OM_SANDBOX
         ? 'sandbox-om'
         : 'production';
+
+    // En mode simulation (méthode non configurée), confirmer l'ordre côté serveur
+    // car aucun webhook ne viendra changer le statut. Idempotent : confirm_order_from_payment
+    // ignore les appels successifs si déjà en 'split_done'.
+    if (confirmed && pi.statut === 'simulated') {
+      await supabase.rpc('confirm_order_from_payment', { p_payment_intent_id: paymentIntentId });
+    }
 
     // Log vérification
     await supabase.from('payment_logs').insert({

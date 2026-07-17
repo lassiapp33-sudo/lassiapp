@@ -1,9 +1,10 @@
 /**
  * services/livreurs.ts — Gestion des livreurs internes (admin).
- * La création de compte passe par une Edge Function avec service_role
- * (même pattern que admin-delete-user).
+ * La création de compte passe par une Edge Function avec service_role.
  */
 import { supabase } from '../lib/supabase'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface AdminLivreur {
   id:          string
@@ -25,8 +26,15 @@ export interface AdminLivraison {
   statut:        string
   livreurId:     string | null
   createdAt:     string
-  acceptedAt:    string | null
   termineeAt:    string | null
+}
+
+export interface TotalLivreur {
+  livreurId:   string
+  nomComplet:  string
+  telephone:   string
+  nbTerminees: number
+  totalAPayer: number
 }
 
 // ─── Livreurs ─────────────────────────────────────────────────────────────────
@@ -57,11 +65,12 @@ export async function toggleLivreurActif(livreurId: string, actif: boolean): Pro
   if (error) throw new Error(error.message)
 }
 
+/** Retourne l'identifiant (numéro de tél normalisé) à communiquer au livreur. */
 export async function creerCompteLivreur(params: {
   nomComplet: string
   telephone:  string
   motDePasse: string
-}): Promise<void> {
+}): Promise<{ livreurId: string; identifiant: string }> {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) throw new Error('Session expirée')
 
@@ -80,6 +89,11 @@ export async function creerCompteLivreur(params: {
 
   const json = await res.json()
   if (!res.ok) throw new Error(json.error ?? 'Erreur lors de la création du compte livreur')
+
+  return {
+    livreurId:   json.livreurId  as string,
+    identifiant: json.identifiant as string,
+  }
 }
 
 // ─── Livraisons (vue admin) ────────────────────────────────────────────────────
@@ -89,7 +103,7 @@ export async function getLivraisons(): Promise<AdminLivraison[]> {
     .from('livraisons')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(200)
+    .limit(500)
 
   if (error) throw new Error(error.message)
 
@@ -105,7 +119,53 @@ export async function getLivraisons(): Promise<AdminLivraison[]> {
     statut:        row.statut,
     livreurId:     row.livreur_id ?? null,
     createdAt:     row.created_at,
-    acceptedAt:    row.accepted_at ?? null,
     termineeAt:    row.terminee_at ?? null,
   }))
+}
+
+/**
+ * Totaux à payer par livreur sur une période.
+ * On filtre côté client sur les livraisons terminées (depuis / jusqu inclus).
+ */
+export function getTotauxParLivreur(
+  livraisons: AdminLivraison[],
+  livreurs:   AdminLivreur[],
+  depuis:     string,
+  jusqua:     string,
+): TotalLivreur[] {
+  const debut = new Date(depuis).getTime()
+  const fin   = new Date(jusqua).getTime() + 86_400_000 // fin de journée
+
+  const byLivreur = new Map<string, { nb: number; total: number }>()
+
+  for (const l of livraisons) {
+    if (
+      l.statut !== 'terminee' ||
+      !l.livreurId ||
+      !l.termineeAt
+    ) continue
+
+    const ts = new Date(l.termineeAt).getTime()
+    if (ts < debut || ts > fin) continue
+
+    const existing = byLivreur.get(l.livreurId) ?? { nb: 0, total: 0 }
+    byLivreur.set(l.livreurId, {
+      nb:    existing.nb + 1,
+      total: existing.total + l.prixLivraison,
+    })
+  }
+
+  return livreurs
+    .filter(l => byLivreur.has(l.id))
+    .map(l => {
+      const stats = byLivreur.get(l.id)!
+      return {
+        livreurId:   l.id,
+        nomComplet:  l.nomComplet,
+        telephone:   l.telephone,
+        nbTerminees: stats.nb,
+        totalAPayer: stats.total,
+      }
+    })
+    .sort((a, b) => b.totalAPayer - a.totalAPayer)
 }

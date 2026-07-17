@@ -25,11 +25,16 @@ import { callWaveCheckout } from '../_shared/waveProxy.ts';
 //
 // Sans ces clés → mode simulation automatique (démo fonctionnelle)
 // ============================================================
-const WAVE_API_KEY      = Deno.env.get('WAVE_API_KEY')     ?? '';
-const OM_MERCHANT_CODE  = Deno.env.get('OM_MERCHANT_CODE') ?? '';
+const WAVE_API_KEY      = Deno.env.get('WAVE_API_KEY')      ?? '';
+const WAVE_PROXY_URL    = Deno.env.get('WAVE_PROXY_URL')    ?? '';
+const OM_MERCHANT_CODE  = Deno.env.get('OM_MERCHANT_CODE')  ?? '';
 const OM_WEBHOOK_SECRET = Deno.env.get('OM_WEBHOOK_SECRET') ?? '';
 
-const IS_PRODUCTION = WAVE_API_KEY !== '' || isOmReady();
+// Flags par fournisseur : chacun peut être en prod ou simulation indépendamment.
+// Wave est prêt si la clé directe OU le proxy Cloudflare est configuré.
+const IS_WAVE_READY = WAVE_API_KEY !== '' || WAVE_PROXY_URL !== '';
+const IS_OM_READY   = isOmReady();
+const IS_PRODUCTION = IS_WAVE_READY || IS_OM_READY;
 
 serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
@@ -96,11 +101,14 @@ serve(async (req) => {
     // 6-9. Initier le paiement chez le fournisseur
     let paymentResult;
 
+    // Détermine si ce fournisseur précis est en production ou simulation.
+    const useWaveProd = IS_WAVE_READY && moyenPaiement === 'wave';
+    const useOmProd   = IS_OM_READY   && moyenPaiement === 'orange_money';
+
     try {
-      if (!IS_PRODUCTION) {
+      if (!useWaveProd && !useOmProd) {
         // ======================================================
-        // MODE SIMULATION — Démo fonctionnelle sans API réelle
-        // L'ingénieur Wave/OM peut voir tout le flux fonctionner
+        // MODE SIMULATION — moyen non configuré ou démo complète
         // ======================================================
         paymentResult = await simulatePaiement(piId, montantTotal, moyenPaiement);
 
@@ -110,16 +118,15 @@ serve(async (req) => {
           updated_at:   new Date().toISOString(),
         }).eq('id', piId);
 
-      } else if (moyenPaiement === 'wave') {
+      } else if (useWaveProd) {
         // ======================================================
         // MODE PRODUCTION — WAVE
-        // 🔌 L'ingénieur Wave active cette branche en ajoutant WAVE_API_KEY
+        // 🔌 Activé quand WAVE_API_KEY ou WAVE_PROXY_URL est configuré
         // ======================================================
         paymentResult = await initiateWavePayment({
           piId, montantTotal, prixBase, commission, prestataireId,
         });
 
-        // 8. Stocker le checkout_id Wave + passer en 'initiated'
         await supabase.from('payment_intents').update({
           statut:       'initiated',
           external_ref: paymentResult.ref,
@@ -129,13 +136,12 @@ serve(async (req) => {
       } else {
         // ======================================================
         // MODE PRODUCTION — ORANGE MONEY
-        // 🔌 L'ingénieur OM active cette branche en configurant OM_CLIENT_ID + OM_MERCHANT_CODE
+        // 🔌 Activé quand OM_CLIENT_ID + OM_CLIENT_SECRET + OM_MERCHANT_CODE sont configurés
         // ======================================================
         paymentResult = await initiateOrangeMoneyPayment({
           piId, montantTotal, prixBase, commission, prestataireId,
         });
 
-        // 8. Stocker le checkout_id OM + passer en 'initiated'
         await supabase.from('payment_intents').update({
           statut:       'initiated',
           external_ref: paymentResult.ref,
@@ -185,7 +191,7 @@ serve(async (req) => {
       paymentRef:      paymentResult.ref,
       redirectUrl:     paymentResult.redirectUrl ?? null,
       qrCode:          paymentResult?.qrCode ?? null,  // OM seulement : base64 affiché si deepLink non dispo
-      mode:            IS_PRODUCTION ? 'production' : 'simulation',
+      mode:            (useWaveProd || useOmProd) ? 'production' : 'simulation',
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (e: unknown) {

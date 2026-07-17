@@ -2,26 +2,16 @@
 -- LIVRAISON — tables, RLS, fonctions
 -- ============================================================
 
--- 1. Rôle livreur dans profiles
+-- 1. Rôle livreur dans profiles (inclut 'merchant' pour les données existantes)
 ALTER TABLE public.profiles
   DROP CONSTRAINT IF EXISTS profiles_role_check;
 
-ALTER TABLE public.profiles
-  ADD CONSTRAINT profiles_role_check
-  CHECK (role IN ('client', 'prestataire', 'livreur', 'admin'));
-
--- Note : la valeur 'merchant' reste acceptée via la contrainte ci-dessus si elle existe
--- déjà dans les données (on garde la compatibilité). Le code React Native utilise 'merchant',
--- Supabase stocke 'merchant' — le livreur est un nouveau rôle distinct.
 ALTER TABLE public.profiles
   DROP CONSTRAINT IF EXISTS profiles_role_check2;
 
 ALTER TABLE public.profiles
   ADD CONSTRAINT profiles_role_check2
   CHECK (role IN ('client', 'merchant', 'prestataire', 'livreur', 'admin'));
-
-ALTER TABLE public.profiles
-  DROP CONSTRAINT IF EXISTS profiles_role_check;
 
 -- 2. Table livreurs (infos spécifiques)
 CREATE TABLE IF NOT EXISTS public.livreurs (
