@@ -87,8 +87,17 @@ export async function creerCompteLivreur(params: {
     },
   )
 
-  const json = await res.json()
-  if (!res.ok) throw new Error(json.error ?? 'Erreur lors de la création du compte livreur')
+  let json: Record<string, unknown> = {}
+  try { json = await res.json() } catch { /* réponse non-JSON (ex: 404 HTML) */ }
+
+  if (!res.ok) {
+    const msg = typeof json.error === 'string' && json.error
+      ? json.error
+      : typeof json.message === 'string' && json.message
+      ? json.message
+      : `Erreur ${res.status} — impossible de créer le compte livreur`
+    throw new Error(msg)
+  }
 
   return {
     livreurId:   json.livreurId  as string,

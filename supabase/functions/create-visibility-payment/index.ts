@@ -14,15 +14,12 @@ const MAX_FEATURED_PRODUCTS = 50
 const OM_MERCHANT_CODE  = Deno.env.get('OM_MERCHANT_CODE')  ?? ''  // code marchand (6 chiffres)
 const OM_WEBHOOK_SECRET = Deno.env.get('OM_WEBHOOK_SECRET') ?? ''
 
-const WAVE_API_KEY     = Deno.env.get('WAVE_API_KEY')     ?? ''
-const WAVE_MERCHANT_ID = Deno.env.get('WAVE_MERCHANT_ID') ?? ''
+const WAVE_API_KEY = Deno.env.get('WAVE_API_KEY') ?? ''
 
 const APP_BASE_URL = Deno.env.get('APP_BASE_URL') ?? 'lassi://'
 
-// ⚠️ wave conditionné à WAVE_MERCHANT_ID (champ hors-spec Checkout API officielle).
-// Si confirmé non requis par Wave, simplifier en : wave: !!WAVE_API_KEY
 const KEYS_READY = {
-  wave:         !!(WAVE_API_KEY && WAVE_MERCHANT_ID),
+  wave:         !!WAVE_API_KEY,
   orange_money: !!(Deno.env.get('OM_CLIENT_ID') && Deno.env.get('OM_CLIENT_SECRET') && OM_MERCHANT_CODE),
 }
 
@@ -195,7 +192,6 @@ Deno.serve(async (req) => {
       const waveBody = JSON.stringify({
         currency:         'XOF',
         amount:           String(finalPrice),
-        merchant_id:      WAVE_MERCHANT_ID,   // ⚠️ hors-spec officielle — à confirmer avec Wave
         success_url:      `${APP_BASE_URL}visibility-success?sub=${sub.id}`,
         error_url:        `${APP_BASE_URL}visibility-error?sub=${sub.id}`,
         client_reference: sub.id,
