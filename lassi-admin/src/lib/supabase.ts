@@ -16,7 +16,7 @@ function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise
 
 export const supabase = createClient(url, key, {
   auth: {
-    detectSessionInUrl: false,
+    detectSessionInUrl: true,
     persistSession:     true,
     autoRefreshToken:   true,
   },

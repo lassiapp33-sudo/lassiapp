@@ -22,6 +22,7 @@ import AvisPage            from './pages/AvisPage'
 import AnnoncesPage        from './pages/AnnoncesPage'
 import SecurityPage        from './pages/SecurityPage'
 import LivreursPage        from './pages/LivreursPage'
+import ResetPasswordPage   from './pages/ResetPasswordPage'
 
 // ─── Garde de route ───────────────────────────────────────────────────────────
 
@@ -46,7 +47,8 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login"          element={<LoginPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       <Route path="/" element={<RequireAdmin><Layout /></RequireAdmin>}>
         <Route index              element={<OverviewPage />} />
