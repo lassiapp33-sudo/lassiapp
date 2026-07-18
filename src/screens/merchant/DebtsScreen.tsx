@@ -46,11 +46,13 @@ export default function DebtsScreen({ onBack }: Props) {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [convClients, setConvClients] = useState<ClientOption[]>([]);
+  const [orderClients, setOrderClients] = useState<ClientOption[]>([]);
 
   useEffect(() => {
     if (!shopId) return;
     loadDebts(shopId);
-    // Charge les clients qui ont échangé des messages avec ce prestataire
+
+    // Clients issus des conversations
     chatService
       .getMerchantConversations(shopId)
       .then(async convs => {
@@ -58,21 +60,40 @@ export default function DebtsScreen({ onBack }: Props) {
           convs.map(c =>
             chatService.getClientProfile(c.clientId).then(p => ({
               id: c.clientId,
-              name: p.name || 'Client',
+              name: p.name || '',
+              phone: p.phone ?? undefined,
             })),
           ),
         );
         setConvClients(
           profiles
-            .filter(p => p.name && p.name !== 'Client')
+            .filter(p => p.name)
             .map(p => ({
               id: p.id,
               name: p.name,
               initial: p.name.charAt(0).toUpperCase(),
+              phone: p.phone,
               isExisting: false,
             })),
         );
       })
+      .catch(() => {});
+
+    // Clients issus des commandes
+    debtsService
+      .getOrderClients(shopId)
+      .then(clients =>
+        setOrderClients(
+          clients
+            .filter(c => c.name && c.name !== 'Client')
+            .map(c => ({
+              id: c.id,
+              name: c.name,
+              initial: c.name.charAt(0).toUpperCase(),
+              isExisting: false,
+            })),
+        ),
+      )
       .catch(() => {});
   }, [shopId]);
 
@@ -86,18 +107,24 @@ export default function DebtsScreen({ onBack }: Props) {
     [debtors, filter, q],
   );
 
-  // Options combinées : débiteurs existants + clients des conversations pas encore débiteurs
-  const existingNames = new Set(debtors.map(d => d.name.toLowerCase()));
+  // Options combinées : débiteurs existants + clients messagerie + clients commandes (sans doublons)
+  const existingIds = new Set(debtors.map(d => d.id));
   const existingOptions: ClientOption[] = debtors.map(d => ({
     id: d.id,
     name: d.name,
     initial: d.initial,
+    phone: d.phone,
     isExisting: true,
   }));
-  const newOptions: ClientOption[] = convClients.filter(
-    c => !existingNames.has(c.name.toLowerCase()),
-  );
-  const clientOptions: ClientOption[] = [...existingOptions, ...newOptions];
+  const seenIds = new Set<string>(existingIds);
+  const freshOptions: ClientOption[] = [];
+  for (const c of [...convClients, ...orderClients]) {
+    if (!seenIds.has(c.id)) {
+      seenIds.add(c.id);
+      freshOptions.push(c);
+    }
+  }
+  const clientOptions: ClientOption[] = [...existingOptions, ...freshOptions];
 
   const handleMarkPaid = (debtorId: string, name: string) => {
     Alert.alert(
@@ -129,11 +156,11 @@ export default function DebtsScreen({ onBack }: Props) {
         Alert.alert('Erreur', "Impossible d'enregistrer la dette. Réessaie.");
       }
     } else {
-      // Nouveau client : créer la ligne debt puis ajouter le montant
+      // Nouveau client (messagerie, commande ou saisie manuelle) : créer la ligne debt
       try {
-        const newDebtor = await debtsService.addDebtor(shopId, option.name);
+        const newDebtor = await debtsService.addDebtor(shopId, option.name, option.phone);
         await debtsService.addToDebt(newDebtor.id, amount);
-        loadDebts(shopId); // recharge depuis Supabase
+        loadDebts(shopId);
       } catch {
         Alert.alert('Erreur', "Impossible d'enregistrer la dette. Réessaie.");
       }

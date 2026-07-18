@@ -6,8 +6,7 @@
  */
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 
 // ─── Compression ──────────────────────────────────────────────────────────────
 
@@ -91,27 +90,34 @@ export async function uploadImage(
   // 1. Compression avant envoi
   const compressedUri = await compressImage(localUri);
 
-  // 2. Lecture native du fichier en base64 — plus fiable que fetch() sur file:// Android
-  const base64 = await FileSystem.readAsStringAsync(compressedUri, {
-    encoding: FileSystem.EncodingType.Base64,
+  // 2. Lecture en ArrayBuffer via fetch (compatible file:// iOS+Android)
+  const fileResponse = await fetch(compressedUri);
+  const arrayBuffer = await fileResponse.arrayBuffer();
+
+  // 3. JWT utilisateur
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Non connecté');
+
+  // 4. Upload via Edge Function (service_role côté serveur = bypass schema check)
+  const fnUrl = `${SUPABASE_URL}/functions/v1/upload-image`;
+  const uploadRes = await fetch(fnUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: SUPABASE_ANON,
+      'Content-Type': 'image/jpeg',
+      'x-bucket': bucket,
+      'x-path': path,
+    },
+    body: arrayBuffer,
   });
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
+
+  const result = await uploadRes.json() as { url?: string; error?: string };
+  if (!uploadRes.ok || !result.url) {
+    throw new Error(`Upload échoué : ${result.error ?? uploadRes.status}`);
   }
 
-  // 3. Upload vers Supabase Storage
-  const { error } = await supabase.storage.from(bucket).upload(path, bytes, {
-    contentType: 'image/jpeg',
-    upsert: true, // écrase si le fichier existe déjà
-  });
-
-  if (error) throw new Error(`Upload échoué : ${error.message}`);
-
-  // 4. URL publique permanente
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
+  return result.url;
 }
 
 /**

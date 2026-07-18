@@ -278,7 +278,8 @@ export default function AddProductSheet({
       const path = storageService.productImagePath(shopId, product?.id ?? `new_${Date.now()}`);
       const url = await storageService.uploadImage('products', uri, path);
       setPhotoUrl(url);
-    } catch {
+    } catch (e) {
+      console.error('[upload photo produit]', e);
       Alert.alert('Erreur', "Impossible d'uploader la photo. Réessaie.");
     } finally {
       setUploading(false);

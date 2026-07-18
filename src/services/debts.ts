@@ -100,3 +100,23 @@ export async function removeDebtor(debtId: string): Promise<void> {
   const { error } = await supabase.from('debts').delete().eq('id', debtId);
   if (error) throw new Error(error.message);
 }
+
+// Retourne les clients uniques qui ont passé au moins une commande dans cette boutique
+export async function getOrderClients(shopId: string): Promise<{ id: string; name: string }[]> {
+  const { data } = await supabase
+    .from('orders')
+    .select('client_id, client_name')
+    .eq('shop_id', shopId)
+    .not('client_id', 'is', null)
+    .order('created_at', { ascending: false });
+
+  const seen = new Set<string>();
+  const result: { id: string; name: string }[] = [];
+  for (const row of data ?? []) {
+    if (row.client_id && !seen.has(row.client_id)) {
+      seen.add(row.client_id);
+      result.push({ id: row.client_id, name: row.client_name ?? 'Client' });
+    }
+  }
+  return result;
+}
