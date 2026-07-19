@@ -37,6 +37,28 @@ export interface TotalLivreur {
   totalAPayer: number
 }
 
+export interface VersementLivreur {
+  id:              string
+  livreurId:       string
+  montantBrut:     number
+  commissionLassi: number
+  montantNet:      number
+  nbCourses:       number
+  createdAt:       string
+}
+
+export interface SoldeLivreur {
+  livreurId:          string
+  nomComplet:         string
+  telephone:          string
+  actif:              boolean
+  montantBrut:        number
+  commissionLassi:    number
+  montantNet:         number
+  nbCourses:          number
+  dernierVersementAt: string | null
+}
+
 // ─── Livreurs ─────────────────────────────────────────────────────────────────
 
 export async function getLivreurs(): Promise<AdminLivreur[]> {
@@ -130,6 +152,84 @@ export async function getLivraisons(): Promise<AdminLivraison[]> {
     createdAt:     row.created_at,
     termineeAt:    row.terminee_at ?? null,
   }))
+}
+
+// ─── Versements ───────────────────────────────────────────────────────────────
+
+export async function getVersements(): Promise<VersementLivreur[]> {
+  const { data, error } = await supabase
+    .from('versements_livreurs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(1000)
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? []).map(row => ({
+    id:              row.id,
+    livreurId:       row.livreur_id,
+    montantBrut:     row.montant_brut,
+    commissionLassi: row.commission_lassi,
+    montantNet:      row.montant_net,
+    nbCourses:       row.nb_courses,
+    createdAt:       row.created_at,
+  }))
+}
+
+export async function marquerLivreurVerse(livreurId: string): Promise<void> {
+  const { error } = await supabase.rpc('marquer_livreur_verse', { p_livreur_id: livreurId })
+  if (error) {
+    if (error.message.includes('SOLDE_ZERO')) throw new Error('Ce livreur n\'a aucun solde à verser.')
+    if (error.message.includes('NON_AUTORISE')) throw new Error('Action non autorisée.')
+    throw new Error(error.message)
+  }
+}
+
+/**
+ * Calcule le solde actuel non versé par livreur.
+ * Solde = sum(courses terminées depuis le dernier versement).
+ */
+export function getSoldesActuels(
+  livraisons:  AdminLivraison[],
+  livreurs:    AdminLivreur[],
+  versements:  VersementLivreur[],
+): SoldeLivreur[] {
+  // Date du dernier versement par livreur
+  const dernierVersementAt = new Map<string, string>()
+  for (const v of versements) {
+    const existing = dernierVersementAt.get(v.livreurId)
+    if (!existing || v.createdAt > existing) {
+      dernierVersementAt.set(v.livreurId, v.createdAt)
+    }
+  }
+
+  // Cumul des courses non encore versées
+  const byLivreur = new Map<string, { nb: number; brut: number }>()
+  for (const l of livraisons) {
+    if (l.statut !== 'terminee' || !l.livreurId || !l.termineeAt) continue
+    const lastPaid = dernierVersementAt.get(l.livreurId)
+    if (lastPaid && l.termineeAt <= lastPaid) continue
+    const cur = byLivreur.get(l.livreurId) ?? { nb: 0, brut: 0 }
+    byLivreur.set(l.livreurId, { nb: cur.nb + 1, brut: cur.brut + l.prixLivraison })
+  }
+
+  return livreurs
+    .map(l => {
+      const stats     = byLivreur.get(l.id) ?? { nb: 0, brut: 0 }
+      const commission = Math.round(stats.brut * 0.15)
+      return {
+        livreurId:          l.id,
+        nomComplet:         l.nomComplet,
+        telephone:          l.telephone,
+        actif:              l.actif,
+        montantBrut:        stats.brut,
+        commissionLassi:    commission,
+        montantNet:         stats.brut - commission,
+        nbCourses:          stats.nb,
+        dernierVersementAt: dernierVersementAt.get(l.id) ?? null,
+      }
+    })
+    .sort((a, b) => b.montantBrut - a.montantBrut)
 }
 
 /**

@@ -6,16 +6,19 @@
  * Onglet 3 : Paiements    — total à payer par livreur sur une période
  */
 import React, { useEffect, useMemo, useState } from 'react'
-import { Truck, Plus, X, ToggleLeft, ToggleRight, RefreshCw, Copy, Check, AlertCircle } from 'lucide-react'
+import { Truck, Plus, X, ToggleLeft, ToggleRight, RefreshCw, Copy, Check, AlertCircle, BadgeCheck } from 'lucide-react'
 import { SkeletonRow } from '../components/Skeleton'
 import {
   getLivreurs,
   getLivraisons,
+  getVersements,
   toggleLivreurActif,
   creerCompteLivreur,
-  getTotauxParLivreur,
+  marquerLivreurVerse,
+  getSoldesActuels,
   AdminLivreur,
   AdminLivraison,
+  SoldeLivreur,
 } from '../services/livreurs'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -229,6 +232,93 @@ function CreateModal({ onClose, onCreated }: CreateModalProps) {
   )
 }
 
+// ─── Modal confirmation versement ────────────────────────────────────────────
+
+interface ConfirmVersementProps {
+  solde:    SoldeLivreur
+  onClose:  () => void
+  onConfirm: () => Promise<void>
+}
+
+function ConfirmVersementModal({ solde, onClose, onConfirm }: ConfirmVersementProps) {
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState('')
+
+  const handleConfirm = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      await onConfirm()
+      onClose()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erreur.')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="bg-surface border border-border rounded-2xl w-full max-w-sm shadow-2xl">
+        <div className="p-5 border-b border-border flex items-center justify-between">
+          <span className="font-title font-bold text-white text-base">Confirmer le versement</span>
+          <button onClick={onClose} className="text-muted hover:text-white transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {error && (
+            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-300">
+              <AlertCircle size={15} className="mt-0.5 shrink-0" />
+              {error}
+            </div>
+          )}
+
+          <p className="text-muted text-sm">
+            Confirmer le paiement à <span className="text-white font-medium">{solde.nomComplet}</span> ?
+            Le solde sera réinitialisé à 0.
+          </p>
+
+          <div className="bg-bg rounded-xl p-4 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted">Montant brut</span>
+              <span className="text-white font-medium">{formatMontant(solde.montantBrut)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted">Commission LASSİ (15%)</span>
+              <span className="text-red-400">− {formatMontant(solde.commissionLassi)}</span>
+            </div>
+            <div className="flex justify-between border-t border-border pt-2">
+              <span className="text-white font-bold">Net à verser</span>
+              <span className="text-accent font-bold text-base">{formatMontant(solde.montantNet)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted">Courses concernées</span>
+              <span className="text-muted">{solde.nbCourses} course{solde.nbCourses > 1 ? 's' : ''}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 p-5 border-t border-border">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2 rounded-xl border border-border text-muted hover:text-white transition-colors text-sm"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={loading}
+            className="flex-1 py-2 rounded-xl bg-accent text-bg font-bold text-sm hover:bg-accent/90 transition-colors disabled:opacity-50"
+          >
+            {loading ? 'En cours…' : 'Confirmer versement'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Page principale ─────────────────────────────────────────────────────────
 
 type Tab = 'livreurs' | 'livraisons' | 'paiements'
@@ -239,29 +329,23 @@ export default function LivreursPage() {
   const [livraisons,      setLivraisons]      = useState<AdminLivraison[]>([])
   const [loadingLivreurs, setLoadingLivreurs] = useState(true)
   const [loadingLiv,      setLoadingLiv]      = useState(true)
+  const [loadingVers,     setLoadingVers]     = useState(true)
   const [showCreate,      setShowCreate]      = useState(false)
   const [toggling,        setToggling]        = useState<string | null>(null)
+  const [versements,      setVersements]      = useState<import('../services/livreurs').VersementLivreur[]>([])
+  const [confirmSolde,    setConfirmSolde]    = useState<SoldeLivreur | null>(null)
 
   // Filtre statut livraisons
   const [filtreStatut, setFiltreStatut] = useState<string>('tous')
-
-  // Filtre période paiements
-  const periodes = getPeriodes()
-  const [periodeIdx,    setPeriodeIdx]    = useState(0)
-  const [customDepuis,  setCustomDepuis]  = useState('')
-  const [customJusqua,  setCustomJusqua]  = useState('')
-  const [showCustom,    setShowCustom]    = useState(false)
-
-  const periode = showCustom
-    ? { depuis: customDepuis, jusqua: customJusqua }
-    : periodes[periodeIdx]
 
   // ── Chargement ──────────────────────────────────────────────────────────────
   const loadAll = async () => {
     setLoadingLivreurs(true)
     setLoadingLiv(true)
-    try { setLivreurs(await getLivreurs()) }     catch { /* ignore */ } finally { setLoadingLivreurs(false) }
-    try { setLivraisons(await getLivraisons()) } catch { /* ignore */ } finally { setLoadingLiv(false) }
+    setLoadingVers(true)
+    try { setLivreurs(await getLivreurs()) }       catch { /* ignore */ } finally { setLoadingLivreurs(false) }
+    try { setLivraisons(await getLivraisons()) }   catch { /* ignore */ } finally { setLoadingLiv(false) }
+    try { setVersements(await getVersements()) }   catch { /* ignore */ } finally { setLoadingVers(false) }
   }
 
   useEffect(() => { loadAll() }, [])
@@ -274,6 +358,12 @@ export default function LivreursPage() {
       setLivreurs(prev => prev.map(l => l.id === livreur.id ? { ...l, actif: !l.actif } : l))
     } catch { /* ignore */ }
     finally { setToggling(null) }
+  }
+
+  // ── Versement confirmé ───────────────────────────────────────────────────────
+  const handleVerse = async (livreurId: string) => {
+    await marquerLivreurVerse(livreurId)
+    await loadAll()
   }
 
   // ── Stats par livreur ────────────────────────────────────────────────────────
@@ -299,13 +389,14 @@ export default function LivreursPage() {
     return livraisons.filter(l => l.statut === filtreStatut)
   }, [livraisons, filtreStatut])
 
-  // ── Totaux paiements ─────────────────────────────────────────────────────────
-  const totaux = useMemo(() => {
-    if (!periode.depuis || !periode.jusqua) return []
-    return getTotauxParLivreur(livraisons, livreurs, periode.depuis, periode.jusqua)
-  }, [livraisons, livreurs, periode.depuis, periode.jusqua])
+  // ── Soldes actuels (non versés) ──────────────────────────────────────────────
+  const soldes = useMemo(
+    () => getSoldesActuels(livraisons, livreurs, versements),
+    [livraisons, livreurs, versements],
+  )
 
-  const totalGeneral = totaux.reduce((acc, t) => acc + t.totalAPayer, 0)
+  const totalBrut = soldes.reduce((a, s) => a + s.montantBrut, 0)
+  const totalNet  = soldes.reduce((a, s) => a + s.montantNet, 0)
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -344,7 +435,7 @@ export default function LivreursPage() {
         {([
           ['livreurs',   `Livreurs (${livreurs.length})`],
           ['livraisons', `Livraisons (${livraisons.length})`],
-          ['paiements',  'Paiements'],
+          ['paiements',  'Rémunérations'],
         ] as [Tab, string][]).map(([t, label]) => (
           <button
             key={t}
@@ -515,87 +606,39 @@ export default function LivreursPage() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          ONGLET 3 — PAIEMENTS
+          ONGLET 3 — RÉMUNÉRATIONS
       ════════════════════════════════════════════════════════════════════════ */}
       {tab === 'paiements' && (
         <div className="space-y-5">
 
-          {/* Bannière explicative */}
+          {/* Bannière */}
           <div className="flex items-start gap-3 bg-amber-400/8 border border-amber-400/25 rounded-xl p-4">
             <AlertCircle size={16} className="text-amber-400 mt-0.5 shrink-0" />
             <p className="text-amber-200 text-sm leading-relaxed">
-              Ces montants représentent ce que LASSİ doit reverser à chaque livreur pour les livraisons terminées sur la période.
-              Le règlement s'effectue <strong>hors application</strong> (virement Wave, espèces…).
+              Solde actuel non versé par livreur (depuis leur dernier paiement).
+              Cliquez sur <strong>Déjà versé</strong> après avoir réglé le livreur hors application.
+              Le solde sera remis à zéro et l'historique des courses reste intact.
             </p>
           </div>
 
-          {/* Sélecteur période */}
-          <div className="space-y-3">
-            <div className="flex gap-2 flex-wrap">
-              {periodes.map((p, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setPeriodeIdx(i); setShowCustom(false) }}
-                  className={`px-4 py-2 rounded-lg text-sm border transition-colors ${
-                    !showCustom && periodeIdx === i
-                      ? 'bg-accent border-accent text-bg font-bold'
-                      : 'border-border text-muted hover:text-white'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-              <button
-                onClick={() => setShowCustom(true)}
-                className={`px-4 py-2 rounded-lg text-sm border transition-colors ${
-                  showCustom
-                    ? 'bg-accent border-accent text-bg font-bold'
-                    : 'border-border text-muted hover:text-white'
-                }`}
-              >
-                Personnalisé
-              </button>
-            </div>
-
-            {showCustom && (
-              <div className="flex gap-3 items-center">
-                <input
-                  type="date"
-                  value={customDepuis}
-                  onChange={e => setCustomDepuis(e.target.value)}
-                  className="bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
-                />
-                <span className="text-muted text-sm">→</span>
-                <input
-                  type="date"
-                  value={customJusqua}
-                  onChange={e => setCustomJusqua(e.target.value)}
-                  className="bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
-                />
-              </div>
-            )}
-
-            <p className="text-muted text-xs">
-              Période : <span className="text-white">{periode.depuis}</span> → <span className="text-white">{periode.jusqua}</span>
-              {' '} · Livraisons terminées uniquement
-            </p>
-          </div>
-
-          {/* Total général */}
-          {totaux.length > 0 && (
-            <div className="flex items-center justify-between bg-surface border border-border rounded-xl px-5 py-4">
-              <div>
-                <div className="text-xs text-muted">Total à décaisser</div>
-                <div className="text-white font-bold text-2xl mt-0.5">{formatMontant(totalGeneral)}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-muted">{totaux.length} livreur{totaux.length > 1 ? 's' : ''}</div>
-                <div className="text-muted text-sm mt-0.5">
-                  {totaux.reduce((a, t) => a + t.nbTerminees, 0)} livraisons terminées
+          {/* Résumé global */}
+          {(loadingLivreurs || loadingLiv || loadingVers)
+            ? null
+            : soldes.some(s => s.montantBrut > 0) && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-surface border border-border rounded-xl px-5 py-4">
+                  <div className="text-xs text-muted mb-1">Total brut à décaisser</div>
+                  <div className="text-white font-bold text-xl">{formatMontant(totalBrut)}</div>
+                  <div className="text-xs text-muted mt-1">{soldes.filter(s => s.montantBrut > 0).length} livreur{soldes.filter(s => s.montantBrut > 0).length > 1 ? 's' : ''} en attente</div>
+                </div>
+                <div className="bg-surface border border-border rounded-xl px-5 py-4">
+                  <div className="text-xs text-muted mb-1">Net à verser aux livreurs</div>
+                  <div className="text-accent font-bold text-xl">{formatMontant(totalNet)}</div>
+                  <div className="text-xs text-muted mt-1">après commission LASSİ 15%</div>
                 </div>
               </div>
-            </div>
-          )}
+            )
+          }
 
           {/* Tableau par livreur */}
           <div className="bg-surface border border-border rounded-2xl overflow-hidden">
@@ -603,44 +646,62 @@ export default function LivreursPage() {
               <thead>
                 <tr className="border-b border-border text-xs text-muted">
                   <th className="text-left px-5 py-3 font-medium">Livreur</th>
-                  <th className="text-left px-5 py-3 font-medium">Téléphone</th>
-                  <th className="text-right px-5 py-3 font-medium">Livraisons terminées</th>
-                  <th className="text-right px-5 py-3 font-medium">Total à payer</th>
+                  <th className="text-right px-5 py-3 font-medium">Courses</th>
+                  <th className="text-right px-5 py-3 font-medium">Montant brut</th>
+                  <th className="text-right px-5 py-3 font-medium">Commission (15%)</th>
+                  <th className="text-right px-5 py-3 font-medium">Net à verser</th>
+                  <th className="px-5 py-3" />
                 </tr>
               </thead>
               <tbody>
-                {(loadingLivreurs || loadingLiv)
-                  ? Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} cols={4} />)
-                  : totaux.length === 0
+                {(loadingLivreurs || loadingLiv || loadingVers)
+                  ? Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} cols={6} />)
+                  : soldes.length === 0
                   ? (
                     <tr>
-                      <td colSpan={4} className="text-center text-muted py-12 text-sm">
-                        Aucune livraison terminée sur cette période.
+                      <td colSpan={6} className="text-center text-muted py-12 text-sm">
+                        Aucun livreur enregistré.
                       </td>
                     </tr>
                   )
-                  : totaux.map(t => (
-                    <tr key={t.livreurId} className="border-b border-border/50 hover:bg-white/3 transition-colors">
-                      <td className="px-5 py-3 text-white font-medium text-sm">{t.nomComplet}</td>
-                      <td className="px-5 py-3 text-muted text-sm font-mono">{t.telephone}</td>
-                      <td className="px-5 py-3 text-right text-white text-sm font-mono">{t.nbTerminees}</td>
+                  : soldes.map(s => (
+                    <tr key={s.livreurId} className="border-b border-border/50 hover:bg-white/3 transition-colors">
+                      <td className="px-5 py-3">
+                        <div className="text-white font-medium text-sm">{s.nomComplet}</div>
+                        <div className="text-muted text-xs font-mono mt-0.5">{s.telephone}</div>
+                        {!s.actif && (
+                          <span className="text-xs text-red-400/80 mt-0.5 block">Inactif</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-right text-white text-sm font-mono">
+                        {s.nbCourses > 0 ? s.nbCourses : <span className="text-muted">0</span>}
+                      </td>
+                      <td className="px-5 py-3 text-right text-white text-sm font-mono">
+                        {s.montantBrut > 0 ? formatMontant(s.montantBrut) : <span className="text-muted">—</span>}
+                      </td>
+                      <td className="px-5 py-3 text-right text-red-400 text-sm font-mono">
+                        {s.commissionLassi > 0 ? `− ${formatMontant(s.commissionLassi)}` : <span className="text-muted">—</span>}
+                      </td>
                       <td className="px-5 py-3 text-right">
-                        <span className="text-accent font-bold text-base">{formatMontant(t.totalAPayer)}</span>
+                        {s.montantNet > 0
+                          ? <span className="text-accent font-bold text-base">{formatMontant(s.montantNet)}</span>
+                          : <span className="text-emerald-400 text-sm font-medium">Soldé ✓</span>
+                        }
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        {s.montantBrut > 0 && (
+                          <button
+                            onClick={() => setConfirmSolde(s)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 transition-colors text-xs font-medium whitespace-nowrap"
+                          >
+                            <BadgeCheck size={14} />
+                            Déjà versé
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
                 }
-                {totaux.length > 1 && (
-                  <tr className="bg-white/3">
-                    <td colSpan={2} className="px-5 py-3 text-muted text-sm font-medium">Total général</td>
-                    <td className="px-5 py-3 text-right text-white text-sm font-mono font-bold">
-                      {totaux.reduce((a, t) => a + t.nbTerminees, 0)}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <span className="text-accent font-bold text-lg">{formatMontant(totalGeneral)}</span>
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
@@ -653,6 +714,15 @@ export default function LivreursPage() {
         <CreateModal
           onClose={() => setShowCreate(false)}
           onCreated={() => { loadAll() }}
+        />
+      )}
+
+      {/* Modal confirmation versement */}
+      {confirmSolde && (
+        <ConfirmVersementModal
+          solde={confirmSolde}
+          onClose={() => setConfirmSolde(null)}
+          onConfirm={() => handleVerse(confirmSolde.livreurId)}
         />
       )}
 
