@@ -22,16 +22,61 @@ export function normalizeAddr(str: string): string {
     .trim();
 }
 
+// Mots non significatifs à ignorer dans la recherche
+const STOP_WORDS = new Set([
+  'rue', 'avenue', 'av', 'bd', 'boulevard', 'villa', 'maison', 'cite', 'lot',
+  'bloc', 'chez', 'a', 'de', 'du', 'la', 'le', 'les', 'et', 'en', 'au', 'aux',
+  'pres', 'derriere', 'devant', 'face', 'angle', 'villa', 'no', 'n', 'x',
+  'entre', 'sur', 'sous', 'dans', 'vers', 'villa', 'immeuble', 'batiment',
+]);
+
 export function searchAddresses(query: string, maxResults = 7): DakarAddress[] {
   if (query.length < 2) return [];
   const q = normalizeAddr(query);
-  const words = q.split(/\s+/).filter(Boolean);
-  return DAKAR_ADDRESSES.filter(addr => {
-    const haystack = normalizeAddr(
-      addr.label + ' ' + addr.zone + ' ' + addr.keywords.join(' '),
-    );
-    return words.every(w => haystack.includes(w));
-  }).slice(0, maxResults);
+  const allWords = q.split(/\s+/).filter(Boolean);
+
+  // Filtrer les mots vides et les nombres seuls (ex: "24" dans "Rue 24")
+  const words = allWords.filter(w => !STOP_WORDS.has(w) && !/^\d+$/.test(w));
+  const searchWords = words.length > 0 ? words : allWords.filter(w => w.length > 1);
+
+  if (searchWords.length === 0) return [];
+
+  const hayOf = (addr: DakarAddress) =>
+    normalizeAddr(addr.label + ' ' + addr.zone + ' ' + addr.keywords.join(' '));
+
+  // 1. Correspondance exacte : tous les mots trouvés
+  const exact = DAKAR_ADDRESSES.filter(addr =>
+    searchWords.every(w => hayOf(addr).includes(w)),
+  );
+  if (exact.length > 0) return exact.slice(0, maxResults);
+
+  // 2. Correspondance partielle : score par nombre de mots trouvés
+  return DAKAR_ADDRESSES
+    .map(addr => ({ addr, score: searchWords.filter(w => hayOf(addr).includes(w)).length }))
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxResults)
+    .map(x => x.addr);
+}
+
+// Détecte des coordonnées GPS dans un texte collé (ex: "14.7950, -17.4098")
+// Supporte aussi les URLs Google Maps contenant des coords
+export function parseGpsCoords(text: string): { lat: number; lng: number } | null {
+  const clean = text.trim();
+
+  // Cherche deux nombres décimaux séparés par virgule, point-virgule ou espace
+  const match = clean.match(/(-?\d{1,3}[.,]\d{4,})\s*[,;\/ ]\s*(-?\d{1,3}[.,]\d{4,})/);
+  if (!match) return null;
+
+  const lat = parseFloat(match[1].replace(',', '.'));
+  const lng = parseFloat(match[2].replace(',', '.'));
+  if (isNaN(lat) || isNaN(lng)) return null;
+
+  // Validation : Sénégal ≈ lat 12–16, lng -17 à -11
+  if (lat >= 10 && lat <= 18 && lng >= -20 && lng <= -8) {
+    return { lat, lng };
+  }
+  return null;
 }
 
 // ─── Base d'adresses ──────────────────────────────────────────────────────────

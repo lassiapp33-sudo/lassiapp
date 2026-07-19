@@ -34,7 +34,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string> 
   try {
     const [result] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
     if (!result) return 'Ma position';
-    return result.subregion ?? result.district ?? result.city ?? result.region ?? 'Ma position';
+    return result.district ?? result.subregion ?? result.city ?? result.region ?? 'Ma position';
   } catch {
     return 'Ma position';
   }

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
-import { DakarAddress, searchAddresses } from '../../data/dakarAddresses';
+import { DakarAddress, searchAddresses, parseGpsCoords } from '../../data/dakarAddresses';
+import { reverseGeocode } from '../../services/location';
 
 interface Props {
   label?: string;
@@ -16,6 +17,9 @@ interface Props {
   onChangeText: (text: string) => void;
   onSelect: (addr: DakarAddress) => void;
 }
+
+// Entrée synthétique représentant une position GPS détectée
+const GPS_ID = '__gps__';
 
 export default function AddressAutocomplete({
   label,
@@ -26,10 +30,45 @@ export default function AddressAutocomplete({
 }: Props) {
   const [suggestions, setSuggestions] = useState<DakarAddress[]>([]);
   const [open, setOpen] = useState(false);
+  const geocodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleChange = useCallback(
     (text: string) => {
       onChangeText(text);
+
+      // ── Détection coordonnées GPS collées ──────────────────────────────
+      const gps = parseGpsCoords(text);
+      if (gps) {
+        // Suggestion immédiate pendant le géocodage
+        const placeholder: DakarAddress = {
+          id: GPS_ID,
+          label: 'Localisation en cours…',
+          keywords: [],
+          zone: `${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}`,
+          lat: gps.lat,
+          lng: gps.lng,
+        };
+        setSuggestions([placeholder]);
+        setOpen(true);
+
+        // Géocodage inverse pour avoir le vrai nom du quartier
+        if (geocodeTimerRef.current) clearTimeout(geocodeTimerRef.current);
+        geocodeTimerRef.current = setTimeout(async () => {
+          const addrLabel = await reverseGeocode(gps.lat, gps.lng);
+          setSuggestions([{
+            id: GPS_ID,
+            label: addrLabel,
+            keywords: [],
+            zone: 'Position GPS détectée',
+            lat: gps.lat,
+            lng: gps.lng,
+          }]);
+          setOpen(true);
+        }, 400);
+        return;
+      }
+
+      // ── Recherche normale dans la base d'adresses ─────────────────────
       const results = searchAddresses(text);
       setSuggestions(results);
       setOpen(results.length > 0);
@@ -80,12 +119,14 @@ export default function AddressAutocomplete({
               activeOpacity={0.75}
             >
               <View style={s.itemLeft}>
-                <Text style={s.itemPin}>📍</Text>
+                <Text style={s.itemPin}>{addr.id === GPS_ID ? '🎯' : '📍'}</Text>
                 <View style={s.itemText}>
                   <Text style={s.itemLabel} numberOfLines={1}>
                     {addr.label}
                   </Text>
-                  <Text style={s.itemZone}>{addr.zone}</Text>
+                  <Text style={[s.itemZone, addr.id === GPS_ID && s.itemZoneGps]}>
+                    {addr.zone}
+                  </Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -163,5 +204,8 @@ const s = StyleSheet.create({
     fontFamily: fonts.label,
     fontSize: 10,
     marginTop: 1,
+  },
+  itemZoneGps: {
+    color: colors.accent,
   },
 });
