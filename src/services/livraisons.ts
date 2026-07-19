@@ -110,7 +110,9 @@ export const accepterLivraison = async (
   if (error) {
     if (error.message.includes('DEJA_PRISE'))
       return { success: false, error: 'Cette livraison vient d\'être prise par un autre livreur.' };
-    return { success: false, error: 'Impossible d\'accepter.' };
+    if (error.message.includes('NON_AUTORISE'))
+      return { success: false, error: 'Votre compte livreur n\'est pas encore activé. Contactez l\'administrateur.' };
+    return { success: false, error: 'Impossible d\'accepter. Réessaie ou contacte le support.' };
   }
   return { success: true };
 };
@@ -140,6 +142,61 @@ export const connexionLivreur = async (
   if (error) return { success: false, error: 'Identifiants incorrects' };
   return { success: true };
 };
+
+// ─── Gains livreur ────────────────────────────────────────────────────────────
+
+export interface VersementLivreurRow {
+  id:              string;
+  montant_brut:    number;
+  commission_lassi: number;
+  montant_net:     number;
+  nb_courses:      number;
+  created_at:      string;
+}
+
+/** Toutes les livraisons terminées du livreur connecté (historique complet). */
+export const getMesLivraisonsTerminees = async (): Promise<Livraison[]> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
+    .from('livraisons')
+    .select('*')
+    .eq('livreur_id', user.id)
+    .eq('statut', 'terminee')
+    .order('terminee_at', { ascending: false })
+    .limit(200);
+  return (data ?? []) as Livraison[];
+};
+
+/** Versements reçus par le livreur connecté. */
+export const getMesVersements = async (): Promise<VersementLivreurRow[]> => {
+  const { data } = await supabase
+    .from('versements_livreurs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  return (data ?? []) as VersementLivreurRow[];
+};
+
+/**
+ * Calcule le solde non versé du livreur.
+ * = sum des terminées depuis le dernier versement × 0.85 (net après commission 15%)
+ */
+export function calcSoldeNonVerse(
+  livraisons: Livraison[],
+  versements: VersementLivreurRow[],
+): { nbCourses: number; montantBrut: number; montantNet: number } {
+  const lastAt = versements.length > 0 ? versements[0].created_at : null;
+  let brut = 0;
+  let nb = 0;
+  for (const l of livraisons) {
+    if (!l.terminee_at) continue;
+    if (lastAt && l.terminee_at <= lastAt) continue;
+    brut += l.prix_livraison;
+    nb++;
+  }
+  return { nbCourses: nb, montantBrut: brut, montantNet: Math.round(brut * 0.85) };
+}
 
 // ADMIN : créer un compte livreur via Edge Function (service_role requis)
 export const creerCompteLivreur = async (params: {

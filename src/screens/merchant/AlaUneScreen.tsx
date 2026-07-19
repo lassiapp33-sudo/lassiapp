@@ -177,7 +177,9 @@ function HistoItem({ bloc, restants, onReactiver, loading }: HistoItemProps) {
         <Text style={styles.histoDate}>{date}</Text>
       </View>
       <Text style={styles.histoEls}>
-        {bloc.elements.length} élément{bloc.elements.length > 1 ? 's' : ''} · {bloc.elements.map(e => e.nom).join(', ')}
+        {bloc.elements.length === 0
+          ? 'Affiche · image uniquement'
+          : `${bloc.elements.length} élément${bloc.elements.length > 1 ? 's' : ''} · ${bloc.elements.map(e => e.nom).join(', ')}`}
       </Text>
       <TouchableOpacity
         style={[styles.reactiverBtn, (restants === 0 || loading) && styles.btnDisabled]}
@@ -209,7 +211,10 @@ interface CreerModalProps {
   quotaRestants: number;
 }
 
+type CreerMode = 'bloc' | 'affiche';
+
 function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: CreerModalProps) {
+  const [mode, setMode] = useState<CreerMode>('bloc');
   const [titre, setTitre] = useState('');
   const [desc, setDesc] = useState('');
   const [elements, setElements] = useState<ElementALaUne[]>([
@@ -218,6 +223,7 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
   const [imageUri, setImageUri] = useState<string | null>(null);
 
   const reset = () => {
+    setMode('bloc');
     setTitre('');
     setDesc('');
     setElements([{ id: shortId(), nom: '', prix: 0 }]);
@@ -274,6 +280,12 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
   };
 
   const handleSubmit = async () => {
+    if (mode === 'affiche') {
+      if (!imageUri) { Alert.alert('Image requise', 'Ajoutez une image pour votre affiche.'); return; }
+      await onCreer('Affiche', '', [], imageUri);
+      reset();
+      return;
+    }
     if (!titre.trim()) { Alert.alert('Titre requis', 'Donnez un titre à votre bloc.'); return; }
     const valid = elements.filter(e => e.nom.trim());
     if (valid.length === 0) { Alert.alert('Éléments requis', 'Ajoutez au moins un élément.'); return; }
@@ -295,89 +307,136 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
             Il vous reste {quotaRestants}/10 blocs aujourd'hui
           </Text>
 
+          {/* Toggle Bloc / Affiche */}
+          <View style={styles.modeToggle}>
+            <TouchableOpacity
+              style={[styles.modeBtn, mode === 'bloc' && styles.modeBtnActive]}
+              onPress={() => setMode('bloc')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.modeBtnTxt, mode === 'bloc' && styles.modeBtnTxtActive]}>Bloc</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modeBtn, mode === 'affiche' && styles.modeBtnActive]}
+              onPress={() => setMode('affiche')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.modeBtnTxt, mode === 'affiche' && styles.modeBtnTxtActive]}>Affiche</Text>
+            </TouchableOpacity>
+          </View>
+
           <ScrollView showsVerticalScrollIndicator={false} style={styles.modalBody}>
-            <Text style={styles.fieldLabel}>Titre *</Text>
-            <TextInput
-              style={styles.textInput}
-              value={titre}
-              onChangeText={t => setTitre(t.slice(0, 80))}
-              placeholder="Ex: Spécial midi, Offre éclair…"
-              placeholderTextColor={colors.muted}
-              maxLength={80}
-            />
-            <Text style={styles.charCount}>{titre.length}/80</Text>
-
-            <Text style={styles.fieldLabel}>Description (optionnel)</Text>
-            <TextInput
-              style={[styles.textInput, styles.textArea]}
-              value={desc}
-              onChangeText={t => setDesc(t.slice(0, 300))}
-              placeholder="Détails de l'offre, horaires…"
-              placeholderTextColor={colors.muted}
-              multiline
-              numberOfLines={3}
-              maxLength={300}
-            />
-            <Text style={styles.charCount}>{desc.length}/300</Text>
-
-            {/* Image optionnelle */}
-            <Text style={styles.fieldLabel}>Image (optionnel)</Text>
-            {imageUri ? (
-              <View style={styles.imagePreviewBox}>
-                <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="cover" />
-                <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => setImageUri(null)}>
-                  <Text style={styles.imageRemoveTxt}>✕</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.imagePickerRow}>
-                <TouchableOpacity style={styles.imagePickerBtn} onPress={pickFromGallery} activeOpacity={0.7}>
-                  <IcoGallery stroke={colors.accent} />
-                  <Text style={styles.imagePickerTxt}>Galerie</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.imagePickerBtn} onPress={pickFromCamera} activeOpacity={0.7}>
-                  <IcoCamera stroke={colors.accent} />
-                  <Text style={styles.imagePickerTxt}>Appareil photo</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            <View style={styles.elHeaderRow}>
-              <Text style={styles.fieldLabel}>Éléments ({elements.length}/20)</Text>
-              {elements.length < 20 && (
-                <TouchableOpacity onPress={addElement} style={styles.addElBtn}>
-                  <IcoPlus stroke={colors.accent} />
-                  <Text style={styles.addElTxt}>Ajouter</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {elements.map((el, idx) => (
-              <View key={el.id} style={styles.elInputRow}>
-                <View style={styles.elInputLeft}>
-                  <TextInput
-                    style={styles.elInputNom}
-                    value={el.nom}
-                    onChangeText={v => updateEl(el.id, 'nom', v)}
-                    placeholder={`Élément ${idx + 1}`}
-                    placeholderTextColor={colors.muted}
-                  />
-                  <TextInput
-                    style={styles.elInputPrix}
-                    value={el.prix > 0 ? String(el.prix) : ''}
-                    onChangeText={v => updateEl(el.id, 'prix', v)}
-                    placeholder="Prix (F)"
-                    placeholderTextColor={colors.muted}
-                    keyboardType="numeric"
-                  />
-                </View>
-                {elements.length > 1 && (
-                  <TouchableOpacity onPress={() => removeEl(el.id)} style={styles.elRemoveBtn}>
-                    <IcoTrash stroke={colors.danger} />
-                  </TouchableOpacity>
+            {mode === 'affiche' ? (
+              <>
+                <Text style={styles.afficheHint}>
+                  Publiez une image en plein format pendant 24h.{'\n'}Aucun titre ni élément requis.
+                </Text>
+                <Text style={styles.fieldLabel}>Image *</Text>
+                {imageUri ? (
+                  <View style={styles.imagePreviewBox}>
+                    <Image source={{ uri: imageUri }} style={styles.imagePreviewLarge} resizeMode="cover" />
+                    <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => setImageUri(null)}>
+                      <Text style={styles.imageRemoveTxt}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.imagePickerRow}>
+                    <TouchableOpacity style={styles.imagePickerBtn} onPress={pickFromGallery} activeOpacity={0.7}>
+                      <IcoGallery stroke={colors.accent} />
+                      <Text style={styles.imagePickerTxt}>Galerie</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.imagePickerBtn} onPress={pickFromCamera} activeOpacity={0.7}>
+                      <IcoCamera stroke={colors.accent} />
+                      <Text style={styles.imagePickerTxt}>Appareil photo</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
-              </View>
-            ))}
+              </>
+            ) : (
+              <>
+                <Text style={styles.fieldLabel}>Titre *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={titre}
+                  onChangeText={t => setTitre(t.slice(0, 80))}
+                  placeholder="Ex: Spécial midi, Offre éclair…"
+                  placeholderTextColor={colors.muted}
+                  maxLength={80}
+                />
+                <Text style={styles.charCount}>{titre.length}/80</Text>
+
+                <Text style={styles.fieldLabel}>Description (optionnel)</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  value={desc}
+                  onChangeText={t => setDesc(t.slice(0, 300))}
+                  placeholder="Détails de l'offre, horaires…"
+                  placeholderTextColor={colors.muted}
+                  multiline
+                  numberOfLines={3}
+                  maxLength={300}
+                />
+                <Text style={styles.charCount}>{desc.length}/300</Text>
+
+                <Text style={styles.fieldLabel}>Image (optionnel)</Text>
+                {imageUri ? (
+                  <View style={styles.imagePreviewBox}>
+                    <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="cover" />
+                    <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => setImageUri(null)}>
+                      <Text style={styles.imageRemoveTxt}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.imagePickerRow}>
+                    <TouchableOpacity style={styles.imagePickerBtn} onPress={pickFromGallery} activeOpacity={0.7}>
+                      <IcoGallery stroke={colors.accent} />
+                      <Text style={styles.imagePickerTxt}>Galerie</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.imagePickerBtn} onPress={pickFromCamera} activeOpacity={0.7}>
+                      <IcoCamera stroke={colors.accent} />
+                      <Text style={styles.imagePickerTxt}>Appareil photo</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <View style={styles.elHeaderRow}>
+                  <Text style={styles.fieldLabel}>Éléments ({elements.length}/20)</Text>
+                  {elements.length < 20 && (
+                    <TouchableOpacity onPress={addElement} style={styles.addElBtn}>
+                      <IcoPlus stroke={colors.accent} />
+                      <Text style={styles.addElTxt}>Ajouter</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {elements.map((el, idx) => (
+                  <View key={el.id} style={styles.elInputRow}>
+                    <View style={styles.elInputLeft}>
+                      <TextInput
+                        style={styles.elInputNom}
+                        value={el.nom}
+                        onChangeText={v => updateEl(el.id, 'nom', v)}
+                        placeholder={`Élément ${idx + 1}`}
+                        placeholderTextColor={colors.muted}
+                      />
+                      <TextInput
+                        style={styles.elInputPrix}
+                        value={el.prix > 0 ? String(el.prix) : ''}
+                        onChangeText={v => updateEl(el.id, 'prix', v)}
+                        placeholder="Prix (F)"
+                        placeholderTextColor={colors.muted}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    {elements.length > 1 && (
+                      <TouchableOpacity onPress={() => removeEl(el.id)} style={styles.elRemoveBtn}>
+                        <IcoTrash stroke={colors.danger} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))}
+              </>
+            )}
             <View style={{ height: 20 }} />
           </ScrollView>
 
@@ -387,7 +446,11 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
             disabled={loading}
             activeOpacity={0.8}
           >
-            {loading ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.submitTxt}>Publier le bloc (24h)</Text>}
+            {loading ? <ActivityIndicator color={colors.bg} /> : (
+              <Text style={styles.submitTxt}>
+                {mode === 'affiche' ? "Publier l'affiche (24h)" : 'Publier le bloc (24h)'}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -872,6 +935,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   elRemoveBtn: { padding: 6 },
+
+  modeToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.bg,
+    borderRadius: radius.pill,
+    padding: 3,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modeBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: radius.pill,
+  },
+  modeBtnActive: { backgroundColor: colors.accent },
+  modeBtnTxt: { color: colors.muted, fontFamily: fonts.ui, fontSize: 13 },
+  modeBtnTxtActive: { color: colors.bg },
+
+  afficheHint: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  imagePreviewLarge: {
+    width: '100%',
+    height: 220,
+    borderRadius: radius.sm,
+  },
 
   submitBtn: {
     backgroundColor: colors.accent,

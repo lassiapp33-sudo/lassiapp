@@ -7,23 +7,36 @@ import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import {
   getLivraisonsDisponibles, getMesLivraisons,
   accepterLivraison, terminerLivraison, Livraison,
+  getMesLivraisonsTerminees, getMesVersements,
+  calcSoldeNonVerse, VersementLivreurRow,
 } from '../../services/livraisons';
 
 interface Props {
   onLogout: () => void;
 }
 
+type Onglet = 'dispo' | 'encours' | 'gains' | 'historique';
+
 export default function LivreurScreen({ onLogout }: Props) {
-  const [dispos, setDispos] = useState<Livraison[]>([]);
-  const [miennes, setMiennes] = useState<Livraison[]>([]);
+  const [dispos,     setDispos]     = useState<Livraison[]>([]);
+  const [miennes,    setMiennes]    = useState<Livraison[]>([]);
+  const [terminees,  setTerminees]  = useState<Livraison[]>([]);
+  const [versements, setVersements] = useState<VersementLivreurRow[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [onglet, setOnglet] = useState<'dispo' | 'encours'>('dispo');
+  const [onglet,     setOnglet]     = useState<Onglet>('dispo');
 
   const charger = useCallback(async () => {
     setRefreshing(true);
-    const [d, m] = await Promise.all([getLivraisonsDisponibles(), getMesLivraisons()]);
+    const [d, m, t, v] = await Promise.all([
+      getLivraisonsDisponibles(),
+      getMesLivraisons(),
+      getMesLivraisonsTerminees(),
+      getMesVersements(),
+    ]);
     setDispos(d);
     setMiennes(m);
+    setTerminees(t);
+    setVersements(v);
     setRefreshing(false);
   }, []);
 
@@ -52,10 +65,17 @@ export default function LivreurScreen({ onLogout }: Props) {
     ]);
   }, [charger]);
 
-  const liste = useMemo(
-    () => onglet === 'dispo' ? dispos : miennes,
-    [onglet, dispos, miennes],
+  const solde = useMemo(
+    () => calcSoldeNonVerse(terminees, versements),
+    [terminees, versements],
   );
+
+  const liste = useMemo((): Livraison[] => {
+    if (onglet === 'dispo')      return dispos;
+    if (onglet === 'encours')    return miennes;
+    if (onglet === 'historique') return terminees;
+    return [];
+  }, [onglet, dispos, miennes, terminees]);
 
   return (
     <View style={s.container}>
@@ -66,59 +86,128 @@ export default function LivreurScreen({ onLogout }: Props) {
         </TouchableOpacity>
       </View>
 
+      {/* ── Onglets ── */}
       <View style={s.tabs}>
-        <TouchableOpacity
-          style={[s.tab, onglet === 'dispo' && s.tabActive]}
-          onPress={() => setOnglet('dispo')}
-          activeOpacity={0.8}
-        >
-          <Text style={[s.tabText, onglet === 'dispo' && s.tabTextActive]}>
-            Disponibles ({dispos.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[s.tab, onglet === 'encours' && s.tabActive]}
-          onPress={() => setOnglet('encours')}
-          activeOpacity={0.8}
-        >
-          <Text style={[s.tabText, onglet === 'encours' && s.tabTextActive]}>
-            En cours ({miennes.length})
-          </Text>
-        </TouchableOpacity>
+        {([
+          ['dispo',      `Dispo (${dispos.length})`],
+          ['encours',    `En cours (${miennes.length})`],
+          ['gains',      'Mes gains'],
+          ['historique', 'Historique'],
+        ] as [Onglet, string][]).map(([key, label]) => (
+          <TouchableOpacity
+            key={key}
+            style={[s.tab, onglet === key && s.tabActive]}
+            onPress={() => setOnglet(key)}
+            activeOpacity={0.8}
+          >
+            <Text style={[s.tabText, onglet === key && s.tabTextActive]} numberOfLines={1}>
+              {label}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      <FlatList
-        data={liste}
-        keyExtractor={item => item.id}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={charger} tintColor={colors.accent} />
-        }
-        contentContainerStyle={s.list}
-        removeClippedSubviews
-        maxToRenderPerBatch={6}
-        windowSize={5}
-        initialNumToRender={8}
-        ListEmptyComponent={
-          <Text style={s.empty}>
-            {onglet === 'dispo'
-              ? 'Aucune livraison disponible pour le moment.'
-              : 'Aucune livraison en cours.'}
-          </Text>
-        }
-        renderItem={({ item }) => <LivraisonCard
-          item={item}
-          onglet={onglet}
-          onAccepter={handleAccepter}
-          onTerminer={handleTerminer}
-        />}
-      />
+      {/* ── Onglet Gains ── */}
+      {onglet === 'gains' ? (
+        <FlatList
+          data={[]}
+          keyExtractor={() => ''}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={charger} tintColor={colors.accent} />
+          }
+          ListHeaderComponent={
+            <View style={s.gainsWrap}>
+              {/* Solde principal */}
+              <View style={s.soldeCard}>
+                <Text style={s.soldeLabel}>Solde en attente de versement</Text>
+                <Text style={s.soldeMontant}>{solde.montantNet.toLocaleString()} F</Text>
+                <Text style={s.soldeSub}>{solde.nbCourses} course{solde.nbCourses !== 1 ? 's' : ''} non encore payées</Text>
+              </View>
+
+              {/* Détail */}
+              <View style={s.detailCard}>
+                <View style={s.detailRow}>
+                  <Text style={s.detailLabel}>Montant brut des courses</Text>
+                  <Text style={s.detailVal}>{solde.montantBrut.toLocaleString()} F</Text>
+                </View>
+                <View style={s.detailRow}>
+                  <Text style={s.detailLabel}>Commission LASSİ (15%)</Text>
+                  <Text style={s.detailNeg}>− {Math.round(solde.montantBrut * 0.15).toLocaleString()} F</Text>
+                </View>
+                <View style={[s.detailRow, s.detailRowLast]}>
+                  <Text style={s.detailLabelBold}>Net à recevoir</Text>
+                  <Text style={s.detailAccent}>{solde.montantNet.toLocaleString()} F</Text>
+                </View>
+              </View>
+
+              {/* Historique des versements */}
+              {versements.length > 0 && (
+                <>
+                  <Text style={s.sectionTitle}>Versements reçus</Text>
+                  {versements.map(v => (
+                    <View key={v.id} style={s.versCard}>
+                      <View style={s.versRow}>
+                        <Text style={s.versMontant}>{v.montant_net.toLocaleString()} F</Text>
+                        <Text style={s.versCourses}>{v.nb_courses} course{v.nb_courses !== 1 ? 's' : ''}</Text>
+                      </View>
+                      <Text style={s.versDate}>
+                        {new Date(v.created_at).toLocaleDateString('fr-FR', {
+                          day: '2-digit', month: 'long', year: 'numeric',
+                        })}
+                      </Text>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              {solde.nbCourses === 0 && versements.length === 0 && (
+                <Text style={s.empty}>Aucune course terminée pour le moment.</Text>
+              )}
+            </View>
+          }
+          renderItem={() => null}
+        />
+      ) : (
+        /* ── Listes courses (dispo / en cours / historique) ── */
+        <FlatList
+          data={liste}
+          keyExtractor={item => item.id}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={charger} tintColor={colors.accent} />
+          }
+          contentContainerStyle={s.list}
+          removeClippedSubviews
+          maxToRenderPerBatch={6}
+          windowSize={5}
+          initialNumToRender={8}
+          ListEmptyComponent={
+            <Text style={s.empty}>
+              {onglet === 'dispo'
+                ? 'Aucune livraison disponible pour le moment.'
+                : onglet === 'encours'
+                ? 'Aucune livraison en cours.'
+                : 'Aucune livraison terminée.'}
+            </Text>
+          }
+          renderItem={({ item }) => (
+            <LivraisonCard
+              item={item}
+              onglet={onglet}
+              onAccepter={handleAccepter}
+              onTerminer={handleTerminer}
+            />
+          )}
+        />
+      )}
     </View>
   );
 }
 
+// ─── LivraisonCard ────────────────────────────────────────────────────────────
+
 interface CardProps {
-  item: Livraison;
-  onglet: 'dispo' | 'encours';
+  item:       Livraison;
+  onglet:     Onglet;
   onAccepter: (id: string) => void;
   onTerminer: (id: string) => void;
 }
@@ -140,6 +229,14 @@ const LivraisonCard = memo(function LivraisonCard({ item, onglet, onAccepter, on
         <Text style={s.pointValue}>{item.arrivee_label}</Text>
       </View>
 
+      {onglet === 'historique' && item.terminee_at ? (
+        <Text style={s.termineeDate}>
+          Terminée le {new Date(item.terminee_at).toLocaleDateString('fr-FR', {
+            day: '2-digit', month: 'short', year: 'numeric',
+          })}
+        </Text>
+      ) : null}
+
       {onglet === 'encours' && item.contact_tel ? (
         <TouchableOpacity
           style={s.contactBtn}
@@ -152,11 +249,12 @@ const LivraisonCard = memo(function LivraisonCard({ item, onglet, onAccepter, on
         </TouchableOpacity>
       ) : null}
 
-      {onglet === 'dispo' ? (
+      {onglet === 'dispo' && (
         <TouchableOpacity style={s.btn} onPress={() => onAccepter(item.id)} activeOpacity={0.85}>
           <Text style={s.btnText}>Accepter la livraison</Text>
         </TouchableOpacity>
-      ) : (
+      )}
+      {onglet === 'encours' && (
         <TouchableOpacity style={[s.btn, s.btnDone]} onPress={() => onTerminer(item.id)} activeOpacity={0.85}>
           <Text style={s.btnText}>Livraison terminée</Text>
         </TouchableOpacity>
@@ -164,6 +262,8 @@ const LivraisonCard = memo(function LivraisonCard({ item, onglet, onAccepter, on
     </View>
   );
 });
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
@@ -188,14 +288,15 @@ const s = StyleSheet.create({
   },
   logoutTxt: { color: colors.muted, fontFamily: fonts.label, fontSize: 12 },
 
-  tabs: { flexDirection: 'row', gap: 10, padding: 16 },
+  tabs: { flexDirection: 'row', gap: 6, paddingHorizontal: 12, paddingVertical: 12 },
   tab: {
-    flex: 1, padding: 12, borderRadius: radius.md,
+    flex: 1, paddingVertical: 9, borderRadius: radius.md,
     backgroundColor: colors.surface, alignItems: 'center',
     borderWidth: 1.5, borderColor: colors.border,
+    paddingHorizontal: 4,
   },
   tabActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  tabText: { color: colors.muted, fontFamily: fonts.ui, fontSize: 13 },
+  tabText: { color: colors.muted, fontFamily: fonts.ui, fontSize: 11 },
   tabTextActive: { color: colors.bg },
 
   list: { paddingHorizontal: 16, paddingBottom: 32 },
@@ -218,6 +319,8 @@ const s = StyleSheet.create({
   pointLabel: { color: colors.muted, fontFamily: fonts.label, fontSize: 11 },
   pointValue: { color: colors.white, fontFamily: fonts.body, fontSize: 14, marginTop: 2 },
 
+  termineeDate: { color: colors.muted, fontFamily: fonts.label, fontSize: 12, marginTop: 4 },
+
   contactBtn: {
     backgroundColor: colors.bg, borderRadius: radius.sm,
     padding: 10, marginTop: 8, alignItems: 'center',
@@ -236,4 +339,57 @@ const s = StyleSheet.create({
     color: colors.muted, textAlign: 'center',
     marginTop: 40, fontFamily: fonts.body, fontSize: 14,
   },
+
+  // Gains
+  gainsWrap: { padding: 16, paddingBottom: 40 },
+
+  soldeCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.accent + '55',
+    marginBottom: 16,
+  },
+  soldeLabel: { color: colors.muted, fontFamily: fonts.label, fontSize: 12, marginBottom: 10 },
+  soldeMontant: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 38, marginBottom: 8 },
+  soldeSub: { color: colors.muted, fontFamily: fonts.body, fontSize: 13 },
+
+  detailCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 24,
+  },
+  detailRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  detailRowLast: { borderBottomWidth: 0, paddingTop: 12 },
+  detailLabel: { color: colors.muted, fontFamily: fonts.body, fontSize: 13 },
+  detailLabelBold: { color: colors.white, fontFamily: fonts.ui, fontSize: 14 },
+  detailVal: { color: colors.white, fontFamily: fonts.body, fontSize: 13 },
+  detailNeg: { color: '#f87171', fontFamily: fonts.body, fontSize: 13 },
+  detailAccent: { color: colors.accent, fontFamily: fonts.title, fontSize: 16 },
+
+  sectionTitle: {
+    color: colors.muted, fontFamily: fonts.label, fontSize: 11,
+    textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10,
+  },
+
+  versCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  versRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  versMontant: { color: colors.white, fontFamily: fonts.title, fontSize: 16 },
+  versCourses: { color: colors.muted, fontFamily: fonts.label, fontSize: 12 },
+  versDate: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 4 },
 });

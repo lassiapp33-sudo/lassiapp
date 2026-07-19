@@ -60,6 +60,7 @@ export async function canLeaveAvis(shopId: string, userId: string): Promise<CanL
         note: data.existing_note,
         commentaire: data.existing_commentaire ?? null,
         photoUrl: data.existing_photo_url ?? null,
+        vocalUrl: null,
         reponseCommercant: null,
         masque: data.existing_masque ?? false,
         createdAt: data.existing_created_at,

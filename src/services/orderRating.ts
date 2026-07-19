@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '../lib/supabase';
 
 export type RatingDirection = 'client_to_merchant' | 'merchant_to_client';
@@ -91,4 +91,17 @@ export async function getMesStatsClient(): Promise<ClientStats> {
   const { data, error } = await supabase.rpc('get_mes_stats_client');
   if (error) throw new Error(error.message);
   return data as ClientStats;
+}
+
+export interface ClientScoreRow {
+  client_id: string;
+  note_moyenne: number;
+  nb_avis: number;
+}
+
+export async function getClientsScores(clientIds: string[]): Promise<ClientScoreRow[]> {
+  if (clientIds.length === 0) return [];
+  const { data, error } = await supabase.rpc('get_clients_scores', { p_client_ids: clientIds });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ClientScoreRow[];
 }

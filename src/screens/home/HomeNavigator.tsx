@@ -615,7 +615,6 @@ export default function HomeNavigator({ onLogout }: Props) {
         onTerrainReservations={() => push({ id: 'terrain_my_reservations' })}
         onClassement={() => push({ id: 'classement' })}
         onAbonnements={() => push({ id: 'mes_abonnements' })}
-        onMesLivraisons={() => push({ id: 'orders' })}
         onLogout={onLogout}
       />
     );

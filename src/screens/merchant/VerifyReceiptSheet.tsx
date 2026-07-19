@@ -13,6 +13,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { IcoClose } from '../../components/icons';
+import ClientScoreBadge from '../../components/orders/ClientScoreBadge';
 import { verifyReceiptMerchant, VerifyResult } from '../../services/receipts';
 import { getErrorMessage } from '../../utils/errorUtils';
 import { formatPrice } from '../../utils/format';
@@ -139,6 +140,11 @@ export default function VerifyReceiptSheet({ visible, onClose, onVerified }: Pro
                   )}
                   {result.total !== undefined && (
                     <Text style={s.resultSuccessSub}>Total : {formatPrice(result.total)}</Text>
+                  )}
+                  {result.clientScore !== undefined && result.clientNbNotes !== undefined && result.clientNbNotes > 0 && (
+                    <View style={{ marginTop: 4 }}>
+                      <ClientScoreBadge score={result.clientScore} nbNotes={result.clientNbNotes} />
+                    </View>
                   )}
                 </View>
               </View>

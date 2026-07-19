@@ -3,8 +3,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // react-native-get-random-values et expo-secure-store sont natifs uniquement
 if (Platform.OS !== 'web') {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('react-native-get-random-values');
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('react-native-get-random-values');
+  } catch (_) {
+    // Fallback silencieux — crypto.getRandomValues sera fourni par Hermes si absent
+  }
 }
 
 class LargeSecureStore {

@@ -116,7 +116,7 @@ export default function App() {
     useShopStore.setState({
       shopId: null,
       profile:  { initial: 'M', name: 'Ma Boutique', subtitle: '', isOpen: true },
-      context:  { shopType: 'products', openingHours: null, isManuallyClose: false, galleryUrls: [], subcategories: [] },
+      context:  { shopType: 'products', openingHours: null, isManuallyClose: false, galleryUrls: [], subcategories: [], category: '' },
       categories: [],
       products:   [],
       loading:    false,
@@ -133,54 +133,67 @@ export default function App() {
   // Handler de premier plan + canaux Android
   // Le require() ici est lazy : expo-notifications ne charge QUE si !IS_EXPO_GO
   useEffect(() => {
-    const N = getN();
-    if (!N) return;
+    try {
+      const N = getN();
+      if (!N) return;
 
-    // Affiche les notifications quand l'app est au premier plan
-    N.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert:  true,
-        shouldPlaySound:  true,
-        shouldSetBadge:   false,
-        shouldShowBanner: true,
-        shouldShowList:   true,
-      }),
-    });
+      // Affiche les notifications quand l'app est au premier plan
+      try {
+        N.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowAlert:  true,
+            shouldPlaySound:  true,
+            shouldSetBadge:   false,
+            shouldShowBanner: true,
+            shouldShowList:   true,
+          }),
+        });
+      } catch (_) {}
 
-    // Canaux Android
-    if (Platform.OS === 'android') {
-      N.setNotificationChannelAsync('commandes', {
-        name:             'Commandes',
-        importance:       N.AndroidImportance.HIGH,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor:       '#FDCF34',
-        sound:            'default',
-      });
-      N.setNotificationChannelAsync('messages', {
-        name:       'Messages',
-        importance: N.AndroidImportance.DEFAULT,
-        sound:      'default',
-      });
-    }
+      // Canaux Android — .catch() obligatoire : rejet non géré = crash prod
+      if (Platform.OS === 'android') {
+        N.setNotificationChannelAsync('commandes', {
+          name:             'Commandes',
+          importance:       N.AndroidImportance.HIGH,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor:       '#FDCF34',
+          sound:            'default',
+        }).catch(() => {});
+        N.setNotificationChannelAsync('messages', {
+          name:       'Messages',
+          importance: N.AndroidImportance.DEFAULT,
+          sound:      'default',
+        }).catch(() => {});
+      }
+    } catch (_) {}
   }, []);
 
   // Écoute les taps sur notification (non disponible dans Expo Go SDK 53+)
   useEffect(() => {
-    const N = getN();
-    if (!N) return;
+    try {
+      const N = getN();
+      if (!N) return;
 
-    const sub = N.addNotificationResponseReceivedListener((response) => {
-      handleNotifData(response.notification.request.content.data as Record<string, any>);
-    });
+      let sub: { remove: () => void } | null = null;
+      try {
+        sub = N.addNotificationResponseReceivedListener((response) => {
+          handleNotifData(response.notification.request.content.data as Record<string, any>);
+        });
+      } catch (_) {}
 
-    // Cold start : l'app a été ouverte depuis un tap sur une notif
-    N.getLastNotificationResponseAsync().then((response) => {
-      if (response?.notification) {
-        handleNotifData(response.notification.request.content.data as Record<string, any>);
-      }
-    });
+      // Cold start : l'app a été ouverte depuis un tap sur une notif
+      N.getLastNotificationResponseAsync()
+        .then((response) => {
+          if (response?.notification) {
+            handleNotifData(response.notification.request.content.data as Record<string, any>);
+          }
+        })
+        .catch(() => {});
 
-    return () => sub.remove();
+      return () => { try { sub?.remove(); } catch (_) {} };
+    } catch (_) {
+      return undefined;
+    }
   }, []);
 
   // Écoute les changements Supabase (expiration de token, déconnexion externe…)
@@ -234,31 +247,36 @@ export default function App() {
       <ErrorBoundary>
       {screen === 'splash' && (
         <SplashScreen onFinish={async () => {
-          const { hasSeenOnboarding } = useAuthStore.getState();
+          try {
+            const { hasSeenOnboarding } = useAuthStore.getState();
 
-          // Section 7 : redémarrage à froid après une mise en arrière-plan
-          // trop longue → on déconnecte au lieu de restaurer la session.
-          const expired = await hasInactivityTimeoutElapsed();
-          await clearBackgroundMark();
-          if (expired) {
-            await authService.logout().catch(() => {});
+            // Section 7 : redémarrage à froid après une mise en arrière-plan
+            // trop longue → on déconnecte au lieu de restaurer la session.
+            const expired = await hasInactivityTimeoutElapsed();
+            await clearBackgroundMark();
+            if (expired) {
+              await authService.logout().catch(() => {});
+              useAuthStore.getState().setLoading(false);
+              setScreen(hasSeenOnboarding ? 'auth' : 'onboarding');
+              return;
+            }
+
+            const sessionUser = await authService.getSessionUser();
+
+            if (sessionUser) {
+              useAuthStore.getState().setUser(sessionUser);
+              if (sessionUser.role === 'merchant') setScreen('merchant');
+              else if (sessionUser.role === 'livreur') setScreen('livreur');
+              else setScreen('client');
+              return;
+            }
+
             useAuthStore.getState().setLoading(false);
             setScreen(hasSeenOnboarding ? 'auth' : 'onboarding');
-            return;
+          } catch {
+            useAuthStore.getState().setLoading(false);
+            setScreen(useAuthStore.getState().hasSeenOnboarding ? 'auth' : 'onboarding');
           }
-
-          const sessionUser = await authService.getSessionUser();
-
-          if (sessionUser) {
-            useAuthStore.getState().setUser(sessionUser);
-            if (sessionUser.role === 'merchant') setScreen('merchant');
-            else if (sessionUser.role === 'livreur') setScreen('livreur');
-            else setScreen('client');
-            return;
-          }
-
-          useAuthStore.getState().setLoading(false);
-          setScreen(hasSeenOnboarding ? 'auth' : 'onboarding');
         }} />
       )}
 

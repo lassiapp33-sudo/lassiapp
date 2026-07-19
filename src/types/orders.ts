@@ -22,6 +22,9 @@ export interface IncomingOrder {
   orderId: string; // ex : "#A427"
   initial: string;
   clientName: string;
+  clientId?: string;        // uuid du client (orders.client_id)
+  clientScore?: number;     // note de fiabilité (moyenne merchant_to_client)
+  clientNbNotes?: number;   // nombre de fois noté par des prestataires
   avatarUrl?: string | null; // photo de profil du client (profiles.avatar_url)
   status: OrderStatus;
   items: IncomingOrderItem[];

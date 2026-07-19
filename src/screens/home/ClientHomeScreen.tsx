@@ -17,8 +17,8 @@ import CategoryGrid from '../../components/home/CategoryGrid';
 import { CatId } from '../../components/category/CatNavBar';
 import PromoBanner from '../../components/home/PromoBanner';
 import NearbyCard, { NearbyPlace } from '../../components/home/NearbyCard';
-import SponsoredAdCard from '../../components/home/SponsoredAdCard';
-import { SponsoredAd, getActiveSponsoredAds } from '../../services/sponsoredAds';
+import SponsoredAdModal from '../../components/home/SponsoredAdModal';
+import { SponsoredAd, getActiveSponsoredAds, incrementerContact } from '../../services/sponsoredAds';
 import BottomNav, { NavTab, NAV_HEIGHT } from '../../components/home/BottomNav';
 import WelcomeClientModal from '../../components/home/WelcomeClientModal';
 import { colors, fonts, TOP_INSET } from '../../theme';
@@ -76,7 +76,7 @@ export default function ClientHomeScreen({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [sponsoredAds, setSponsoredAds] = useState<SponsoredAd[]>([]);
+  const [sponsoredAdModal, setSponsoredAdModal] = useState<SponsoredAd | null>(null);
 
   const userId = useAuthStore(s => s.user?.id);
   const userInitial = useAuthStore(s => s.user?.initial ?? 'A');
@@ -159,8 +159,24 @@ export default function ClientHomeScreen({
     loadFavorites();
     refreshLocation();
     loadShops();
-    getActiveSponsoredAds(3).then(setSponsoredAds).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Annonces sponsorisées — modale affichée une seule fois par annonce par compte
+  useEffect(() => {
+    if (!userId) return;
+    getActiveSponsoredAds(5)
+      .then(async ads => {
+        for (const ad of ads) {
+          const seenKey = `sponsored_seen_ad_${userId}_${ad.id}`;
+          const seen = await AsyncStorage.getItem(seenKey).catch(() => null);
+          if (!seen) {
+            setSponsoredAdModal(ad);
+            return;
+          }
+        }
+      })
+      .catch(() => {});
+  }, [userId]);
 
   // Message de bienvenue (essentiel de LASSI) — affiché une seule fois,
   // mémorisé par compte via AsyncStorage.
@@ -177,6 +193,26 @@ export default function ClientHomeScreen({
   const dismissWelcome = () => {
     setShowWelcome(false);
     if (userId) AsyncStorage.setItem(`welcome_client_seen_${userId}`, '1').catch(() => {});
+  };
+
+  const dismissSponsoredAd = () => {
+    if (!sponsoredAdModal || !userId) return;
+    const seenKey = `sponsored_seen_ad_${userId}_${sponsoredAdModal.id}`;
+    AsyncStorage.setItem(seenKey, '1').catch(() => {});
+    setSponsoredAdModal(null);
+  };
+
+  const handleSponsoredContact = () => {
+    if (!sponsoredAdModal) return;
+    incrementerContact(sponsoredAdModal.id);
+    dismissSponsoredAd();
+    onContactShop?.(sponsoredAdModal.shopId, sponsoredAdModal.shopName ?? '', sponsoredAdModal.shopLogoUrl ?? null);
+  };
+
+  const handleSponsoredViewShop = () => {
+    if (!sponsoredAdModal) return;
+    dismissSponsoredAd();
+    onShopPress?.(sponsoredAdModal.shopId, sponsoredAdModal.shopName ?? '');
   };
 
   const handleNavPress = (t: NavTab) => {
@@ -240,22 +276,6 @@ export default function ClientHomeScreen({
         {/* Produits en vitrine — carrousel auto-défilant avec indicateurs */}
         <PromoBanner onPress={onShopItemPress} onView={onShopItemView} />
 
-        {/* Annonces sponsorisées */}
-        {sponsoredAds.length > 0 && (
-          <>
-            <View style={[styles.sectionHead, { marginBottom: 10 }]}>
-              <Text style={styles.secTitle}>À la une</Text>
-            </View>
-            {sponsoredAds.map(ad => (
-              <SponsoredAdCard
-                key={ad.id}
-                ad={ad}
-                onContact={() => onContactShop?.(ad.shopId, ad.shopName ?? '', ad.shopLogoUrl ?? null)}
-                onViewShop={() => onShopPress?.(ad.shopId, ad.shopName ?? '')}
-              />
-            ))}
-          </>
-        )}
 
         {/* Boutiques à proximité */}
         <View style={styles.px}>
@@ -293,6 +313,15 @@ export default function ClientHomeScreen({
       </ScrollView>
 
       <WelcomeClientModal visible={showWelcome} onClose={dismissWelcome} />
+
+      {sponsoredAdModal ? (
+        <SponsoredAdModal
+          ad={sponsoredAdModal}
+          onDismiss={dismissSponsoredAd}
+          onContact={handleSponsoredContact}
+          onViewShop={handleSponsoredViewShop}
+        />
+      ) : null}
     </LassiScreen>
   );
 }

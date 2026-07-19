@@ -33,7 +33,7 @@ type HistoryItem =
   | { kind: 'order'; data: ClientOrder }
   | { kind: 'livraison'; data: Livraison };
 
-type HistoryFilter = 'all' | 'orders' | 'livraisons';
+type HistoryFilter = 'all' | 'orders';
 
 // ─── Icône état vide ─────────────────────────────────────────────────────────
 
@@ -47,8 +47,7 @@ const IcoEmpty = () => (
 
 const FILTER_TABS: { id: HistoryFilter; label: string }[] = [
   { id: 'all', label: 'Tout' },
-  { id: 'orders', label: 'Commandes' },
-  { id: 'livraisons', label: 'Livraisons' },
+  { id: 'orders', label: 'Commandes boutiques' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -68,7 +67,6 @@ function mergeAndSort(orders: ClientOrder[], livraisons: Livraison[]): HistoryIt
 
 function applyFilter(items: HistoryItem[], filter: HistoryFilter): HistoryItem[] {
   if (filter === 'orders') return items.filter(i => i.kind === 'order');
-  if (filter === 'livraisons') return items.filter(i => i.kind === 'livraison');
   return items;
 }
 

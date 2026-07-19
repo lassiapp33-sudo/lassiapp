@@ -10,6 +10,7 @@ import { IcoClose, IcoPlay, IcoStop } from '../icons';
 import { formatPrice } from '../../utils/format';
 import { buildOrderAnnouncement } from '../../utils/orderSpeech';
 import useSpeechStore from '../../store/speechStore';
+import ClientScoreBadge from './ClientScoreBadge';
 
 // Couleurs spécifiques aux boutons d'action
 const WAVE_COLOR = '#1DC8F2';
@@ -121,6 +122,9 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
         {/* Infos client */}
         <View style={styles.who}>
           <Text style={styles.clientName}>{order.clientName}</Text>
+          {order.clientScore !== undefined && order.clientNbNotes !== undefined && order.clientNbNotes > 0 && (
+            <ClientScoreBadge score={order.clientScore} nbNotes={order.clientNbNotes} />
+          )}
           <View style={styles.metaRow}>
             <Text style={styles.orderId}>{order.orderId}</Text>
             <Text style={styles.metaSep}>·</Text>

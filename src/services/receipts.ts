@@ -31,6 +31,8 @@ export interface VerifyResult {
   reason?: 'introuvable' | 'expire' | 'deja_utilise' | 'aucun' | string;
   clientName?: string;
   total?: number;
+  clientScore?: number;
+  clientNbNotes?: number;
 }
 
 /** Charge le reçu d'une commande (côté client). */

@@ -27,6 +27,7 @@ export interface SponsoredAd {
   estMin: number;
   estMax: number;
   actualViews: number;
+  contactCount: number;
   status: AdStatus;
   startedAt: string;
   expiresAt: string;
@@ -167,6 +168,7 @@ interface RawAdFeed {
   estimated_views_min: number;
   estimated_views_max: number;
   actual_views: number;
+  contact_count: number;
   expires_at: string;
   shop_id: string;
   shop_name: string;
@@ -190,6 +192,7 @@ export async function getActiveSponsoredAds(limit = 5): Promise<SponsoredAd[]> {
     estMin:        r.estimated_views_min,
     estMax:        r.estimated_views_max,
     actualViews:   r.actual_views,
+    contactCount:  r.contact_count ?? 0,
     status:        'active',
     startedAt:     '',
     expiresAt:     r.expires_at,
@@ -223,6 +226,7 @@ export async function getMerchantAds(shopId: string): Promise<SponsoredAd[]> {
     estMin:        r.estimated_views_min as number,
     estMax:        r.estimated_views_max as number,
     actualViews:   r.actual_views as number,
+    contactCount:  (r.contact_count as number) ?? 0,
     status:        r.status as AdStatus,
     startedAt:     r.started_at as string,
     expiresAt:     r.expires_at as string,
@@ -230,8 +234,14 @@ export async function getMerchantAds(shopId: string): Promise<SponsoredAd[]> {
   }));
 }
 
-// ─── Enregistrer une vue (fire-and-forget) ────────────────────────────────────
+// ─── Enregistrer une vue (impression, fire-and-forget) ───────────────────────
 
 export function incrementerVue(adId: string): void {
   void supabase.rpc('incrementer_vue_annonce', { p_ad_id: adId });
+}
+
+// ─── Enregistrer un contact (fire-and-forget) ─────────────────────────────────
+
+export function incrementerContact(adId: string): void {
+  void supabase.rpc('incrementer_contact_annonce', { p_ad_id: adId });
 }

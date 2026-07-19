@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { IncomingOrder, OrderStatus } from '../types/orders';
+import { getClientsScores } from './orderRating';
 import { Platform } from 'react-native';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
@@ -40,6 +41,7 @@ function rowToOrder(row: Record<string, any>): IncomingOrder {
     orderId: shortId(row.id),
     initial: (row.client_name ?? 'C').charAt(0).toUpperCase(),
     clientName: row.client_name ?? 'Client',
+    clientId: row.client_id ?? undefined,
     status: row.status as OrderStatus,
     items,
     total: row.total,
@@ -64,7 +66,25 @@ export async function getShopOrders(shopId: string): Promise<IncomingOrder[]> {
     .neq('status', 'pending')
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []).map(rowToOrder);
+
+  const orders = (data ?? []).map(rowToOrder);
+
+  // Batch-fetch des scores de fiabilité pour tous les clients distincts
+  const clientIds = [...new Set(orders.map(o => o.clientId).filter((id): id is string => !!id))];
+  if (clientIds.length > 0) {
+    try {
+      const scores = await getClientsScores(clientIds);
+      const scoreMap = new Map(scores.map(s => [s.client_id, s]));
+      return orders.map(o => {
+        const s = o.clientId ? scoreMap.get(o.clientId) : undefined;
+        return s ? { ...o, clientScore: s.note_moyenne, clientNbNotes: s.nb_avis } : o;
+      });
+    } catch {
+      // Score non critique — on continue sans
+    }
+  }
+
+  return orders;
 }
 
 export async function updateOrderStatus(

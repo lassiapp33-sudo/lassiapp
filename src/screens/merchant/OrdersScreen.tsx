@@ -16,7 +16,7 @@ import OrderCard from '../../components/orders/OrderCard';
 import PrepTimeSheet from '../../components/orders/PrepTimeSheet';
 import RefuseSheet from '../../components/orders/RefuseSheet';
 import VerifyReceiptSheet from './VerifyReceiptSheet';
-import RatingPromptModal from '../../components/avis/RatingPromptModal';
+import ClientRatingModal from '../../components/avis/ClientRatingModal';
 import { colors, fonts } from '../../theme';
 import { IncomingOrder, MerchantTab, OrderStatus } from '../../types/orders';
 import useOrdersStore from '../../store/ordersStore';
@@ -290,11 +290,10 @@ export default function OrdersScreen({ onBack, initialTab }: Props) {
         }}
       />
 
-      <RatingPromptModal
+      <ClientRatingModal
         visible={ratingTarget !== null}
         orderId={ratingTarget?.id ?? ''}
-        direction="merchant_to_client"
-        targetName={ratingTarget?.clientName ?? ''}
+        clientName={ratingTarget?.clientName ?? ''}
         onDismiss={() => setRatingTarget(null)}
       />
     </View>

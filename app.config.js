@@ -1,6 +1,6 @@
 module.exports = {
   expo: {
-    name: "LassiApp",
+    name: "LASSI",
     slug: "LassiApp",
     scheme: "lassiapp",
     version: "1.0.0",

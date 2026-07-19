@@ -53,7 +53,7 @@ export async function deleteAccount(): Promise<void> {
   useShopStore.setState({
     shopId: null,
     profile: { initial: 'M', name: 'Ma Boutique', subtitle: '', isOpen: true },
-    context: { shopType: 'products', openingHours: null, isManuallyClose: false, galleryUrls: [], subcategories: [] },
+    context: { shopType: 'products', openingHours: null, isManuallyClose: false, galleryUrls: [], subcategories: [], category: '' },
     categories: [],
     products: [],
     loading: false,
