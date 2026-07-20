@@ -2,7 +2,7 @@ name: VIP Rankings Weekly Update
 
 on:
   schedule:
-    - cron: '0 0 * * 1'  # Chaque lundi à 00h00 UTC
+    - cron: '2 0 * * 1'  # Chaque lundi à 00h02 UTC (décalé de 2 min vs pg_cron pour éviter le doublon)
   workflow_dispatch:       # Permet aussi de lancer manuellement depuis GitHub
 
 jobs:

@@ -300,22 +300,24 @@ export const setCarrouselSelection = async (
 // ============================================================
 // Helpers période
 // ============================================================
-// - getPeriodeSemaine() : période ACTIVE = semaine précédente. "Ma
-//   catégorie" est calculé chaque dimanche 23h59 et reste figé toute la
-//   semaine suivante (20260611130000_cron_classements.sql).
-// - getPeriodeMois() : période EN COURS = mois en cours. Mondial / Quartier
-//   / Top clients sont un APERÇU LIVE du mois en cours, recalculé chaque
-//   dimanche à partir des points cumulés depuis le 1er
-//   (20260612140000_classement_mensuel_progressif.sql). Le calcul final
-//   (récompenses + reset des compteurs) a lieu le 1er du mois suivant.
+// - getPeriodeSemaine() : semaine EN COURS (lundi → dimanche).
+//   Lundi→sam : pas de snapshot → fallback live → points s'accumulent depuis 0.
+//   Dimanche 23h45 : pg_cron écrit le snapshot → score figé.
+//   Lundi suivant : nouvelle semaine → live → repart de 0.
+// - getPeriodeMois() : mois EN COURS. Mondial/Quartier/Top clients sont un
+//   aperçu cumulatif depuis le 1er, recalculé chaque dimanche.
+//   Recalcul final le 1er du mois suivant (00h05) avant attribution récompenses.
 
 /**
- * Semaine ISO 8601 (IYYY-SWW) de la période active — même format que
- * `to_char(now(), 'IYYY') || '-S' || to_char(now(), 'IW')` côté SQL.
+ * Semaine ISO 8601 (IYYY-SWW) de la semaine EN COURS — même format que
+ * `to_char(now(), 'IYYY"-S"IW')` côté SQL.
+ *
+ * Lundi : aucun snapshot pg_cron pour cette semaine → fallback live → 0 pts.
+ * Dimanche 23h45 : pg_cron écrit le snapshot → score figé affiché.
+ * Lundi suivant : nouvelle semaine → live → repart de 0.
  */
 export const getPeriodeSemaine = (): string => {
   const d = new Date();
-  d.setUTCDate(d.getUTCDate() - 7); // la période active est la semaine précédente
 
   // Algorithme ISO 8601 standard : le jeudi de la semaine détermine l'année ISO
   const dayNum = d.getUTCDay() || 7; // dimanche=0 → 7 ; lundi=1 … dimanche=7
@@ -328,12 +330,17 @@ export const getPeriodeSemaine = (): string => {
 };
 
 /**
- * Mois en cours (YYYY-MM) — aperçu live du classement Mondial / Quartier /
- * Top clients, même format que `to_char(now(), 'YYYY-MM')` côté SQL.
+ * Mois en cours (YYYY-MM UTC) — aperçu live du classement Mondial / Quartier /
+ * Top clients, même format que `to_char(now() at time zone 'UTC', 'YYYY-MM')` SQL.
  */
 export const getPeriodeMois = (): string => {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+};
+
+/** Vide le cache en mémoire (à appeler quand on sait que les données ont changé). */
+export const clearClassementCache = (): void => {
+  cache.clear();
 };
 
 const MOIS_FR = [

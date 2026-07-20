@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
@@ -18,8 +18,10 @@ import {
   getClassementLiveClients,
   getPeriodeSemaine,
   getPeriodeMois,
+  clearClassementCache,
   ClassementEntry,
 } from '../../services/classementService';
+import { supabase } from '../../lib/supabase';
 import useAuthStore from '../../store/authStore';
 import useShopStore from '../../store/shopStore';
 import { getErrorMessage, notifyError } from '../../utils/errorUtils';
@@ -47,6 +49,7 @@ export default function ClassementScreen({ variant, onBack }: Props) {
   );
   const [entries, setEntries] = useState<ClassementEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadRef = useRef<() => void>(() => {});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -76,9 +79,26 @@ export default function ClassementScreen({ variant, onBack }: Props) {
     }
   }, [onglet, classeKey]);
 
+  // Garde une référence stable vers load() pour le channel Realtime
+  useEffect(() => { loadRef.current = load; }, [load]);
+
+  // Vide le cache et recharge à chaque ouverture de l'écran
   useEffect(() => {
+    clearClassementCache();
     load();
   }, [load]);
+
+  // Realtime : recharge automatiquement quand pg_cron écrit un nouveau snapshot
+  useEffect(() => {
+    const channel = supabase
+      .channel('classements-snapshot')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'classements' }, () => {
+        clearClassementCache();
+        loadRef.current();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []); // une seule souscription par montage
 
   const top3 = entries.slice(0, 3);
   const reste = entries.slice(3);
