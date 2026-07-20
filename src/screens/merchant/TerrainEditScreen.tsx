@@ -15,9 +15,8 @@ import { getErrorMessage } from '../../utils/errorUtils';
 
 const IcoImage = ({ stroke }: { stroke: string }) => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke={stroke} />
-    <Path d="M17 8l-5-5-5 5" stroke={stroke} />
-    <Line x1="12" y1="3" x2="12" y2="15" stroke={stroke} />
+    <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke={stroke} />
+    <Path d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke={stroke} />
   </Svg>
 );
 

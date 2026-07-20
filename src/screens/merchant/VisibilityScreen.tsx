@@ -173,12 +173,22 @@ function PendingPaymentBanner({
 
 // ─── Bandeau "forfait activé avec le crédit LASSI" ────────────────────────────
 
+const IcoActivated = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke={colors.accent} />
+    <Path d="m9 11 3 3L22 4" stroke={colors.accent} />
+  </Svg>
+);
+
 function BoostActivatedBanner({ expiresAt }: { expiresAt: string }) {
   return (
     <View style={styles.activatedBanner}>
-      <Text style={styles.activatedTxt}>
-        ✅ Forfait activé jusqu'au {formatDateLong(expiresAt)} !
-      </Text>
+      <View style={styles.activatedRow}>
+        <IcoActivated />
+        <Text style={styles.activatedTxt}>
+          Forfait activé jusqu'au {formatDateLong(expiresAt)} !
+        </Text>
+      </View>
     </View>
   );
 }
@@ -585,11 +595,24 @@ export default function VisibilityScreen({ onBack }: Props) {
               </View>
             )}
 
+            {/* Mode de paiement dans le scroll uniquement pour "Offre du quartier" */}
+            {offerType === 'quartier' && !isPending && !isVerifying && (
+              <PayFooter
+                plan={withDynamicPrice(selectedPlan)}
+                payMethod={payMethod}
+                onMethodChange={setPayMethod}
+                onPay={handlePay}
+                loading={isPayLoading || creditPayLoading}
+                keysAvailable={keysAvailable ?? undefined}
+                creditBalance={creditBalance}
+              />
+            )}
+
             <View style={{ height: 14 }} />
           </ScrollView>
 
-          {/* Footer : OM / Wave / Crédit LASSI */}
-          {!isPending && !isVerifying && (
+          {/* Footer fixe : OM / Wave / Crédit LASSI — pour "Booster ma position" uniquement */}
+          {offerType !== 'quartier' && !isPending && !isVerifying && (
             <PayFooter
               plan={withDynamicPrice(selectedPlan)}
               payMethod={payMethod}
@@ -781,6 +804,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.accent,
     padding: 16,
+  },
+  activatedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   activatedTxt: {
     color: colors.accent,

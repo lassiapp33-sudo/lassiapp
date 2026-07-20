@@ -12,9 +12,16 @@ import {
 } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import BlocStoryCard, { STORY_W, STORY_H_BASE } from './BlocStoryCard';
 import type { BlocALaUne } from '../../types/aLaUne';
+
+const IcoShareUp = () => (
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13" stroke={colors.bg} />
+  </Svg>
+);
 
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
@@ -125,7 +132,10 @@ export default function StoryShareModal({
               {capturing ? (
                 <ActivityIndicator color={colors.bg} size="small" />
               ) : (
-                <Text style={styles.shareTxt}>📤 Partager l'image</Text>
+                <View style={styles.shareBtnContent}>
+                <IcoShareUp />
+                <Text style={styles.shareTxt}>Partager l'image</Text>
+              </View>
               )}
             </TouchableOpacity>
 
@@ -213,6 +223,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingVertical: 15,
     alignItems: 'center',
+  },
+  shareBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   shareTxt: {
     color: colors.bg,

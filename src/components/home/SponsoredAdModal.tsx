@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,8 @@ import Avatar from '../Avatar';
 import { SponsoredAd, incrementerVue, incrementerContact } from '../../services/sponsoredAds';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
-const IMG_H = Math.round(SCREEN_W * 0.52);
+// Largeur interne de la carte : overlay padding 20×2, border 1.5×2
+const CARD_IMG_W = Math.min(SCREEN_W - 40, 380) - 3;
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -55,12 +56,26 @@ interface Props {
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 export default function SponsoredAdModal({ ad, onDismiss, onContact, onViewShop }: Props) {
-  // Impression : comptabilisée dès que la modale s'affiche
+  const [imgRatio, setImgRatio] = useState<number | null>(null);
+
   useEffect(() => {
     incrementerVue(ad.id);
   }, [ad.id]);
 
+  // Image.getSize en premier (avant render), onLoad en backup
+  useEffect(() => {
+    if (ad.imageUrl) {
+      Image.getSize(
+        ad.imageUrl,
+        (w, h) => { if (w > 0 && h > 0) setImgRatio(w / h); },
+        () => {}, // onLoad prendra le relais
+      );
+    }
+  }, [ad.imageUrl]);
+
   const hasText = !!(ad.titre || ad.corps);
+  // Hauteur calculée selon le ratio réel — par défaut carré jusqu'au chargement
+  const imgHeight = imgRatio != null ? Math.round(CARD_IMG_W / imgRatio) : CARD_IMG_W;
 
   return (
     <Modal visible animationType="fade" transparent onRequestClose={onDismiss}>
@@ -68,7 +83,12 @@ export default function SponsoredAdModal({ ad, onDismiss, onContact, onViewShop 
         <View style={s.card}>
 
           {/* Bouton X fermer */}
-          <TouchableOpacity style={s.closeBtn} onPress={onDismiss} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <TouchableOpacity
+            style={s.closeBtn}
+            onPress={onDismiss}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <IcoClose />
           </TouchableOpacity>
 
@@ -90,32 +110,33 @@ export default function SponsoredAdModal({ ad, onDismiss, onContact, onViewShop 
               <Avatar
                 imageUrl={ad.shopLogoUrl}
                 name={ad.shopName ?? ''}
-                size={44}
+                size={36}
                 variant="shop"
               />
               <Text style={s.shopName} numberOfLines={1}>{ad.shopName}</Text>
             </View>
 
-            {/* Image grande */}
+            {/* Image — hauteur exacte selon dimensions réelles, aucun crop */}
             {ad.imageUrl ? (
               <Image
                 source={{ uri: ad.imageUrl }}
-                style={[s.image, { height: IMG_H }]}
+                style={{ width: '100%', height: imgHeight }}
                 resizeMode="cover"
+                onLoad={e => {
+                  const { width, height } = e.nativeEvent.source;
+                  if (width > 0 && height > 0) setImgRatio(width / height);
+                }}
               />
             ) : null}
 
-            {/* Texte */}
+            {/* Texte (annonce classique) */}
             {hasText ? (
               <View style={[s.textBody, !ad.imageUrl && s.textBodyNoImage]}>
-                {ad.titre ? (
-                  <Text style={s.titre}>{ad.titre}</Text>
-                ) : null}
-                {ad.corps ? (
-                  <Text style={s.corps}>{ad.corps}</Text>
-                ) : null}
+                {ad.titre ? <Text style={s.titre}>{ad.titre}</Text> : null}
+                {ad.corps ? <Text style={s.corps}>{ad.corps}</Text> : null}
               </View>
             ) : null}
+
           </ScrollView>
 
           {/* Boutons fixes en bas */}
@@ -149,7 +170,7 @@ const s = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 380,
-    maxHeight: SCREEN_H * 0.82,
+    maxHeight: SCREEN_H * 0.88,
     backgroundColor: colors.surface,
     borderWidth: 1.5,
     borderColor: colors.accent + '55',
@@ -160,12 +181,12 @@ const s = StyleSheet.create({
   // Bouton fermer
   closeBtn: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 10,
+    right: 10,
     zIndex: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: colors.bg + 'CC',
     alignItems: 'center',
     justifyContent: 'center',
@@ -178,8 +199,8 @@ const s = StyleSheet.create({
   // Badge
   badgeRow: {
     alignItems: 'center',
-    paddingTop: 22,
-    paddingBottom: 6,
+    paddingTop: 8,
+    paddingBottom: 2,
   },
   badge: {
     flexDirection: 'row',
@@ -189,8 +210,8 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.accent + '55',
     borderRadius: radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 3,
   },
   badgeTxt: {
     color: colors.accent,
@@ -204,27 +225,22 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 8,
     paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 16,
+    paddingTop: 5,
+    paddingBottom: 7,
   },
   shopName: {
     color: colors.white,
     fontFamily: fonts.title,
-    fontSize: 16,
+    fontSize: 13,
     flexShrink: 1,
-  },
-
-  // Image
-  image: {
-    width: '100%',
   },
 
   // Texte
   textBody: {
     paddingHorizontal: 22,
-    paddingTop: 18,
+    paddingTop: 12,
     paddingBottom: 8,
     alignItems: 'center',
   },
@@ -251,7 +267,7 @@ const s = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: 10,
-    padding: 14,
+    padding: 8,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
@@ -261,7 +277,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    height: 48,
+    height: 40,
     borderRadius: radius.md,
     backgroundColor: colors.accent,
   },
@@ -276,7 +292,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    height: 48,
+    height: 40,
     borderRadius: radius.md,
     borderWidth: 1.5,
     borderColor: colors.accent,

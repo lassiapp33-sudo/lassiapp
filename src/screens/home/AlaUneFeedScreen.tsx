@@ -58,7 +58,7 @@ function BlocMiniCard({ bloc, onPress }: BlocMiniCardProps) {
     <TouchableOpacity style={styles.miniCard} onPress={onPress} activeOpacity={0.82}>
       {/* Image si disponible */}
       {bloc.image_url ? (
-        <Image source={{ uri: bloc.image_url }} style={styles.miniCardImg} resizeMode="cover" />
+        <Image source={{ uri: bloc.image_url }} style={styles.miniCardImg} resizeMode="contain" />
       ) : (
         <View style={styles.miniCardImgPlaceholder}>
           <IcoFlame />
@@ -422,6 +422,7 @@ const styles = StyleSheet.create({
   miniCardImg: {
     width: MINI_CARD_W,
     height: 110,
+    backgroundColor: colors.surface,
   },
   miniCardImgPlaceholder: {
     width: MINI_CARD_W,

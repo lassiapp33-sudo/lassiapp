@@ -45,7 +45,7 @@ export default function CheckoutPayment({ orderId, prestataireId, prixBase, onSu
       if (result.mode === 'simulation') {
         const verification = await verifierPaiement(result.paymentIntentId!);
         if (verification.confirmed) {
-          Alert.alert('✅ Paiement simulé', 'Commande validée (mode démo)', [
+          Alert.alert('Paiement simulé', 'Commande validée (mode démo)', [
             { text: 'OK', onPress: onSuccess },
           ]);
         }

@@ -54,9 +54,8 @@ const IcoCamera = ({ stroke }: { stroke: string }) => (
 
 const IcoGallery = ({ stroke }: { stroke: string }) => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-    <Rect x={3} y={3} width={18} height={18} rx={2} stroke={stroke} />
-    <Circle cx={8.5} cy={8.5} r={1.5} stroke={stroke} />
-    <Path d="M21 15l-5-5L5 21" stroke={stroke} />
+    <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke={stroke} />
+    <Path d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke={stroke} />
   </Svg>
 );
 
@@ -66,6 +65,24 @@ const IcoTrash = ({ stroke }: { stroke: string }) => (
   </Svg>
 );
 
+const IcoClock = () => (
+  <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Circle cx={12} cy={12} r={10} stroke={colors.accent} />
+    <Path d="M12 6v6l4 2" stroke={colors.accent} />
+  </Svg>
+);
+
+const IcoShareUp = () => (
+  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13" stroke={colors.white} />
+  </Svg>
+);
+
+const IcoSparkle = () => (
+  <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" stroke={colors.accent} />
+  </Svg>
+);
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
 
@@ -123,7 +140,8 @@ function BlocActifCard({ bloc, shopName, shopLogoUrl, shopPhone, isShopOpen }: B
             {bloc.description ? <Text style={styles.blocDesc}>{bloc.description}</Text> : null}
           </View>
           <View style={styles.countdownChip}>
-            <Text style={styles.countdownTxt}>⏳ {countdown}</Text>
+            <IcoClock />
+            <Text style={styles.countdownTxt}>{countdown}</Text>
           </View>
         </View>
         <View style={styles.elList}>
@@ -136,10 +154,12 @@ function BlocActifCard({ bloc, shopName, shopLogoUrl, shopPhone, isShopOpen }: B
           style={styles.shareBlocBtn}
           activeOpacity={0.8}
         >
-          <Text style={styles.shareBlocTxt}>📤 Partager le bloc complet</Text>
+          <IcoShareUp />
+          <Text style={styles.shareBlocTxt}>Partager le bloc complet</Text>
         </TouchableOpacity>
         <View style={styles.lassiTag}>
-          <Text style={styles.lassiTagTxt}>✨ Message généré par LASSİ · non modifiable</Text>
+          <IcoSparkle />
+          <Text style={styles.lassiTagTxt}>Message généré par LASSİ · non modifiable</Text>
         </View>
       </View>
 
@@ -238,7 +258,7 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
+      allowsEditing: false,
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
@@ -253,7 +273,7 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
+      allowsEditing: false,
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
@@ -334,7 +354,7 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
                 <Text style={styles.fieldLabel}>Image *</Text>
                 {imageUri ? (
                   <View style={styles.imagePreviewBox}>
-                    <Image source={{ uri: imageUri }} style={styles.imagePreviewLarge} resizeMode="cover" />
+                    <Image source={{ uri: imageUri }} style={styles.imagePreviewLarge} resizeMode="contain" />
                     <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => setImageUri(null)}>
                       <Text style={styles.imageRemoveTxt}>✕</Text>
                     </TouchableOpacity>
@@ -381,7 +401,7 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
                 <Text style={styles.fieldLabel}>Image (optionnel)</Text>
                 {imageUri ? (
                   <View style={styles.imagePreviewBox}>
-                    <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="cover" />
+                    <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="contain" />
                     <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => setImageUri(null)}>
                       <Text style={styles.imageRemoveTxt}>✕</Text>
                     </TouchableOpacity>
@@ -616,7 +636,9 @@ export default function AlaUneScreen({ onBack }: Props) {
 
           {actifs.length === 0 && (
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyIcon}>🌟</Text>
+              <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}>
+                <Path d="M12 17.8 5.8 21 7 14.1 2 9.3l7-1L12 2l3 6.3 7 1-5 4.8 1.2 6.9z" stroke={colors.accent} />
+              </Svg>
               <Text style={styles.emptyTxt}>
                 Aucun bloc actif pour l'instant.{'\n'}Créez votre premier bloc À la une !
               </Text>
@@ -729,6 +751,9 @@ const styles = StyleSheet.create({
   blocTitre: { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
   blocDesc: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 4 },
   countdownChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: colors.accent + '20',
     borderRadius: radius.pill,
     paddingHorizontal: 10,
@@ -748,17 +773,23 @@ const styles = StyleSheet.create({
   elPrix: { color: colors.accent, fontFamily: fonts.ui, fontSize: 12 },
 
   shareBlocBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     marginTop: 12,
     backgroundColor: colors.bg,
     borderRadius: radius.sm,
     paddingVertical: 10,
-    alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
   },
   shareBlocTxt: { color: colors.white, fontFamily: fonts.ui, fontSize: 12.5 },
 
   lassiTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     marginTop: 8,
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -794,7 +825,7 @@ const styles = StyleSheet.create({
   reactiverTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 12 },
 
   emptyBox: { alignItems: 'center', paddingVertical: 36 },
-  emptyIcon: { fontSize: 36, marginBottom: 12 },
+  emptyIcon: {},
   emptyTxt: {
     color: colors.muted,
     fontFamily: fonts.body,
@@ -881,8 +912,9 @@ const styles = StyleSheet.create({
   },
   imagePreview: {
     width: '100%',
-    height: 160,
+    height: 280,
     borderRadius: radius.sm,
+    backgroundColor: colors.surface,
   },
   imageRemoveBtn: {
     position: 'absolute',
@@ -965,8 +997,9 @@ const styles = StyleSheet.create({
   },
   imagePreviewLarge: {
     width: '100%',
-    height: 220,
+    height: 380,
     borderRadius: radius.sm,
+    backgroundColor: colors.surface,
   },
 
   submitBtn: {

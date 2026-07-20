@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 import type { BlocALaUne } from '../../types/aLaUne';
@@ -41,6 +41,7 @@ interface Props {
 
 const BlocStoryCard = React.forwardRef<View, Props>(
   ({ bloc, shopName, shopLogoUrl, shopPhone, isShopOpen, countdown, productImageUri }, ref) => {
+    const [imgHeight, setImgHeight] = useState(Math.round(STORY_W * (4 / 5)));
     const shownEls = bloc.elements.slice(0, 5);
     const extraCount = bloc.elements.length - shownEls.length;
     const initial = shopName.trim().charAt(0).toUpperCase();
@@ -94,12 +95,14 @@ const BlocStoryCard = React.forwardRef<View, Props>(
         <View style={styles.divider} />
 
         {/* ── Titre + description ── */}
-        <View style={styles.titleBlock}>
-          <Text style={styles.titre} numberOfLines={3}>{bloc.titre}</Text>
-          {bloc.description ? (
-            <Text style={styles.desc} numberOfLines={2}>{bloc.description}</Text>
-          ) : null}
-        </View>
+        {bloc.titre !== 'Affiche' && (
+          <View style={styles.titleBlock}>
+            <Text style={styles.titre} numberOfLines={3}>{bloc.titre}</Text>
+            {bloc.description ? (
+              <Text style={styles.desc} numberOfLines={2}>{bloc.description}</Text>
+            ) : null}
+          </View>
+        )}
 
         {/* ── Éléments ── */}
         <View style={styles.elementsList}>
@@ -131,8 +134,12 @@ const BlocStoryCard = React.forwardRef<View, Props>(
         {productImageUri ? (
           <Image
             source={{ uri: productImageUri }}
-            style={styles.productImage}
+            style={[styles.productImage, { height: imgHeight }]}
             resizeMode="cover"
+            onLoad={(e) => {
+              const { width, height } = e.nativeEvent.source;
+              if (width > 0) setImgHeight(Math.round(STORY_W * height / width));
+            }}
           />
         ) : null}
 
@@ -335,10 +342,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  // Photo produit
+  // Photo produit (hauteur calculée dynamiquement via onLoad)
   productImage: {
     width: STORY_W,
-    height: Math.round(STORY_W * (4 / 5)),
     marginHorizontal: 0,
     borderRadius: 0,
     marginBottom: 0,

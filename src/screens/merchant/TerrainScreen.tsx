@@ -126,7 +126,10 @@ export default function TerrainScreen({ onBack, onAddTerrain, onEditTerrain, onT
         >
           {terrains.length === 0 ? (
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyEmoji}>🏟️</Text>
+              <Svg width={44} height={44} viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" stroke={colors.accent} />
+                <Path d="M4 22v-7" stroke={colors.accent} />
+              </Svg>
               <Text style={styles.emptyTitle}>Aucun terrain</Text>
               <Text style={styles.emptySub}>
                 Ajoute ton premier terrain pour commencer à recevoir des réservations.
@@ -204,7 +207,7 @@ const styles = StyleSheet.create({
   actionTxtAccent: { color: colors.accent },
 
   emptyBox: { alignItems: 'center', paddingVertical: 60, gap: 10 },
-  emptyEmoji: { fontSize: 44 },
+  emptyIco: { marginBottom: 6 },
   emptyTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 17 },
   emptySub: {
     color: colors.muted, fontFamily: fonts.body,

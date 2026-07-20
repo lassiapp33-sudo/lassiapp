@@ -38,9 +38,9 @@ const IcoPhoto = () => (
   >
     <Path
       d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"
-      stroke={colors.muted}
+      stroke={colors.accent}
     />
-    <Path d="M12 17a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke={colors.muted} />
+    <Path d="M12 17a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke={colors.accent} />
   </Svg>
 );
 

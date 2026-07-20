@@ -1,19 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   Image,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import Avatar from '../Avatar';
 import { SponsoredAd, incrementerVue } from '../../services/sponsoredAds';
-
-const { width: SCREEN_W } = Dimensions.get('window');
-const IMG_H = Math.round((SCREEN_W - 40) * 0.78);
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -44,6 +40,9 @@ interface Props {
 }
 
 export default function SponsoredAdCard({ ad, onContact, onViewShop }: Props) {
+  // null = pas encore chargé (affiche un placeholder), nombre = ratio w/h réel
+  const [imgRatio, setImgRatio] = useState<number | null>(null);
+
   useEffect(() => {
     incrementerVue(ad.id);
   }, [ad.id]);
@@ -52,6 +51,7 @@ export default function SponsoredAdCard({ ad, onContact, onViewShop }: Props) {
 
   return (
     <View style={s.card}>
+
       {/* Badge Sponsorisé */}
       <View style={s.badgeRow}>
         <View style={s.badge}>
@@ -60,35 +60,38 @@ export default function SponsoredAdCard({ ad, onContact, onViewShop }: Props) {
         </View>
       </View>
 
-      {/* En-tête boutique centré */}
+      {/* En-tête boutique */}
       <View style={s.shopRow}>
         <Avatar
           imageUrl={ad.shopLogoUrl}
           name={ad.shopName ?? ''}
-          size={46}
+          size={36}
           variant="shop"
         />
         <Text style={s.shopName} numberOfLines={1}>{ad.shopName}</Text>
       </View>
 
-      {/* Image grande */}
+      {/* Image pleine largeur — hauteur exacte selon ratio réel, aucun crop */}
       {ad.imageUrl ? (
         <Image
           source={{ uri: ad.imageUrl }}
-          style={[s.image, { height: IMG_H }]}
-          resizeMode="cover"
+          style={imgRatio
+            ? { width: '100%', aspectRatio: imgRatio }
+            : s.imgPlaceholder
+          }
+          resizeMode={imgRatio ? 'cover' : 'contain'}
+          onLoad={e => {
+            const { width, height } = e.nativeEvent.source;
+            if (width > 0 && height > 0) setImgRatio(width / height);
+          }}
         />
       ) : null}
 
-      {/* Texte */}
+      {/* Texte (annonce classique) */}
       {hasText ? (
         <View style={[s.textBody, !ad.imageUrl && s.textBodyNoImage]}>
-          {ad.titre ? (
-            <Text style={s.titre}>{ad.titre}</Text>
-          ) : null}
-          {ad.corps ? (
-            <Text style={s.corps}>{ad.corps}</Text>
-          ) : null}
+          {ad.titre ? <Text style={s.titre}>{ad.titre}</Text> : null}
+          {ad.corps ? <Text style={s.corps}>{ad.corps}</Text> : null}
         </View>
       ) : null}
 
@@ -106,6 +109,7 @@ export default function SponsoredAdCard({ ad, onContact, onViewShop }: Props) {
           <Text style={s.btnSecondaryTxt}>Voir la vitrine</Text>
         </TouchableOpacity>
       </View>
+
     </View>
   );
 }
@@ -126,8 +130,8 @@ const s = StyleSheet.create({
   // Badge
   badgeRow: {
     alignItems: 'center',
-    paddingTop: 18,
-    paddingBottom: 4,
+    paddingTop: 6,
+    paddingBottom: 1,
   },
   badge: {
     flexDirection: 'row',
@@ -137,8 +141,8 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.accent + '55',
     borderRadius: radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 3,
   },
   badgeTxt: {
     color: colors.accent,
@@ -152,28 +156,30 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 8,
     paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 16,
+    paddingTop: 4,
+    paddingBottom: 6,
   },
   shopName: {
     color: colors.white,
     fontFamily: fonts.title,
-    fontSize: 15.5,
+    fontSize: 13,
     flexShrink: 1,
   },
 
-  // Image
-  image: {
+  // Image — placeholder carré jusqu'au chargement
+  imgPlaceholder: {
     width: '100%',
+    aspectRatio: 1,
+    backgroundColor: colors.bg,
   },
 
   // Texte
   textBody: {
     paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 6,
+    paddingTop: 10,
+    paddingBottom: 4,
     alignItems: 'center',
   },
   textBodyNoImage: {
@@ -200,14 +206,14 @@ const s = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 4,
   },
 
   // Boutons
   actions: {
     flexDirection: 'row',
     gap: 10,
-    padding: 14,
+    padding: 8,
   },
   btnPrimary: {
     flex: 1,
@@ -215,7 +221,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    height: 48,
+    height: 40,
     borderRadius: radius.md,
     backgroundColor: colors.accent,
   },
@@ -230,7 +236,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    height: 48,
+    height: 40,
     borderRadius: radius.md,
     borderWidth: 1.5,
     borderColor: colors.accent,

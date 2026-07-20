@@ -273,7 +273,7 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
       setContent({ titre: '', corps: '', imageUri: null, imageUrl: null });
       onCreated?.(result.newBalance);
       Alert.alert(
-        '🚀 Campagne lancée !',
+        'Campagne lancée !',
         `Ton annonce est en ligne.\nNouveau solde : ${result.newBalance} crédits.`,
       );
     } catch (e) {
@@ -339,7 +339,7 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
       if (result.paid) {
         setPendingPay(null);
         await loadAds();
-        Alert.alert('🚀 Campagne lancée !', 'Paiement confirmé. Ton annonce est en ligne.');
+        Alert.alert('Campagne lancée !', 'Paiement confirmé. Ton annonce est en ligne.');
       } else {
         Alert.alert('Non confirmé', 'On n\'a pas encore reçu ton paiement. Réessaie dans quelques secondes.');
       }

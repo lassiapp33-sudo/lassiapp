@@ -312,7 +312,10 @@ export default function OffreQuartierScreen({ onBack }: Props) {
         </View>
       ) : !hasContent ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>👑</Text>
+          <Svg width={44} height={44} viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M2 20h20" stroke={colors.accent} />
+            <Path d="m3 9 4 2 5-7 5 7 4-2-2 11H5L3 9z" stroke={colors.accent} />
+          </Svg>
           <Text style={styles.emptyTitle}>Pas encore débloqué</Text>
           <Text style={styles.emptyTxt}>
             Termine dans le Top 5 du classement national pour débloquer un emplacement dans le
@@ -461,7 +464,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     gap: 10,
   },
-  emptyEmoji: { fontSize: 40 },
+  emptyIco: { marginBottom: 6 },
   emptyTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 17 },
   emptyTxt: {
     color: colors.muted,

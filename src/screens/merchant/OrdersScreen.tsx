@@ -8,7 +8,7 @@ import {
   Vibration,
   RefreshControl,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Circle } from 'react-native-svg';
 
 import OrdersHeader from '../../components/orders/OrdersHeader';
 import StatusTabs from '../../components/orders/StatusTabs';
@@ -25,41 +25,60 @@ import { useRealtimeOrders } from '../../hooks/useRealtimeOrders';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { notifyError } from '../../utils/errorUtils';
 
+// ─── Icônes état vide ─────────────────────────────────────────────────────────
+
+const S = 44;
+const IC = { width: S, height: S, viewBox: '0 0 24 24', fill: 'none', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+
+const IcoAll = () => (
+  <Svg {...IC}>
+    <Path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" stroke={colors.accent} />
+    <Path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2H9z" stroke={colors.accent} />
+    <Path d="M9 12h6M9 16h4" stroke={colors.accent} />
+  </Svg>
+);
+
+const IcoNew = () => (
+  <Svg {...IC}>
+    <Circle cx={12} cy={12} r={10} stroke={colors.accent} />
+    <Path d="m9 12 2 2 4-4" stroke={colors.accent} />
+  </Svg>
+);
+
+const IcoPreparing = () => (
+  <Svg {...IC}>
+    <Path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" stroke={colors.accent} />
+  </Svg>
+);
+
+const IcoDone = () => (
+  <Svg {...IC}>
+    <Path d="M12 17.8 5.8 21 7 14.1 2 9.3l7-1L12 2l3 6.3 7 1-5 4.8 1.2 6.9z" stroke={colors.accent} />
+  </Svg>
+);
+
+const IcoRefused = () => (
+  <Svg {...IC}>
+    <Circle cx={12} cy={12} r={10} stroke={colors.accent} />
+    <Path d="m15 9-6 6M9 9l6 6" stroke={colors.accent} />
+  </Svg>
+);
+
 // ─── État vide par onglet ──────────────────────────────────────────────────────
 
-const EMPTY: Record<MerchantTab, { emoji: string; text: string; sub: string }> = {
-  all: {
-    emoji: '📋',
-    text: 'Aucune commande pour le moment.',
-    sub: 'Votre vitrine est en ligne, attendez vos premiers clients !',
-  },
-  new: {
-    emoji: '✅',
-    text: 'Aucune nouvelle commande.',
-    sub: 'Les nouvelles commandes apparaîtront ici en temps réel.',
-  },
-  preparing: {
-    emoji: '🚀',
-    text: 'Aucune commande en cours.',
-    sub: 'Confirmez une nouvelle commande pour la démarrer.',
-  },
-  done: {
-    emoji: '🎉',
-    text: 'Aucune commande terminée.',
-    sub: 'Vos commandes terminées apparaîtront ici.',
-  },
-  refused: {
-    emoji: '📭',
-    text: 'Aucune commande annulée.',
-    sub: 'Les commandes refusées ou annulées apparaîtront ici.',
-  },
+const EMPTY: Record<MerchantTab, { icon: React.ReactElement; text: string; sub: string }> = {
+  all:       { icon: <IcoAll />,      text: 'Aucune commande pour le moment.',  sub: 'Votre vitrine est en ligne, attendez vos premiers clients !' },
+  new:       { icon: <IcoNew />,      text: 'Aucune nouvelle commande.',        sub: 'Les nouvelles commandes apparaîtront ici en temps réel.' },
+  preparing: { icon: <IcoPreparing />, text: 'Aucune commande en cours.',       sub: 'Confirmez une nouvelle commande pour la démarrer.' },
+  done:      { icon: <IcoDone />,     text: 'Aucune commande terminée.',        sub: 'Vos commandes terminées apparaîtront ici.' },
+  refused:   { icon: <IcoRefused />,  text: 'Aucune commande annulée.',         sub: 'Les commandes refusées ou annulées apparaîtront ici.' },
 };
 
 function EmptyState({ tab }: { tab: MerchantTab }) {
   const m = EMPTY[tab];
   return (
     <View style={styles.empty}>
-      <Text style={styles.emptyEmoji}>{m.emoji}</Text>
+      <View style={styles.emptyIco}>{m.icon}</View>
       <Text style={styles.emptyTxt}>{m.text}</Text>
       <Text style={styles.emptySub}>{m.sub}</Text>
     </View>
@@ -329,7 +348,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 32,
   },
-  emptyEmoji: { fontSize: 40 },
+  emptyIco: { marginBottom: 6 },
   emptyTxt: {
     color: colors.white,
     fontFamily: fonts.title,

@@ -181,6 +181,7 @@ export default function BlocAlaUneScreen({ blocCode, elementIndex, onBack, onSho
   const [bloc, setBloc] = useState<BlocALaUne | null>(null);
   const [shop, setShop] = useState<ShopInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [heroH, setHeroH] = useState(Math.round(SCREEN_W * (9 / 16)));
   const [checkoutTarget, setCheckoutTarget] = useState<ElementALaUne | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const countdown = useCountdown(bloc?.expire_at ?? new Date(Date.now() + 3600000).toISOString());
@@ -357,8 +358,12 @@ export default function BlocAlaUneScreen({ blocCode, elementIndex, onBack, onSho
             {bloc.image_url ? (
               <Image
                 source={{ uri: bloc.image_url }}
-                style={styles.heroImage}
+                style={[styles.heroImage, { height: heroH }]}
                 resizeMode="cover"
+                onLoad={(e) => {
+                  const { width, height } = e.nativeEvent.source;
+                  if (width > 0) setHeroH(Math.round(SCREEN_W * height / width));
+                }}
               />
             ) : null}
             {bloc.description ? (
@@ -433,7 +438,6 @@ const styles = StyleSheet.create({
 
   heroImage: {
     width: SCREEN_W,
-    height: Math.round(SCREEN_W * (9 / 16)),
     marginBottom: 14,
     backgroundColor: colors.surface,
   },

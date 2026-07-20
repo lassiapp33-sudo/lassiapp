@@ -266,7 +266,10 @@ export default function TerrainReservationsScreen({ terrain, onBack }: Props) {
           <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
         ) : reservations.length === 0 ? (
           <View style={styles.emptyBox}>
-            <Text style={styles.emptyEmoji}>📅</Text>
+            <Svg width={44} height={44} viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+              <Rect x={3} y={4} width={18} height={18} rx={2} stroke={colors.accent} />
+              <Path d="M16 2v4M8 2v4M3 10h18" stroke={colors.accent} />
+            </Svg>
             <Text style={styles.emptyTitle}>Aucune réservation</Text>
             <Text style={styles.emptySub}>Pas de réservation pour cette date.</Text>
           </View>
@@ -437,7 +440,7 @@ const styles = StyleSheet.create({
   validerTxt: { color: colors.bg, fontFamily: fonts.title, fontSize: 13 },
 
   emptyBox: { alignItems: 'center', paddingVertical: 48, gap: 10 },
-  emptyEmoji: { fontSize: 40 },
+  emptyIco: { marginBottom: 6 },
   emptyTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 16 },
   emptySub: { color: colors.muted, fontFamily: fonts.body, fontSize: 13, textAlign: 'center' },
 

@@ -273,11 +273,11 @@ export default function MaCampagneScreen({ onBack }: Props) {
 
   useEffect(() => { void load(); }, [load]);
 
-  // Auto-refresh 60s si une campagne est active
+  // Auto-refresh 10s si une campagne est active
   useEffect(() => {
     const hasActive = ads.some(a => a.status === 'active') || !!sub;
     if (hasActive) {
-      intervalRef.current = setInterval(() => { void load(true); }, 60_000);
+      intervalRef.current = setInterval(() => { void load(true); }, 10_000);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
@@ -327,7 +327,10 @@ export default function MaCampagneScreen({ onBack }: Props) {
           <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />
         ) : isEmpty ? (
           <View style={s.emptyWrap}>
-            <Text style={s.emptyEmoji}>📭</Text>
+            <Svg width={48} height={48} viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 16 }}>
+              <Path d="M11 5 6 9H2v6h4l5 4V5z" stroke={colors.accent} />
+              <Path d="m23 9-6 6M17 9l6 6" stroke={colors.accent} />
+            </Svg>
             <Text style={s.emptyTitle}>Aucune campagne</Text>
             <Text style={s.emptyDesc}>
               Tes annonces sponsorisées et forfaits actifs apparaîtront ici.
@@ -548,10 +551,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 72,
     paddingHorizontal: 40,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
   },
   emptyTitle: {
     color: colors.white,

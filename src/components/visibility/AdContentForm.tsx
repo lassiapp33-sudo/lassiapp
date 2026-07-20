@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,19 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Dimensions,
 } from 'react-native';
+
+const FORM_W = Dimensions.get('window').width - 36; // marginHorizontal: 18 × 2
+import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
+
+const IcoCamera = () => (
+  <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" stroke={colors.accent} />
+    <Circle cx={12} cy={13} r={3} stroke={colors.accent} />
+  </Svg>
+);
 import { AdFormat } from '../../services/sponsoredAds';
 import * as storageService from '../../services/storage';
 
@@ -132,10 +143,24 @@ function ImagePicker({
   onRemove: () => void;
   required?: boolean;
 }) {
+  const [imgRatio, setImgRatio] = useState<number>(3 / 4);
+
+  useEffect(() => {
+    if (uri) {
+      Image.getSize(
+        uri,
+        (w, h) => { if (w && h) setImgRatio(w / h); },
+        () => {},
+      );
+    }
+  }, [uri]);
+
+  const previewHeight = Math.round(FORM_W / imgRatio);
+
   if (uri) {
     return (
       <View style={s.imagePreviewWrap}>
-        <Image source={{ uri }} style={s.imagePreview} resizeMode="cover" />
+        <Image source={{ uri }} style={[s.imagePreview, { height: previewHeight }]} resizeMode="cover" />
         {uploading && (
           <View style={s.uploadOverlay}>
             <ActivityIndicator color={colors.accent} />
@@ -153,7 +178,7 @@ function ImagePicker({
 
   return (
     <TouchableOpacity style={s.imagePicker} onPress={onPick} activeOpacity={0.82}>
-      <Text style={s.imagePickerIco}>🖼️</Text>
+      <IcoCamera />
       <Text style={s.imagePickerTxt}>
         {required ? 'Ajouter une image *' : 'Ajouter une image'}
       </Text>
@@ -216,7 +241,6 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
-  imagePickerIco: { fontSize: 28 },
   imagePickerTxt: {
     color: colors.white,
     fontFamily: fonts.title,
@@ -236,7 +260,6 @@ const s = StyleSheet.create({
   },
   imagePreview: {
     width: '100%',
-    height: 180,
     borderRadius: radius.lg,
   },
   uploadOverlay: {

@@ -247,7 +247,7 @@ export async function getMerchantAds(shopId: string): Promise<SponsoredAd[]> {
   }));
 }
 
-// ─── Enregistrer une vue (impression, fire-and-forget) ───────────────────────
+// ─── Enregistrer une vue (fire-and-forget) ───────────────────────────────────
 
 export function incrementerVue(adId: string): void {
   void supabase.rpc('incrementer_vue_annonce', { p_ad_id: adId });
