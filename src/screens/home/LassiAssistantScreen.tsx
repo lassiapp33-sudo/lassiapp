@@ -366,7 +366,8 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
 
   // ── Auto-scroll ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+    const t = setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+    return () => clearTimeout(t);
   }, [messages]);
 
   // ── handleSend — fonction normale (pas useCallback) ────────────────────────

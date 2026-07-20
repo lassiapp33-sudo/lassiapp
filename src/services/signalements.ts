@@ -46,9 +46,8 @@ async function checkRateLimit(userId: string): Promise<void> {
 // ─── Envoi du signalement ────────────────────────────────────────────────────
 
 export async function envoyerSignalement(params: EnvoyerParams): Promise<void> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+  const user = authData?.user ?? null;
   if (!user) throw new Error('Tu dois être connecté pour signaler un problème.');
 
   await checkRateLimit(user.id);

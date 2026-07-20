@@ -28,6 +28,7 @@ import { IcoBack } from '../../components/icons';
 import { ProfileOptionRow, profileRowStyles } from '../../components/common/ProfileOptionRow';
 import { ProfileIdCard } from '../../components/common/ProfileIdCard';
 import { getMonCarrouselQuota } from '../../services/classementService';
+import { getShopById } from '../../services/shops';
 import StatsGrid from '../../components/visibility/StatsGrid';
 import { VisibilityStats, getVisibilityStats, getActiveSub } from '../../services/visibilityPayment';
 
@@ -61,6 +62,21 @@ const IcoTrend = () => (
     strokeLinejoin="round"
   >
     <Path d="M3 17l6-6 4 4 8-8M17 7h4v4" stroke={colors.accent} />
+  </Svg>
+);
+
+const IcoMega = () => (
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path d="M3 11v2M18 8c1.5.8 2.5 2.3 2.5 4s-1 3.2-2.5 4" stroke={colors.accent} />
+    <Path d="M5 11v2h3l6 4V7l-6 4H5z" stroke={colors.accent} />
   </Svg>
 );
 
@@ -286,6 +302,7 @@ interface Props {
   onTerrains?: () => void;
   onVisibility?: () => void;
   onOffreQuartier?: () => void;
+  onMaCampagne?: () => void;
   onRevenue?: () => void;
   onPayments?: () => void;
   onMyOrders?: () => void;
@@ -300,6 +317,7 @@ export default function MerchantProfileScreen({
   onTerrains,
   onVisibility,
   onOffreQuartier,
+  onMaCampagne,
   onRevenue,
   onPayments,
   onMyOrders,
@@ -315,6 +333,7 @@ export default function MerchantProfileScreen({
   const [showLangModal, setShowLangModal] = useState(false);
   const [showAPropos, setShowAPropos] = useState(false);
   const [showSignaler, setShowSignaler] = useState(false);
+  const [merchantRating, setMerchantRating] = useState<{ note: number; count: number } | null>(null);
   const [carrouselEligible, setCarrouselEligible] = useState(false);
   const [hasActiveSub, setHasActiveSub] = useState(false);
   const [stats, setStats] = useState<VisibilityStats | null>(null);
@@ -327,6 +346,15 @@ export default function MerchantProfileScreen({
   const updateLogo = useShopStore(s => s.updateLogo);
   const isVip = useShopStore(s => s.profile.isVip ?? false);
   const shopSubcategories = useShopStore(s => s.context.subcategories);
+
+  useEffect(() => {
+    if (!shopId) return;
+    getShopById(shopId)
+      .then(shop => {
+        if (shop) setMerchantRating({ note: shop.rating, count: shop.reviewsCount });
+      })
+      .catch(() => {});
+  }, [shopId]);
 
   // Terrains (foot/basket) : "Ma vitrine" est remplacée par "Mes terrains"
   const isSlotShop = shopSubcategories.some(
@@ -433,6 +461,8 @@ export default function MerchantProfileScreen({
           onEditAvatar={handleEditAvatar}
           chipLabel={isVip ? t.profile.merchantVip : t.profile.merchant}
           bottomSpacing={14}
+          starRating={merchantRating?.note ?? null}
+          starCount={merchantRating?.count}
         />
 
         <Text style={profileRowStyles.secLbl}>{t.profile.myBusiness}</Text>
@@ -457,6 +487,12 @@ export default function MerchantProfileScreen({
             title={t.profile.myVisibility}
             subtitle={t.profile.myVisibilitySub}
             onPress={onVisibility}
+          />
+          <ProfileOptionRow
+            icon={<IcoMega />}
+            title="Ma Campagne"
+            subtitle="Annonces sponsorisées & forfaits actifs"
+            onPress={onMaCampagne}
           />
           <ProfileOptionRow
             icon={<IcoDollar />}
@@ -487,18 +523,6 @@ export default function MerchantProfileScreen({
             />
           )}
         </View>
-
-        {hasActiveSub && (
-          <>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 8, paddingHorizontal: 20 }}>
-              <Text style={[profileRowStyles.secLbl, { marginTop: 0, marginBottom: 0 }]}>Résultat forfait</Text>
-              <TouchableOpacity onPress={refreshStats} disabled={statsLoading} style={{ opacity: statsLoading ? 0.4 : 1 }}>
-                <Text style={{ color: colors.accent, fontSize: 12, fontFamily: fonts.ui }}>↻ Rafraîchir</Text>
-              </TouchableOpacity>
-            </View>
-            <StatsGrid stats={stats} loading={statsLoading} />
-          </>
-        )}
 
         <Text style={profileRowStyles.secLbl}>{t.profile.preferences}</Text>
         <View style={profileRowStyles.grp}>

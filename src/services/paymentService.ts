@@ -39,7 +39,8 @@ export const initierPaiement = async (params: {
 
   const idempotencyKey = `${params.orderId}-${params.moyenPaiement}-${new Date().toISOString().slice(0, 10)}`;
 
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: sessData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+  const session = sessData?.session ?? null;
   if (!session) return { success: false, error: 'Non connecté' };
 
   let data, error;
@@ -88,7 +89,8 @@ export const verifierPaiement = async (paymentIntentId: string): Promise<{
   statut: string;
   mode: string;
 }> => {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: sessData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+  const session = sessData?.session ?? null;
   if (!session) return { confirmed: false, statut: 'error', mode: 'unknown' };
 
   let data, error;

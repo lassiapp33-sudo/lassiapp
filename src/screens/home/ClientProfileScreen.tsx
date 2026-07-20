@@ -309,9 +309,7 @@ export default function ClientProfileScreen({
   useEffect(() => {
     getMesStatsClient()
       .then(stats => {
-        if (stats.nb_avis > 0) {
-          setClientRating({ note: stats.note_moyenne, count: stats.nb_avis });
-        }
+        setClientRating({ note: stats.note_moyenne, count: stats.nb_avis });
       })
       .catch(() => {});
   }, []);

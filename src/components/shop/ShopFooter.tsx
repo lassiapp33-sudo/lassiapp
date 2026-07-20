@@ -35,7 +35,7 @@ const IcoCard = () => (
   </Svg>
 );
 
-const BOTTOM_EXTRA = Platform.OS === 'ios' ? 20 : 0;
+const BOTTOM_EXTRA = Platform.OS === 'ios' ? 34 : 0;
 export const FOOTER_HEIGHT = 88 + BOTTOM_EXTRA;
 
 // Labels du bouton principal selon le type de vitrine
@@ -92,10 +92,6 @@ export default function ShopFooter({
 
 const styles = StyleSheet.create({
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     height: FOOTER_HEIGHT,
     backgroundColor: 'rgba(20, 21, 42, 0.97)',
     borderTopWidth: 1,

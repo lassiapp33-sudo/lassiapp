@@ -3,8 +3,6 @@ import { View, Image, StyleSheet, Animated, Easing } from 'react-native';
 import { colors, fonts } from '../theme';
 
 const SIZE = 240;
-const NEEDLE_LEN = Math.round(SIZE * 0.40);
-const NEEDLE_W   = 8;
 
 interface Props {
   onFinish: () => void;
@@ -62,9 +60,13 @@ export default function SplashScreen({ onFinish }: Props) {
           source={require('../../assets/icon/lassi-radar-base.png')}
           style={styles.layer}
         />
-        {/* Aiguille dessinée en View — évite tout bug PNG/Animated.Image sur Android */}
+        {/* Aiguille PNG dans Animated.View — évite Animated.Image qui bug sur Android */}
         <Animated.View style={[styles.layer, { transform: [{ rotate }] }]}>
-          <View style={styles.needle} />
+          <Image
+            source={require('../../assets/icon/lassi-radar-aiguille.png')}
+            style={styles.layer}
+            fadeDuration={0}
+          />
         </Animated.View>
       </View>
 
@@ -94,16 +96,6 @@ const styles = StyleSheet.create({
     width:      SIZE,
     height:     SIZE,
     resizeMode: 'contain',
-  },
-  // Aiguille : rectangle jaune arrondi, pivot en bas au centre du radarBox
-  needle: {
-    position:        'absolute',
-    width:           NEEDLE_W,
-    height:          NEEDLE_LEN,
-    backgroundColor: '#FDCF34',
-    borderRadius:    NEEDLE_W / 2,
-    left:            SIZE / 2 - NEEDLE_W / 2,
-    top:             SIZE / 2 - NEEDLE_LEN,
   },
   tagline: {
     color:      '#8a8eb5',

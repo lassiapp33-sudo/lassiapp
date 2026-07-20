@@ -1,5 +1,6 @@
 import React from 'react';
-import { ScrollView, TouchableOpacity, Text, Image, View, StyleSheet } from 'react-native';
+import { ScrollView, TouchableOpacity, Text, View, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { colors, fonts, radius } from '../../theme';
 
 export interface SubCat {
@@ -35,7 +36,7 @@ export default function SubCatTabs({ tabs, active, onChange }: Props) {
             {tab.imageUri || tab.SvgIcon ? (
               <View style={styles.row}>
                 {tab.imageUri ? (
-                  <Image source={tab.imageUri} style={styles.ico} resizeMode="contain" />
+                  <Image source={tab.imageUri} style={styles.ico} contentFit="contain" cachePolicy="memory" />
                 ) : tab.SvgIcon ? (
                   <tab.SvgIcon color={on ? colors.bg : colors.muted} />
                 ) : null}

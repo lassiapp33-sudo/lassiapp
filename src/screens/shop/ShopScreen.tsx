@@ -102,6 +102,7 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+
 function toPairs<T>(arr: T[]): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += 2) out.push(arr.slice(i, i + 2));
@@ -360,14 +361,19 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const hasGallery = galleryUrls.length > 0;
   const hasInfoSection = !!(shopPhone || shopAddress || shopHours || shopHasCoords);
 
-  // Index du composant sticky MenuTabs
-  const menuTabsStickyIdx = 6 + (hasGallery ? 1 : 0) + (hasInfoSection ? 1 : 0);
-
   // ── Promos ────────────────────────────────────────────────────────────────
   const productPromoMap = promosService.buildProductPromoMap(activePromos);
   const shopWidePromos = activePromos.filter(
     p => p.cibleType === 'vitrine' || p.cibleType === 'categorie',
   );
+
+  // Enfants toujours rendus avant MenuTabs : ShopCover(0) ShopIdentity(1) nameRow(2) ShopStats(3) ShopInfoBar(4) → base 5
+  const menuTabsStickyIdx = 5
+    + (shopData?.description ? 1 : 0)
+    + (hasGallery ? 1 : 0)
+    + (shopWidePromos.length > 0 ? 1 : 0)
+    + (showOrderOptions ? 1 : 0)
+    + (hasInfoSection ? 1 : 0);
 
   // ── Utilisateur courant ────────────────────────────────────────────────────
   const currentUser = useAuthStore(s => s.user);
@@ -400,8 +406,6 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     addItem(shopInfo, { id: p.id, name: p.name, emoji: p.emoji, price: p.price });
   };
 
-  const CART_BAR_H = 56;
-  const scrollBotPad = FOOTER_HEIGHT + (cartCount > 0 ? CART_BAR_H + 16 : 0) + 120;
   const cartBottom = FOOTER_HEIGHT + 8;
 
   if (loadError) {
@@ -431,9 +435,9 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
         <ScrollView
           ref={scrollRef}
           style={styles.scroll}
-          contentContainerStyle={{ paddingBottom: scrollBotPad, minHeight: '100%' }}
           showsVerticalScrollIndicator={false}
           stickyHeaderIndices={tabs.length > 1 ? [menuTabsStickyIdx] : []}
+          contentContainerStyle={{ paddingBottom: 16 }}
         >
           {/* 0 — Bannière */}
           <ShopCover />
@@ -571,8 +575,9 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
             </View>
           )}
 
-          {/* 8 — Onglets catalogue (STICKY) */}
+
           {tabs.length > 1 && <MenuTabs tabs={tabs} active={activeTab} onPress={setActiveTab} />}
+
 
           {/* 9 — Catalogue / Terrains / Créneaux foot-basket */}
           {isSlotShop ? (
@@ -763,6 +768,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
               isMerchant={isMerchant}
             />
           )}
+
         </ScrollView>
       )}
 

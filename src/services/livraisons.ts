@@ -38,7 +38,8 @@ export const creerLivraison = async (params: {
   );
   if (devis.horsZone) return { success: false, error: devis.message ?? 'Zone non couverte.' };
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+  const user = authData?.user ?? null;
   if (!user) return { success: false, error: 'Non connecté.' };
 
   const { data, error } = await supabase
@@ -67,7 +68,8 @@ export const creerLivraison = async (params: {
 
 // DEMANDEUR (client ou prestataire) : mon historique de livraisons
 export const getLivraisonsDemandeur = async (): Promise<Livraison[]> => {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+  const user = authData?.user ?? null;
   if (!user) return [];
   const { data } = await supabase
     .from('livraisons')
@@ -91,7 +93,8 @@ export const getLivraisonsDisponibles = async (): Promise<Livraison[]> => {
 
 // LIVREUR : mes livraisons en cours (acceptée par moi)
 export const getMesLivraisons = async (): Promise<Livraison[]> => {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+  const user = authData?.user ?? null;
   if (!user) return [];
   const { data } = await supabase
     .from('livraisons')
@@ -156,7 +159,8 @@ export interface VersementLivreurRow {
 
 /** Toutes les livraisons terminées du livreur connecté (historique complet). */
 export const getMesLivraisonsTerminees = async (): Promise<Livraison[]> => {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+  const user = authData?.user ?? null;
   if (!user) return [];
   const { data } = await supabase
     .from('livraisons')
@@ -204,7 +208,8 @@ export const creerCompteLivreur = async (params: {
   telephone:  string;
   motDePasse: string;
 }): Promise<{ success: true; livreurId: string } | { success: false; error: string }> => {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: sessData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+  const session = sessData?.session ?? null;
   if (!session) return { success: false, error: 'Non connecté.' };
 
   const { data, error } = await supabase.functions.invoke('admin-create-livreur', {

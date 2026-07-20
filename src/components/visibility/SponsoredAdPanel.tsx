@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
@@ -21,9 +22,17 @@ import {
   creerAnnonceSponsorisee,
   getMerchantAds,
   formatDuration,
+  creditsToFcfa,
+  formatFcfa,
 } from '../../services/sponsoredAds';
 import { formatPrice, formatDateLong } from '../../utils/format';
 import useShopStore from '../../store/shopStore';
+import {
+  PayMethod,
+  checkPaymentAvailability,
+  createVisibilityPayment,
+  verifyVisibilityPayment,
+} from '../../services/visibilityPayment';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -31,6 +40,26 @@ const IcoMega = () => (
   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <Path d="M3 11v2M18 8c1.5.8 2.5 2.3 2.5 4s-1 3.2-2.5 4" stroke={colors.bg} />
     <Path d="M5 11v2h3l6 4V7l-6 4H5z" stroke={colors.bg} />
+  </Svg>
+);
+
+const IcoCheck = () => (
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M20 6 9 17 4 12" stroke={colors.bg} />
+  </Svg>
+);
+
+const IcoWave = ({ active }: { active: boolean }) => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" stroke={active ? colors.bg : colors.muted} />
+    <Circle cx={12} cy={12} r={3} stroke={active ? colors.bg : colors.muted} />
+  </Svg>
+);
+
+const IcoLock = () => (
+  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z" stroke={colors.muted} />
+    <Path d="M7 11V7a5 5 0 0 1 10 0v4" stroke={colors.muted} />
   </Svg>
 );
 
@@ -93,10 +122,19 @@ function MyAdCard({ ad }: { ad: SponsoredAd }) {
         <StatusBadge status={ad.status} />
       </View>
 
-      {/* Compteur de vues — chiffre central */}
-      <View style={adS.viewsBlock}>
-        <Text style={adS.viewsCount}>{ad.actualViews.toLocaleString('fr-SN')}</Text>
-        <Text style={adS.viewsLabel}>vues</Text>
+      {/* Métriques : vues + contacts côte à côte */}
+      <View style={adS.metricsRow}>
+        <View style={adS.metricBox}>
+          <Text style={adS.metricCount}>{ad.actualViews.toLocaleString('fr-SN')}</Text>
+          <Text style={adS.metricLabel}>vues</Text>
+        </View>
+        <View style={adS.metricDivider} />
+        <View style={adS.metricBox}>
+          <Text style={[adS.metricCount, { color: colors.success }]}>
+            {(ad.contactCount ?? 0).toLocaleString('fr-SN')}
+          </Text>
+          <Text style={adS.metricLabel}>contacts</Text>
+        </View>
       </View>
 
       {/* Barre de progression */}
@@ -104,7 +142,7 @@ function MyAdCard({ ad }: { ad: SponsoredAd }) {
         <View style={adS.progressRow}>
           <Text style={adS.progressPct}>{pct}%</Text>
           <Text style={adS.progressGoal}>
-            objectif {ad.estMin.toLocaleString()}–{ad.estMax.toLocaleString()}
+            objectif {ad.estMin.toLocaleString()}–{ad.estMax.toLocaleString()} vues
           </Text>
         </View>
         <View style={adS.progressWrap}>
@@ -149,7 +187,6 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
   const [myAds, setMyAds]         = useState<SponsoredAd[]>([]);
   const [loadingAds, setLoadingAds] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadAds = useCallback(async (silent = false) => {
@@ -158,7 +195,6 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
     try {
       const ads = await getMerchantAds(shopId);
       setMyAds(ads);
-      setLastRefresh(new Date());
     } finally {
       if (!silent) setLoadingAds(false);
     }
@@ -184,11 +220,24 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
   }, [myAds, loadAds]);
 
   // Résumé budget/durée/estimations selon la sélection courante
-  const budget = selection.mode === 'pack' ? selection.pack.budgetCredits : selection.budgetCredits;
+  const budget   = selection.mode === 'pack' ? selection.pack.budgetCredits : selection.budgetCredits;
   const duration = selection.mode === 'pack' ? selection.pack.durationHours : selection.durationHours;
-  const estMin = selection.mode === 'pack' ? selection.pack.estMin : selection.estMin;
-  const estMax = selection.mode === 'pack' ? selection.pack.estMax : selection.estMax;
+  const estMin   = selection.mode === 'pack' ? selection.pack.estMin : selection.estMin;
+  const estMax   = selection.mode === 'pack' ? selection.pack.estMax : selection.estMax;
+  const fcfaPrice = creditsToFcfa(budget);
   const hasEnough = creditBalance >= budget;
+
+  // ── Méthode de paiement ──────────────────────────────────────────────────────
+  const [payMethod, setPayMethod]     = useState<PayMethod>('credit');
+  const [keysAvailable, setKeysAvailable] = useState<{ wave: boolean; orange_money: boolean } | null>(null);
+  // État paiement Wave/OM en attente
+  type PendingPay = { subscriptionId: string; paymentUrl: string; qrCode: string } | null;
+  const [pendingPay, setPendingPay]   = useState<PendingPay>(null);
+  const [verifying, setVerifying]     = useState(false);
+
+  useEffect(() => {
+    checkPaymentAvailability().then(setKeysAvailable).catch(() => {});
+  }, []);
 
   const validate = (): string | null => {
     if (format === 'classique') {
@@ -198,59 +247,108 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
       if (!content.imageUrl) return "L'image est requise pour une Affiche.";
     }
     if (uploading) return "Attends la fin de l'upload avant de lancer.";
-    if (!hasEnough) return `Crédit insuffisant — il te manque ${formatPrice(budget - creditBalance)}.`;
+    if (payMethod === 'credit' && !hasEnough)
+      return `Crédit insuffisant — il te manque ${budget - creditBalance} crédits.`;
     return null;
   };
 
-  const handleLaunch = async () => {
-    const err = validate();
-    if (err) { Alert.alert('Annonce incomplète', err); return; }
+  // ── Lancement par crédit LASSI ────────────────────────────────────────────────
+  const launchWithCredit = async () => {
     if (!shopId) return;
-
-    Alert.alert(
-      'Lancer la campagne ?',
-      `${budget} crédits seront débités de ton solde.\nDurée : ${formatDuration(duration)}`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Lancer',
-          style: 'default',
-          onPress: async () => {
-            setLaunching(true);
-            try {
-              const result = await creerAnnonceSponsorisee({
-                shopId,
-                format,
-                titre:         format === 'classique' ? content.titre : undefined,
-                corps:         format === 'classique' ? content.corps : undefined,
-                imageUrl:      content.imageUrl ?? undefined,
-                budgetCredits: budget,
-                durationHours: duration,
-                estMin,
-                estMax,
-              });
-              await loadMyShop(); // rafraîchit creditBalance
-              await loadAds();
-              setContent({ titre: '', corps: '', imageUri: null, imageUrl: null });
-              onCreated?.(result.newBalance);
-              Alert.alert(
-                '🚀 Campagne lancée !',
-                `Ton annonce est en ligne. Nouveau solde : ${formatPrice(result.newBalance)} crédits.`,
-              );
-            } catch (e) {
-              Alert.alert('Erreur', e instanceof Error ? e.message : 'Erreur inattendue');
-            } finally {
-              setLaunching(false);
-            }
-          },
-        },
-      ],
-    );
+    setLaunching(true);
+    try {
+      const result = await creerAnnonceSponsorisee({
+        shopId,
+        format,
+        titre:         format === 'classique' ? content.titre : undefined,
+        corps:         format === 'classique' ? content.corps : undefined,
+        imageUrl:      content.imageUrl ?? undefined,
+        budgetCredits: budget,
+        durationHours: duration,
+        estMin,
+        estMax,
+      });
+      await loadMyShop();
+      await loadAds();
+      setContent({ titre: '', corps: '', imageUri: null, imageUrl: null });
+      onCreated?.(result.newBalance);
+      Alert.alert(
+        '🚀 Campagne lancée !',
+        `Ton annonce est en ligne.\nNouveau solde : ${result.newBalance} crédits.`,
+      );
+    } catch (e) {
+      Alert.alert('Erreur', e instanceof Error ? e.message : 'Erreur inattendue');
+    } finally {
+      setLaunching(false);
+    }
   };
 
-  const refreshLabel = lastRefresh
-    ? `Mis à jour ${lastRefresh.getHours().toString().padStart(2, '0')}:${lastRefresh.getMinutes().toString().padStart(2, '0')}`
-    : null;
+  // ── Lancement par Wave / Orange Money ────────────────────────────────────────
+  const launchWithWaveOrOM = async () => {
+    if (!shopId) return;
+    setLaunching(true);
+    try {
+      const result = await createVisibilityPayment({
+        planId:     `ad_${budget}cr`,
+        payMethod,
+        offerType:  'quartier',          // champ requis, ignoré côté annonce
+        productIds: [],
+        allProducts: false,
+      });
+
+      if (result.status === 'awaiting_keys') {
+        Alert.alert(
+          'Bientôt disponible',
+          `Le paiement par ${payMethod === 'wave' ? 'Wave' : 'Orange Money'} sera disponible prochainement.`,
+        );
+        return;
+      }
+
+      setPendingPay({
+        subscriptionId: result.subscriptionId,
+        paymentUrl:     result.paymentUrl,
+        qrCode:         result.qrCode,
+      });
+
+      if (result.paymentUrl) {
+        const canOpen = await Linking.canOpenURL(result.paymentUrl);
+        if (canOpen) await Linking.openURL(result.paymentUrl);
+      }
+    } catch (e) {
+      Alert.alert('Erreur', e instanceof Error ? e.message : 'Erreur inattendue');
+    } finally {
+      setLaunching(false);
+    }
+  };
+
+  const handleLaunch = () => {
+    const err = validate();
+    if (err) { Alert.alert('Annonce incomplète', err); return; }
+    if (payMethod === 'credit') {
+      void launchWithCredit();
+    } else {
+      void launchWithWaveOrOM();
+    }
+  };
+
+  const handleVerifyPay = async () => {
+    if (!pendingPay) return;
+    setVerifying(true);
+    try {
+      const result = await verifyVisibilityPayment(pendingPay.subscriptionId);
+      if (result.paid) {
+        setPendingPay(null);
+        await loadAds();
+        Alert.alert('🚀 Campagne lancée !', 'Paiement confirmé. Ton annonce est en ligne.');
+      } else {
+        Alert.alert('Non confirmé', 'On n\'a pas encore reçu ton paiement. Réessaie dans quelques secondes.');
+      }
+    } catch {
+      Alert.alert('Erreur', 'Impossible de vérifier le paiement.');
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   return (
     <ScrollView
@@ -266,28 +364,6 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
         />
       }
     >
-
-      {/* Section : mes campagnes actives */}
-      {(myAds.length > 0 || loadingAds) && (
-        <>
-          <View style={s.secRow}>
-            <Text style={s.secLabel}>Mes campagnes</Text>
-            {refreshLabel ? (
-              <TouchableOpacity style={s.refreshBtn} onPress={() => loadAds(true)} activeOpacity={0.7}>
-                <IcoRefresh />
-                <Text style={s.refreshTxt}>{refreshLabel}</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-          {loadingAds ? (
-            <ActivityIndicator color={colors.accent} style={{ marginBottom: 22 }} />
-          ) : (
-            <View style={s.adsWrap}>
-              {myAds.slice(0, 5).map(ad => <MyAdCard key={ad.id} ad={ad} />)}
-            </View>
-          )}
-        </>
-      )}
 
       {/* Section : nouvelle campagne */}
       <Text style={[s.secLabel, s.secLabelStandalone]}>Créer une nouvelle annonce</Text>
@@ -314,36 +390,133 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
       <Text style={s.fieldLabel}>Budget & durée</Text>
       <AdPackSelector selection={selection} onChange={setSelection} />
 
-      {/* Récapitulatif + CTA */}
+      {/* Récapitulatif */}
       <View style={s.summary}>
         <View style={s.summaryRow}>
           <Text style={s.summaryKey}>Portée estimée</Text>
-          <Text style={s.summaryVal}>
-            {estMin.toLocaleString()}–{estMax.toLocaleString()} vues
-          </Text>
+          <Text style={s.summaryVal}>{estMin.toLocaleString()}–{estMax.toLocaleString()} vues</Text>
         </View>
         <View style={s.summaryRow}>
           <Text style={s.summaryKey}>Durée</Text>
           <Text style={s.summaryVal}>{formatDuration(duration)}</Text>
         </View>
-        <View style={s.summaryRow}>
+        <View style={[s.summaryRow, s.summaryRowHighlight]}>
           <Text style={s.summaryKey}>Coût</Text>
-          <Text style={[s.summaryVal, !hasEnough && { color: colors.danger }]}>
-            {budget} crédits
-          </Text>
+          <Text style={s.summaryVal}>{formatFcfa(fcfaPrice)}</Text>
         </View>
-        <View style={s.summaryRow}>
-          <Text style={s.summaryKey}>Ton solde</Text>
-          <Text style={[s.summaryVal, !hasEnough && { color: colors.danger }]}>
-            {creditBalance} crédits
-          </Text>
-        </View>
+        {payMethod === 'credit' && (
+          <View style={s.summaryRow}>
+            <Text style={s.summaryKey}>Ton solde crédit</Text>
+            <Text style={[s.summaryVal, !hasEnough && { color: colors.danger }]}>
+              {formatFcfa(creditBalance)}
+            </Text>
+          </View>
+        )}
       </View>
 
+      {/* Sélecteur de paiement */}
+      <Text style={s.payLabel}>Mode de paiement</Text>
+      <View style={s.payMethods}>
+
+        {/* Crédit LASSI */}
+        <TouchableOpacity
+          style={[s.payRow, payMethod === 'credit' && s.payRowActive]}
+          onPress={() => setPayMethod('credit')}
+          activeOpacity={0.8}
+        >
+          <View style={[s.payRadio, payMethod === 'credit' && s.payRadioActive]}>
+            {payMethod === 'credit' && <IcoCheck />}
+          </View>
+          <View style={s.payInfo}>
+            <Text style={[s.payName, payMethod === 'credit' && s.payNameActive]}>
+              Crédit LASSI
+            </Text>
+            <Text style={s.payDesc}>Déduction immédiate de ton solde</Text>
+          </View>
+          <Text style={[s.payPrice, payMethod === 'credit' && s.payPriceActive]}>
+            {formatFcfa(fcfaPrice)}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Wave */}
+        <TouchableOpacity
+          style={[
+            s.payRow,
+            payMethod === 'wave' && s.payRowActive,
+            !keysAvailable?.wave && s.payRowDisabled,
+          ]}
+          onPress={() => keysAvailable?.wave && setPayMethod('wave')}
+          activeOpacity={keysAvailable?.wave ? 0.8 : 1}
+        >
+          <View style={[s.payRadio, payMethod === 'wave' && s.payRadioActive]}>
+            {payMethod === 'wave' ? <IcoCheck /> : !keysAvailable?.wave ? <IcoLock /> : null}
+          </View>
+          <View style={s.payInfo}>
+            <Text style={[s.payName, payMethod === 'wave' && s.payNameActive]}>
+              Wave
+            </Text>
+            <Text style={s.payDesc}>
+              {keysAvailable?.wave ? 'Paiement mobile sécurisé' : 'Bientôt disponible'}
+            </Text>
+          </View>
+          <Text style={[s.payPrice, payMethod === 'wave' && s.payPriceActive]}>
+            {formatFcfa(fcfaPrice)}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Orange Money */}
+        <TouchableOpacity
+          style={[
+            s.payRow,
+            payMethod === 'orange_money' && s.payRowActive,
+            !keysAvailable?.orange_money && s.payRowDisabled,
+          ]}
+          onPress={() => keysAvailable?.orange_money && setPayMethod('orange_money')}
+          activeOpacity={keysAvailable?.orange_money ? 0.8 : 1}
+        >
+          <View style={[s.payRadio, payMethod === 'orange_money' && s.payRadioActive]}>
+            {payMethod === 'orange_money' ? <IcoCheck /> : !keysAvailable?.orange_money ? <IcoLock /> : null}
+          </View>
+          <View style={s.payInfo}>
+            <Text style={[s.payName, payMethod === 'orange_money' && s.payNameActive]}>
+              Orange Money
+            </Text>
+            <Text style={s.payDesc}>
+              {keysAvailable?.orange_money ? 'Paiement mobile sécurisé' : 'Bientôt disponible'}
+            </Text>
+          </View>
+          <Text style={[s.payPrice, payMethod === 'orange_money' && s.payPriceActive]}>
+            {formatFcfa(fcfaPrice)}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Bandeau paiement Wave/OM en attente */}
+      {pendingPay ? (
+        <View style={s.pendingBanner}>
+          <Text style={s.pendingTxt}>
+            Paiement en attente — reviens ici après avoir payé dans l'app.
+          </Text>
+          <TouchableOpacity
+            style={[s.verifyBtn, verifying && { opacity: 0.6 }]}
+            onPress={handleVerifyPay}
+            disabled={verifying}
+            activeOpacity={0.8}
+          >
+            <Text style={s.verifyBtnTxt}>{verifying ? 'Vérification…' : 'J\'ai payé — vérifier'}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      {/* Bouton lancer */}
       <TouchableOpacity
-        style={[s.cta, (!hasEnough || uploading || launching) && s.ctaDisabled]}
+        style={[
+          s.cta,
+          (uploading || launching || !!pendingPay) && s.ctaDisabled,
+          payMethod === 'credit' && !hasEnough && s.ctaDisabled,
+        ]}
         onPress={handleLaunch}
-        disabled={!hasEnough || uploading || launching}
+        disabled={uploading || launching || !!pendingPay || (payMethod === 'credit' && !hasEnough)}
         activeOpacity={0.85}
       >
         {launching ? (
@@ -356,7 +529,7 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
         )}
       </TouchableOpacity>
 
-      {!hasEnough && (
+      {payMethod === 'credit' && !hasEnough && (
         <Text style={s.noFundsHint}>
           Crédit insuffisant — recharge via le menu "Obtenir des crédits".
         </Text>
@@ -462,6 +635,116 @@ const s = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 18,
   },
+
+  // Récap prix FCFA
+  summaryRowHighlight: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 10,
+    marginTop: 4,
+  },
+  summaryFcfa: {
+    color: colors.accent,
+    fontFamily: fonts.body,
+    fontSize: 11,
+    marginTop: 2,
+  },
+
+  // Sélecteur paiement
+  payLabel: {
+    color: colors.white,
+    fontFamily: fonts.title,
+    fontSize: 15,
+    paddingHorizontal: 18,
+    paddingBottom: 10,
+    marginTop: 2,
+  },
+  payMethods: {
+    marginHorizontal: 18,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 16,
+  },
+  payRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  payRowActive: {
+    backgroundColor: 'rgba(253,207,52,.06)',
+  },
+  payRowDisabled: {
+    opacity: 0.5,
+  },
+  payRadio: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  payRadioActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  payInfo: { flex: 1 },
+  payName: {
+    color: colors.muted,
+    fontFamily: fonts.title,
+    fontSize: 13.5,
+    marginBottom: 2,
+  },
+  payNameActive: { color: colors.white },
+  payDesc: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 11,
+  },
+  payPrice: {
+    color: colors.muted,
+    fontFamily: fonts.title,
+    fontSize: 13,
+  },
+  payPriceActive: { color: colors.accent },
+
+  // Bandeau Wave/OM en attente
+  pendingBanner: {
+    marginHorizontal: 18,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    padding: 14,
+    marginBottom: 14,
+  },
+  pendingTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  verifyBtn: {
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verifyBtnTxt: {
+    color: colors.bg,
+    fontFamily: fonts.titleXL,
+    fontSize: 14,
+  },
 });
 
 const adS = StyleSheet.create({
@@ -510,24 +793,34 @@ const adS = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // Compteur central vues
-  viewsBlock: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    marginBottom: 16,
+  // Métriques vues + contacts
+  metricsRow: {
+    flexDirection: 'row',
     backgroundColor: colors.bg,
     borderRadius: radius.md,
+    marginBottom: 16,
+    overflow: 'hidden',
   },
-  viewsCount: {
+  metricBox: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  metricDivider: {
+    width: 1,
+    backgroundColor: colors.border,
+    marginVertical: 10,
+  },
+  metricCount: {
     color: colors.accent,
     fontFamily: fonts.titleXL,
-    fontSize: 38,
-    lineHeight: 44,
+    fontSize: 32,
+    lineHeight: 38,
   },
-  viewsLabel: {
+  metricLabel: {
     color: colors.muted,
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 2,
   },
 

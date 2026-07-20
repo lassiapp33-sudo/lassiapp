@@ -17,7 +17,14 @@ class LargeSecureStore {
     const SecureStore = require('expo-secure-store');
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const aesjs = require('aes-js');
-    const encryptionKey = crypto.getRandomValues(new Uint8Array(256 / 8));
+    let encryptionKey: Uint8Array;
+    try {
+      encryptionKey = crypto.getRandomValues(new Uint8Array(256 / 8));
+    } catch {
+      // Fallback si crypto.getRandomValues indisponible (Android < 9 / Hermes sans polyfill)
+      encryptionKey = new Uint8Array(32);
+      for (let i = 0; i < 32; i++) encryptionKey[i] = Math.floor(Math.random() * 256);
+    }
     const cipher = new aesjs.ModeOfOperation.ctr(encryptionKey, new aesjs.Counter(1));
     const encryptedBytes = cipher.encrypt(aesjs.utils.utf8.toBytes(value));
     await SecureStore.setItemAsync(key, aesjs.utils.hex.fromBytes(encryptionKey));

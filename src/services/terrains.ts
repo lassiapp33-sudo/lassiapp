@@ -151,9 +151,8 @@ export const createReservation = async (params: {
 // ─── Mes réservations (client) ────────────────────────────────────────────────
 
 export const getMyTerrainReservations = async (): Promise<ReservationTerrain[]> => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+  const user = authData?.user ?? null;
   if (!user) throw new Error('Non authentifié');
 
   const { data, error } = await supabase
@@ -252,9 +251,8 @@ export const verifyTerrainReceipt = async (
 // ─── Vérification paiement via Edge Function ──────────────────────────────────
 
 async function authHeaders(): Promise<Record<string, string>> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const { data: sessData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+  const session = sessData?.session ?? null;
   if (!session) throw new Error('Session expirée — reconnecte-toi');
   return {
     'Content-Type': 'application/json',

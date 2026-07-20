@@ -95,7 +95,8 @@ export async function uploadImage(
   const arrayBuffer = await fileResponse.arrayBuffer();
 
   // 3. JWT utilisateur
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: sessData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+  const session = sessData?.session ?? null;
   if (!session?.access_token) throw new Error('Non connecté');
 
   // 4. Upload via Edge Function (service_role côté serveur = bypass schema check)

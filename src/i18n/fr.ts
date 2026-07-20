@@ -236,7 +236,7 @@ const fr: Translations = {
     loginBtn: 'Se connecter',
     noAccount: 'Pas encore de compte ? ',
     createAccount: 'Créer un compte',
-    roleTitle: 'Bienvenue 🤴🏾👸🏾\nTu es ici pour…',
+    roleTitle: 'Bienvenue\nTu es ici pour…',
     roleSub: 'Choisis ton profil pour commencer.',
     clientRole: 'Je suis un Client',
     clientRoleDesc: 'Découvrir, commander et payer près de moi',

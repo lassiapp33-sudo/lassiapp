@@ -18,14 +18,15 @@ import { getBadgesActifsBatch, RecompenseAttribuee } from '../../services/classe
 import { computeStatus, WeekHours } from '../../services/hours';
 import { useT } from '../../i18n';
 
-/** Construit les SubCat[] — imageUri vient directement de categories.ts (source unique). */
+/** Construit les SubCat[] — imageUri/SvgIcon viennent directement de categories.ts (source unique). */
 function buildSubcats(catId: CatId): SubCat[] {
   const cfg = getCatConfig(catId);
   if (!cfg) return [];
   return cfg.subcats.map(sub => ({
     id: sub.id,
-    label: sub.imageUri ? sub.label : `${sub.emoji} ${sub.label}`,
+    label: sub.imageUri || sub.SvgIcon ? sub.label : `${sub.emoji} ${sub.label}`,
     imageUri: sub.imageUri,
+    SvgIcon: sub.SvgIcon,
   }));
 }
 

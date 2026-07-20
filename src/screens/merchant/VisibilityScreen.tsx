@@ -18,7 +18,6 @@ import BenefitsList from '../../components/visibility/BenefitsList';
 import PlanCard from '../../components/visibility/PlanCard';
 import ProductPicker from '../../components/visibility/ProductPicker';
 import PayFooter from '../../components/visibility/PayFooter';
-import ActiveSubCard, { computeSubCardProps } from '../../components/visibility/ActiveSubCard';
 import SponsoredAdPanel from '../../components/visibility/SponsoredAdPanel';
 import { colors, fonts, radius } from '../../theme';
 import { IcoChevron } from '../../components/icons';
@@ -249,23 +248,19 @@ type PayState =
   | { type: 'verifying' }
   | { type: 'error'; message: string };
 
-type VisibilityView = 'subscribe' | 'subscribed';
-
 interface Props {
   onBack: () => void;
-  initialView?: VisibilityView;
 }
 
 // ─── Écran principal ──────────────────────────────────────────────────────────
 
-export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: Props) {
+export default function VisibilityScreen({ onBack }: Props) {
   const shopId = useShopStore(s => s.shopId);
   const creditBalance = useShopStore(s => s.profile?.creditBalance ?? 0);
   const loadMyShop = useShopStore(s => s.loadMyShop);
 
   const [offerType, setOfferType] = useState<OfferType>('quartier');
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [view, setView] = useState<VisibilityView>(initialView);
   const [plans, setPlans] = useState<VisibilityPlan[]>([]);
   const [activeSub, setActiveSub] = useState<ActiveSub | null>(null);
   const [selectedId, setSelectedId] = useState('3m');
@@ -301,7 +296,6 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
     setOfferType(offer);
     setSelectedId('3m');
     setBoostExpiry(null);
-    if (offer !== 'quartier') setView('subscribe');
     // 'annonce' gère son propre état dans SponsoredAdPanel
   };
 
@@ -330,7 +324,6 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
       setSelectedProductIds(defaultProduct ? [defaultProduct.id] : []);
       if (sub) {
         setActiveSub(sub);
-        setView('subscribed');
       }
     } catch {
       // Silencieux : la liste de fallback est dans getVisibilityPlans
@@ -433,7 +426,6 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
         const sub = shopId ? await getActiveSub(shopId) : null;
         setActiveSub(sub);
         setPayState({ type: 'idle' });
-        setView('subscribed');
       } else if (result.status === 'awaiting_keys') {
         setPayState({ type: 'idle' });
         Alert.alert('Configuration en cours', 'Les clés API ne sont pas encore configurées.');
@@ -479,7 +471,6 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
       if (offerType === 'quartier') {
         const sub = shopId ? await getActiveSub(shopId) : null;
         setActiveSub(sub);
-        setView('subscribed');
       } else {
         setBoostExpiry({ offer: offerType, expiresAt: result.expiresAt });
       }
@@ -499,9 +490,6 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
   const isPending = payState.type === 'pending';
   const isVerifying = payState.type === 'verifying';
   const isPayLoading = payState.type === 'loading';
-
-  // "Déjà abonné" ne concerne que l'Offre du quartier (seule offre suivie en DB)
-  const showSubscribed = offerType === 'quartier' && view === 'subscribed' && activeSub;
 
   return (
     <View style={styles.root}>
@@ -534,31 +522,6 @@ export default function VisibilityScreen({ onBack, initialView = 'subscribe' }: 
         <View style={styles.loadingWrap}>
           <Text style={styles.loadingTxt}>Chargement…</Text>
         </View>
-      ) : showSubscribed && activeSub ? (
-        // ── Vue "Déjà abonné" ───────────────────────────────────────────────
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
-          <ActiveSubCard
-            {...computeSubCardProps({
-              planLabel: activeSub.planLabel,
-              startedAt: activeSub.startedAt,
-              expiresAt: activeSub.expiresAt,
-            })}
-            productName={activeSub.productName}
-            productEmoji={activeSub.productEmoji}
-            productCount={activeSub.productCount}
-            allProducts={activeSub.allProducts}
-          />
-
-          <View style={styles.renewWrap}>
-            <RenewCard onPress={() => setView('subscribe')} />
-          </View>
-
-          <View style={{ height: 28 }} />
-        </ScrollView>
       ) : !selectedPlan ? (
         <View style={styles.loadingWrap}>
           <Text style={styles.loadingTxt}>Chargement…</Text>

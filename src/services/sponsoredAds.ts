@@ -55,6 +55,19 @@ export interface CreateAdResult {
   newBalance: number;
 }
 
+// ─── Conversion crédits ↔ FCFA ───────────────────────────────────────────────
+// Taux officiel LASSI : 1 crédit = 1 FCFA (montant identique partout)
+
+export const CREDIT_FCFA_RATE = 1;
+
+export function creditsToFcfa(credits: number): number {
+  return Math.round(credits * CREDIT_FCFA_RATE);
+}
+
+export function formatFcfa(fcfa: number): string {
+  return fcfa.toLocaleString('fr-SN') + ' F';
+}
+
 // ─── Packs prédéfinis ─────────────────────────────────────────────────────────
 // Tarifs et estimations calqués sur l'expérience TikTok Ads.
 // Les packs offrent de meilleures conditions que le mode personnalisé.
@@ -64,7 +77,7 @@ export const AD_PACKS: AdPack[] = [
     id: 'decouverte',
     label: 'Découverte',
     tagline: 'Idéal pour tester',
-    budgetCredits: 200,
+    budgetCredits: 2000,
     durationHours: 12,
     estMin: 1500,
     estMax: 5000,
@@ -74,7 +87,7 @@ export const AD_PACKS: AdPack[] = [
     id: 'populaire',
     label: 'Populaire',
     tagline: 'Meilleur rapport portée/prix',
-    budgetCredits: 500,
+    budgetCredits: 5000,
     durationHours: 24,
     estMin: 5000,
     estMax: 18000,
@@ -84,7 +97,7 @@ export const AD_PACKS: AdPack[] = [
     id: 'boost_max',
     label: 'Boost Max',
     tagline: 'Couverture maximale',
-    budgetCredits: 1200,
+    budgetCredits: 12000,
     durationHours: 48,
     estMin: 9000,
     estMax: 30000,
@@ -105,7 +118,7 @@ export const DURATION_OPTIONS: { label: string; hours: number }[] = [
 
 // ─── Budget personnalisé : paliers disponibles ────────────────────────────────
 
-export const BUDGET_STEPS = [100, 150, 200, 300, 500, 750, 1000, 1500, 2000];
+export const BUDGET_STEPS = [1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000];
 
 // ─── Calcul de l'estimation de vues (mode personnalisé) ──────────────────────
 // Plus conservative que les packs pour inciter à choisir un pack.

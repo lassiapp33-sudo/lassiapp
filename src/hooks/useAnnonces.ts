@@ -33,9 +33,12 @@ export function useAnnonces(userId: string | null) {
     let cancelled = false;
     supabase
       .rpc('get_annonces_non_lues')
-      .then(({ data, error }: { data: Annonce[] | null; error: unknown }) => {
-        if (!cancelled && !error && data) setQueue(data);
-      });
+      .then(
+        ({ data, error }: { data: Annonce[] | null; error: unknown }) => {
+          if (!cancelled && !error && data) setQueue(data);
+        },
+        () => {},
+      );
     return () => {
       cancelled = true;
     };

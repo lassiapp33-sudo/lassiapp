@@ -1,5 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { colors } from '../theme';
 import usePendingNavStore from '../store/pendingNavStore';
 
@@ -22,7 +23,8 @@ export default function MascoHomeBtn({ style }: Props) {
       <Image
         source={require('../../assets/mascotte/lassi-roi.png')}
         style={styles.img}
-        resizeMode="contain"
+        contentFit="contain"
+        cachePolicy="memory"
       />
     </TouchableOpacity>
   );

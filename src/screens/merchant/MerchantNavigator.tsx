@@ -22,6 +22,7 @@ import MerchantAbonnementsScreen from '../fitness/MerchantAbonnementsScreen';
 import AlaUneScreen from './AlaUneScreen';
 import BlocAlaUneScreen from '../home/BlocAlaUneScreen';
 import MerchantLivraisonScreen from './MerchantLivraisonScreen';
+import MaCampagneScreen from './MaCampagneScreen';
 import { Terrain } from '../../types/terrain';
 import NotificationsScreen from '../home/NotificationsScreen';
 import ChatScreen from '../chat/ChatScreen';
@@ -95,6 +96,7 @@ type MerchantScreen =
   | 'a_la_une'
   | { id: 'a_la_une_bloc'; blocCode: string; elementIndex?: number }
   | 'livraison'
+  | 'ma_campagne'
   | { id: 'orders'; initialTab: 'new' | 'preparing' };
 
 interface Props {
@@ -463,6 +465,8 @@ export default function MerchantNavigator({ onLogout }: Props) {
   if (screen === 'visibility') return <VisibilityScreen onBack={() => setScreen(visibilityFrom)} />;
   if (screen === 'offre_quartier')
     return <OffreQuartierScreen onBack={() => setScreen('profile')} />;
+  if (screen === 'ma_campagne')
+    return <MaCampagneScreen onBack={() => setScreen('profile')} />;
   if (screen === 'certificat') return <CertificatScreen onBack={() => setScreen('profile')} />;
   if (screen === 'revenue') return <RevenueScreen onBack={() => setScreen('profile')} />;
   if (screen === 'payments') return <MerchantPaymentsScreen onBack={() => setScreen('profile')} />;
@@ -477,6 +481,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
         }}
         onVisibility={() => { setVisibilityFrom('profile'); setScreen('visibility'); }}
         onOffreQuartier={() => setScreen('offre_quartier')}
+        onMaCampagne={() => setScreen('ma_campagne')}
         onRevenue={() => setScreen('revenue')}
         onPayments={() => setScreen('payments')}
         onMyOrders={() => setScreen('myorders')}

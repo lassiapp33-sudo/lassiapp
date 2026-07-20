@@ -315,6 +315,29 @@ const s = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 13,
   },
+  packFcfaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  packFcfaEq: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    marginRight: 4,
+  },
+  packFcfa: {
+    color: colors.muted,
+    fontFamily: fonts.title,
+    fontSize: 13,
+  },
+  packFcfaActive: { color: colors.white },
+  packFcfaHint: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 11,
+  },
+
   packEstWrap: {
     backgroundColor: 'rgba(0,0,0,.2)',
     borderRadius: radius.sm,
@@ -390,5 +413,11 @@ const s = StyleSheet.create({
     color: colors.muted,
     fontFamily: fonts.body,
     fontSize: 11,
+    marginBottom: 6,
+  },
+  estFcfa: {
+    color: colors.accent,
+    fontFamily: fonts.title,
+    fontSize: 13,
   },
 });

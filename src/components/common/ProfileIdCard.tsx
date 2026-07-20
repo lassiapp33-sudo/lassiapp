@@ -73,12 +73,13 @@ export function ProfileIdCard({
           <View style={styles.chip}>
             <Text style={styles.chipTxt}>{chipLabel}</Text>
           </View>
-          {starRating != null && starRating > 0 && (
+          {starRating != null && (
             <View style={styles.ratingBadge}>
               <IcoStarFilled />
               <Text style={styles.ratingTxt}>
-                {starRating.toFixed(1)}
-                {starCount ? ` (${starCount})` : ''}
+                {starCount && starCount > 0
+                  ? `${starRating.toFixed(1)} (${starCount} avis)`
+                  : '0'}
               </Text>
             </View>
           )}

@@ -32,7 +32,9 @@ function esc(s: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/'/g, '&#039;')
+    .replace(/`/g, '&#096;')
+    .replace(/\\/g, '&#092;');
 }
 
 // ─── HTML Leaflet navigation in-app ──────────────────────────────────────────

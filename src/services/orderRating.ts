@@ -8,7 +8,8 @@ export async function uploadVocalRating(
   direction: RatingDirection,
   localUri: string,
 ): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+  const user = authData?.user ?? null;
   if (!user) throw new Error('non authentifié');
 
   const path = `${user.id}/${orderId}_${direction}.m4a`;
@@ -38,7 +39,8 @@ export async function uploadVocalAvis(
   shopId: string,
   localUri: string,
 ): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+  const user = authData?.user ?? null;
   if (!user) throw new Error('non authentifié');
 
   const path = `${user.id}/avis_${shopId}.m4a`;

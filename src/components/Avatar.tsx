@@ -119,7 +119,10 @@ export default function Avatar({
       source={{ uri: imageUrl }}
       style={{ width: size, height: size, borderRadius }}
       contentFit="cover"
-      transition={150}
+      transition={100}
+      cachePolicy="memory-disk"
+      priority="high"
+      placeholder={[bgColor]}
       onError={() => setHasError(true)}
     />
   ) : (

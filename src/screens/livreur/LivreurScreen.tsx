@@ -27,17 +27,22 @@ export default function LivreurScreen({ onLogout }: Props) {
 
   const charger = useCallback(async () => {
     setRefreshing(true);
-    const [d, m, t, v] = await Promise.all([
-      getLivraisonsDisponibles(),
-      getMesLivraisons(),
-      getMesLivraisonsTerminees(),
-      getMesVersements(),
-    ]);
-    setDispos(d);
-    setMiennes(m);
-    setTerminees(t);
-    setVersements(v);
-    setRefreshing(false);
+    try {
+      const [d, m, t, v] = await Promise.all([
+        getLivraisonsDisponibles(),
+        getMesLivraisons(),
+        getMesLivraisonsTerminees(),
+        getMesVersements(),
+      ]);
+      setDispos(d);
+      setMiennes(m);
+      setTerminees(t);
+      setVersements(v);
+    } catch {
+      // erreur réseau silencieuse — les listes restent vides
+    } finally {
+      setRefreshing(false);
+    }
   }, []);
 
   useEffect(() => { charger(); }, [charger]);
