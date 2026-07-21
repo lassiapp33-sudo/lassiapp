@@ -272,10 +272,9 @@ export default function App() {
             }
 
             // Supabase n'a pas répondu à temps mais on a un utilisateur en cache :
-            // ouvrir l'app immédiatement, la session sera re-vérifiée en arrière-plan
-            // via onAuthStateChange (si le token est vraiment expiré, l'utilisateur
-            // sera redirigé vers l'auth automatiquement).
+            // ouvrir l'app immédiatement, la session sera re-vérifiée en arrière-plan.
             if (cachedUser) {
+              useAuthStore.getState().setUser(cachedUser); // ← indispensable : passe isLoading à false
               if (cachedUser.role === 'merchant') setScreen('merchant');
               else if (cachedUser.role === 'livreur') setScreen('livreur');
               else setScreen('client');
@@ -287,6 +286,7 @@ export default function App() {
           } catch {
             const { hasSeenOnboarding, user: cachedUser } = useAuthStore.getState();
             if (cachedUser) {
+              useAuthStore.getState().setUser(cachedUser);
               if (cachedUser.role === 'merchant') setScreen('merchant');
               else if (cachedUser.role === 'livreur') setScreen('livreur');
               else setScreen('client');
