@@ -338,18 +338,42 @@ export async function getSessionUser(): Promise<AuthUser | null> {
       error,
     } = await supabase.auth.getSession();
 
-    // Token expiré ou révoqué : on nettoie la session stockée pour éviter
-    // que Supabase rejoue le refresh à chaque démarrage et logue une erreur.
     if (error) {
-      await supabase.auth.signOut().catch(() => {});
+      // Nettoyer uniquement pour une vraie erreur d'auth, jamais sur erreur réseau
+      // (signOut sur erreur réseau effacerait la session stockée localement → logout brutal)
+      if (!isNetworkError(error.message)) {
+        await supabase.auth.signOut().catch(() => {});
+      }
       return null;
     }
 
     if (!session?.user) return null;
-    return getProfileById(session.user.id);
+
+    // Essai de récupération du profil complet depuis la DB
+    const profile = await getProfileById(session.user.id);
+    if (profile) return profile;
+
+    // getProfileById a échoué (réseau probablement) mais la session JWT est valide.
+    // On reconstruit un AuthUser minimal depuis les métadonnées stockées localement
+    // dans le token — l'utilisateur reste connecté, le profil complet sera rechargé plus tard.
+    const meta = session.user.user_metadata ?? {};
+    const role = meta.role as UserRole | undefined;
+    const name = meta.name as string | undefined;
+    const phone = meta.phone as string | undefined;
+    if (role && name && phone) {
+      return {
+        id: session.user.id,
+        name,
+        phone,
+        email: session.user.email ?? '',
+        role,
+        initial: getInitials(name),
+      };
+    }
+
+    return null;
   } catch {
-    // Sécurité : si getSession jette (rare), on retourne null proprement
-    await supabase.auth.signOut().catch(() => {});
+    // Ne pas appeler signOut sur les exceptions — la session pourrait être valide
     return null;
   }
 }

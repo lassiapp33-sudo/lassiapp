@@ -245,10 +245,9 @@ export default function App() {
       {screen === 'splash' && (
         <SplashScreen onFinish={async () => {
           try {
-            const { hasSeenOnboarding } = useAuthStore.getState();
+            const { hasSeenOnboarding, user: cachedUser } = useAuthStore.getState();
 
-            // Section 7 : redémarrage à froid après une mise en arrière-plan
-            // trop longue → on déconnecte au lieu de restaurer la session.
+            // Section 7 : redémarrage à froid après inactivité prolongée → déconnexion forcée
             const expired = await hasInactivityTimeoutElapsed();
             await clearBackgroundMark();
             if (expired) {
@@ -258,9 +257,10 @@ export default function App() {
               return;
             }
 
+            // Vérification session avec timeout : si Supabase répond → source de vérité
             const sessionUser = await Promise.race([
               authService.getSessionUser(),
-              new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+              new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
             ]);
 
             if (sessionUser) {
@@ -271,11 +271,29 @@ export default function App() {
               return;
             }
 
+            // Supabase n'a pas répondu à temps mais on a un utilisateur en cache :
+            // ouvrir l'app immédiatement, la session sera re-vérifiée en arrière-plan
+            // via onAuthStateChange (si le token est vraiment expiré, l'utilisateur
+            // sera redirigé vers l'auth automatiquement).
+            if (cachedUser) {
+              if (cachedUser.role === 'merchant') setScreen('merchant');
+              else if (cachedUser.role === 'livreur') setScreen('livreur');
+              else setScreen('client');
+              return;
+            }
+
             useAuthStore.getState().setLoading(false);
             setScreen(hasSeenOnboarding ? 'auth' : 'onboarding');
           } catch {
+            const { hasSeenOnboarding, user: cachedUser } = useAuthStore.getState();
+            if (cachedUser) {
+              if (cachedUser.role === 'merchant') setScreen('merchant');
+              else if (cachedUser.role === 'livreur') setScreen('livreur');
+              else setScreen('client');
+              return;
+            }
             useAuthStore.getState().setLoading(false);
-            setScreen(useAuthStore.getState().hasSeenOnboarding ? 'auth' : 'onboarding');
+            setScreen(hasSeenOnboarding ? 'auth' : 'onboarding');
           }
         }} />
       )}

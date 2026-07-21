@@ -71,9 +71,14 @@ const useAuthStore = create<AuthState>()(
     {
       name: 'lassi-auth',
       storage: createJSONStorage(() => AsyncStorage),
-      // On ne persiste QUE hasSeenOnboarding.
-      // La session auth est gérée par Supabase via AsyncStorage (lib/supabase.ts).
-      partialize: state => ({ hasSeenOnboarding: state.hasSeenOnboarding }),
+      // On persiste hasSeenOnboarding + user pour un fallback instantané au redémarrage.
+      // La source de vérité reste Supabase (getSessionUser), le cache sert de filet de sécurité
+      // quand le réseau est lent : l'app s'ouvre immédiatement, la session est vérifiée en arrière-plan.
+      partialize: state => ({
+        hasSeenOnboarding: state.hasSeenOnboarding,
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
     },
   ),
 );
