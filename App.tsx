@@ -99,14 +99,13 @@ export default function App() {
     Poppins_300Light,
   });
 
-  // Sur web, onLayout ne re-déclenche pas quand fontsLoaded change → on cache le splash via effet
+  // Cache le splash natif dès le premier rendu React — les polices chargent en parallèle
+  // pendant les 2,6 secondes du SplashScreen animé, donc elles sont prêtes avant la nav
   useEffect(() => {
-    if (fontsLoaded) ExpoSplashScreen.hideAsync().catch(() => {});
-  }, [fontsLoaded]);
+    ExpoSplashScreen.hideAsync().catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onLayout = useCallback(async () => {
-    if (fontsLoaded && Platform.OS !== 'web') await ExpoSplashScreen.hideAsync();
-  }, [fontsLoaded]);
+  const onLayout = useCallback(() => {}, []);
 
   // Déconnexion : supprime le token push, Supabase + tous les stores + retour à l'auth
   const handleLogout = useCallback(async () => {
@@ -227,8 +226,6 @@ export default function App() {
     return () => sub.remove();
   }, [handleLogout]);
 
-  // Sur web, les polices chargent en arrière-plan via CSS — on ne bloque pas le rendu
-  if (!fontsLoaded && Platform.OS !== 'web') return null;
 
   return (
     <View style={styles.root} onLayout={onLayout}>
@@ -261,7 +258,10 @@ export default function App() {
               return;
             }
 
-            const sessionUser = await authService.getSessionUser();
+            const sessionUser = await Promise.race([
+              authService.getSessionUser(),
+              new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+            ]);
 
             if (sessionUser) {
               useAuthStore.getState().setUser(sessionUser);
