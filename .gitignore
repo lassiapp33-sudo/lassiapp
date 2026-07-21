@@ -41,5 +41,5 @@ yarn-error.*
 /ios
 /android
 
-# Firebase (fourni localement ou via secret EAS)
-/google-services.json
+# Firebase — google-services.json inclus dans git (config client non-secrète, nécessaire pour EAS)
+# /google-services.json

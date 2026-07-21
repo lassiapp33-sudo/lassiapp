@@ -25,6 +25,14 @@ export default class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
     logger.error('[ErrorBoundary]', error, info.componentStack);
+    if (!__DEV__) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const crashlytics = require('@react-native-firebase/crashlytics').default;
+        crashlytics().log(`Component stack: ${info.componentStack ?? ''}`);
+        crashlytics().recordError(error);
+      } catch (_) {}
+    }
   }
 
   handleRetry = (): void => this.setState({ hasError: false });

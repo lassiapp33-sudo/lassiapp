@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "525436972525",
+    "project_id": "lassiapp",
+    "storage_bucket": "lassiapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:525436972525:android:fdf032e45e9b4815170be4",
+        "android_client_info": {
+          "package_name": "com.lassiapp.lassiapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5pLlxjT_KQDOGmyOF2b2cx3Cn7Kz_tJA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
