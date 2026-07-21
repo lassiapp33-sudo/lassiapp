@@ -17,7 +17,7 @@ const APP_BASE_URL      = Deno.env.get('APP_BASE_URL') ?? 'lassi://'
 const IS_PRODUCTION = WAVE_API_KEY !== '' || isOmReady()
 
 // ── Haversine (même logique que config/livraison.ts côté app) ──────────────
-const PRIX_BASE       = 500
+const PRIX_BASE       = 800  // 500 base + 300 forfait
 const PRIX_PAR_KM     = 250
 const PRIX_MINIMUM    = 1000
 const PRIX_MAXIMUM    = 15000
