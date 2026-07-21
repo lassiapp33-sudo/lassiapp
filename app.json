@@ -46,6 +46,7 @@
     "plugins": [
       "@react-native-firebase/app",
       "@react-native-firebase/crashlytics",
+      "./plugins/withFirebaseCrashlyticsGradle",
       "expo-font",
       [
         "expo-camera",
