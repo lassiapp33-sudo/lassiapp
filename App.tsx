@@ -13,9 +13,10 @@ import {
 import { Poppins_300Light } from '@expo-google-fonts/poppins';
 
 import { colors }        from './src/theme';
-import SplashScreen      from './src/screens/SplashScreen';
-import OnboardingScreen  from './src/screens/OnboardingScreen';
-import AuthNavigator     from './src/screens/AuthNavigator';
+import SplashScreen         from './src/screens/SplashScreen';
+import OnboardingScreen     from './src/screens/OnboardingScreen';
+import AuthNavigator        from './src/screens/AuthNavigator';
+import ResetPasswordScreen  from './src/screens/auth/ResetPasswordScreen';
 import HomeNavigator     from './src/screens/home/HomeNavigator';
 import MerchantNavigator from './src/screens/merchant/MerchantNavigator';
 import LivreurNavigator  from './src/screens/livreur/LivreurNavigator';
@@ -26,7 +27,7 @@ import NotifPopupBanner  from './src/components/common/NotifPopupBanner';
 import AnnonceModal      from './src/components/common/AnnonceModal';
 import { useAnnonces }   from './src/hooks/useAnnonces';
 import { useConnectionWatcher } from './src/hooks/useConnectionWatcher';
-import useAuthStore            from './src/store/authStore';
+import useAuthStore, { AuthUser } from './src/store/authStore';
 import useShopStore             from './src/store/shopStore';
 import useOrdersStore           from './src/store/ordersStore';
 import useDebtsStore            from './src/store/debtsStore';
@@ -59,7 +60,7 @@ const getN = (): N | null => {
 
 ExpoSplashScreen.preventAutoHideAsync();
 
-type Screen = 'splash' | 'onboarding' | 'auth' | 'client' | 'merchant' | 'livreur';
+type Screen = 'splash' | 'onboarding' | 'auth' | 'client' | 'merchant' | 'livreur' | 'resetPassword';
 
 // Décode les données d'une notification push et stocke la navigation en attente
 function handleNotifData(data: Record<string, any> | undefined | null) {
@@ -76,6 +77,10 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('splash');
   const userId = useAuthStore(s => s.user?.id ?? null);
   const setPendingNav = usePendingNavStore(s => s.setPendingNav);
+
+  // Promesse de session lancée au montage — en parallèle avec l'animation du splash (2,6s).
+  // Résultat disponible dès onFinish, sans délai supplémentaire.
+  const sessionFetch = React.useRef<Promise<AuthUser | null> | null>(null);
 
   // Charge les IDs de cartes déjà affichées (AsyncStorage) au démarrage
   const loadSeenIds = useNotifPopupStore(s => s.loadSeenIds);
@@ -99,10 +104,13 @@ export default function App() {
     Poppins_300Light,
   });
 
-  // Cache le splash natif dès le premier rendu React — les polices chargent en parallèle
-  // pendant les 2,6 secondes du SplashScreen animé, donc elles sont prêtes avant la nav
+  // Cache le splash natif dès le premier rendu React.
+  // Lance immédiatement getSessionUser() en parallèle avec l'animation du splash (2,6s)
+  // afin que le token soit rafraîchi et le profil récupéré avant onFinish — supprime le
+  // délai réseau visible après la fin de l'animation.
   useEffect(() => {
     ExpoSplashScreen.hideAsync().catch(() => {});
+    sessionFetch.current = authService.getSessionUser().catch(() => null);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onLayout = useCallback(() => {}, []);
@@ -206,6 +214,11 @@ export default function App() {
     return unsubscribe;
   }, [screen]);
 
+  // Intercepte l'event PASSWORD_RECOVERY (lien email reset-password)
+  useEffect(() => {
+    return authService.onPasswordRecovery(() => setScreen('resetPassword'));
+  }, []);
+
   // Déconnexion automatique après inactivité prolongée (Section 7) :
   // on note l'heure de mise en arrière-plan, et au retour au premier plan
   // on déconnecte si le délai INACTIVITY_TIMEOUT_MS est dépassé.
@@ -257,9 +270,10 @@ export default function App() {
               return;
             }
 
-            // Vérification session avec timeout : si Supabase répond → source de vérité
+            // Utilise la promesse lancée au montage (en parallèle avec le splash).
+            // Si elle n'existe pas (rare), on en lance une nouvelle avec un timeout court.
             const sessionUser = await Promise.race([
-              authService.getSessionUser(),
+              sessionFetch.current ?? authService.getSessionUser(),
               new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
             ]);
 
@@ -316,6 +330,10 @@ export default function App() {
       {screen === 'client'   && <HomeNavigator     onLogout={handleLogout} />}
       {screen === 'merchant' && <MerchantNavigator onLogout={handleLogout} />}
       {screen === 'livreur'  && <LivreurNavigator  onLogout={handleLogout} />}
+
+      {screen === 'resetPassword' && (
+        <ResetPasswordScreen onDone={() => setScreen('auth')} />
+      )}
       </ErrorBoundary>
     </View>
   );

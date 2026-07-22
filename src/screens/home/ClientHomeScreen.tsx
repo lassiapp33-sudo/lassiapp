@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
+import Svg, { Path, Circle } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useT } from '../../i18n';
 
@@ -28,6 +29,7 @@ import useFavoritesStore from '../../store/favoritesStore';
 import useNotificationsStore from '../../store/notificationsStore';
 import useLocationStore from '../../store/locationStore';
 import * as shopsService from '../../services/shops';
+import { supabase } from '../../lib/supabase';
 import { getBadgesActifsBatch, RecompenseAttribuee } from '../../services/classementService';
 import { haversineMeters, formatDistance } from '../../services/location';
 import { computeStatus, WeekHours } from '../../services/hours';
@@ -154,11 +156,13 @@ export default function ClientHomeScreen({
     }
   }
 
-  // Montage seul — loadShops est une fonction locale (non memoized), l'ajouter créerait une boucle infinie
+  // Montage seul — loadShops est une fonction locale (non memoized), l'ajouter créerait une boucle infinie.
+  // On s'assure que la session Supabase est en mémoire (GoTrue lock libéré) avant d'appeler loadShops,
+  // pour éviter que la lecture SecureStore bloque la requête shops sur les appareils lents au cold start.
   useEffect(() => {
     loadFavorites();
     refreshLocation();
-    loadShops();
+    supabase.auth.getSession().catch(() => {}).finally(() => loadShops());
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Annonces sponsorisées — modale affichée une seule fois par annonce par compte
@@ -280,7 +284,13 @@ export default function ClientHomeScreen({
         {/* Boutiques à proximité */}
         <View style={styles.px}>
           <View style={styles.sectionHead}>
-            <Text style={styles.secTitle}>{t.home.nearby}</Text>
+            <View style={styles.secTitleRow}>
+              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: 6 }}>
+                <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill={colors.accent} />
+                <Circle cx={12} cy={9} r={2.5} fill={colors.bg} />
+              </Svg>
+              <Text style={styles.secTitle}>{t.home.nearby}</Text>
+            </View>
           </View>
 
           {loading ? (
@@ -336,6 +346,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 14,
     paddingHorizontal: 20,
+  },
+  secTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   secTitle: {
     color: colors.white,

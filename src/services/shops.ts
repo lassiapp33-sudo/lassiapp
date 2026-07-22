@@ -122,10 +122,14 @@ export async function getUserLocation(): Promise<{ lat: number; lng: number } | 
 // ─── Requêtes ────────────────────────────────────────────────────────────────
 
 export async function getShops(): Promise<Shop[]> {
-  const { data, error } = await supabase
-    .from('shops')
-    .select('*')
-    .order('rating', { ascending: false });
+  const timeoutMs = 15000;
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('timeout')), timeoutMs),
+  );
+  const { data, error } = await Promise.race([
+    supabase.from('shops').select('*').order('rating', { ascending: false }),
+    timeout,
+  ]);
   if (error) throw new Error(error.message);
   return (data ?? []).map(rowToShop);
 }

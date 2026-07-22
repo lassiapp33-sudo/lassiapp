@@ -50,6 +50,8 @@ module.exports = {
       favicon: "./assets/favicon.png",
     },
     plugins: [
+      "@react-native-firebase/app",
+      "@react-native-firebase/crashlytics",
       "expo-font",
       [
         "expo-camera",
