@@ -203,6 +203,10 @@ export default function HomeNavigator({ onLogout }: Props) {
       push({ id: 'a_la_une_bloc', blocCode: pendingNav.blocCode, elementIndex: pendingNav.elementIndex });
     } else if (pendingNav.type === 'a_la_une_categorie') {
       push({ id: 'a_la_une_categorie', categorieId: pendingNav.categorieId });
+    } else if (pendingNav.type === 'new_shop') {
+      push({ id: 'shop', shopId: pendingNav.shopId, shopName: pendingNav.shopName });
+    } else if (pendingNav.type === 'a_la_une_feed') {
+      push({ id: 'a_la_une_feed' });
     }
   }, [pendingNav, clearPending]);
 
@@ -571,8 +575,16 @@ export default function HomeNavigator({ onLogout }: Props) {
                 isVip: false,
               },
             ]);
+          } else if (type === 'ann' && targetId === 'a_la_une_feed') {
+            // Annonce À la une → ouvrir le feed À la une
+            setHistory(h => [...h.slice(0, -1), { id: 'a_la_une_feed' }]);
+          } else if (type === 'ann' && targetId) {
+            // Annonce avec tag = shopId → ouvrir la vitrine du nouveau prestataire
+            setHistory(h => [
+              ...h.slice(0, -1),
+              { id: 'shop', shopId: targetId, shopName: '…' },
+            ]);
           }
-          // Les autres types (order, pay, vip) n'ont pas encore d'écran dédié côté client
         }}
       />
     );

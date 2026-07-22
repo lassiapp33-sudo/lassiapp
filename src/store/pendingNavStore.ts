@@ -12,7 +12,9 @@ export type PendingNav =
   | { type: 'payment_success'; paymentIntentId: string }
   | { type: 'payment_failed' }
   | { type: 'a_la_une_bloc'; blocCode: string; elementIndex?: number }
-  | { type: 'a_la_une_categorie'; categorieId: string };
+  | { type: 'a_la_une_categorie'; categorieId: string }
+  | { type: 'new_shop'; shopId: string; shopName: string }
+  | { type: 'a_la_une_feed' };
 
 interface PendingNavState {
   pendingNav: PendingNav | null;

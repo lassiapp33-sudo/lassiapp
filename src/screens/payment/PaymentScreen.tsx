@@ -34,12 +34,14 @@ function WaitingView({
   method,
   total,
   verifying,
+  paymentUrl,
   onVerify,
   onBack,
 }: {
   method: PayMethod;
   total: number;
   verifying: boolean;
+  paymentUrl: string;
   onVerify: () => void;
   onBack: () => void;
 }) {
@@ -58,6 +60,16 @@ function WaitingView({
           {` dans ${methodLabel}, puis reviens ici et appuie sur le bouton ci-dessous.`}
         </Text>
       </View>
+
+      {!!paymentUrl && (
+        <TouchableOpacity
+          style={styles.reopenBtn}
+          onPress={() => Linking.openURL(paymentUrl).catch(() => {})}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.reopenTxt}>↗ Rouvrir {methodLabel}</Text>
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         style={[styles.verifyBtn, verifying && styles.verifyBtnLoading]}
@@ -97,6 +109,8 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
   const referenceRef = useRef<string>(order.preInitiatedPiId ?? '');
   const processingRef = useRef(false);
 
+  const [paymentUrl, setPaymentUrl] = useState<string>('');
+
   const handlePay = async () => {
     if (processingRef.current) return;
     processingRef.current = true;
@@ -109,8 +123,32 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
         merchantName: order.shopName,
       });
       referenceRef.current = session.reference;
+
+      // Mode simulation (pas de clés API Wave/OM) : vérification directe
+      if (session.simulation) {
+        const paid = await payService.verifyPayment({
+          reference: session.reference,
+          ticketId: order.ticketId,
+          method,
+        });
+        if (paid) {
+          setStage('confirm');
+        } else {
+          Alert.alert('Simulation', 'Paiement simulé non confirmé. Réessaie.');
+        }
+        return;
+      }
+
       if (session.paymentUrl) {
-        await Linking.openURL(session.paymentUrl);
+        setPaymentUrl(session.paymentUrl);
+        // canOpenURL retourne false sur Android 11+ pour les schemes non déclarés
+        // (ex. orangemoney://) même si l'app est installée → on ouvre directement.
+        Linking.openURL(session.paymentUrl).catch(() => {
+          Alert.alert(
+            'Ouverture impossible',
+            `L'app ${method === 'om' ? 'Orange Money' : 'Wave'} n'est pas installée ou le lien est invalide.`,
+          );
+        });
       }
       setStage('waiting');
     } catch (err) {
@@ -165,6 +203,7 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
           method={method}
           total={order.total}
           verifying={verifying}
+          paymentUrl={paymentUrl}
           onVerify={handleVerify}
           onBack={onBack}
         />
@@ -277,5 +316,20 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 13,
     marginTop: 4,
+  },
+  reopenBtn: {
+    width: '100%',
+    height: 46,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  reopenTxt: {
+    color: colors.accent,
+    fontFamily: fonts.ui,
+    fontSize: 14,
   },
 });

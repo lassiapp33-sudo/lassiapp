@@ -16,6 +16,26 @@ if (!SUPABASE_URL || !SUPABASE_ANON) {
   logger.warn("[Supabase] Variables d'env manquantes — vérifie ton fichier .env");
 }
 
+// Chaque requête Supabase (auth token refresh + REST) passe par ce fetch.
+// Sans timeout, le refresh du token JWT peut bloquer indéfiniment sur réseau lent
+// et maintenir le lock GoTrue acquis — toutes les requêtes suivantes attendent en file.
+// Avec ce timeout, le lock est libéré après 12 s et l'utilisateur voit un bouton "Réessayer".
+function fetchWithTimeout(
+  input: Parameters<typeof fetch>[0],
+  init?: Parameters<typeof fetch>[1],
+): ReturnType<typeof fetch> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12_000);
+  // Propage un éventuel signal d'annulation existant
+  const existingSignal = init?.signal as AbortSignal | undefined;
+  if (existingSignal) {
+    existingSignal.addEventListener('abort', () => controller.abort(), { once: true });
+  }
+  return fetch(input, { ...init, signal: controller.signal }).finally(() =>
+    clearTimeout(timer),
+  );
+}
+
 // Client Supabase partagé dans toute l'app
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
@@ -25,4 +45,5 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
     persistSession: true, // sauvegarde la session sur le téléphone
     detectSessionInUrl: Platform.OS === 'web',
   },
+  global: { fetch: fetchWithTimeout },
 });

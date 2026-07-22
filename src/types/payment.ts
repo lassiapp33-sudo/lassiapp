@@ -12,7 +12,7 @@ export interface OrderInfo {
   shopLocation: string; // ex : "📍 Medina"
   items: OrderItem[];
   total: number;
-  /** Frais de service LASSİ (1%) déjà inclus dans `total`. */
+  /** Frais de service LASSİ (10%) déjà inclus dans `total`. */
   commission?: number;
   orderType?: 'place' | 'emporter';
   /** Méthode et piId déjà initiés depuis CartScreen — PaymentScreen démarre en waiting. */

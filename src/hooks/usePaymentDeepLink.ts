@@ -2,12 +2,30 @@ import { useEffect } from 'react';
 import { Linking } from 'react-native';
 import { verifierPaiement } from '../services/paymentService';
 import usePendingNavStore from '../store/pendingNavStore';
+import { supabase } from '../lib/supabase';
 
 export function usePaymentDeepLink() {
   const setPendingNav = usePendingNavStore(s => s.setPendingNav);
 
   useEffect(() => {
     const handleUrl = async ({ url }: { url: string }) => {
+      // ── Reset mot de passe ────────────────────────────────────────────────
+      if (url.includes('reset-password')) {
+        // PKCE flow : ?code=...
+        const code = parseParam(url, 'code');
+        if (code) {
+          await supabase.auth.exchangeCodeForSession(code).catch(() => {});
+          return;
+        }
+        // Implicit flow : #access_token=...&refresh_token=...
+        const accessToken = parseParam(url, 'access_token');
+        const refreshToken = parseParam(url, 'refresh_token');
+        if (accessToken && refreshToken) {
+          await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).catch(() => {});
+        }
+        return;
+      }
+
       // ── Paiement ──────────────────────────────────────────────────────────
       if (url.includes('lassiapp://paiement/succes')) {
         const piId = parseParam(url, 'pi');

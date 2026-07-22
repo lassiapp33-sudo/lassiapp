@@ -12,7 +12,9 @@
  *     (get_auth_email_by_phone) pour retrouver quel email a été utilisé.
  */
 
-import { supabase } from '../lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
+import { SESSION_ACTIVE_KEY } from '../lib/secureStorage';
 import { AuthUser, UserRole } from '../store/authStore';
 import { getInitials } from '../utils/getInitials';
 import { uploadImage, logoPath } from './storage';
@@ -20,6 +22,8 @@ import { saveConsent } from './consents';
 import type { WeekHours } from './hours';
 import logger from '../utils/logger';
 import { isNetworkError } from '../utils/network';
+
+export { SESSION_ACTIVE_KEY };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -223,29 +227,43 @@ export interface LoginParams {
 export async function login(params: LoginParams): Promise<AuthUser> {
   const cleanPhone = params.phone.replace(/\s+/g, '');
 
-  // 1 — Retrouver l'email auth (réel ou technique) via la RPC Supabase
-  //     La fonction SQL get_auth_email_by_phone est accessible aux utilisateurs anonymes
-  const { data: authEmail, error: rpcError } = await supabase.rpc('get_auth_email_by_phone', {
-    p_phone: cleanPhone,
+  // 1 — Retrouver l'email auth via fetch direct (anon, contourne GoTrue au démarrage)
+  const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_auth_email_by_phone`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON,
+      Authorization: `Bearer ${SUPABASE_ANON}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ p_phone: cleanPhone }),
   });
 
-  if (rpcError) {
-    // Section 5 : rate limiting anti-bruteforce (5 tentatives / 15 min, blocage 30 min)
-    // Section 6 : compte temporairement suspendu (pattern attaquant détecté)
-    if (rpcError.code === 'PT429' || rpcError.code === 'PT403') {
-      throw new Error(rpcError.message);
+  if (!rpcRes.ok) {
+    const errBody: { code?: string; message?: string } = await rpcRes.json().catch(() => ({}));
+    if (errBody.code === 'PT429' || errBody.code === 'PT403') {
+      throw new Error(errBody.message ?? 'Trop de tentatives.');
     }
     throw new Error('Numéro introuvable. Vérifie ton numéro ou crée un compte.');
   }
+
+  const authEmail: string | null = await rpcRes.json();
   if (!authEmail) {
     throw new Error('Numéro introuvable. Vérifie ton numéro ou crée un compte.');
   }
 
   // 2 — Connexion Supabase avec l'email auth retrouvé
-  const { data, error: loginError } = await supabase.auth.signInWithPassword({
-    email: authEmail,
-    password: params.password,
-  });
+  // Timeout 15s : si GoTrue est encore bloqué par le Keystore au démarrage,
+  // l'utilisateur voit un message clair au lieu d'un spinner infini.
+  const loginResult = await Promise.race([
+    supabase.auth.signInWithPassword({ email: authEmail, password: params.password }),
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error('Connexion trop lente. Vérifie ta connexion et réessaie.')),
+        30000,
+      ),
+    ),
+  ]);
+  const { data, error: loginError } = loginResult;
 
   if (loginError) {
     // Enregistrer l'échec et lire le résultat pour afficher le bon message immédiatement
@@ -277,6 +295,7 @@ export async function login(params: LoginParams): Promise<AuthUser> {
     () => {},
   );
 
+  void AsyncStorage.setItem(SESSION_ACTIVE_KEY, '1');
   return profile;
 }
 
@@ -295,6 +314,7 @@ export async function loginLivreur(telephone: string, password: string): Promise
   const profile = await getProfileById(data.user.id);
   if (!profile) throw new Error('Profil introuvable. Contacte le support LASSİ.');
 
+  void AsyncStorage.setItem(SESSION_ACTIVE_KEY, '1');
   return profile;
 }
 
@@ -315,6 +335,7 @@ export async function logout(): Promise<void> {
   // (toutes les sessions de cet utilisateur) en plus de nettoyer le
   // stockage local (secureStorage).
   const { error } = await supabase.auth.signOut({ scope: 'global' });
+  void AsyncStorage.removeItem(SESSION_ACTIVE_KEY).catch(() => {});
   if (error) throw new Error(traduireErreur(error.message));
 }
 
@@ -324,9 +345,21 @@ export async function forgotPassword(email: string): Promise<void> {
   // Fonctionne uniquement pour les comptes créés avec un email réel.
   // Pour les comptes sans email (email technique), orienter vers le support.
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-    redirectTo: 'lassiapp://reset-password',
+    redirectTo: 'https://lassi.tech/reset-password',
   });
   if (error) throw new Error(traduireErreur(error.message));
+}
+
+export async function updatePassword(newPassword: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw new Error(traduireErreur(error.message));
+}
+
+export function onPasswordRecovery(callback: () => void): () => void {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') callback();
+  });
+  return () => subscription.unsubscribe();
 }
 
 // ─── Récupération de session au démarrage ───────────────────────────────────
@@ -395,6 +428,10 @@ export function onAuthStateChange(callback: (user: AuthUser | null) => void): ()
       return;
     }
     const profile = await getProfileById(session.user.id).catch(() => null);
+    // Ne pas déconnecter si le profil est introuvable lors d'un TOKEN_REFRESHED :
+    // la session est valide, c'est probablement une erreur réseau transitoire.
+    // On appelle callback(null) uniquement si la session elle-même est invalide.
+    if (!profile) return;
     callback(profile);
   });
   return () => subscription.unsubscribe();

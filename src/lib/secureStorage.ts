@@ -1,6 +1,11 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Clé AsyncStorage (rapide, sans Keystore) indiquant qu'une session existe.
+// Lue AVANT que GoTrue lise le Keystore — si absente, on retourne null à GoTrue
+// pour éviter le refresh de token bloquant (12s fetchWithTimeout) au démarrage.
+export const SESSION_ACTIVE_KEY = 'lassi_session_active';
+
 // react-native-get-random-values et expo-secure-store sont natifs uniquement
 if (Platform.OS !== 'web') {
   try {
@@ -72,4 +77,36 @@ class LargeSecureStore {
   }
 }
 
-export const secureStorage = new LargeSecureStore();
+const _rawSecureStorage = new LargeSecureStore();
+
+// Wrapper GoTrue-aware : si SESSION_ACTIVE_KEY absent, retourne null pour tous les
+// getItem() de GoTrue → pas de token stale → pas de refresh réseau → init instantanée.
+// Dès qu'un setItem() est appelé (login réussi), la session est considérée active.
+class SessionAwareStorage {
+  private _checked = false;
+  private _active = false;
+
+  private async _ensureChecked(): Promise<void> {
+    if (this._checked) return;
+    this._checked = true;
+    const flag = await AsyncStorage.getItem(SESSION_ACTIVE_KEY).catch(() => null);
+    this._active = !!flag;
+  }
+
+  async getItem(key: string): Promise<string | null> {
+    await this._ensureChecked();
+    if (!this._active) return null;
+    return _rawSecureStorage.getItem(key);
+  }
+
+  async setItem(key: string, value: string): Promise<void> {
+    this._active = true;
+    return _rawSecureStorage.setItem(key, value);
+  }
+
+  async removeItem(key: string): Promise<void> {
+    return _rawSecureStorage.removeItem(key);
+  }
+}
+
+export const secureStorage = new SessionAwareStorage();

@@ -4,8 +4,8 @@
 
 export const PAYMENT_CONFIG = {
   // Commission LASSİ
-  COMMISSION_RATE: 0.01,            // 1% exactement
-  COMMISSION_PERCENT_DISPLAY: '1%', // pour affichage UI
+  COMMISSION_RATE: 0.10,             // 10% exactement
+  COMMISSION_PERCENT_DISPLAY: '10%', // pour affichage UI
 
   // Reçu
   RECEIPT_VALIDITY_MINUTES: 40,
@@ -31,7 +31,7 @@ export type MoyenPaiement = typeof PAYMENT_CONFIG.MOYENS_PAIEMENT[number];
 // ============================================================
 
 /**
- * Calcule le prix affiché au client (prix de base + commission LASSİ 1%)
+ * Calcule le prix affiché au client (prix de base + commission LASSİ 10%)
  * @param prixBase - Prix entré par le prestataire (FCFA entier)
  * @returns Prix total affiché au client (arrondi au FCFA supérieur)
  */

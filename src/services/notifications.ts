@@ -81,7 +81,7 @@ export async function getNotifications(): Promise<Notif[]> {
   const regularNotifs: Notif[] = (notifData ?? []).map(rowToNotif);
 
   const annonceNotifs: Notif[] = (annoncesData ?? []).map(
-    (a: { id: string; titre: string; corps: string; icone: string; created_at: string; est_lue: boolean }) => ({
+    (a: { id: string; titre: string; corps: string; icone: string; tag: string | null; created_at: string; est_lue: boolean }) => ({
       id: ANN_PREFIX + a.id,
       type: 'ann' as NotifType,
       title: `${a.icone} ${a.titre}`,
@@ -90,6 +90,7 @@ export async function getNotifications(): Promise<Notif[]> {
       unread: !a.est_lue,
       group: toGroup(a.created_at),
       createdAt: a.created_at,
+      targetId: a.tag ?? undefined,
     }),
   );
 

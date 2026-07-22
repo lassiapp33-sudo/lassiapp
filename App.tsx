@@ -35,7 +35,9 @@ import useFavoritesStore        from './src/store/favoritesStore';
 import useNotificationsStore    from './src/store/notificationsStore';
 import useNotifPopupStore       from './src/store/notifPopupStore';
 import useCartStore             from './src/store/cartStore';
+import AsyncStorage             from '@react-native-async-storage/async-storage';
 import * as authService         from './src/services/auth';
+import { SESSION_ACTIVE_KEY }   from './src/services/auth';
 import { usePushToken, removeCurrentDeviceToken } from './src/hooks/usePushToken';
 import { usePaymentDeepLink } from './src/hooks/usePaymentDeepLink';
 import usePendingNavStore from './src/store/pendingNavStore';
@@ -70,6 +72,10 @@ function handleNotifData(data: Record<string, any> | undefined | null) {
     setPendingNav({ type: 'msg', conversationId: data.conversationId });
   } else if (data.type === 'commande' && data.orderId) {
     setPendingNav({ type: 'order', orderId: data.orderId });
+  } else if (data.type === 'new_shop' && data.shop_id) {
+    setPendingNav({ type: 'new_shop', shopId: data.shop_id as string, shopName: (data.shop_name as string) ?? '' });
+  } else if (data.type === 'a_la_une_feed') {
+    setPendingNav({ type: 'a_la_une_feed' });
   }
 }
 
@@ -105,12 +111,19 @@ export default function App() {
   });
 
   // Cache le splash natif dès le premier rendu React.
-  // Lance immédiatement getSessionUser() en parallèle avec l'animation du splash (2,6s)
-  // afin que le token soit rafraîchi et le profil récupéré avant onFinish — supprime le
-  // délai réseau visible après la fin de l'animation.
+  // Lance getSessionUser() SEULEMENT si une session existait (flag AsyncStorage sans Keystore).
+  // Sans flag → pas de GoTrue au démarrage → mutex jamais bloqué → login instantané.
   useEffect(() => {
     ExpoSplashScreen.hideAsync().catch(() => {});
-    sessionFetch.current = authService.getSessionUser().catch(() => null);
+    AsyncStorage.getItem(SESSION_ACTIVE_KEY)
+      .then(hasSession => {
+        sessionFetch.current = hasSession
+          ? authService.getSessionUser().catch(() => null)
+          : Promise.resolve(null);
+      })
+      .catch(() => {
+        sessionFetch.current = Promise.resolve(null);
+      });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onLayout = useCallback(() => {}, []);
@@ -118,7 +131,11 @@ export default function App() {
   // Déconnexion : supprime le token push, Supabase + tous les stores + retour à l'auth
   const handleLogout = useCallback(async () => {
     await removeCurrentDeviceToken();
-    try { await authService.logout(); } catch (_) {}
+    // Timeout 3s : scope:'global' peut bloquer indéfiniment sur Android prod (réseau lent)
+    await Promise.race([
+      authService.logout(),
+      new Promise<void>(resolve => setTimeout(resolve, 3000)),
+    ]).catch(() => {});
     useAuthStore.getState().logout();
     useShopStore.setState({
       shopId: null,
@@ -272,9 +289,11 @@ export default function App() {
 
             // Utilise la promesse lancée au montage (en parallèle avec le splash).
             // Si elle n'existe pas (rare), on en lance une nouvelle avec un timeout court.
+            // La session a déjà eu 2,6 s pour charger (pendant l'animation).
+            // On attend au max 1 s de plus → sinon on utilise le cachedUser persisté.
             const sessionUser = await Promise.race([
               sessionFetch.current ?? authService.getSessionUser(),
-              new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+              new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000)),
             ]);
 
             if (sessionUser) {
