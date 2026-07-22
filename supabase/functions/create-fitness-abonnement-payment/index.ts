@@ -16,9 +16,9 @@ const APP_BASE_URL      = Deno.env.get('APP_BASE_URL') ?? 'lassi://'
 
 const IS_PRODUCTION = WAVE_API_KEY !== '' || isOmReady()
 
-// Commission LASSI : 10% du prix vendeur (arrondie au FCFA supérieur)
+// Commission LASSI : 1% du prix vendeur (arrondie au FCFA supérieur)
 function calculerPrixClient(prixBase: number): number {
-  const commission = Math.ceil(prixBase * 0.10)
+  const commission = Math.ceil(prixBase * 0.01)
   return prixBase + commission
 }
 
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     if (!offre) return json({ error: 'Offre introuvable ou inactive' }, 404)
 
     const prixBase   = offre.prix as number
-    const commission = Math.ceil(prixBase * 0.10)
+    const commission = Math.ceil(prixBase * 0.01)
     const prixTotal  = calculerPrixClient(prixBase)
     const dureeJours = (offre.duree_jours as number) || 30
 
