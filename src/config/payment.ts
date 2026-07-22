@@ -1,10 +1,15 @@
 // ============================================================
 // CONFIGURATION PAIEMENT LASSI — NE PAS MODIFIER SANS ACCORD
+//
+// ⚠️  COMMISSION = 1% SUR TOUTES LES TRANSACTIONS DE L'APP
+//     Les 10% sont UNIQUEMENT pour les livreurs (admin interne).
+//     Ne JAMAIS changer COMMISSION_RATE sans ordre explicite du fondateur.
 // ============================================================
 
 export const PAYMENT_CONFIG = {
-  // Commission LASSİ
-  COMMISSION_RATE: 0.01,            // 1% exactement
+  // Commission LASSİ — 1% sur TOUTES les transactions (commandes, fitness, terrains...)
+  // ⚠️ Les 10% = livreurs admin interne uniquement — NE JAMAIS mettre ici
+  COMMISSION_RATE: 0.01,            // 1% — NE PAS MODIFIER
   COMMISSION_PERCENT_DISPLAY: '1%', // pour affichage UI
 
   // Reçu
