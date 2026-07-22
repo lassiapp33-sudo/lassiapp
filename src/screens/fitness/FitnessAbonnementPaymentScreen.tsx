@@ -14,7 +14,7 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
-import { calculerPrixClient } from '../../config/payment';
+import { calculerPrixClient, PAYMENT_CONFIG } from '../../config/payment';
 import { PayMethod } from '../../types/payment';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { supabase } from '../../lib/supabase';
@@ -263,7 +263,7 @@ export default function FitnessAbonnementPaymentScreen({
             <Text style={styles.totalAmount}>{formatPrice(prixClient)}</Text>
           </View>
           <Text style={styles.commissionNote}>
-            Dont 10% de commission LASSI ({formatPrice(prixClient - offre.prix)})
+            Dont {PAYMENT_CONFIG.COMMISSION_PERCENT_DISPLAY} de commission LASSI ({formatPrice(prixClient - offre.prix)})
           </Text>
         </View>
 

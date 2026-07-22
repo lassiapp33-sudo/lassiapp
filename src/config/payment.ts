@@ -4,8 +4,8 @@
 
 export const PAYMENT_CONFIG = {
   // Commission LASSİ
-  COMMISSION_RATE: 0.10,             // 10% exactement
-  COMMISSION_PERCENT_DISPLAY: '10%', // pour affichage UI
+  COMMISSION_RATE: 0.01,            // 1% exactement
+  COMMISSION_PERCENT_DISPLAY: '1%', // pour affichage UI
 
   // Reçu
   RECEIPT_VALIDITY_MINUTES: 40,
