@@ -6,7 +6,7 @@
  * Onglet 3 : Paiements    — total à payer par livreur sur une période
  */
 import React, { useEffect, useMemo, useState } from 'react'
-import { Truck, Plus, X, ToggleLeft, ToggleRight, RefreshCw, Copy, Check, AlertCircle, BadgeCheck } from 'lucide-react'
+import { Truck, Plus, X, ToggleLeft, ToggleRight, RefreshCw, Copy, Check, AlertCircle, BadgeCheck, Trash2, Ban } from 'lucide-react'
 import { SkeletonRow } from '../components/Skeleton'
 import {
   getLivreurs,
@@ -15,6 +15,9 @@ import {
   toggleLivreurActif,
   creerCompteLivreur,
   marquerLivreurVerse,
+  supprimerLivreur,
+  supprimerLivraison,
+  annulerLivraison,
   getSoldesActuels,
   AdminLivreur,
   AdminLivraison,
@@ -319,6 +322,70 @@ function ConfirmVersementModal({ solde, onClose, onConfirm }: ConfirmVersementPr
   )
 }
 
+// ─── Modal confirmation danger ────────────────────────────────────────────────
+
+interface ConfirmDangerProps {
+  title:     string
+  message:   React.ReactNode
+  label:     string
+  onClose:   () => void
+  onConfirm: () => Promise<void>
+}
+
+function ConfirmDangerModal({ title, message, label, onClose, onConfirm }: ConfirmDangerProps) {
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState('')
+
+  const handleConfirm = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      await onConfirm()
+      onClose()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erreur.')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="bg-surface border border-border rounded-2xl w-full max-w-sm shadow-2xl">
+        <div className="p-5 border-b border-border flex items-center justify-between">
+          <span className="font-title font-bold text-white text-base">{title}</span>
+          <button onClick={onClose} className="text-muted hover:text-white transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          {error && (
+            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-300">
+              <AlertCircle size={15} className="mt-0.5 shrink-0" />
+              {error}
+            </div>
+          )}
+          <p className="text-muted text-sm leading-relaxed">{message}</p>
+        </div>
+        <div className="flex gap-3 p-5 border-t border-border">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2 rounded-xl border border-border text-muted hover:text-white transition-colors text-sm"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={loading}
+            className="flex-1 py-2 rounded-xl bg-red-500/80 hover:bg-red-500 text-white font-bold text-sm transition-colors disabled:opacity-50"
+          >
+            {loading ? 'En cours…' : label}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Page principale ─────────────────────────────────────────────────────────
 
 type Tab = 'livreurs' | 'livraisons' | 'paiements'
@@ -332,8 +399,11 @@ export default function LivreursPage() {
   const [loadingVers,     setLoadingVers]     = useState(true)
   const [showCreate,      setShowCreate]      = useState(false)
   const [toggling,        setToggling]        = useState<string | null>(null)
-  const [versements,      setVersements]      = useState<import('../services/livreurs').VersementLivreur[]>([])
-  const [confirmSolde,    setConfirmSolde]    = useState<SoldeLivreur | null>(null)
+  const [versements,             setVersements]             = useState<import('../services/livreurs').VersementLivreur[]>([])
+  const [confirmSolde,           setConfirmSolde]           = useState<SoldeLivreur | null>(null)
+  const [confirmDeleteLivreur,   setConfirmDeleteLivreur]   = useState<AdminLivreur | null>(null)
+  const [confirmDeleteLivraison, setConfirmDeleteLivraison] = useState<AdminLivraison | null>(null)
+  const [confirmAnnulerLivraison,setConfirmAnnulerLivraison]= useState<AdminLivraison | null>(null)
 
   // Filtre statut livraisons
   const [filtreStatut, setFiltreStatut] = useState<string>('tous')
@@ -496,17 +566,26 @@ export default function LivreursPage() {
                     </td>
                     <td className="px-5 py-3 text-muted text-xs">{formatDate(l.createdAt)}</td>
                     <td className="px-5 py-3">
-                      <button
-                        onClick={() => handleToggle(l)}
-                        disabled={toggling === l.id}
-                        className="text-muted hover:text-white transition-colors disabled:opacity-50"
-                        title={l.actif ? 'Désactiver' : 'Activer'}
-                      >
-                        {l.actif
-                          ? <ToggleRight size={22} className="text-emerald-400" />
-                          : <ToggleLeft size={22} />
-                        }
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handleToggle(l)}
+                          disabled={toggling === l.id}
+                          className="text-muted hover:text-white transition-colors disabled:opacity-50"
+                          title={l.actif ? 'Désactiver' : 'Activer'}
+                        >
+                          {l.actif
+                            ? <ToggleRight size={22} className="text-emerald-400" />
+                            : <ToggleLeft size={22} />
+                          }
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteLivreur(l)}
+                          className="text-muted hover:text-red-400 transition-colors"
+                          title="Supprimer ce livreur"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -551,6 +630,7 @@ export default function LivreursPage() {
                   <th className="text-left px-5 py-3 font-medium">Prix</th>
                   <th className="text-left px-5 py-3 font-medium">Statut</th>
                   <th className="text-left px-5 py-3 font-medium">Date</th>
+                  <th className="px-5 py-3" />
                 </tr>
               </thead>
               <tbody>
@@ -559,13 +639,14 @@ export default function LivreursPage() {
                   : livraisonsFiltrees.length === 0
                   ? (
                     <tr>
-                      <td colSpan={8} className="text-center text-muted py-12 text-sm">
+                      <td colSpan={9} className="text-center text-muted py-12 text-sm">
                         Aucune livraison {filtreStatut !== 'tous' ? `"${statutLabel(filtreStatut)}"` : ''}.
                       </td>
                     </tr>
                   )
                   : livraisonsFiltrees.map(l => {
                     const livreur = l.livreurId ? livreurById.get(l.livreurId) : null
+                    const peutAnnuler = l.statut === 'en_attente' || l.statut === 'acceptee'
                     return (
                       <tr key={l.id} className="border-b border-border/50 hover:bg-white/3 transition-colors">
                         <td className="px-5 py-3 text-white text-sm max-w-[140px] truncate" title={l.departLabel}>{l.departLabel}</td>
@@ -595,6 +676,26 @@ export default function LivreursPage() {
                           </span>
                         </td>
                         <td className="px-5 py-3 text-muted text-xs whitespace-nowrap">{formatDate(l.createdAt)}</td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            {peutAnnuler && (
+                              <button
+                                onClick={() => setConfirmAnnulerLivraison(l)}
+                                className="text-amber-400 hover:text-amber-300 transition-colors"
+                                title="Annuler cette livraison"
+                              >
+                                <Ban size={15} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setConfirmDeleteLivraison(l)}
+                              className="text-muted hover:text-red-400 transition-colors"
+                              title="Supprimer cette livraison"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     )
                   })
@@ -723,6 +824,65 @@ export default function LivreursPage() {
           solde={confirmSolde}
           onClose={() => setConfirmSolde(null)}
           onConfirm={() => handleVerse(confirmSolde.livreurId)}
+        />
+      )}
+
+      {/* Modal supprimer livreur */}
+      {confirmDeleteLivreur && (
+        <ConfirmDangerModal
+          title="Supprimer le livreur"
+          message={
+            <>
+              Supprimer définitivement <span className="text-white font-medium">{confirmDeleteLivreur.nomComplet}</span> ?
+              {' '}Les livraisons associées resteront dans l'historique sans livreur assigné.
+            </>
+          }
+          label="Supprimer"
+          onClose={() => setConfirmDeleteLivreur(null)}
+          onConfirm={async () => {
+            await supprimerLivreur(confirmDeleteLivreur.id)
+            setLivreurs(prev => prev.filter(l => l.id !== confirmDeleteLivreur.id))
+          }}
+        />
+      )}
+
+      {/* Modal supprimer livraison */}
+      {confirmDeleteLivraison && (
+        <ConfirmDangerModal
+          title="Supprimer la livraison"
+          message={
+            <>
+              Supprimer définitivement la course <span className="text-white font-medium">{confirmDeleteLivraison.departLabel} → {confirmDeleteLivraison.arriveeLabel}</span> ?
+              {' '}Cette action est irréversible.
+            </>
+          }
+          label="Supprimer"
+          onClose={() => setConfirmDeleteLivraison(null)}
+          onConfirm={async () => {
+            await supprimerLivraison(confirmDeleteLivraison.id)
+            setLivraisons(prev => prev.filter(l => l.id !== confirmDeleteLivraison.id))
+          }}
+        />
+      )}
+
+      {/* Modal annuler livraison */}
+      {confirmAnnulerLivraison && (
+        <ConfirmDangerModal
+          title="Annuler la livraison"
+          message={
+            <>
+              Annuler la course <span className="text-white font-medium">{confirmAnnulerLivraison.departLabel} → {confirmAnnulerLivraison.arriveeLabel}</span> ?
+              {' '}Le statut passera à « Annulée » et le livreur sera notifié.
+            </>
+          }
+          label="Annuler la livraison"
+          onClose={() => setConfirmAnnulerLivraison(null)}
+          onConfirm={async () => {
+            await annulerLivraison(confirmAnnulerLivraison.id)
+            setLivraisons(prev => prev.map(l =>
+              l.id === confirmAnnulerLivraison.id ? { ...l, statut: 'annulee' } : l
+            ))
+          }}
         />
       )}
 

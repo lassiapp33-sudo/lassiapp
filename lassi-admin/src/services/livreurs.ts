@@ -176,6 +176,30 @@ export async function getVersements(): Promise<VersementLivreur[]> {
   }))
 }
 
+export async function supprimerLivreur(livreurId: string): Promise<void> {
+  const { error } = await supabase
+    .from('livreurs')
+    .delete()
+    .eq('id', livreurId)
+  if (error) throw new Error(error.message)
+}
+
+export async function supprimerLivraison(livraisonId: string): Promise<void> {
+  const { error } = await supabase
+    .from('livraisons')
+    .delete()
+    .eq('id', livraisonId)
+  if (error) throw new Error(error.message)
+}
+
+export async function annulerLivraison(livraisonId: string): Promise<void> {
+  const { error } = await supabase
+    .from('livraisons')
+    .update({ statut: 'annulee' })
+    .eq('id', livraisonId)
+  if (error) throw new Error(error.message)
+}
+
 export async function marquerLivreurVerse(livreurId: string): Promise<void> {
   const { error } = await supabase.rpc('marquer_livreur_verse', { p_livreur_id: livreurId })
   if (error) {
