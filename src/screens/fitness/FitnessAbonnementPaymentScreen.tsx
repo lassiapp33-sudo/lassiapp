@@ -194,10 +194,9 @@ export default function FitnessAbonnementPaymentScreen({
       if (data.paid) {
         onSuccess();
       } else {
-        Alert.alert(
-          'Paiement non confirmé',
-          "Le paiement n'a pas encore été reçu. Vérifie dans Wave ou Orange Money, puis réessaie.",
-        );
+        const msg = data.info
+          ?? "Le paiement n'a pas encore été reçu. Vérifie dans Wave ou Orange Money, puis réessaie dans quelques instants.";
+        Alert.alert('Paiement non confirmé', msg);
       }
     } catch {
       Alert.alert('Erreur', 'Impossible de vérifier le paiement. Réessaie.');
@@ -264,7 +263,7 @@ export default function FitnessAbonnementPaymentScreen({
             <Text style={styles.totalAmount}>{formatPrice(prixClient)}</Text>
           </View>
           <Text style={styles.commissionNote}>
-            Dont 1% de commission LASSI ({formatPrice(prixClient - offre.prix)})
+            Dont 10% de commission LASSI ({formatPrice(prixClient - offre.prix)})
           </Text>
         </View>
 
