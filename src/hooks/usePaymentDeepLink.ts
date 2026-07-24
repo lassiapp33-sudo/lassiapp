@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Linking } from 'react-native';
+import { Linking, Alert } from 'react-native';
 import { verifierPaiement } from '../services/paymentService';
 import usePendingNavStore from '../store/pendingNavStore';
 import { supabase } from '../lib/supabase';
@@ -14,7 +14,14 @@ export function usePaymentDeepLink() {
         // PKCE flow : ?code=...
         const code = parseParam(url, 'code');
         if (code) {
-          await supabase.auth.exchangeCodeForSession(code).catch(() => {});
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            Alert.alert(
+              'Lien expiré',
+              'Ce lien de réinitialisation est expiré ou déjà utilisé. Refais "Mot de passe oublié" dans l\'app pour obtenir un nouveau lien.',
+              [{ text: 'OK' }],
+            );
+          }
           return;
         }
         // Implicit flow : #access_token=...&refresh_token=...
