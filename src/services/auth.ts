@@ -345,7 +345,7 @@ export async function forgotPassword(email: string): Promise<void> {
   // Fonctionne uniquement pour les comptes créés avec un email réel.
   // Pour les comptes sans email (email technique), orienter vers le support.
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-    redirectTo: 'https://lassi.tech/reset-password',
+    redirectTo: 'https://lassiapp33-sudo.github.io/lassiapp/reset-password.html',
   });
   if (error) throw new Error(traduireErreur(error.message));
 }
