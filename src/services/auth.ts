@@ -13,7 +13,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON, getCachedToken, setCachedToken, safeGetSession } from '../lib/supabase';
 import { SESSION_ACTIVE_KEY } from '../lib/secureStorage';
 import { AuthUser, UserRole } from '../store/authStore';
 import { getInitials } from '../utils/getInitials';
@@ -251,49 +251,61 @@ export async function login(params: LoginParams): Promise<AuthUser> {
     throw new Error('Numéro introuvable. Vérifie ton numéro ou crée un compte.');
   }
 
-  // 2 — Connexion Supabase avec l'email auth retrouvé
-  // Timeout 15s : si GoTrue est encore bloqué par le Keystore au démarrage,
-  // l'utilisateur voit un message clair au lieu d'un spinner infini.
-  const loginResult = await Promise.race([
-    supabase.auth.signInWithPassword({ email: authEmail, password: params.password }),
-    new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new Error('Connexion trop lente. Vérifie ta connexion et réessaie.')),
-        30000,
-      ),
-    ),
-  ]);
-  const { data, error: loginError } = loginResult;
+  // 2 — Connexion via REST direct — bypass total du mutex GoTrue (bug Android)
+  type GoTrueSession = { access_token: string; refresh_token: string; user: { id: string } };
+  const tokenFetch = fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON },
+    body: JSON.stringify({ email: authEmail, password: params.password }),
+  });
+  const tokenTimeout = new Promise<Response>((_, reject) =>
+    setTimeout(() => reject(new Error('Connexion trop lente. Vérifie ta connexion et réessaie.')), 20_000),
+  );
+  const tokenRes = await Promise.race([tokenFetch, tokenTimeout]);
 
-  if (loginError) {
-    // Enregistrer l'échec et lire le résultat pour afficher le bon message immédiatement
-    const { data: lockResult } = await supabase.rpc('record_login_failure', { p_phone: cleanPhone });
-    if (lockResult?.status === 'permanently_blocked') {
-      throw new Error('Compte bloqué suite à trop de tentatives. Contacte le support LASSI.');
+  if (!tokenRes.ok) {
+    const errBody = (await tokenRes.json().catch(() => ({}))) as { error_description?: string; message?: string };
+    const msg = errBody.error_description ?? errBody.message ?? '';
+    // Enregistrer l'échec (best-effort)
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/record_login_failure`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_phone: cleanPhone }),
+    }).catch(() => {});
+    if (msg.toLowerCase().includes('invalid login credentials') || tokenRes.status === 400) {
+      throw new Error('Mot de passe incorrect.');
     }
-    if (lockResult?.status === 'locked') {
-      throw new Error(
-        `Trop de tentatives. Compte bloqué pendant ${lockResult.locked_min} minute(s).`,
-      );
-    }
-    throw new Error(traduireErreur(loginError.message));
+    throw new Error(traduireErreur(msg) || 'Connexion impossible. Réessaie.');
   }
-  if (!data.user) throw new Error('Connexion impossible. Réessaie.');
 
-  // 3 — Récupérer le profil complet
-  const profile = await getProfileById(data.user.id);
+  const session = (await tokenRes.json()) as GoTrueSession;
+  const { access_token, refresh_token } = session;
+  const userId = session.user?.id;
+  if (!userId || !access_token) throw new Error('Connexion impossible. Réessaie.');
+
+  // Token disponible immédiatement pour toutes les requêtes suivantes
+  setCachedToken(access_token);
+
+  // 3 — Récupérer le profil complet (raw fetch avec le token frais)
+  const profile = await getProfileById(userId, access_token);
   if (!profile) throw new Error('Profil introuvable. Contacte le support LASSİ.');
 
-  // Réinitialiser le compteur d'échecs (best-effort)
-  void supabase.rpc('record_login_success', { p_phone: cleanPhone });
+  // Injecter la session dans GoTrue en arrière-plan (pour le refresh automatique)
+  supabase.auth.setSession({ access_token, refresh_token }).catch(() => {});
 
-  // Section 8 : trace la connexion réussie (best-effort, non bloquant)
-  void supabase.rpc('log_audit_event', { p_action: 'login_success' }).then(
-    ({ error }) => {
-      if (error) logger.warn('[auth] log_audit_event(login_success) échoué:', error.message);
-    },
-    () => {},
-  );
+  // Réinitialiser le compteur d'échecs (best-effort)
+  fetch(`${SUPABASE_URL}/rest/v1/rpc/record_login_success`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_phone: cleanPhone }),
+  }).catch(() => {});
+
+  // Trace la connexion réussie (best-effort)
+  fetch(`${SUPABASE_URL}/rest/v1/rpc/log_audit_event`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_action: 'login_success' }),
+  }).catch(() => {});
 
   void AsyncStorage.setItem(SESSION_ACTIVE_KEY, '1');
   return profile;
@@ -305,13 +317,27 @@ export async function loginLivreur(telephone: string, password: string): Promise
   const tel = telephone.replace(/\D/g, '');
   const emailInterne = `livreur.${tel}@lassi.internal`;
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: emailInterne,
-    password,
-  });
-  if (error || !data.user) throw new Error('Identifiants incorrects.');
+  type GoTrueSession = { access_token: string; refresh_token: string; user: { id: string } };
+  const tokenRes = await Promise.race([
+    fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON },
+      body: JSON.stringify({ email: emailInterne, password }),
+    }),
+    new Promise<Response>((_, reject) =>
+      setTimeout(() => reject(new Error('Connexion trop lente. Réessaie.')), 20_000),
+    ),
+  ]);
 
-  const profile = await getProfileById(data.user.id);
+  if (!tokenRes.ok) throw new Error('Identifiants incorrects.');
+  const session = (await tokenRes.json()) as GoTrueSession;
+  const { access_token, refresh_token } = session;
+  if (!access_token || !session.user?.id) throw new Error('Identifiants incorrects.');
+
+  setCachedToken(access_token);
+  supabase.auth.setSession({ access_token, refresh_token }).catch(() => {});
+
+  const profile = await getProfileById(session.user.id, access_token);
   if (!profile) throw new Error('Profil introuvable. Contacte le support LASSİ.');
 
   void AsyncStorage.setItem(SESSION_ACTIVE_KEY, '1');
@@ -321,22 +347,30 @@ export async function loginLivreur(telephone: string, password: string): Promise
 // ─── Déconnexion ────────────────────────────────────────────────────────────
 
 export async function logout(): Promise<void> {
-  // Section 8 : trace la déconnexion AVANT de révoquer la session — une fois
-  // signOut() appelé, l'utilisateur n'est plus authentifié et la RPC ne
-  // pourrait plus identifier qui se déconnecte.
-  await supabase.rpc('log_audit_event', { p_action: 'logout' }).then(
-    ({ error }) => {
-      if (error) logger.warn('[auth] log_audit_event(logout) échoué:', error.message);
-    },
-    () => {},
-  );
+  const token = getCachedToken();
 
-  // scope: 'global' (Section 7) — révoque le refresh token côté serveur
-  // (toutes les sessions de cet utilisateur) en plus de nettoyer le
-  // stockage local (secureStorage).
-  const { error } = await supabase.auth.signOut({ scope: 'global' });
+  // Trace la déconnexion (best-effort, non bloquant)
+  if (token) {
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/log_audit_event`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_action: 'logout' }),
+    }).catch(() => {});
+  }
+
+  // Révoque le token côté serveur (best-effort, non bloquant)
+  if (token) {
+    fetch(`${SUPABASE_URL}/auth/v1/logout?scope=global`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+  }
+
+  // Nettoyer immédiatement sans attendre le réseau
+  setCachedToken(null);
   void AsyncStorage.removeItem(SESSION_ACTIVE_KEY).catch(() => {});
-  if (error) throw new Error(traduireErreur(error.message));
+  // Nettoyer SecureStore (session locale) en arrière-plan
+  supabase.auth.signOut({ scope: 'local' }).catch(() => {});
 }
 
 // ─── Mot de passe oublié ────────────────────────────────────────────────────
@@ -345,7 +379,7 @@ export async function forgotPassword(email: string): Promise<void> {
   // Fonctionne uniquement pour les comptes créés avec un email réel.
   // Pour les comptes sans email (email technique), orienter vers le support.
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-    redirectTo: 'lassiapp://reset-password',
+    redirectTo: 'https://lassiapp33-sudo.github.io/lassiapp/reset-password.html',
   });
   if (error) throw new Error(traduireErreur(error.message));
 }
@@ -366,29 +400,24 @@ export function onPasswordRecovery(callback: () => void): () => void {
 
 export async function getSessionUser(): Promise<AuthUser | null> {
   try {
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.getSession();
+    const { data: { session }, error } = await safeGetSession(15_000);
 
     if (error) {
-      // Nettoyer uniquement pour une vraie erreur d'auth, jamais sur erreur réseau
-      // (signOut sur erreur réseau effacerait la session stockée localement → logout brutal)
       if (!isNetworkError(error.message)) {
-        await supabase.auth.signOut().catch(() => {});
+        supabase.auth.signOut().catch(() => {});
       }
       return null;
     }
 
     if (!session?.user) return null;
 
-    // Essai de récupération du profil complet depuis la DB
-    const profile = await getProfileById(session.user.id);
+    // token frais disponible : mise à jour du cache immédiate
+    if (session.access_token) setCachedToken(session.access_token);
+
+    const profile = await getProfileById(session.user.id, session.access_token);
     if (profile) return profile;
 
-    // getProfileById a échoué (réseau probablement) mais la session JWT est valide.
-    // On reconstruit un AuthUser minimal depuis les métadonnées stockées localement
-    // dans le token — l'utilisateur reste connecté, le profil complet sera rechargé plus tard.
+    // Fallback minimal depuis les métadonnées JWT (réseau indisponible)
     const meta = session.user.user_metadata ?? {};
     const role = meta.role as UserRole | undefined;
     const name = meta.name as string | undefined;
@@ -406,7 +435,6 @@ export async function getSessionUser(): Promise<AuthUser | null> {
 
     return null;
   } catch {
-    // Ne pas appeler signOut sur les exceptions — la session pourrait être valide
     return null;
   }
 }
@@ -439,15 +467,16 @@ export function onAuthStateChange(callback: (user: AuthUser | null) => void): ()
 
 // ─── Helpers internes ───────────────────────────────────────────────────────
 
-async function getProfileById(userId: string): Promise<AuthUser | null> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, name, phone, email, role, avatar_url')
-    .eq('id', userId)
-    .single();
-
-  if (error || !data) return null;
-  return profileToAuthUser(data);
+async function getProfileById(userId: string, token?: string): Promise<AuthUser | null> {
+  const authToken = token ?? getCachedToken() ?? SUPABASE_ANON;
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/profiles?select=id,name,phone,email,role,avatar_url&id=eq.${encodeURIComponent(userId)}&limit=1`,
+    { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${authToken}` } },
+  );
+  if (!res.ok) return null;
+  const data = (await res.json()) as Record<string, unknown>[];
+  if (!data?.length) return null;
+  return profileToAuthUser(data[0]);
 }
 
 // ─── Mise à jour avatar ──────────────────────────────────────────────────────
