@@ -1,0 +1,12 @@
+name            = "lassi-wave-proxy"
+main            = "worker.ts"
+compatibility_date = "2024-09-23"
+
+# Secrets à configurer via CLI (NE PAS mettre les valeurs ici) :
+#
+#   wrangler secret put WAVE_API_KEY
+#   wrangler secret put WAVE_SIGNING_SECRET
+#   wrangler secret put INTERNAL_SECRET
+#
+# Déploiement :
+#   npx wrangler deploy

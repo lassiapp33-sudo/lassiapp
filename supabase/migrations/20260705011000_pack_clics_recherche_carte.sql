@@ -15,6 +15,7 @@ CREATE INDEX IF NOT EXISTS recherche_clics_shop_idx
 
 ALTER TABLE recherche_clics ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "client_insert_own_click" ON recherche_clics;
 CREATE POLICY "client_insert_own_click" ON recherche_clics
   FOR INSERT TO authenticated
   WITH CHECK (client_id = auth.uid());
@@ -32,13 +33,12 @@ CREATE INDEX IF NOT EXISTS carte_clics_shop_idx
 
 ALTER TABLE carte_clics ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "client_insert_own_click" ON carte_clics;
 CREATE POLICY "client_insert_own_click" ON carte_clics
   FOR INSERT TO authenticated
   WITH CHECK (client_id = auth.uid());
 
 -- ─── Mise à jour du RPC get_shop_visibility_stats ─────────────────────────────
--- Nouveau paramètre p_offer_type (défaut 'quartier' pour compatibilité ascendante).
--- Selon le pack, les clics sont comptés depuis la table correspondante.
 
 CREATE OR REPLACE FUNCTION get_shop_visibility_stats(
   p_shop_id    UUID,
@@ -79,12 +79,12 @@ BEGIN
   ORDER BY started_at DESC
   LIMIT 1;
 
-  -- Fallback : début du mois courant (achats crédit LASSI sans ligne visibility_subscriptions)
+  -- Fallback : début du mois courant
   IF v_started_at IS NULL THEN
     v_started_at := v_month_start;
   END IF;
 
-  -- 3. Visiteurs uniques ce mois (recently_viewed — commun à tous les packs)
+  -- 3. Visiteurs uniques ce mois (recently_viewed)
   SELECT COUNT(*) INTO v_views_month
   FROM recently_viewed
   WHERE shop_id  = p_shop_id
@@ -129,6 +129,4 @@ BEGIN
 END;
 $$;
 
--- Deux signatures : ancienne (1 arg) et nouvelle (2 args)
-GRANT EXECUTE ON FUNCTION get_shop_visibility_stats(UUID)       TO authenticated;
 GRANT EXECUTE ON FUNCTION get_shop_visibility_stats(UUID, TEXT) TO authenticated;

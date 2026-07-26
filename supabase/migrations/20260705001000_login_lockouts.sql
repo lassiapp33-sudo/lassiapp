@@ -80,8 +80,6 @@ $$;
 GRANT EXECUTE ON FUNCTION public.get_auth_email_by_phone(TEXT) TO anon, authenticated;
 
 -- ─── 3. Enregistrer un échec de connexion ─────────────────────────────────────
--- Appelé côté client après un signInWithPassword() échoué (mauvais mot de passe).
--- Logique : 3 échecs par cycle → lockout progressif (5/10/15 min), au 4e cycle → permanent.
 
 CREATE OR REPLACE FUNCTION public.record_login_failure(p_phone TEXT)
 RETURNS JSONB

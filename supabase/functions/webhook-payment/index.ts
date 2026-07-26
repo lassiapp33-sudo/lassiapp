@@ -69,20 +69,16 @@ serve(async (req) => {
   // Auth : secret en query param (pas de HMAC — API Sonatel n'en propose pas)
   // URL format : /webhook-payment?source=om&pi_id={uuid}&secret={OM_WEBHOOK_SECRET}
   if (sourceParam === 'om') {
-    const piId    = url.searchParams.get('pi_id')  ?? '';
-    const secret  = url.searchParams.get('secret') ?? '';
+    // OM peut HTML-encoder l'URL et envoyer "&amp;secret=" → fallback "amp;secret"
+    const secret = url.searchParams.get('secret') ?? url.searchParams.get('amp;secret') ?? '';
 
-    if (!isUUID(piId)) {
-      console.error('[webhook-om] pi_id invalide dans l\'URL');
-      return new Response('pi_id invalide', { status: 400 });
-    }
     // Toujours rejeter si secret absent (jamais de fallback permissif sur un endpoint financier)
     if (!OM_WEBHOOK_SECRET) {
       console.error('[webhook-om] OM_WEBHOOK_SECRET non configuré — webhook désactivé par sécurité');
       return new Response('Configuration manquante', { status: 503 });
     }
     if (secret !== OM_WEBHOOK_SECRET) {
-      console.error('[webhook-om] secret invalide');
+      console.error('[webhook-om] secret invalide:', { received: secret.slice(0, 8) + '...' });
       return new Response('Non autorisé', { status: 401 });
     }
 
@@ -93,17 +89,36 @@ serve(async (req) => {
       return new Response('Body invalide', { status: 400 });
     }
 
+    // pi_id : depuis l'URL (notificationUrl dynamique) OU depuis metadata (URL statique portail OM)
+    const piIdFromUrl  = url.searchParams.get('pi_id') ?? '';
+    const piIdFromBody = (omPayload.metadata as Record<string, unknown> | undefined)?.pi_id as string | undefined ?? '';
+    const piId = isUUID(piIdFromUrl) ? piIdFromUrl : isUUID(piIdFromBody) ? piIdFromBody : '';
+
+    if (!piId) {
+      console.error('[webhook-om] pi_id introuvable (ni URL ni metadata)', JSON.stringify({ keys: Object.keys(omPayload) }));
+      return new Response('pi_id introuvable', { status: 400 });
+    }
+
     // Format notification Sonatel : { status, transactionId, amount, partner, customer, ... }
     const externalStatus = omPayload.status as string | undefined;
-    const isSuccess      = externalStatus === 'SUCCESS';
-    const externalRef    = omPayload.transactionId as string | undefined;
-    const rawAmount      = (omPayload.amount as Record<string, unknown> | undefined)?.value;
-    const receivedAmount = rawAmount !== undefined && Number.isFinite(Number(rawAmount))
+    // OM Senegal peut envoyer 'SUCCESS', 'SUCCESSFUL', 'success', 'PAYMENT_SUCCESS', etc.
+    const isSuccess = ['SUCCESS', 'SUCCESSFUL', 'success', 'successful',
+                       'PAYMENT_SUCCESS', 'COMPLETED', 'completed'].includes(externalStatus ?? '');
+    // transactionId ou payToken selon la version OM
+    const externalRef = (omPayload.transactionId ?? omPayload.payToken ?? omPayload.txId) as string | undefined;
+    // OM Senegal peut envoyer amount.value, amount.montant, ou directement un champ montant
+    const omAmount = omPayload.amount as Record<string, unknown> | undefined;
+    const rawAmount = omAmount?.value ?? omAmount?.montant ?? omPayload.montant ?? omPayload.totalAmount;
+    const receivedAmount = rawAmount !== undefined && rawAmount !== null && Number.isFinite(Number(rawAmount))
       ? Math.round(Number(rawAmount)) : null;
 
     const externalEventId = `${externalRef ?? piId}:${externalStatus ?? 'unknown'}`;
 
-    console.log('[webhook-om] notification reçue:', JSON.stringify({ piId, externalStatus, externalRef }));
+    // Log complet pour traçabilité argent réel — NE PAS SUPPRIMER
+    console.log('[webhook-om] reçu:', JSON.stringify({
+      piId, externalStatus, externalRef, isSuccess, receivedAmount,
+      payloadKeys: Object.keys(omPayload),
+    }));
 
     const { data: result, error: rpcError } = await supabase.rpc('process_payment_webhook', {
       p_external_event_id: externalEventId,
@@ -125,6 +140,38 @@ serve(async (req) => {
       console.error('[ALERTE PAIEMENT OM] montant incohérent — pi', piId, JSON.stringify(result));
     }
 
+    // Notifier le prestataire que la commande est confirmée et payée
+    if (result?.ok && !result?.already_processed && !result?.disputed && result?.order_id) {
+      try {
+        const { data: orderRow } = await supabase
+          .from('orders')
+          .select('shop_id, client_name, total')
+          .eq('id', result.order_id)
+          .maybeSingle();
+
+        if (orderRow?.shop_id) {
+          const { data: shopRow } = await supabase
+            .from('shops')
+            .select('merchant_id')
+            .eq('id', orderRow.shop_id)
+            .maybeSingle();
+
+          if (shopRow?.merchant_id) {
+            const montantFr = `${Number(orderRow.total).toLocaleString('fr-FR')} FCFA`;
+            const body = `Paiement reçu ✅ Commande de ${orderRow.client_name ?? 'Client'} · ${montantFr}`;
+            await sendPushToUser(supabase, shopRow.merchant_id, {
+              title:     '💳 Paiement confirmé',
+              body,
+              data:      { type: 'commande', orderId: result.order_id },
+              channelId: 'commandes',
+            });
+          }
+        }
+      } catch {
+        // best-effort
+      }
+    }
+
     // Orange attend toujours 200 (sinon elle retry en boucle)
     return new Response('OK', { status: 200 });
   }
@@ -134,8 +181,9 @@ serve(async (req) => {
   // Payload signé  : timestamp (string) + raw body
   // Anti-rejeu     : timestamp rejeté si > 5 min dans le passé ou > 30 s dans le futur
   if (!waveSignature) {
-    console.error('[webhook] En-tête Wave-Signature absent et source!=om');
-    return new Response('Signature manquante', { status: 401 });
+    // Ping de santé Wave (pas de signature) — on accuse réception sans traiter
+    console.log('[webhook] Ping santé Wave reçu (pas de Wave-Signature)');
+    return new Response('OK', { status: 200 });
   }
 
   const source = 'wave' as const;
@@ -196,15 +244,22 @@ serve(async (req) => {
     return new Response('Body invalide', { status: 400 });
   }
 
-  const piId: unknown = payload.client_reference ?? payload.order_id ?? (payload.metadata as Record<string, unknown> | undefined)?.pi_id;
+  // Wave envoie { type, data: { ... } } — on normalise vers un objet plat
+  // pour supporter les deux structures (flat et enveloppée).
+  const data = (payload.data && typeof payload.data === 'object')
+    ? payload.data as Record<string, unknown>
+    : payload;
+
+  const piId: unknown = data.client_reference ?? data.order_id ?? (data.metadata as Record<string, unknown> | undefined)?.pi_id;
   if (!isUUID(piId)) {
-    console.error('[webhook] payment_intent_id absent ou invalide — clés reçues:', Object.keys(payload));
-    return new Response('payment_intent_id manquant', { status: 400 });
+    // Événement de test Wave sans client_reference valide — on accuse réception sans traiter
+    console.log('[webhook] événement Wave sans payment_intent_id valide (test/ping) — payload keys:', Object.keys(data));
+    return new Response('OK', { status: 200 });
   }
 
-  const externalStatus = (payload.payment_status ?? payload.status) as string | undefined;
+  const externalStatus = (data.payment_status ?? data.status) as string | undefined;
   const isSuccess      = ['succeeded', 'completed', 'success', 'SUCCESSFUL'].includes(externalStatus ?? '');
-  const externalRef    = (payload.id ?? payload.transaction_id) as string | undefined;
+  const externalRef    = (data.id ?? data.transaction_id) as string | undefined;
 
   // 3. ID d'événement pour la déduplication (un même événement Wave/OM peut
   // être renvoyé plusieurs fois). 🔌 À ajuster avec l'ingénieur Wave/OM si un
@@ -213,7 +268,7 @@ serve(async (req) => {
   const externalEventId = `${externalRef ?? piId}:${externalStatus ?? 'unknown'}`;
 
   // 4. Montant reçu, pour vérification au FCFA près (null si absent du payload)
-  const rawAmount = payload.amount ?? payload.client_amount ?? null;
+  const rawAmount = data.amount ?? data.client_amount ?? null;
   const receivedAmount = rawAmount !== null && rawAmount !== undefined && Number.isFinite(Number(rawAmount))
     ? Math.round(Number(rawAmount))
     : null;

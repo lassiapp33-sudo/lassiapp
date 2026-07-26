@@ -21,6 +21,9 @@ import BIPage              from './pages/BIPage'
 import AvisPage            from './pages/AvisPage'
 import AnnoncesPage        from './pages/AnnoncesPage'
 import SecurityPage        from './pages/SecurityPage'
+import LivreursPage        from './pages/LivreursPage'
+import ResetPasswordPage   from './pages/ResetPasswordPage'
+import FinancePage         from './pages/FinancePage'
 
 // ─── Garde de route ───────────────────────────────────────────────────────────
 
@@ -45,7 +48,8 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login"          element={<LoginPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       <Route path="/" element={<RequireAdmin><Layout /></RequireAdmin>}>
         <Route index              element={<OverviewPage />} />
@@ -62,6 +66,8 @@ function AppRoutes() {
         <Route path="avis"         element={<AvisPage />} />
         <Route path="annonces"     element={<AnnoncesPage />} />
         <Route path="securite"     element={<SecurityPage />} />
+        <Route path="livreurs"     element={<LivreursPage />} />
+        <Route path="finance"      element={<FinancePage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

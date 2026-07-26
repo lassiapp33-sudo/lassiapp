@@ -4,12 +4,13 @@
  * Suppression via Edge Function admin-delete-user (service_role).
  */
 import React, { useEffect, useRef, useState } from 'react'
-import { Users, Search, Trash2, AlertTriangle, X, RefreshCw, Wifi, WifiOff } from 'lucide-react'
+import { Users, Search, Trash2, AlertTriangle, X, RefreshCw, Wifi, WifiOff, ToggleLeft, ToggleRight } from 'lucide-react'
 import Badge      from '../components/Badge'
 import EmptyState from '../components/EmptyState'
 import { SkeletonRow } from '../components/Skeleton'
 import { supabase } from '../lib/supabase'
 import { getProfiles, getUserStats, deleteUser, type AdminProfile } from '../services/users'
+import { getLivreurs, toggleLivreurActif, type AdminLivreur } from '../services/livreurs'
 
 // ─── Modal de confirmation de suppression ────────────────────────────────────
 
@@ -85,25 +86,28 @@ function DeleteModal({ user, onConfirm, onCancel, loading }: DeleteModalProps) {
 
 export default function UsersPage() {
   const [profiles,    setProfiles]    = useState<AdminProfile[]>([])
+  const [livreurs,    setLivreurs]    = useState<AdminLivreur[]>([])
   const [stats,       setStats]       = useState<any>(null)
   const [search,      setSearch]      = useState('')
   const [loading,     setLoading]     = useState(true)
   const [syncing,     setSyncing]     = useState(false)
-  const [roleFilter,  setRoleFilter]  = useState<'all' | 'client' | 'merchant'>('all')
+  const [roleFilter,  setRoleFilter]  = useState<'all' | 'client' | 'merchant' | 'livreur'>('all')
   const [toDelete,    setToDelete]    = useState<AdminProfile | null>(null)
   const [deleting,    setDeleting]    = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [realtimeOk,  setRealtimeOk]  = useState<boolean | null>(null)
   const [lastSync,    setLastSync]    = useState<Date | null>(null)
+  const [togglingId,  setTogglingId]  = useState<string | null>(null)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   const loadData = async (silent = false) => {
     if (!silent) setLoading(true)
     else setSyncing(true)
     try {
-      const [p, s] = await Promise.all([getProfiles(), getUserStats()])
+      const [p, s, l] = await Promise.all([getProfiles(), getUserStats(), getLivreurs()])
       setProfiles(p)
       setStats(s)
+      setLivreurs(l)
       setLastSync(new Date())
     } catch (err) {
       console.error('[UsersPage] loadData:', err)
@@ -181,6 +185,23 @@ export default function UsersPage() {
     return matchSearch && matchRole
   })
 
+  const filteredLivreurs = livreurs.filter(l => {
+    const q = search.toLowerCase()
+    return !search || l.nomComplet.toLowerCase().includes(q) || l.telephone.includes(q)
+  })
+
+  const handleToggleLivreur = async (l: AdminLivreur) => {
+    setTogglingId(l.id)
+    try {
+      await toggleLivreurActif(l.id, !l.actif)
+      setLivreurs(prev => prev.map(lv => lv.id === l.id ? { ...lv, actif: !lv.actif } : lv))
+    } catch (err: any) {
+      console.error('[UsersPage] toggleLivreur:', err)
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
   const handleDeleteConfirm = async (reason: string) => {
     if (!toDelete) return
     setDeleting(true)
@@ -256,11 +277,12 @@ export default function UsersPage() {
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {[
             { label: 'Total',         value: stats.totalUsers },
             { label: 'Clients',       value: stats.totalClients },
             { label: 'Prestataires',  value: stats.totalMerchants },
+            { label: 'Livreurs',      value: livreurs.length },
             { label: 'Nouveaux (7j)', value: stats.newThisWeek },
           ].map(s => (
             <div key={s.label} className="bg-surface border border-border rounded-xl p-4 text-center">
@@ -283,7 +305,7 @@ export default function UsersPage() {
           />
         </div>
         <div className="flex gap-1 bg-surface border border-border rounded-lg p-1">
-          {(['all', 'client', 'merchant'] as const).map(r => (
+          {(['all', 'client', 'merchant', 'livreur'] as const).map(r => (
             <button
               key={r}
               onClick={() => setRoleFilter(r)}
@@ -291,12 +313,14 @@ export default function UsersPage() {
                 roleFilter === r ? 'bg-accent text-bg' : 'text-muted hover:text-white'
               }`}
             >
-              {r === 'all' ? 'Tous' : r === 'client' ? 'Clients' : 'Prestataires'}
+              {r === 'all' ? 'Tous' : r === 'client' ? 'Clients' : r === 'merchant' ? 'Prestataires' : 'Livreurs'}
             </button>
           ))}
         </div>
         <span className="text-muted text-xs ml-auto">
-          {filtered.length} utilisateur{filtered.length !== 1 ? 's' : ''}
+          {roleFilter === 'livreur'
+            ? `${filteredLivreurs.length} livreur${filteredLivreurs.length !== 1 ? 's' : ''}`
+            : `${filtered.length} utilisateur${filtered.length !== 1 ? 's' : ''}`}
         </span>
       </div>
 
@@ -316,6 +340,58 @@ export default function UsersPage() {
           <table className="w-full">
             <tbody>{Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} cols={5} />)}</tbody>
           </table>
+        ) : roleFilter === 'livreur' ? (
+          filteredLivreurs.length === 0 ? (
+            <EmptyState
+              icon={<Users size={48} />}
+              title="Aucun livreur"
+              subtitle={search ? 'Aucun résultat pour cette recherche.' : 'Les livreurs créés depuis la page Livreurs apparaîtront ici.'}
+            />
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs text-muted uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left">Nom</th>
+                  <th className="px-4 py-3 text-left">Téléphone</th>
+                  <th className="px-4 py-3 text-center">Statut</th>
+                  <th className="px-4 py-3 text-left">Inscription</th>
+                  <th className="px-4 py-3 text-center">Actif</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLivreurs.map(l => (
+                  <tr key={l.id} className="border-b border-border hover:bg-white/5 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="text-white font-medium">{l.nomComplet}</p>
+                    </td>
+                    <td className="px-4 py-3 text-muted font-mono text-xs">{l.telephone}</td>
+                    <td className="px-4 py-3 text-center">
+                      {l.actif
+                        ? <span className="text-xs bg-success/15 text-success border border-success/30 px-2 py-0.5 rounded-full">Actif</span>
+                        : <span className="text-xs bg-border text-muted border border-border px-2 py-0.5 rounded-full">Inactif</span>}
+                    </td>
+                    <td className="px-4 py-3 text-muted text-xs">
+                      {new Date(l.createdAt).toLocaleDateString('fr-FR', {
+                        day: '2-digit', month: 'short', year: '2-digit',
+                      })}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => handleToggleLivreur(l)}
+                        disabled={togglingId === l.id}
+                        title={l.actif ? 'Désactiver' : 'Activer'}
+                        className="p-1 disabled:opacity-50 transition-colors"
+                      >
+                        {l.actif
+                          ? <ToggleRight size={24} className="text-success" />
+                          : <ToggleLeft size={24} className="text-muted" />}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={<Users size={48} />}

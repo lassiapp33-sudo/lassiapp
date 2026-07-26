@@ -21,9 +21,9 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- ③ Policies Storage
+-- ③ Policies Storage (DROP IF EXISTS pour idempotence)
 
--- Le client peut uploader dans son propre dossier (format : {user_id}/*)
+DROP POLICY IF EXISTS "voice_notes_insert" ON storage.objects;
 CREATE POLICY "voice_notes_insert"
   ON storage.objects FOR INSERT
   TO authenticated
@@ -32,13 +32,13 @@ CREATE POLICY "voice_notes_insert"
     (storage.foldername(name))[1] = auth.uid()::text
   );
 
--- Tout utilisateur authentifié peut lire (prestataires inclus)
+DROP POLICY IF EXISTS "voice_notes_select" ON storage.objects;
 CREATE POLICY "voice_notes_select"
   ON storage.objects FOR SELECT
   TO authenticated
   USING (bucket_id = 'voice-notes');
 
--- Le client peut supprimer ses propres fichiers
+DROP POLICY IF EXISTS "voice_notes_delete" ON storage.objects;
 CREATE POLICY "voice_notes_delete"
   ON storage.objects FOR DELETE
   TO authenticated

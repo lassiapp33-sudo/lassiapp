@@ -135,22 +135,21 @@ export default function RecompensesPage() {
 
   useEffect(() => {
     if (!showForm || form.target) { setResults([]); return }
-    const term = search.trim()
-    if (term.length < 2) { setResults([]); return }
+    const term  = search.trim()
+    const delay = term.length >= 2 ? 300 : 0
 
     setSearching(true)
     const timeout = setTimeout(() => {
-      getProfiles(term)
+      getProfiles(term || undefined)
         .then(rows => {
-          if (form.targetType === 'client') {
-            setResults(rows.filter(p => p.role === 'client'))
-          } else {
-            setResults(rows.filter(p => p.role === 'merchant'))
-          }
+          const filtered = form.targetType === 'client'
+            ? rows.filter(p => p.role === 'client')
+            : rows.filter(p => p.role === 'merchant')
+          setResults(term ? filtered : filtered.slice(0, 15))
         })
         .catch(() => setResults([]))
         .finally(() => setSearching(false))
-    }, 300)
+    }, delay)
 
     return () => clearTimeout(timeout)
   }, [search, form.targetType, form.target, showForm])
@@ -424,7 +423,7 @@ export default function RecompensesPage() {
                     </div>
                     {searching && <p className="text-muted text-xs mt-1.5 pl-1">Recherche…</p>}
                     {!searching && search.trim().length >= 2 && results.length === 0 && (
-                      <p className="text-muted text-xs mt-1.5 pl-1">Aucun résultat.</p>
+                      <p className="text-muted text-xs mt-1.5 pl-1">Aucun résultat pour « {search.trim()} ».</p>
                     )}
                     {results.length > 0 && (
                       <div className="mt-1.5 border border-border rounded-xl overflow-hidden max-h-44 overflow-y-auto">

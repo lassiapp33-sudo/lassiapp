@@ -13,27 +13,28 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { isUUID } from '../_shared/validation.ts';
 import { corsHeaders as buildCorsHeaders } from '../_shared/cors.ts';
 import { getOmToken, OM_BASE_URL, isOmReady } from '../_shared/omAuth.ts';
-import { buildWaveSignature } from '../_shared/waveSign.ts';
+import { callWaveCheckout } from '../_shared/waveProxy.ts';
 
 // ============================================================
 // 🔌 POINT D'ENTRÉE — activer le paiement réel :
 //
-// WAVE_API_KEY=...  WAVE_MERCHANT_ID=...
+// WAVE_API_KEY=...
 // OM_CLIENT_ID=...  OM_CLIENT_SECRET=...  OM_MERCHANT_CODE=...
 // OM_BASE_URL=https://api.sandbox.orange-sonatel.com  (sandbox)
 // OM_WEBHOOK_SECRET=...  (secret pour authentifier le callback OM)
 //
 // Sans ces clés → mode simulation automatique (démo fonctionnelle)
 // ============================================================
-const WAVE_API_KEY     = Deno.env.get('WAVE_API_KEY')     ?? '';
-const WAVE_MERCHANT_ID = Deno.env.get('WAVE_MERCHANT_ID') ?? '';
-const OM_MERCHANT_CODE = Deno.env.get('OM_MERCHANT_CODE') ?? '';
+const WAVE_API_KEY      = Deno.env.get('WAVE_API_KEY')      ?? '';
+const WAVE_PROXY_URL    = Deno.env.get('WAVE_PROXY_URL')    ?? '';
+const OM_MERCHANT_CODE  = Deno.env.get('OM_MERCHANT_CODE')  ?? '';
 const OM_WEBHOOK_SECRET = Deno.env.get('OM_WEBHOOK_SECRET') ?? '';
 
-// ⚠️ IS_PRODUCTION conditionne Wave à WAVE_MERCHANT_ID. Si ce champ n'est pas
-// requis par la Checkout API Wave (non documenté), changer la condition en :
-//   const IS_PRODUCTION = WAVE_API_KEY !== '' || isOmReady();
-const IS_PRODUCTION = (WAVE_API_KEY !== '' && WAVE_MERCHANT_ID !== '') || isOmReady();
+// Flags par fournisseur : chacun peut être en prod ou simulation indépendamment.
+// Wave est prêt si la clé directe OU le proxy Cloudflare est configuré.
+const IS_WAVE_READY = WAVE_API_KEY !== '' || WAVE_PROXY_URL !== '';
+const IS_OM_READY   = isOmReady();
+const IS_PRODUCTION = IS_WAVE_READY || IS_OM_READY;
 
 serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
@@ -100,11 +101,14 @@ serve(async (req) => {
     // 6-9. Initier le paiement chez le fournisseur
     let paymentResult;
 
+    // Détermine si ce fournisseur précis est en production ou simulation.
+    const useWaveProd = IS_WAVE_READY && moyenPaiement === 'wave';
+    const useOmProd   = IS_OM_READY   && moyenPaiement === 'orange_money';
+
     try {
-      if (!IS_PRODUCTION) {
+      if (!useWaveProd && !useOmProd) {
         // ======================================================
-        // MODE SIMULATION — Démo fonctionnelle sans API réelle
-        // L'ingénieur Wave/OM peut voir tout le flux fonctionner
+        // MODE SIMULATION — moyen non configuré ou démo complète
         // ======================================================
         paymentResult = await simulatePaiement(piId, montantTotal, moyenPaiement);
 
@@ -114,16 +118,15 @@ serve(async (req) => {
           updated_at:   new Date().toISOString(),
         }).eq('id', piId);
 
-      } else if (moyenPaiement === 'wave') {
+      } else if (useWaveProd) {
         // ======================================================
         // MODE PRODUCTION — WAVE
-        // 🔌 L'ingénieur Wave active cette branche en ajoutant WAVE_API_KEY
+        // 🔌 Activé quand WAVE_API_KEY ou WAVE_PROXY_URL est configuré
         // ======================================================
         paymentResult = await initiateWavePayment({
           piId, montantTotal, prixBase, commission, prestataireId,
         });
 
-        // 8. Stocker le checkout_id Wave + passer en 'initiated'
         await supabase.from('payment_intents').update({
           statut:       'initiated',
           external_ref: paymentResult.ref,
@@ -133,13 +136,12 @@ serve(async (req) => {
       } else {
         // ======================================================
         // MODE PRODUCTION — ORANGE MONEY
-        // 🔌 L'ingénieur OM active cette branche en configurant OM_CLIENT_ID + OM_MERCHANT_CODE
+        // 🔌 Activé quand OM_CLIENT_ID + OM_CLIENT_SECRET + OM_MERCHANT_CODE sont configurés
         // ======================================================
         paymentResult = await initiateOrangeMoneyPayment({
           piId, montantTotal, prixBase, commission, prestataireId,
         });
 
-        // 8. Stocker le checkout_id OM + passer en 'initiated'
         await supabase.from('payment_intents').update({
           statut:       'initiated',
           external_ref: paymentResult.ref,
@@ -189,7 +191,7 @@ serve(async (req) => {
       paymentRef:      paymentResult.ref,
       redirectUrl:     paymentResult.redirectUrl ?? null,
       qrCode:          paymentResult?.qrCode ?? null,  // OM seulement : base64 affiché si deepLink non dispo
-      mode:            IS_PRODUCTION ? 'production' : 'simulation',
+      mode:            (useWaveProd || useOmProd) ? 'production' : 'simulation',
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (e: unknown) {
@@ -239,46 +241,15 @@ async function initiateWavePayment(params: {
   piId: string; montantTotal: number; prixBase: number;
   commission: number; prestataireId: string;
 }) {
-  // Structure du split Wave (à confirmer avec l'ingénieur Wave) :
-  // Le merchant principal (LASSİ) reçoit montantTotal
-  // puis Wave split : prixBase → prestataire, commission → LASSİ
-
-  // amount doit être une string selon la spec Wave (cf. doc Checkout API)
-  //
-  // ⚠️ À CONFIRMER AVEC WAVE :
-  //   - merchant_id     : non mentionné dans la doc officielle Checkout API.
-  //                       Si Wave rejette les champs inconnus → retirer ce champ.
-  //   - split_config    : idem — à remplacer par le mécanisme officiel Wave si
-  //                       une feature de split existe pour votre compte Business.
   const waveBody = JSON.stringify({
     currency:         'XOF',
     amount:           String(params.montantTotal),
-    merchant_id:      WAVE_MERCHANT_ID,       // ⚠️ hors-spec — voir ci-dessus
     error_url:        `lassiapp://paiement/echec?pi=${params.piId}`,
     success_url:      `lassiapp://paiement/succes?pi=${params.piId}`,
-    split_config: {                            // ⚠️ hors-spec — voir ci-dessus
-      beneficiaire_prestataire: params.prestataireId,
-      montant_prestataire:      String(params.prixBase),
-      montant_lassi:            String(params.commission),
-    },
     client_reference: params.piId,
   });
 
-  const waveHeaders: Record<string, string> = {
-    'Authorization':   `Bearer ${WAVE_API_KEY}`,
-    'Content-Type':    'application/json',
-    // Idempotence côté fournisseur : un retry réseau de notre part ne doit
-    // jamais créer deux sessions de paiement pour le même payment_intent.
-    'Idempotency-Key': params.piId,
-  };
-  const waveSig = await buildWaveSignature(waveBody);
-  if (waveSig) waveHeaders['Wave-Signature'] = waveSig;
-
-  const response = await fetch('https://api.wave.com/v1/checkout/sessions', {
-    method:  'POST',
-    headers: waveHeaders,
-    body:    waveBody,
-  });
+  const response = await callWaveCheckout(waveBody, params.piId);
 
   if (!response.ok) {
     const err = await response.json();
@@ -324,16 +295,19 @@ async function initiateOrangeMoneyPayment(params: {
     headers: {
       'Authorization':  `Bearer ${omToken}`,
       'Content-Type':   'application/json',
+      // X-Callback-Url conservé comme fallback certains builds OM l'honorent
       'X-Callback-Url': callbackUrl,
     },
     body: JSON.stringify({
-      code:     OM_MERCHANT_CODE,
-      name:     'LASSI',
-      amount:   { value: params.montantTotal, unit: 'XOF' },
-      validity: 900,  // 15 minutes
-      metadata: { pi_id: params.piId },
+      code:            OM_MERCHANT_CODE,
+      name:            'LASSI',
+      amount:          { value: params.montantTotal, unit: 'XOF' },
+      validity:        900,  // 15 minutes
+      metadata:        { pi_id: params.piId },
+      // notificationUrl : champ officiel API OM v4 pour le callback POST
+      // (X-Callback-Url seul n'est pas toujours honoré selon la version OM)
+      notificationUrl: callbackUrl,
       // callbackSuccessUrl/callbackCancelUrl omis : Orange rejette supabase.co
-      // Le suivi réel passe par X-Callback-Url (webhook, POST Orange → nous).
     }),
   });
 
@@ -343,11 +317,28 @@ async function initiateOrangeMoneyPayment(params: {
   }
 
   const data = await response.json();
+
+  // Log complet pour identifier tous les champs d'identifiant retournés par OM
+  console.log('[create-payment] OM QR response keys:', JSON.stringify({
+    keys:      Object.keys(data),
+    orderId:   data.orderId,
+    id:        data.id,
+    payToken:  data.payToken,
+    txId:      data.txId,
+    reference: data.reference,
+    qrCode:    data.qrCode ? '[base64]' : null,
+    deepLinks: data.deepLinks,
+  }));
+
   // deepLinks.OM cible l'app Orange Money (vs deepLinks.MAXIT).
-  // deepLink (racine) est un alias mais peut varier selon la config Orange.
   const deepLink = data.deepLinks?.OM ?? data.deepLink ?? null;
+
+  // Identifiant OM : tenter tous les champs connus, fallback sur notre piId
+  // Le log ci-dessus permettra d'identifier le bon champ si c'est encore notre UUID
+  const omOrderId = data.orderId ?? data.id ?? data.payToken ?? data.txId ?? data.reference ?? params.piId;
+
   return {
-    ref:         params.piId,
+    ref:         omOrderId,
     redirectUrl: deepLink,
     qrCode:      data.qrCode ?? null,
     status:      'initiated',

@@ -373,15 +373,8 @@ Deno.serve(async (req) => {
             }))),
           })
         }
-
-        // Notification in-app (écran cloche)
-        await admin.from('notifications').insert({
-          user_id: shop.merchant_id,
-          type:    'order',
-          title:   'Nouvelle commande 🛎️',
-          body:    notifBody,
-          data:    { order_id: orderId },
-        })
+        // La notification in-app est insérée automatiquement par le trigger SQL
+        // notify_merchant_new_order — pas de doublon ici.
       }
     } catch {
       // best-effort : la commande est déjà créée, on ignore l'erreur de notif

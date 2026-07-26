@@ -55,9 +55,14 @@ Deno.serve(async (req) => {
 
     if (!pi) return json({ error: 'Payment intent introuvable' }, 404)
 
-    // Déjà complété (idempotent)
+    // Déjà complété (idempotent) — inclut le cas OM (confirmé par webhook)
     if (pi.statut === 'completed' || pi.statut === 'simulated') {
       return json({ paid: true, statut: pi.statut })
+    }
+
+    // OM : le webhook n'a pas encore répondu — on ne peut pas vérifier côté client
+    if (pi.moyen_paiement === 'orange_money') {
+      return json({ paid: false, statut: pi.statut, info: 'Attends la confirmation Orange Money (peut prendre 1-2 min).' })
     }
 
     // ③ Vérification Wave
