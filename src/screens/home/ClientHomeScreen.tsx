@@ -29,10 +29,16 @@ import useFavoritesStore from '../../store/favoritesStore';
 import useNotificationsStore from '../../store/notificationsStore';
 import useLocationStore from '../../store/locationStore';
 import * as shopsService from '../../services/shops';
-import { supabase } from '../../lib/supabase';
 import { getBadgesActifsBatch, RecompenseAttribuee } from '../../services/classementService';
 import { haversineMeters, formatDistance } from '../../services/location';
 import { computeStatus, WeekHours } from '../../services/hours';
+import { getClientPayments } from '../../services/clientPayments';
+import { getMesAbonnements } from '../../services/fitnessAbonnements';
+import { getClientOrders } from '../../services/clientOrders';
+import { getLivraisonsDemandeur } from '../../services/livraisons';
+import { getRecentlyViewed } from '../../services/recentlyViewed';
+import { getMyTerrainReservations } from '../../services/terrains';
+import { setFastCache } from '../../lib/fastCache';
 
 interface Props {
   onCategoryPress?: (catId: CatId, title: string) => void;
@@ -96,74 +102,107 @@ export default function ClientHomeScreen({
     try {
       const shops = await shopsService.getShops();
 
-      const merchantIds = shops.map(shop => shop.merchantId).filter((id): id is string => !!id);
-      const badgeMap = await getBadgesActifsBatch(merchantIds).catch(
-        () => ({}) as Record<string, RecompenseAttribuee>,
-      );
-
-      // Toutes les boutiques → liste "Tout près de toi"
       const currentCoords = useLocationStore.getState().coords;
-      const places: NearbyPlace[] = shops.map(shop => {
-        const distance =
-          currentCoords && shop.latitude && shop.longitude
-            ? formatDistance(
-                haversineMeters(
-                  currentCoords.latitude,
-                  currentCoords.longitude,
-                  shop.latitude,
-                  shop.longitude,
-                ),
-              )
-            : '';
-        const shopStatus = computeStatus(
-          shop.openingHours as WeekHours | null,
-          shop.isManuallyClose,
-        );
-        return {
-          id: shop.id,
-          name: shop.name,
-          category: shop.category,
-          rating: shop.rating,
-          distance,
-          isVip: shop.isVip,
-          isChampion: !!shop.merchantId && !!badgeMap[shop.merchantId],
-          isFav: favorites.includes(shop.id),
-          status: shopStatus.isOpen ? 'open' : 'closed',
-          statusLabel: shopStatus.label,
-          logoUrl: shop.logoUrl,
-        } as NearbyPlace;
-      });
 
-      // Tri par distance si la position est disponible
-      if (currentCoords) {
-        places.sort((a, b) => {
-          const toM = (s: string) => {
-            if (!s) return 999999;
-            if (s.includes('km')) return parseFloat(s) * 1000;
-            return parseFloat(s);
-          };
-          return toM(a.distance) - toM(b.distance);
+      const buildPlaces = (badgeMap: Record<string, RecompenseAttribuee>): NearbyPlace[] => {
+        const fav = useFavoritesStore.getState().favorites;
+        const places = shops.map(shop => {
+          const distance =
+            currentCoords && shop.latitude && shop.longitude
+              ? formatDistance(
+                  haversineMeters(
+                    currentCoords.latitude,
+                    currentCoords.longitude,
+                    shop.latitude,
+                    shop.longitude,
+                  ),
+                )
+              : '';
+          const shopStatus = computeStatus(
+            shop.openingHours as WeekHours | null,
+            shop.isManuallyClose,
+          );
+          return {
+            id: shop.id,
+            name: shop.name,
+            category: shop.category,
+            rating: shop.rating,
+            distance,
+            isVip: shop.isVip,
+            isChampion: !!shop.merchantId && !!badgeMap[shop.merchantId],
+            isFav: fav.includes(shop.id),
+            status: shopStatus.isOpen ? 'open' : 'closed',
+            statusLabel: shopStatus.label,
+            logoUrl: shop.logoUrl,
+          } as NearbyPlace;
         });
-      }
 
-      setNearby(places);
+        if (currentCoords) {
+          places.sort((a, b) => {
+            const toM = (s: string) => {
+              if (!s) return 999999;
+              if (s.includes('km')) return parseFloat(s) * 1000;
+              return parseFloat(s);
+            };
+            return toM(a.distance) - toM(b.distance);
+          });
+        }
+        return places;
+      };
+
+      // Phase 1 : boutiques sans badges → affichage immédiat dès que le réseau répond
+      setNearby(buildPlaces({}));
       setLoadError(false);
+      setLoading(false);
+
+      // Phase 2 : badges en arrière-plan (peut bloquer sur GoTrue au cold start — non bloquant)
+      const merchantIds = shops.map(shop => shop.merchantId).filter((id): id is string => !!id);
+      if (merchantIds.length > 0) {
+        const badgeMap = await Promise.race([
+          getBadgesActifsBatch(merchantIds).catch(() => ({}) as Record<string, RecompenseAttribuee>),
+          new Promise<Record<string, RecompenseAttribuee>>(resolve =>
+            setTimeout(() => resolve({}), 8000),
+          ),
+        ]);
+        setNearby(buildPlaces(badgeMap));
+      }
     } catch {
       setNearby([]);
       setLoadError(true);
-    } finally {
       setLoading(false);
     }
   }
 
-  // Montage seul — loadShops est une fonction locale (non memoized), l'ajouter créerait une boucle infinie.
-  // On s'assure que la session Supabase est en mémoire (GoTrue lock libéré) avant d'appeler loadShops,
-  // pour éviter que la lecture SecureStore bloque la requête shops sur les appareils lents au cold start.
+  // getShops() utilise fetch direct (contourne GoTrue) → loadShops() peut être appelé immédiatement.
   useEffect(() => {
     loadFavorites();
     refreshLocation();
-    supabase.auth.getSession().catch(() => {}).finally(() => loadShops());
+    loadShops();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pré-charge toutes les données authentifiées en arrière-plan dès que GoTrue libère.
+  // Au cold start, GoTrue prend 1-5s. L'utilisateur est sur home → quand il
+  // navigue vers n'importe quel écran profil, le cache est déjà prêt.
+  useEffect(() => {
+    if (!userId) return;
+    getClientPayments(userId)
+      .then(data => setFastCache(`payments_${userId}`, data))
+      .catch(() => {});
+    getMesAbonnements(userId)
+      .then(data => setFastCache(`abonnements_${userId}`, data))
+      .catch(() => {});
+    getClientOrders(userId)
+      .then(data => setFastCache(`orders_${userId}`, data))
+      .catch(() => {});
+    getLivraisonsDemandeur()
+      .then(data => setFastCache(`livraisons_${userId}`, data))
+      .catch(() => {});
+    getMyTerrainReservations()
+      .then(data => setFastCache(`terrain_res_${userId}`, data))
+      .catch(() => {});
+    getRecentlyViewed()
+      .catch(() => {}); // sauvegarde dans son propre cache rv_cache_${uid}
+  }, [userId]);
 
   // Annonces sponsorisées — modale affichée une seule fois par annonce par compte
   useEffect(() => {

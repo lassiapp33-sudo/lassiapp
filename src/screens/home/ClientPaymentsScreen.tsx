@@ -16,6 +16,7 @@ import * as clientPaymentsService from '../../services/clientPayments';
 import { PaymentFilter } from '../../types/merchantPayments';
 import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
+import { getFastCache, setFastCache } from '../../lib/fastCache';
 import { IcoBack, IcoClose } from '../../components/icons';
 import { formatPrice, formatDateTime } from '../../utils/format';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -359,13 +360,31 @@ export default function ClientPaymentsScreen({ onBack }: Props) {
 
   const load = useCallback(
     async (isRefresh = false) => {
-      if (!user?.id) return;
+      if (!user?.id) { setLoading(false); setRefreshing(false); return; }
+
+      if (!isRefresh) {
+        // Affiche le cache immédiatement, refresh en arrière-plan
+        const cached = await getFastCache<ClientPayment[]>(`payments_${user.id}`);
+        if (cached) {
+          setPayments(cached);
+          setLoading(false);
+          clientPaymentsService.getClientPayments(user.id)
+            .then(fresh => { setPayments(fresh); setFastCache(`payments_${user.id}`, fresh); })
+            .catch(() => {});
+          return;
+        }
+      }
+
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
       setError(null);
       try {
-        const data = await clientPaymentsService.getClientPayments(user.id);
+        const data = await Promise.race([
+          clientPaymentsService.getClientPayments(user.id),
+          new Promise<ClientPayment[]>(resolve => setTimeout(() => resolve([]), 6000)),
+        ]);
         setPayments(data);
+        setFastCache(`payments_${user.id}`, data);
       } catch {
         setError('Impossible de charger les paiements. Tire vers le bas pour réessayer.');
       } finally {

@@ -5,6 +5,7 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import * as rvService from '../../services/recentlyViewed';
 import { RecentShop } from '../../services/recentlyViewed';
+import useAuthStore from '../../store/authStore';
 import MascoHomeBtn from '../../components/MascoHomeBtn';
 import logger from '../../utils/logger';
 import { IcoBack } from '../../components/icons';
@@ -99,6 +100,7 @@ interface Props {
 }
 
 export default function RecentlyViewedScreen({ onBack, onShopPress }: Props) {
+  const userId = useAuthStore(s => s.user?.id);
   const [shops, setShops] = useState<RecentShop[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -120,9 +122,10 @@ export default function RecentlyViewedScreen({ onBack, onShopPress }: Props) {
   useEffect(() => {
     let cancelled = false;
 
-    // 1. Affichage instantané depuis le cache local (sans spinner si données présentes)
+    // 1. Affichage instantané depuis le cache local — userId depuis le store persisted,
+    //    aucun appel GoTrue, lecture AsyncStorage directe (~50ms)
     rvService
-      .getCachedRecentlyViewed()
+      .getCachedRecentlyViewed(userId ?? undefined)
       .then(cached => {
         if (!cancelled && cached.length > 0) {
           setShops(cached);

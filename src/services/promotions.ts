@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import { Promotion, AppliedDiscount, ProductPromoInfo } from '../types/promotions';
 import { CartItem } from '../store/cartStore';
 import { formatPrice } from '../utils/format';
@@ -38,16 +38,24 @@ export async function getShopPromos(shopId: string): Promise<Promotion[]> {
 
 /** Promos actives d'un shop pour l'affichage client (vitrine + panier). */
 export async function getActivePromos(shopId: string): Promise<Promotion[]> {
-  const now = new Date().toISOString();
-  const { data, error } = await supabase
-    .from('promotions')
-    .select('*')
-    .eq('shop_id', shopId)
-    .eq('actif', true)
-    .or(`date_debut.is.null,date_debut.lte.${now}`)
-    .or(`date_fin.is.null,date_fin.gte.${now}`);
-  if (error) return [];
-  return (data ?? []).map(rowToPromo);
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/promotions?select=*&shop_id=eq.${encodeURIComponent(shopId)}&actif=eq.true`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
+    );
+    if (!res.ok) return [];
+    const data: Record<string, unknown>[] = await res.json();
+    const now = new Date();
+    return (data ?? [])
+      .filter(r => {
+        const debut = r.date_debut ? new Date(r.date_debut as string) : null;
+        const fin = r.date_fin ? new Date(r.date_fin as string) : null;
+        return (!debut || debut <= now) && (!fin || fin >= now);
+      })
+      .map(rowToPromo);
+  } catch {
+    return [];
+  }
 }
 
 /** Promos actives pour une liste de product IDs (affichage carrousel). */

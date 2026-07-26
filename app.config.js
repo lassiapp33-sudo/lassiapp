@@ -5,6 +5,15 @@ module.exports = {
     scheme: "lassiapp",
     version: "1.0.0",
     orientation: "portrait",
+    updates: {
+      url: "https://u.expo.dev/e9058ef3-df10-43e4-af04-6830a98025e9",
+      enabled: true,
+      checkAutomatically: "ON_LOAD",
+      fallbackToCacheTimeout: 0,
+    },
+    runtimeVersion: {
+      policy: "appVersion",
+    },
     icon: "./assets/icon.png",
     userInterfaceStyle: "dark",
     newArchEnabled: false,

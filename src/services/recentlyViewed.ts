@@ -201,12 +201,12 @@ export async function getRecentlyViewed(limit = 20): Promise<RecentShop[]> {
   return shops;
 }
 
-/** Retourne le cache local instantané (affiché avant le fetch Supabase). */
-export async function getCachedRecentlyViewed(): Promise<RecentShop[]> {
+/** Retourne le cache local instantané (affiché avant le fetch Supabase).
+ *  Si userId est fourni, lit directement AsyncStorage sans passer par GoTrue. */
+export async function getCachedRecentlyViewed(userId?: string): Promise<RecentShop[]> {
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    if (userId) return readCache(userId);
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
     return readCache(user.id);
   } catch {

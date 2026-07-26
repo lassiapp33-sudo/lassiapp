@@ -47,7 +47,10 @@ const useDebtsStore = create<DebtsState>()((set, get) => ({
   loadDebts: async shopId => {
     set({ loading: true, shopId });
     try {
-      const debtors = await debtsService.getDebts(shopId);
+      const debtors = await Promise.race([
+        debtsService.getDebts(shopId),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+      ]);
       set({ debtors, loading: false, fromCache: false });
       useConnectionStore.getState().setOffline(false);
       persistCache(shopId, debtors);

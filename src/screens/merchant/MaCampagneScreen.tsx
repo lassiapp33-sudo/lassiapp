@@ -277,7 +277,7 @@ export default function MaCampagneScreen({ onBack }: Props) {
   useEffect(() => {
     const hasActive = ads.some(a => a.status === 'active') || !!sub;
     if (hasActive) {
-      intervalRef.current = setInterval(() => { void load(true); }, 10_000);
+      intervalRef.current = setInterval(() => { void load(true); }, 300_000);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }

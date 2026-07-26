@@ -188,27 +188,30 @@ export default function AlaUneFeedScreen({ onBack, onBlocPress, onShopPress }: P
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
-    const blocs = await getTousLesBlocsActifs();
+    try {
+      const blocs = await getTousLesBlocsActifs();
 
-    // Grouper par prestataire_id, ordre d'apparition = premier bloc le plus récent
-    const map: Record<string, PanneauPrestataire> = {};
-    const order: string[] = [];
-    for (const b of blocs) {
-      if (!map[b.prestataire_id]) {
-        map[b.prestataire_id] = {
-          prestataireId: b.prestataire_id,
-          shopName: b.shop_name ?? 'Boutique',
-          shopLogoUrl: b.shop_logo_url ?? null,
-          blocs: [],
-        };
-        order.push(b.prestataire_id);
+      const map: Record<string, PanneauPrestataire> = {};
+      const order: string[] = [];
+      for (const b of blocs) {
+        if (!map[b.prestataire_id]) {
+          map[b.prestataire_id] = {
+            prestataireId: b.prestataire_id,
+            shopName: b.shop_name ?? 'Boutique',
+            shopLogoUrl: b.shop_logo_url ?? null,
+            blocs: [],
+          };
+          order.push(b.prestataire_id);
+        }
+        map[b.prestataire_id].blocs.push(b);
       }
-      map[b.prestataire_id].blocs.push(b);
+      setPanneaux(order.map(id => map[id]));
+    } catch {
+      setPanneaux([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-
-    setPanneaux(order.map(id => map[id]));
-    setLoading(false);
-    setRefreshing(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);

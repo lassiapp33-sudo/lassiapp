@@ -19,6 +19,7 @@ import { getLivraisonsDemandeur } from '../../services/livraisons';
 import { prepareReorder } from '../../services/reorder';
 import useAuthStore from '../../store/authStore';
 import useCartStore from '../../store/cartStore';
+import { getFastCache, setFastCache } from '../../lib/fastCache';
 import AvisForm from '../../components/avis/AvisForm';
 import { Avis } from '../../types/avis';
 import MascoHomeBtn from '../../components/MascoHomeBtn';
@@ -106,7 +107,28 @@ export default function ClientOrdersScreen({
 
   const load = useCallback(
     async (isRefresh = false) => {
-      if (!user?.id) return;
+      if (!user?.id) { setLoading(false); setRefreshing(false); return; }
+
+      if (!isRefresh) {
+        const [cachedOrders, cachedLivraisons] = await Promise.all([
+          getFastCache<ClientOrder[]>(`orders_${user.id}`),
+          getFastCache<Livraison[]>(`livraisons_${user.id}`),
+        ]);
+        if (cachedOrders || cachedLivraisons) {
+          setAllItems(mergeAndSort(cachedOrders ?? [], cachedLivraisons ?? []));
+          setLoading(false);
+          Promise.all([
+            clientOrdersService.getClientOrders(user.id),
+            getLivraisonsDemandeur(),
+          ]).then(([freshOrders, freshLivraisons]) => {
+            setAllItems(mergeAndSort(freshOrders, freshLivraisons));
+            setFastCache(`orders_${user.id}`, freshOrders);
+            setFastCache(`livraisons_${user.id}`, freshLivraisons);
+          }).catch(() => {});
+          return;
+        }
+      }
+
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
       setError(null);
@@ -116,6 +138,8 @@ export default function ClientOrdersScreen({
           getLivraisonsDemandeur(),
         ]);
         setAllItems(mergeAndSort(orders, livraisons));
+        setFastCache(`orders_${user.id}`, orders);
+        setFastCache(`livraisons_${user.id}`, livraisons);
       } catch {
         setError('Impossible de charger ton historique. Tire vers le bas pour réessayer.');
       } finally {

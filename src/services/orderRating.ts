@@ -1,5 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import { supabase } from '../lib/supabase';
+import { supabase, getCachedToken, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 
 export type RatingDirection = 'client_to_merchant' | 'merchant_to_client';
 
@@ -90,9 +90,18 @@ export interface ClientStats {
 }
 
 export async function getMesStatsClient(): Promise<ClientStats> {
-  const { data, error } = await supabase.rpc('get_mes_stats_client');
-  if (error) throw new Error(error.message);
-  return data as ClientStats;
+  const token = getCachedToken() ?? SUPABASE_ANON;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_mes_stats_client`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON,
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: '{}',
+  });
+  if (!res.ok) throw new Error('Stats client non disponibles');
+  return (await res.json()) as ClientStats;
 }
 
 export interface ClientScoreRow {

@@ -18,6 +18,12 @@ export interface OrderInfo {
   /** Méthode et piId déjà initiés depuis CartScreen — PaymentScreen démarre en waiting. */
   preMethod?: PayMethod;
   preInitiatedPiId?: string;
+  /** Paiement déjà confirmé côté serveur (simulation) — PaymentScreen démarre en confirm. */
+  paymentConfirmed?: boolean;
+  /** QR code base64 Orange Money — affiché dans WaitingView si pas de deep link. */
+  qrCode?: string;
+  /** URL de paiement Wave/OM — pour le bouton "Rouvrir" dans WaitingView. */
+  paymentUrl?: string;
 }
 
 export type PayMethod = 'wave' | 'om';

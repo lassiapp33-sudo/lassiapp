@@ -31,14 +31,16 @@ export function useAnnonces(userId: string | null) {
       return;
     }
     let cancelled = false;
-    supabase
-      .rpc('get_annonces_non_lues')
+    Promise.race([
+      supabase.rpc('get_annonces_non_lues'),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000)),
+    ])
       .then(
         ({ data, error }: { data: Annonce[] | null; error: unknown }) => {
           if (!cancelled && !error && data) setQueue(data);
         },
-        () => {},
-      );
+      )
+      .catch(() => {});
     return () => {
       cancelled = true;
     };

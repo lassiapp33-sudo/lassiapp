@@ -1,6 +1,12 @@
-import { supabase, SUPABASE_URL } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import type { BlocALaUne, ElementALaUne } from '../types/aLaUne';
 import { lienElement } from '../utils/deepLinks';
+
+const ANON_HEADERS = {
+  apikey: SUPABASE_ANON,
+  Authorization: `Bearer ${SUPABASE_ANON}`,
+  'Content-Type': 'application/json',
+};
 
 // ─── Upload image bloc vers Storage ──────────────────────────────────────────
 
@@ -79,12 +85,40 @@ export const reactiverBloc = async (
   return { success: true, blocId: data as string };
 };
 
+// ─── Helper fetch direct (contourne GoTrue lock) ─────────────────────────────
+
+async function aluFetch<T>(path: string): Promise<T[]> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: ANON_HEADERS });
+    if (!res.ok) return [];
+    return res.json() as Promise<T[]>;
+  } catch {
+    return [];
+  }
+}
+
+async function enrichirShops(blocs: BlocALaUne[]): Promise<BlocALaUne[]> {
+  if (blocs.length === 0) return [];
+  const ids = [...new Set(blocs.map(b => b.prestataire_id))];
+  type ShopRow = { merchant_id: string; name: string; logo_url: string | null };
+  const shops = await aluFetch<ShopRow>(
+    `shops?select=merchant_id,name,logo_url&merchant_id=in.(${ids.join(',')})`,
+  );
+  const shopMap: Record<string, ShopRow> = {};
+  for (const s of shops) shopMap[s.merchant_id] = s;
+  return blocs.map(b => ({
+    ...b,
+    shop_name: shopMap[b.prestataire_id]?.name ?? 'Boutique',
+    shop_logo_url: shopMap[b.prestataire_id]?.logo_url ?? null,
+  }));
+}
+
 // ─── Cache mémoire 5 min pour getBlocsActifs ─────────────────────────────────
 
 const CACHE_TTL = 5 * 60 * 1000;
 const blocsCache = new Map<string, { data: BlocALaUne[]; ts: number }>();
 
-// ─── Blocs actifs d'une catégorie (clients) ───────────────────────────────────
+// ─── Blocs actifs d'une catégorie (clients) — direct fetch, pas de GoTrue ────
 
 export const getBlocsActifs = async (
   categorieId: string,
@@ -93,80 +127,27 @@ export const getBlocsActifs = async (
   const cacheKey = `${categorieId}:${sousCategorieId ?? ''}`;
   const hit = blocsCache.get(cacheKey);
   if (hit && Date.now() - hit.ts < CACHE_TTL) return hit.data;
-  let query = supabase
-    .from('a_la_une')
-    .select('*')
-    .eq('categorie_id', categorieId)
-    .eq('actif', true)
-    .gt('expire_at', new Date().toISOString())
-    .order('created_at', { ascending: false })
-    .limit(30);
 
+  const now = new Date().toISOString();
+  let path = `a_la_une?select=*&categorie_id=eq.${encodeURIComponent(categorieId)}&actif=eq.true&expire_at=gt.${now}&order=created_at.desc&limit=30`;
   if (sousCategorieId) {
-    query = query.or(`sous_categorie_id.eq.${sousCategorieId},sous_categorie_id.is.null`);
+    path += `&or=(sous_categorie_id.eq.${encodeURIComponent(sousCategorieId)},sous_categorie_id.is.null)`;
   }
 
-  const { data, error } = await query;
-  if (error) return [];
-  const blocs = (data ?? []) as BlocALaUne[];
-
-  if (blocs.length === 0) {
-    blocsCache.set(cacheKey, { data: [], ts: Date.now() });
-    return [];
-  }
-
-  // Enrichir avec le nom et le logo de la boutique
-  const prestataireIds = [...new Set(blocs.map(b => b.prestataire_id))];
-  const { data: shops } = await supabase
-    .from('shops')
-    .select('merchant_id, name, logo_url')
-    .in('merchant_id', prestataireIds);
-
-  const shopMap: Record<string, { name: string; logo_url: string | null }> = {};
-  for (const s of shops ?? []) {
-    shopMap[s.merchant_id] = { name: s.name, logo_url: s.logo_url ?? null };
-  }
-
-  const result = blocs.map(b => ({
-    ...b,
-    shop_name: shopMap[b.prestataire_id]?.name,
-    shop_logo_url: shopMap[b.prestataire_id]?.logo_url ?? null,
-  }));
+  const blocs = await aluFetch<BlocALaUne>(path);
+  const result = await enrichirShops(blocs);
   blocsCache.set(cacheKey, { data: result, ts: Date.now() });
   return result;
 };
 
-// ─── Tous les blocs actifs (feed client, toutes catégories) ──────────────────
+// ─── Tous les blocs actifs (feed client) — direct fetch, pas de GoTrue ───────
 
 export const getTousLesBlocsActifs = async (): Promise<BlocALaUne[]> => {
-  const { data, error } = await supabase
-    .from('a_la_une')
-    .select('*')
-    .eq('actif', true)
-    .gt('expire_at', new Date().toISOString())
-    .order('created_at', { ascending: false })
-    .limit(100);
-
-  if (error || !data) return [];
-  const blocs = data as BlocALaUne[];
-  if (blocs.length === 0) return [];
-
-  const prestataireIds = [...new Set(blocs.map(b => b.prestataire_id))];
-  const { data: shops } = await supabase
-    .from('shops')
-    .select('merchant_id, name, logo_url')
-    .in('merchant_id', prestataireIds);
-
-  const shopMap: Record<string, { name: string; logo_url: string | null }> = {};
-  for (const s of shops ?? []) {
-    shopMap[s.merchant_id] = { name: s.name, logo_url: s.logo_url ?? null };
-  }
-
-  return blocs.map(b => ({
-    ...b,
-    shop_name: shopMap[b.prestataire_id]?.name ?? 'Boutique',
-    shop_logo_url: shopMap[b.prestataire_id]?.logo_url ?? null,
-  }));
+  const now = new Date().toISOString();
+  const blocs = await aluFetch<BlocALaUne>(
+    `a_la_une?select=*&actif=eq.true&expire_at=gt.${now}&order=created_at.desc&limit=100`,
+  );
+  return enrichirShops(blocs);
 };
 
 // ─── Mes blocs (prestataire) : actifs + historique ───────────────────────────

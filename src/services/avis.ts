@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import { Avis, AvisInput, CanLeaveAvisResult } from '../types/avis';
 
 // ─── Mapping ─────────────────────────────────────────────────────────────────
@@ -24,14 +24,17 @@ function rowToAvis(row: Record<string, any>): Avis {
 // ─── Lecture ─────────────────────────────────────────────────────────────────
 
 export async function getShopAvis(shopId: string): Promise<Avis[]> {
-  const { data, error } = await supabase
-    .from('avis')
-    .select('*')
-    .eq('shop_id', shopId)
-    .eq('masque', false)
-    .order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
-  return (data ?? []).map(rowToAvis);
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/avis?select=*&shop_id=eq.${encodeURIComponent(shopId)}&masque=eq.false&order=created_at.desc`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
+    );
+    if (!res.ok) return [];
+    const data: Record<string, unknown>[] = await res.json();
+    return (data ?? []).map(rowToAvis);
+  } catch {
+    return [];
+  }
 }
 
 export async function getAvisById(avisId: string): Promise<Avis | null> {

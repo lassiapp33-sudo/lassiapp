@@ -534,7 +534,14 @@ export default function HomeNavigator({ onLogout }: Props) {
         shopLng={screen.shopLng}
         shopName={screen.shopName}
         shopLogoUrl={screen.shopLogoUrl}
-        onBack={pop}
+        onBack={() =>
+          setHistory(h => {
+            // Remonter jusqu'à l'écran avant la carte (map + suivi_gps)
+            let i = h.length - 1;
+            while (i > 0 && (h[i].id === 'suivi_gps' || h[i].id === 'map')) i--;
+            return h.slice(0, i + 1);
+          })
+        }
       />
     );
   }

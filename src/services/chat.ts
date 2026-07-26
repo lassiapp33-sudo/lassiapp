@@ -1,4 +1,4 @@
-import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
+import { supabase, getCachedToken, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import useAuthStore from '../store/authStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -86,11 +86,13 @@ export async function getOrCreateConversation(shopId: string): Promise<Conversat
 }
 
 export async function getMyConversations(): Promise<Conversation[]> {
-  const { data, error } = await supabase
-    .from('conversations')
-    .select('*')
-    .order('last_message_at', { ascending: false });
-  if (error) return [];
+  const token = getCachedToken() ?? SUPABASE_ANON;
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/conversations?select=*&order=last_message_at.desc`,
+    { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) return [];
+  const data = (await res.json()) as Record<string, unknown>[];
   return (data ?? []).map(rowToConversation);
 }
 
@@ -107,63 +109,45 @@ export async function getMerchantConversations(shopId: string): Promise<Conversa
 // ─── Messages ─────────────────────────────────────────────────────────────────
 
 export async function getMessages(conversationId: string): Promise<ChatMessage[]> {
-  // Filtre côté client : seulement les messages dans la fenêtre 72h
   const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
-  const { data, error } = await supabase
-    .from('messages')
-    .select('*')
-    .eq('conversation_id', conversationId)
-    .gte('created_at', cutoff)
-    .order('created_at', { ascending: true });
-  if (error) throw new Error(error.message);
+  const token = getCachedToken() ?? SUPABASE_ANON;
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/messages?select=*&conversation_id=eq.${encodeURIComponent(conversationId)}&created_at=gte.${encodeURIComponent(cutoff)}&order=created_at.asc`,
+    { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) throw new Error('Messages non disponibles');
+  const data = (await res.json()) as Record<string, unknown>[];
   return (data ?? []).map(rowToMessage);
 }
 
-// ─── Upload générique vers Supabase Storage ───────────────────────────────────
-// Utilise FormData + fetch direct vers l'API REST Supabase.
-// C'est la seule méthode totalement fiable dans React Native (Hermes) :
-// fetch().blob() / arrayBuffer() retournent souvent un buffer vide sur device réel.
-
+// ─── Upload générique via Edge Function (service_role bypass schema NULL) ────────
 async function uploadToStorage(
   localUri: string,
   storagePath: string,
   mimeType: string,
 ): Promise<string> {
-  // Récupérer le token JWT de la session courante
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token ?? SUPABASE_ANON;
+  const token = getCachedToken() ?? SUPABASE_ANON;
 
-  // FormData avec le fichier local — React Native gère le streaming nativement
-  const formData = new FormData();
-  formData.append('file', {
-    uri: localUri,
-    name: storagePath.split('/').pop() ?? 'file',
-    type: mimeType,
-  } as any);
+  const fileResponse = await fetch(localUri);
+  const arrayBuffer = await fileResponse.arrayBuffer();
 
-  // Appel direct à l'API REST Supabase Storage (pas le SDK)
-  // NE PAS mettre Content-Type dans les headers : React Native le génère
-  // automatiquement avec le bon boundary multipart
-  const endpoint = `${SUPABASE_URL}/storage/v1/object/chat-media/${storagePath}`;
-  const response = await fetch(endpoint, {
+  const uploadRes = await fetch(`${SUPABASE_URL}/functions/v1/upload-image`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       apikey: SUPABASE_ANON,
+      'Content-Type': mimeType,
+      'x-bucket': 'chat-media',
+      'x-path': storagePath,
     },
-    body: formData,
+    body: arrayBuffer,
   });
 
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(`Storage upload: ${body?.message ?? response.status}`);
+  const result = await uploadRes.json().catch(() => ({})) as { url?: string; error?: string };
+  if (!uploadRes.ok || !result.url) {
+    throw new Error(`Envoi échoué : ${result.error ?? uploadRes.status}`);
   }
-
-  // URL publique construite via le SDK (plus propre)
-  const { data } = supabase.storage.from('chat-media').getPublicUrl(storagePath);
-  return data.publicUrl;
+  return result.url;
 }
 
 // Upload un message vocal et retourne l'URL publique
@@ -218,9 +202,16 @@ export async function sendMessage(
   const user = useAuthStore.getState().user;
   if (!user) throw new Error('Non connecté');
 
-  const { data, error } = await supabase
-    .from('messages')
-    .insert({
+  const token = getCachedToken() ?? SUPABASE_ANON;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/messages`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON,
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({
       conversation_id: conversationId,
       sender_id: user.id,
       sender_role: user.role,
@@ -228,23 +219,30 @@ export async function sendMessage(
       content: params.content,
       voice_url: params.voiceUrl ?? null,
       ticket_data: params.ticketData ?? null,
-    })
-    .select()
-    .single();
+    }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    throw new Error((err.message as string) ?? "Envoi du message échoué");
+  }
+  const rows = (await res.json()) as Record<string, unknown>[];
+  const row = Array.isArray(rows) ? rows[0] : rows;
 
-  if (error) throw new Error(error.message);
+  // Notifier le destinataire (best-effort)
+  fetch(`${SUPABASE_URL}/functions/v1/notify-new-message`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON,
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      conversationId,
+      preview: pushPreview(params.type, params.content),
+    }),
+  }).catch(() => {});
 
-  // Notifier le destinataire (best-effort — ne bloque pas l'envoi)
-  supabase.functions
-    .invoke('notify-new-message', {
-      body: {
-        conversationId,
-        preview: pushPreview(params.type, params.content),
-      },
-    })
-    .catch(() => {});
-
-  return rowToMessage(data);
+  return rowToMessage(row);
 }
 
 // Met à jour le statut d'un ticket (pending → paid) après paiement

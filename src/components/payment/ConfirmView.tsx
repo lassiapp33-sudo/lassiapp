@@ -113,12 +113,12 @@ export default function ConfirmView({ order, method, onBackToChat }: Props) {
       </View>
 
       {/* ── Titre + montant ──────────────────────────────────────────────── */}
-      <Text style={styles.title}>Paiement réussi !</Text>
+      <Text style={styles.title}>Paiement confirmé ✓</Text>
       <Text style={styles.amount}>{formatPrice(order.total)}</Text>
       <Text style={styles.desc}>
-        {'Ta commande chez '}
+        {'Votre paiement a bien été reçu.\nVeuillez patienter la confirmation du vendeur '}
         <Text style={styles.descBold}>{order.shopName}</Text>
-        {' est confirmée.\nElle sera prête dans 5 min 🎉'}
+        {'.\nMerci beaucoup !'}
       </Text>
 
       {/* ── Reçu ────────────────────────────────────────────────────────── */}

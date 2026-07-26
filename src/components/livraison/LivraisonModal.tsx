@@ -17,7 +17,7 @@ import { formatPrice } from '../../utils/format';
 import { devisLivraison, LIVRAISON_CONFIG } from '../../config/livraison';
 import { getCurrentLocation, reverseGeocode } from '../../services/location';
 import { creerLivraison } from '../../services/livraisons';
-import { supabase } from '../../lib/supabase';
+import { SUPABASE_URL, SUPABASE_ANON } from '../../lib/supabase';
 import useAuthStore from '../../store/authStore';
 import AddressAutocomplete from './AddressAutocomplete';
 import { DakarAddress } from '../../data/dakarAddresses';
@@ -62,19 +62,21 @@ export default function LivraisonModal({
     if (!visible) return;
     setLoadingCoords(true);
     Promise.all([
-      supabase
-        .from('shops')
-        .select('latitude, longitude, address_text, name')
-        .eq('id', shopId)
-        .single()
-        .then(({ data }) => {
+      fetch(
+        `${SUPABASE_URL}/rest/v1/shops?select=latitude,longitude,address_text,name&id=eq.${encodeURIComponent(shopId)}&limit=1`,
+        { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
+      )
+        .then(r => r.json())
+        .then((rows: Record<string, unknown>[]) => {
+          const data = rows[0];
           if (data?.latitude && data?.longitude) {
-            setCoordsDepart({ lat: data.latitude, lng: data.longitude });
-            setDepartLabel(data.address_text ?? data.name ?? shopName);
+            setCoordsDepart({ lat: data.latitude as number, lng: data.longitude as number });
+            setDepartLabel((data.address_text ?? data.name ?? shopName) as string);
           } else {
             setCoordsDepart({ lat: DAKAR_LAT, lng: DAKAR_LNG });
           }
-        }),
+        })
+        .catch(() => setCoordsDepart({ lat: DAKAR_LAT, lng: DAKAR_LNG })),
       getCurrentLocation().then(async pos => {
         if (pos) {
           setCoordsArrivee({ lat: pos.latitude, lng: pos.longitude });

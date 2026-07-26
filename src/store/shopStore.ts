@@ -83,14 +83,20 @@ const useShopStore = create<ShopState>()((set, get) => ({
   loadMyShop: async () => {
     set({ loading: true, shopNotFound: false });
     try {
-      const shop = await shopsService.getMyShop();
+      const shop = await Promise.race([
+        shopsService.getMyShop(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+      ]);
 
       if (!shop) {
         set({ loading: false, shopNotFound: true });
         return;
       }
 
-      const products = await productsService.getProducts(shop.id);
+      const products = await Promise.race([
+        productsService.getProducts(shop.id),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+      ]);
 
       // Dériver les catégories à partir des produits existants
       const catIds = [...new Set(products.map(p => p.category))];

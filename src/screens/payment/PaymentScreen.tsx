@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  Image,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 
@@ -35,6 +36,7 @@ function WaitingView({
   total,
   verifying,
   paymentUrl,
+  qrCode,
   onVerify,
   onBack,
 }: {
@@ -42,10 +44,12 @@ function WaitingView({
   total: number;
   verifying: boolean;
   paymentUrl: string;
+  qrCode?: string;
   onVerify: () => void;
   onBack: () => void;
 }) {
   const methodLabel = method === 'wave' ? 'Wave' : 'Orange Money';
+  const hasQr = method === 'om' && !!qrCode && !paymentUrl;
   return (
     <View style={styles.waitRoot}>
       <View style={styles.waitCard}>
@@ -54,11 +58,27 @@ function WaitingView({
           <Path d="M12 6v6l4 2" stroke={colors.accent} strokeLinecap="round" />
         </Svg>
         <Text style={styles.waitTitle}>En attente de paiement</Text>
-        <Text style={styles.waitBody}>
-          {'Complète le paiement de '}
-          <Text style={styles.waitAmount}>{formatPrice(total)}</Text>
-          {` dans ${methodLabel}, puis reviens ici et appuie sur le bouton ci-dessous.`}
-        </Text>
+        {hasQr ? (
+          <>
+            <Text style={styles.waitBody}>
+              Scanne ce QR code avec l'app{' '}
+              <Text style={styles.waitAmount}>Orange Money</Text>
+              {' '}pour payer{' '}
+              <Text style={styles.waitAmount}>{formatPrice(total)}</Text>.
+            </Text>
+            <Image
+              source={{ uri: `data:image/png;base64,${qrCode}` }}
+              style={styles.qrImage}
+              resizeMode="contain"
+            />
+          </>
+        ) : (
+          <Text style={styles.waitBody}>
+            {'Complète le paiement de '}
+            <Text style={styles.waitAmount}>{formatPrice(total)}</Text>
+            {` dans ${methodLabel}, puis reviens ici et appuie sur le bouton ci-dessous.`}
+          </Text>
+        )}
       </View>
 
       {!!paymentUrl && (
@@ -102,14 +122,28 @@ interface Props {
 }
 
 export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
-  const [stage, setStage] = useState<Stage>(order.preInitiatedPiId ? 'waiting' : 'checkout');
+  const [stage, setStage] = useState<Stage>(
+    order.paymentConfirmed ? 'confirm' : order.preInitiatedPiId ? 'waiting' : 'checkout',
+  );
   const [method, setMethod] = useState<PayMethod>(order.preMethod ?? 'wave');
   const [processing, setProcessing] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const referenceRef = useRef<string>(order.preInitiatedPiId ?? '');
   const processingRef = useRef(false);
 
-  const [paymentUrl, setPaymentUrl] = useState<string>('');
+  const [paymentUrl, setPaymentUrl] = useState<string>(order.paymentUrl ?? '');
+
+  // Ouvre automatiquement l'app de paiement dès que l'écran d'attente est affiché.
+  // En faisant l'ouverture ICI (pas dans CartScreen), LASSI est déjà au second plan
+  // et Android ne lui redonne pas le focus — l'app OM reste visible.
+  useEffect(() => {
+    if (stage !== 'waiting' || !paymentUrl) return;
+    const t = setTimeout(() => {
+      Linking.openURL(paymentUrl).catch(() => {});
+    }, 200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // une seule fois au montage
 
   const handlePay = async () => {
     if (processingRef.current) return;
@@ -173,8 +207,8 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
         setStage('confirm');
       } else {
         Alert.alert(
-          'Paiement non trouvé',
-          "Le paiement n'est pas encore confirmé. Attends quelques secondes et réessaie.",
+          'Paiement introuvable',
+          "Votre paiement n'a pas encore été détecté. Vérifiez que la transaction a bien été effectuée dans Orange Money, puis réessayez dans quelques instants.",
         );
       }
     } catch (err) {
@@ -204,6 +238,7 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
           total={order.total}
           verifying={verifying}
           paymentUrl={paymentUrl}
+          qrCode={order.qrCode}
           onVerify={handleVerify}
           onBack={onBack}
         />
@@ -331,5 +366,12 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontFamily: fonts.ui,
     fontSize: 14,
+  },
+  qrImage: {
+    width: 190,
+    height: 190,
+    marginTop: 8,
+    borderRadius: 8,
+    backgroundColor: '#fff',
   },
 });

@@ -159,14 +159,20 @@ export default function CategoryScreen({
   const loadShops = useCallback(async (cat: CatId) => {
     setLoading(true);
     try {
+      // Phase 1 : boutiques via fetch direct (pas de GoTrue) → affichage immédiat
       const data = await shopsService.getShopsByCategory(cat);
       setShops(data);
+      setLoading(false);
+      // Phase 2 : badges en arrière-plan (GoTrue peut bloquer au cold start)
       const merchantIds = data.map(s => s.merchantId).filter((id): id is string => !!id);
-      setBadgeMap(await getBadgesActifsBatch(merchantIds).catch(() => ({})));
+      if (merchantIds.length > 0) {
+        getBadgesActifsBatch(merchantIds)
+          .then(bm => setBadgeMap(bm))
+          .catch(() => {});
+      }
     } catch {
       setShops([]);
       setBadgeMap({});
-    } finally {
       setLoading(false);
     }
   }, []);

@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, getCachedToken, safeGetSession } from '../lib/supabase';
 import { IncomingOrder, OrderStatus } from '../types/orders';
 import { getClientsScores } from './orderRating';
 import { Platform } from 'react-native';
@@ -61,8 +61,8 @@ export async function getShopOrders(shopId: string): Promise<IncomingOrder[]> {
     .from('orders')
     .select('*, order_items(*)')
     .eq('shop_id', shopId)
-    // Masque les commandes en attente de paiement (pas encore confirmées via webhook)
-    .neq('status', 'new')
+    // Masque uniquement les commandes non encore payées ('pending')
+    // 'new' = paiement confirmé → visible dans l'onglet Nouvelles
     .neq('status', 'pending')
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -155,16 +155,18 @@ export async function createOrderSecure(
   idempotencyKey?: string,
   voiceNoteUrl?: string,
 ): Promise<{ orderId: string; total: number }> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) throw new Error('Session expirée — reconnecte-toi.');
+  let token = getCachedToken();
+  if (!token) {
+    const { data: { session } } = await safeGetSession(15_000);
+    token = session?.access_token ?? null;
+  }
+  if (!token) throw new Error('Session expirée — reconnecte-toi.');
 
   const res = await fetch(`${SUPABASE_URL}/functions/v1/create-order`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${token}`,
       apikey: ANON_KEY,
     },
     body: JSON.stringify({

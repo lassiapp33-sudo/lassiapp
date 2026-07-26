@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { getCachedToken, safeGetSession } from '../lib/supabase';
 import { PayMethod } from '../types/payment';
 import { retryWithBackoff } from '../utils/retry';
 import useConnectionStore from '../store/connectionStore';
@@ -11,13 +11,16 @@ const ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const ERREUR_CONNEXION = 'Connexion impossible. Vérifie ton réseau et réessaie.';
 
 async function authHeaders(): Promise<Record<string, string>> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) throw new Error('Session expirée — reconnecte-toi');
+  // Token caché = accès instantané. Fallback GoTrue si pas encore chargé (démarrage app).
+  let token = getCachedToken();
+  if (!token) {
+    const { data: { session } } = await safeGetSession(15_000);
+    token = session?.access_token ?? null;
+  }
+  if (!token) throw new Error('Session expirée — reconnecte-toi');
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${session.access_token}`,
+    Authorization: `Bearer ${token}`,
     apikey: ANON_KEY,
   };
 }
@@ -43,17 +46,24 @@ export async function createPayment(params: {
 
   let res: Response;
   try {
-    res = await retryWithBackoff(async () =>
-      fetch(`${FUNCTIONS_BASE}/create-payment`, {
-        method: 'POST',
-        headers: await authHeaders(),
-        body: JSON.stringify({
-          orderId: params.ticketId,
-          moyenPaiement,
-          idempotencyKey,
-        }),
-      }),
-    );
+    res = await retryWithBackoff(async () => {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 12_000);
+      try {
+        return await fetch(`${FUNCTIONS_BASE}/create-payment`, {
+          method: 'POST',
+          headers: await authHeaders(),
+          body: JSON.stringify({
+            orderId: params.ticketId,
+            moyenPaiement,
+            idempotencyKey,
+          }),
+          signal: ctrl.signal,
+        });
+      } finally {
+        clearTimeout(tid);
+      }
+    });
   } catch {
     useConnectionStore.getState().setOffline(true);
     throw new Error(ERREUR_CONNEXION);

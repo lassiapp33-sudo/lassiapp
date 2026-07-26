@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -78,14 +78,17 @@ export async function getMesOffres(prestataireId: string): Promise<FitnessOffre[
 
 /** Offres actives d'un fitness — pour les clients. */
 export async function getOffresActives(prestataireId: string): Promise<FitnessOffre[]> {
-  const { data, error } = await supabase
-    .from('fitness_abonnement_offres')
-    .select('*')
-    .eq('prestataire_id', prestataireId)
-    .eq('actif', true)
-    .order('prix', { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data ?? []).map(rowToOffre);
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/fitness_abonnement_offres?select=*&prestataire_id=eq.${encodeURIComponent(prestataireId)}&actif=eq.true&order=prix.asc`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
+    );
+    if (!res.ok) return [];
+    const data: Record<string, unknown>[] = await res.json();
+    return (data ?? []).map(rowToOffre);
+  } catch {
+    return [];
+  }
 }
 
 /** Crée une offre d'abonnement. */

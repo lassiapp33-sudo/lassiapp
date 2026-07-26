@@ -82,10 +82,10 @@ export default function RoleSelectScreen({ onSelectClient, onSelectMerchant, onL
       </View>
 
       <View style={styles.loginRow}>
-        <Text style={styles.loginTxt}>{t.auth.alreadyAccount}</Text>
-        <TouchableOpacity onPress={onLogin} activeOpacity={0.7}>
-          <Text style={styles.loginLink}>{t.auth.signIn}</Text>
-        </TouchableOpacity>
+        <Text style={styles.loginTxt}>
+          {t.auth.alreadyAccount}{' '}
+          <Text style={styles.loginLink} onPress={onLogin}>{t.auth.signIn}</Text>
+        </Text>
       </View>
     </View>
   );

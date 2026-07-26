@@ -10,6 +10,8 @@ import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { ReservationTerrain, SPORT_EMOJI } from '../../types/terrain';
 import { getMyTerrainReservations } from '../../services/terrains';
+import useAuthStore from '../../store/authStore';
+import { getFastCache, setFastCache } from '../../lib/fastCache';
 import logger from '../../utils/logger';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -153,23 +155,40 @@ interface Props {
 // ─── Écran principal ─────────────────────────────────────────────────────────
 
 export default function TerrainMyReservationsScreen({ onBack }: Props) {
+  const userId = useAuthStore(s => s.user?.id);
   const [reservations, setReservations] = useState<ReservationTerrain[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [qrTarget, setQrTarget] = useState<ReservationTerrain | null>(null);
 
   const load = useCallback(async (silent = false) => {
+    const cacheKey = `terrain_res_${userId ?? ''}`;
+    if (!silent) {
+      const cached = await getFastCache<ReservationTerrain[]>(cacheKey);
+      if (cached) {
+        setReservations(cached);
+        setLoading(false);
+        getMyTerrainReservations()
+          .then(fresh => {
+            setReservations(fresh);
+            if (userId) setFastCache(cacheKey, fresh);
+          })
+          .catch(() => {});
+        return;
+      }
+    }
     if (!silent) setLoading(true);
     try {
       const data = await getMyTerrainReservations();
       setReservations(data);
+      if (userId) setFastCache(cacheKey, data);
     } catch (err) {
       logger.warn('[TerrainMyReservations] load:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => { load(); }, [load]);
 

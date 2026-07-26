@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import { MerchantPayMethod, PaymentStatus, DayRevenue, PaymentStats } from '../types/merchantPayments';
 
 export interface ClientPayment {
@@ -46,11 +46,16 @@ export async function getClientPayments(clientId: string): Promise<ClientPayment
 
   let shopNameMap: Record<string, string> = {};
   if (prestataireIds.length > 0) {
-    const { data: shops } = await supabase
-      .from('shops')
-      .select('merchant_id, name')
-      .in('merchant_id', prestataireIds);
-    shopNameMap = Object.fromEntries((shops ?? []).map(s => [s.merchant_id, s.name]));
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/shops?select=merchant_id,name&merchant_id=in.(${prestataireIds.map(encodeURIComponent).join(',')})`,
+        { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
+      );
+      if (res.ok) {
+        const shops: Array<{ merchant_id: string; name: string }> = await res.json();
+        shopNameMap = Object.fromEntries(shops.map(s => [s.merchant_id, s.name]));
+      }
+    } catch {}
   }
 
   return rows.map(r => rowToClientPayment(r, shopNameMap));

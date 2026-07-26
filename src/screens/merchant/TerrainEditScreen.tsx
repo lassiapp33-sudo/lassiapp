@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
   TextInput, Alert, ActivityIndicator, Platform, KeyboardAvoidingView, Switch,
 } from 'react-native';
-import Svg, { Path, Line } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { Terrain, SportType, SPORT_EMOJI, SPORT_LABEL } from '../../types/terrain';

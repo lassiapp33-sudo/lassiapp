@@ -254,7 +254,7 @@ const fr: Translations = {
   },
   home: {
     explore: 'Explore ton quartier',
-    nearby: '📍 Tout près de toi',
+    nearby: 'Tout près de toi',
     noShops: "Aucune boutique trouvée pour l'instant.",
     search: 'Rechercher',
     searchPlaceholder: 'Cherche un commerce, un plat…',

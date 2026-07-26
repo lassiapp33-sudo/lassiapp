@@ -139,7 +139,7 @@ export default function BubbleTicket({
         {paid && (
           <View style={styles.paidStamp}>
             <IcoCheck />
-            <Text style={styles.paidTxt}>Payé via Wave ✓</Text>
+            <Text style={styles.paidTxt}>Paiement confirmé ✓</Text>
           </View>
         )}
       </View>

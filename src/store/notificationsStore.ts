@@ -41,7 +41,10 @@ const useNotificationsStore = create<NotifState>()((set, get) => ({
   loadNotifications: async () => {
     set({ loading: true });
     try {
-      const notifs = await notifsService.getNotifications();
+      const notifs = await Promise.race([
+        notifsService.getNotifications(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+      ]);
       set({ notifications: notifs, loading: false });
     } catch {
       set({ loading: false });

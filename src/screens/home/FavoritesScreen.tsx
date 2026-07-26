@@ -12,7 +12,7 @@ import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import useFavoritesStore from '../../store/favoritesStore';
 import * as shopsService from '../../services/shops';
-import { Shop } from '../../services/shops';
+import { Shop, getShopsByIds } from '../../services/shops';
 import { computeStatus, type WeekHours } from '../../services/hours';
 import { useRealtimeShops } from '../../hooks/useRealtimeShops';
 import Avatar from '../../components/Avatar';
@@ -137,14 +137,13 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
   const [shopsError, setShopsError] = useState(false);
 
   const favorites = useFavoritesStore(s => s.favorites);
-  const favLoading = useFavoritesStore(s => s.loading);
   const loadFavorites = useFavoritesStore(s => s.loadFavorites);
 
   useEffect(() => {
     loadFavorites();
   }, []);
 
-  // Charger les boutiques favorisées depuis Supabase
+  // Charger les boutiques favorisées — batch direct fetch, contourne GoTrue
   const loadFavShops = React.useCallback(() => {
     if (favorites.length === 0) {
       setFavShops([]);
@@ -153,8 +152,8 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
     }
     setShopsLoading(true);
     setShopsError(false);
-    Promise.all(favorites.map(id => shopsService.getShopById(id)))
-      .then(results => setFavShops(results.filter(Boolean) as Shop[]))
+    getShopsByIds(favorites)
+      .then(results => setFavShops(results))
       .catch(err => {
         logger.warn('[FavoritesScreen] load shops:', err);
         setShopsError(true);
@@ -179,7 +178,7 @@ export default function FavoritesScreen({ onBack, onShopPress }: Props) {
   // Tant que la liste des favoris (store) ou les détails des commerces ne sont
   // pas prêts, on affiche le loader — jamais "Aucun favori" en transition.
   const isLoading =
-    favLoading || shopsLoading || (favorites.length > 0 && favShops.length === 0 && !shopsError);
+    shopsLoading || (favorites.length > 0 && favShops.length === 0 && !shopsError);
 
   return (
     <LassiScreen

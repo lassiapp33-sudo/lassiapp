@@ -1,4 +1,25 @@
-import { supabase } from '../lib/supabase';
+import { SUPABASE_URL, SUPABASE_ANON, supabase } from '../lib/supabase';
+
+const ANON_HEADERS = {
+  apikey: SUPABASE_ANON,
+  Authorization: `Bearer ${SUPABASE_ANON}`,
+  'Content-Type': 'application/json',
+};
+
+async function rpcFetch<T>(fnName: string, body: Record<string, unknown> = {}): Promise<T[]> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fnName}`, {
+      method: 'POST',
+      headers: ANON_HEADERS,
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data as T[] : [];
+  } catch {
+    return [];
+  }
+}
 
 export interface ClassementEntry {
   rang: number;
@@ -61,18 +82,19 @@ export const getClassementSousCategorie = async (
   const cached = getCached(key);
   if (cached) return cached;
 
-  const { data, error } = await supabase
-    .from('classements')
-    .select('rang, points, nom_affiche, image_url, prestataire_id')
-    .eq('type', 'sous_categorie')
-    .eq('sous_categorie', sousCategorie)
-    .eq('periode', periode)
-    .eq('est_actif', true)
-    .order('rang')
-    .limit(20);
-  if (error) throw new Error(error.message);
-  cache.set(key, { data: data ?? [], ts: Date.now() });
-  return data ?? [];
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/classements?select=rang,points,nom_affiche,image_url,prestataire_id&type=eq.sous_categorie&sous_categorie=eq.${encodeURIComponent(sousCategorie)}&periode=eq.${encodeURIComponent(periode)}&est_actif=eq.true&order=rang.asc&limit=20`,
+      { headers: ANON_HEADERS },
+    );
+    if (!res.ok) return [];
+    const data: ClassementEntry[] = await res.json();
+    const result = Array.isArray(data) ? data : [];
+    cache.set(key, { data: result, ts: Date.now() });
+    return result;
+  } catch {
+    return [];
+  }
 };
 
 // --- Classement mondial (mensuel) — pagination ---
@@ -81,77 +103,67 @@ export const getClassementMondial = async (
   page = 0,
   pageSize = 10,
 ): Promise<ClassementEntry[]> => {
-  const { data, error } = await supabase
-    .from('classements')
-    .select('rang, points, nom_affiche, image_url, prestataire_id')
-    .eq('type', 'mondial')
-    .eq('periode', periode)
-    .eq('est_actif', true)
-    .order('rang')
-    .range(page * pageSize, page * pageSize + pageSize - 1);
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  try {
+    const offset = page * pageSize;
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/classements?select=rang,points,nom_affiche,image_url,prestataire_id&type=eq.mondial&periode=eq.${encodeURIComponent(periode)}&est_actif=eq.true&order=rang.asc&offset=${offset}&limit=${pageSize}`,
+      { headers: ANON_HEADERS },
+    );
+    if (!res.ok) return [];
+    const data: ClassementEntry[] = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
 };
 
 // --- Classement quartiers ---
 export const getClassementQuartiers = async (periode: string): Promise<ClassementEntry[]> => {
-  const { data, error } = await supabase
-    .from('classements')
-    .select('rang, points, nom_affiche')
-    .eq('type', 'quartier')
-    .eq('periode', periode)
-    .eq('est_actif', true)
-    .order('rang')
-    .limit(10);
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/classements?select=rang,points,nom_affiche&type=eq.quartier&periode=eq.${encodeURIComponent(periode)}&est_actif=eq.true&order=rang.asc&limit=10`,
+      { headers: ANON_HEADERS },
+    );
+    if (!res.ok) return [];
+    const data: ClassementEntry[] = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
 };
 
 // --- Classement clients ---
 export const getClassementClients = async (periode: string): Promise<ClassementEntry[]> => {
-  const { data, error } = await supabase
-    .from('classements')
-    .select('rang, points, nom_affiche, image_url, client_id')
-    .eq('type', 'client')
-    .eq('periode', periode)
-    .eq('est_actif', true)
-    .order('rang')
-    .limit(100);
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/classements?select=rang,points,nom_affiche,image_url,client_id&type=eq.client&periode=eq.${encodeURIComponent(periode)}&est_actif=eq.true&order=rang.asc&limit=100`,
+      { headers: ANON_HEADERS },
+    );
+    if (!res.ok) return [];
+    const data: ClassementEntry[] = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
 };
 
-// --- Classement LIVE sous-catégorie (prestataire_scores, avant snapshot pg_cron) ---
+// --- Classement LIVE sous-catégorie — direct RPC fetch, pas de GoTrue ---
 export const getClassementLiveSousCategorie = async (
   sousCategorie: string,
-): Promise<ClassementEntry[]> => {
-  const { data, error } = await supabase.rpc('get_classement_live_sous_categorie', {
-    p_sous_categorie: sousCategorie,
-  });
-  if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as ClassementEntry[];
-};
+): Promise<ClassementEntry[]> =>
+  rpcFetch<ClassementEntry>('get_classement_live_sous_categorie', { p_sous_categorie: sousCategorie });
 
-// --- Classement LIVE mondial (prestataire_scores, avant snapshot pg_cron) ---
-export const getClassementLiveMondial = async (): Promise<ClassementEntry[]> => {
-  const { data, error } = await supabase.rpc('get_classement_live_mondial');
-  if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as ClassementEntry[];
-};
+// --- Classement LIVE mondial — direct RPC fetch, pas de GoTrue ---
+export const getClassementLiveMondial = async (): Promise<ClassementEntry[]> =>
+  rpcFetch<ClassementEntry>('get_classement_live_mondial');
 
-// --- Classement LIVE quartiers (avant snapshot pg_cron) ---
-export const getClassementLiveQuartiers = async (): Promise<ClassementEntry[]> => {
-  const { data, error } = await supabase.rpc('get_classement_live_quartiers');
-  if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as ClassementEntry[];
-};
+// --- Classement LIVE quartiers — direct RPC fetch, pas de GoTrue ---
+export const getClassementLiveQuartiers = async (): Promise<ClassementEntry[]> =>
+  rpcFetch<ClassementEntry>('get_classement_live_quartiers');
 
-// --- Classement LIVE clients (client_scores, avant snapshot pg_cron) ---
-export const getClassementLiveClients = async (): Promise<ClassementEntry[]> => {
-  const { data, error } = await supabase.rpc('get_classement_live_clients');
-  if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as ClassementEntry[];
-};
+// --- Classement LIVE clients — direct RPC fetch, pas de GoTrue ---
+export const getClassementLiveClients = async (): Promise<ClassementEntry[]> =>
+  rpcFetch<ClassementEntry>('get_classement_live_clients');
 
 // --- Mes récompenses actives (prestataire) — exclut les expirées ---
 export const getMesRecompenses = async (prestataireId: string): Promise<RecompenseAttribuee[]> => {

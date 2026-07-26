@@ -36,10 +36,10 @@ const IconFlame = () => (
 export default function TabSelector({ onNearbyPress, onRecentPress, onAlaUnePress }: Props) {
   return (
     <View style={styles.row}>
-      {/* Autour de moi — réduit */}
+      {/* Autour de moi */}
       <TouchableOpacity style={styles.sideBtn} onPress={onNearbyPress} activeOpacity={0.8}>
         <IconCompass />
-        <Text style={styles.sideLbl} numberOfLines={1}>Autour de moi</Text>
+        <Text style={styles.sideLbl}>Autour de moi</Text>
       </TouchableOpacity>
 
       {/* À la une — central, accent */}
@@ -48,10 +48,10 @@ export default function TabSelector({ onNearbyPress, onRecentPress, onAlaUnePres
         <Text style={styles.centerLbl}>À la une</Text>
       </TouchableOpacity>
 
-      {/* Vus récemment — réduit */}
+      {/* Vus récemment */}
       <TouchableOpacity style={styles.sideBtn} onPress={onRecentPress} activeOpacity={0.8}>
         <IconClock />
-        <Text style={styles.sideLbl} numberOfLines={1}>Vus récemment</Text>
+        <Text style={styles.sideLbl}>Vus récemment</Text>
       </TouchableOpacity>
     </View>
   );
@@ -62,37 +62,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 7,
     marginBottom: 24,
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
 
-  // Boutons latéraux — plus petits
+  // Boutons latéraux
   sideBtn: {
     flex: 1,
-    height: 38,
+    minHeight: 52,
     borderRadius: radius.sm,
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
+    justifyContent: 'space-between',
+    paddingHorizontal: 6,
+    paddingVertical: 10,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
   sideLbl: {
     fontFamily: fonts.body,
-    fontSize: 11,
+    fontSize: 10.5,
     color: colors.muted,
+    textAlign: 'center',
   },
 
   // Bouton central — À la une en accent
   centerBtn: {
     flex: 1.15,
-    height: 42,
+    minHeight: 52,
     borderRadius: radius.md,
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
+    paddingVertical: 10,
     backgroundColor: colors.accent,
     shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 4 },
@@ -102,7 +104,7 @@ const styles = StyleSheet.create({
   },
   centerLbl: {
     fontFamily: fonts.title,
-    fontSize: 13,
+    fontSize: 10.5,
     color: colors.bg,
   },
 });

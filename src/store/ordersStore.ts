@@ -28,7 +28,10 @@ const useOrdersStore = create<OrdersState>()((set, get) => ({
   loadOrders: async shopId => {
     set({ loading: true, shopId });
     try {
-      const orders = await ordersService.getShopOrders(shopId);
+      const orders = await Promise.race([
+        ordersService.getShopOrders(shopId),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+      ]);
       set({ orders, loading: false });
     } catch (err) {
       logger.warn('[ordersStore] loadOrders:', err);

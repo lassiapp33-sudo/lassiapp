@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
@@ -64,32 +64,43 @@ export default function ClientMessagesScreen({ onBack }: Props) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [shops, setShops] = useState<Record<string, Shop>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [openChat, setOpenChat] = useState<OpenChat | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const convs = await chatService.getMyConversations();
-        setConversations(convs);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
 
-        // Charger les infos boutique pour chaque conversation
-        const shopMap: Record<string, Shop> = {};
-        await Promise.all(
+    const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> =>
+      Promise.race([p, new Promise<never>((_, r) => setTimeout(() => r(new Error('timeout')), ms))]);
+
+    try {
+      const convs = await withTimeout(chatService.getMyConversations(), 10_000);
+      setConversations(convs);
+
+      const shopMap: Record<string, Shop> = {};
+      await withTimeout(
+        Promise.all(
           convs.map(async c => {
             try {
               const s = await shopsService.getShopById(c.shopId);
               if (s) shopMap[c.shopId] = s;
             } catch {}
           }),
-        );
-        setShops(shopMap);
-      } catch {
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+        ),
+        10_000,
+      );
+      setShops(shopMap);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (openChat) {
     return (
@@ -116,6 +127,14 @@ export default function ClientMessagesScreen({ onBack }: Props) {
 
       {loading ? (
         <LoadingSpinner />
+      ) : loadError ? (
+        <View style={styles.center}>
+          <Text style={styles.emptyTitle}>Connexion échouée</Text>
+          <Text style={styles.emptyDesc}>Vérifie ta connexion et réessaie.</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={load} activeOpacity={0.8}>
+            <Text style={styles.retryTxt}>Réessayer</Text>
+          </TouchableOpacity>
+        </View>
       ) : conversations.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.emptyTitle}>Aucun message pour l'instant</Text>
@@ -183,6 +202,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+
+  retryBtn: {
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 28,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  retryTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 13 },
 
   list: { paddingVertical: 8 },
 

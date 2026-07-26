@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Linking,
 } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -26,14 +25,14 @@ import { AppliedDiscount } from '../../types/promotions';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { notifyError } from '../../utils/errorUtils';
-import { calculerPrixClient, calculerCommission, PAYMENT_CONFIG } from '../../config/payment';
+import { calculerCommission, calculerPrixClient } from '../../config/payment';
 import { PayMethod } from '../../types/payment';
 import PayMethodCard from '../../components/payment/PayMethodCard';
 import * as payService from '../../services/payment';
 import LivraisonModal from '../../components/livraison/LivraisonModal';
 import { devisLivraison } from '../../config/livraison';
 import { getCurrentLocation } from '../../services/location';
-import { supabase } from '../../lib/supabase';
+import { SUPABASE_URL, SUPABASE_ANON } from '../../lib/supabase';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -95,15 +94,17 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
   useEffect(() => {
     const sid = shopId || shopInfo?.id || '';
     if (!sid) return;
-    supabase
-      .from('shops')
-      .select('latitude, longitude')
-      .eq('id', sid)
-      .single()
-      .then(({ data }) => {
+    fetch(
+      `${SUPABASE_URL}/rest/v1/shops?select=latitude,longitude&id=eq.${encodeURIComponent(sid)}&limit=1`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
+    )
+      .then(r => r.json())
+      .then((rows: Record<string, unknown>[]) => {
+        const data = rows[0];
         if (data?.latitude && data?.longitude)
-          setShopCoords({ lat: data.latitude, lng: data.longitude });
-      });
+          setShopCoords({ lat: data.latitude as number, lng: data.longitude as number });
+      })
+      .catch(() => {});
     getCurrentLocation().then(pos => {
       if (pos) setClientCoords({ lat: pos.latitude, lng: pos.longitude });
     });
@@ -243,6 +244,10 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
       // Initier le paiement Wave/OM immédiatement après création de la commande.
       // Si l'initiation échoue → on reste dans CartScreen (l'utilisateur peut réessayer).
       let preInitiatedPiId: string | undefined;
+      let paymentConfirmed = false;
+      let preQrCode: string | undefined;
+      let prePaymentUrl: string | undefined;
+
       try {
         const session = await payService.createPayment({
           ticketId: realOrderId,
@@ -251,9 +256,29 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
           merchantName: freshShopInfo?.name ?? shopName,
         });
         preInitiatedPiId = session.reference;
-        if (session.paymentUrl) {
-          Linking.openURL(session.paymentUrl);
+        preQrCode = session.qrCode || undefined;
+        prePaymentUrl = session.paymentUrl || undefined;
+
+        if (session.simulation) {
+          // Mode simulation : vérification immédiate, pas d'app externe à ouvrir
+          const paid = await payService.verifyPayment({
+            reference: session.reference,
+            ticketId: realOrderId,
+            method,
+          });
+          if (!paid) {
+            notifyError(
+              method === 'om'
+                ? 'Orange Money n\'est pas encore disponible. Utilise Wave.'
+                : 'Paiement simulé non confirmé. Réessaie.',
+            );
+            return;
+          }
+          paymentConfirmed = true;
         }
+        // PaymentScreen ouvre automatiquement l'app Wave/OM au montage (useEffect)
+        // — ne pas appeler Linking.openURL ici, sinon la navigation CartScreen→PaymentScreen
+        // reprend le focus et Android annule l'intent.
       } catch (payErr: unknown) {
         notifyError(payErr instanceof Error ? payErr.message : 'Impossible d\'initier le paiement. Réessaie ou change de moyen.');
         return; // Reste dans CartScreen — la commande est en attente (invisible au prestataire)
@@ -272,6 +297,9 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         orderType: orderType,
         preMethod: method,
         preInitiatedPiId,
+        paymentConfirmed,
+        qrCode: preQrCode,
+        paymentUrl: prePaymentUrl,
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Une erreur est survenue. Réessaie dans un instant.';
@@ -330,10 +358,10 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
                 </Text>
               </View>
 
-              {/* Nom + prix unitaire */}
+              {/* Nom + prix unitaire client (prix vendeur + commission 1%) */}
               <View style={styles.itemInfo}>
                 <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
+                <Text style={styles.itemPrice}>{formatPrice(calculerPrixClient(item.price))}</Text>
               </View>
 
               {/* Contrôles quantité */}
@@ -382,10 +410,12 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
 
           {/* Résumé de commande */}
           <View style={styles.summary}>
-            <View style={styles.summaryLine}>
-              <Text style={styles.summaryKey}>Sous-total</Text>
-              <Text style={styles.summaryVal}>{formatPrice(subtotal)}</Text>
-            </View>
+            {totalDiscount > 0 && (
+              <View style={styles.summaryLine}>
+                <Text style={styles.summaryKey}>Sous-total</Text>
+                <Text style={styles.summaryVal}>{formatPrice(subtotal)}</Text>
+              </View>
+            )}
             {shopInfo?.showOrderType && (
               <View style={styles.summaryLine}>
                 <Text style={styles.summaryKey}>Type</Text>
@@ -404,13 +434,6 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
                 <Text style={styles.discountVal}>−{formatPrice(d.reductionFcfa)}</Text>
               </View>
             ))}
-            {/* Frais de service LASSİ */}
-            <View style={styles.summaryLine}>
-              <Text style={styles.summaryKey}>
-                Frais de service LASSİ ({PAYMENT_CONFIG.COMMISSION_PERCENT_DISPLAY})
-              </Text>
-              <Text style={styles.summaryVal}>{formatPrice(commission)}</Text>
-            </View>
             {/* Séparateur */}
             <View style={styles.separator} />
             <View style={styles.totalRow}>
@@ -431,7 +454,10 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
             disabled={!hasItems || isSubmitting}
           >
             {isSubmitting ? (
-              <ActivityIndicator color={colors.bg} size="small" />
+              <>
+                <ActivityIndicator color={colors.white} size="small" />
+                <Text style={styles.payBtnTxt}>Traitement…</Text>
+              </>
             ) : (
               <>
                 <IcoPay />

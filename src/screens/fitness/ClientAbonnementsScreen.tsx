@@ -14,6 +14,7 @@ import { formatPrice } from '../../utils/format';
 import useAuthStore from '../../store/authStore';
 import * as fitnessService from '../../services/fitnessAbonnements';
 import { FitnessAbonnement } from '../../services/fitnessAbonnements';
+import { getFastCache, setFastCache } from '../../lib/fastCache';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -114,17 +115,38 @@ export default function ClientAbonnementsScreen({ onBack }: Props) {
   const [abonnements, setAbonnements] = useState<FitnessAbonnement[]>([]);
   const [loading, setLoading]         = useState(true);
 
+  function sortAbonnements(list: FitnessAbonnement[]) {
+    const actifs = list
+      .filter(a => !fitnessService.isExpireLocalement(a) && a.statut === 'actif')
+      .sort((a, b) => new Date(a.dateExpiration).getTime() - new Date(b.dateExpiration).getTime());
+    const expires = list
+      .filter(a => fitnessService.isExpireLocalement(a) || a.statut === 'expire')
+      .sort((a, b) => new Date(b.dateExpiration).getTime() - new Date(a.dateExpiration).getTime());
+    return [...actifs, ...expires];
+  }
+
   const load = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) { setLoading(false); return; }
+
+    // Affiche le cache immédiatement, refresh en arrière-plan
+    const cached = await getFastCache<FitnessAbonnement[]>(`abonnements_${userId}`);
+    if (cached) {
+      setAbonnements(sortAbonnements(cached));
+      setLoading(false);
+      fitnessService.getMesAbonnements(userId)
+        .then(fresh => { setAbonnements(sortAbonnements(fresh)); setFastCache(`abonnements_${userId}`, fresh); })
+        .catch(() => {});
+      return;
+    }
+
     setLoading(true);
     try {
-      const list = await fitnessService.getMesAbonnements(userId);
-      // Actifs d'abord (par expiration croissante), expirés ensuite
-      const actifs  = list.filter(a => !fitnessService.isExpireLocalement(a) && a.statut === 'actif')
-        .sort((a, b) => new Date(a.dateExpiration).getTime() - new Date(b.dateExpiration).getTime());
-      const expires = list.filter(a => fitnessService.isExpireLocalement(a) || a.statut === 'expire')
-        .sort((a, b) => new Date(b.dateExpiration).getTime() - new Date(a.dateExpiration).getTime());
-      setAbonnements([...actifs, ...expires]);
+      const list = await Promise.race([
+        fitnessService.getMesAbonnements(userId),
+        new Promise<FitnessAbonnement[]>(resolve => setTimeout(() => resolve([]), 6000)),
+      ]);
+      setAbonnements(sortAbonnements(list));
+      setFastCache(`abonnements_${userId}`, list);
     } finally {
       setLoading(false);
     }

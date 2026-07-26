@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import useAuthStore from '../store/authStore';
 import * as Location from 'expo-location';
 import { reverseGeocode } from './location';
@@ -122,32 +122,71 @@ export async function getUserLocation(): Promise<{ lat: number; lng: number } | 
 // ─── Requêtes ────────────────────────────────────────────────────────────────
 
 export async function getShops(): Promise<Shop[]> {
-  const timeoutMs = 15000;
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('timeout')), timeoutMs),
-  );
-  const { data, error } = await Promise.race([
-    supabase.from('shops').select('*').order('rating', { ascending: false }),
-    timeout,
-  ]);
-  if (error) throw new Error(error.message);
-  return (data ?? []).map(rowToShop);
+  // Fetch direct avec la clé anon — contourne le GoTrue lock (SecureStore lent au cold start).
+  // La table shops a RLS USING (true) : lecture publique sans token utilisateur.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/shops?select=*&order=rating.desc`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON,
+          Authorization: `Bearer ${SUPABASE_ANON}`,
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      },
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data: Record<string, unknown>[] = await res.json();
+    return (data ?? []).map(rowToShop);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function getShopsByCategory(category: string): Promise<Shop[]> {
-  const { data, error } = await supabase
-    .from('shops')
-    .select('*')
-    .eq('category', category)
-    .order('rating', { ascending: false });
-  if (error) throw new Error(error.message);
-  return (data ?? []).map(rowToShop);
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/shops?select=*&category=eq.${encodeURIComponent(category)}&order=rating.desc`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
+    );
+    if (!res.ok) return [];
+    const data: Record<string, unknown>[] = await res.json();
+    return (data ?? []).map(rowToShop);
+  } catch {
+    return [];
+  }
 }
 
 export async function getShopById(id: string): Promise<Shop | null> {
-  const { data, error } = await supabase.from('shops').select('*').eq('id', id).maybeSingle();
-  if (error || !data) return null;
-  return rowToShop(data);
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/shops?select=*&id=eq.${encodeURIComponent(id)}&limit=1`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
+    );
+    if (!res.ok) return null;
+    const data: Record<string, unknown>[] = await res.json();
+    return data.length > 0 ? rowToShop(data[0]) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getShopsByIds(ids: string[]): Promise<Shop[]> {
+  if (ids.length === 0) return [];
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/shops?select=*&id=in.(${ids.map(encodeURIComponent).join(',')})`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
+    );
+    if (!res.ok) return [];
+    const data: Record<string, unknown>[] = await res.json();
+    return (data ?? []).map(rowToShop);
+  } catch {
+    return [];
+  }
 }
 
 // ─── Marchand : ma boutique ───────────────────────────────────────────────────

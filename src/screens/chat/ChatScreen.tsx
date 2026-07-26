@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { ScrollView, KeyboardAvoidingView, Platform, StyleSheet, Alert } from 'react-native';
+import { ScrollView, KeyboardAvoidingView, Platform, StyleSheet, Alert, View, Text, TouchableOpacity } from 'react-native';
 
 import ChatHeader from '../../components/chat/ChatHeader';
 import DaySeparator from '../../components/chat/DaySeparator';
@@ -10,7 +10,7 @@ import BubbleTicket, { TicketItem } from '../../components/chat/BubbleTicket';
 import QuickReplies from '../../components/chat/QuickReplies';
 import ChatComposer from '../../components/chat/ChatComposer';
 import AttachSheet from '../../components/chat/AttachSheet';
-import { colors } from '../../theme';
+import { colors, fonts, radius } from '../../theme';
 import { OrderInfo } from '../../types/payment';
 import useAuthStore from '../../store/authStore';
 import * as chatService from '../../services/chat';
@@ -136,6 +136,8 @@ export default function ChatScreen({
   const [conversationId, setConversationId] = useState<string | null>(directConvId ?? null);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [initError, setInitError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [showAttach, setShowAttach] = useState(false);
 
   // Nom/avatar/initiale/téléphone/vip résolus depuis Supabase — remplacent les props si besoin
@@ -169,6 +171,7 @@ export default function ChatScreen({
   // ── Chargement initial ────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
+    setInitError(false);
     (async () => {
       setLoading(true);
       try {
@@ -243,6 +246,7 @@ export default function ChatScreen({
         }
       } catch (err) {
         logger.warn('[ChatScreen] init:', err);
+        if (!cancelled) setInitError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -250,7 +254,7 @@ export default function ChatScreen({
     return () => {
       cancelled = true;
     };
-  }, [shopId, directConvId, currentUserId, userRole]);
+  }, [shopId, directConvId, currentUserId, userRole, retryCount]);
 
   // ── Marquer ticket payé localement + message de confirmation ─────────────
   // useCallback([]) : setMessages et les refs sont stables, pas de dépendances réactives
@@ -510,6 +514,20 @@ export default function ChatScreen({
 
       {loading ? (
         <LoadingSpinner />
+      ) : initError ? (
+        <View style={styles.errorWrap}>
+          <Text style={styles.errorTxt}>Impossible de charger les messages.</Text>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={() => {
+              setInitError(false);
+              setRetryCount(c => c + 1);
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.retryTxt}>Réessayer</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <ScrollView
           ref={scrollRef}
@@ -546,4 +564,8 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingVertical: 18, gap: 12 },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  errorWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  errorTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 14, textAlign: 'center', marginBottom: 16 },
+  retryBtn: { paddingVertical: 10, paddingHorizontal: 28, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.accent },
+  retryTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 13 },
 });

@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import { StoreProduct } from '../types/store';
 
 // ─── Mapping ─────────────────────────────────────────────────────────────────
@@ -30,13 +30,17 @@ function rowToProduct(row: Record<string, any>): StoreProduct {
 // ─── Requêtes ────────────────────────────────────────────────────────────────
 
 export async function getProducts(shopId: string): Promise<StoreProduct[]> {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .eq('shop_id', shopId)
-    .order('created_at', { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data ?? []).map(rowToProduct);
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/products?select=*&shop_id=eq.${encodeURIComponent(shopId)}&order=created_at.asc`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
+    );
+    if (!res.ok) return [];
+    const data: Record<string, unknown>[] = await res.json();
+    return (data ?? []).map(rowToProduct);
+  } catch {
+    return [];
+  }
 }
 
 export async function addProduct(
@@ -120,14 +124,17 @@ export async function validateCartAvailability(
   itemIds: string[],
 ): Promise<{ id: string; name: string }[]> {
   if (itemIds.length === 0) return [];
-  const { data, error } = await supabase
-    .from('products')
-    .select('id, name, stock')
-    .in('id', itemIds)
-    .eq('shop_id', shopId);
-  if (error) return []; // en cas d'erreur réseau, la validation serveur prendra le relais
-  type CartRow = { id: string; name: string; stock: string };
-  return ((data as CartRow[]) ?? [])
-    .filter(p => p.stock === 'out')
-    .map(p => ({ id: p.id, name: p.name }));
+  try {
+    // Utilise fetch direct avec clé ANON (bypass GoTrue mutex) — les produits sont publics
+    const ids = itemIds.map(id => encodeURIComponent(id)).join(',');
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/products?select=id,name,stock&shop_id=eq.${encodeURIComponent(shopId)}&id=in.(${ids})`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
+    );
+    if (!res.ok) return [];
+    const data = (await res.json()) as { id: string; name: string; stock: string }[];
+    return data.filter(p => p.stock === 'out').map(p => ({ id: p.id, name: p.name }));
+  } catch {
+    return []; // en cas d'erreur réseau, la validation serveur prendra le relais
+  }
 }

@@ -17,23 +17,19 @@ if (!SUPABASE_URL || !SUPABASE_ANON) {
 }
 
 // Chaque requête Supabase (auth token refresh + REST) passe par ce fetch.
-// Sans timeout, le refresh du token JWT peut bloquer indéfiniment sur réseau lent
-// et maintenir le lock GoTrue acquis — toutes les requêtes suivantes attendent en file.
-// Avec ce timeout, le lock est libéré après 12 s et l'utilisateur voit un bouton "Réessayer".
+// AbortController ne coupe pas fiablement le fetch natif Android — on utilise
+// Promise.race (pur JS) pour garantir le timeout même sur Android.
+// Quand ce timeout se déclenche, GoTrue reçoit l'erreur, libère son mutex interne
+// et toutes les requêtes en attente peuvent continuer (avec session null si refresh échoué).
 function fetchWithTimeout(
   input: Parameters<typeof fetch>[0],
   init?: Parameters<typeof fetch>[1],
 ): ReturnType<typeof fetch> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12_000);
-  // Propage un éventuel signal d'annulation existant
-  const existingSignal = init?.signal as AbortSignal | undefined;
-  if (existingSignal) {
-    existingSignal.addEventListener('abort', () => controller.abort(), { once: true });
-  }
-  return fetch(input, { ...init, signal: controller.signal }).finally(() =>
-    clearTimeout(timer),
+  const fetchPromise = fetch(input, init);
+  const timeoutPromise = new Promise<Response>((_, reject) =>
+    setTimeout(() => reject(new Error('Network timeout')), 12_000),
   );
+  return Promise.race([fetchPromise, timeoutPromise]);
 }
 
 // Client Supabase partagé dans toute l'app
@@ -47,3 +43,27 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   },
   global: { fetch: fetchWithTimeout },
 });
+
+// Token caché : mis à jour à chaque changement d'état auth (login, refresh, logout).
+// Accès synchrone instantané — évite toute attente du mutex GoTrue pour les appels API.
+let _cachedToken: string | null = null;
+supabase.auth.onAuthStateChange((_event, session) => {
+  _cachedToken = session?.access_token ?? null;
+});
+export function getCachedToken(): string | null {
+  return _cachedToken;
+}
+// Permet à auth.ts de mettre à jour le cache immédiatement après un login raw
+export function setCachedToken(token: string | null): void {
+  _cachedToken = token;
+}
+
+// Fallback : attend que GoTrue finisse son refresh (max 15 s).
+// fetchWithTimeout garantit que le refresh HTTP se termine en ≤12 s,
+// donc 15 s laisse 3 s de marge pour que le mutex soit libéré.
+export function safeGetSession(ms = 15_000): ReturnType<typeof supabase.auth.getSession> {
+  const timeout = new Promise<{ data: { session: null }; error: null }>(resolve =>
+    setTimeout(() => resolve({ data: { session: null }, error: null }), ms),
+  );
+  return Promise.race([supabase.auth.getSession(), timeout]);
+}

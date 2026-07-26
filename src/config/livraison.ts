@@ -4,7 +4,7 @@
 // ============================================================
 
 export const LIVRAISON_CONFIG = {
-  PRIX_BASE: 500,            // FCFA — prise en charge
+  PRIX_BASE: 800,            // FCFA — prise en charge (500 base + 300 forfait)
   PRIX_PAR_KM: 250,          // FCFA par km
   PRIX_MINIMUM: 1000,        // FCFA — jamais en dessous
   PRIX_MAXIMUM: 15000,       // FCFA — plafond de sécurité

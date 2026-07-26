@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, getCachedToken, safeGetSession, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import { ClientOrder, ClientOrderStatus, CommerceType } from '../types/clientOrders';
 
 interface OrderItemRow {
@@ -80,8 +80,26 @@ export async function getClientOrders(clientId: string): Promise<ClientOrder[]> 
   return (data ?? []).map(rowToOrder);
 }
 
-// Annule la commande côté client (status 'new' → 'refused')
+// Annule la commande — fetch direct avec token caché (bypass GoTrue mutex, réponse instantanée)
 export async function cancelOrder(orderId: string): Promise<void> {
-  const { error } = await supabase.from('orders').update({ status: 'refused' }).eq('id', orderId);
-  if (error) throw new Error(error.message);
+  let token = getCachedToken();
+  if (!token) {
+    const { data: { session } } = await safeGetSession(15_000);
+    token = session?.access_token ?? null;
+  }
+  if (!token) throw new Error('Session expirée — reconnecte-toi.');
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/annuler_commande_client`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      apikey: SUPABASE_ANON,
+    },
+    body: JSON.stringify({ p_order_id: orderId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as Record<string, unknown>;
+    throw new Error((err.message as string) ?? "Impossible d'annuler.");
+  }
 }

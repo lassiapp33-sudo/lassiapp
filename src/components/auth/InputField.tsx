@@ -148,5 +148,7 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: fonts.body,
     fontSize: 14,
+    paddingVertical: 0,
+    textAlignVertical: 'center',
   },
 });
