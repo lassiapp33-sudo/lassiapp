@@ -23,6 +23,7 @@ import AnnoncesPage        from './pages/AnnoncesPage'
 import SecurityPage        from './pages/SecurityPage'
 import LivreursPage        from './pages/LivreursPage'
 import ResetPasswordPage   from './pages/ResetPasswordPage'
+import FinancePage         from './pages/FinancePage'
 
 // ─── Garde de route ───────────────────────────────────────────────────────────
 
@@ -66,6 +67,7 @@ function AppRoutes() {
         <Route path="annonces"     element={<AnnoncesPage />} />
         <Route path="securite"     element={<SecurityPage />} />
         <Route path="livreurs"     element={<LivreursPage />} />
+        <Route path="finance"      element={<FinancePage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
