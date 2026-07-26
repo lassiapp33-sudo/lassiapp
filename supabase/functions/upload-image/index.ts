@@ -12,6 +12,7 @@ const SUPABASE_SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const ALLOWED_BUCKETS = new Set([
   'products', 'logos', 'covers', 'avatars',
   'gallery', 'signalements', 'avis', 'disputes',
+  'chat-media',
 ]);
 
 const cors = {
@@ -60,9 +61,10 @@ serve(async (req: Request) => {
     }
 
     // 4. Upload via service_role (bypass schema check)
+    const contentType = req.headers.get('Content-Type') ?? 'application/octet-stream';
     const { error: uploadErr } = await admin.storage
       .from(bucket)
-      .upload(path, arrayBuffer, { contentType: 'image/jpeg', upsert: true });
+      .upload(path, arrayBuffer, { contentType, upsert: true });
 
     if (uploadErr) {
       return new Response(JSON.stringify({ error: uploadErr.message }), {

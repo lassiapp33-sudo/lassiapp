@@ -295,16 +295,19 @@ async function initiateOrangeMoneyPayment(params: {
     headers: {
       'Authorization':  `Bearer ${omToken}`,
       'Content-Type':   'application/json',
+      // X-Callback-Url conservé comme fallback certains builds OM l'honorent
       'X-Callback-Url': callbackUrl,
     },
     body: JSON.stringify({
-      code:     OM_MERCHANT_CODE,
-      name:     'LASSI',
-      amount:   { value: params.montantTotal, unit: 'XOF' },
-      validity: 900,  // 15 minutes
-      metadata: { pi_id: params.piId },
+      code:            OM_MERCHANT_CODE,
+      name:            'LASSI',
+      amount:          { value: params.montantTotal, unit: 'XOF' },
+      validity:        900,  // 15 minutes
+      metadata:        { pi_id: params.piId },
+      // notificationUrl : champ officiel API OM v4 pour le callback POST
+      // (X-Callback-Url seul n'est pas toujours honoré selon la version OM)
+      notificationUrl: callbackUrl,
       // callbackSuccessUrl/callbackCancelUrl omis : Orange rejette supabase.co
-      // Le suivi réel passe par X-Callback-Url (webhook, POST Orange → nous).
     }),
   });
 
@@ -314,11 +317,28 @@ async function initiateOrangeMoneyPayment(params: {
   }
 
   const data = await response.json();
+
+  // Log complet pour identifier tous les champs d'identifiant retournés par OM
+  console.log('[create-payment] OM QR response keys:', JSON.stringify({
+    keys:      Object.keys(data),
+    orderId:   data.orderId,
+    id:        data.id,
+    payToken:  data.payToken,
+    txId:      data.txId,
+    reference: data.reference,
+    qrCode:    data.qrCode ? '[base64]' : null,
+    deepLinks: data.deepLinks,
+  }));
+
   // deepLinks.OM cible l'app Orange Money (vs deepLinks.MAXIT).
-  // deepLink (racine) est un alias mais peut varier selon la config Orange.
   const deepLink = data.deepLinks?.OM ?? data.deepLink ?? null;
+
+  // Identifiant OM : tenter tous les champs connus, fallback sur notre piId
+  // Le log ci-dessus permettra d'identifier le bon champ si c'est encore notre UUID
+  const omOrderId = data.orderId ?? data.id ?? data.payToken ?? data.txId ?? data.reference ?? params.piId;
+
   return {
-    ref:         params.piId,
+    ref:         omOrderId,
     redirectUrl: deepLink,
     qrCode:      data.qrCode ?? null,
     status:      'initiated',

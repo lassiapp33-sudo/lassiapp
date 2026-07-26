@@ -88,12 +88,16 @@ serve(async (req) => {
   for (const payout of batch ?? []) {
     results.processed++;
 
-    // 1. Invariant comptable : gross_amount == commission_amount + merchant_amount
-    //    (déjà garanti par la contrainte check_montants sur payment_intents,
-    //    double vérification défensive ici)
+    // 1. Invariant comptable :
+    //    - montant_total == prix_base + commission_lassi (garanti par check_montants)
+    //    - montant > 0 (payout positif)
+    //    - montant <= prix_base (LASSI ne reverse jamais plus que le prix du prestataire)
+    //    Note : montant < prix_base est normal — LASSI prend sa commission AVANT
+    //    d'envoyer, les frais fournisseur (OM 0.8% / Wave 1%) réduisent la part prestataire.
     const invariantOk =
       payout.montant_total === payout.prix_base + payout.commission_lassi &&
-      payout.montant === payout.prix_base;
+      payout.montant > 0 &&
+      payout.montant <= payout.prix_base;
 
     if (!invariantOk) {
       // Section 9 : ne jamais logger la ligne complète (contient
