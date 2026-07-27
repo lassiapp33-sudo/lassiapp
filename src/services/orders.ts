@@ -51,6 +51,7 @@ function rowToOrder(row: Record<string, any>): IncomingOrder {
     orderType: row.order_type === 'emporter' ? 'emporter' : row.order_type === 'place' ? 'place' : null,
     refusalReason: row.refusal_reason ?? null,
     voiceNoteUrl: row.voice_note_url ?? null,
+    note: row.note ?? null,
   };
 }
 

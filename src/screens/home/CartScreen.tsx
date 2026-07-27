@@ -15,7 +15,7 @@ import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import { OrderInfo } from '../../types/payment';
-import useCartStore from '../../store/cartStore';
+import useCartStore, { selectActiveItems, SubBasket } from '../../store/cartStore';
 import Avatar from '../../components/Avatar';
 import { validateCartAvailability } from '../../services/products';
 import { createOrderSecure, uploadVoiceNote } from '../../services/orders';
@@ -66,6 +66,29 @@ const IcoPay = () => (
   </Svg>
 );
 
+// ─── Helpers multi-panier ─────────────────────────────────────────────────────
+
+function mergeBasketItems(baskets: SubBasket[]) {
+  const map = new Map<string, SubBasket['items'][number]>();
+  for (const basket of baskets) {
+    for (const item of basket.items) {
+      const ex = map.get(item.id);
+      map.set(item.id, ex ? { ...ex, qty: ex.qty + item.qty } : { ...item });
+    }
+  }
+  return Array.from(map.values());
+}
+
+function buildOrderNote(baskets: SubBasket[], userNote: string): string | undefined {
+  const filled = baskets.filter(b => b.items.length > 0);
+  if (filled.length <= 1) return userNote || undefined;
+  const parts = filled.map(
+    b => `${b.label}: ${b.items.map(i => `${i.name} x${i.qty}`).join(', ')}`,
+  );
+  const basketsNote = parts.join(' | ');
+  return userNote ? `${basketsNote}\nNote: ${userNote}` : basketsNote;
+}
+
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -75,12 +98,24 @@ interface Props {
   onCheckout: (order: OrderInfo) => void;
 }
 
+const BASKET_PRESETS = ['Pour moi', 'Pour papa', 'Pour maman', 'Pour un ami'];
+
 export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Props) {
-  const items = useCartStore(s => s.items);
+  // ── Store ──────────────────────────────────────────────────────────────────
+  const baskets = useCartStore(s => s.baskets);
+  const activeBasketId = useCartStore(s => s.activeBasketId);
   const shopInfo = useCartStore(s => s.shopInfo);
   const orderType = useCartStore(s => s.orderType);
   const updateQty = useCartStore(s => s.updateQty);
+  const addBasket = useCartStore(s => s.addBasket);
+  const removeBasket = useCartStore(s => s.removeBasket);
+  const setActiveBasket = useCartStore(s => s.setActiveBasket);
+  const removeFromAllBaskets = useCartStore(s => s.removeFromAllBaskets);
 
+  // Items du panier actif uniquement (pour l'affichage de la liste)
+  const items = useCartStore(selectActiveItems);
+
+  // ── State local ────────────────────────────────────────────────────────────
   const [note, setNote] = useState('');
   const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,8 +124,27 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
   const [showLivraisonModal, setShowLivraisonModal] = useState(false);
   const [shopCoords, setShopCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [clientCoords, setClientCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [showAddBasket, setShowAddBasket] = useState(false);
+  const [newBasketName, setNewBasketName] = useState('');
 
-  // Pré-calcul du devis pour affichage sur le bouton (coords chargées en arrière-plan)
+  // ── Données agrégées (tous paniers) ───────────────────────────────────────
+  const allMergedItems = mergeBasketItems(baskets);
+
+  const devisBtn =
+    shopCoords && clientCoords
+      ? devisLivraison(shopCoords.lat, shopCoords.lng, clientCoords.lat, clientCoords.lng)
+      : null;
+
+  const isSubmittingRef = useRef(false);
+
+  const subtotal = allMergedItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const totalDiscount = discounts.reduce((s, d) => s + d.reductionFcfa, 0);
+  const total = Math.max(subtotal - totalDiscount, 0);
+  const commission = calculerCommission(total);
+  const totalClient = calculerPrixClient(total);
+
+  // ── Effets ────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     const sid = shopId || shopInfo?.id || '';
     if (!sid) return;
@@ -110,71 +164,55 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
     });
   }, [shopId, shopInfo?.id]);
 
-  const devisBtn = shopCoords && clientCoords
-    ? devisLivraison(shopCoords.lat, shopCoords.lng, clientCoords.lat, clientCoords.lng)
-    : null;
-
-  // Garde synchrone anti-double-clic — la ref se met à jour immédiatement,
-  // sans attendre un cycle de rendu React.
-  const isSubmittingRef = useRef(false);
-
-  const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
-  const totalDiscount = discounts.reduce((s, d) => s + d.reductionFcfa, 0);
-  const total = Math.max(subtotal - totalDiscount, 0);
-  const commission = calculerCommission(total);
-  const totalClient = calculerPrixClient(total);
-
-  // Charger les promos actives du shop pour l'affichage (calcul serveur au paiement)
   useEffect(() => {
     const sid = shopId || shopInfo?.id || '';
-    if (!sid || items.length === 0) {
+    if (!sid || allMergedItems.length === 0) {
       setDiscounts([]);
       return;
     }
     promosService
       .getActivePromos(sid)
       .then(promos => {
-        setDiscounts(promosService.calcClientDiscount(promos, items));
+        setDiscounts(promosService.calcClientDiscount(promos, allMergedItems));
       })
       .catch(() => {});
-  }, [shopId, shopInfo?.id, items]);
+  // baskets comme dépendance : re-calcul dès qu'un panier change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopId, shopInfo?.id, baskets]);
 
-  const hasItems = items.length > 0;
+  // ── Gestion paniers ───────────────────────────────────────────────────────
 
-  const displayName = shopInfo?.name ?? shopName;
-  const displayLocation = shopInfo?.location ?? '';
+  const confirmAddBasket = (label: string) => {
+    addBasket(label);
+    setShowAddBasket(false);
+    setNewBasketName('');
+  };
 
-  // ── Checkout ────────────────────────────────────────────────────────────────
+  // ── Checkout ──────────────────────────────────────────────────────────────
+
   const handleCheckout = async () => {
-    // ① Garde synchrone : bloque tout appel concurrent avant le prochain rendu
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
     setIsSubmitting(true);
 
-    // Quand l'alerte "article indisponible" est affichée, on ne libère pas
-    // le verrou dans le bloc finally — les boutons de l'alerte s'en chargent.
     let releaseInFinally = true;
 
     try {
-      // ② Lire l'état FRAIS du store (évite la closure périmée)
       const store = useCartStore.getState();
-      const freshItems = store.items;
+      const freshBaskets = store.baskets;
+      const freshMerged = mergeBasketItems(freshBaskets);
 
-      if (freshItems.length === 0) return;
+      if (freshMerged.length === 0) return;
 
       const sid = shopId || store.shopInfo?.id || '';
-      const unavailable = await validateCartAvailability(
-        sid,
-        freshItems.map(i => i.id),
-      );
+      const allIds = [...new Set(freshBaskets.flatMap(b => b.items.map(i => i.id)))];
+      const unavailable = await validateCartAvailability(sid, allIds);
 
       if (unavailable.length > 0) {
-        // ③ Retirer complètement (qty→0) les articles indisponibles
-        const { updateQty: storeUpdateQty } = useCartStore.getState();
-        unavailable.forEach(u => storeUpdateQty(u.id, 0));
+        removeFromAllBaskets(unavailable.map(u => u.id));
 
         const names = unavailable.map(u => `• ${u.name}`).join('\n');
-        releaseInFinally = false; // Les boutons de l'alerte libèrent le verrou
+        releaseInFinally = false;
 
         Alert.alert(
           'Article(s) indisponible(s)',
@@ -185,8 +223,8 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
               onPress: () => {
                 isSubmittingRef.current = false;
                 setIsSubmitting(false);
-                // Relancer avec l'état frais (stale closure corrigée)
-                if (useCartStore.getState().items.length > 0) handleCheckout();
+                const anyLeft = mergeBasketItems(useCartStore.getState().baskets).length > 0;
+                if (anyLeft) handleCheckout();
               },
             },
             {
@@ -202,30 +240,24 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         return;
       }
 
-      // ④ Recalculer le total depuis l'état frais (pas depuis la closure)
       const freshStore = useCartStore.getState();
-      const freshSubtotal = freshStore.items.reduce((s, i) => s + i.price * i.qty, 0);
-      // Les discounts locaux (state React) sont cohérents avec l'état frais si les
-      // items n'ont pas changé ; le serveur recalcule de toute façon.
+      const freshAllMerged = mergeBasketItems(freshStore.baskets);
+      const freshSubtotal = freshAllMerged.reduce((s, i) => s + i.price * i.qty, 0);
       const freshTotal = Math.max(freshSubtotal - totalDiscount, 0);
       const freshCommission = calculerCommission(freshTotal);
       const freshTotalClient = calculerPrixClient(freshTotal);
 
-      const orderItems = freshStore.items.map(i => ({
+      const orderItems = freshAllMerged.map(i => ({
         qty: i.qty,
         name: i.name,
         price: i.price * i.qty,
       }));
+
+      const rawItems = freshAllMerged.map(i => ({ productId: i.id, qty: i.qty }));
+      const structuredNote = buildOrderNote(freshStore.baskets, note.trim());
       const freshShopInfo = freshStore.shopInfo;
-      const freshOrderType = freshStore.orderType;
+      const freshOrderType = freshShopInfo?.showOrderType ? freshStore.orderType : undefined;
 
-      // Créer la commande en DB AVANT d'ouvrir l'écran de paiement.
-      // Le ticketId (UUID réel) est requis par l'Edge Function create-payment.
-      // La note et le message vocal sont transmis ici — seul endroit où ils sont disponibles.
-      const rawItems = freshStore.items.map(i => ({ productId: i.id, qty: i.qty }));
-      const orderType = freshShopInfo?.showOrderType ? freshOrderType : undefined;
-
-      // Upload du message vocal avant création commande (best-effort)
       let voiceNotePath: string | undefined;
       if (voiceNoteUri) {
         const path = await uploadVoiceNote(voiceNoteUri);
@@ -235,14 +267,12 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
       const { orderId: realOrderId } = await createOrderSecure(
         sid,
         rawItems,
-        note.trim() || undefined,
-        orderType,
+        structuredNote,
+        freshOrderType,
         undefined,
         voiceNotePath,
       );
 
-      // Initier le paiement Wave/OM immédiatement après création de la commande.
-      // Si l'initiation échoue → on reste dans CartScreen (l'utilisateur peut réessayer).
       let preInitiatedPiId: string | undefined;
       let paymentConfirmed = false;
       let preQrCode: string | undefined;
@@ -260,7 +290,6 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         prePaymentUrl = session.paymentUrl || undefined;
 
         if (session.simulation) {
-          // Mode simulation : vérification immédiate, pas d'app externe à ouvrir
           const paid = await payService.verifyPayment({
             reference: session.reference,
             ticketId: realOrderId,
@@ -269,19 +298,20 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
           if (!paid) {
             notifyError(
               method === 'om'
-                ? 'Orange Money n\'est pas encore disponible. Utilise Wave.'
+                ? "Orange Money n'est pas encore disponible. Utilise Wave."
                 : 'Paiement simulé non confirmé. Réessaie.',
             );
             return;
           }
           paymentConfirmed = true;
         }
-        // PaymentScreen ouvre automatiquement l'app Wave/OM au montage (useEffect)
-        // — ne pas appeler Linking.openURL ici, sinon la navigation CartScreen→PaymentScreen
-        // reprend le focus et Android annule l'intent.
       } catch (payErr: unknown) {
-        notifyError(payErr instanceof Error ? payErr.message : 'Impossible d\'initier le paiement. Réessaie ou change de moyen.');
-        return; // Reste dans CartScreen — la commande est en attente (invisible au prestataire)
+        notifyError(
+          payErr instanceof Error
+            ? payErr.message
+            : "Impossible d'initier le paiement. Réessaie ou change de moyen.",
+        );
+        return;
       }
 
       freshStore.clearCart();
@@ -294,7 +324,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         items: orderItems,
         total: freshTotalClient,
         commission: freshCommission,
-        orderType: orderType,
+        orderType: freshOrderType,
         preMethod: method,
         preInitiatedPiId,
         paymentConfirmed,
@@ -302,7 +332,8 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         paymentUrl: prePaymentUrl,
       });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Une erreur est survenue. Réessaie dans un instant.';
+      const msg =
+        err instanceof Error ? err.message : 'Une erreur est survenue. Réessaie dans un instant.';
       notifyError(msg);
     } finally {
       if (releaseInFinally) {
@@ -311,6 +342,14 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
       }
     }
   };
+
+  // ── Rendu ─────────────────────────────────────────────────────────────────
+
+  const hasItems = allMergedItems.length > 0;
+  const displayName = shopInfo?.name ?? shopName;
+  const displayLocation = shopInfo?.location ?? '';
+  const filledBaskets = baskets.filter(b => b.items.length > 0);
+  const multipleBaskets = filledBaskets.length > 1;
 
   return (
     <LassiScreen
@@ -334,7 +373,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
         >
-          {/* Bandeau commerce — Avatar unique pour le logo */}
+          {/* Bandeau commerce */}
           <View style={styles.shopBand}>
             <Avatar
               imageUrl={shopInfo?.logoUrl ?? undefined}
@@ -348,42 +387,153 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
             </View>
           </View>
 
-          {/* Articles */}
-          {items.map(item => (
-            <View key={item.id} style={styles.lineItem}>
-              {/* Emoji ou initiale */}
-              <View style={styles.itemThumb}>
-                <Text style={styles.itemInitial}>
-                  {item.emoji || item.name.charAt(0).toUpperCase()}
-                </Text>
-              </View>
+          {/* ── Onglets paniers ─────────────────────────────────────────── */}
+          <View style={styles.basketTabsWrap}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.basketTabsContent}
+            >
+              {baskets.map(b => {
+                const isActive = b.id === activeBasketId;
+                const bQty = b.items.reduce((s, i) => s + i.qty, 0);
+                return (
+                  <TouchableOpacity
+                    key={b.id}
+                    style={[styles.basketTab, isActive && styles.basketTabActive]}
+                    onPress={() => setActiveBasket(b.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.basketTabTxt, isActive && styles.basketTabTxtActive]}>
+                      {b.label}
+                    </Text>
+                    {bQty > 0 && (
+                      <View style={[styles.basketTabBadge, isActive && styles.basketTabBadgeActive]}>
+                        <Text style={[styles.basketTabBadgeTxt, isActive && styles.basketTabBadgeTxtActive]}>
+                          {bQty}
+                        </Text>
+                      </View>
+                    )}
+                    {baskets.length > 1 && (
+                      <TouchableOpacity
+                        onPress={() => removeBasket(b.id)}
+                        style={styles.basketTabClose}
+                        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                      >
+                        <Text style={[styles.basketTabCloseTxt, isActive && styles.basketTabCloseTxtActive]}>
+                          ×
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
 
-              {/* Nom + prix unitaire client (prix vendeur + commission 1%) */}
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemPrice}>{formatPrice(calculerPrixClient(item.price))}</Text>
-              </View>
+              {/* Bouton ajouter un panier */}
+              <TouchableOpacity
+                style={styles.basketTabAdd}
+                onPress={() => setShowAddBasket(v => !v)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.basketTabAddTxt}>+ Panier</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
 
-              {/* Contrôles quantité */}
-              <View style={styles.qtyWrap}>
+          {/* ── Panneau d'ajout de panier ────────────────────────────────── */}
+          {showAddBasket && (
+            <View style={styles.addBasketPanel}>
+              <Text style={styles.addBasketLabel}>Commande pour :</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.presetsRow}
+              >
+                {BASKET_PRESETS.map(p => (
+                  <TouchableOpacity
+                    key={p}
+                    style={styles.presetChip}
+                    onPress={() => confirmAddBasket(p)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.presetChipTxt}>{p}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              <View style={styles.customNameRow}>
+                <TextInput
+                  style={styles.customNameInput}
+                  placeholder="Autre prénom…"
+                  placeholderTextColor="#5a5c80"
+                  value={newBasketName}
+                  onChangeText={setNewBasketName}
+                  returnKeyType="done"
+                  onSubmitEditing={() => {
+                    if (newBasketName.trim()) confirmAddBasket(newBasketName.trim());
+                  }}
+                />
                 <TouchableOpacity
-                  style={styles.qtyBtn}
-                  onPress={() => updateQty(item.id, item.qty - 1)}
-                  activeOpacity={0.75}
+                  style={[styles.customNameOk, !newBasketName.trim() && { opacity: 0.35 }]}
+                  onPress={() => {
+                    if (newBasketName.trim()) confirmAddBasket(newBasketName.trim());
+                  }}
+                  disabled={!newBasketName.trim()}
+                  activeOpacity={0.8}
                 >
-                  <Text style={styles.qtyBtnTxt}>−</Text>
+                  <Text style={styles.customNameOkTxt}>OK</Text>
                 </TouchableOpacity>
-                <Text style={styles.qtyNum}>{item.qty}</Text>
                 <TouchableOpacity
-                  style={[styles.qtyBtn, styles.qtyBtnPlus]}
-                  onPress={() => updateQty(item.id, item.qty + 1)}
-                  activeOpacity={0.75}
+                  style={styles.customNameCancel}
+                  onPress={() => setShowAddBasket(false)}
+                  activeOpacity={0.8}
                 >
-                  <Text style={[styles.qtyBtnTxt, styles.qtyBtnPlusTxt]}>+</Text>
+                  <Text style={styles.customNameCancelTxt}>Annuler</Text>
                 </TouchableOpacity>
               </View>
             </View>
-          ))}
+          )}
+
+          {/* ── Articles du panier actif ─────────────────────────────────── */}
+          {items.length === 0 ? (
+            <View style={styles.emptyBasket}>
+              <Text style={styles.emptyBasketTxt}>
+                Ce panier est vide — ajoute des articles depuis la boutique.
+              </Text>
+            </View>
+          ) : (
+            items.map(item => (
+              <View key={item.id} style={styles.lineItem}>
+                <View style={styles.itemThumb}>
+                  <Text style={styles.itemInitial}>
+                    {item.emoji || item.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.itemPrice}>
+                    {formatPrice(calculerPrixClient(item.price))}
+                  </Text>
+                </View>
+                <View style={styles.qtyWrap}>
+                  <TouchableOpacity
+                    style={styles.qtyBtn}
+                    onPress={() => updateQty(item.id, item.qty - 1)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={styles.qtyBtnTxt}>−</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.qtyNum}>{item.qty}</Text>
+                  <TouchableOpacity
+                    style={[styles.qtyBtn, styles.qtyBtnPlus]}
+                    onPress={() => updateQty(item.id, item.qty + 1)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.qtyBtnTxt, styles.qtyBtnPlusTxt]}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          )}
 
           {/* Champ note */}
           <View style={styles.noteField}>
@@ -405,11 +555,31 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
 
           {/* Moyen de paiement */}
           <Text style={styles.payMethodTitle}>Moyen de paiement</Text>
-          <PayMethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />
-          <PayMethodCard method="om"   selected={method === 'om'}   onSelect={() => setMethod('om')} />
+          <PayMethodCard
+            method="wave"
+            selected={method === 'wave'}
+            onSelect={() => setMethod('wave')}
+          />
+          <PayMethodCard
+            method="om"
+            selected={method === 'om'}
+            onSelect={() => setMethod('om')}
+          />
 
           {/* Résumé de commande */}
           <View style={styles.summary}>
+            {/* Sous-totaux par panier (seulement si plusieurs paniers avec des articles) */}
+            {multipleBaskets &&
+              filledBaskets.map(b => {
+                const bTotal = b.items.reduce((s, i) => s + i.price * i.qty, 0);
+                return (
+                  <View key={b.id} style={styles.summaryLine}>
+                    <Text style={styles.summaryKey}>{b.label}</Text>
+                    <Text style={styles.summaryVal}>{formatPrice(calculerPrixClient(bTotal))}</Text>
+                  </View>
+                );
+              })}
+
             {totalDiscount > 0 && (
               <View style={styles.summaryLine}>
                 <Text style={styles.summaryKey}>Sous-total</Text>
@@ -424,7 +594,6 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
                 </Text>
               </View>
             )}
-            {/* Lignes de réduction (display-only, le serveur recalcule) */}
             {discounts.map(d => (
               <View key={d.promoId} style={styles.discountLine}>
                 <View style={{ flex: 1 }}>
@@ -434,7 +603,6 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
                 <Text style={styles.discountVal}>−{formatPrice(d.reductionFcfa)}</Text>
               </View>
             ))}
-            {/* Séparateur */}
             <View style={styles.separator} />
             <View style={styles.totalRow}>
               <Text style={styles.totalKey}>Total</Text>
@@ -479,11 +647,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
           >
             <Text style={styles.livraisonBtnTxt}>Commander + Livrer</Text>
             <Text style={styles.livraisonBtnSub}>
-              {devisBtn == null
-                ? '…'
-                : devisBtn.horsZone
-                ? 'Hors zone'
-                : `+${formatPrice(devisBtn.prix)}`}
+              {devisBtn == null ? '…' : devisBtn.horsZone ? 'Hors zone' : `+${formatPrice(devisBtn.prix)}`}
             </Text>
           </TouchableOpacity>
         </View>
@@ -494,9 +658,8 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         shopId={shopId || shopInfo?.id || ''}
         shopName={displayName}
         onClose={() => setShowLivraisonModal(false)}
-        onConfirmed={(_livraisonId) => {
+        onConfirmed={_livraisonId => {
           setShowLivraisonModal(false);
-          // Lancer le paiement de la commande après enregistrement de la livraison
           handleCheckout();
         }}
       />
@@ -536,7 +699,7 @@ const styles = StyleSheet.create({
   // Bandeau commerce
   shopBand: {
     marginHorizontal: 18,
-    marginBottom: 18,
+    marginBottom: 14,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -559,6 +722,177 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  // ── Onglets paniers ────────────────────────────────────────────────────────
+  basketTabsWrap: {
+    marginBottom: 14,
+  },
+  basketTabsContent: {
+    paddingHorizontal: 18,
+    gap: 8,
+    alignItems: 'center',
+  },
+  basketTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  basketTabActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  basketTabTxt: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 12.5,
+  },
+  basketTabTxtActive: {
+    color: colors.bg,
+    fontFamily: fonts.title,
+  },
+  basketTabBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(255,255,255,.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  basketTabBadgeActive: {
+    backgroundColor: 'rgba(20,21,42,.25)',
+  },
+  basketTabBadgeTxt: {
+    color: colors.muted,
+    fontFamily: fonts.titleXL,
+    fontSize: 10,
+  },
+  basketTabBadgeTxtActive: {
+    color: colors.bg,
+  },
+  basketTabClose: {
+    marginLeft: 2,
+  },
+  basketTabCloseTxt: {
+    color: colors.muted,
+    fontFamily: fonts.titleXL,
+    fontSize: 15,
+    lineHeight: 16,
+  },
+  basketTabCloseTxtActive: {
+    color: colors.bg,
+  },
+  basketTabAdd: {
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    borderStyle: 'dashed',
+  },
+  basketTabAddTxt: {
+    color: colors.accent,
+    fontFamily: fonts.ui,
+    fontSize: 12.5,
+  },
+
+  // ── Panneau ajout panier ───────────────────────────────────────────────────
+  addBasketPanel: {
+    marginHorizontal: 18,
+    marginBottom: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: 14,
+    gap: 10,
+  },
+  addBasketLabel: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  presetsRow: {
+    flexGrow: 0,
+  },
+  presetChip: {
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: '#222447',
+    marginRight: 8,
+  },
+  presetChipTxt: {
+    color: colors.white,
+    fontFamily: fonts.ui,
+    fontSize: 12.5,
+  },
+  customNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  customNameInput: {
+    flex: 1,
+    height: 38,
+    backgroundColor: '#222447',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    color: colors.white,
+    fontFamily: fonts.body,
+    fontSize: 13,
+  },
+  customNameOk: {
+    height: 38,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customNameOkTxt: {
+    color: colors.bg,
+    fontFamily: fonts.title,
+    fontSize: 13,
+  },
+  customNameCancel: {
+    height: 38,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customNameCancelTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+  },
+
+  // Panier vide
+  emptyBasket: {
+    marginHorizontal: 18,
+    marginBottom: 12,
+    padding: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+  },
+  emptyBasketTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
   // Articles
   lineItem: {
     marginHorizontal: 18,
@@ -567,8 +901,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  lineItemFaded: { opacity: 0.35 },
-
   itemThumb: {
     width: 60,
     height: 60,

@@ -11,6 +11,7 @@ import { formatPrice } from '../../utils/format';
 import { buildOrderAnnouncement } from '../../utils/orderSpeech';
 import useSpeechStore from '../../store/speechStore';
 import ClientScoreBadge from './ClientScoreBadge';
+import { parseMultiBasketNote } from '../../utils/basketNote';
 
 // Couleurs spécifiques aux boutons d'action
 const WAVE_COLOR = '#1DC8F2';
@@ -81,6 +82,7 @@ interface Props {
 function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props) {
   const badge = BADGE_CFG[order.status];
   const isNew = order.status === 'new';
+  const parsedBaskets = parseMultiBasketNote(order.note);
 
   // Lecture à voix haute de la commande — une seule lecture à la fois (état partagé)
   const speakingOrderId = useSpeechStore(s => s.speakingOrderId);
@@ -148,15 +150,57 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
 
       {/* ── Articles commandés ──────────────────────────────────────────────── */}
       <View style={styles.items}>
-        {order.items.map((item, i) => (
-          <View key={i} style={styles.itemRow}>
-            <Text style={styles.itemName}>
-              <Text style={styles.itemQty}>{item.qty}× </Text>
-              {item.name}
-            </Text>
-            <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
-          </View>
-        ))}
+        {parsedBaskets ? (
+          // ── Multi-panier : affichage par personne ─────────────────────────
+          <>
+            {parsedBaskets.baskets.map((basket, bi) => (
+              <View key={bi} style={bi > 0 ? styles.basketSection : undefined}>
+                {/* En-tête panier */}
+                <View style={styles.basketHeader}>
+                  <View style={styles.basketDot} />
+                  <Text style={styles.basketHeaderTxt}>{basket.label}</Text>
+                </View>
+                {/* Lignes articles du panier (format: "Nom x2, Nom2 x1") */}
+                {basket.items.split(', ').map((itemStr, ii) => {
+                  const match = itemStr.match(/^(.*) x(\d+)$/);
+                  const name = match ? match[1] : itemStr;
+                  const qty = match ? match[2] : '1';
+                  return (
+                    <View key={ii} style={styles.itemRowIndented}>
+                      <Text style={styles.itemName}>
+                        <Text style={styles.itemQty}>{qty}× </Text>
+                        {name}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            ))}
+            {parsedBaskets.userNote ? (
+              <View style={styles.noteRow}>
+                <Text style={styles.noteTxt}>📝 {parsedBaskets.userNote}</Text>
+              </View>
+            ) : null}
+          </>
+        ) : (
+          // ── Panier simple : affichage plat + note ─────────────────────────
+          <>
+            {order.items.map((item, i) => (
+              <View key={i} style={styles.itemRow}>
+                <Text style={styles.itemName}>
+                  <Text style={styles.itemQty}>{item.qty}× </Text>
+                  {item.name}
+                </Text>
+                <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
+              </View>
+            ))}
+            {order.note ? (
+              <View style={styles.noteRow}>
+                <Text style={styles.noteTxt}>📝 {order.note}</Text>
+              </View>
+            ) : null}
+          </>
+        )}
 
         {/* Ligne paiement + total */}
         <View style={styles.paidSep} />
@@ -375,6 +419,53 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontFamily: fonts.ui,
     fontSize: 12,
+  },
+
+  // Multi-panier
+  basketSection: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,.07)',
+  },
+  basketHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  basketDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#FDCF34',
+    flexShrink: 0,
+  },
+  basketHeaderTxt: {
+    color: '#FDCF34',
+    fontFamily: fonts.title,
+    fontSize: 11.5,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  itemRowIndented: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+    paddingLeft: 13,
+  },
+  noteRow: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,.07)',
+  },
+  noteTxt: {
+    color: '#8a8cb0',
+    fontFamily: fonts.body,
+    fontSize: 11.5,
+    lineHeight: 17,
+    fontStyle: 'italic',
   },
 
   // Séparateur + ligne paiement

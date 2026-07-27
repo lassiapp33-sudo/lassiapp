@@ -35,4 +35,5 @@ export interface IncomingOrder {
   orderType?: 'place' | 'emporter' | null;
   refusalReason?: string | null;
   voiceNoteUrl?: string | null; // chemin Supabase Storage du message vocal client
+  note?: string | null;         // note textuelle du client (inclut le détail multi-panier)
 }

@@ -15,7 +15,7 @@ import ShopFooter, { FOOTER_HEIGHT } from '../../components/shop/ShopFooter';
 import OpeningHoursCard from '../../components/store/OpeningHoursCard';
 import BoutonSuivi from '../../components/prestataire/BoutonSuivi';
 import { colors, fonts, TOP_INSET, radius } from '../../theme';
-import useCartStore, { OrderType } from '../../store/cartStore';
+import useCartStore, { OrderType, selectActiveItems, selectTotalQty, selectTotalPrice } from '../../store/cartStore';
 import useFavoritesStore from '../../store/favoritesStore';
 import useLocationStore from '../../store/locationStore';
 import * as shopsService from '../../services/shops';
@@ -384,13 +384,14 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const stableId = shopId || shopName || '';
   const isFav = useFavoritesStore(s => s.favorites.includes(stableId));
   const toggleFav = useFavoritesStore(s => s.toggleFavorite);
-  const cartItems = useCartStore(s => s.items);
+  const cartItems = useCartStore(selectActiveItems);  // articles du panier actif (pour afficher qty par produit)
+  const cartCount = useCartStore(selectTotalQty);      // total tous paniers (badge flottant)
+  const cartTotalRaw = useCartStore(selectTotalPrice); // total tous paniers (prix flottant)
   const addItem = useCartStore(s => s.addItem);
   const removeItem = useCartStore(s => s.removeItem);
   const setCartOrder = useCartStore(s => s.setOrderType);
 
-  const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
-  const cartTotal = calculerPrixClient(cartItems.reduce((s, i) => s + i.price * i.qty, 0));
+  const cartTotal = calculerPrixClient(cartTotalRaw);
 
   const shopInfo = {
     id: stableId,
@@ -803,6 +804,8 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
         total={cartTotal}
         hasItems={cartCount > 0}
         shopType={shopType}
+        isOpen={isOpen}
+        nextChange={status.nextChange}
         onChat={onChat ? () => onChat(shopData?.logoUrl ?? null, isVip) : undefined}
         onCheckout={onCheckout}
       />

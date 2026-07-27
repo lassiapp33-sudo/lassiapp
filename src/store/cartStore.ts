@@ -6,7 +6,7 @@ export interface CartItem {
   id: string;
   name: string;
   emoji: string;
-  price: number; // prix unitaire
+  price: number;
   qty: number;
 }
 
@@ -18,14 +18,29 @@ export interface CartShopInfo {
   name: string;
   location: string;
   logoUrl?: string;
-  showOrderType?: boolean; // true uniquement pour les boutiques alimentaires (produits hors bakery/stores)
+  showOrderType?: boolean;
 }
+
+export interface SubBasket {
+  id: string;
+  label: string;
+  items: CartItem[];
+}
+
+const uid = () => Math.random().toString(36).slice(2, 9);
+const newBasket = (label = 'Mon panier'): SubBasket => ({ id: uid(), label, items: [] });
 
 interface CartState {
   shopInfo: CartShopInfo | null;
-  items: CartItem[];
+  baskets: SubBasket[];
+  activeBasketId: string;
   orderType: OrderType;
 
+  addBasket: (label: string) => void;
+  removeBasket: (id: string) => void;
+  setActiveBasket: (id: string) => void;
+  renameBasket: (id: string, label: string) => void;
+  removeFromAllBaskets: (ids: string[]) => void;
   addItem: (shopInfo: CartShopInfo, item: Omit<CartItem, 'qty'>) => void;
   removeItem: (id: string) => void;
   updateQty: (id: string, qty: number) => void;
@@ -33,54 +48,139 @@ interface CartState {
   setOrderType: (type: OrderType) => void;
 }
 
+// ── Selectors ──────────────────────────────────────────────────────────────
+export const selectActiveItems = (s: CartState): CartItem[] =>
+  s.baskets.find(b => b.id === s.activeBasketId)?.items ?? [];
+
+export const selectTotalQty = (s: CartState): number =>
+  s.baskets.reduce((sum, b) => sum + b.items.reduce((n, i) => n + i.qty, 0), 0);
+
+export const selectTotalPrice = (s: CartState): number =>
+  s.baskets.reduce((sum, b) => sum + b.items.reduce((n, i) => n + i.price * i.qty, 0), 0);
+// ───────────────────────────────────────────────────────────────────────────
+
 const useCartStore = create<CartState>()(
   persist(
-    set => ({
-      shopInfo: null,
-      items: [],
-      orderType: 'place' as OrderType,
+    set => {
+      const init = newBasket();
+      return {
+        shopInfo: null,
+        baskets: [init],
+        activeBasketId: init.id,
+        orderType: 'place' as OrderType,
 
-      setOrderType: type => set({ orderType: type }),
+        setOrderType: type => set({ orderType: type }),
 
-      addItem: (shopInfo, item) =>
-        set(state => {
-          const existing = state.items.find(i => i.id === item.id);
-          if (existing) {
-            return {
-              items: state.items.map(i => (i.id === item.id ? { ...i, qty: i.qty + 1 } : i)),
-            };
-          }
-          return {
-            shopInfo,
-            items: [...state.items, { ...item, qty: 1 }],
-          };
-        }),
+        addBasket: label => {
+          const b = newBasket(label);
+          set(s => ({ baskets: [...s.baskets, b], activeBasketId: b.id }));
+        },
 
-      removeItem: id =>
-        set(state => {
-          const item = state.items.find(i => i.id === id);
-          if (!item) return state;
-          if (item.qty <= 1) {
-            const items = state.items.filter(i => i.id !== id);
-            return { items, shopInfo: items.length === 0 ? null : state.shopInfo };
-          }
-          return { items: state.items.map(i => (i.id === id ? { ...i, qty: i.qty - 1 } : i)) };
-        }),
+        removeBasket: id =>
+          set(s => {
+            const baskets = s.baskets.filter(b => b.id !== id);
+            if (baskets.length === 0) {
+              const fresh = newBasket();
+              return { baskets: [fresh], activeBasketId: fresh.id, shopInfo: null };
+            }
+            const activeBasketId =
+              s.activeBasketId === id ? baskets[baskets.length - 1].id : s.activeBasketId;
+            const anyItems = baskets.some(b => b.items.length > 0);
+            return { baskets, activeBasketId, shopInfo: anyItems ? s.shopInfo : null };
+          }),
 
-      updateQty: (id, qty) =>
-        set(state => {
-          if (qty <= 0) {
-            const items = state.items.filter(i => i.id !== id);
-            return { items, shopInfo: items.length === 0 ? null : state.shopInfo };
-          }
-          return { items: state.items.map(i => (i.id === id ? { ...i, qty } : i)) };
-        }),
+        setActiveBasket: id => set({ activeBasketId: id }),
 
-      clearCart: () => set({ items: [], shopInfo: null, orderType: 'place' }),
-    }),
+        renameBasket: (id, label) =>
+          set(s => ({ baskets: s.baskets.map(b => (b.id === id ? { ...b, label } : b)) })),
+
+        removeFromAllBaskets: ids =>
+          set(s => {
+            const baskets = s.baskets.map(b => ({
+              ...b,
+              items: b.items.filter(i => !ids.includes(i.id)),
+            }));
+            const anyItems = baskets.some(b => b.items.length > 0);
+            return { baskets, shopInfo: anyItems ? s.shopInfo : null };
+          }),
+
+        addItem: (shopInfo, item) =>
+          set(s => {
+            const baskets = s.baskets.map(b => {
+              if (b.id !== s.activeBasketId) return b;
+              const existing = b.items.find(i => i.id === item.id);
+              return {
+                ...b,
+                items: existing
+                  ? b.items.map(i => (i.id === item.id ? { ...i, qty: i.qty + 1 } : i))
+                  : [...b.items, { ...item, qty: 1 }],
+              };
+            });
+            return { shopInfo, baskets };
+          }),
+
+        removeItem: id =>
+          set(s => {
+            const baskets = s.baskets.map(b => {
+              if (b.id !== s.activeBasketId) return b;
+              const item = b.items.find(i => i.id === id);
+              if (!item) return b;
+              return {
+                ...b,
+                items:
+                  item.qty <= 1
+                    ? b.items.filter(i => i.id !== id)
+                    : b.items.map(i => (i.id === id ? { ...i, qty: i.qty - 1 } : i)),
+              };
+            });
+            const anyItems = baskets.some(b => b.items.length > 0);
+            return { baskets, shopInfo: anyItems ? s.shopInfo : null };
+          }),
+
+        updateQty: (id, qty) =>
+          set(s => {
+            const baskets = s.baskets.map(b => {
+              if (b.id !== s.activeBasketId) return b;
+              return {
+                ...b,
+                items:
+                  qty <= 0
+                    ? b.items.filter(i => i.id !== id)
+                    : b.items.map(i => (i.id === id ? { ...i, qty } : i)),
+              };
+            });
+            const anyItems = baskets.some(b => b.items.length > 0);
+            return { baskets, shopInfo: anyItems ? s.shopInfo : null };
+          }),
+
+        clearCart: () => {
+          const fresh = newBasket();
+          set({ baskets: [fresh], activeBasketId: fresh.id, shopInfo: null, orderType: 'place' });
+        },
+      };
+    },
     {
       name: 'lassi-cart',
       storage: createJSONStorage(() => AsyncStorage),
+      version: 2,
+      migrate: (persisted, version) => {
+        if (version < 2) {
+          const old = persisted as {
+            items?: CartItem[];
+            shopInfo?: CartShopInfo | null;
+            orderType?: OrderType;
+          };
+          const b = newBasket();
+          b.items = old.items ?? [];
+          return {
+            shopInfo: old.shopInfo ?? null,
+            baskets: [b],
+            activeBasketId: b.id,
+            orderType: old.orderType ?? 'place',
+          };
+        }
+        return persisted as CartState;
+      },
     },
   ),
 );
