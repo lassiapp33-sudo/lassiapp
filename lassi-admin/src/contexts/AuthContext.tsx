@@ -122,13 +122,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        // Déconnexion explicite ou refresh token expiré → on vide la session
         if (event === 'SIGNED_OUT') { setUser(null); return }
-        if (event === 'SIGNED_IN' && session?.user) {
+
+        // SIGNED_IN déclenché par un refresh token ou re-connexion explicite
+        // On ne touche à rien si init() est encore en cours (busy.current)
+        if (event === 'SIGNED_IN' && session?.user && !busy.current) {
           try {
             const admin = await fetchAdminProfile(session.user)
-            setUser(admin)
+            // On ne met à jour que si le profil est valide — jamais setUser(null) ici
+            // (SIGNED_OUT est le seul chemin qui doit déconnecter)
+            if (admin) setUser(admin)
           } catch { /* signIn() remonte déjà l'erreur */ }
         }
+
+        // TOKEN_REFRESHED : le token a été renouvelé silencieusement, rien à faire
+        // USER_UPDATED / INITIAL_SESSION : géré par init(), on ignore
       },
     )
 

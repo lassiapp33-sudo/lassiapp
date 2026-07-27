@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import {
   Wallet, ArrowDownLeft, ArrowUpRight, RefreshCw, TrendingUp, AlertCircle,
+  Send, X, CheckCircle,
 } from 'lucide-react'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string
@@ -45,11 +46,59 @@ function formatDate(iso: string) {
   })
 }
 
+interface Toast { id: number; type: 'success' | 'error'; message: string }
+
 export default function FinancePage() {
   const [data,    setData]    = useState<FinanceData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState('')
   const [filter,  setFilter]  = useState<'all' | 'MERCHANT_PAYMENT' | 'CASHIN'>('all')
+
+  // Cash-Out
+  const [recipient,     setRecipient]     = useState('')
+  const [amount,        setAmount]        = useState('')
+  const [showConfirm,   setShowConfirm]   = useState(false)
+  const [transferring,  setTransferring]  = useState(false)
+  const [toasts,        setToasts]        = useState<Toast[]>([])
+  const toastId = useRef(0)
+
+  const addToast = useCallback((type: 'success' | 'error', message: string) => {
+    const id = ++toastId.current
+    setToasts(prev => [...prev, { id, type, message }])
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000)
+  }, [])
+
+  const validateForm = () => {
+    if (!/^7[05678][0-9]{7}$/.test(recipient)) return 'Numéro invalide (ex: 771234567)'
+    if (!amount || parseInt(amount) < 100)       return 'Montant minimum 100 FCFA'
+    return null
+  }
+
+  const handleTransfer = async () => {
+    setShowConfirm(false)
+    setTransferring(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const jwt = session?.access_token
+      if (!jwt) throw new Error('Session expirée')
+
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/om-finance?action=transfer&recipient=${encodeURIComponent(recipient)}&amount=${encodeURIComponent(amount)}`,
+        { method: 'POST', headers: { Authorization: `Bearer ${jwt}` } }
+      )
+      const json = await res.json()
+      if (!res.ok || json.error) throw new Error(json.error ?? `Erreur ${res.status}`)
+
+      addToast('success', `Transfert réussi — ${formatFcfa(parseInt(amount))} envoyés au ${recipient}`)
+      setRecipient('')
+      setAmount('')
+      load() // rafraîchir le solde
+    } catch (e) {
+      addToast('error', e instanceof Error ? e.message : 'Erreur inconnue')
+    } finally {
+      setTransferring(false)
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -189,6 +238,107 @@ export default function FinancePage() {
           >
             {f.label}
           </button>
+        ))}
+      </div>
+
+      {/* Section Cash-Out */}
+      <div className="rounded-xl bg-surface border border-border p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Send size={16} className="text-accent" />
+          <h2 className="font-semibold text-white text-sm">Transfert d'argent (Cash-Out)</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="text-xs text-muted">Numéro destinataire (OM)</label>
+            <input
+              type="tel"
+              placeholder="77 123 45 67"
+              value={recipient}
+              onChange={e => setRecipient(e.target.value.replace(/\s/g, ''))}
+              className="w-full px-3 py-2 rounded-lg bg-bg border border-border text-white text-sm placeholder-muted focus:outline-none focus:border-accent"
+              maxLength={9}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted">Montant (FCFA)</label>
+            <input
+              type="number"
+              placeholder="5 000"
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-bg border border-border text-white text-sm placeholder-muted focus:outline-none focus:border-accent"
+              min={100}
+            />
+          </div>
+        </div>
+        <button
+          disabled={transferring}
+          onClick={() => {
+            const err = validateForm()
+            if (err) { addToast('error', err); return }
+            setShowConfirm(true)
+          }}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent text-bg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          <Send size={14} />
+          {transferring ? 'Transfert en cours…' : 'Transférer les fonds'}
+        </button>
+      </div>
+
+      {/* Modal confirmation */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface border border-border rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-white">Confirmer le transfert</h3>
+              <button onClick={() => setShowConfirm(false)} className="text-muted hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="space-y-2 rounded-lg bg-bg border border-border p-4 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted">Destinataire</span>
+                <span className="text-white font-mono">{recipient}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted">Montant</span>
+                <span className="text-accent font-bold">{formatFcfa(parseInt(amount))}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted">Depuis</span>
+                <span className="text-white">Compte LASSI · {data?.msisdn ?? '770926843'}</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted">Cette action est irréversible. Vérifiez le numéro avant de confirmer.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 py-2 rounded-lg border border-border text-muted text-sm hover:text-white transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleTransfer}
+                className="flex-1 py-2 rounded-lg bg-accent text-bg text-sm font-semibold hover:opacity-90 transition-opacity"
+              >
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toasts */}
+      <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2">
+        {toasts.map(t => (
+          <div key={t.id} className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium animate-in slide-in-from-right ${
+            t.type === 'success'
+              ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+              : 'bg-danger/10 border border-danger/30 text-danger'
+          }`}>
+            {t.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+            {t.message}
+          </div>
         ))}
       </div>
 

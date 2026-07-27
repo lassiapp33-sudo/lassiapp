@@ -5,8 +5,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getOmToken, OM_BASE_URL } from '../_shared/omAuth.ts';
 import { corsHeaders as buildCorsHeaders } from '../_shared/cors.ts';
 
-const OM_RETAILER_MSISDN = Deno.env.get('OM_RETAILER_MSISDN') ?? '770926843';
-const OM_MERCHANT_CODE   = Deno.env.get('OM_MERCHANT_CODE')   ?? '';
+const OM_RETAILER_MSISDN        = Deno.env.get('OM_RETAILER_MSISDN')        ?? '770926843';
+const OM_MERCHANT_CODE          = Deno.env.get('OM_MERCHANT_CODE')          ?? '';
+const OM_RETAILER_PIN_ENCRYPTED = Deno.env.get('OM_RETAILER_PIN_ENCRYPTED') ?? '';
+
+const PHONE_RE = /^7[05678][0-9]{7}$/;
 
 serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
@@ -82,6 +85,56 @@ serve(async (req) => {
         net_commission:    sum(income) - sum(payouts),
         count_income:      income.length,
         count_payouts:     payouts.length,
+      };
+    }
+
+    // ── TRANSFER (Cash-Out manuel) ────────────────────────────────────────────
+    // POST ?action=transfer&recipient=77XXXXXXX&amount=5000
+    if (action === 'transfer') {
+      const recipient = url.searchParams.get('recipient') ?? '';
+      const amount    = parseInt(url.searchParams.get('amount') ?? '0', 10);
+
+      if (!PHONE_RE.test(recipient)) {
+        return new Response(JSON.stringify({ error: 'Numéro invalide (format attendu : 77XXXXXXX)' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (!amount || amount < 100) {
+        return new Response(JSON.stringify({ error: 'Montant invalide (minimum 100 FCFA)' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (!OM_RETAILER_PIN_ENCRYPTED) {
+        return new Response(JSON.stringify({ error: 'OM_RETAILER_PIN_ENCRYPTED non configuré' }), {
+          status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const reference = `LASSI_TRF_${Date.now()}_${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+      const r = await fetch(`${OM_BASE_URL}/api/eWallet/v1/cashins`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          partner:  { idType: 'MSISDN', id: OM_RETAILER_MSISDN, encryptedPinCode: OM_RETAILER_PIN_ENCRYPTED },
+          customer: { idType: 'MSISDN', id: recipient },
+          amount:   { value: amount, unit: 'XOF' },
+          reference,
+          receiveNotification: false,
+        }),
+      });
+
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({})) as Record<string, unknown>;
+        throw new Error(`OM transfer error (${r.status}): ${err.detail ?? JSON.stringify(err)}`);
+      }
+
+      const data = await r.json() as Record<string, unknown>;
+      result.transfer = {
+        ok:            true,
+        transactionId: data.transactionId ?? data.requestId ?? reference,
+        reference,
+        recipient,
+        amount,
       };
     }
 

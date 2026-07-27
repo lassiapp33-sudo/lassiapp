@@ -85,7 +85,7 @@ $keyBase64 = $keyRes.key
 $keyId     = $keyRes.keyId
 Write-Host "Cle RSA recuperee (keyId: $keyId)"
 
-# ── Chiffrement RSA-OAEP SHA-1 (compatible PS 5.1 / .NET 4.x) ────────────────
+# ── Chiffrement RSA PKCS1v1.5 (RSA/ECB/PKCS1Padding — attendu par OM Sonatel) ─
 $keyBytes  = [Convert]::FromBase64String($keyBase64)
 $rsaParams = Parse-RSAPublicKey $keyBytes
 
@@ -96,12 +96,12 @@ $params.Exponent = $rsaParams.Exponent
 $rsa.ImportParameters($params)
 
 $pinBytes       = [System.Text.Encoding]::UTF8.GetBytes($Pin)
-$encryptedBytes = $rsa.Encrypt($pinBytes, $true) # $true = OAEP padding (SHA-1)
+$encryptedBytes = $rsa.Encrypt($pinBytes, $false) # $false = PKCS1v1.5 (RSA/ECB/PKCS1Padding attendu par OM Sonatel)
 $encryptedB64   = [Convert]::ToBase64String($encryptedBytes)
 
 Write-Host ""
 Write-Host "============================================================"
-Write-Host "PIN chiffre (RSA-OAEP SHA-1, base64) :"
+Write-Host "PIN chiffre (RSA PKCS1v1.5, base64) :"
 Write-Host $encryptedB64
 Write-Host "Longueur : $($encryptedB64.Length) caracteres (attendu: ~344)"
 Write-Host "============================================================"
