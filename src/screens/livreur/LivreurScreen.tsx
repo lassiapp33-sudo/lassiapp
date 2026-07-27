@@ -13,11 +13,12 @@ import {
 
 interface Props {
   onLogout: () => void;
+  onShop?: () => void;
 }
 
 type Onglet = 'dispo' | 'encours' | 'gains' | 'historique';
 
-export default function LivreurScreen({ onLogout }: Props) {
+export default function LivreurScreen({ onLogout, onShop }: Props) {
   const [dispos,     setDispos]     = useState<Livraison[]>([]);
   const [miennes,    setMiennes]    = useState<Livraison[]>([]);
   const [terminees,  setTerminees]  = useState<Livraison[]>([]);
@@ -86,9 +87,16 @@ export default function LivreurScreen({ onLogout }: Props) {
     <View style={s.container}>
       <View style={s.header}>
         <Text style={s.title}>Espace Livreur</Text>
-        <TouchableOpacity style={s.logoutBtn} onPress={onLogout} activeOpacity={0.75}>
-          <Text style={s.logoutTxt}>Déconnexion</Text>
-        </TouchableOpacity>
+        <View style={s.headerActions}>
+          {onShop && (
+            <TouchableOpacity style={s.shopBtn} onPress={onShop} activeOpacity={0.8}>
+              <Text style={s.shopTxt}>Commander</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={s.logoutBtn} onPress={onLogout} activeOpacity={0.75}>
+            <Text style={s.logoutTxt}>Déco</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* ── Onglets ── */}
@@ -284,8 +292,16 @@ const s = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   title: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 20 },
-  logoutBtn: {
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  shopBtn: {
     paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+  },
+  shopTxt: { color: colors.bg, fontFamily: fonts.ui, fontSize: 12 },
+  logoutBtn: {
+    paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: radius.pill,
     borderWidth: 1,

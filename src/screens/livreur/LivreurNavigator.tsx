@@ -1,10 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import LivreurScreen from './LivreurScreen';
+import LivreurShopNavigator from './LivreurShopNavigator';
 
 interface Props {
   onLogout: () => void;
 }
 
 export default function LivreurNavigator({ onLogout }: Props) {
-  return <LivreurScreen onLogout={onLogout} />;
+  const [shopping, setShopping] = useState(false);
+
+  if (shopping) {
+    return <LivreurShopNavigator onBack={() => setShopping(false)} />;
+  }
+
+  return <LivreurScreen onLogout={onLogout} onShop={() => setShopping(true)} />;
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
@@ -49,6 +49,8 @@ interface Props {
   total: number;
   hasItems: boolean;
   shopType?: 'products' | 'services' | 'memberships' | 'terrains';
+  isOpen?: boolean;
+  nextChange?: string;
   onChat?: () => void;
   onCheckout?: () => void;
 }
@@ -57,13 +59,25 @@ export default function ShopFooter({
   total,
   hasItems,
   shopType = 'products',
+  isOpen = true,
+  nextChange = '',
   onChat,
   onCheckout,
 }: Props) {
   const { main, sub } = LABELS[shopType] ?? LABELS.products;
 
-  // Pour les produits : le montant s'affiche si panier non vide
   const mainLabel = shopType === 'products' && hasItems ? `${main} · ${formatPrice(total)}` : main;
+
+  const handleCheckout = () => {
+    if (!isOpen) {
+      const message = nextChange
+        ? `Cette boutique est actuellement fermée.\n${nextChange}`
+        : 'Cette boutique est actuellement fermée. Revenez plus tard.';
+      Alert.alert('Boutique fermée', message, [{ text: 'OK' }]);
+      return;
+    }
+    onCheckout?.();
+  };
 
   return (
     <View style={styles.footer}>
@@ -76,14 +90,18 @@ export default function ShopFooter({
 
       {/* Bouton d'action principal — libellé adapté au type */}
       <TouchableOpacity
-        style={[styles.btnPay, !hasItems && shopType === 'products' && styles.btnPayDim]}
-        onPress={onCheckout}
+        style={[
+          styles.btnPay,
+          !isOpen && styles.btnPayClosed,
+          isOpen && !hasItems && shopType === 'products' && styles.btnPayDim,
+        ]}
+        onPress={handleCheckout}
         activeOpacity={0.85}
       >
         <IcoCard />
         <View>
-          <Text style={styles.payTxt}>{mainLabel}</Text>
-          <Text style={styles.paySubTxt}>{sub}</Text>
+          <Text style={[styles.payTxt, !isOpen && styles.payTxtClosed]}>{!isOpen ? 'Boutique fermée' : mainLabel}</Text>
+          <Text style={[styles.paySubTxt, !isOpen && styles.paySubTxtClosed]}>{!isOpen ? (nextChange || 'Indisponible') : sub}</Text>
         </View>
       </TouchableOpacity>
     </View>
@@ -140,6 +158,12 @@ const styles = StyleSheet.create({
     gap: 9,
   },
   btnPayDim: { opacity: 0.55 },
+  btnPayClosed: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    opacity: 0.85,
+  },
   payTxt: {
     color: colors.bg,
     fontFamily: fonts.titleXL,
@@ -151,5 +175,11 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     opacity: 0.7,
     marginTop: -1,
+  },
+  payTxtClosed: {
+    color: colors.danger,
+  },
+  paySubTxtClosed: {
+    color: colors.danger,
   },
 });

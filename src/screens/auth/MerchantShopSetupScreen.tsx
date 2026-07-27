@@ -279,7 +279,11 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
                 onPress={() => toggleSubcat(sub.id)}
                 activeOpacity={0.8}
               >
-                {sub.imageUri ? (
+                {sub.SvgIcon ? (
+                  <View style={styles.subcatSvgBox}>
+                    <sub.SvgIcon color={colors.white} />
+                  </View>
+                ) : sub.imageUri ? (
                   <Image source={sub.imageUri} style={styles.subcatImg} resizeMode="cover" />
                 ) : (
                   <Text style={styles.subcatEmoji}>{sub.emoji}</Text>
@@ -552,6 +556,7 @@ const styles = StyleSheet.create({
   },
   subcatEmoji: { fontSize: 22, width: 38, textAlign: 'center' },
   subcatImg: { width: 38, height: 38, borderRadius: 6 },
+  subcatSvgBox: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   subcatLabel: {
     color: colors.muted,
     fontFamily: fonts.title,

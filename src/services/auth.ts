@@ -193,12 +193,23 @@ export async function registerMerchant(params: RegisterMerchantParams): Promise<
     .single();
 
   if (shopError) {
-    // Nettoyage : supprimer le compte auth pour éviter un état bloqué
-    // (merchant avec profil mais sans boutique)
+    // Nettoyage définitif : supprimer le compte auth+profil pour libérer
+    // le numéro et permettre une nouvelle tentative sans "déjà associé".
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await fetch(`${SUPABASE_URL}/functions/v1/delete-account`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: SUPABASE_ANON,
+          },
+        });
+      }
       await supabase.auth.signOut();
     } catch {
-      /* ignore */
+      /* ignore — signOut seul si delete-account échoue */
     }
     throw new Error(`Impossible de créer ta vitrine : ${shopError.message}`);
   }
