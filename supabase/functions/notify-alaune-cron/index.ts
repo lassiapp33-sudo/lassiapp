@@ -51,7 +51,7 @@ serve(async (req) => {
       icone:     '✨',
       tag:       'a_la_une_feed',
       audience:  'clients',
-      expire_at: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(), // 12h
+      expire_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h
     });
 
     // 3. Récupérer tous les clients et leurs tokens push

@@ -2,7 +2,6 @@
 // Déclenchée par un trigger SQL sur shops (AFTER INSERT) via pg_net.http_post.
 // Déployer : supabase functions deploy notify-new-prestataire
 
-import { serve }        from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL  = Deno.env.get('SUPABASE_URL')              ?? '';
@@ -24,13 +23,20 @@ const CATEGORY_LABELS: Record<string, string> = {
   sport:     'Sport',
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
-    // Auth : service_role uniquement (appel interne depuis trigger SQL)
-    const token = req.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!SUPABASE_SRK || token !== SUPABASE_SRK) {
+    // Auth : vérifie que le token JWT a le rôle service_role (appel interne trigger SQL)
+    const token = req.headers.get('Authorization')?.replace('Bearer ', '').trim() ?? '';
+    let jwtRole: string | null = null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1] ?? ''));
+      jwtRole = payload?.role ?? null;
+    } catch { /* token malformé */ }
+
+    if (jwtRole !== 'service_role') {
+      console.error('[notify-new-prestataire] Auth échouée — rôle JWT:', jwtRole ?? '(absent)');
       return fail('Non autorisé', 401);
     }
 

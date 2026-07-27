@@ -71,6 +71,7 @@ Deno.serve(async (req) => {
 
       const { error: banError } = await admin.auth.admin.updateUserById(uid, {
         email: `deleted-${uid}@lassi.app`,
+        phone: `+0${uid.replace(/-/g, '').substring(0, 14)}`, // libère le vrai numéro pour réinscription
         password: crypto.randomUUID() + crypto.randomUUID(),
         user_metadata: {},
         ban_duration: '876000h', // ~100 ans = permanent

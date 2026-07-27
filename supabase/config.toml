@@ -103,3 +103,8 @@ verify_jwt = false
 # WAVE_WEBHOOK_SECRET / OM_WEBHOOK_SECRET) avant tout traitement.
 [functions.webhook-payment]
 verify_jwt = false
+
+# notify-alaune-cron est appelée par pg_cron (pas de JWT utilisateur) :
+# la passerelle ne doit pas exiger de JWT, la fonction vérifie X-Cron-Secret.
+[functions.notify-alaune-cron]
+verify_jwt = false
