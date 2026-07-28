@@ -74,6 +74,13 @@ serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
+  // Auto-guérison : répare les split_done sans payout_queue avant de traiter le batch
+  // (protège contre les régressions de migration qui oublient l'INSERT payout_queue)
+  const { data: reconciled } = await supabase.rpc('reconcile_missing_payouts');
+  if ((reconciled as { reconciled?: number })?.reconciled > 0) {
+    console.log(`[process-payouts] reconcile: ${(reconciled as { reconciled: number }).reconciled} payout(s) manquant(s) réparé(s)`);
+  }
+
   const { data: batch, error: claimError } = await supabase.rpc('payout_queue_claim_batch', {
     p_limit: BATCH_LIMIT,
   });
