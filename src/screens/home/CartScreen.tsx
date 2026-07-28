@@ -271,6 +271,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         freshOrderType,
         undefined,
         voiceNotePath,
+        method,
       );
 
       let preInitiatedPiId: string | undefined;
@@ -994,7 +995,7 @@ const styles = StyleSheet.create({
     color: '#5a5c80',
     fontFamily: fonts.body,
     fontSize: 12.5,
-    minHeight: 20,
+    minHeight: 44,
   },
 
   // Moyen de paiement
