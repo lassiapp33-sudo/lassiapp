@@ -50,13 +50,13 @@ interface CartState {
 
 // ── Selectors ──────────────────────────────────────────────────────────────
 export const selectActiveItems = (s: CartState): CartItem[] =>
-  s.baskets.find(b => b.id === s.activeBasketId)?.items ?? [];
+  (s.baskets ?? []).find(b => b.id === s.activeBasketId)?.items ?? [];
 
 export const selectTotalQty = (s: CartState): number =>
-  s.baskets.reduce((sum, b) => sum + b.items.reduce((n, i) => n + i.qty, 0), 0);
+  (s.baskets ?? []).reduce((sum, b) => sum + b.items.reduce((n, i) => n + i.qty, 0), 0);
 
 export const selectTotalPrice = (s: CartState): number =>
-  s.baskets.reduce((sum, b) => sum + b.items.reduce((n, i) => n + i.price * i.qty, 0), 0);
+  (s.baskets ?? []).reduce((sum, b) => sum + b.items.reduce((n, i) => n + i.price * i.qty, 0), 0);
 // ───────────────────────────────────────────────────────────────────────────
 
 const useCartStore = create<CartState>()(
@@ -163,15 +163,17 @@ const useCartStore = create<CartState>()(
       name: 'lassi-cart',
       storage: createJSONStorage(() => AsyncStorage),
       version: 2,
-      migrate: (persisted, version) => {
-        if (version < 2) {
-          const old = persisted as {
-            items?: CartItem[];
-            shopInfo?: CartShopInfo | null;
-            orderType?: OrderType;
-          };
+      migrate: (persisted: unknown, version: number) => {
+        const old = ((persisted ?? {}) as {
+          items?: CartItem[];
+          baskets?: SubBasket[];
+          activeBasketId?: string;
+          shopInfo?: CartShopInfo | null;
+          orderType?: OrderType;
+        });
+        if (version < 2 || !Array.isArray(old.baskets)) {
           const b = newBasket();
-          b.items = old.items ?? [];
+          b.items = Array.isArray(old.items) ? old.items : [];
           return {
             shopInfo: old.shopInfo ?? null,
             baskets: [b],
