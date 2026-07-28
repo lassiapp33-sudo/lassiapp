@@ -6,6 +6,7 @@
  * - Si session absente ou invalide     → redirection /login automatique (pas d'écran d'erreur)
  * - Si session corrompue (localStorage) → nettoyage auto + redirection /login
  * - Jamais de spinner infini : timeout 15s max (+ timeout réseau 15s dans supabase.ts)
+ * - Session ne s'expire JAMAIS automatiquement — seul le bouton "Déconnexion" déconnecte
  */
 import React, {
   createContext, useCallback, useContext,
@@ -13,12 +14,6 @@ import React, {
 } from 'react'
 import { supabase } from '../lib/supabase'
 import type { User } from '@supabase/supabase-js'
-
-// Section 7 — déconnexion automatique après inactivité prolongée :
-// le dashboard admin manipule des données sensibles (paiements, litiges,
-// comptes), on utilise donc un délai plus court que côté app mobile.
-const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000 // 15 minutes
-const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'] as const
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,7 +54,6 @@ async function fetchAdminProfile(supabaseUser: User): Promise<AdminUser | null> 
 // Nettoie la session Supabase du localStorage et redirige vers /login
 function clearSessionAndRedirect() {
   try {
-    // Supprime uniquement les clés Supabase pour ne pas perdre d'autres données
     Object.keys(localStorage).forEach(k => {
       if (k.startsWith('sb-')) localStorage.removeItem(k)
     })
@@ -74,7 +68,8 @@ const AuthContext = createContext<AuthCtx | null>(null)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user,    setUser]    = useState<AdminUser | null>(null)
   const [loading, setLoading] = useState(true)
-  const busy = useRef(false) // évite deux initialisations simultanées
+  const busy          = useRef(false)  // évite deux initialisations simultanées
+  const manualSignOut = useRef(false)  // true = l'utilisateur a cliqué "Déconnexion"
 
   const init = useCallback(() => {
     if (busy.current) return
@@ -104,14 +99,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then(({ data: { session } }) => {
         if (done) return
         if (!session?.user) {
-          // Pas de session → page de login (sans nettoyer — rien à nettoyer)
           finish(null)
           return
         }
         return fetchAdminProfile(session.user).then(finish)
       })
       .catch(() => {
-        // Erreur réseau ou session invalide → nettoyage automatique
         if (!done) { done = true; busy.current = false; clearTimeout(timer) }
         clearSessionAndRedirect()
       })
@@ -122,22 +115,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // Déconnexion explicite ou refresh token expiré → on vide la session
-        if (event === 'SIGNED_OUT') { setUser(null); return }
+        if (event === 'SIGNED_OUT') {
+          // Logout manuel → on déconnecte proprement
+          // Logout automatique (refresh token expiré) → on déconnecte aussi
+          // mais seulement si ce n'était pas un faux-SIGNED_OUT dû à un réseau instable
+          if (manualSignOut.current) {
+            manualSignOut.current = false
+            setUser(null)
+          } else {
+            // Supabase a perdu la session — on recharge init() plutôt que
+            // de déconnecter immédiatement (récupère depuis localStorage si possible)
+            busy.current = false
+            init()
+          }
+          return
+        }
 
-        // SIGNED_IN déclenché par un refresh token ou re-connexion explicite
-        // On ne touche à rien si init() est encore en cours (busy.current)
+        // SIGNED_IN : déclenché par re-connexion explicite uniquement
+        // (pas pendant init() grâce à busy.current)
         if (event === 'SIGNED_IN' && session?.user && !busy.current) {
           try {
             const admin = await fetchAdminProfile(session.user)
-            // On ne met à jour que si le profil est valide — jamais setUser(null) ici
-            // (SIGNED_OUT est le seul chemin qui doit déconnecter)
             if (admin) setUser(admin)
-          } catch { /* signIn() remonte déjà l'erreur */ }
+          } catch { /* ignore */ }
         }
 
-        // TOKEN_REFRESHED : le token a été renouvelé silencieusement, rien à faire
-        // USER_UPDATED / INITIAL_SESSION : géré par init(), on ignore
+        // TOKEN_REFRESHED : renouvellement silencieux — rien à faire,
+        // le client Supabase gère ça seul, on ne touche pas à user
       },
     )
 
@@ -157,32 +161,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
+    manualSignOut.current = true
     await supabase.auth.signOut({ scope: 'global' })
     setUser(null)
   }, [])
-
-  // Section 7 : déconnexion automatique après INACTIVITY_TIMEOUT_MS sans
-  // interaction (souris/clavier/scroll/touch) une fois connecté.
-  useEffect(() => {
-    if (!user) return
-
-    let timer: ReturnType<typeof setTimeout>
-
-    const reset = () => {
-      clearTimeout(timer)
-      timer = setTimeout(() => {
-        signOut()
-      }, INACTIVITY_TIMEOUT_MS)
-    }
-
-    reset()
-    ACTIVITY_EVENTS.forEach(evt => window.addEventListener(evt, reset))
-
-    return () => {
-      clearTimeout(timer)
-      ACTIVITY_EVENTS.forEach(evt => window.removeEventListener(evt, reset))
-    }
-  }, [user, signOut])
 
   const value = useMemo(
     () => ({ user, loading, signIn, signOut }),

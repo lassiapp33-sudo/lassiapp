@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     if (!shopId || !shopName) return fail('Paramètres manquants', 400);
 
     const categoryLabel = CATEGORY_LABELS[category] ?? category ?? 'Services';
-    const title = '🆕 Nouveau prestataire !';
+    const title = 'Nouveau prestataire !';
     const body  = `${shopName} vient de rejoindre LASSI — ${categoryLabel}`;
 
     // 1. Annonce in-app (cloche notifications côté clients)
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     await sb.from('annonces').insert({
       titre:     'Nouveau prestataire !',
       corps:     body,
-      icone:     '🆕',
+      icone:     '',
       tag:       shopId,
       audience:  'clients',
       expire_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
