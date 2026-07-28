@@ -17,8 +17,10 @@ import AdPackSelector, { AdPackSelection } from './AdPackSelector';
 import AdContentForm, { AdContent } from './AdContentForm';
 import {
   AdFormat,
+  AdPack,
   SponsoredAd,
   AD_PACKS,
+  getAdPacks,
   creerAnnonceSponsorisee,
   getMerchantAds,
   formatDuration,
@@ -168,19 +170,19 @@ interface Props {
   onCreated?: (newBalance: number) => void;
 }
 
-const DEFAULT_PACK = AD_PACKS.find(p => p.popular) ?? AD_PACKS[1];
-
 export default function SponsoredAdPanel({ onCreated }: Props) {
   const shopId        = useShopStore(s => s.shopId);
   const creditBalance = useShopStore(s => s.profile?.creditBalance ?? 0);
   const loadMyShop    = useShopStore(s => s.loadMyShop);
+
+  const [adPacks, setAdPacks] = useState<AdPack[]>(AD_PACKS);
 
   const [format, setFormat]       = useState<AdFormat>('classique');
   const [content, setContent]     = useState<AdContent>({
     titre: '', corps: '', imageUri: null, imageUrl: null,
   });
   const [selection, setSelection] = useState<AdPackSelection>({
-    mode: 'pack', pack: DEFAULT_PACK,
+    mode: 'pack', pack: AD_PACKS.find(p => p.popular) ?? AD_PACKS[1],
   });
   const [uploading, setUploading] = useState(false);
   const [launching, setLaunching] = useState(false);
@@ -207,6 +209,14 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
   }, [loadAds]);
 
   useEffect(() => { loadAds(); }, [loadAds]);
+
+  useEffect(() => {
+    getAdPacks().then(packs => {
+      setAdPacks(packs);
+      const def = packs.find(p => p.popular) ?? packs[1] ?? packs[0];
+      if (def) setSelection({ mode: 'pack', pack: def });
+    }).catch(() => {});
+  }, []);
 
   // Auto-refresh toutes les 60s tant qu'une campagne est active
   useEffect(() => {
@@ -388,7 +398,7 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
 
       {/* Pack / Budget */}
       <Text style={s.fieldLabel}>Budget & durée</Text>
-      <AdPackSelector selection={selection} onChange={setSelection} />
+      <AdPackSelector selection={selection} onChange={setSelection} packs={adPacks} />
 
       {/* Récapitulatif */}
       <View style={s.summary}>

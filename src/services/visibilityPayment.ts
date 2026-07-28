@@ -98,24 +98,43 @@ export async function getVisibilityPlans(): Promise<VisibilityPlan[]> {
     .from('visibility_plans')
     .select('id, label, price, duration_months, duration_days, old_price, per_label, popular')
     .eq('active', true)
+    .eq('plan_type', 'quartier')
     .order('duration_months');
 
   if (error || !data?.length) {
-    // Fallback statique si la table n'est pas encore migrée
     return FALLBACK_PLANS;
   }
 
-  return data.map(r => ({
-    id: r.id,
-    label: r.label,
-    desc: computePlanDesc(r.price, r.old_price ?? null, r.duration_days),
-    price: r.price,
-    durationMonths: r.duration_months,
-    durationDays: r.duration_days,
-    oldPrice: r.old_price ?? null,
-    perLabel: r.per_label,
-    popular: r.popular,
-  }));
+  return data.map(r => mapPlanRow(r));
+}
+
+export async function getBoostPlans(): Promise<VisibilityPlan[]> {
+  const { data, error } = await supabase
+    .from('visibility_plans')
+    .select('id, label, price, duration_months, duration_days, old_price, per_label, popular')
+    .eq('active', true)
+    .eq('plan_type', 'recherche')
+    .order('duration_months');
+
+  if (error || !data?.length) {
+    return BOOST_PLANS_FALLBACK;
+  }
+
+  return data.map(r => mapPlanRow(r));
+}
+
+function mapPlanRow(r: Record<string, unknown>): VisibilityPlan {
+  return {
+    id:             r.id as string,
+    label:          r.label as string,
+    desc:           computePlanDesc(r.price as number, (r.old_price as number | null) ?? null, r.duration_days as number),
+    price:          r.price as number,
+    durationMonths: r.duration_months as number,
+    durationDays:   r.duration_days as number,
+    oldPrice:       (r.old_price as number | null) ?? null,
+    perLabel:       r.per_label as string,
+    popular:        r.popular as boolean,
+  };
 }
 
 // ─── Charger l'abonnement actif du shop courant ───────────────────────────────
@@ -387,6 +406,42 @@ const FALLBACK_PLANS: VisibilityPlan[] = [
     durationDays: 180,
     oldPrice: 18000,
     perLabel: '1 500 F/mois',
+    popular: false,
+  },
+];
+
+const BOOST_PLANS_FALLBACK: VisibilityPlan[] = [
+  {
+    id: 'boost_1m',
+    label: '1 mois',
+    desc: 'Paiement unique',
+    price: 500,
+    durationMonths: 1,
+    durationDays: 30,
+    oldPrice: null,
+    perLabel: '500 F/mois',
+    popular: false,
+  },
+  {
+    id: 'boost_3m',
+    label: '3 mois',
+    desc: 'Économise 500 F',
+    price: 1000,
+    durationMonths: 3,
+    durationDays: 90,
+    oldPrice: 1500,
+    perLabel: '333 F/mois',
+    popular: true,
+  },
+  {
+    id: 'boost_6m',
+    label: '6 mois',
+    desc: 'Économise 500 F',
+    price: 2500,
+    durationMonths: 6,
+    durationDays: 180,
+    oldPrice: 3000,
+    perLabel: '417 F/mois',
     popular: false,
   },
 ];

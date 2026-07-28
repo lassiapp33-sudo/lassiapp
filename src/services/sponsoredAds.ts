@@ -72,6 +72,27 @@ export function formatFcfa(fcfa: number): string {
 // Tarifs et estimations calqués sur l'expérience TikTok Ads.
 // Les packs offrent de meilleures conditions que le mode personnalisé.
 
+export async function getAdPacks(): Promise<AdPack[]> {
+  const { data, error } = await supabase
+    .from('ad_packs')
+    .select('id, label, tagline, budget_credits, duration_hours, est_min, est_max, popular')
+    .eq('active', true)
+    .order('budget_credits');
+
+  if (error || !data?.length) return AD_PACKS;
+
+  return data.map(r => ({
+    id:            r.id as string,
+    label:         r.label as string,
+    tagline:       r.tagline as string,
+    budgetCredits: r.budget_credits as number,
+    durationHours: r.duration_hours as number,
+    estMin:        r.est_min as number,
+    estMax:        r.est_max as number,
+    popular:       r.popular as boolean,
+  }));
+}
+
 export const AD_PACKS: AdPack[] = [
   {
     id: 'decouverte',

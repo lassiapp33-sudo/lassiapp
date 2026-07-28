@@ -35,6 +35,7 @@ import {
   PayMethod,
   WaveOrangeMethod,
   getVisibilityPlans,
+  getBoostPlans,
   getActiveSub,
   createVisibilityPayment,
   createCreditPurchase,
@@ -55,43 +56,6 @@ const OFFER_LABELS: Record<OfferType, string> = {
   recherche: 'Booster ma position dans les recherches',
 };
 
-// Forfaits "Booster recherche" et "Épingle dorée" — même tarif pour les deux
-// (miroir de _shared/boostPlansPricing.ts, payables avec le crédit LASSI).
-const BOOST_PLANS: VisibilityPlan[] = [
-  {
-    id: '1m',
-    label: '1 mois',
-    desc: 'Paiement unique',
-    price: 500,
-    durationMonths: 1,
-    durationDays: 30,
-    oldPrice: null,
-    perLabel: '500 F/mois',
-    popular: false,
-  },
-  {
-    id: '3m',
-    label: '3 mois',
-    desc: 'Économise 500 F',
-    price: 1000,
-    durationMonths: 3,
-    durationDays: 90,
-    oldPrice: 1500,
-    perLabel: '333 F/mois',
-    popular: true,
-  },
-  {
-    id: '6m',
-    label: '6 mois',
-    desc: 'Économise 500 F',
-    price: 2500,
-    durationMonths: 6,
-    durationDays: 180,
-    oldPrice: 3000,
-    perLabel: '417 F/mois',
-    popular: false,
-  },
-];
 
 // ─── Sous-composant renouvellement ────────────────────────────────────────────
 
@@ -271,7 +235,8 @@ export default function VisibilityScreen({ onBack }: Props) {
 
   const [offerType, setOfferType] = useState<OfferType>('quartier');
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [plans, setPlans] = useState<VisibilityPlan[]>([]);
+  const [plans,      setPlans]      = useState<VisibilityPlan[]>([]);
+  const [boostPlans, setBoostPlans] = useState<VisibilityPlan[]>([]);
   const [activeSub, setActiveSub] = useState<ActiveSub | null>(null);
   const [selectedId, setSelectedId] = useState('3m');
   const [products, setProducts] = useState<StoreProduct[]>([]);
@@ -288,9 +253,7 @@ export default function VisibilityScreen({ onBack }: Props) {
     wave: boolean;
     orange_money: boolean;
   } | null>(null);
-  // "Offre du quartier" charge ses forfaits depuis la DB, les deux autres
-  // offres utilisent des forfaits fixes (même tarif pour les deux).
-  const plansForOffer = offerType === 'quartier' ? plans : BOOST_PLANS;
+  const plansForOffer = offerType === 'quartier' ? plans : boostPlans;
   const selectedPlan =
     plansForOffer.find(p => p.id === selectedId) ?? plansForOffer[1] ?? plansForOffer[0] ?? null;
 
@@ -313,13 +276,15 @@ export default function VisibilityScreen({ onBack }: Props) {
   const init = useCallback(async () => {
     setInitLoading(true);
     try {
-      const [loadedPlans, sub, keys, loadedProducts] = await Promise.all([
+      const [loadedPlans, loadedBoostPlans, sub, keys, loadedProducts] = await Promise.all([
         getVisibilityPlans(),
+        getBoostPlans(),
         shopId ? getActiveSub(shopId) : Promise.resolve(null),
         checkPaymentAvailability(),
         shopId ? getProducts(shopId) : Promise.resolve([]),
       ]);
       setPlans(loadedPlans);
+      setBoostPlans(loadedBoostPlans);
       setKeysAvailable(keys);
       // Méthode par défaut : OM si dispo, sinon Wave, sinon crédit
       if (keys.orange_money) {
@@ -595,8 +560,8 @@ export default function VisibilityScreen({ onBack }: Props) {
               </View>
             )}
 
-            {/* Mode de paiement dans le scroll uniquement pour "Offre du quartier" */}
-            {offerType === 'quartier' && !isPending && !isVerifying && (
+            {/* Mode de paiement — dans le scroll pour les deux offres */}
+            {!isPending && !isVerifying && (
               <PayFooter
                 plan={withDynamicPrice(selectedPlan)}
                 payMethod={payMethod}
@@ -610,19 +575,6 @@ export default function VisibilityScreen({ onBack }: Props) {
 
             <View style={{ height: 14 }} />
           </ScrollView>
-
-          {/* Footer fixe : OM / Wave / Crédit LASSI — pour "Booster ma position" uniquement */}
-          {offerType !== 'quartier' && !isPending && !isVerifying && (
-            <PayFooter
-              plan={withDynamicPrice(selectedPlan)}
-              payMethod={payMethod}
-              onMethodChange={setPayMethod}
-              onPay={handlePay}
-              loading={isPayLoading || creditPayLoading}
-              keysAvailable={keysAvailable ?? undefined}
-              creditBalance={creditBalance}
-            />
-          )}
         </>
       )}
 

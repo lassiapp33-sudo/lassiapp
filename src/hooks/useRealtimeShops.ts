@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { supabase } from '../lib/supabase';
-import * as shopsService from '../services/shops';
+import { rowToShop } from '../services/shops';
 import type { Shop } from '../services/shops';
 
 /**
  * Abonnement Realtime sur la table shops.
  * Appelle onUpdate à chaque UPDATE d'un commerce (horaires, statut manuel, etc.)
- * Suit le même pattern que useRealtimeOrders / useRealtimeMessages.
+ * Utilise payload.new directement — aucune requête SQL supplémentaire.
  */
 export function useRealtimeShops(onUpdate: (shop: Shop) => void) {
   const cbRef = useRef(onUpdate);
@@ -20,10 +20,9 @@ export function useRealtimeShops(onUpdate: (shop: Shop) => void) {
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'shops' },
-          async payload => {
-            const shopId = (payload.new as { id: string }).id;
-            const shop = await shopsService.getShopById(shopId);
-            if (shop) cbRef.current(shop);
+          payload => {
+            const shop = rowToShop(payload.new as Record<string, unknown>);
+            cbRef.current(shop);
           },
         )
         .subscribe();

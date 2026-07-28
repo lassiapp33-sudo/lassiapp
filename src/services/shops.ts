@@ -42,7 +42,7 @@ export interface Shop {
 
 // ─── Mapping ─────────────────────────────────────────────────────────────────
 
-function rowToShop(row: Record<string, any>): Shop {
+export function rowToShop(row: Record<string, any>): Shop {
   const now = new Date();
   const isExclu = row.vip_exclu === true;
   const isVipManual =

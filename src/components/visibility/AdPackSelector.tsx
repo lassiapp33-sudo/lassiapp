@@ -136,12 +136,14 @@ export type AdPackSelection =
 
 interface Props {
   selection: AdPackSelection;
-  onChange: (sel: AdPackSelection) => void;
+  onChange:  (sel: AdPackSelection) => void;
+  packs?:    AdPack[];
 }
 
 type Tab = 'packs' | 'custom';
 
-export default function AdPackSelector({ selection, onChange }: Props) {
+export default function AdPackSelector({ selection, onChange, packs: propPacks }: Props) {
+  const resolvedPacks = propPacks ?? AD_PACKS;
   const [tab, setTab] = useState<Tab>(selection.mode === 'custom' ? 'custom' : 'packs');
 
   const customBudget =
@@ -172,7 +174,7 @@ export default function AdPackSelector({ selection, onChange }: Props) {
             onPress={() => {
               setTab(t);
               if (t === 'packs') {
-                const defaultPack = AD_PACKS.find(p => p.popular) ?? AD_PACKS[1];
+                const defaultPack = resolvedPacks.find(p => p.popular) ?? resolvedPacks[1] ?? resolvedPacks[0];
                 onChange({ mode: 'pack', pack: defaultPack });
               } else {
                 const est = estimateViews(customBudget);
@@ -190,7 +192,7 @@ export default function AdPackSelector({ selection, onChange }: Props) {
 
       {tab === 'packs' ? (
         <View style={s.packsWrap}>
-          {AD_PACKS.map(pack => (
+          {resolvedPacks.map(pack => (
             <PackCard
               key={pack.id}
               pack={pack}
