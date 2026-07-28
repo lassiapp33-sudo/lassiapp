@@ -22,6 +22,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildWaveSignature } from '../_shared/waveSign.ts';
+import { sendPushToUser } from '../_shared/push.ts';
 
 // Payout API Wave : seul WAVE_API_KEY est nécessaire (pas de WAVE_MERCHANT_ID)
 const WAVE_API_KEY = Deno.env.get('WAVE_API_KEY') ?? '';
@@ -205,6 +206,17 @@ serve(async (req) => {
     }
 
     results.paid++;
+
+    // Notification OM uniquement : le Cash In requiert une validation manuelle
+    // du prestataire dans son app Orange Money → on le prévient immédiatement
+    if (payout.moyen_paiement === 'orange_money') {
+      await sendPushToUser(supabase, payout.prestataire_id, {
+        title: 'Reversement reçu — action requise',
+        body: `Vous avez ${payout.montant} FCFA en attente. Ouvrez votre app Orange Money et acceptez le versement.`,
+        data: { type: 'om_cashin_pending', montant: payout.montant },
+        channelId: 'paiements',
+      });
+    }
   }
 
   return new Response(JSON.stringify({ ok: true, ...results }), {
