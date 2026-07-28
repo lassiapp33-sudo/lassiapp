@@ -49,12 +49,23 @@ export default function RatingPromptModal({
         vocalUrl = await uploadVocalRating(orderId, direction, vocalUri);
       }
       await soumettreNote(orderId, direction, note, commentaire.trim() || undefined, vocalUrl);
-    } catch {
-      notifyError('Impossible d\'enregistrer ta note. Réessaie plus tard.');
-    } finally {
-      setLoading(false);
+      // Succès → fermer seulement ici
       reset();
       onDismiss();
+    } catch (err: unknown) {
+      const raw = err instanceof Error ? err.message : String(err);
+      console.error('[RatingPromptModal] échec soumission note:', raw);
+      // Message selon l'erreur DB réelle
+      if (raw.includes('non autorisé')) {
+        notifyError('Session expirée — rouvre l\'app et réessaie.');
+      } else if (raw.includes('commande introuvable')) {
+        notifyError('Commande introuvable. Réessaie plus tard.');
+      } else {
+        notifyError('Impossible d\'enregistrer ta note. Réessaie.');
+      }
+      // Le modal reste ouvert → l'utilisateur peut réessayer
+    } finally {
+      setLoading(false);
     }
   };
 

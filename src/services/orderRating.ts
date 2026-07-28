@@ -73,6 +73,8 @@ export async function soumettreNote(
   commentaire?: string,
   vocalUrl?: string,
 ): Promise<void> {
+  // Forcer le refresh du token si la session a expiré pendant le paiement OM
+  await supabase.auth.getSession();
   const { error } = await supabase.rpc('soumettre_note_commande', {
     p_order_id: orderId,
     p_direction: direction,
