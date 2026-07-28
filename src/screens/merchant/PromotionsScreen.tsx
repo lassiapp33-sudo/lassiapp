@@ -296,7 +296,7 @@ export default function PromotionsScreen({ onBack }: Props) {
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior="padding"
           keyboardVerticalOffset={0}
         >
           <View style={styles.sheet}>
@@ -308,6 +308,7 @@ export default function PromotionsScreen({ onBack }: Props) {
             <ScrollView
               showsVerticalScrollIndicator={false}
               style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 32 }}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"
             >

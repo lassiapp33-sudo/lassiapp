@@ -4,26 +4,17 @@ import {
   MerchantPayMethod,
   PaymentStats,
   DayRevenue,
-  PaymentClientRow,
-  PaymentOrderRow,
 } from '../types/merchantPayments';
 
 // ─── Mapping ──────────────────────────────────────────────────────────────────
 
 function rowToPayment(row: Record<string, any>): MerchantPayment {
-  const client = (row.client as PaymentClientRow | null) ?? {};
-  const order = (row.order as PaymentOrderRow | null) ?? {};
-  const items = Array.isArray(row.items)
-    ? row.items
-    : Array.isArray(order.items)
-      ? order.items
-      : [];
   return {
     id: row.id,
     orderId: row.order_id ?? undefined,
-    clientName: client.name ?? row.client_name ?? '—',
-    clientPhone: client.phone ?? undefined,
-    items,
+    clientName: row.client_name ?? '—',
+    clientPhone: undefined,
+    items: Array.isArray(row.items) ? row.items : [],
     amount: Number(row.amount ?? 0),
     method: (row.method ?? 'wave') as MerchantPayMethod,
     status: row.status ?? 'pending',
@@ -37,7 +28,7 @@ function rowToPayment(row: Record<string, any>): MerchantPayment {
 export async function getMerchantPayments(prestataireId: string): Promise<MerchantPayment[]> {
   const { data, error } = await supabase
     .from('payments')
-    .select('*, order:order_id(items), client:client_id(name, phone)')
+    .select('*')
     .eq('prestataire_id', prestataireId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
