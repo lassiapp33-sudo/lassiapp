@@ -390,7 +390,7 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
       if (intent.type === 'salutation' && intent.reponse) {
         setMessages(prev => [
           ...prev.filter(m => m.id !== loadId),
-          { id: uid(), kind: 'bot' as const, text: intent.reponse! },
+          { id: uid(), kind: 'bot' as const, text: intent.reponse ?? '' },
         ]);
       } else if (intent.type === 'search' && intent.categorie) {
         const shops = await rechercherPrestataires(intent.categorie.id, intent.zone, null);
@@ -403,7 +403,7 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
               {
                 id: uid(),
                 kind: 'bot' as const,
-                text: `Je n'ai trouvé aucun ${intent.categorie!.label}${loc} pour l'instant 🐝\nEssaie une autre zone ou regarde la carte !`,
+                text: `Je n'ai trouvé aucun ${intent.categorie?.label ?? ''}${loc} pour l'instant 🐝\nEssaie une autre zone ou regarde la carte !`,
               },
             ];
           }
@@ -413,7 +413,7 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
               id: uid(),
               kind: 'shops' as const,
               shops,
-              catLabel: intent.categorie!.label,
+              catLabel: intent.categorie?.label ?? '',
               zone: intent.zone,
             },
           ];
@@ -421,7 +421,7 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
       } else if (intent.type === 'faq' && intent.faq) {
         setMessages(prev => [
           ...prev.filter(m => m.id !== loadId),
-          { id: uid(), kind: 'bot' as const, text: intent.faq!.reponse },
+          { id: uid(), kind: 'bot' as const, text: intent.faq?.reponse ?? '' },
         ]);
       } else {
         await loggerQuestionSansReponse(txt);

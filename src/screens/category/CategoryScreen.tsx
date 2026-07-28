@@ -32,7 +32,7 @@ function buildSubcats(catId: CatId): SubCat[] {
 
 /** Retourne title / subLabel / subcats pour l'écran — sans duplication. */
 function getCatMeta(catId: CatId) {
-  const cfg = getCatConfig(catId)!;
+  const cfg = getCatConfig(catId) ?? getCatConfig('services');
   return {
     title: cfg.label,
     subLabel: cfg.subLabel,

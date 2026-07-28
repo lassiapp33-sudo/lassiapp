@@ -286,9 +286,9 @@ export default function AvisForm({
             </Text>
             {hasPhoto ? (
               <View style={styles.photoPreviewRow}>
-                <Image source={{ uri: previewUri! }} style={styles.photoThumb} />
+                <Image source={{ uri: previewUri ?? '' }} style={styles.photoThumb} />
                 <Text style={styles.photoCaption} numberOfLines={1}>
-                  {photoLocalUri ? 'Photo sélectionnée' : (photoUrl!.split('/').pop() ?? 'Photo')}
+                  {photoLocalUri ? 'Photo sélectionnée' : (photoUrl?.split('/').pop() ?? 'Photo')}
                 </Text>
                 <TouchableOpacity onPress={handleRemovePhoto} activeOpacity={0.7}>
                   <IcoTrash />

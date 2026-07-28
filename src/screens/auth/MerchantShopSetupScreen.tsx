@@ -174,7 +174,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
         password: userData.password,
         shopName: shopName.trim(),
         shopSubtitle: autoSubtitle || undefined,
-        shopCategory: catId!,
+        shopCategory: catId ?? '',
         shopSubcategories: subcats,
         shopType: catConfig?.shopType ?? 'products',
         openingHours: skipHours ? null : hours,

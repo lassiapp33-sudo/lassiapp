@@ -260,7 +260,7 @@ export default function OffreQuartierScreen({ onBack }: Props) {
     setSaving(true);
     try {
       const items = selectedIds.map(id => {
-        const item = eligibleItems.find(it => it.id === id)!;
+        const item = eligibleItems.find(it => it.id === id) ?? eligibleItems[0];
         return {
           productId: item.kind === 'product' ? item.id : null,
           terrainId: item.kind === 'terrain' ? item.id : null,

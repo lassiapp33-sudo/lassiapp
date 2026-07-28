@@ -99,10 +99,10 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
         const paidItems: PromoItem[] = [
           ...specificData
             .filter(r => shopByProductId.has(r.id as string))
-            .map(r => toItem(r, shopByProductId.get(r.id as string)!)),
+            .map(r => toItem(r, shopByProductId.get(r.id as string) as Parameters<typeof toItem>[1])),
           ...allProductsData
             .filter(r => shopById.has(r.shop_id as string))
-            .map(r => toItem(r, shopById.get(r.shop_id as string)!)),
+            .map(r => toItem(r, shopById.get(r.shop_id as string) as Parameters<typeof toItem>[1])),
         ];
 
         // ③ Carrousel récompenses classement
@@ -136,7 +136,7 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
               const shop = shopByMerchant.get(r.prestataire_id);
               const isUrl = typeof r.image_url === 'string' && r.image_url.startsWith('http');
               return {
-                id: r.product_id!,
+                id: r.product_id ?? '',
                 name: r.nom,
                 price: r.prix,
                 emoji: isUrl ? '' : (r.image_url ?? ''),

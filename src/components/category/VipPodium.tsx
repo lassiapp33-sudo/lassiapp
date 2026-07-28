@@ -150,10 +150,10 @@ export default function VipPodium({ entries, subLabel = '', renewIn = '7j', onPr
 
   // Ordre d'affichage : 2e à gauche, 1er au centre, 3e à droite
   const sorted = [
-    podium.find(e => e.rank === 2)!,
-    podium.find(e => e.rank === 1)!,
-    podium.find(e => e.rank === 3)!,
-  ];
+    podium.find(e => e.rank === 2),
+    podium.find(e => e.rank === 1),
+    podium.find(e => e.rank === 3),
+  ].filter((e): e is NonNullable<typeof e> => e != null);
 
   return (
     <View style={styles.section}>

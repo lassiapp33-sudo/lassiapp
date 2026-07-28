@@ -298,8 +298,8 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     const meters = shopsService.calcDistanceMeters(
       userCoords.latitude,
       userCoords.longitude,
-      shopLat!,
-      shopLng!,
+      shopLat ?? 0,
+      shopLng ?? 0,
     );
     return shopsService.formatDistance(meters);
   })();
@@ -568,7 +568,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                   adresse={shopAddress}
                   nomBoutique={displayName}
                   onSuivi={onSuivi && shopHasCoords
-                    ? () => onSuivi({ shopLat: shopLat!, shopLng: shopLng!, shopName: displayName, shopLogoUrl: displayLogoUrl ?? null })
+                    ? () => onSuivi({ shopLat: shopLat ?? 0, shopLng: shopLng ?? 0, shopName: displayName, shopLogoUrl: displayLogoUrl ?? null })
                     : undefined
                   }
                 />
