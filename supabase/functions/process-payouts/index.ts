@@ -93,6 +93,10 @@ serve(async (req) => {
 
   const results = { processed: 0, paid: 0, retried: 0, failed: 0 };
 
+  // Délai anti-doublon OM : OM rejette deux Cash Ins identiques (même montant + même numéro)
+  // envoyés dans une fenêtre de ~2 min. On espace d'au moins 5 s entre Cash Ins au même numéro.
+  const omLastSentAt = new Map<string, number>();
+
   for (const payout of batch ?? []) {
     results.processed++;
 
@@ -155,6 +159,13 @@ serve(async (req) => {
     }
 
     // 4. Appel API payout (idempotency_key = payout_{id})
+    // Pour OM : attendre 5 s si on vient d'envoyer un Cash In au même numéro (anti "transaction identique")
+    if (IS_PRODUCTION && payout.moyen_paiement === 'orange_money') {
+      const last = omLastSentAt.get(phone) ?? 0;
+      const wait = 5000 - (Date.now() - last);
+      if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    }
+
     let payoutRef: string;
     try {
       if (!IS_PRODUCTION) {
@@ -207,13 +218,17 @@ serve(async (req) => {
 
     results.paid++;
 
-    // Notification OM uniquement : le Cash In requiert une validation manuelle
-    // du prestataire dans son app Orange Money → on le prévient immédiatement
+    // Enregistrer le timestamp du Cash In OM réussi (anti-doublon pour la prochaine itération)
+    if (payout.moyen_paiement === 'orange_money') {
+      omLastSentAt.set(phone, Date.now());
+    }
+
+    // Notification prestataire : Cash In OM direct (pas d'acceptation manuelle requise)
     if (payout.moyen_paiement === 'orange_money') {
       await sendPushToUser(supabase, payout.prestataire_id, {
-        title: 'Reversement reçu — action requise',
-        body: `Vous avez ${payout.montant} FCFA en attente. Ouvrez votre app Orange Money et acceptez le versement.`,
-        data: { type: 'om_cashin_pending', montant: payout.montant },
+        title: 'Reversement reçu ✅',
+        body: `${payout.montant} FCFA ont été envoyés sur votre Orange Money.`,
+        data: { type: 'om_cashin_done', montant: payout.montant },
         channelId: 'paiements',
       });
     }

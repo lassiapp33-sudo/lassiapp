@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { shopId, items, note, orderType, idempotencyKey, voiceNoteUrl } = await req.json()
+    const { shopId, items, note, orderType, idempotencyKey, voiceNoteUrl, paymentMethod } = await req.json()
     if (!shopId || !Array.isArray(items) || items.length === 0) {
       return new Response(JSON.stringify({ error: 'shopId et items requis' }), {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
@@ -339,8 +339,10 @@ Deno.serve(async (req) => {
       await admin.from('orders').update({ voice_note_url: voiceNoteUrl }).eq('id', orderId)
     }
 
-    // ⑨ Push au prestataire — best-effort, ne bloque pas la réponse au client
-    try {
+    // ⑨ Push au prestataire — uniquement pour les commandes cash (paiement immédiat).
+    // Pour Wave/OM, la confirmation de paiement vient du webhook-payment → double notif évitée.
+    const isCashOrder = !paymentMethod || paymentMethod === 'cash'
+    if (isCashOrder) try {
       const { data: shop } = await admin
         .from('shops')
         .select('merchant_id')
