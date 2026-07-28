@@ -25,7 +25,7 @@ export default function AnnonceModal({ annonce, nbRestantes, onFermer }: Props) 
             </View>
           )}
 
-          <Text style={s.emoji}>{annonce.icone}</Text>
+          {!!annonce.icone && <Text style={s.emoji}>{annonce.icone}</Text>}
           <Text style={s.title}>{annonce.titre}</Text>
           <Text style={s.body}>{annonce.corps}</Text>
 
