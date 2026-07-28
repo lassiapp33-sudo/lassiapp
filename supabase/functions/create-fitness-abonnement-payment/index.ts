@@ -169,11 +169,12 @@ Deno.serve(async (req) => {
         'X-Callback-Url': callbackUrl,
       },
       body: JSON.stringify({
-        code:     OM_MERCHANT_CODE,
-        name:     'LASSI',
-        amount:   { value: prixTotal, unit: 'XOF' },
-        validity: 900,
-        metadata: { pi_id: piId },
+        code:            OM_MERCHANT_CODE,
+        name:            'LASSI',
+        amount:          { value: prixTotal, unit: 'XOF' },
+        validity:        900,
+        metadata:        { pi_id: piId },
+        notificationUrl: callbackUrl,
       }),
     })
     const omData = await omRes.json()

@@ -8,11 +8,11 @@ import { isUUID } from '../_shared/validation.ts'
 
 const OM_WEBHOOK_SECRET = Deno.env.get('OM_WEBHOOK_SECRET') ?? ''
 
-interface OmNotification {
-  amount:         { value: number; unit: string }
-  transactionId?: string
-  status:         'SUCCESS' | 'FAILED' | string
-}
+// Mêmes statuts que webhook-payment — OM peut envoyer plusieurs variantes
+const OM_SUCCESS_STATUSES = new Set([
+  'SUCCESS', 'SUCCESSFUL', 'success', 'successful',
+  'PAYMENT_SUCCESS', 'COMPLETED', 'completed',
+])
 
 Deno.serve(async (req) => {
   function json(data: unknown, status = 200) {
@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   try {
     const url    = new URL(req.url)
     const piId   = url.searchParams.get('pi_id') ?? ''
-    const secret = url.searchParams.get('secret') ?? ''
+    const secret = url.searchParams.get('secret') ?? url.searchParams.get('amp;secret') ?? ''
 
     if (!piId || !isUUID(piId)) return json({ error: 'pi_id invalide' }, 400)
 
@@ -36,11 +36,14 @@ Deno.serve(async (req) => {
       console.error('webhook-fitness-abo: OM_WEBHOOK_SECRET non configuré')
       return json({ error: 'Configuration manquante' }, 503)
     }
-    if (secret !== OM_WEBHOOK_SECRET) return json({ error: 'Non autorisé' }, 401)
+    if (secret !== OM_WEBHOOK_SECRET) {
+      console.error('[webhook-fitness-abo] secret invalide')
+      return json({ error: 'Non autorisé' }, 401)
+    }
 
-    let notification: OmNotification
+    let notification: Record<string, unknown>
     try {
-      notification = await req.json() as OmNotification
+      notification = await req.json() as Record<string, unknown>
     } catch {
       return json({ error: 'Body invalide' }, 400)
     }
@@ -58,25 +61,66 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (!pi) return json({ error: 'Payment intent introuvable' }, 404)
-    if (pi.statut === 'completed') return json({ received: true }) // idempotent
 
-    if (notification.status === 'FAILED') {
-      await admin.from('payment_intents').update({ statut: 'failed' }).eq('id', piId)
+    // Idempotence : déjà traité
+    if (pi.statut === 'completed' || pi.statut === 'split_done') {
       return json({ received: true })
     }
-    if (notification.status !== 'SUCCESS') return json({ received: true })
+
+    const externalStatus = notification.status as string | undefined
+    const externalRef    = (notification.transactionId ?? notification.payToken ?? notification.txId) as string | undefined
+
+    console.log('[webhook-fitness-abo] reçu:', JSON.stringify({ piId, externalStatus, externalRef }))
+
+    // Échec côté OM
+    if (externalStatus === 'FAILED' || externalStatus === 'failed') {
+      await admin.from('payment_intents').update({ statut: 'failed', updated_at: new Date().toISOString() }).eq('id', piId)
+      return json({ received: true })
+    }
+
+    // Statut non reconnu → accuser réception sans traiter (OM ne retry pas en boucle)
+    if (!externalStatus || !OM_SUCCESS_STATUSES.has(externalStatus)) {
+      console.warn('[webhook-fitness-abo] statut inconnu:', externalStatus)
+      return json({ received: true })
+    }
 
     // Vérifier le montant
-    const reçu    = Math.round(Number(notification.amount?.value))
-    const attendu = Math.round(Number(pi.montant_total))
-    if (reçu !== attendu) {
+    const omAmount   = notification.amount as Record<string, unknown> | undefined
+    const rawAmount  = omAmount?.value ?? omAmount?.montant ?? notification.montant ?? notification.totalAmount
+    const reçu       = rawAmount !== undefined ? Math.round(Number(rawAmount)) : null
+    const attendu    = Math.round(Number(pi.montant_total))
+
+    if (reçu !== null && reçu !== attendu) {
       console.error('[webhook-fitness-abo] montant incohérent', { reçu, attendu, piId })
-      await admin.from('payment_intents').update({ statut: 'failed' }).eq('id', piId)
+      await admin.from('payment_intents')
+        .update({ statut: 'disputed', updated_at: new Date().toISOString() })
+        .eq('id', piId)
       return json({ received: true })
+    }
+
+    // Marquer confirmé puis appeler confirm_order_from_payment (flux standard)
+    // → met en split_done + insère dans payout_queue (reversement prestataire)
+    await admin.from('payment_intents').update({
+      statut:          'confirmed',
+      external_status: externalStatus,
+      external_ref:    externalRef ?? null,
+      confirmed_at:    new Date().toISOString(),
+      updated_at:      new Date().toISOString(),
+    }).eq('id', piId).eq('statut', 'initiated')
+
+    const { data: confirmResult, error: confirmErr } = await admin.rpc('confirm_order_from_payment', {
+      p_payment_intent_id: piId,
+    })
+
+    if (confirmErr) {
+      console.error('[webhook-fitness-abo] confirm_order_from_payment erreur:', confirmErr.message)
+      // Ne pas bloquer : activer quand même l'abonnement
     }
 
     // Activer l'abonnement
-    await activerAbonnement(admin, pi, notification.transactionId)
+    await activerAbonnement(admin, pi, externalRef)
+
+    console.log('[webhook-fitness-abo] abonnement activé, split:', JSON.stringify(confirmResult))
 
     return json({ received: true })
 
@@ -92,16 +136,21 @@ async function activerAbonnement(
   transactionId?: string,
 ) {
   const meta = (pi.metadata as Record<string, unknown>) ?? {}
-  const offreId   = meta.offre_id   as string
-  const offreNom  = meta.offre_nom  as string
+  const offreId    = meta.offre_id   as string
+  const offreNom   = meta.offre_nom  as string
   const dureeJours = Number(meta.duree_jours ?? 30)
 
   const dateAchat      = new Date()
   const dateExpiration = new Date(dateAchat.getTime() + dureeJours * 86_400_000)
 
-  await admin.from('payment_intents')
-    .update({ statut: 'completed', external_ref: transactionId ?? pi.id })
-    .eq('id', pi.id as string)
+  // Idempotence : si l'abonnement existe déjà (double webhook), ne pas dupliquer
+  const { data: existing } = await admin
+    .from('fitness_abonnements_clients')
+    .select('id')
+    .eq('payment_intent_id', pi.id as string)
+    .maybeSingle()
+
+  if (existing) return
 
   const { error } = await admin.from('fitness_abonnements_clients').insert({
     offre_id:          offreId,

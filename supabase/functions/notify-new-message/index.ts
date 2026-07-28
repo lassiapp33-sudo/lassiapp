@@ -42,6 +42,23 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Rate limit : 30 notifications/minute par expéditeur (anti-spam / anti-boucle)
+    const adminRl = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    )
+    const { data: rl } = await adminRl.rpc('check_rate_limit', {
+      p_key:            `notify-msg:${user.id}`,
+      p_max_attempts:   30,
+      p_window_seconds: 60,
+      p_block_seconds:  120,
+    })
+    if (rl?.allowed === false) {
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+
     const { conversationId, preview } = await req.json()
     if (!conversationId || !preview) {
       return new Response(JSON.stringify({ error: 'conversationId et preview requis' }), {

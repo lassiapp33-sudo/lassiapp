@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
     const omRes = await fetch(`${OM_BASE_URL}/api/eWallet/v4/qrcode`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${omToken}`, 'Content-Type': 'application/json', 'X-Callback-Url': callbackUrl },
-      body: JSON.stringify({ code: OM_MERCHANT_CODE, name: 'LASSI Livraison', amount: { value: devis.prix, unit: 'XOF' }, validity: 900, metadata: { pi_id: piId } }),
+      body: JSON.stringify({ code: OM_MERCHANT_CODE, name: 'LASSI Livraison', amount: { value: devis.prix, unit: 'XOF' }, validity: 900, metadata: { pi_id: piId }, notificationUrl: callbackUrl }),
     })
 
     if (!omRes.ok) { const e = await omRes.json(); throw new Error(`OM: ${e.message ?? JSON.stringify(e)}`) }
