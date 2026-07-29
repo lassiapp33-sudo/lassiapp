@@ -153,15 +153,21 @@ export default function UsersPage() {
             getUserStats().then(setStats).catch(() => {})
           } else if (payload.eventType === 'UPDATE') {
             const updated = payload.new as any
-            setProfiles(prev => prev.map(p => p.id === updated.id ? {
-              ...p,
-              name:      updated.name ?? p.name,
-              phone:     updated.phone ?? p.phone,
-              email:     updated.email ?? p.email,
-              role:      updated.role ?? p.role,
-              isAdmin:   updated.is_admin ?? p.isAdmin,
-              avatarUrl: updated.avatar_url ?? p.avatarUrl,
-            } : p))
+            // Compte auto-supprimé (anonymisé) → le retirer de la liste
+            if (updated.name === 'Compte supprimé') {
+              setProfiles(prev => prev.filter(p => p.id !== updated.id))
+              getUserStats().then(setStats).catch(() => {})
+            } else {
+              setProfiles(prev => prev.map(p => p.id === updated.id ? {
+                ...p,
+                name:      updated.name ?? p.name,
+                phone:     updated.phone ?? p.phone,
+                email:     updated.email ?? p.email,
+                role:      updated.role ?? p.role,
+                isAdmin:   updated.is_admin ?? p.isAdmin,
+                avatarUrl: updated.avatar_url ?? p.avatarUrl,
+              } : p))
+            }
           }
           setLastSync(new Date())
         },

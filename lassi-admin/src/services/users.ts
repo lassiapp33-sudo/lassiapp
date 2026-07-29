@@ -38,6 +38,7 @@ export async function getProfiles(search?: string, page = 0): Promise<AdminProfi
   let query = supabase
     .from('profiles')
     .select('id, name, phone, email, role, is_admin, avatar_url, created_at')
+    .not('name', 'eq', 'Compte supprimé')   // Exclure les comptes auto-supprimés (anonymisés)
     .order('created_at', { ascending: false })
     .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
@@ -122,16 +123,19 @@ export async function getUserStats(): Promise<{
     supabase
       .from('profiles')
       .select('id', { count: 'exact', head: true })
-      .eq('role', 'client'),
+      .eq('role', 'client')
+      .not('name', 'eq', 'Compte supprimé'),
     supabase
       .from('profiles')
       .select('id', { count: 'exact', head: true })
-      .eq('role', 'merchant'),
+      .eq('role', 'merchant')
+      .not('name', 'eq', 'Compte supprimé'),
     supabase.from('shops').select('id', { count: 'exact', head: true }),
     supabase
       .from('profiles')
       .select('id', { count: 'exact', head: true })
-      .gte('created_at', weekAgo.toISOString()),
+      .gte('created_at', weekAgo.toISOString())
+      .not('name', 'eq', 'Compte supprimé'),
   ])
 
   const totalClients   = clientsRes.count   ?? 0
