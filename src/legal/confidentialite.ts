@@ -6,8 +6,8 @@
  *     sénégalais et déclaré à la CDP (Commission de Protection des Données Personnelles).
  */
 
-export const VERSION = '1.1.0';
-export const DATE_MAJ = '11 juin 2026';
+export const VERSION = '1.2.0';
+export const DATE_MAJ = '29 juillet 2026';
 
 export interface Section {
   titre: string;
@@ -38,7 +38,9 @@ export const CONFIDENTIALITE_SECTIONS: Section[] = [
       "• Données d'utilisation (commandes, favoris, historique de navigation)\n" +
       "• Données techniques (type d'appareil, système d'exploitation, identifiant de notification push)\n\n" +
       'Données de paiement :\n' +
-      'Les transactions sont traitées par Wave et Orange Money. Nous ne collectons ni ne stockons vos informations bancaires ou codes secrets. Nous conservons uniquement les références et montants des transactions, à des fins de suivi et de comptabilité.',
+      'Les transactions sont traitées par Wave et Orange Money. Nous ne collectons ni ne stockons vos informations bancaires ou codes secrets. Nous conservons uniquement les références et montants des transactions, à des fins de suivi et de comptabilité.\n\n' +
+      'Pour les Prestataires — traitement des données financières :\n' +
+      "Lors de chaque opération de reversement (payout), les données suivantes sont transmises à l'opérateur de paiement concerné (Wave Sénégal ou Orange Money Sénégal) : numéro marchand du Prestataire, montant net reversé, référence de transaction LASSİ, et date de l'opération. Ces transmissions sont strictement nécessaires à l'exécution du virement et sont effectuées dans le respect des conditions générales et des exigences réglementaires de chaque opérateur. LASSİ conserve un historique de ces opérations à des fins comptables et de justification en cas de litige.",
   },
   {
     titre: '3. Comment nous utilisons vos données',
@@ -69,9 +71,10 @@ export const CONFIDENTIALITE_SECTIONS: Section[] = [
       'Nous ne vendons jamais vos données personnelles.\n\n' +
       'Nous partageons certaines données uniquement dans les cas suivants :\n' +
       "• Avec les autres utilisateurs, dans le cadre du service : un Prestataire voit le nom et la commande d'un Client qui commande chez lui ; un Client voit les informations publiques d'un Prestataire.\n" +
-      '• Avec les opérateurs de paiement (Wave, Orange Money) pour traiter les transactions.\n' +
+      "• Avec les opérateurs de paiement (Wave Sénégal, Orange Money Sénégal) pour traiter les transactions et opérer les reversements vers les Prestataires. Ces opérateurs appliquent leurs propres frais de service et conditions de traitement, indépendants de LASSİ.\n" +
       '• Avec nos prestataires techniques (hébergement Supabase, notifications), tenus à la confidentialité, uniquement pour faire fonctionner le service.\n' +
-      "• Avec les autorités, si la loi l'exige (réquisition judiciaire, obligation légale).",
+      "• Avec les autorités, si la loi l'exige (réquisition judiciaire, obligation légale).\n\n" +
+      "Pour les Prestataires : les données transmises à Wave ou Orange Money lors d'un reversement se limitent aux informations strictement nécessaires à l'exécution de l'opération (numéro marchand, montant, référence). Aucune donnée personnelle supplémentaire n'est communiquée à ces opérateurs sans votre consentement explicite.",
   },
   {
     titre: '6. Conservation des données',
