@@ -788,18 +788,6 @@ export const CATEGORIES: CatConfig[] = [
     subcatMode: 'multiple',
     subcats: [
       {
-        id: 'alimentation',
-        emoji: '🛒',
-        label: 'Alimentation / Boutique',
-        desc: 'Épicerie, mini-marché',
-      },
-      {
-        id: 'quincaillerie',
-        emoji: '🔧',
-        label: 'Quincaillerie',
-        desc: 'Outils, matériaux, bricolage',
-      },
-      {
         id: 'nexx_sow',
         emoji: '🥛',
         label: 'Nexx sow',
@@ -812,6 +800,18 @@ export const CATEGORIES: CatConfig[] = [
         label: 'Sombi ak Thiéré',
         desc: 'Sombi, thiéré, céréales traditionnelles',
         SvgIcon: IcoSombiThiere,
+      },
+      {
+        id: 'alimentation',
+        emoji: '🛒',
+        label: 'Alimentation / Boutique',
+        desc: 'Épicerie, mini-marché',
+      },
+      {
+        id: 'quincaillerie',
+        emoji: '🔧',
+        label: 'Quincaillerie',
+        desc: 'Outils, matériaux, bricolage',
       },
     ],
     renderIcon: (color, size = 24) =>
