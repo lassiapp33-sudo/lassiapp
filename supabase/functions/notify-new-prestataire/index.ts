@@ -51,13 +51,13 @@ Deno.serve(async (req) => {
     if (!shopId || !shopName) return fail('Paramètres manquants', 400);
 
     const categoryLabel = CATEGORY_LABELS[category] ?? category ?? 'Services';
-    const title = 'Nouveau prestataire !';
+    const title = 'Nouveau prestataire';
     const body  = `${shopName} vient de rejoindre LASSI — ${categoryLabel}`;
 
     // 1. Annonce in-app (cloche notifications côté clients)
     //    tag = shopId permet la navigation directe vers la vitrine au tap
     await sb.from('annonces').insert({
-      titre:     'Nouveau prestataire !',
+      titre:     'Nouveau prestataire',
       corps:     body,
       icone:     '',
       tag:       shopId,
