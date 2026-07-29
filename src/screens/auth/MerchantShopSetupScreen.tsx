@@ -7,6 +7,7 @@
  *   4. Horaires         — planning hebdomadaire (optionnel, peut être sauté)
  */
 import React, { useState } from 'react';
+import { Image as ExpoImage } from 'expo-image';
 import {
   View,
   Text,
@@ -284,7 +285,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
                     <sub.SvgIcon color={colors.white} />
                   </View>
                 ) : sub.imageUri ? (
-                  <Image source={sub.imageUri} style={styles.subcatImg} resizeMode="cover" />
+                  <ExpoImage source={sub.imageUri} style={styles.subcatImg} contentFit="cover" cachePolicy="memory-disk" transition={0} />
                 ) : (
                   <Text style={styles.subcatEmoji}>{sub.emoji}</Text>
                 )}

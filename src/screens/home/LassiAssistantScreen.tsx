@@ -12,6 +12,7 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, TOP_INSET, radius } from '../../theme';
@@ -261,7 +262,7 @@ function SearchChips({ onPress }: { onPress: (cat: CatMatch) => void }) {
           activeOpacity={0.78}
         >
           {c.imageUri ? (
-            <Image source={c.imageUri} style={styles.chipImg} resizeMode="cover" />
+            <ExpoImage source={c.imageUri} style={styles.chipImg} contentFit="cover" cachePolicy="memory-disk" transition={0} />
           ) : (
             <Text style={styles.chipEmoji}>{c.emoji}</Text>
           )}
@@ -337,7 +338,7 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
             const cleaned: ChatMsg[] = msgs.filter(
               (m: ChatMsg) =>
                 m.kind !== 'chips' &&
-                !(m.kind === 'bot' && m.text.startsWith('Salut ! Je suis Lassi')),
+                !(m.kind === 'bot' && m.text.startsWith('Salut, je suis Lassi')),
             );
             setMessages(cleaned.length > 0 ? cleaned : makeInitialMsgs());
           } else {
@@ -403,7 +404,7 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
               {
                 id: uid(),
                 kind: 'bot' as const,
-                text: `Je n'ai trouvé aucun ${intent.categorie?.label ?? ''}${loc} pour l'instant 🐝\nEssaie une autre zone ou regarde la carte !`,
+                text: `Je n'ai trouvé aucun ${intent.categorie?.label ?? ''}${loc} pour l'instant 🐝\nEssaie une autre zone ou regarde la carte.`,
               },
             ];
           }
@@ -430,7 +431,7 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
           {
             id: uid(),
             kind: 'bot' as const,
-            text: "Je n'ai pas bien compris 🐝\nEssaie \"coiffeur à Patte d'Oie\" ou pose une question sur l'app. Le service client peut aussi t'aider !",
+            text: "Je n'ai pas bien compris 🐝\nEssaie \"coiffeur à Patte d'Oie\" ou pose une question sur l'app. Le service client peut aussi t'aider.",
           },
           { id: uid(), kind: 'sc' as const },
         ]);
@@ -506,7 +507,7 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
         </View>
         <BotBubble
           text={
-            'Salut ! Je suis Lassi 🐝\nPose-moi ta question ou cherche un commerce près de toi !'
+            'Salut, je suis Lassi 🐝\nPose-moi ta question ou cherche un commerce près de toi.'
           }
         />
         <SearchChips onPress={cat => sendRef.current(cat.label)} />

@@ -27,6 +27,7 @@ function buildSubcats(catId: CatId): SubCat[] {
     label: sub.imageUri || sub.SvgIcon ? sub.label : `${sub.emoji} ${sub.label}`,
     imageUri: sub.imageUri,
     SvgIcon: sub.SvgIcon,
+    imageSize: sub.imageSize,
   }));
 }
 

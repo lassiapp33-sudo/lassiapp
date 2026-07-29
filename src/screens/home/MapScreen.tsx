@@ -11,6 +11,7 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { LassiMascotte, MASCOTTE_NOM } from '../../components/LassiMascotte';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
@@ -557,7 +558,7 @@ export default function MapScreen({
               activeOpacity={0.8}
             >
               {f.imageUri ? (
-                <Image source={f.imageUri} style={styles.filterIco} resizeMode="cover" />
+                <ExpoImage source={f.imageUri} style={styles.filterIco} contentFit="cover" cachePolicy="memory-disk" transition={0} />
               ) : f.emoji ? (
                 <Text style={styles.filterEmoji}>{f.emoji}</Text>
               ) : null}

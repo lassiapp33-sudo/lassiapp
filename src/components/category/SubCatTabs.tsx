@@ -8,6 +8,7 @@ export interface SubCat {
   label: string;
   imageUri?: number; // require('../../../assets/xxx.png')
   SvgIcon?: React.FC<{ color: string }>; // composant SVG inline
+  imageSize?: number; // taille custom (défaut 36)
 }
 
 interface Props {
@@ -36,7 +37,7 @@ export default function SubCatTabs({ tabs, active, onChange }: Props) {
             {tab.imageUri || tab.SvgIcon ? (
               <View style={styles.row}>
                 {tab.imageUri ? (
-                  <Image source={tab.imageUri} style={styles.ico} contentFit="contain" cachePolicy="memory" />
+                  <Image source={tab.imageUri} style={[styles.ico, tab.imageSize ? { width: tab.imageSize, height: tab.imageSize } : null]} contentFit="contain" cachePolicy="memory-disk" transition={0} />
                 ) : tab.SvgIcon ? (
                   <tab.SvgIcon color={on ? colors.bg : colors.muted} />
                 ) : null}

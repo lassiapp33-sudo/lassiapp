@@ -188,7 +188,8 @@ export const getBadgesActifs = async (prestataireId: string): Promise<Recompense
     .eq('prestataire_id', prestataireId)
     .eq('est_actif', true)
     .or(`valide_jusqu_a.is.null,valide_jusqu_a.gt.${now}`)
-    .order('rang');
+    .order('rang')
+    .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return data ?? [];
 };
@@ -216,7 +217,8 @@ export const getBadgesActifsBatch = async (
     .in('prestataire_id', ids)
     .eq('est_actif', true)
     .or(`valide_jusqu_a.is.null,valide_jusqu_a.gt.${now}`)
-    .order('rang');
+    .order('rang')
+    .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
 
   const best: Record<string, RecompenseAttribuee> = {};

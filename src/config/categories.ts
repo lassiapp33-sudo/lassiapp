@@ -6,9 +6,18 @@
 import React from 'react';
 import Svg, { Path, Circle, Rect, Ellipse } from 'react-native-svg';
 
-const IMG_SOUPE = require('../../assets/soupe.png');
-const IMG_JUS = require('../../assets/jus.png');
-const IMG_SNACK = require('../../assets/snack.png');
+const IMG_SOUPE      = require('../../assets/soupe_icon.webp');
+const IMG_NEXX_SOW   = require('../../assets/nexx_sow.webp');
+const IMG_JUS        = require('../../assets/jus_icon.webp');
+const IMG_SNACK      = require('../../assets/snack_icon.png');
+const IMG_BURGER     = require('../../assets/burger_icon.png');
+const IMG_COIFFEUR_H = require('../../assets/coiffeur_h.webp');
+const IMG_COIFFEUR_F = require('../../assets/coiffeur_f.webp');
+const IMG_MALIBU     = require('../../assets/malibu_icon.webp');
+const IMG_DIBITERI   = require('../../assets/dibiteri_icon.webp');
+const IMG_SERAS_IMG  = require('../../assets/seras_icon.webp');
+const IMG_NDEIKI     = require('../../assets/ndeiki_icon.webp');
+const IMG_TANGANA    = require('../../assets/tangana_icon.webp');
 
 // Reproduction vectorielle de coiffeur_homme.png — homme qui se coiffe
 const IcoCoiffeurHomme: React.FC<{ color: string }> = () =>
@@ -433,56 +442,6 @@ const IcoFastfood: React.FC<{ color: string }> = () =>
     React.createElement(Ellipse, { cx: 34, cy: 10, rx: 2, ry: 1, fill: '#F5DEB3' }),
   );
 
-const IcoDibiterie: React.FC<{ color: string }> = () =>
-  React.createElement(Svg, { width: 36, height: 36, viewBox: '0 0 56 56' },
-    React.createElement(Path, {
-      d: 'M 16 42 L 38 16', stroke: '#F5F5F5', strokeWidth: 6, strokeLinecap: 'round',
-    }),
-    React.createElement(Circle, { cx: 13, cy: 45, r: 6, fill: '#F5F5F5' }),
-    React.createElement(Circle, { cx: 19, cy: 39, r: 5, fill: '#F5F5F5' }),
-    React.createElement(Circle, { cx: 37, cy: 19, r: 5, fill: '#F5F5F5' }),
-    React.createElement(Circle, { cx: 43, cy: 13, r: 6, fill: '#F5F5F5' }),
-    React.createElement(Path, {
-      d: 'M 22 30 C 18 24 20 16 28 12 C 36 8 44 12 46 20 C 48 28 44 36 36 38 C 28 40 22 36 22 30 Z',
-      fill: '#8B3A10', opacity: 0.9,
-    }),
-    React.createElement(Path, {
-      d: 'M 28 16 L 22 34 M 35 13 L 29 31',
-      stroke: '#4A1A04', strokeWidth: 2.5, strokeLinecap: 'round', opacity: 0.8,
-    }),
-    React.createElement(Path, {
-      d: 'M 30 14 C 37 14 43 19 44 25',
-      stroke: '#C05018', strokeWidth: 2, fill: 'none', strokeLinecap: 'round', opacity: 0.6,
-    }),
-  );
-
-const IcoSeras: React.FC<{ color: string }> = () =>
-  React.createElement(Svg, { width: 36, height: 36, viewBox: '0 0 60 56' },
-    React.createElement(Path, {
-      d: 'M 4 50 C 6 46 10 46 12 50 C 14 46 18 46 20 50 C 22 46 26 46 28 50 C 30 46 34 46 36 50',
-      stroke: '#FF6D00', strokeWidth: 4, fill: 'none', strokeLinecap: 'round',
-    }),
-    React.createElement(Path, {
-      d: 'M 10 24 C 10 14 18 9 30 9 C 42 9 50 14 50 24 C 50 34 42 38 30 38 C 18 38 10 34 10 24 Z',
-      fill: '#C87028',
-    }),
-    React.createElement(Path, { d: 'M 50 24 L 58 14 L 53 24 L 58 34 Z', fill: '#8A3A10' }),
-    React.createElement(Path, {
-      d: 'M 12 28 C 14 36 22 40 30 39 C 38 38 48 34 50 28',
-      stroke: '#E8943C', strokeWidth: 4, fill: 'none', strokeLinecap: 'round',
-    }),
-    React.createElement(Path, {
-      d: 'M 10 24 C 10 14 16 9 22 10 C 16 14 14 19 14 24 C 14 29 16 34 22 38 C 16 37 10 34 10 24 Z',
-      fill: '#7A3010',
-    }),
-    React.createElement(Path, {
-      d: 'M 32 11 L 26 37 M 40 11 L 34 37',
-      stroke: '#3A1004', strokeWidth: 2.5, strokeLinecap: 'round', opacity: 0.8,
-    }),
-    React.createElement(Circle, { cx: 15, cy: 21, r: 3.5, fill: '#1A0A04' }),
-    React.createElement(Circle, { cx: 16.5, cy: 19.5, r: 1.2, fill: '#FFF', opacity: 0.9 }),
-  );
-
 // ─── Fruiterie ─────────────────────────────────────────────────────────────────
 
 const IcoFruits: React.FC<{ color: string }> = () =>
@@ -560,86 +519,6 @@ const IcoArtsMartaux: React.FC<{ color: string }> = () =>
       stroke: '#B71C1C', strokeWidth: 2, fill: 'none', strokeLinecap: 'round',
     }),
     React.createElement(Ellipse, { cx: 22, cy: 24, rx: 5, ry: 7, fill: '#EF5350', opacity: 0.5 }),
-  );
-
-// Reproduction vectorielle de tangana.png — baguette de pain avec incisions
-const IcoTangana: React.FC<{ color: string }> = () =>
-  React.createElement(
-    Svg,
-    { width: 36, height: 36, viewBox: '0 0 36 36' },
-    // Ombre portée
-    React.createElement(Ellipse, { cx: 18, cy: 28, rx: 13, ry: 2, fill: '#9A5E10', opacity: 0.25 }),
-    // Corps de la baguette (allongé, bombé)
-    React.createElement(Path, {
-      d: 'M 5 20 C 4 13 8 10 18 10 C 28 10 32 13 31 20 C 32 27 28 26 18 26 C 8 26 4 27 5 20 Z',
-      fill: '#D4922A',
-    }),
-    // Croûte du dessous (plus foncée)
-    React.createElement(Path, {
-      d: 'M 6 23 C 6 26 10 26 18 26 C 26 26 30 26 30 23',
-      stroke: '#A86820',
-      strokeWidth: 3.5,
-      fill: 'none',
-      strokeLinecap: 'round',
-    }),
-    // 3 incisions diagonales caractéristiques
-    React.createElement(Path, { d: 'M 10 13 L 8 22', stroke: '#7A4A0C', strokeWidth: 1.8, strokeLinecap: 'round', opacity: 0.8 }),
-    React.createElement(Path, { d: 'M 18 12 L 16 22', stroke: '#7A4A0C', strokeWidth: 1.8, strokeLinecap: 'round', opacity: 0.8 }),
-    React.createElement(Path, { d: 'M 26 13 L 24 22', stroke: '#7A4A0C', strokeWidth: 1.8, strokeLinecap: 'round', opacity: 0.8 }),
-    // Reflet doré sur le dessus
-    React.createElement(Path, {
-      d: 'M 8 14 C 13 11 23 11 28 14',
-      stroke: '#F0C050',
-      strokeWidth: 1.5,
-      fill: 'none',
-      strokeLinecap: 'round',
-      opacity: 0.65,
-    }),
-  );
-
-// Reproduction vectorielle de ndeki.png — sandwich / petit pain garni
-const IcoNdeki: React.FC<{ color: string }> = () =>
-  React.createElement(
-    Svg,
-    { width: 36, height: 36, viewBox: '0 0 36 36' },
-    // Pain du bas
-    React.createElement(Path, {
-      d: 'M 5 22 C 5 18 8 17 18 17 C 28 17 31 18 31 22 C 31 27 28 29 18 29 C 8 29 5 27 5 22 Z',
-      fill: '#C88020',
-    }),
-    // Garniture viande (couche épaisse rouge-brun)
-    React.createElement(Path, {
-      d: 'M 6 19 C 7 15 10 14 18 14 C 26 14 29 15 30 19',
-      stroke: '#8B2A0E',
-      strokeWidth: 5,
-      fill: 'none',
-      strokeLinecap: 'round',
-    }),
-    // Légumes verts sur la garniture
-    React.createElement(Path, {
-      d: 'M 10 17 L 13 15 M 17 15 L 20 14 M 24 16 L 26 17',
-      stroke: '#3A8020',
-      strokeWidth: 1.8,
-      strokeLinecap: 'round',
-    }),
-    // Chapeau du pain (demi-oval bombé)
-    React.createElement(Path, {
-      d: 'M 6 16 C 5 9 9 7 18 7 C 27 7 31 9 30 16 C 29 18 26 17 18 17 C 10 17 7 18 6 16 Z',
-      fill: '#D4A030',
-    }),
-    // Reflet brillant sur le chapeau
-    React.createElement(Path, {
-      d: 'M 9 10 C 13 8 23 8 27 10',
-      stroke: '#F0C858',
-      strokeWidth: 1.5,
-      fill: 'none',
-      strokeLinecap: 'round',
-      opacity: 0.7,
-    }),
-    // Graines de sésame
-    React.createElement(Ellipse, { cx: 15, cy: 11, rx: 1.2, ry: 0.7, fill: '#F0C858' }),
-    React.createElement(Ellipse, { cx: 18, cy: 10, rx: 1.2, ry: 0.7, fill: '#F0C858' }),
-    React.createElement(Ellipse, { cx: 21, cy: 11, rx: 1.2, ry: 0.7, fill: '#F0C858' }),
   );
 
 // Reproduction vectorielle de malibu.jpg — poisson braisé entier avec marques de grill
@@ -750,6 +629,7 @@ const IcoFruitsMarines: React.FC<{ color: string }> = () =>
     React.createElement(Ellipse, { cx: 18, cy: 19, rx: 2.5, ry: 1, fill: '#FFB870', opacity: 0.5 }),
   );
 
+
 export type CatId = 'stores' | 'tangana' | 'food' | 'hair' | 'sport' | 'bakery' | 'fruiterie';
 
 export type ShopType = 'products' | 'services' | 'memberships' | 'terrains';
@@ -761,6 +641,7 @@ export interface SubcatOption {
   desc: string;
   imageUri?: number;
   SvgIcon?: React.FC<{ color: string }>;
+  imageSize?: number;
   /** true → vitrine affiche la réservation de créneaux (TerrainCreneaux) */
   hasSlots?: boolean;
 }
@@ -792,7 +673,8 @@ export const CATEGORIES: CatConfig[] = [
         emoji: '🥛',
         label: 'Nexx sow',
         desc: 'Lait frais, produits laitiers',
-        SvgIcon: IcoNexxSow,
+        imageUri: IMG_NEXX_SOW,
+        imageSize: 60,
       },
       {
         id: 'sombi_ak_thiere',
@@ -845,14 +727,16 @@ export const CATEGORIES: CatConfig[] = [
         emoji: '☕',
         label: 'Tangana',
         desc: 'Petit-déjeuner, café Touba, thé, pain',
-        SvgIcon: IcoTangana,
+        imageUri: IMG_TANGANA,
+        imageSize: 50,
       },
       {
         id: 'ndeki',
         emoji: '🍲',
         label: 'Ndéki (Mama)',
         desc: 'Repas du midi, plats cuisinés',
-        SvgIcon: IcoNdeki,
+        imageUri: IMG_NDEIKI,
+        imageSize: 68,
       },
       {
         id: 'soupe',
@@ -860,6 +744,7 @@ export const CATEGORIES: CatConfig[] = [
         label: 'Soupe',
         desc: 'Soupes, potages, bouillons maison',
         imageUri: IMG_SOUPE,
+        imageSize: 44,
       },
     ],
     renderIcon: (color, size = 24) =>
@@ -929,16 +814,17 @@ export const CATEGORIES: CatConfig[] = [
         desc: 'Plats complets, sur place / à emporter',
         SvgIcon: IcoRestaurant,
       },
-      { id: 'fastfood', emoji: '🍔', label: 'Fast-food', desc: 'Burgers, shawarma, sandwichs', SvgIcon: IcoFastfood },
+      { id: 'fastfood', emoji: '🍔', label: 'Fast-food', desc: 'Burgers, shawarma, sandwichs', imageUri: IMG_BURGER, imageSize: 52 },
       {
         id: 'malibu',
         emoji: '🍹',
         label: 'Malibu',
         desc: 'Cocktails, boissons exotiques, ambiance',
-        SvgIcon: IcoMalibu,
+        imageUri: IMG_MALIBU,
+        imageSize: 52,
       },
-      { id: 'dibiterie', emoji: '🥩', label: 'Dibiterie', desc: 'Viande grillée, thiébou guinar', SvgIcon: IcoDibiterie },
-      { id: 'seras', emoji: '🔥', label: 'Séraas', desc: 'Poisson braisé, fruits de mer' },
+      { id: 'dibiterie', emoji: '🥩', label: 'Dibiterie', desc: 'Viande grillée, thiébou guinar', imageUri: IMG_DIBITERI, imageSize: 56 },
+      { id: 'seras', emoji: '🔥', label: 'Séraas', desc: 'Poisson braisé, fruits de mer', imageUri: IMG_SERAS_IMG, imageSize: 56 },
       {
         id: 'jus',
         emoji: '🧃',
@@ -952,6 +838,7 @@ export const CATEGORIES: CatConfig[] = [
         label: 'Snack & Gourmandise',
         desc: 'Gâteaux, viennoiseries, snacks',
         imageUri: IMG_SNACK,
+        imageSize: 50,
       },
     ],
     renderIcon: (color, size = 24) =>
@@ -1021,13 +908,16 @@ export const CATEGORIES: CatConfig[] = [
         emoji: '💈',
         label: 'Hommes',
         desc: 'Coupe, barbe, soins homme',
-        SvgIcon: IcoCoiffeurHomme,
+        imageUri: IMG_COIFFEUR_H,
+        imageSize: 56,
       },
       {
         id: 'femmes',
         emoji: '💇‍♀️',
         label: 'Femmes',
         desc: 'Tresses, tissage, soins, brushing',
+        imageUri: IMG_COIFFEUR_F,
+        imageSize: 44,
       },
       {
         id: 'esthetique',
