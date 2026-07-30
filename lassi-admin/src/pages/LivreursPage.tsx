@@ -288,7 +288,7 @@ function ConfirmVersementModal({ solde, onClose, onConfirm }: ConfirmVersementPr
               <span className="text-white font-medium">{formatMontant(solde.montantBrut)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted">Commission LASSİ (15%)</span>
+              <span className="text-muted">Commission LASSİ (10%)</span>
               <span className="text-red-400">− {formatMontant(solde.commissionLassi)}</span>
             </div>
             <div className="flex justify-between border-t border-border pt-2">
@@ -735,7 +735,7 @@ export default function LivreursPage() {
                 <div className="bg-surface border border-border rounded-xl px-5 py-4">
                   <div className="text-xs text-muted mb-1">Net à verser aux livreurs</div>
                   <div className="text-accent font-bold text-xl">{formatMontant(totalNet)}</div>
-                  <div className="text-xs text-muted mt-1">après commission LASSİ 15%</div>
+                  <div className="text-xs text-muted mt-1">après commission LASSİ 10%</div>
                 </div>
               </div>
             )
@@ -749,7 +749,7 @@ export default function LivreursPage() {
                   <th className="text-left px-5 py-3 font-medium">Livreur</th>
                   <th className="text-right px-5 py-3 font-medium">Courses</th>
                   <th className="text-right px-5 py-3 font-medium">Montant brut</th>
-                  <th className="text-right px-5 py-3 font-medium">Commission (15%)</th>
+                  <th className="text-right px-5 py-3 font-medium">Commission (10%)</th>
                   <th className="text-right px-5 py-3 font-medium">Net à verser</th>
                   <th className="px-5 py-3" />
                 </tr>

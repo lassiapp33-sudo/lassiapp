@@ -156,9 +156,12 @@ Deno.serve(async (req) => {
     if (!OM_WEBHOOK_SECRET) throw new Error('OM_WEBHOOK_SECRET non configuré')
     const omToken = await getOmToken()
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    // Utiliser webhook-payment (URL fixe enregistrée dans le dashboard OM)
+    // OM ignore le notificationUrl dynamique et appelle toujours l'URL du dashboard.
     const callbackUrl =
-      `${supabaseUrl}/functions/v1/webhook-fitness-abonnement` +
-      `?pi_id=${encodeURIComponent(piId)}` +
+      `${supabaseUrl}/functions/v1/webhook-payment` +
+      `?source=om` +
+      `&pi_id=${encodeURIComponent(piId)}` +
       `&secret=${encodeURIComponent(OM_WEBHOOK_SECRET)}`
 
     const omRes = await fetch(`${OM_BASE_URL}/api/eWallet/v4/qrcode`, {

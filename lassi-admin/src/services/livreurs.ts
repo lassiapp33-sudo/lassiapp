@@ -240,7 +240,7 @@ export function getSoldesActuels(
   return livreurs
     .map(l => {
       const stats     = byLivreur.get(l.id) ?? { nb: 0, brut: 0 }
-      const commission = Math.round(stats.brut * 0.15)
+      const commission = Math.round(stats.brut * 0.10)
       return {
         livreurId:          l.id,
         nomComplet:         l.nomComplet,

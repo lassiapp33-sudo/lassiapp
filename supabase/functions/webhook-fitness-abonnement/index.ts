@@ -172,8 +172,8 @@ async function activerAbonnement(
   // Notification in-app au client
   await admin.from('notifications').insert({
     user_id: pi.client_id,
-    type:    'pay',
-    title:   '🏋️ Abonnement activé !',
+    type:    'payment',
+    title:   '🏋️ Abonnement activé',
     body:    `Ton abonnement « ${offreNom} » est actif jusqu'au ${dateExpiration.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`,
     data:    { type: 'fitness_abonnement' },
   }).catch(() => null)

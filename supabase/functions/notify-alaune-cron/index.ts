@@ -44,25 +44,35 @@ serve(async (req) => {
     const title = '✨ Nouveautés À la une !';
     const body  = `${count} offre${count > 1 ? 's' : ''} vous attend${count > 1 ? 'ent' : ''} sur LASSI. Découvrez-les maintenant.`;
 
-    // 2. Annonce in-app pour la cloche de notifications
-    await sb.from('annonces').insert({
-      titre:     'Nouveautés À la une !',
-      corps:     body,
-      icone:     '✨',
-      tag:       'a_la_une_feed',
-      audience:  'clients',
-      expire_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h
-    });
-
-    // 3. Récupérer tous les clients et leurs tokens push
-    const { data: clients } = await sb
+    // 2. Récupérer tous les clients
+    const { data: clients, error: clientErr } = await sb
       .from('profiles')
       .select('id')
       .eq('role', 'client');
 
+    if (clientErr) throw new Error(clientErr.message);
+
     const clientIds = (clients ?? []).map(r => r.id as string);
     if (clientIds.length === 0) return ok({ sent: false, reason: 'Aucun client.' });
 
+    // 3. Insérer une notification individuelle par client (table notifications)
+    //    → déclenche Realtime + persistant dans la boîte même si le client est inactif
+    const notifRows = clientIds.map(userId => ({
+      user_id: userId,
+      type:    'ann',
+      title,
+      body,
+      data:    { type: 'a_la_une_feed', target_id: 'a_la_une_feed' },
+      is_read: false,
+    }));
+
+    // Insérer par lots de 500 pour éviter les timeouts
+    const INSERT_BATCH = 500;
+    for (let i = 0; i < notifRows.length; i += INSERT_BATCH) {
+      await sb.from('notifications').insert(notifRows.slice(i, i + INSERT_BATCH));
+    }
+
+    // 4. Récupérer les tokens push des clients
     const { data: tokenRows } = await sb
       .from('push_tokens')
       .select('token')
@@ -72,9 +82,9 @@ serve(async (req) => {
       .map(r => r.token as string)
       .filter(t => t.startsWith('ExponentPushToken[') || t.startsWith('ExpoPushToken['));
 
-    if (pushTokens.length === 0) return ok({ sent: false, reason: 'Aucun token push.' });
+    if (pushTokens.length === 0) return ok({ sent: true, notifsSent: clientIds.length, pushSent: 0, reason: 'Aucun token push.' });
 
-    // 4. Envoi en lots de 100
+    // 5. Envoi push en lots de 100 (limite Expo Push API)
     const BATCH_SIZE = 100;
     let totalPushed  = 0;
 
@@ -113,7 +123,7 @@ serve(async (req) => {
       totalPushed += batch.length;
     }
 
-    return ok({ sent: true, totalPushed, activeBlocs: count });
+    return ok({ sent: true, notifsSent: clientIds.length, pushSent: totalPushed, activeBlocs: count });
 
   } catch (e) {
     console.error('[notify-alaune-cron]', e);

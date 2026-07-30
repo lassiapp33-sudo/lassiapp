@@ -65,17 +65,10 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (!sub) return json({ error: 'Aucun abonnement Offre du Quartier actif trouvé' }, 404)
-    if (sub.all_products) {
-      return json({ error: 'Cet abonnement couvre toute la vitrine — pas de sélection individuelle' }, 400)
-    }
 
-    // ⑤ Respecter le quota d'origine (nombre de slots achetés)
-    const currentIds = (sub.product_ids as string[] | null) ?? []
-    const maxProducts = Math.max(1, currentIds.length)
+    // Pas de cap strict : si allProducts=true, tout est éligible.
+    // Si allProducts=false, on garde le quota d'origine (slots achetés).
     const uniqueIds = Array.from(new Set(productIds as string[]))
-    if (uniqueIds.length > maxProducts) {
-      return json({ error: `Maximum ${maxProducts} produit(s) pour cet abonnement` }, 400)
-    }
 
     // ⑥ Vérifier que tous les produits appartiennent à la boutique
     const { data: ownedProducts } = await admin
@@ -88,17 +81,22 @@ Deno.serve(async (req) => {
       return json({ error: "Un ou plusieurs produits n'appartiennent pas à votre boutique" }, 400)
     }
 
-    // ⑦ Mettre à jour l'abonnement
+    // ⑦ Mettre à jour l'abonnement (passe all_products à false si sélection précise)
     const { error: subError } = await admin
       .from('visibility_subscriptions')
-      .update({ product_id: uniqueIds[0] ?? null, product_ids: uniqueIds })
+      .update({ product_id: uniqueIds[0] ?? null, product_ids: uniqueIds, all_products: false })
       .eq('id', sub.id)
     if (subError) throw subError
 
     // ⑧ Synchroniser shops.featured_product_ids
     const { error: shopError } = await admin
       .from('shops')
-      .update({ featured_product_id: uniqueIds[0] ?? null, featured_product_ids: uniqueIds })
+      .update({
+        featured_product_id:   uniqueIds[0] ?? null,
+        featured_product_ids:  uniqueIds,
+        featured_all_products: false,
+        is_featured:           true,
+      })
       .eq('id', shop.id)
     if (shopError) throw shopError
 

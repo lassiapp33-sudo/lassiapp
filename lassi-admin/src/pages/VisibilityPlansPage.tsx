@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Eye, Save, Check, X, ToggleLeft, ToggleRight, Clock, CheckCircle2, AlertCircle, Megaphone, TrendingUp } from 'lucide-react'
+import { Eye, Save, Check, X, ToggleLeft, ToggleRight, Clock, CheckCircle2, AlertCircle, Megaphone, TrendingUp, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -74,8 +74,10 @@ export default function VisibilityPlansPage() {
   const [loadingAds,    setLoadingAds]    = useState(true)
   const [loadingSubs,   setLoadingSubs]   = useState(true)
 
-  const [globalError, setGlobalError] = useState<string | null>(null)
-  const [subsError,   setSubsError]   = useState<string | null>(null)
+  const [globalError,  setGlobalError]  = useState<string | null>(null)
+  const [subsError,    setSubsError]    = useState<string | null>(null)
+  const [deletingAll,  setDeletingAll]  = useState(false)
+  const [deleteError,  setDeleteError]  = useState<string | null>(null)
 
   // ── Chargement ───────────────────────────────────────────────────────────────
 
@@ -206,6 +208,19 @@ export default function VisibilityPlansPage() {
 
   const hasDirty = [...quartierPlans, ...boostPlans, ...adPacks].some(p => p.dirty)
 
+  async function deleteAllSubs() {
+    if (!window.confirm('Supprimer tout l\'historique des achats ? Cette action est irréversible.')) return
+    setDeletingAll(true)
+    setDeleteError(null)
+    const { error } = await supabase.from('visibility_subscriptions').delete().not('id', 'is', null)
+    if (error) {
+      setDeleteError(error.message)
+    } else {
+      setSubs([])
+    }
+    setDeletingAll(false)
+  }
+
   // Stats
   const totalActive  = subs.filter(s => s.status === 'active').length
   const totalRevenue = subs.filter(s => s.status === 'active').reduce((a, s) => a + s.amount, 0)
@@ -281,10 +296,26 @@ export default function VisibilityPlansPage() {
       )}
 
       {/* ── Historique souscriptions ─────────────────────────────────────── */}
-      <Section icon={<CheckCircle2 size={16} />} title="Historique des achats" subtitle="Toutes les souscriptions payées">
-        {subsError && (
+      <Section
+        icon={<CheckCircle2 size={16} />}
+        title="Historique des achats"
+        subtitle="Toutes les souscriptions payées"
+        action={
+          <button
+            onClick={deleteAllSubs}
+            disabled={deletingAll || subs.length === 0}
+            className="flex items-center gap-2 bg-danger/10 text-danger border border-danger/30 hover:bg-danger/20
+                       px-3 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {deletingAll
+              ? <><div className="w-3 h-3 border-2 border-danger border-t-transparent rounded-full animate-spin" /> Suppression…</>
+              : <><Trash2 size={13} /> Supprimer tout</>}
+          </button>
+        }
+      >
+        {(subsError || deleteError) && (
           <div className="flex items-center gap-2 bg-danger/10 border border-danger/30 rounded-xl px-4 py-3 mb-4">
-            <X size={16} className="text-danger" /><span className="text-danger text-sm">{subsError}</span>
+            <X size={16} className="text-danger" /><span className="text-danger text-sm">{subsError ?? deleteError}</span>
           </div>
         )}
         <div className="bg-surface border border-border rounded-xl overflow-hidden">
@@ -470,17 +501,20 @@ function AdPackCard({ pack, onChange, onSave }: {
 
 // ─── Helpers UI ───────────────────────────────────────────────────────────────
 
-function Section({ icon, title, subtitle, children }: {
-  icon: React.ReactNode; title: string; subtitle: string; children: React.ReactNode
+function Section({ icon, title, subtitle, children, action }: {
+  icon: React.ReactNode; title: string; subtitle: string; children: React.ReactNode; action?: React.ReactNode
 }) {
   return (
     <section className="space-y-4">
-      <div className="flex items-center gap-2">
-        <span className="text-accent">{icon}</span>
-        <div>
-          <h2 className="text-white font-semibold text-sm">{title}</h2>
-          <p className="text-muted text-xs">{subtitle}</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-accent">{icon}</span>
+          <div>
+            <h2 className="text-white font-semibold text-sm">{title}</h2>
+            <p className="text-muted text-xs">{subtitle}</p>
+          </div>
         </div>
+        {action}
       </div>
       {children}
     </section>

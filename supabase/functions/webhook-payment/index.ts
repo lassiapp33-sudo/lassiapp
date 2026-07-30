@@ -172,6 +172,60 @@ serve(async (req) => {
       }
     }
 
+    // Abonnement fitness : payment_intent sans order_id ni reservation_id
+    // OM appelle toujours l'URL du dashboard (webhook-payment), pas le notificationUrl dynamique.
+    if (result?.ok && !result?.already_processed && !result?.disputed
+        && !result?.order_id && !result?.reservation_id) {
+      try {
+        const { data: piData } = await supabase
+          .from('payment_intents')
+          .select('metadata, client_id, prestataire_id, montant_total')
+          .eq('id', piId)
+          .maybeSingle();
+
+        if (piData?.metadata) {
+          const meta        = piData.metadata as Record<string, unknown>;
+          const offreId     = meta.offre_id   as string;
+          const offreNom    = meta.offre_nom   as string;
+          const dureeJours  = Number(meta.duree_jours ?? 30);
+          const dateAchat   = new Date();
+          const dateExp     = new Date(dateAchat.getTime() + dureeJours * 86_400_000);
+
+          const { data: existingAbo } = await supabase
+            .from('fitness_abonnements_clients')
+            .select('id')
+            .eq('payment_intent_id', piId)
+            .maybeSingle();
+
+          if (!existingAbo) {
+            await supabase.from('fitness_abonnements_clients').insert({
+              offre_id:          offreId,
+              client_id:         piData.client_id,
+              prestataire_id:    piData.prestataire_id,
+              nom_offre:         offreNom,
+              prix_paye:         piData.montant_total,
+              date_achat:        dateAchat.toISOString(),
+              date_expiration:   dateExp.toISOString(),
+              statut:            'actif',
+              payment_intent_id: piId,
+            });
+
+            await supabase.from('notifications').insert({
+              user_id: piData.client_id,
+              type:    'payment',
+              title:   '🏋️ Abonnement activé',
+              body:    `Ton abonnement « ${offreNom} » est actif jusqu\'au ${dateExp.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`,
+              data:    { type: 'fitness_abonnement' },
+            }).catch(() => null);
+
+            console.log('[webhook-payment] fitness abonnement activé pi', piId, 'client', piData.client_id);
+          }
+        }
+      } catch (fitErr) {
+        console.error('[webhook-payment] fitness activation erreur:', fitErr instanceof Error ? fitErr.message : fitErr);
+      }
+    }
+
     // Orange attend toujours 200 (sinon elle retry en boucle)
     return new Response('OK', { status: 200 });
   }

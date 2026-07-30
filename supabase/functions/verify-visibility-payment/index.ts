@@ -94,16 +94,33 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
-    // ③ Charger l'abonnement avec le plan associé
-    const { data: sub } = await admin
+    // ③ Charger l'abonnement — SELECT explicite sans FK join (plan_id peut être NULL pour annonce)
+    const { data: sub, error: subFetchError } = await admin
       .from('visibility_subscriptions')
-      .select('*, plan:plan_id(duration_days, label)')
+      .select('id, shop_id, merchant_id, status, offer_type, amount, plan_id, plan_duration_days, product_ids, product_id, all_products, transaction_id, metadata')
       .eq('id', subId)
       .maybeSingle()
 
+    if (subFetchError) {
+      console.error('OM webhook: erreur SELECT abonnement —', subId, JSON.stringify(subFetchError))
+      return json({ error: 'Erreur lecture abonnement' }, 500)
+    }
     if (!sub) {
       console.error('OM webhook: abonnement introuvable —', subId)
       return json({ error: 'Abonnement introuvable' }, 404)
+    }
+
+    // Charger le label du plan séparément (seulement si plan_id non null)
+    let planLabel = ''
+    let planDurationFromPlan: number | null = null
+    if (sub.plan_id) {
+      const { data: plan } = await admin
+        .from('visibility_plans')
+        .select('label, duration_days')
+        .eq('id', sub.plan_id)
+        .maybeSingle()
+      planLabel = plan?.label ?? ''
+      planDurationFromPlan = plan?.duration_days ?? null
     }
 
     // Idempotent : déjà traité
@@ -121,8 +138,10 @@ Deno.serve(async (req) => {
     }
 
     // Statuts intermédiaires ignorés (Orange peut envoyer PENDING avant SUCCESS)
-    if (notification.status !== 'SUCCESS') {
-      console.log('OM webhook: statut intermédiaire ignoré —', notification.status)
+    // Accepter toutes les variantes success courantes de l'API Sonatel
+    const successStatuses = new Set(['SUCCESS', 'SUCCESSFUL', 'PAID', 'COMPLETED'])
+    if (!successStatuses.has((notification.status ?? '').toUpperCase())) {
+      console.log('OM webhook: statut non-SUCCESS ignoré —', notification.status)
       return json({ received: true })
     }
 
@@ -163,7 +182,7 @@ Deno.serve(async (req) => {
     }
 
     // ⑥ Montant vérifié → activer l'abonnement
-    const durationDays: number = sub.plan_duration_days ?? sub.plan?.duration_days ?? 30
+    const durationDays: number = sub.plan_duration_days ?? planDurationFromPlan ?? 30
     if (!Number.isFinite(durationDays) || durationDays <= 0) {
       console.error('OM webhook: durationDays invalide —', durationDays, 'pour sub', subId)
       return json({ error: 'Configuration forfait invalide' }, 500)
@@ -200,6 +219,49 @@ Deno.serve(async (req) => {
         p_days: durationDays,
       })
       if (rpcError) throw rpcError
+    } else if (offerType === 'annonce') {
+      // Annonce sponsorisée payée en OM/Wave : créer l'annonce directement
+      // (pas d'intermédiaire crédit — le paiement OM/Wave finance l'annonce directement)
+      const meta = sub.metadata as {
+        format: string
+        titre?: string | null
+        corps?: string | null
+        imageUrl?: string | null
+        durationHours: number
+        estMin: number
+        estMax: number
+      } | null
+
+      if (!meta || !meta.format || !meta.durationHours) {
+        // Fallback : si pas de metadata (test manuel), juste créditer
+        console.warn('OM webhook annonce: metadata absente — fallback crédit uniquement')
+        const creditsToAdd = Math.round(Number(sub.amount))
+        const { error: creditError } = await admin.rpc('increment_shop_credit', {
+          p_shop_id: sub.shop_id,
+          p_amount: creditsToAdd,
+        })
+        if (creditError) throw creditError
+      } else {
+        const adExpiresAt = new Date(Date.now() + meta.durationHours * 3_600_000).toISOString()
+        const { error: adError } = await admin
+          .from('sponsored_ads')
+          .insert({
+            shop_id:              sub.shop_id,
+            merchant_id:          sub.merchant_id,
+            format:               meta.format,
+            titre:                meta.titre ?? null,
+            corps:                meta.corps ?? null,
+            image_url:            meta.imageUrl ?? null,
+            budget_credits:       Math.round(Number(sub.amount)),
+            duration_hours:       meta.durationHours,
+            estimated_views_min:  meta.estMin,
+            estimated_views_max:  meta.estMax,
+            expires_at:           adExpiresAt,
+            status:               'active',
+          })
+        if (adError) throw adError
+        console.log('OM webhook annonce: annonce créée pour shop', sub.shop_id, 'expire', adExpiresAt)
+      }
     } else {
       // quartier : mise en avant des produits
       await admin
@@ -259,23 +321,27 @@ Deno.serve(async (req) => {
     const expiryFr = expiresAt.toLocaleDateString('fr-FR', {
       day: 'numeric', month: 'long', year: 'numeric',
     })
-    const planLabel  = sub.plan?.label ?? ''
     const amountFCFA = (sub.amount as number)?.toLocaleString('fr-FR') ?? ''
 
     const OFFER_LABELS: Record<string, string> = {
       quartier:  "l'Offre du Quartier",
       recherche: 'Booster recherche',
       carte:     'Épingle dorée (carte)',
+      annonce:   'Annonce Sponsorisée',
     }
     const offerLabel = OFFER_LABELS[offerType] ?? offerType
+
+    const notifBody = offerType === 'annonce'
+      ? `Votre paiement de ${amountFCFA} FCFA a été reçu et votre annonce sponsorisée est maintenant en ligne. Bonne visibilité !`
+      : `Grâce à votre achat du forfait « ${planLabel} » (${amountFCFA} FCFA), ` +
+        `vous avez activé ${offerLabel} jusqu'au ${expiryFr}. ` +
+        `Profitez-en pour attirer encore plus de clients !`
 
     await admin.from('notifications').insert({
       user_id: sub.merchant_id,
       type:    'vip',
-      title:   '🎉 Félicitations pour votre achat !',
-      body:    `Grâce à votre achat du forfait « ${planLabel} » (${amountFCFA} FCFA), ` +
-               `vous avez activé ${offerLabel} jusqu'au ${expiryFr}. ` +
-               `Profitez-en pour attirer encore plus de clients !`,
+      title:   '🎉 Félicitations pour votre achat',
+      body:    notifBody,
       data:    { subscription_id: sub.id, offer_type: offerType },
     })
 
@@ -283,8 +349,13 @@ Deno.serve(async (req) => {
     return json({ received: true })
 
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Erreur interne'
-    console.error('OM webhook erreur:', msg)
+    let msg = 'Erreur interne'
+    if (err instanceof Error) {
+      msg = err.message
+    } else if (err != null && typeof err === 'object' && 'message' in err) {
+      msg = String((err as { message: unknown }).message)
+    }
+    console.error('OM webhook erreur:', msg, JSON.stringify(err))
     // Retourner 500 pour qu'Orange retry (elle réessaie sur 5xx)
     return json({ error: msg }, 500)
   }

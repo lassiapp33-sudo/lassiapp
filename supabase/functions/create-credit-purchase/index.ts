@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID, isSafeString } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { calculateOffreQuartierPrice } from '../_shared/offreQuartierPricing.ts'
-import { findBoostPlan } from '../_shared/boostPlansPricing.ts'
+
 
 // ─── Achat d'un forfait de visibilité avec le crédit LASSI ─────────────────────
 // Permet à un marchand ayant reçu du crédit LASSI (don admin via
@@ -11,7 +11,7 @@ import { findBoostPlan } from '../_shared/boostPlansPricing.ts'
 // sans attendre l'intégration Wave / Orange Money. Le forfait est activé
 // instantanément (pas de statut "pending").
 
-const PLAN_ID_RE = /^[a-z0-9]+$/i
+const PLAN_ID_RE = /^[a-z0-9_]+$/i
 const MAX_FEATURED_PRODUCTS = 50
 const BOOST_DURATION_LABELS: Record<string, string> = { '1m': '1 mois', '3m': '3 mois', '6m': '6 mois' }
 
@@ -136,13 +136,19 @@ Deno.serve(async (req) => {
       if (existing) return json({ error: 'Un abonnement actif existe déjà' }, 409)
 
     } else {
-      // findBoostPlan vérifie déjà l'existence du planId — pas besoin de double check
-      const plan = findBoostPlan(planId)
+      const { data: plan } = await admin
+        .from('visibility_plans')
+        .select('id, label, price, duration_days')
+        .eq('id', planId)
+        .in('plan_type', ['recherche', 'carte'])
+        .eq('active', true)
+        .maybeSingle()
+
       if (!plan) return json({ error: 'Forfait introuvable' }, 404)
 
       price = plan.price
-      durationDays = plan.durationDays
-      planLabel = BOOST_DURATION_LABELS[plan.id] ?? `${durationDays} jours`
+      durationDays = plan.duration_days
+      planLabel = plan.label
     }
 
     // ⑤ Vérifier et débiter le portefeuille — atomique, échoue si solde insuffisant
@@ -272,7 +278,7 @@ Deno.serve(async (req) => {
       await admin.from('notifications').insert({
         user_id: user.id,
         type:    'vip',
-        title:   '🎉 Forfait activé avec ton crédit LASSI !',
+        title:   '🎉 Forfait activé avec ton crédit LASSI',
         body:    `Ton crédit LASSI a été utilisé pour activer le forfait « ${planLabel} » de ${OFFER_LABELS.quartier} jusqu'au ${expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}. Il te reste ${newBalance.toLocaleString('fr-FR')} FCFA de crédit.`,
         data:    { subscription_id: sub.id, offer_type: 'quartier' },
       })
@@ -294,7 +300,7 @@ Deno.serve(async (req) => {
       await admin.from('notifications').insert({
         user_id: user.id,
         type:    'vip',
-        title:   '🎉 Forfait activé avec ton crédit LASSI !',
+        title:   '🎉 Forfait activé avec ton crédit LASSI',
         body:    `Ton crédit LASSI a été utilisé pour activer « ${planLabel} » de ${OFFER_LABELS.recherche} jusqu'au ${responseExpiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}. Il te reste ${newBalance.toLocaleString('fr-FR')} FCFA de crédit.`,
         data:    { offer_type: 'recherche' },
       })
@@ -316,7 +322,7 @@ Deno.serve(async (req) => {
       await admin.from('notifications').insert({
         user_id: user.id,
         type:    'vip',
-        title:   '🎉 Forfait activé avec ton crédit LASSI !',
+        title:   '🎉 Forfait activé avec ton crédit LASSI',
         body:    `Ton crédit LASSI a été utilisé pour activer « ${planLabel} » de ${OFFER_LABELS.carte} jusqu'au ${responseExpiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}. Il te reste ${newBalance.toLocaleString('fr-FR')} FCFA de crédit.`,
         data:    { offer_type: 'carte' },
       })

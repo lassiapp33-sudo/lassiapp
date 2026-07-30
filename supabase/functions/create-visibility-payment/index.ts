@@ -2,13 +2,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID, isSafeString, isBoolean } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { calculateOffreQuartierPrice } from '../_shared/offreQuartierPricing.ts'
-import { findBoostPlan } from '../_shared/boostPlansPricing.ts'
+
 import { getOmToken, OM_BASE_URL } from '../_shared/omAuth.ts'
 import { buildWaveSignature } from '../_shared/waveSign.ts'
 
-type OfferType = 'quartier' | 'recherche' | 'carte'
+type OfferType = 'quartier' | 'recherche' | 'carte' | 'annonce'
 
-const PLAN_ID_RE = /^[a-z0-9]+$/i
+const PLAN_ID_RE = /^[a-z0-9_]+$/i
 const MAX_FEATURED_PRODUCTS = 50
 
 const OM_MERCHANT_CODE  = Deno.env.get('OM_MERCHANT_CODE')  ?? ''  // code marchand (6 chiffres)
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     if (userError || !user) return json({ error: 'Non autorisé' }, 401)
 
     // ② Validation du body
-    const { planId, payMethod, productIds, allProducts, offerType: rawOfferType } = await req.json()
+    const { planId, payMethod, productIds, allProducts, offerType: rawOfferType, adMetadata } = await req.json()
     if (!planId || !payMethod) {
       return json({ error: 'planId et payMethod requis' }, 400)
     }
@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
       return json({ error: 'payMethod invalide (wave | orange_money)' }, 400)
     }
 
-    const offerType: OfferType = ['quartier', 'recherche', 'carte'].includes(rawOfferType)
+    const offerType: OfferType = ['quartier', 'recherche', 'carte', 'annonce'].includes(rawOfferType)
       ? rawOfferType as OfferType
       : 'quartier'
 
@@ -152,12 +152,29 @@ Deno.serve(async (req) => {
 
       if (existing) return json({ error: 'Un abonnement actif existe déjà' }, 409)
 
+    } else if (offerType === 'annonce') {
+      // Annonce sponsorisée : planId = "ad_Ncr" → N crédits → N FCFA (1 crédit = 1 FCFA)
+      const adMatch = planId.match(/^ad_(\d+)cr$/i)
+      if (!adMatch) return json({ error: 'Format planId annonce invalide (attendu: ad_Ncr)' }, 400)
+      const nCredits = parseInt(adMatch[1], 10)
+      if (!nCredits || nCredits < 1 || nCredits > 1_000_000) {
+        return json({ error: 'Budget annonce invalide' }, 400)
+      }
+      finalPrice = nCredits  // 1 crédit = 1 FCFA
+      planDurationDays = 365  // expiry fictif — la durée réelle est gérée par les crédits
+
     } else {
-      // Offres "recherche" et "carte" — prix depuis la liste statique boost
-      const boostPlan = findBoostPlan(planId)
-      if (!boostPlan) return json({ error: 'Forfait introuvable' }, 404)
-      finalPrice = boostPlan.price
-      planDurationDays = boostPlan.durationDays
+      const { data: plan } = await admin
+        .from('visibility_plans')
+        .select('id, label, price, duration_days')
+        .eq('id', planId)
+        .in('plan_type', ['recherche', 'carte'])
+        .eq('active', true)
+        .maybeSingle()
+
+      if (!plan) return json({ error: 'Forfait introuvable' }, 404)
+      finalPrice = plan.price
+      planDurationDays = plan.duration_days
     }
 
     // ⑦ Créer la ligne pending avant l'appel API
@@ -166,7 +183,8 @@ Deno.serve(async (req) => {
       .insert({
         shop_id:            shop.id,
         merchant_id:        user.id,
-        plan_id:            planId,
+        // annonce n'a pas de plan dans visibility_plans → null pour éviter la FK violation
+        plan_id:            offerType === 'annonce' ? null : planId,
         product_id:         featuredProductIds[0] ?? null,
         product_ids:        featuredProductIds,
         all_products:       wantsAllProducts,
@@ -175,6 +193,8 @@ Deno.serve(async (req) => {
         status:             'pending',
         offer_type:         offerType,
         plan_duration_days: planDurationDays,
+        // Pour annonce : contenu stocké ici, le webhook crée l'annonce directement
+        metadata:           offerType === 'annonce' && adMetadata ? adMetadata : null,
       })
       .select()
       .single()
@@ -279,7 +299,13 @@ Deno.serve(async (req) => {
     })
 
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Erreur interne'
+    let msg = 'Erreur interne'
+    if (err instanceof Error) {
+      msg = err.message
+    } else if (err != null && typeof err === 'object' && 'message' in err) {
+      msg = String((err as { message: unknown }).message)
+    }
+    console.error('[create-visibility-payment]', JSON.stringify(err))
     return json({ error: msg }, 500)
   }
 })

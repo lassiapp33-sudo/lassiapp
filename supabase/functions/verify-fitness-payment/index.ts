@@ -55,9 +55,21 @@ Deno.serve(async (req) => {
 
     if (!pi) return json({ error: 'Payment intent introuvable' }, 404)
 
-    // Déjà complété (idempotent) — inclut le cas OM (confirmé par webhook)
-    if (pi.statut === 'completed' || pi.statut === 'simulated') {
-      return json({ paid: true, statut: pi.statut })
+    // Déjà complété (idempotent) — inclut tous les statuts post-webhook OM/Wave
+    const PAID_STATUSES = new Set(['completed', 'simulated', 'split_done', 'confirmed'])
+    if (PAID_STATUSES.has(pi.statut as string)) {
+      // Vérifier que l'abonnement est bien activé (sécurité double)
+      const { data: abo } = await admin
+        .from('fitness_abonnements_clients')
+        .select('id, statut')
+        .eq('payment_intent_id', pi.id)
+        .maybeSingle()
+      if (abo) return json({ paid: true, statut: pi.statut })
+      // Paiement confirmé mais abonnement pas encore inséré (race condition webhook)
+      // → retourner paid:true quand même, le webhook va finir
+      if (pi.statut === 'split_done' || pi.statut === 'confirmed') {
+        return json({ paid: true, statut: pi.statut })
+      }
     }
 
     // OM : le webhook n'a pas encore répondu — on ne peut pas vérifier côté client
@@ -113,8 +125,8 @@ Deno.serve(async (req) => {
     // Notification in-app
     await admin.from('notifications').insert({
       user_id: user.id,
-      type:    'pay',
-      title:   '🏋️ Abonnement activé !',
+      type:    'payment',
+      title:   '🏋️ Abonnement activé',
       body:    `Ton abonnement « ${meta.offre_nom} » est actif jusqu'au ${dateExpiration.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`,
       data:    { type: 'fitness_abonnement' },
     }).catch(() => null)

@@ -303,8 +303,8 @@ Deno.serve(async (req) => {
       if (creditErr) throw creditErr
     }
 
-    const notifTitle = "🎁 Un cadeau de la part de l'équipe LASSI !"
-    const notifBody  = `Bonjour ! L'équipe LASSI a le plaisir de vous offrir ${describeRecompenses(row)}. Merci pour votre engagement sur la plateforme, et à très vite pour de nouvelles surprises !`
+    const notifTitle = "🎁 Un cadeau de la part de l'équipe LASSI"
+    const notifBody  = `Bonjour. L'équipe LASSI a le plaisir de vous offrir ${describeRecompenses(row)}. Merci pour votre engagement sur la plateforme, et à très vite pour de nouvelles surprises.`
 
     // Notification "cadeau de l'équipe LASSI" au destinataire
     await admin.from('notifications').insert({
