@@ -9,7 +9,6 @@ interface Props {
   onSelectClient: () => void;
   onSelectMerchant: () => void;
   onLogin: () => void;
-  onGerantLogin?: () => void;
 }
 
 // Icône panier (Client)
@@ -47,7 +46,7 @@ const IconStore = () => (
   </Svg>
 );
 
-export default function RoleSelectScreen({ onSelectClient, onSelectMerchant, onLogin, onGerantLogin }: Props) {
+export default function RoleSelectScreen({ onSelectClient, onSelectMerchant, onLogin }: Props) {
   const t = useT();
   return (
     <View style={styles.screen}>
@@ -88,11 +87,6 @@ export default function RoleSelectScreen({ onSelectClient, onSelectMerchant, onL
           <Text style={styles.loginLink} onPress={onLogin}>{t.auth.signIn}</Text>
         </Text>
       </View>
-      {onGerantLogin != null && (
-        <TouchableOpacity onPress={onGerantLogin} style={styles.gerantLien}>
-          <Text style={styles.gerantTxt}>Espace gérant 5 Étoiles</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
@@ -178,15 +172,5 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontFamily: fonts.ui,
     fontSize: 13.5,
-  },
-  gerantLien: {
-    alignItems: 'center',
-    paddingTop: 10,
-  },
-  gerantTxt: {
-    color: '#C9A227',
-    fontFamily: fonts.body,
-    fontSize: 12,
-    letterSpacing: 1,
   },
 });

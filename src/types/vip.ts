@@ -84,8 +84,8 @@ export interface VipListeItem {
 export const VIP_CATEGORIE_LABELS: Record<VipCategorie, string> = {
   restauration: 'Restauration',
   musculation_fitness: 'Fitness',
-  boulangerie_patisserie: 'Boulangerie',
-  beaute_tressage: 'Beauté & Tressage',
+  boulangerie_patisserie: 'Boulangerie / Pâtisserie',
+  beaute_tressage: 'Salon de beauté',
   coiffure: 'Coiffure',
 };
 

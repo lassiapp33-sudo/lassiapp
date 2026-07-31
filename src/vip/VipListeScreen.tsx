@@ -18,8 +18,8 @@ const FILTRES: { id: Filtre; label: string }[] = [
   { id: 'all', label: 'Tous' },
   { id: 'restauration', label: 'Restauration' },
   { id: 'musculation_fitness', label: 'Fitness' },
-  { id: 'boulangerie_patisserie', label: 'Boulangerie' },
-  { id: 'beaute_tressage', label: 'Beauté' },
+  { id: 'boulangerie_patisserie', label: 'Boulangerie / Pâtisserie' },
+  { id: 'beaute_tressage', label: 'Salon de beauté' },
   { id: 'coiffure', label: 'Coiffure' },
 ];
 

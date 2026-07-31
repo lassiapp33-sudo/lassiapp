@@ -27,6 +27,7 @@ import MerchantNavigator from './src/screens/merchant/MerchantNavigator';
 import LivreurNavigator  from './src/screens/livreur/LivreurNavigator';
 import GerantNavigator   from './src/vip/GerantNavigator';
 import useGerantStore    from './src/store/gerantStore';
+import { getMonProfilVip } from './src/services/vip';
 import ErrorBoundary     from './src/components/common/ErrorBoundary';
 import OfflineBanner     from './src/components/common/OfflineBanner';
 import NotifCardModal    from './src/components/common/NotifCardModal';
@@ -89,10 +90,21 @@ function handleNotifData(data: Record<string, any> | undefined | null) {
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('splash');
-  const userId = useAuthStore(s => s.user?.id ?? null);
-  const gerantActive  = useGerantStore(s => s.isActive);
-  const clearGerant   = useGerantStore(s => s.clearGerant);
+  const userId       = useAuthStore(s => s.user?.id ?? null);
+  const gerantActive = useGerantStore(s => s.isActive);
+  const setGerant    = useGerantStore(s => s.setGerant);
+  const clearGerant  = useGerantStore(s => s.clearGerant);
   const setPendingNav = usePendingNavStore(s => s.setPendingNav);
+
+  // Vérifie si le marchand connecté est un gérant 5 Étoiles, puis navigue
+  const goMerchant = React.useCallback(async () => {
+    try {
+      const profil = await getMonProfilVip();
+      if (profil?.actif) setGerant(profil);
+      else clearGerant();
+    } catch { clearGerant(); }
+    setScreen('merchant');
+  }, [setGerant, clearGerant]);
 
   // Promesse de session lancée au montage — en parallèle avec l'animation du splash (2,6s).
   // Résultat disponible dès onFinish, sans délai supplémentaire.
@@ -153,6 +165,7 @@ export default function App() {
 
   // Déconnexion : supprime le token push, Supabase + tous les stores + retour à l'auth
   const handleLogout = useCallback(async () => {
+    clearGerant();
     await removeCurrentDeviceToken();
     // Timeout 3s : scope:'global' peut bloquer indéfiniment sur Android prod (réseau lent)
     await Promise.race([
@@ -175,7 +188,7 @@ export default function App() {
     useNotificationsStore.setState({ notifications: [], loading: false });
     useCartStore.getState().clearCart();
     setScreen('auth');
-  }, []);
+  }, [clearGerant]);
 
   // Handler de premier plan + canaux Android
   // Le require() ici est lazy : expo-notifications ne charge QUE si !IS_EXPO_GO
@@ -336,7 +349,7 @@ export default function App() {
 
             if (sessionUser) {
               useAuthStore.getState().setUser(sessionUser);
-              if (sessionUser.role === 'merchant') setScreen('merchant');
+              if (sessionUser.role === 'merchant') { await goMerchant(); }
               else if (sessionUser.role === 'livreur') setScreen('livreur');
               else setScreen('client');
               return;
@@ -346,7 +359,7 @@ export default function App() {
             // ouvrir l'app immédiatement, la session sera re-vérifiée en arrière-plan.
             if (cachedUser) {
               useAuthStore.getState().setUser(cachedUser); // ← indispensable : passe isLoading à false
-              if (cachedUser.role === 'merchant') setScreen('merchant');
+              if (cachedUser.role === 'merchant') { await goMerchant(); }
               else if (cachedUser.role === 'livreur') setScreen('livreur');
               else setScreen('client');
               return;
@@ -358,7 +371,7 @@ export default function App() {
             const { hasSeenOnboarding, user: cachedUser } = useAuthStore.getState();
             if (cachedUser) {
               useAuthStore.getState().setUser(cachedUser);
-              if (cachedUser.role === 'merchant') setScreen('merchant');
+              if (cachedUser.role === 'merchant') { void goMerchant(); }
               else if (cachedUser.role === 'livreur') setScreen('livreur');
               else setScreen('client');
               return;
@@ -376,27 +389,25 @@ export default function App() {
         }} />
       )}
 
-      {/* Espace gérant 5 Étoiles — prioritaire sur toute autre vue si session active */}
-      {gerantActive && (
-        <GerantNavigator onLogout={() => { clearGerant(); }} />
-      )}
-
-      {!gerantActive && screen === 'auth' && (
+      {screen === 'auth' && (
         <AuthNavigator
           onComplete={(role) => {
-            if (role === 'merchant') setScreen('merchant');
+            if (role === 'merchant') void goMerchant();
             else if (role === 'livreur') setScreen('livreur');
             else setScreen('client');
           }}
-          onGerantLogin={() => { /* GerantNavigator gère sa propre session via useGerantStore */ }}
         />
       )}
 
-      {!gerantActive && screen === 'client'   && <HomeNavigator     onLogout={handleLogout} />}
-      {!gerantActive && screen === 'merchant' && <MerchantNavigator onLogout={handleLogout} />}
-      {!gerantActive && screen === 'livreur'  && <LivreurNavigator  onLogout={handleLogout} />}
+      {screen === 'client'   && <HomeNavigator     onLogout={handleLogout} />}
+      {screen === 'merchant' && (
+        gerantActive
+          ? <GerantNavigator onLogout={handleLogout} />
+          : <MerchantNavigator onLogout={handleLogout} />
+      )}
+      {screen === 'livreur'  && <LivreurNavigator  onLogout={handleLogout} />}
 
-      {!gerantActive && screen === 'resetPassword' && (
+      {screen === 'resetPassword' && (
         <ResetPasswordScreen onDone={() => setScreen('auth')} />
       )}
       </ErrorBoundary>
