@@ -10,9 +10,9 @@ function normaliserTelephone(tel: string): string {
   return digits;
 }
 
-// Reconstruit l'email @vip.lassi.app identique à celui créé par la Edge Function.
+// Reconstruit l'email identique à celui créé par la Edge Function create-vip-gerant.
 function emailVip(telephone: string): string {
-  return `${normaliserTelephone(telephone)}@vip.lassi.app`;
+  return `221${normaliserTelephone(telephone)}@lassi.app`;
 }
 
 export async function connexionVip(telephone: string, motDePasse: string) {

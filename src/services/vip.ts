@@ -153,10 +153,13 @@ export async function lierGerantVip(): Promise<string | null> {
 }
 
 export async function getMonProfilVip(): Promise<VipProfil | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
   const { data, error } = await supabase
     .from('vip_profils')
     .select('*')
-    .single();
+    .eq('gerant_user_id', user.id)
+    .maybeSingle();
   if (error || !data) return null;
   return rowToProfil(data as Record<string, any>);
 }
@@ -295,9 +298,18 @@ export async function getMonPrestations(): Promise<VipPrestation[]> {
 }
 
 export async function getMonHoraires(): Promise<VipHoraire[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data: profilRow } = await supabase
+    .from('vip_profils')
+    .select('id')
+    .eq('gerant_user_id', user.id)
+    .maybeSingle();
+  if (!profilRow) return [];
   const { data, error } = await supabase
     .from('vip_horaires')
     .select('*')
+    .eq('vip_profil_id', profilRow.id)
     .order('jour', { ascending: true });
   if (error) return [];
   return (data ?? []).map(rowToHoraire);

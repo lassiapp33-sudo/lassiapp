@@ -519,7 +519,7 @@ export default function HomeNavigator({ onLogout }: Props) {
             shopId,
             shopInitial: shopName.charAt(0).toUpperCase(),
             shopName,
-            isVip: false,
+            isVip: true,
           })
         }
       />
