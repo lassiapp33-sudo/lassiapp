@@ -25,6 +25,8 @@ import ResetPasswordScreen  from './src/screens/auth/ResetPasswordScreen';
 import HomeNavigator     from './src/screens/home/HomeNavigator';
 import MerchantNavigator from './src/screens/merchant/MerchantNavigator';
 import LivreurNavigator  from './src/screens/livreur/LivreurNavigator';
+import GerantNavigator   from './src/vip/GerantNavigator';
+import useGerantStore    from './src/store/gerantStore';
 import ErrorBoundary     from './src/components/common/ErrorBoundary';
 import OfflineBanner     from './src/components/common/OfflineBanner';
 import NotifCardModal    from './src/components/common/NotifCardModal';
@@ -88,6 +90,8 @@ function handleNotifData(data: Record<string, any> | undefined | null) {
 export default function App() {
   const [screen, setScreen] = useState<Screen>('splash');
   const userId = useAuthStore(s => s.user?.id ?? null);
+  const gerantActive  = useGerantStore(s => s.isActive);
+  const clearGerant   = useGerantStore(s => s.clearGerant);
   const setPendingNav = usePendingNavStore(s => s.setPendingNav);
 
   // Promesse de session lancée au montage — en parallèle avec l'animation du splash (2,6s).
@@ -372,19 +376,27 @@ export default function App() {
         }} />
       )}
 
-      {screen === 'auth' && (
-        <AuthNavigator onComplete={(role) => {
-          if (role === 'merchant') setScreen('merchant');
-          else if (role === 'livreur') setScreen('livreur');
-          else setScreen('client');
-        }} />
+      {/* Espace gérant 5 Étoiles — prioritaire sur toute autre vue si session active */}
+      {gerantActive && (
+        <GerantNavigator onLogout={() => { clearGerant(); }} />
       )}
 
-      {screen === 'client'   && <HomeNavigator     onLogout={handleLogout} />}
-      {screen === 'merchant' && <MerchantNavigator onLogout={handleLogout} />}
-      {screen === 'livreur'  && <LivreurNavigator  onLogout={handleLogout} />}
+      {!gerantActive && screen === 'auth' && (
+        <AuthNavigator
+          onComplete={(role) => {
+            if (role === 'merchant') setScreen('merchant');
+            else if (role === 'livreur') setScreen('livreur');
+            else setScreen('client');
+          }}
+          onGerantLogin={() => { /* GerantNavigator gère sa propre session via useGerantStore */ }}
+        />
+      )}
 
-      {screen === 'resetPassword' && (
+      {!gerantActive && screen === 'client'   && <HomeNavigator     onLogout={handleLogout} />}
+      {!gerantActive && screen === 'merchant' && <MerchantNavigator onLogout={handleLogout} />}
+      {!gerantActive && screen === 'livreur'  && <LivreurNavigator  onLogout={handleLogout} />}
+
+      {!gerantActive && screen === 'resetPassword' && (
         <ResetPasswordScreen onDone={() => setScreen('auth')} />
       )}
       </ErrorBoundary>

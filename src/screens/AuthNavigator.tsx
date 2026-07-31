@@ -19,13 +19,15 @@ type StackItem =
   | { id: 'shopSetup'; userData: RegisterData }
   | { id: 'login' }
   | { id: 'emailVerify'; email: string }
-  | { id: 'forgotPassword' };
+  | { id: 'forgotPassword' }
+  | { id: 'gerantLogin' };
 
 interface Props {
   onComplete: (role: UserRole) => void;
+  onGerantLogin?: () => void;
 }
 
-export default function AuthNavigator({ onComplete }: Props) {
+export default function AuthNavigator({ onComplete, onGerantLogin }: Props) {
   const [stack, setStack] = useState<StackItem[]>([{ id: 'role' }]);
   // CGU et Confidentialité s'ouvrent en modal pour ne pas démonter l'écran
   // d'inscription (ce qui remettrait tous les champs à zéro).
@@ -49,6 +51,7 @@ export default function AuthNavigator({ onComplete }: Props) {
           onSelectClient={() => push({ id: 'register', role: 'client' })}
           onSelectMerchant={() => push({ id: 'register', role: 'merchant' })}
           onLogin={() => push({ id: 'login' })}
+          onGerantLogin={onGerantLogin != null ? onGerantLogin : undefined}
         />
       );
       break;

@@ -259,20 +259,62 @@ export interface UpdateProfilEditorialParams {
   signatureMot?: string;
   baseline?: string;
   adresseCourte?: string;
+  initiale?: string;
 }
 
 export async function updateProfilEditorial(
   profilId: string,
   p: UpdateProfilEditorialParams,
 ): Promise<void> {
+  const payload: Record<string, unknown> = {
+    mot_du_gerant: p.motDuGerant,
+    signature_mot: p.signatureMot,
+    baseline: p.baseline,
+    adresse_courte: p.adresseCourte,
+  };
+  if (p.initiale !== undefined) payload.initiale = p.initiale;
   const { error } = await supabase
     .from('vip_profils')
-    .update({
-      mot_du_gerant: p.motDuGerant,
-      signature_mot: p.signatureMot,
-      baseline: p.baseline,
-      adresse_courte: p.adresseCourte,
-    })
+    .update(payload)
     .eq('id', profilId);
+  if (error) throw new Error(error.message);
+}
+
+// ─── Gérant : données propres ─────────────────────────────────────────────────
+
+export async function getMonPrestations(): Promise<VipPrestation[]> {
+  const profil = await getMonProfilVip();
+  if (!profil) return [];
+  const { data, error } = await supabase
+    .from('vip_prestations')
+    .select('*')
+    .eq('vip_profil_id', profil.id)
+    .order('ordre', { ascending: true });
+  if (error) return [];
+  return (data ?? []).map(rowToPrestation);
+}
+
+export async function getMonHoraires(): Promise<VipHoraire[]> {
+  const { data, error } = await supabase
+    .from('vip_horaires')
+    .select('*')
+    .order('jour', { ascending: true });
+  if (error) return [];
+  return (data ?? []).map(rowToHoraire);
+}
+
+export async function setSignaturePrestation(
+  profilId: string,
+  prestationId: string,
+): Promise<void> {
+  await supabase
+    .from('vip_prestations')
+    .update({ est_signature: false })
+    .eq('vip_profil_id', profilId)
+    .eq('est_signature', true);
+  const { error } = await supabase
+    .from('vip_prestations')
+    .update({ est_signature: true })
+    .eq('id', prestationId);
   if (error) throw new Error(error.message);
 }
