@@ -94,12 +94,12 @@ serve(async (req) => {
       if (!existing) return errResp(400, `Auth : ${authErr.message}`)
 
       // Vérifier qu'il n'a pas déjà un profil VIP complet
-      const { data: vpExist } = await admin
+      const { data: vpRows } = await admin
         .from('vip_profils')
         .select('id')
         .eq('gerant_user_id', existing.id)
-        .maybeSingle()
-      if (vpExist) return errResp(409, `Le numéro ${tel} est déjà lié à un profil 5 Étoiles.`)
+        .limit(1)
+      if (vpRows && vpRows.length > 0) return errResp(409, `Le numéro ${tel} est deja lie a un profil 5 Etoiles.`)
 
       userId = existing.id
     } else {
@@ -120,15 +120,15 @@ serve(async (req) => {
     // ── 6. Boutique VIP (réutiliser si déjà créée lors d'une tentative précédente) ──
     let shopId: string
 
-    const { data: existingShop } = await admin
+    const { data: shopRows } = await admin
       .from('shops')
       .select('id')
       .eq('merchant_id', userId)
       .eq('is_vip', true)
-      .maybeSingle()
+      .limit(1)
 
-    if (existingShop) {
-      shopId = existingShop.id
+    if (shopRows && shopRows.length > 0) {
+      shopId = shopRows[0].id
     } else {
       const { data: shopData, error: shopErr } = await admin
         .from('shops')
@@ -166,7 +166,7 @@ serve(async (req) => {
       baseline:         baseline ? String(baseline) : null,
       initiale:         String(initiale).toUpperCase().charAt(0),
       telephone_gerant: tel,
-      actif:            false,
+      actif:            true,
       gerant_user_id:   userId,
     }, { onConflict: 'shop_id' })
     if (vpErr) return errResp(400, `Profil VIP : ${vpErr.message}`)
