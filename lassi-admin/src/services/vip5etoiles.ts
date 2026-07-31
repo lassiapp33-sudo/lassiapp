@@ -85,6 +85,15 @@ export async function creerProfilComplet(params: {
   const { data, error } = await supabase.functions.invoke('create-vip-gerant', {
     body: params,
   })
-  if (error) throw new Error(error.message ?? 'Erreur serveur')
+  if (error) {
+    // Extraire le vrai message depuis le body de la réponse HTTP
+    try {
+      const body = await (error as any).context?.json?.()
+      if (body?.error) throw new Error(body.error)
+    } catch (inner) {
+      if (inner instanceof Error && inner.message !== error.message) throw inner
+    }
+    throw new Error(error.message ?? 'Erreur serveur')
+  }
   if (data?.error) throw new Error(data.error)
 }
