@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from 'react'
-import { Crown, Search, Plus, Trash2, Power, RefreshCw, X, Check } from 'lucide-react'
+import { Crown, Search, Plus, Trash2, Power, RefreshCw, X, Check, Eye, EyeOff } from 'lucide-react'
 import EmptyState from '../components/EmptyState'
 import { SkeletonRow } from '../components/Skeleton'
 import {
   getVip5EtoilesProfils,
   toggleActif,
   supprimerProfil,
-  creerProfil,
+  creerProfilComplet,
   VIP_CAT_LABELS,
   type Vip5EtoilesProfil,
   type VipCategorie,
 } from '../services/vip5etoiles'
-import { getShops, type AdminShop } from '../services/users'
 
 // ─── Formulaire création ──────────────────────────────────────────────────────
 
@@ -20,153 +19,173 @@ interface CreerModalProps {
   onCreated: () => void
 }
 
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="text-xs text-muted mb-1 block">{label}</label>
+      {children}
+    </div>
+  )
+}
+
 function CreerModal({ onClose, onCreated }: CreerModalProps) {
-  const [shops, setShops]       = useState<AdminShop[]>([])
-  const [search, setSearch]     = useState('')
-  const [shopId, setShopId]     = useState('')
-  const [categorie, setCategorie] = useState<VipCategorie>('restauration')
-  const [gabarit, setGabarit]   = useState<'palais' | 'maison'>('palais')
-  const [nomAffiche, setNom]    = useState('')
-  const [baseline, setBaseline] = useState('')
-  const [initiale, setInitiale] = useState('')
-  const [saving, setSaving]     = useState(false)
-  const [err, setErr]           = useState('')
-
-  useEffect(() => {
-    getShops().then(setShops).catch(() => {})
-  }, [])
-
-  const filtered = shops.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase())
-  ).slice(0, 40)
+  const [telephone,  setTelephone]  = useState('')
+  const [motDePasse, setMotDePasse] = useState('')
+  const [showMdp,    setShowMdp]    = useState(false)
+  const [categorie,  setCategorie]  = useState<VipCategorie>('restauration')
+  const [gabarit,    setGabarit]    = useState<'palais' | 'maison'>('palais')
+  const [nomAffiche, setNom]        = useState('')
+  const [initiale,   setInitiale]   = useState('')
+  const [baseline,   setBaseline]   = useState('')
+  const [saving,     setSaving]     = useState(false)
+  const [err,        setErr]        = useState('')
 
   async function handleSubmit() {
-    if (!shopId || !nomAffiche.trim() || !initiale.trim()) {
-      setErr('Boutique, nom affiché et initiale sont obligatoires.')
+    if (!telephone.trim() || !motDePasse || !nomAffiche.trim() || !initiale.trim()) {
+      setErr('Téléphone, mot de passe, nom affiché et initiale sont obligatoires.')
       return
     }
-    if (initiale.trim().length > 1) {
-      setErr("L'initiale doit être un seul caractère.")
+    if (motDePasse.length < 8) {
+      setErr('Le mot de passe doit contenir au moins 8 caractères.')
       return
     }
     setSaving(true)
     setErr('')
     try {
-      await creerProfil({
-        shopId,
+      await creerProfilComplet({
+        telephone:  telephone.trim(),
+        motDePasse,
+        nomAffiche: nomAffiche.trim(),
         categorie,
         gabarit,
-        nomAffiche: nomAffiche.trim(),
-        baseline:   baseline.trim() || undefined,
         initiale:   initiale.trim().toUpperCase(),
+        baseline:   baseline.trim() || undefined,
       })
       onCreated()
     } catch (e: any) {
-      setErr(e.message ?? 'Erreur création')
+      setErr(e.message ?? 'Erreur lors de la création')
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 overflow-y-auto py-8">
       <div className="bg-surface border border-border rounded-xl w-full max-w-md mx-4 p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-white font-semibold text-lg">Nouveau profil 5 Étoiles</h2>
+          <div>
+            <h2 className="text-white font-semibold text-lg">Nouveau profil 5 Étoiles</h2>
+            <p className="text-muted text-xs mt-0.5">Crée la boutique + le compte gérant</p>
+          </div>
           <button onClick={onClose} className="text-muted hover:text-white">
             <X size={20} />
           </button>
         </div>
 
         <div className="space-y-4">
-          {/* Sélection boutique */}
-          <div>
-            <label className="text-xs text-muted mb-1 block">Boutique *</label>
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Rechercher une boutique…"
-              className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent mb-1"
-            />
-            <select
-              value={shopId}
-              onChange={e => setShopId(e.target.value)}
-              className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
-              size={4}
-            >
-              <option value="">— Choisir —</option>
-              {filtered.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          </div>
 
-          {/* Catégorie */}
-          <div>
-            <label className="text-xs text-muted mb-1 block">Catégorie *</label>
-            <select
-              value={categorie}
-              onChange={e => setCategorie(e.target.value as VipCategorie)}
-              className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
-            >
-              {(Object.keys(VIP_CAT_LABELS) as VipCategorie[]).map(k => (
-                <option key={k} value={k}>{VIP_CAT_LABELS[k]}</option>
-              ))}
-            </select>
-          </div>
+          {/* Section compte gérant */}
+          <div className="border border-border/60 rounded-lg p-4 space-y-3">
+            <p className="text-xs text-muted uppercase tracking-widest">Compte gérant</p>
 
-          {/* Gabarit */}
-          <div>
-            <label className="text-xs text-muted mb-1 block">Gabarit</label>
-            <div className="flex gap-3">
-              {(['palais', 'maison'] as const).map(g => (
-                <button
-                  key={g}
-                  onClick={() => setGabarit(g)}
-                  className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                    gabarit === g
-                      ? 'border-accent text-accent bg-accent/10'
-                      : 'border-border text-muted hover:border-white/30'
-                  }`}
-                >
-                  {g === 'palais' ? 'Palais (Cinzel)' : 'Maison (Marcellus)'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Nom affiché + Initiale */}
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-xs text-muted mb-1 block">Nom affiché *</label>
+            <Field label="Numéro de téléphone *">
               <input
-                value={nomAffiche}
-                onChange={e => setNom(e.target.value)}
-                placeholder="Ex : Le Baobab d'Or"
+                value={telephone}
+                onChange={e => setTelephone(e.target.value)}
+                placeholder="7XXXXXXXX"
+                inputMode="tel"
                 className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
               />
-            </div>
-            <div className="w-20">
-              <label className="text-xs text-muted mb-1 block">Initiale *</label>
-              <input
-                value={initiale}
-                onChange={e => setInitiale(e.target.value.slice(0, 1).toUpperCase())}
-                maxLength={1}
-                placeholder="B"
-                className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm text-center uppercase focus:outline-none focus:border-accent"
-              />
-            </div>
+            </Field>
+
+            <Field label="Mot de passe *">
+              <div className="relative">
+                <input
+                  type={showMdp ? 'text' : 'password'}
+                  value={motDePasse}
+                  onChange={e => setMotDePasse(e.target.value)}
+                  placeholder="8 caractères minimum"
+                  className="w-full bg-bg border border-border rounded-lg px-3 py-2 pr-10 text-white text-sm focus:outline-none focus:border-accent"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowMdp(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white"
+                >
+                  {showMdp ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </Field>
           </div>
 
-          {/* Baseline */}
-          <div>
-            <label className="text-xs text-muted mb-1 block">Baseline (optionnel)</label>
-            <input
-              value={baseline}
-              onChange={e => setBaseline(e.target.value)}
-              placeholder="Ex : Cuisine sénégalaise d'exception"
-              className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
-            />
+          {/* Section établissement */}
+          <div className="border border-border/60 rounded-lg p-4 space-y-3">
+            <p className="text-xs text-muted uppercase tracking-widest">Établissement</p>
+
+            {/* Nom affiché + Initiale */}
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <Field label="Nom affiché *">
+                  <input
+                    value={nomAffiche}
+                    onChange={e => setNom(e.target.value)}
+                    placeholder="Ex : Le Baobab d'Or"
+                    className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
+                  />
+                </Field>
+              </div>
+              <div className="w-20">
+                <Field label="Initiale *">
+                  <input
+                    value={initiale}
+                    onChange={e => setInitiale(e.target.value.slice(0, 1).toUpperCase())}
+                    maxLength={1}
+                    placeholder="B"
+                    className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm text-center uppercase focus:outline-none focus:border-accent"
+                  />
+                </Field>
+              </div>
+            </div>
+
+            <Field label="Catégorie *">
+              <select
+                value={categorie}
+                onChange={e => setCategorie(e.target.value as VipCategorie)}
+                className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
+              >
+                {(Object.keys(VIP_CAT_LABELS) as VipCategorie[]).map(k => (
+                  <option key={k} value={k}>{VIP_CAT_LABELS[k]}</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Gabarit">
+              <div className="flex gap-3">
+                {(['palais', 'maison'] as const).map(g => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setGabarit(g)}
+                    className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      gabarit === g
+                        ? 'border-accent text-accent bg-accent/10'
+                        : 'border-border text-muted hover:border-white/30'
+                    }`}
+                  >
+                    {g === 'palais' ? 'Palais' : 'Maison'}
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="Baseline (optionnel)">
+              <input
+                value={baseline}
+                onChange={e => setBaseline(e.target.value)}
+                placeholder="Ex : Cuisine sénégalaise d'exception"
+                className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
+              />
+            </Field>
           </div>
 
           {err && <p className="text-danger text-sm">{err}</p>}
@@ -184,7 +203,7 @@ function CreerModal({ onClose, onCreated }: CreerModalProps) {
             disabled={saving}
             className="flex-1 py-2.5 rounded-lg bg-accent text-bg font-semibold text-sm hover:bg-accent/90 disabled:opacity-50 transition-colors"
           >
-            {saving ? 'Création…' : 'Créer (inactif)'}
+            {saving ? 'Création…' : 'Créer le profil'}
           </button>
         </div>
       </div>

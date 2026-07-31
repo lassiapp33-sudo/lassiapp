@@ -1,5 +1,8 @@
 import { supabase } from '../lib/supabase'
 
+const SUPABASE_URL       = import.meta.env.VITE_SUPABASE_URL as string
+const SUPABASE_ANON_KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+
 export type VipCategorie =
   | 'restauration'
   | 'musculation_fitness'
@@ -73,30 +76,29 @@ export async function supprimerProfil(profilId: string, shopId: string): Promise
   await supabase.from('shops').update({ is_vip: false }).eq('id', shopId).throwOnError()
 }
 
-export async function creerProfil(params: {
-  shopId:     string
+export async function creerProfilComplet(params: {
+  telephone:  string
+  motDePasse: string
+  nomAffiche: string
   categorie:  VipCategorie
   gabarit:    'palais' | 'maison'
-  nomAffiche: string
-  baseline?:  string
   initiale:   string
+  baseline?:  string
 }): Promise<void> {
-  // 1. Créer le profil VIP
-  const { error } = await supabase.from('vip_profils').insert({
-    shop_id:      params.shopId,
-    categorie:    params.categorie,
-    gabarit:      params.gabarit,
-    nom_affiche:  params.nomAffiche,
-    baseline:     params.baseline ?? null,
-    initiale:     params.initiale,
-    actif:        false,
-  })
-  if (error) throw new Error(error.message)
+  const { data: { session } } = await supabase.auth.getSession()
+  const token = session?.access_token
+  if (!token) throw new Error('Session expirée, reconnectez-vous.')
 
-  // 2. Marquer la boutique comme VIP
-  const { error: e2 } = await supabase
-    .from('shops')
-    .update({ is_vip: true })
-    .eq('id', params.shopId)
-  if (e2) throw new Error(e2.message)
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/create-vip-gerant`, {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${token}`,
+      'apikey':        SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify(params),
+  })
+
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error ?? 'Erreur serveur')
 }
