@@ -31,12 +31,13 @@ function toGroup(iso: string): 'today' | 'week' {
 // Mappe le type Supabase vers le NotifType local (compatibilité store)
 function mapType(dbType: string): NotifType {
   const MAP: Record<string, NotifType> = {
-    order: 'order',
-    payment: 'pay',
-    vip: 'vip',
-    message: 'msg',
-    debt: 'msg',
-    livraison: 'livraison',
+    order:    'order',
+    payment:  'pay',
+    vip:      'vip',
+    message:  'msg',
+    debt:     'msg',
+    livraison:'livraison',
+    ann:      'ann',  // annonces À la une / broadcast par client
   };
   return (MAP[dbType] as NotifType) ?? 'msg';
 }
@@ -53,7 +54,7 @@ export function rowToNotif(row: Record<string, any>): Notif {
     unread: !row.is_read,
     group: toGroup(row.created_at),
     createdAt: row.created_at,
-    targetId: data.conversation_id ?? data.order_id ?? undefined,
+    targetId: data.conversation_id ?? data.order_id ?? data.target_id ?? undefined,
     data,
   };
 }
@@ -64,14 +65,14 @@ export async function getNotifications(): Promise<Notif[]> {
   const userId = useAuthStore.getState().user?.id;
   if (!userId) return [];
 
-  const since72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+  const since48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
 
   // 1. Notifications régulières (commandes, paiements, messages, VIP...)
   const { data: notifData } = await supabase
     .from('notifications')
     .select('*')
     .eq('user_id', userId)
-    .gte('created_at', since72h)
+    .gte('created_at', since48h)
     .order('created_at', { ascending: false })
     .limit(50);
 
@@ -80,7 +81,11 @@ export async function getNotifications(): Promise<Notif[]> {
 
   const regularNotifs: Notif[] = (notifData ?? []).map(rowToNotif);
 
-  const annonceNotifs: Notif[] = (annoncesData ?? []).map(
+  const cutoff48h = Date.now() - 48 * 60 * 60 * 1000;
+
+  const annonceNotifs: Notif[] = (annoncesData ?? []).filter(
+    (a: { created_at: string }) => new Date(a.created_at).getTime() >= cutoff48h,
+  ).map(
     (a: { id: string; titre: string; corps: string; icone: string; tag: string | null; created_at: string; est_lue: boolean }) => ({
       id: ANN_PREFIX + a.id,
       type: 'ann' as NotifType,
