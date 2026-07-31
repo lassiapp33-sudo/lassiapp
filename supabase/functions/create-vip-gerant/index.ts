@@ -113,14 +113,15 @@ serve(async (req) => {
 
     // ── 7. Créer le vip_profil ────────────────────────────────────────────
     const { error: vpErr } = await admin.from('vip_profils').insert({
-      shop_id:        shopData.id,
-      categorie:      String(categorie),
-      gabarit:        String(gabarit),
-      nom_affiche:    String(nomAffiche),
-      baseline:       baseline ? String(baseline) : null,
-      initiale:       String(initiale).toUpperCase().charAt(0),
-      actif:          false,
-      gerant_user_id: userId,
+      shop_id:          shopData.id,
+      categorie:        String(categorie),
+      gabarit:          String(gabarit),
+      nom_affiche:      String(nomAffiche),
+      baseline:         baseline ? String(baseline) : null,
+      initiale:         String(initiale).toUpperCase().charAt(0),
+      telephone_gerant: tel,
+      actif:            false,
+      gerant_user_id:   userId,
     })
     if (vpErr) return err(400, `Profil VIP : ${vpErr.message}`)
 
