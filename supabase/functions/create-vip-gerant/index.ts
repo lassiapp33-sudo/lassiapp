@@ -108,11 +108,12 @@ serve(async (req) => {
 
     // ── 5. Profil prestataire (upsert = safe si trigger déjà passé) ───────
     const { error: profErr } = await admin.from('profiles').upsert({
-      id:       userId,
-      name:     String(nomAffiche),
-      phone:    tel,
-      role:     'merchant',
-      is_admin: false,
+      id:         userId,
+      name:       String(nomAffiche),
+      phone:      tel,
+      auth_email: email,
+      role:       'merchant',
+      is_admin:   false,
     }, { onConflict: 'id' })
     if (profErr) return errResp(400, `Profil : ${profErr.message}`)
 
