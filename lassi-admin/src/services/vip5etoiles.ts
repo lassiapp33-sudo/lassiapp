@@ -16,16 +16,17 @@ export const VIP_CAT_LABELS: Record<VipCategorie, string> = {
 }
 
 export interface Vip5EtoilesProfil {
-  id:           string
-  shopId:       string
-  shopName:     string
-  categorie:    VipCategorie
-  gabarit:      'palais' | 'maison'
-  nomAffiche:   string
-  baseline:     string | null
-  actif:        boolean
-  gerantUserId: string | null
-  updatedAt:    string
+  id:              string
+  shopId:          string
+  shopName:        string
+  categorie:       VipCategorie
+  gabarit:         'palais' | 'maison'
+  nomAffiche:      string
+  baseline:        string | null
+  actif:           boolean
+  gerantUserId:    string | null
+  telephoneGerant: string | null
+  updatedAt:       string
 }
 
 export async function getVip5EtoilesProfils(): Promise<Vip5EtoilesProfil[]> {
@@ -33,7 +34,7 @@ export async function getVip5EtoilesProfils(): Promise<Vip5EtoilesProfil[]> {
     .from('vip_profils')
     .select(`
       id, shop_id, categorie, gabarit, nom_affiche, baseline, actif,
-      gerant_user_id, updated_at,
+      gerant_user_id, telephone_gerant, updated_at,
       shops!inner ( name )
     `)
     .order('updated_at', { ascending: false })
@@ -41,16 +42,17 @@ export async function getVip5EtoilesProfils(): Promise<Vip5EtoilesProfil[]> {
   if (error) throw new Error(error.message)
 
   return (data ?? []).map((r: any) => ({
-    id:           r.id,
-    shopId:       r.shop_id,
-    shopName:     r.shops?.name ?? '—',
-    categorie:    r.categorie,
-    gabarit:      r.gabarit ?? 'palais',
-    nomAffiche:   r.nom_affiche,
-    baseline:     r.baseline ?? null,
-    actif:        Boolean(r.actif),
-    gerantUserId: r.gerant_user_id ?? null,
-    updatedAt:    r.updated_at,
+    id:              r.id,
+    shopId:          r.shop_id,
+    shopName:        r.shops?.name ?? '—',
+    categorie:       r.categorie,
+    gabarit:         r.gabarit ?? 'palais',
+    nomAffiche:      r.nom_affiche,
+    baseline:        r.baseline ?? null,
+    actif:           Boolean(r.actif),
+    gerantUserId:    r.gerant_user_id ?? null,
+    telephoneGerant: r.telephone_gerant ?? null,
+    updatedAt:       r.updated_at,
   }))
 }
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Crown, Search, Plus, Trash2, Power, RefreshCw, X, Check, Eye, EyeOff } from 'lucide-react'
+import { Crown, Search, Plus, Trash2, Power, RefreshCw, X, Eye, EyeOff } from 'lucide-react'
 import EmptyState from '../components/EmptyState'
 import { SkeletonRow } from '../components/Skeleton'
 import {
@@ -320,7 +320,7 @@ export default function Vip5EtoilesPage() {
               <th className="text-left px-4 py-3 text-muted font-medium">Établissement</th>
               <th className="text-left px-4 py-3 text-muted font-medium">Catégorie</th>
               <th className="text-left px-4 py-3 text-muted font-medium">Gabarit</th>
-              <th className="text-left px-4 py-3 text-muted font-medium">Gérant lié</th>
+              <th className="text-left px-4 py-3 text-muted font-medium">Téléphone</th>
               <th className="text-center px-4 py-3 text-muted font-medium">Statut</th>
               <th className="text-right px-4 py-3 text-muted font-medium">Actions</th>
             </tr>
@@ -358,12 +358,12 @@ export default function Vip5EtoilesPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  {p.gerantUserId ? (
-                    <span className="flex items-center gap-1 text-success text-xs">
-                      <Check size={12} /> Lié
+                  {p.telephoneGerant ? (
+                    <span className="text-white text-xs font-mono">
+                      +221 {p.telephoneGerant}
                     </span>
                   ) : (
-                    <span className="text-muted text-xs">Non lié</span>
+                    <span className="text-muted text-xs">—</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-center">
