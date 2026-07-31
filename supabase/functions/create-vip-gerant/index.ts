@@ -6,7 +6,7 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-function err(status: number, message: string) {
+function errResp(status: number, message: string) {
   return new Response(JSON.stringify({ error: message }), {
     status,
     headers: { ...CORS, 'Content-Type': 'application/json' },
@@ -30,14 +30,14 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } },
     )
     const { data: { user } } = await anonClient.auth.getUser()
-    if (!user) return err(401, 'Non authentifié')
+    if (!user) return errResp(401, 'Non authentifié')
 
     const { data: profCheck } = await anonClient
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
       .single()
-    if (!profCheck?.is_admin) return err(403, 'Accès réservé aux administrateurs')
+    if (!profCheck?.is_admin) return errResp(403, 'Accès réservé aux administrateurs')
 
     // ── 2. Paramètres ─────────────────────────────────────────────────────
     const {
@@ -51,52 +51,62 @@ serve(async (req) => {
     } = await req.json()
 
     if (!telephone || !motDePasse || !nomAffiche || !categorie || !initiale) {
-      return err(400, 'Champs obligatoires : telephone, motDePasse, nomAffiche, categorie, initiale')
+      return errResp(400, 'Champs obligatoires : telephone, motDePasse, nomAffiche, categorie, initiale')
     }
     if (String(motDePasse).length < 8) {
-      return err(400, 'Le mot de passe doit contenir au moins 8 caractères')
+      return errResp(400, 'Le mot de passe doit contenir au moins 8 caractères')
     }
 
     const tel   = normaliserTel(String(telephone))
     const email = `221${tel}@lassi.app`
 
-    // ── 3. Service role pour les opérations admin ─────────────────────────
+    // ── 3. Service role ───────────────────────────────────────────────────
     const admin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
-    // ── 4. Résoudre l'utilisateur (idempotent : reprise si création partielle) ──
+    // ── 4. Créer ou récupérer le compte auth (idempotent) ─────────────────
+    // L'email est UNIQUE dans auth.users → source de vérité fiable
     let userId: string
 
-    // Chercher d'abord par téléphone dans profiles (même si le trigger a déjà créé le profil)
-    const { data: existingProfile } = await admin
-      .from('profiles')
-      .select('id')
-      .eq('phone', tel)
-      .maybeSingle()
+    const { data: authData, error: authErr } = await admin.auth.admin.createUser({
+      email,
+      password: String(motDePasse),
+      email_confirm: true,
+    })
 
-    if (existingProfile) {
-      // Compte déjà connu → vérifier qu'il n'a pas déjà un profil VIP complet
+    if (authData?.user) {
+      // Nouveau compte créé
+      userId = authData.user.id
+    } else if (authErr) {
+      const alreadyExists =
+        authErr.message.includes('already been registered') ||
+        authErr.message.includes('already exists')
+
+      if (!alreadyExists) return errResp(400, `Auth : ${authErr.message}`)
+
+      // Compte existant (tentative partielle précédente) → retrouver l'ID via email unique
+      const { data: listData, error: listErr } = await admin.auth.admin.listUsers({ perPage: 1000 })
+      if (listErr) return errResp(500, `Recherche compte : ${listErr.message}`)
+
+      const existing = listData.users.find((u: { email?: string }) => u.email === email)
+      if (!existing) return errResp(400, `Auth : ${authErr.message}`)
+
+      // Vérifier qu'il n'a pas déjà un profil VIP complet
       const { data: vpExist } = await admin
         .from('vip_profils')
         .select('id')
-        .eq('gerant_user_id', existingProfile.id)
+        .eq('gerant_user_id', existing.id)
         .maybeSingle()
-      if (vpExist) return err(409, `Le numéro ${tel} est déjà lié à un profil 5 Étoiles.`)
-      userId = existingProfile.id
+      if (vpExist) return errResp(409, `Le numéro ${tel} est déjà lié à un profil 5 Étoiles.`)
+
+      userId = existing.id
     } else {
-      // Créer le compte auth (première tentative propre)
-      const { data: authData, error: authErr } = await admin.auth.admin.createUser({
-        email,
-        password: String(motDePasse),
-        email_confirm: true,
-      })
-      if (authErr) return err(400, `Auth : ${authErr.message}`)
-      userId = authData.user!.id
+      return errResp(500, 'Réponse inattendue de Auth')
     }
 
-    // ── 5. Profil prestataire (upsert = safe si le trigger l'a déjà créé) ──
+    // ── 5. Profil prestataire (upsert = safe si trigger déjà passé) ───────
     const { error: profErr } = await admin.from('profiles').upsert({
       id:       userId,
       name:     String(nomAffiche),
@@ -104,9 +114,9 @@ serve(async (req) => {
       role:     'merchant',
       is_admin: false,
     }, { onConflict: 'id' })
-    if (profErr) return err(400, `Profil : ${profErr.message}`)
+    if (profErr) return errResp(400, `Profil : ${profErr.message}`)
 
-    // ── 6. Boutique VIP (idempotent : réutiliser si déjà créée) ──────────
+    // ── 6. Boutique VIP (réutiliser si déjà créée lors d'une tentative précédente) ──
     let shopId: string
 
     const { data: existingShop } = await admin
@@ -122,31 +132,31 @@ serve(async (req) => {
       const { data: shopData, error: shopErr } = await admin
         .from('shops')
         .insert({
-          merchant_id:         userId,
-          name:                String(nomAffiche),
-          subtitle:            '',
-          description:         null,
-          category:            String(categorie),
-          subcategories:       [],
-          shop_type:           'products',
-          address_text:        null,
-          latitude:            null,
-          longitude:           null,
-          zone:                '',
-          is_open:             true,
-          is_manually_closed:  false,
-          opening_hours:       null,
-          is_vip:              true,
-          rating:              0,
-          reviews_count:       0,
+          merchant_id:        userId,
+          name:               String(nomAffiche),
+          subtitle:           '',
+          description:        null,
+          category:           String(categorie),
+          subcategories:      [],
+          shop_type:          'products',
+          address_text:       null,
+          latitude:           null,
+          longitude:          null,
+          zone:               '',
+          is_open:            true,
+          is_manually_closed: false,
+          opening_hours:      null,
+          is_vip:             true,
+          rating:             0,
+          reviews_count:      0,
         })
         .select('id')
         .single()
-      if (shopErr) return err(400, `Boutique : ${shopErr.message}`)
+      if (shopErr) return errResp(400, `Boutique : ${shopErr.message}`)
       shopId = shopData.id
     }
 
-    // ── 7. Profil VIP (idempotent : upsert sur shop_id unique) ───────────
+    // ── 7. Profil VIP (upsert sur shop_id unique) ─────────────────────────
     const { error: vpErr } = await admin.from('vip_profils').upsert({
       shop_id:          shopId,
       categorie:        String(categorie),
@@ -158,7 +168,7 @@ serve(async (req) => {
       actif:            false,
       gerant_user_id:   userId,
     }, { onConflict: 'shop_id' })
-    if (vpErr) return err(400, `Profil VIP : ${vpErr.message}`)
+    if (vpErr) return errResp(400, `Profil VIP : ${vpErr.message}`)
 
     return new Response(
       JSON.stringify({ success: true, shopId, userId }),
@@ -166,6 +176,6 @@ serve(async (req) => {
     )
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
-    return err(500, msg)
+    return errResp(500, msg)
   }
 })
