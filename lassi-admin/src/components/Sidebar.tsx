@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react'
 import { NavLink, useNavigate }        from 'react-router-dom'
 import {
   LayoutDashboard, TrendingUp, Trophy, Star, Gift,
-  AlertTriangle, Flag, Users, Store, Map, LogOut, MessageSquare, Megaphone, Shield, Truck, Wallet, Eye,
+  AlertTriangle, Flag, Users, Store, Map, LogOut, MessageSquare, Megaphone, Shield, Truck, Wallet, Eye, Crown,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { getOpenDisputesCount }      from '../services/disputes'
@@ -51,6 +51,7 @@ export default function Sidebar() {
     { to: '/',            icon: <LayoutDashboard size={18} />, label: 'Vue d\'ensemble' },
     { to: '/transactions', icon: <TrendingUp size={18} />,     label: 'GTV & Transactions' },
     { to: '/vip',          icon: <Trophy size={18} />,         label: 'Scoring VIP' },
+    { to: '/5etoiles',     icon: <Crown size={18} />,          label: '5 Étoiles' },
     { to: '/featured',     icon: <Star size={18} />,           label: 'Mise en avant' },
     { to: '/recompenses',  icon: <Gift size={18} />,           label: 'Récompenses' },
     { to: '/disputes',     icon: <AlertTriangle size={18} />,  label: 'Litiges',        badge: openDisputes    || undefined },
