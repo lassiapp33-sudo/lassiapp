@@ -1,8 +1,5 @@
 import { supabase } from '../lib/supabase'
 
-const SUPABASE_URL       = import.meta.env.VITE_SUPABASE_URL as string
-const SUPABASE_ANON_KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-
 export type VipCategorie =
   | 'restauration'
   | 'musculation_fitness'
@@ -85,20 +82,9 @@ export async function creerProfilComplet(params: {
   initiale:   string
   baseline?:  string
 }): Promise<void> {
-  const { data: { session } } = await supabase.auth.getSession()
-  const token = session?.access_token
-  if (!token) throw new Error('Session expirée, reconnectez-vous.')
-
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/create-vip-gerant`, {
-    method:  'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${token}`,
-      'apikey':        SUPABASE_ANON_KEY,
-    },
-    body: JSON.stringify(params),
+  const { data, error } = await supabase.functions.invoke('create-vip-gerant', {
+    body: params,
   })
-
-  const json = await res.json()
-  if (!res.ok) throw new Error(json.error ?? 'Erreur serveur')
+  if (error) throw new Error(error.message ?? 'Erreur serveur')
+  if (data?.error) throw new Error(data.error)
 }
