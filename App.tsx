@@ -11,6 +11,11 @@ import {
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { Poppins_300Light } from '@expo-google-fonts/poppins';
+import { Cinzel_400Regular, Cinzel_500Medium, Cinzel_600SemiBold } from '@expo-google-fonts/cinzel';
+import { Marcellus_400Regular } from '@expo-google-fonts/marcellus';
+import { EBGaramond_400Regular, EBGaramond_400Regular_Italic, EBGaramond_500Medium } from '@expo-google-fonts/eb-garamond';
+import { Lora_400Regular, Lora_400Regular_Italic, Lora_500Medium } from '@expo-google-fonts/lora';
+import { Inter_300Light, Inter_400Regular } from '@expo-google-fonts/inter';
 
 import { colors }        from './src/theme';
 import SplashScreen         from './src/screens/SplashScreen';
@@ -24,15 +29,16 @@ import ErrorBoundary     from './src/components/common/ErrorBoundary';
 import OfflineBanner     from './src/components/common/OfflineBanner';
 import NotifCardModal    from './src/components/common/NotifCardModal';
 import NotifPopupBanner  from './src/components/common/NotifPopupBanner';
-import AnnonceModal      from './src/components/common/AnnonceModal';
-import { useAnnonces }   from './src/hooks/useAnnonces';
+import AnnonceModal             from './src/components/common/AnnonceModal';
+import NouveauPrestataireBanner from './src/components/common/NouveauPrestataireBanner';
+import { useAnnonces }          from './src/hooks/useAnnonces';
 import { useConnectionWatcher } from './src/hooks/useConnectionWatcher';
 import useAuthStore, { AuthUser } from './src/store/authStore';
 import useShopStore             from './src/store/shopStore';
 import useOrdersStore           from './src/store/ordersStore';
 import useDebtsStore            from './src/store/debtsStore';
 import useFavoritesStore        from './src/store/favoritesStore';
-import useNotificationsStore    from './src/store/notificationsStore';
+import useNotificationsStore from './src/store/notificationsStore';
 import useNotifPopupStore       from './src/store/notifPopupStore';
 import useCartStore             from './src/store/cartStore';
 import AsyncStorage             from '@react-native-async-storage/async-storage';
@@ -108,6 +114,19 @@ export default function App() {
     PlusJakartaSans_700Bold,
     PlusJakartaSans_800ExtraBold,
     Poppins_300Light,
+    // Polices module VIP 5 Étoiles — chargées au démarrage avec le splash
+    Cinzel_400Regular,
+    Cinzel_500Medium,
+    Cinzel_600SemiBold,
+    Marcellus_400Regular,
+    EBGaramond_400Regular,
+    EBGaramond_400Regular_Italic,
+    EBGaramond_500Medium,
+    Lora_400Regular,
+    Lora_400Regular_Italic,
+    Lora_500Medium,
+    Inter_300Light,
+    Inter_400Regular,
   });
 
   // Cache le splash natif dès le premier rendu React.
@@ -266,10 +285,25 @@ export default function App() {
       <NotifPopupBanner onView={() => setPendingNav({ type: 'notifications' })} />
 
       {/* Carte rich-notification pour récompenses, paiements, annonces-notif */}
-      <NotifCardModal onView={() => setPendingNav({ type: 'notifications' })} />
+      <NotifCardModal
+        onView={() => setPendingNav({ type: 'notifications' })}
+        onVoirAlaUne={() => setPendingNav({ type: 'a_la_une_feed' })}
+      />
 
-      {/* Annonces système admin (table annonces) — une seule fois par annonce */}
-      <AnnonceModal annonce={annonceCourante} nbRestantes={nbRestantes} onFermer={marquerLue} />
+      {/* Annonces "Nouveau prestataire" → popup banner avec bouton Voir la vitrine */}
+      {annonceCourante?.titre?.includes('Nouveau prestataire') && annonceCourante.tag ? (
+        <NouveauPrestataireBanner
+          annonce={annonceCourante}
+          onDismiss={marquerLue}
+          onVoirVitrine={() => {
+            marquerLue();
+            setPendingNav({ type: 'new_shop', shopId: annonceCourante.tag!, shopName: '' });
+          }}
+        />
+      ) : (
+        /* Autres annonces système admin (table annonces) — une seule fois par annonce */
+        <AnnonceModal annonce={annonceCourante} nbRestantes={nbRestantes} onFermer={marquerLue} />
+      )}
 
       <ErrorBoundary>
       {screen === 'splash' && (
