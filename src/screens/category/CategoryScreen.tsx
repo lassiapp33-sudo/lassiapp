@@ -45,6 +45,7 @@ function toShopCard(
   s: Shop,
   userLoc: { lat: number; lng: number } | null | undefined,
   badgeMap: Record<string, RecompenseAttribuee>,
+  vip5EtoilesIds?: Set<string>,
 ): ShopCard_Shop {
   let distance = '—';
   if (userLoc && s.latitude != null && s.longitude != null) {
@@ -57,6 +58,7 @@ function toShopCard(
     name: s.name,
     logoUrl: s.logoUrl ?? null,
     isVip: s.isVip,
+    isVip5Etoiles: vip5EtoilesIds?.has(s.id) ?? false,
     isChampion: !!s.merchantId && !!badgeMap[s.merchantId],
     rating: s.rating,
     status: realStatus.isOpen ? 'open' : 'closed',
@@ -126,6 +128,7 @@ interface Props {
   onMessages?: () => void;
   onProfile?: () => void;
   onVoice?: () => void;
+  vip5EtoilesShopIds?: Set<string>;
 }
 
 export default function CategoryScreen({
@@ -140,6 +143,7 @@ export default function CategoryScreen({
   onMessages,
   onProfile,
   onVoice,
+  vip5EtoilesShopIds,
 }: Props) {
   const t = useT();
 
@@ -301,8 +305,8 @@ export default function CategoryScreen({
   );
 
   const shopCards = useMemo(
-    () => filteredShops.map(s => toShopCard(s, userLoc, badgeMap)),
-    [filteredShops, userLoc, badgeMap],
+    () => filteredShops.map(s => toShopCard(s, userLoc, badgeMap, vip5EtoilesShopIds)),
+    [filteredShops, userLoc, badgeMap, vip5EtoilesShopIds],
   );
 
   const handleShopPress = useCallback(

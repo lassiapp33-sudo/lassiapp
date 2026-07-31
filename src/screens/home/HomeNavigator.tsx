@@ -28,6 +28,8 @@ import ClassementScreen from '../classement/ClassementScreen';
 import FitnessAbonnementPaymentScreen from '../fitness/FitnessAbonnementPaymentScreen';
 import BlocAlaUneScreen from './BlocAlaUneScreen';
 import AlaUneFeedScreen from './AlaUneFeedScreen';
+import FicheVip from '../../vip/FicheVip';
+import { getVipListe } from '../../services/vip';
 import ClientAbonnementsScreen from '../fitness/ClientAbonnementsScreen';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { CatId } from '../../components/category/CatNavBar';
@@ -41,7 +43,7 @@ import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
 import { recordView, recordCarouselClick, recordCarouselVue } from '../../services/recentlyViewed';
 
 function shouldShowCard(type: string): boolean {
-  return type === 'vip' || type === 'pay' || type === 'ann' || type === 'order' || type === 'msg';
+  return type === 'vip' || type === 'pay' || type === 'order' || type === 'msg' || type === 'ann';
 }
 
 // ─── Stack de navigation client ───────────────────────────────────────────────
@@ -110,7 +112,8 @@ type HomeStack =
   | { id: 'fitness_abo_payment'; offre: FitnessOffre; fitnessName: string; shopId: string }
   | { id: 'a_la_une_bloc'; blocCode: string; elementIndex?: number }
   | { id: 'a_la_une_categorie'; categorieId: string }
-  | { id: 'a_la_une_feed' };
+  | { id: 'a_la_une_feed' }
+  | { id: 'vip_fiche'; shopId: string; shopName: string };
 
 interface Props {
   onLogout: () => void;
@@ -127,10 +130,22 @@ export default function HomeNavigator({ onLogout }: Props) {
   const [mapFilter, setMapFilter] = useState('all');
   const [mapSearch, setMapSearch] = useState('');
 
-  // Enregistre la visite dans recently_viewed puis navigue vers la vitrine
+  // Identifiants des établissements 5 Étoiles actifs (chargé une fois au démarrage)
+  const [vipShopIds, setVipShopIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    getVipListe().then(liste => {
+      setVipShopIds(new Set(liste.map(v => v.shopId)));
+    }).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Unique point de branchement : 5 Étoiles → FicheVip, sinon → ShopScreen
   const pushShop = (shopId: string, shopName: string) => {
     recordView(shopId).catch(err => logger.warn('[HomeNavigator] recordView:', err));
-    push({ id: 'shop', shopId, shopName });
+    if (vipShopIds.has(shopId)) {
+      push({ id: 'vip_fiche', shopId, shopName });
+    } else {
+      push({ id: 'shop', shopId, shopName });
+    }
   };
 
   // Navigation depuis PromoBanner — ouvre la vitrine et pointe l'article cliqué
@@ -249,6 +264,7 @@ export default function HomeNavigator({ onLogout }: Props) {
         onMessages={() => setHistory([{ id: 'main' }, { id: 'messages' }])}
         onProfile={() => setHistory([{ id: 'main' }, { id: 'profile' }])}
         onVoice={() => setHistory([{ id: 'main' }, { id: 'voice' }])}
+        vip5EtoilesShopIds={vipShopIds}
       />
     );
   }
@@ -479,6 +495,25 @@ export default function HomeNavigator({ onLogout }: Props) {
     );
   }
 
+  // ── Fiche VIP 5 Étoiles ───────────────────────────────────────────────────
+  if (screen.id === 'vip_fiche') {
+    return (
+      <FicheVip
+        shopId={screen.shopId}
+        onBack={pop}
+        onChat={(shopId, shopName) =>
+          push({
+            id: 'chat',
+            shopId,
+            shopInitial: shopName.charAt(0).toUpperCase(),
+            shopName,
+            isVip: false,
+          })
+        }
+      />
+    );
+  }
+
   // ── Catégorie ─────────────────────────────────────────────────────────────
   if (screen.id === 'category') {
     return (
@@ -502,6 +537,7 @@ export default function HomeNavigator({ onLogout }: Props) {
         onMessages={() => setHistory([{ id: 'main' }, { id: 'messages' }])}
         onProfile={() => setHistory([{ id: 'main' }, { id: 'profile' }])}
         onVoice={() => setHistory([{ id: 'main' }, { id: 'voice' }])}
+        vip5EtoilesShopIds={vipShopIds}
       />
     );
   }
@@ -534,14 +570,7 @@ export default function HomeNavigator({ onLogout }: Props) {
         shopLng={screen.shopLng}
         shopName={screen.shopName}
         shopLogoUrl={screen.shopLogoUrl}
-        onBack={() =>
-          setHistory(h => {
-            // Remonter jusqu'à l'écran avant la carte (map + suivi_gps)
-            let i = h.length - 1;
-            while (i > 0 && (h[i].id === 'suivi_gps' || h[i].id === 'map')) i--;
-            return h.slice(0, i + 1);
-          })
-        }
+        onBack={pop}
       />
     );
   }

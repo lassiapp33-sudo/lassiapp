@@ -13,6 +13,7 @@ export interface Shop {
   name: string;
   logoUrl?: string | null;
   isVip: boolean;
+  isVip5Etoiles?: boolean;
   isChampion?: boolean;
   rating: number;
   status: 'open' | 'closing' | 'closed';
@@ -58,7 +59,11 @@ function ShopCard({ shop, onPress }: Props) {
           <Text style={styles.name} numberOfLines={1}>
             {shop.name}
           </Text>
-          {shop.isVip && <VipBadge />}
+          {shop.isVip5Etoiles
+            ? <Text style={styles.badge5Etoiles}>5 ÉTOILES</Text>
+            : shop.isVip
+            ? <VipBadge />
+            : null}
           {shop.isChampion && <ChampionBadge />}
         </View>
         <View style={styles.meta}>
@@ -157,5 +162,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  badge5Etoiles: {
+    fontFamily: fonts.body,
+    fontSize: 9.5,
+    letterSpacing: 3.2,
+    textTransform: 'uppercase',
+    color: '#C9A227',
   },
 });
