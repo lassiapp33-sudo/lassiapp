@@ -58,7 +58,7 @@ serve(async (req) => {
     }
 
     const tel   = normaliserTel(String(telephone))
-    const email = `${tel}@lassi.app`
+    const email = `221${tel}@lassi.app`
 
     // ── 3. Service role pour les opérations admin ─────────────────────────
     const admin = createClient(
@@ -75,25 +75,35 @@ serve(async (req) => {
     if (authErr) return err(400, `Auth : ${authErr.message}`)
     const userId = authData.user!.id
 
-    // ── 5. Créer le profil prestataire ────────────────────────────────────
+    // ── 5. Profil prestataire (le trigger on_auth_user_created peut déjà l'avoir créé)
     const { error: profErr } = await admin.from('profiles').upsert({
       id:       userId,
       name:     String(nomAffiche),
       phone:    tel,
       role:     'merchant',
       is_admin: false,
-    })
+    }, { onConflict: 'id' })
     if (profErr) return err(400, `Profil : ${profErr.message}`)
 
-    // ── 6. Créer la boutique ──────────────────────────────────────────────
+    // ── 6. Créer la boutique avec tous les champs NOT NULL ────────────────
     const { data: shopData, error: shopErr } = await admin
       .from('shops')
       .insert({
-        name:                String(nomAffiche),
-        category:            String(categorie),
         merchant_id:         userId,
-        is_vip:              true,
+        name:                String(nomAffiche),
+        subtitle:            '',
+        description:         null,
+        category:            String(categorie),
+        subcategories:       [],
+        shop_type:           'products',
+        address_text:        null,
+        latitude:            null,
+        longitude:           null,
+        zone:                '',
+        is_open:             true,
         is_manually_closed:  false,
+        opening_hours:       null,
+        is_vip:              true,
         rating:              0,
         reviews_count:       0,
       })
