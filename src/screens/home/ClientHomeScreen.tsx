@@ -54,6 +54,7 @@ interface Props {
   onMap?: () => void;
   onTerrains?: () => void;
   onAlaUneFeed?: () => void;
+  onVipListePress?: () => void;
   onShopItemPress?: (shopId: string, shopName: string, productId: string) => void;
   onShopItemView?: (shopId: string, productId: string) => void;
   onContactShop?: (shopId: string, shopName: string, shopLogoUrl: string | null) => void;
@@ -73,6 +74,7 @@ export default function ClientHomeScreen({
   onMap,
   onTerrains,
   onAlaUneFeed,
+  onVipListePress,
   onShopItemPress,
   onShopItemView,
   onContactShop,
@@ -207,9 +209,12 @@ export default function ClientHomeScreen({
   // Annonces sponsorisées — modale affichée une seule fois par annonce par compte
   useEffect(() => {
     if (!userId) return;
+    // Nettoyer la clé empoisonnée générée si ad.id était undefined (bug RPC RETURNS JSON)
+    AsyncStorage.removeItem(`sponsored_seen_ad_${userId}_undefined`).catch(() => {});
     getActiveSponsoredAds(5)
       .then(async ads => {
         for (const ad of ads) {
+          if (!ad.id) continue;
           const seenKey = `sponsored_seen_ad_${userId}_${ad.id}`;
           const seen = await AsyncStorage.getItem(seenKey).catch(() => null);
           if (!seen) {
@@ -247,13 +252,13 @@ export default function ClientHomeScreen({
 
   const handleSponsoredContact = () => {
     if (!sponsoredAdModal) return;
-    incrementerContact(sponsoredAdModal.id);
     dismissSponsoredAd();
     onContactShop?.(sponsoredAdModal.shopId, sponsoredAdModal.shopName ?? '', sponsoredAdModal.shopLogoUrl ?? null);
   };
 
   const handleSponsoredViewShop = () => {
     if (!sponsoredAdModal) return;
+    incrementerContact(sponsoredAdModal.id);
     dismissSponsoredAd();
     onShopPress?.(sponsoredAdModal.shopId, sponsoredAdModal.shopName ?? '');
   };
@@ -319,6 +324,20 @@ export default function ClientHomeScreen({
         {/* Produits en vitrine — carrousel auto-défilant avec indicateurs */}
         <PromoBanner onPress={onShopItemPress} onView={onShopItemView} />
 
+        {/* Établissements 5 Étoiles */}
+        {onVipListePress != null && (
+          <TouchableOpacity
+            style={styles.vipBandeau}
+            onPress={onVipListePress}
+            activeOpacity={0.82}
+          >
+            <View style={styles.vipBandeauLeft}>
+              <Text style={styles.vipBandeauBadge}>5 ÉTOILES LASSI</Text>
+              <Text style={styles.vipBandeauDesc}>Restaurants, spas et instituts de prestige sélectionnés par LASSI</Text>
+            </View>
+            <Text style={styles.vipBandeauFleche}>›</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Boutiques à proximité */}
         <View style={styles.px}>
@@ -415,5 +434,38 @@ const styles = StyleSheet.create({
     color: colors.bg,
     fontFamily: fonts.title,
     fontSize: 13,
+  },
+  vipBandeau: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(201,162,39,0.4)',
+    borderRadius: 12,
+    padding: 16,
+    backgroundColor: '#0E1420',
+  },
+  vipBandeauLeft: {
+    flex: 1,
+    gap: 4,
+  },
+  vipBandeauBadge: {
+    color: '#C9A227',
+    fontFamily: fonts.ui,
+    fontSize: 11,
+    letterSpacing: 3,
+  },
+  vipBandeauDesc: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12.5,
+    lineHeight: 18,
+  },
+  vipBandeauFleche: {
+    color: 'rgba(201,162,39,0.6)',
+    fontSize: 24,
+    lineHeight: 28,
+    marginLeft: 8,
   },
 });

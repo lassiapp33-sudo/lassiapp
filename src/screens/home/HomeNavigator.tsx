@@ -29,6 +29,7 @@ import FitnessAbonnementPaymentScreen from '../fitness/FitnessAbonnementPaymentS
 import BlocAlaUneScreen from './BlocAlaUneScreen';
 import AlaUneFeedScreen from './AlaUneFeedScreen';
 import FicheVip from '../../vip/FicheVip';
+import VipListeScreen from '../../vip/VipListeScreen';
 import { getVipListe } from '../../services/vip';
 import ClientAbonnementsScreen from '../fitness/ClientAbonnementsScreen';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
@@ -113,7 +114,8 @@ type HomeStack =
   | { id: 'a_la_une_bloc'; blocCode: string; elementIndex?: number }
   | { id: 'a_la_une_categorie'; categorieId: string }
   | { id: 'a_la_une_feed' }
-  | { id: 'vip_fiche'; shopId: string; shopName: string };
+  | { id: 'vip_fiche'; shopId: string; shopName: string }
+  | { id: 'vip_liste' };
 
 interface Props {
   onLogout: () => void;
@@ -224,6 +226,16 @@ export default function HomeNavigator({ onLogout }: Props) {
       push({ id: 'a_la_une_feed' });
     }
   }, [pendingNav, clearPending]);
+
+  // ── Liste 5 Étoiles ───────────────────────────────────────────────────────
+  if (screen.id === 'vip_liste') {
+    return (
+      <VipListeScreen
+        onBack={pop}
+        onShopPress={pushShop}
+      />
+    );
+  }
 
   // ── Feed À la une (toutes catégories, groupé par prestataire) ────────────
   if (screen.id === 'a_la_une_feed') {
@@ -679,6 +691,7 @@ export default function HomeNavigator({ onLogout }: Props) {
       onVoice={() => push({ id: 'voice' })}
       onClassement={() => push({ id: 'classement' })}
       onAlaUneFeed={() => push({ id: 'a_la_une_feed' })}
+      onVipListePress={() => push({ id: 'vip_liste' })}
       onFavorites={() => push({ id: 'favorites' })}
       onRecent={() => push({ id: 'recent' })}
       onMessages={() => push({ id: 'messages' })}
