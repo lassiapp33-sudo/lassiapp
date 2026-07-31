@@ -26,6 +26,7 @@ export interface FitnessAbonnement {
   paymentIntentId?: string;
   // Champs joints (optionnels selon la requête)
   prestataireName?: string;
+  prestataireAvatar?: string;
   clientName?: string;
 }
 
@@ -58,8 +59,9 @@ function rowToAbonnement(r: Record<string, unknown>): FitnessAbonnement {
     dateExpiration:   r.date_expiration as string,
     statut:           r.statut as 'actif' | 'expire',
     paymentIntentId:  (r.payment_intent_id as string | null) ?? undefined,
-    prestataireName:  (profile?.name as string | null) ?? undefined,
-    clientName:       (client?.name  as string | null) ?? undefined,
+    prestataireName:   (profile?.name       as string | null) ?? undefined,
+    prestataireAvatar: (profile?.avatar_url as string | null) ?? undefined,
+    clientName:        (client?.name        as string | null) ?? undefined,
   };
 }
 
@@ -144,22 +146,31 @@ export async function deleteOffre(offreId: string): Promise<void> {
 export async function getMesAbonnements(clientId: string): Promise<FitnessAbonnement[]> {
   const { data, error } = await supabase
     .from('fitness_abonnements_clients')
-    .select('*, profile:prestataire_id(name)')
+    .select('*, profile:prestataire_id(name, avatar_url)')
     .eq('client_id', clientId)
     .order('date_achat', { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []).map(r => rowToAbonnement(r as Record<string, unknown>));
 }
 
-/** Abonnés d'un fitness (avec nom du client). */
-export async function getMesAbonnes(prestataireId: string): Promise<FitnessAbonnement[]> {
-  const { data, error } = await supabase
-    .from('fitness_abonnements_clients')
-    .select('*, client:client_id(name)')
-    .eq('prestataire_id', prestataireId)
-    .order('date_achat', { ascending: false });
+/** Abonnés d'un fitness (avec nom réel du client via RPC SECURITY DEFINER). */
+export async function getMesAbonnes(_prestataireId: string): Promise<FitnessAbonnement[]> {
+  const { data, error } = await supabase.rpc('get_mes_abonnes');
   if (error) throw new Error(error.message);
-  return (data ?? []).map(r => rowToAbonnement(r as Record<string, unknown>));
+  const rows: Record<string, unknown>[] = Array.isArray(data) ? data : [];
+  return rows.map(r => ({
+    id:               r.id as string,
+    offreId:          r.offre_id as string,
+    clientId:         r.client_id as string,
+    prestataireId:    r.prestataire_id as string,
+    nomOffre:         r.nom_offre as string,
+    prixPaye:         r.prix_paye as number,
+    dateAchat:        r.date_achat as string,
+    dateExpiration:   r.date_expiration as string,
+    statut:           r.statut as 'actif' | 'expire',
+    paymentIntentId:  (r.payment_intent_id as string | null) ?? undefined,
+    clientName:       (r.client_name as string | null) ?? undefined,
+  }));
 }
 
 // ─── Helpers d'affichage ──────────────────────────────────────────────────────

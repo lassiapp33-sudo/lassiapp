@@ -10,6 +10,7 @@ import {
 import Svg, { Path, Line } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
+import Avatar from '../../components/Avatar';
 import { formatPrice } from '../../utils/format';
 import useAuthStore from '../../store/authStore';
 import * as fitnessService from '../../services/fitnessAbonnements';
@@ -80,11 +81,21 @@ function AboCard({ abo }: { abo: FitnessAbonnement }) {
       )}
 
       <View style={[styles.cardContent, isExpired && { opacity: 0.5 }]}>
-        {/* Nom offre + fitness */}
-        <Text style={styles.nomOffre}>{abo.nomOffre}</Text>
+        {/* Logo + nom du prestataire */}
         {abo.prestataireName ? (
-          <Text style={styles.fitnessName}>{abo.prestataireName}</Text>
+          <View style={styles.prestataireRow}>
+            <Avatar
+              imageUrl={abo.prestataireAvatar}
+              name={abo.prestataireName}
+              size={36}
+              variant="shop"
+            />
+            <Text style={styles.prestataireName}>{abo.prestataireName}</Text>
+          </View>
         ) : null}
+
+        {/* Nom de l'offre */}
+        <Text style={styles.nomOffre}>{abo.nomOffre}</Text>
 
         {/* Jours restants */}
         {!isExpired ? (
@@ -258,17 +269,24 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
 
-  nomOffre: {
+  prestataireRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  prestataireName: {
     color: colors.white,
     fontFamily: fonts.title,
-    fontSize: 16,
-    marginBottom: 2,
+    fontSize: 15,
+    flex: 1,
   },
-  fitnessName: {
+
+  nomOffre: {
     color: colors.muted,
     fontFamily: fonts.body,
-    fontSize: 12,
-    marginBottom: 10,
+    fontSize: 13,
+    marginBottom: 8,
   },
 
   joursNum: {
