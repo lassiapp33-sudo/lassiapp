@@ -20,7 +20,7 @@ const FILTRES: { id: Filtre; label: string }[] = [
   { id: 'musculation_fitness', label: 'Fitness' },
   { id: 'boulangerie_patisserie', label: 'Boulangerie / Pâtisserie' },
   { id: 'beaute_tressage', label: 'Salon de beauté' },
-  { id: 'coiffure', label: 'Coiffure' },
+  { id: 'coiffure', label: 'Salon de coiffure' },
 ];
 
 interface Props {

@@ -86,7 +86,7 @@ export const VIP_CATEGORIE_LABELS: Record<VipCategorie, string> = {
   musculation_fitness: 'Fitness',
   boulangerie_patisserie: 'Boulangerie / Pâtisserie',
   beaute_tressage: 'Salon de beauté',
-  coiffure: 'Coiffure',
+  coiffure: 'Salon de coiffure',
 };
 
 export const JOURS_SEMAINE = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'] as const;
