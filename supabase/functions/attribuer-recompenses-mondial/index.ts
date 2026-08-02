@@ -3,7 +3,7 @@
 // Appelée le 1er de chaque mois par GitHub Actions (00:10 UTC)
 // APRÈS que pg_cron a calculé les classements finaux (00:05 UTC).
 //
-// Sécurité : Authorization: Bearer SERVICE_ROLE_KEY (cron GitHub Actions)
+// Sécurité : X-Cron-Secret = CRON_SECRET (GitHub Actions)
 //            OU JWT admin valide.
 // Idempotence : vérifie avant d'insérer — safe à re-appeler.
 // ============================================================
@@ -96,14 +96,18 @@ Deno.serve(async (req) => {
   const SUPABASE_URL     = Deno.env.get('SUPABASE_URL')!
   const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const ANON_KEY         = Deno.env.get('SUPABASE_ANON_KEY')!
+  const CRON_SECRET      = Deno.env.get('CRON_SECRET') ?? ''
 
-  const auth = req.headers.get('Authorization') ?? ''
+  const cronHeader = req.headers.get('X-Cron-Secret') ?? ''
+  const auth       = req.headers.get('Authorization') ?? ''
+
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
-  // ── Authentification ─────────────────────────────────────────────────────
-  const isCron = auth === `Bearer ${SERVICE_ROLE_KEY}`
+  // ── Authentification : X-Cron-Secret (GitHub Actions) ou JWT admin ───────
+  const isCron = CRON_SECRET !== '' && cronHeader === CRON_SECRET
 
   if (!isCron) {
+    if (!auth) return json({ error: 'Non autorisé' }, 401)
     const userClient = createClient(SUPABASE_URL, ANON_KEY, {
       global: { headers: { Authorization: auth } },
     })
