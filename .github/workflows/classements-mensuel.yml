@@ -1,0 +1,63 @@
+name: Classements Mensuel — Attribution Récompenses
+
+# 1er du mois à 00:10 UTC — APRÈS pg_cron lassi-classements-mois-final (00:05 UTC)
+on:
+  schedule:
+    - cron: '10 0 1 * *'
+  # Déclenchement manuel (admin) : laisser periode vide pour auto-calculer le mois précédent
+  workflow_dispatch:
+    inputs:
+      periode:
+        description: 'Période à attribuer (YYYY-MM, ex: 2026-07). Vide = mois précédent UTC.'
+        required: false
+        default: ''
+
+jobs:
+  attribuer-recompenses:
+    name: Attribuer récompenses mondiales
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Appeler attribuer-recompenses-mondial
+        env:
+          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          PERIODE="${{ github.event.inputs.periode }}"
+
+          if [ -n "$PERIODE" ]; then
+            BODY="{\"periode\":\"$PERIODE\"}"
+          else
+            BODY="{}"
+          fi
+
+          echo "Période cible : ${PERIODE:-auto (mois précédent)}"
+          echo "Body envoyé  : $BODY"
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -d "$BODY" \
+            "${SUPABASE_URL}/functions/v1/attribuer-recompenses-mondial")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY_RESP=$(echo "$RESPONSE" | head -1)
+
+          echo "HTTP status : $HTTP_CODE"
+          echo "Réponse     : $BODY_RESP"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "ERREUR : la fonction a retourné HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          # Indiquer si skipped (idempotence) ou attribué
+          if echo "$BODY_RESP" | grep -q '"skipped":true'; then
+            echo "INFO : récompenses déjà attribuées pour cette période (idempotence OK)."
+          else
+            GAGNANTS=$(echo "$BODY_RESP" | grep -o '"gagnants":[0-9]*' | grep -o '[0-9]*')
+            CREDITED=$(echo "$BODY_RESP" | grep -o '"credited":[0-9]*' | grep -o '[0-9]*')
+            echo "SUCCESS : $GAGNANTS récompenses attribuées, $CREDITED portefeuilles crédités."
+          fi
