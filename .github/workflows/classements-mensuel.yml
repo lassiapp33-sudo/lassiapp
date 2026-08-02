@@ -4,7 +4,7 @@ name: Classements Mensuel — Attribution Récompenses
 on:
   schedule:
     - cron: '10 0 1 * *'
-  # Déclenchement manuel (admin) : laisser periode vide pour auto-calculer le mois précédent
+  # Déclenchement manuel : laisser periode vide pour auto-calculer le mois précédent
   workflow_dispatch:
     inputs:
       periode:
@@ -21,9 +21,9 @@ jobs:
     steps:
       - name: Appeler attribuer-recompenses-mondial
         env:
-          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
+          SUPABASE_URL="https://tsdemraszwtbzgtyjzum.supabase.co"
           PERIODE="${{ github.event.inputs.periode }}"
 
           if [ -n "$PERIODE" ]; then
@@ -33,12 +33,11 @@ jobs:
           fi
 
           echo "Période cible : ${PERIODE:-auto (mois précédent)}"
-          echo "Body envoyé  : $BODY"
 
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             -X POST \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "X-Cron-Secret: ${CRON_SECRET}" \
             -d "$BODY" \
             "${SUPABASE_URL}/functions/v1/attribuer-recompenses-mondial")
 
@@ -53,11 +52,10 @@ jobs:
             exit 1
           fi
 
-          # Indiquer si skipped (idempotence) ou attribué
           if echo "$BODY_RESP" | grep -q '"skipped":true'; then
             echo "INFO : récompenses déjà attribuées pour cette période (idempotence OK)."
           else
             GAGNANTS=$(echo "$BODY_RESP" | grep -o '"gagnants":[0-9]*' | grep -o '[0-9]*')
             CREDITED=$(echo "$BODY_RESP" | grep -o '"credited":[0-9]*' | grep -o '[0-9]*')
-            echo "SUCCESS : $GAGNANTS récompenses attribuées, $CREDITED portefeuilles crédités."
+            echo "SUCCESS : ${GAGNANTS} récompenses attribuées, ${CREDITED} portefeuilles crédités."
           fi
