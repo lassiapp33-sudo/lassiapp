@@ -235,10 +235,13 @@ export default function CategoryScreen({
     return sub?.label ?? meta.subLabel;
   }, [catId, subCat, meta]);
 
-  // Top 3 VIP — mémorisé : filter+sort coûteux sur grande liste
+  // Top 3 VIP — filtré par sous-catégorie active (même logique que bySubCat)
   const vipShops = useMemo(
-    () =>
-      shops
+    () => {
+      const pool = meta.subcats.length <= 1
+        ? shops
+        : shops.filter(s => s.subcategories.includes(subCat));
+      return pool
         .filter(s => s.isVip)
         .sort((a, b) => {
           if (a.vipRank !== null && b.vipRank !== null) return a.vipRank - b.vipRank;
@@ -246,8 +249,9 @@ export default function CategoryScreen({
           if (b.vipRank !== null) return 1;
           return b.rating - a.rating;
         })
-        .slice(0, 3),
-    [shops],
+        .slice(0, 3);
+    },
+    [shops, subCat, meta.subcats.length],
   );
 
   const vipEntries: VipEntry[] = useMemo(

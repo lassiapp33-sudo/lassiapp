@@ -4,6 +4,7 @@ import {
   TouchableOpacity, Platform,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import { IcoCelebration } from '../common/LassiIcons';
 import { ReservationTerrain, Terrain, SPORT_EMOJI } from '../../types/terrain';
 import { colors, fonts, radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
@@ -60,8 +61,8 @@ export default function ReservationRecu({ reservation, terrain, onRetour }: Prop
       >
         {/* Badge succès */}
         <View style={styles.successBadge}>
-          <Text style={styles.successEmoji}>🎉</Text>
-          <Text style={styles.successTitle}>Reservation confirmee !</Text>
+          <IcoCelebration size={64} />
+          <Text style={styles.successTitle}>Reservation confirmee</Text>
           <Text style={styles.successSub}>
             Presente ce QR code a l'entree du terrain
           </Text>
@@ -136,7 +137,6 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 32, alignItems: 'center' },
 
   successBadge: { alignItems: 'center', marginBottom: 24, gap: 6 },
-  successEmoji: { fontSize: 48 },
   successTitle: { color: colors.white, fontFamily: fonts.titleXL, fontSize: 20 },
   successSub: { color: colors.muted, fontFamily: fonts.body, fontSize: 13, textAlign: 'center' },
 

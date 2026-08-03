@@ -704,7 +704,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
                 {locLoading
                   ? 'Localisation…'
                   : locZone
-                    ? `📍 ${locZone} — Mettre à jour`
+                    ? `${locZone} — Mettre à jour`
                     : "Définir l'emplacement de ma boutique"}
               </Text>
             </TouchableOpacity>

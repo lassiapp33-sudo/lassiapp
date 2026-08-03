@@ -9,6 +9,23 @@ import {
   Alert,
   Linking,
 } from 'react-native';
+import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
+
+const IcoWavePayment = () => (
+  <Svg width={22} height={22} viewBox="0 0 24 24">
+    <Path d="M3 7q3-3.5 5 0t5 0 5 0" stroke="#1BA8E0" strokeWidth={2.2} fill="none" strokeLinecap="round"/>
+    <Path d="M3 12q3-3.5 5 0t5 0 5 0" stroke="#1BA8E0" strokeWidth={2.2} fill="none" strokeLinecap="round"/>
+    <Path d="M3 17q3-3.5 5 0t5 0 5 0" stroke="#1BA8E0" strokeWidth={2.2} fill="none" strokeLinecap="round"/>
+  </Svg>
+);
+
+const IcoOMPayment = () => (
+  <Svg width={22} height={22} viewBox="0 0 24 24">
+    <SvgCircle cx={12} cy={12} r={10} fill="#FF6600"/>
+    <Path d="M8.5 9.5a3.5 3.5 0 1 1 7 0v5a3.5 3.5 0 0 1-7 0V9.5z" fill="white"/>
+    <SvgCircle cx={12} cy={12} r={2} fill="#FF6600"/>
+  </Svg>
+);
 import {
   initierPaiement,
   verifierPaiement,
@@ -93,7 +110,7 @@ export default function CheckoutPayment({ orderId, prestataireId, prixBase, onSu
             style={[styles.moyenBtn, moyen === m && styles.moyenBtnActive]}
             onPress={() => setMoyen(m)}
           >
-            <Text style={styles.moyenIcon}>{m === 'wave' ? '🌊' : '🟠'}</Text>
+            {m === 'wave' ? <IcoWavePayment /> : <IcoOMPayment />}
             <Text style={[styles.moyenText, moyen === m && { color: '#14152A' }]}>
               {m === 'wave' ? 'Wave' : 'Orange Money'}
             </Text>
@@ -130,7 +147,7 @@ export default function CheckoutPayment({ orderId, prestataireId, prixBase, onSu
         </View>
       ) : PAYMENT_CONFIG.MODE === 'simulation' ? (
         <Text style={styles.simNote}>
-          🔶 Mode démo — Le paiement est simulé. Branchement Wave/OM en cours.
+          Mode démo — Le paiement est simulé. Branchement Wave/OM en cours.
         </Text>
       ) : null}
     </View>

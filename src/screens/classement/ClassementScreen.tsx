@@ -108,26 +108,26 @@ export default function ClassementScreen({ variant, onBack }: Props) {
     variant === 'prestataire'
       ? [
           { key: 'categorie' as TabKey, label: 'Ma catégorie' },
-          { key: 'mondial' as TabKey, label: '🏆 National' },
+          { key: 'mondial' as TabKey, label: 'National' },
         ]
       : [
-          { key: 'quartier' as TabKey, label: '📍 Mon quartier' },
-          { key: 'clients' as TabKey, label: '🏆 Top clients' },
-          { key: 'mondial' as TabKey, label: '🌍 Top national' },
+          { key: 'quartier' as TabKey, label: 'Mon quartier' },
+          { key: 'clients' as TabKey, label: 'Top clients' },
+          { key: 'mondial' as TabKey, label: 'Top national' },
         ];
 
-  const periodeLabel = onglet === 'categorie' ? '📅 Cette semaine' : '📅 Ce mois-ci';
+  const periodeLabel = onglet === 'categorie' ? 'Cette semaine' : 'Ce mois-ci';
 
   const hint =
     onglet === 'categorie'
-      ? '🏅 Le Top 3 gagne le podium VIP cette semaine !'
+      ? 'Le Top 3 gagne le podium VIP cette semaine.'
       : onglet === 'mondial'
         ? variant === 'prestataire'
-          ? '👑 Le Top 5 national débloque "Offre du Quartier" + récompenses !'
-          : '👑 Les meilleurs prestataires du Sénégal ce mois-ci !'
+          ? 'Le Top 5 national débloque "Offre du Quartier" + récompenses.'
+          : 'Les meilleurs prestataires du Sénégal ce mois-ci.'
         : onglet === 'quartier'
-          ? '🏅 Le quartier en tête fait la fierté de tous ses commerçants !'
-          : '🎖️ Le client n°1 du mois reçoit le badge Supporter n°1 !';
+          ? 'Le quartier en tête fait la fierté de tous ses commerçants.'
+          : 'Le client n°1 du mois reçoit le badge Supporter n°1.';
 
   if (loading) {
     return (
@@ -190,7 +190,7 @@ function Header({ onBack }: { onBack: () => void }) {
       <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.75}>
         <IcoBack />
       </TouchableOpacity>
-      <Text style={styles.headTitle}>🏆 Classement</Text>
+      <Text style={styles.headTitle}>Classement</Text>
     </View>
   );
 }

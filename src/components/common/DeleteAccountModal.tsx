@@ -17,6 +17,13 @@ import {
   Platform,
 } from 'react-native';
 import Svg, { Path, Polyline } from 'react-native-svg';
+
+const IcoWarnTriangle = () => (
+  <Svg width={13} height={13} viewBox="0 0 24 24">
+    <Path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="rgba(224,122,122,.15)" stroke="rgb(224,122,122)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M12 9v4M12 17h.01" stroke="rgb(224,122,122)" strokeWidth={2} strokeLinecap="round"/>
+  </Svg>
+);
 import { colors, fonts, radius } from '../../theme';
 import { deleteAccount } from '../../services/account';
 import { getErrorMessage } from '../../utils/errorUtils';
@@ -133,7 +140,10 @@ export default function DeleteAccountModal({ visible, role, onClose, onSuccess }
 
           {/* ── Conséquences ─────────────────────────────────────────────── */}
           <View style={styles.warnBox}>
-            <Text style={styles.warnLabel}>⚠️ Cette action est définitive</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <IcoWarnTriangle />
+              <Text style={styles.warnLabel}>Cette action est définitive</Text>
+            </View>
             <Text style={styles.warnBody}>{consequences}</Text>
           </View>
 

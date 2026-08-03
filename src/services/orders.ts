@@ -187,6 +187,36 @@ export async function createOrderSecure(
   return { orderId: body.orderId, total: body.total };
 }
 
+// ─── Commande VIP 5 Étoiles ──────────────────────────────────────────────────
+
+export async function createVipOrder(
+  shopId: string,
+  items: { prestationId: string; qty: number }[],
+  orderType: 'emporter' | 'place',
+  note?: string,
+): Promise<{ orderId: string; total: number }> {
+  let token = getCachedToken();
+  if (!token) {
+    const { data: { session } } = await safeGetSession(15_000);
+    token = session?.access_token ?? null;
+  }
+  if (!token) throw new Error('Session expirée — reconnecte-toi.');
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/create-vip-order`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      apikey: ANON_KEY,
+    },
+    body: JSON.stringify({ shopId, items, orderType, note: note ?? null }),
+  });
+
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error ?? 'La commande VIP a échoué.');
+  return { orderId: body.orderId, total: body.total };
+}
+
 // ─── Revenus ─────────────────────────────────────────────────────────────────
 
 export interface RevenueOrder {

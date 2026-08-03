@@ -215,13 +215,13 @@ export default function ClientOrdersScreen({
         if (deleted.length) lines.push(`Articles supprimés retirés : ${deleted.join(', ')}`);
       }
       if (result.priceChanged.length > 0) {
-        lines.push('⚠️ Certains prix ont été mis à jour depuis ta dernière commande.');
+        lines.push('Certains prix ont été mis à jour depuis ta dernière commande.');
       }
 
       const msg =
         lines.length > 0
-          ? `Ton panier est prêt !\n\n${lines.join('\n')}`
-          : 'Ton panier est prêt ! Vérifie et confirme ta commande.';
+          ? `Ton panier est prêt.\n\n${lines.join('\n')}`
+          : 'Ton panier est prêt. Vérifie et confirme ta commande.';
 
       Alert.alert('Commander à nouveau', msg, [
         {
@@ -346,7 +346,7 @@ export default function ClientOrdersScreen({
                 </Text>
                 {allItems.length === 0 && (
                   <>
-                    <Text style={s.emptySub}>Découvre les prestataires près de toi !</Text>
+                    <Text style={s.emptySub}>Découvre les prestataires près de toi.</Text>
                     <TouchableOpacity style={s.exploreBtn} onPress={onExplore} activeOpacity={0.85}>
                       <Text style={s.exploreTxt}>Explorer l'accueil</Text>
                     </TouchableOpacity>

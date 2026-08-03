@@ -104,7 +104,7 @@ export default function TerrainDetailScreen({ terrain, onBack }: Props) {
 
           {terrain.capacite > 0 && (
             <View style={styles.infoPill}>
-              <Text style={styles.infoPillTxt}>👥 {terrain.capacite} joueurs max</Text>
+              <Text style={styles.infoPillTxt}>{terrain.capacite} joueurs max</Text>
             </View>
           )}
 

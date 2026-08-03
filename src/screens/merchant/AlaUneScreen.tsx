@@ -231,10 +231,7 @@ interface CreerModalProps {
   quotaRestants: number;
 }
 
-type CreerMode = 'bloc' | 'affiche';
-
 function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: CreerModalProps) {
-  const [mode, setMode] = useState<CreerMode>('bloc');
   const [titre, setTitre] = useState('');
   const [desc, setDesc] = useState('');
   const [elements, setElements] = useState<ElementALaUne[]>([
@@ -243,7 +240,6 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
   const [imageUri, setImageUri] = useState<string | null>(null);
 
   const reset = () => {
-    setMode('bloc');
     setTitre('');
     setDesc('');
     setElements([{ id: shortId(), nom: '', prix: 0 }]);
@@ -300,12 +296,6 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
   };
 
   const handleSubmit = async () => {
-    if (mode === 'affiche') {
-      if (!imageUri) { Alert.alert('Image requise', 'Ajoutez une image pour votre affiche.'); return; }
-      await onCreer('Affiche', '', [], imageUri);
-      reset();
-      return;
-    }
     if (!titre.trim()) { Alert.alert('Titre requis', 'Donnez un titre à votre bloc.'); return; }
     const valid = elements.filter(e => e.nom.trim());
     if (valid.length === 0) { Alert.alert('Éléments requis', 'Ajoutez au moins un élément.'); return; }
@@ -315,7 +305,10 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <View style={styles.modalSheet}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Nouveau bloc À la une</Text>
@@ -327,53 +320,11 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
             Il vous reste {quotaRestants}/10 blocs aujourd'hui
           </Text>
 
-          {/* Toggle Bloc / Affiche */}
-          <View style={styles.modeToggle}>
-            <TouchableOpacity
-              style={[styles.modeBtn, mode === 'bloc' && styles.modeBtnActive]}
-              onPress={() => setMode('bloc')}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.modeBtnTxt, mode === 'bloc' && styles.modeBtnTxtActive]}>Bloc</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modeBtn, mode === 'affiche' && styles.modeBtnActive]}
-              onPress={() => setMode('affiche')}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.modeBtnTxt, mode === 'affiche' && styles.modeBtnTxtActive]}>Affiche</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false} style={styles.modalBody}>
-            {mode === 'affiche' ? (
-              <>
-                <Text style={styles.afficheHint}>
-                  Publiez une image en plein format pendant 24h.{'\n'}Aucun titre ni élément requis.
-                </Text>
-                <Text style={styles.fieldLabel}>Image *</Text>
-                {imageUri ? (
-                  <View style={styles.imagePreviewBox}>
-                    <Image source={{ uri: imageUri }} style={styles.imagePreviewLarge} resizeMode="contain" />
-                    <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => setImageUri(null)}>
-                      <Text style={styles.imageRemoveTxt}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={styles.imagePickerRow}>
-                    <TouchableOpacity style={styles.imagePickerBtn} onPress={pickFromGallery} activeOpacity={0.7}>
-                      <IcoGallery stroke={colors.accent} />
-                      <Text style={styles.imagePickerTxt}>Galerie</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.imagePickerBtn} onPress={pickFromCamera} activeOpacity={0.7}>
-                      <IcoCamera stroke={colors.accent} />
-                      <Text style={styles.imagePickerTxt}>Appareil photo</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </>
-            ) : (
-              <>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={styles.modalBody}
+            keyboardShouldPersistTaps="handled"
+          >
                 <Text style={styles.fieldLabel}>Titre *</Text>
                 <TextInput
                   style={styles.textInput}
@@ -455,23 +406,18 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
                     )}
                   </View>
                 ))}
-              </>
-            )}
-            <View style={{ height: 20 }} />
+                <TouchableOpacity
+                  style={[styles.submitBtn, loading && styles.btnDisabled]}
+                  onPress={handleSubmit}
+                  disabled={loading}
+                  activeOpacity={0.8}
+                >
+                  {loading ? <ActivityIndicator color={colors.bg} /> : (
+                    <Text style={styles.submitTxt}>Publier le bloc (24h)</Text>
+                  )}
+                </TouchableOpacity>
+                <View style={{ height: 20 }} />
           </ScrollView>
-
-          <TouchableOpacity
-            style={[styles.submitBtn, loading && styles.btnDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            {loading ? <ActivityIndicator color={colors.bg} /> : (
-              <Text style={styles.submitTxt}>
-                {mode === 'affiche' ? "Publier l'affiche (24h)" : 'Publier le bloc (24h)'}
-              </Text>
-            )}
-          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -640,7 +586,7 @@ export default function AlaUneScreen({ onBack }: Props) {
                 <Path d="M12 17.8 5.8 21 7 14.1 2 9.3l7-1L12 2l3 6.3 7 1-5 4.8 1.2 6.9z" stroke={colors.accent} />
               </Svg>
               <Text style={styles.emptyTxt}>
-                Aucun bloc actif pour l'instant.{'\n'}Créez votre premier bloc À la une !
+                Aucun bloc actif pour l'instant.{'\n'}Créez votre premier bloc À la une.
               </Text>
             </View>
           )}
@@ -841,8 +787,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingTop: 20,
     paddingHorizontal: 20,
-    paddingBottom: 30,
-    maxHeight: '90%',
+    paddingBottom: 12,
+    maxHeight: '92%',
+    flex: 1,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -859,7 +806,7 @@ const styles = StyleSheet.create({
   },
   modalClose: { padding: 4 },
   modalCloseTxt: { color: colors.muted, fontSize: 18 },
-  modalBody: { flexGrow: 0 },
+  modalBody: { flex: 1 },
 
   fieldLabel: { color: colors.muted, fontFamily: fonts.label, fontSize: 12, marginBottom: 6 },
   textInput: {
@@ -967,40 +914,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   elRemoveBtn: { padding: 6 },
-
-  modeToggle: {
-    flexDirection: 'row',
-    backgroundColor: colors.bg,
-    borderRadius: radius.pill,
-    padding: 3,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  modeBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: radius.pill,
-  },
-  modeBtnActive: { backgroundColor: colors.accent },
-  modeBtnTxt: { color: colors.muted, fontFamily: fonts.ui, fontSize: 13 },
-  modeBtnTxtActive: { color: colors.bg },
-
-  afficheHint: {
-    color: colors.muted,
-    fontFamily: fonts.body,
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  imagePreviewLarge: {
-    width: '100%',
-    height: 380,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface,
-  },
 
   submitBtn: {
     backgroundColor: colors.accent,

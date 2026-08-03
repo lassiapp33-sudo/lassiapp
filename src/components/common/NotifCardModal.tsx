@@ -9,6 +9,14 @@ import {
 } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 import { NotifType } from '../../store/notificationsStore';
+import {
+  IcoNotifGift,
+  IcoNotifPay,
+  IcoNotifAnn,
+  IcoNotifOrder,
+  IcoNotifMsg,
+  IcoNotifLivraison,
+} from './LassiIcons';
 import useNotifPopupStore from '../../store/notifPopupStore';
 
 // ─── Constantes par type ──────────────────────────────────────────────────────
@@ -22,19 +30,23 @@ const TAG_LABEL: Record<NotifType, string> = {
   livraison: 'LIVRAISON',
 };
 
-const LARGE_EMOJI: Record<NotifType, string> = {
-  vip:       '🎁',
-  pay:       '🎉',
-  ann:       '📢',
-  order:     '🛍️',
-  msg:       '💬',
-  livraison: '🚚',
-};
+function NotifIcon({ type, size }: { type: NotifType | string; size: number }) {
+  switch (type) {
+    case 'vip':       return <IcoNotifGift size={size} />;
+    case 'pay':       return <IcoNotifPay size={size} />;
+    case 'ann':       return <IcoNotifAnn size={size} />;
+    case 'order':     return <IcoNotifOrder size={size} />;
+    case 'msg':       return <IcoNotifMsg size={size} />;
+    case 'livraison': return <IcoNotifLivraison size={size} />;
+    default:          return <IcoNotifGift size={size} />;
+  }
+}
 
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 interface Props {
-  onView: () => void; // ouvre l'écran Notifications complet
+  onView: () => void;       // ouvre l'écran Notifications complet
+  onVoirAlaUne: () => void; // ouvre le feed À la une
 }
 
 /**
@@ -43,20 +55,21 @@ interface Props {
  * Queue FIFO : si plusieurs notifications sont en attente, le bouton affiche
  * "Suivant (N)" jusqu'à la dernière qui affiche "C'est compris !".
  */
-export default function NotifCardModal({ onView }: Props) {
+export default function NotifCardModal({ onView, onVoirAlaUne }: Props) {
   const queue   = useNotifPopupStore(s => s.queue);
   const dismiss = useNotifPopupStore(s => s.dismiss);
 
   const current    = queue[0] ?? null;
   const nbRestants = Math.max(queue.length - 1, 0);
 
-  const handleCompris = useCallback(() => dismiss(), [dismiss]);
-  const handleView    = useCallback(() => { dismiss(); onView(); }, [dismiss, onView]);
+  const handleCompris   = useCallback(() => dismiss(), [dismiss]);
+  const handleView      = useCallback(() => { dismiss(); onView(); }, [dismiss, onView]);
+  const handleVoirAlaUne = useCallback(() => { dismiss(); onVoirAlaUne(); }, [dismiss, onVoirAlaUne]);
 
   if (!current || current.type === 'order' || current.type === 'msg') return null;
 
   const tag   = TAG_LABEL[current.type]  ?? 'LASSI';
-  const emoji = LARGE_EMOJI[current.type] ?? '📬';
+  const isAlaUne = current.targetId === 'a_la_une_feed';
 
   return (
     <Modal visible animationType="fade" transparent onRequestClose={handleCompris}>
@@ -69,7 +82,7 @@ export default function NotifCardModal({ onView }: Props) {
           </View>
 
           {/* Grande icône */}
-          <Text style={s.emoji}>{emoji}</Text>
+          <NotifIcon type={current.type} size={48} />
 
           {/* Titre */}
           <Text style={s.title}>{current.title}</Text>
@@ -86,14 +99,20 @@ export default function NotifCardModal({ onView }: Props) {
           {/* Bouton principal */}
           <TouchableOpacity style={s.cta} onPress={handleCompris} activeOpacity={0.85}>
             <Text style={s.ctaTxt}>
-              {nbRestants > 0 ? `Suivant (${nbRestants})` : "C'est compris !"}
+              {nbRestants > 0 ? `Suivant (${nbRestants})` : "C'est compris"}
             </Text>
           </TouchableOpacity>
 
-          {/* Lien discret vers le centre de notifs */}
-          <TouchableOpacity style={s.viewBtn} onPress={handleView} activeOpacity={0.7}>
-            <Text style={s.viewTxt}>Voir mes notifications</Text>
-          </TouchableOpacity>
+          {/* Bouton secondaire : "Voir à la une" ou "Voir mes notifications" */}
+          {isAlaUne ? (
+            <TouchableOpacity style={s.ctaSecondary} onPress={handleVoirAlaUne} activeOpacity={0.85}>
+              <Text style={s.ctaSecondaryTxt}>Voir à la une</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={s.viewBtn} onPress={handleView} activeOpacity={0.7}>
+              <Text style={s.viewTxt}>Voir mes notifications</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </Modal>
@@ -135,10 +154,6 @@ const s = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 0.8,
   },
-  emoji: {
-    fontSize: 46,
-    marginBottom: 4,
-  },
   title: {
     color: colors.white,
     fontFamily: fonts.titleXL,
@@ -171,6 +186,21 @@ const s = StyleSheet.create({
     color: colors.bg,
     fontFamily: fonts.titleXL,
     fontSize: 15,
+  },
+  ctaSecondary: {
+    width: '100%',
+    height: 46,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  ctaSecondaryTxt: {
+    color: colors.accent,
+    fontFamily: fonts.titleXL,
+    fontSize: 14,
   },
   viewBtn: {
     marginTop: 10,

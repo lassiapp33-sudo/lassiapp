@@ -47,7 +47,7 @@ const SALUTATIONS: { mots: string[]; rep: string }[] = [
       'good night',
       'good evening',
     ],
-    rep: "Bonjour ! 🐝 Je suis Lassi, ton assistante dans l'app LASSİ ! Dis-moi ce que tu cherches — un commerce, une question sur l'app — je suis là pour toi !",
+    rep: "Bonjour. 🐝 Je suis Lassi, ton assistante dans l'app LASSİ. Dis-moi ce que tu cherches — un commerce, une question sur l'app — je suis là pour toi.",
   },
   // Salut / hello
   {
@@ -64,7 +64,7 @@ const SALUTATIONS: { mots: string[]; rep: string }[] = [
       'assalamu alaykum',
       'wa alaykum salam',
     ],
-    rep: "Salut ! 🐝 Lassi est là. Je peux t'aider à trouver un tangana, un coiffeur, un resto, ou répondre à tes questions sur l'app. Qu'est-ce qu'il te faut ?",
+    rep: "Salut. 🐝 Lassi est là. Je peux t'aider à trouver un tangana, un coiffeur, un resto, ou répondre à tes questions sur l'app. Qu'est-ce qu'il te faut ?",
   },
   // Comment ça va
   {
@@ -79,7 +79,7 @@ const SALUTATIONS: { mots: string[]; rep: string }[] = [
       'la forme',
       'bien ou',
     ],
-    rep: "Je vais super bien, merci ! 🐝 Toujours prête à t'aider à trouver les meilleurs commerces de Dakar. Et toi, qu'est-ce qu'il te faut ?",
+    rep: "Je vais super bien, merci. 🐝 Toujours prête à t'aider à trouver les meilleurs commerces de Dakar. Et toi, qu'est-ce qu'il te faut ?",
   },
   // Qui es-tu / présentation
   {
@@ -99,7 +99,7 @@ const SALUTATIONS: { mots: string[]; rep: string }[] = [
       'tu sers a quoi',
       'ton role',
     ],
-    rep: "Je suis Lassi 🐝, l'abeille assistante de l'app LASSİ ! Mon rôle : te guider pour trouver les commerces de ton quartier (tangana, coiffeur, resto, sport...), répondre à tes questions sur l'app et faciliter ta vie à Dakar. Je suis là 24h/24, demande-moi tout !",
+    rep: "Je suis Lassi 🐝, l'abeille assistante de l'app LASSİ. Mon rôle : te guider pour trouver les commerces de ton quartier (tangana, coiffeur, resto, sport...), répondre à tes questions sur l'app et faciliter ta vie à Dakar. Je suis là 24h/24, demande-moi tout.",
   },
   // Présente-toi
   {
@@ -112,7 +112,7 @@ const SALUTATIONS: { mots: string[]; rep: string }[] = [
       'c est lassi',
       'lassi presente',
     ],
-    rep: "Avec plaisir ! Je suis Lassi 🐝, l'abeille mascotte de l'app LASSİ — l'app qui connecte les clients aux commerçants de quartier à Dakar. Je suis ton assistante : je trouve des commerces pour toi, je réponds à tes questions et j'oriente vers le service client si besoin. Dis-moi ce que tu veux !",
+    rep: "Avec plaisir. Je suis Lassi 🐝, l'abeille mascotte de l'app LASSİ — l'app qui connecte les clients aux commerçants de quartier à Dakar. Je suis ton assistante : je trouve des commerces pour toi, je réponds à tes questions et j'oriente vers le service client si besoin. Dis-moi ce que tu veux.",
   },
   // Merci
   {
@@ -127,7 +127,7 @@ const SALUTATIONS: { mots: string[]; rep: string }[] = [
       'vous etes genial',
       'tu es genial',
     ],
-    rep: "Avec plaisir ! 🐝 C'est exactement fait pour ça. Tu as besoin d'autre chose ?",
+    rep: "Avec plaisir. 🐝 C'est exactement fait pour ça. Tu as besoin d'autre chose ?",
   },
   // Au revoir
   {
@@ -144,7 +144,7 @@ const SALUTATIONS: { mots: string[]; rep: string }[] = [
       'a demain',
       'tchao',
     ],
-    rep: "À très bientôt ! 🐝 N'hésite pas à revenir quand tu as besoin. Passe une excellente journée !",
+    rep: "À très bientôt. 🐝 N'hésite pas à revenir quand tu as besoin. Passe une excellente journée.",
   },
   // Aide générale
   {
@@ -159,7 +159,7 @@ const SALUTATIONS: { mots: string[]; rep: string }[] = [
       'comment fonctionne',
       'explique moi',
     ],
-    rep: "Bien sûr, je suis là ! 🐝 Je peux :\n• Trouver un commerce (tangana, coiffeur, resto, sport...)\n• Répondre à tes questions sur l'app\n• T'orienter vers le service client\nDis-moi ce qu'il te faut !",
+    rep: "Bien sûr, je suis là. 🐝 Je peux :\n• Trouver un commerce (tangana, coiffeur, resto, sport...)\n• Répondre à tes questions sur l'app\n• T'orienter vers le service client\nDis-moi ce qu'il te faut.",
   },
   // Wolof
   {
@@ -175,7 +175,7 @@ const SALUTATIONS: { mots: string[]; rep: string }[] = [
       'mbaa nga sant',
       'fanaan',
     ],
-    rep: 'Mangi fi rekk ! 🐝 Maa ngi Lassi, ci biir app LASSİ bi. Dinaa la jàppandikoo — ci tangana, coiffeur, resto... walla ci questions yi ci app bi. Lii mooy la soxor ?',
+    rep: 'Mangi fi rekk. 🐝 Maa ngi Lassi, ci biir app LASSİ bi. Dinaa la jàppandikoo — ci tangana, coiffeur, resto... walla ci questions yi ci app bi. Lii mooy la soxor ?',
   },
   // Compliments
   {
@@ -192,7 +192,7 @@ const SALUTATIONS: { mots: string[]; rep: string }[] = [
       'trop fort',
       'incroyable',
     ],
-    rep: "Oh, tu es trop gentil(le) ! 🐝 Ça me fait chaud au cœur. Je ferai tout pour être à la hauteur. En quoi puis-je t'aider ?",
+    rep: "Oh, tu es trop gentil(le). 🐝 Ça me fait chaud au cœur. Je ferai tout pour être à la hauteur. En quoi puis-je t'aider ?",
   },
   // Humour / taquinerie
   {
@@ -206,7 +206,7 @@ const SALUTATIONS: { mots: string[]; rep: string }[] = [
       'tu es reelle',
       'tu es vraie',
     ],
-    rep: "Je suis Lassi 🐝, une abeille très intelligente de l'app LASSİ ! Pas tout à fait un robot, pas tout à fait humaine — juste là pour t'aider du mieux possible. Alors, qu'est-ce qu'on fait ?",
+    rep: "Je suis Lassi 🐝, une abeille très intelligente de l'app LASSİ. Pas tout à fait un robot, pas tout à fait humaine — juste là pour t'aider du mieux possible. Alors, qu'est-ce qu'on fait ?",
   },
   // Test / ping
   {
@@ -220,7 +220,7 @@ const SALUTATIONS: { mots: string[]; rep: string }[] = [
       'allo lassi',
       'lassi tu es la',
     ],
-    rep: "Oui, je suis bien là ! 🐝 Prête à t'aider. Dis-moi ce que tu cherches.",
+    rep: "Oui, je suis bien là. 🐝 Prête à t'aider. Dis-moi ce que tu cherches.",
   },
 ];
 

@@ -1,4 +1,4 @@
-import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import {
   VipCategorie,
   VipFiche,
@@ -98,24 +98,11 @@ function ficheFromJson(raw: any): VipFiche {
 
 export async function getVipListe(categorie?: VipCategorie): Promise<VipListeItem[]> {
   try {
-    const params = new URLSearchParams();
-    if (categorie) params.set('p_categorie', categorie);
-    const qs = params.toString() ? `?${params.toString()}` : '';
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/rpc/get_vip_liste${qs}`,
-      {
-        method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON,
-          Authorization: `Bearer ${SUPABASE_ANON}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(categorie ? { p_categorie: categorie } : {}),
-      },
+    const { data, error } = await supabase.rpc('get_vip_liste',
+      categorie ? { p_categorie: categorie } : {},
     );
-    if (!res.ok) return [];
-    const data: Record<string, unknown>[] = await res.json();
-    return (data ?? []).map(rowToListeItem);
+    if (error) return [];
+    return ((data as Record<string, unknown>[]) ?? []).map(rowToListeItem);
   } catch {
     return [];
   }
@@ -123,22 +110,9 @@ export async function getVipListe(categorie?: VipCategorie): Promise<VipListeIte
 
 export async function getVipFiche(shopId: string): Promise<VipFiche | null> {
   try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/rpc/get_vip_fiche`,
-      {
-        method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON,
-          Authorization: `Bearer ${SUPABASE_ANON}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ p_shop_id: shopId }),
-      },
-    );
-    if (!res.ok) return null;
-    const raw = await res.json();
-    if (!raw?.profil) return null;
-    return ficheFromJson(raw);
+    const { data, error } = await supabase.rpc('get_vip_fiche', { p_shop_id: shopId });
+    if (error || !data?.profil) return null;
+    return ficheFromJson(data);
   } catch {
     return null;
   }

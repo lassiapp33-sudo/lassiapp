@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { IcoTrophy } from '../common/LassiIcons';
 import { colors, fonts } from '../../theme';
 import { formatPrice } from '../../utils/format';
 
@@ -49,10 +50,10 @@ export default function DashHeader({
   return (
     <View style={styles.row}>
       <View>
-        <Text style={styles.greeting}>Asalaa maalekum 👋</Text>
+        <Text style={styles.greeting}>Asalaa maalekum</Text>
         <Text style={styles.name}>
           {name}
-          {isVip ? <Text style={styles.vip}> 🏆</Text> : null}
+          {isVip ? <IcoTrophy size={16} /> : null}
         </Text>
         {/* Zone géographique réelle sous le nom */}
         {zoneName ? (
@@ -100,9 +101,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.titleXL,
     fontSize: 19,
     marginTop: 2,
-  },
-  vip: {
-    fontSize: 13,
   },
   locRow: {
     flexDirection: 'row',

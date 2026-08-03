@@ -8,16 +8,13 @@ import {
 } from 'react-native';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { NotifType } from '../../store/notificationsStore';
+import { IcoNotifOrder, IcoNotifMsg } from './LassiIcons';
 import useNotifPopupStore from '../../store/notifPopupStore';
 
-const EMOJI: Record<NotifType, string> = {
-  order:     '🛍️',
-  pay:       '✅',
-  vip:       '🎁',
-  msg:       '💬',
-  ann:       '📢',
-  livraison: '🚚',
-};
+function BannerIcon({ type }: { type: NotifType }) {
+  if (type === 'msg') return <IcoNotifMsg size={24} />;
+  return <IcoNotifOrder size={24} />;
+}
 
 const COLOR: Record<NotifType, string> = {
   order:     colors.accent,
@@ -129,7 +126,7 @@ export default function NotifPopupBanner({ onView }: Props) {
           activeOpacity={0.82}
         >
           <View style={[s.iconBox, { backgroundColor: bg }]}>
-            <Text style={s.emoji}>{EMOJI[current.type]}</Text>
+            <BannerIcon type={current.type} />
           </View>
           <View style={s.txt}>
             <Text style={s.title} numberOfLines={1}>{current.title}</Text>
@@ -202,7 +199,6 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  emoji: { fontSize: 20 },
   txt:   { flex: 1 },
   title: {
     color: colors.white,

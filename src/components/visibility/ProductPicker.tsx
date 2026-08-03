@@ -1,13 +1,33 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
 import { StoreProduct } from '../../types/store';
 
+const IC = '#FDCF34';
+const IF = '#FDCF3440';
+
 const IcoCheck = () => (
   <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" strokeWidth={3}>
     <Path d="M20 6 9 17l-5-5" stroke={colors.bg} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const IcoStore = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24">
+    <Path d="M3 9l1-5h16l1 5" stroke={IC} strokeWidth={1.5} fill={IF} strokeLinejoin="round"/>
+    <Rect x="3" y="9" width="18" height="12" rx="1" stroke={IC} strokeWidth={1.5} fill={IF}/>
+    <Rect x="9" y="14" width="6" height="7" rx="0.5" stroke={IC} strokeWidth={1.2} fill="none"/>
+    <Path d="M3 9a3 3 0 0 0 6 0M9 9a3 3 0 0 0 6 0M15 9a3 3 0 0 0 6 0" stroke={IC} strokeWidth={1.2} fill="none"/>
+  </Svg>
+);
+
+const IcoProduct = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24">
+    <Path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4H6z" fill={IF} stroke={IC} strokeWidth={1.5} strokeLinejoin="round"/>
+    <Path d="M3 6h18" stroke={IC} strokeWidth={1.5}/>
+    <Path d="M16 10a4 4 0 0 1-8 0" stroke={IC} strokeWidth={1.5} strokeLinecap="round" fill="none"/>
   </Svg>
 );
 
@@ -19,6 +39,10 @@ interface Props {
   allProducts: boolean;
   onToggleProduct: (id: string) => void;
   onToggleAllProducts: () => void;
+  /** Libellé "Toute ma vitrine" personnalisé (ex : "Tout mon registre") */
+  allLabel?: string;
+  /** Texte affiché quand la liste est vide */
+  emptyMessage?: string;
 }
 
 export default function ProductPicker({
@@ -27,20 +51,24 @@ export default function ProductPicker({
   allProducts,
   onToggleProduct,
   onToggleAllProducts,
+  allLabel,
+  emptyMessage,
 }: Props) {
   if (products.length === 0) {
     return (
       <View style={styles.empty}>
         <Text style={styles.emptyTxt}>
-          Ajoute un produit dans ta vitrine pour pouvoir le mettre en avant.
+          {emptyMessage ?? 'Ajoute un produit dans ta vitrine pour pouvoir le mettre en avant.'}
         </Text>
       </View>
     );
   }
 
+  const allRowLabel = allLabel ?? 'Toute ma vitrine';
+
   return (
     <View style={styles.wrap}>
-      {/* Toute la vitrine */}
+      {/* Toute la vitrine / Tout le registre */}
       <TouchableOpacity
         style={[styles.card, allProducts && styles.cardSel]}
         onPress={onToggleAllProducts}
@@ -50,14 +78,14 @@ export default function ProductPicker({
           {allProducts && <IcoCheck />}
         </View>
         <View style={styles.imgBox}>
-          <Text style={styles.emoji}>🏪</Text>
+          <IcoStore />
         </View>
         <View style={styles.info}>
           <Text style={styles.name} numberOfLines={1}>
-            Toute ma vitrine
+            {allRowLabel}
           </Text>
           <Text style={styles.allDesc}>
-            {products.length} produit{products.length > 1 ? 's' : ''}
+            {products.length} prestation{products.length > 1 ? 's' : ''}
           </Text>
         </View>
       </TouchableOpacity>
@@ -82,8 +110,10 @@ export default function ProductPicker({
               <View style={styles.imgBox}>
                 {p.photoUrl ? (
                   <Image source={{ uri: p.photoUrl }} style={styles.img} />
+                ) : p.emoji ? (
+                  <Text style={styles.emoji}>{p.emoji}</Text>
                 ) : (
-                  <Text style={styles.emoji}>{p.emoji || '🛍️'}</Text>
+                  <IcoProduct />
                 )}
               </View>
 

@@ -57,7 +57,7 @@ export default function EmailVerifyScreen({ email, onBack, onComplete }: Props) 
         <IconMail />
       </View>
 
-      <Text style={styles.h1}>{'Vérifie ton\nemail 📧'}</Text>
+      <Text style={styles.h1}>{'Vérifie ton\nemail'}</Text>
       <Text style={styles.sub}>
         {'On a envoyé un lien de confirmation à '}
         <Text style={styles.emailHighlight}>{email}</Text>
@@ -77,7 +77,7 @@ export default function EmailVerifyScreen({ email, onBack, onComplete }: Props) 
       >
         <Text style={styles.resend}>
           {resent ? (
-            '✅ Lien renvoyé !'
+            'Lien renvoyé'
           ) : resendLoading ? (
             'Envoi…'
           ) : (

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts } from '../../theme';
 import ClientHomeScreen from '../home/ClientHomeScreen';
+import MapScreen from '../home/MapScreen';
 import ShopScreen from '../shop/ShopScreen';
 import CartScreen from '../home/CartScreen';
 import PaymentScreen from '../payment/PaymentScreen';
@@ -10,6 +11,7 @@ import ReceiptScreen from '../home/ReceiptScreen';
 import SearchScreen from '../home/SearchScreen';
 import CategoryScreen from '../category/CategoryScreen';
 import ChatScreen from '../chat/ChatScreen';
+import SuiviGPSScreen from '../home/SuiviGPSScreen';
 import { CatId } from '../../components/category/CatNavBar';
 import { OrderInfo } from '../../types/payment';
 import { recordView, recordCarouselClick, recordCarouselVue } from '../../services/recentlyViewed';
@@ -17,6 +19,8 @@ import logger from '../../utils/logger';
 
 type Stack =
   | { id: 'main' }
+  | { id: 'map' }
+  | { id: 'suivi'; shopLat: number; shopLng: number; shopName: string; shopLogoUrl: string | null }
   | { id: 'search' }
   | { id: 'orders' }
   | { id: 'receipt'; orderId: string }
@@ -40,7 +44,7 @@ interface Props {
 }
 
 export default function LivreurShopNavigator({ onBack }: Props) {
-  const [history, setHistory] = useState<Stack[]>([{ id: 'main' }]);
+  const [history, setHistory] = useState<Stack[]>([{ id: 'map' }]);
   const screen = history[history.length - 1];
   const push = (s: Stack) => setHistory(h => [...h, s]);
   const pop = () => setHistory(h => h.length > 1 ? h.slice(0, -1) : h);
@@ -59,6 +63,35 @@ export default function LivreurShopNavigator({ onBack }: Props) {
   const onShopItemView = (shopId: string, productId: string) => {
     recordCarouselVue(shopId, productId).catch(() => {});
   };
+
+  if (screen.id === 'suivi') {
+    return (
+      <SuiviGPSScreen
+        shopLat={screen.shopLat}
+        shopLng={screen.shopLng}
+        shopName={screen.shopName}
+        shopLogoUrl={screen.shopLogoUrl}
+        onBack={pop}
+      />
+    );
+  }
+
+  if (screen.id === 'map') {
+    return (
+      <View style={s.root}>
+        <MapScreen
+          onBack={history.length > 1 ? pop : onBack}
+          onShopPress={pushShop}
+          onRouteSuivi={({ shopLat, shopLng, shopName, shopLogoUrl }) =>
+            push({ id: 'suivi', shopLat, shopLng, shopName, shopLogoUrl })
+          }
+        />
+        <TouchableOpacity style={s.backStrip} onPress={onBack} activeOpacity={0.85}>
+          <Text style={s.backTxt}>← Retour espace livreur</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (screen.id === 'payment') {
     return (
@@ -185,7 +218,7 @@ export default function LivreurShopNavigator({ onBack }: Props) {
         onMessages={() => {}}
         onNotifications={() => {}}
         onProfile={() => push({ id: 'orders' })}
-        onMap={() => {}}
+        onMap={() => push({ id: 'map' })}
         onTerrains={() => {}}
         onContactShop={(shopId, shopName, shopLogoUrl) =>
           push({

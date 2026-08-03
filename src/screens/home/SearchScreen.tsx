@@ -29,10 +29,10 @@ const IcoStar = () => (
 
 // ─── Sous-composants ──────────────────────────────────────────────────────────
 
-function GroupLabel({ emoji, label, vip }: { emoji: string; label: string; vip?: boolean }) {
+function GroupLabel({ label, vip }: { emoji?: string; label: string; vip?: boolean }) {
   return (
     <Text style={[styles.groupLbl, vip && styles.groupLblVip]}>
-      {emoji} {label}
+      {label}
     </Text>
   );
 }

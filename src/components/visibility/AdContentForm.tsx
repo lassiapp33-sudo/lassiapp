@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  ScrollView,
+  findNodeHandle,
 } from 'react-native';
 
 const FORM_W = Dimensions.get('window').width - 36; // marginHorizontal: 18 × 2
@@ -38,6 +40,7 @@ interface Props {
   uploading: boolean;
   onSetUploading: (v: boolean) => void;
   shopId: string;
+  scrollViewRef?: React.RefObject<ScrollView | null>;
 }
 
 export default function AdContentForm({
@@ -47,7 +50,24 @@ export default function AdContentForm({
   uploading,
   onSetUploading,
   shopId,
+  scrollViewRef,
 }: Props) {
+  const titreWrapRef = useRef<View>(null);
+  const corpsWrapRef = useRef<View>(null);
+
+  const scrollToRef = (ref: React.RefObject<View | null>) => {
+    if (!scrollViewRef?.current || !ref.current) return;
+    const scrollNode = findNodeHandle(scrollViewRef.current);
+    if (scrollNode == null) return;
+    ref.current.measureLayout(
+      scrollNode,
+      (_x: number, y: number) => {
+        scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
+      },
+      () => {},
+    );
+  };
+
   const pickImage = async () => {
     const uri = await storageService.pickGalleryImage();
     if (!uri) return;
@@ -90,31 +110,37 @@ export default function AdContentForm({
   return (
     <View style={s.wrap}>
       {/* Titre */}
-      <Text style={s.fieldLabel}>Titre de l'annonce *</Text>
-      <TextInput
-        style={s.input}
-        placeholder="Ex : Nouveau menu disponible !"
-        placeholderTextColor={colors.muted}
-        value={content.titre}
-        onChangeText={v => onChange({ ...content, titre: v })}
-        maxLength={60}
-      />
-      <Text style={s.counter}>{content.titre.length}/60</Text>
+      <View ref={titreWrapRef}>
+        <Text style={s.fieldLabel}>Titre de l'annonce *</Text>
+        <TextInput
+          style={s.input}
+          placeholder="Ex : Nouveau menu disponible"
+          placeholderTextColor={colors.muted}
+          value={content.titre}
+          onChangeText={v => onChange({ ...content, titre: v })}
+          maxLength={60}
+          onFocus={() => scrollToRef(titreWrapRef)}
+        />
+        <Text style={s.counter}>{content.titre.length}/60</Text>
+      </View>
 
       {/* Corps */}
-      <Text style={[s.fieldLabel, { marginTop: 14 }]}>Description *</Text>
-      <TextInput
-        style={[s.input, s.inputMulti]}
-        placeholder="Décris ton offre, ta nouveauté ou ton événement…"
-        placeholderTextColor={colors.muted}
-        value={content.corps}
-        onChangeText={v => onChange({ ...content, corps: v })}
-        multiline
-        numberOfLines={3}
-        maxLength={200}
-        textAlignVertical="top"
-      />
-      <Text style={s.counter}>{content.corps.length}/200</Text>
+      <View ref={corpsWrapRef}>
+        <Text style={[s.fieldLabel, { marginTop: 14 }]}>Description *</Text>
+        <TextInput
+          style={[s.input, s.inputMulti]}
+          placeholder="Décris ton offre, ta nouveauté ou ton événement…"
+          placeholderTextColor={colors.muted}
+          value={content.corps}
+          onChangeText={v => onChange({ ...content, corps: v })}
+          multiline
+          numberOfLines={3}
+          maxLength={200}
+          textAlignVertical="top"
+          onFocus={() => scrollToRef(corpsWrapRef)}
+        />
+        <Text style={s.counter}>{content.corps.length}/200</Text>
+      </View>
 
       {/* Image optionnelle */}
       <Text style={[s.fieldLabel, { marginTop: 14 }]}>Image (optionnelle)</Text>

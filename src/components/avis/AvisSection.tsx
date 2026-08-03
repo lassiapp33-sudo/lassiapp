@@ -181,7 +181,7 @@ export default function AvisSection({ shopId, shopName, currentUserId, isMerchan
       ) : total === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyTxt}>Aucun avis pour l'instant.</Text>
-          {canLeave && <Text style={styles.emptySub}>Sois le premier à noter ce commerce !</Text>}
+          {canLeave && <Text style={styles.emptySub}>Sois le premier à noter ce commerce.</Text>}
         </View>
       ) : (
         <>

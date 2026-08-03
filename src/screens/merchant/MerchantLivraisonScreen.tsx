@@ -7,6 +7,7 @@ import {
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import { IcoBack } from '../../components/icons';
+import { IcoTruck } from '../../components/common/LassiIcons';
 import { formatPrice } from '../../utils/format';
 import { devisLivraison, LIVRAISON_CONFIG } from '../../config/livraison';
 import { getCurrentLocation, reverseGeocode } from '../../services/location';
@@ -231,8 +232,8 @@ export default function MerchantLivraisonScreen({ onBack }: Props) {
     return (
       <LassiScreen header={<Header onBack={onBack} />}>
         <View style={s.center}>
-          <Text style={s.successIcon}>🚚</Text>
-          <Text style={s.successTitle}>Livraison demandée !</Text>
+          <IcoTruck size={64} />
+          <Text style={s.successTitle}>Livraison demandée</Text>
           <Text style={s.successSub}>
             Un livreur va prendre en charge votre colis.{'\n'}
             Frais payés : {formatPrice(montantRef.current)}
@@ -515,7 +516,6 @@ const s = StyleSheet.create({
   cardPrix: { color: colors.accent, fontFamily: fonts.title, fontSize: 16 },
 
   // Success
-  successIcon:  { fontSize: 48, marginBottom: 16 },
   successTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 22, textAlign: 'center' },
   successSub:   { color: colors.muted, fontFamily: fonts.body, fontSize: 14, textAlign: 'center', marginTop: 10, lineHeight: 20 },
   newBtn: {

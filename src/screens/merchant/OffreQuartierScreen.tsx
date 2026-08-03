@@ -242,12 +242,14 @@ export default function OffreQuartierScreen({ onBack }: Props) {
   };
 
   const togglePaid = (id: string) => {
+    // allProducts=true : le prestataire peut choisir parmi tous ses produits
+    const effectiveQuota = activeSub?.allProducts ? paidEligibleItems.length : paidQuotaN;
     setPaidSelectedIds(prev => {
       if (prev.includes(id)) return prev.filter(p => p !== id);
-      if (prev.length >= paidQuotaN) {
+      if (effectiveQuota > 0 && prev.length >= effectiveQuota) {
         Alert.alert(
           'Quota atteint',
-          `Ton pack permet de mettre en avant ${paidQuotaN} produit${paidQuotaN > 1 ? 's' : ''} maximum.`,
+          `Tu peux sélectionner ${effectiveQuota} produit${effectiveQuota > 1 ? 's' : ''} maximum.`,
         );
         return prev;
       }
@@ -303,7 +305,7 @@ export default function OffreQuartierScreen({ onBack }: Props) {
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.75}>
           <IcoBack />
         </TouchableOpacity>
-        <Text style={styles.title}>👑 Offre du Quartier</Text>
+        <Text style={styles.title}>Offre du Quartier</Text>
       </View>
 
       {loading ? (
@@ -331,8 +333,8 @@ export default function OffreQuartierScreen({ onBack }: Props) {
               <View style={styles.adminBanner}>
                 <Text style={styles.adminBannerTitle}>
                   {quota.type_classement === 'bienvenue'
-                    ? '🎁 Cadeau de bienvenue'
-                    : `Top ${quota.rang} national 🎉`}
+                    ? 'Cadeau de bienvenue'
+                    : `Top ${quota.rang} national`}
                 </Text>
                 <View style={styles.bannerRow}>
                   <Text style={styles.bannerMeta}>
@@ -401,13 +403,19 @@ export default function OffreQuartierScreen({ onBack }: Props) {
                 )}
               </View>
 
-              {!activeSub.allProducts && (
+              {/* Toujours afficher la liste — même si allProducts=true, le prestataire peut changer sa sélection */}
+              {paidEligibleItems.length > 0 && (
                 <>
+                  {activeSub.allProducts && (
+                    <Text style={styles.paidPickerHint}>
+                      Actuellement toute ta vitrine est mise en avant. Tu peux choisir des produits précis ci-dessous.
+                    </Text>
+                  )}
                   <ProductList
                     items={paidEligibleItems}
                     selectedIds={paidSelectedIds}
                     onToggle={togglePaid}
-                    quotaN={paidQuotaN}
+                    quotaN={activeSub.allProducts ? paidEligibleItems.length : (paidQuotaN || paidEligibleItems.length)}
                   />
 
                   <TouchableOpacity
@@ -417,7 +425,7 @@ export default function OffreQuartierScreen({ onBack }: Props) {
                     activeOpacity={0.85}
                   >
                     <Text style={styles.saveBtnTxt}>
-                      {savingPaid ? 'Enregistrement…' : 'Enregistrer'}
+                      {savingPaid ? 'Enregistrement…' : 'Enregistrer la sélection'}
                     </Text>
                   </TouchableOpacity>
                 </>
@@ -532,6 +540,14 @@ const styles = StyleSheet.create({
   paidBannerBadgeTxt: { color: colors.success, fontFamily: fonts.ui, fontSize: 10, letterSpacing: 0.5 },
   paidBannerTitle: { color: colors.success, fontFamily: fonts.titleXL, fontSize: 16 },
   paidBannerExpiry: { color: colors.white, fontFamily: fonts.ui, fontSize: 12, marginTop: 2 },
+  paidPickerHint: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    marginHorizontal: 18,
+    marginBottom: 10,
+    lineHeight: 17,
+  },
 
   // ── Product list ────────────────────────────────────────────────────────────
   list: { marginHorizontal: 18, gap: 8, marginBottom: 8 },

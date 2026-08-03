@@ -18,6 +18,30 @@ import { VIP_FONTS } from '../useVipFonts';
 import { getMonProfilVip, updateProfilEditorial } from '../../services/vip';
 import useGerantStore from '../../store/gerantStore';
 import { TOP_INSET } from '../../theme';
+import { VipCategorie } from '../../types/vip';
+
+const MAISON_SUGGESTIONS: Record<VipCategorie, { baseline: string; motGerant: string }> = {
+  restauration: {
+    baseline:  'Ex : Cuisine sénégalaise raffinée',
+    motGerant: 'Ex : Nous accueillons chaque client comme un hôte de marque...',
+  },
+  beaute_tressage: {
+    baseline:  'Ex : Tressage africain haut de gamme',
+    motGerant: 'Ex : Chaque cliente repart sublimée, c\'est notre engagement...',
+  },
+  coiffure: {
+    baseline:  'Ex : Coiffure & soins capillaires premium',
+    motGerant: 'Ex : Votre cheveu mérite le meilleur traitement...',
+  },
+  musculation_fitness: {
+    baseline:  'Ex : Salle de sport moderne au cœur de Dakar',
+    motGerant: 'Ex : Ici, chaque séance vous rapproche de votre meilleure version...',
+  },
+  boulangerie_patisserie: {
+    baseline:  'Ex : Pains artisanaux & pâtisseries fines',
+    motGerant: 'Ex : Nos produits sont faits maison, avec amour, chaque matin...',
+  },
+};
 
 const IcoBack = () => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none"
@@ -34,6 +58,7 @@ interface Props {
 export default function GerantMaisonScreen({ onBack, onPreview }: Props) {
   const profilStore = useGerantStore(s => s.profil);
   const setGerant = useGerantStore(s => s.setGerant);
+  const sg = MAISON_SUGGESTIONS[profilStore?.categorie as VipCategorie] ?? MAISON_SUGGESTIONS.restauration;
 
   const [profilId, setProfilId] = useState<string | null>(null);
   const [initiale, setInitiale] = useState(profilStore?.initiale ?? '');
@@ -117,7 +142,7 @@ export default function GerantMaisonScreen({ onBack, onPreview }: Props) {
             label="Baseline"
             value={baseline}
             onChange={setBaseline}
-            placeholder="Ex : Cuisine sénégalaise raffinée"
+            placeholder={sg.baseline}
             hint="Sous-titre court affiché sous le nom"
             multiline
           />
@@ -126,7 +151,7 @@ export default function GerantMaisonScreen({ onBack, onPreview }: Props) {
             label="Mot du gérant"
             value={motDuGerant}
             onChange={setMotDuGerant}
-            placeholder="Ex : Nous accueillons chaque client comme un hôte de marque..."
+            placeholder={sg.motGerant}
             hint="Citation personnelle affichée sur la fiche"
             multiline
           />

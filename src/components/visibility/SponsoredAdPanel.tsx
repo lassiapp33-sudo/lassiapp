@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Linking,
+  findNodeHandle,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
@@ -190,6 +191,7 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
   const [loadingAds, setLoadingAds] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const scrollRef   = useRef<ScrollView>(null);
 
   const loadAds = useCallback(async (silent = false) => {
     if (!shopId) return;
@@ -283,7 +285,7 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
       setContent({ titre: '', corps: '', imageUri: null, imageUrl: null });
       onCreated?.(result.newBalance);
       Alert.alert(
-        'Campagne lancée !',
+        'Campagne lancée',
         `Ton annonce est en ligne.\nNouveau solde : ${result.newBalance} crédits.`,
       );
     } catch (e) {
@@ -301,9 +303,18 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
       const result = await createVisibilityPayment({
         planId:     `ad_${budget}cr`,
         payMethod,
-        offerType:  'quartier',          // champ requis, ignoré côté annonce
+        offerType:  'annonce',
         productIds: [],
         allProducts: false,
+        adMetadata: {
+          format,
+          titre:         format === 'classique' ? content.titre : null,
+          corps:         format === 'classique' ? content.corps : null,
+          imageUrl:      content.imageUrl ?? null,
+          durationHours: duration,
+          estMin,
+          estMax,
+        },
       });
 
       if (result.status === 'awaiting_keys') {
@@ -349,9 +360,16 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
       if (result.paid) {
         setPendingPay(null);
         await loadAds();
-        Alert.alert('Campagne lancée !', 'Paiement confirmé. Ton annonce est en ligne.');
+        setContent({ titre: '', corps: '', imageUri: null, imageUrl: null });
+        Alert.alert(
+          'Campagne lancée',
+          'Ton paiement a été confirmé et ton annonce est maintenant en ligne.',
+        );
       } else {
-        Alert.alert('Non confirmé', 'On n\'a pas encore reçu ton paiement. Réessaie dans quelques secondes.');
+        Alert.alert(
+          'Paiement non confirmé',
+          'On n\'a pas encore reçu la confirmation Orange Money. Patiente 1-2 min et réessaie.',
+        );
       }
     } catch {
       Alert.alert('Erreur', 'Impossible de vérifier le paiement.');
@@ -362,9 +380,11 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={s.root}
       contentContainerStyle={s.content}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -394,6 +414,7 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
         uploading={uploading}
         onSetUploading={setUploading}
         shopId={shopId ?? ''}
+        scrollViewRef={scrollRef as React.RefObject<ScrollView | null>}
       />
 
       {/* Pack / Budget */}

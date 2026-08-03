@@ -18,14 +18,14 @@ import { OrderInfo } from '../../types/payment';
 import useCartStore, { selectActiveItems, SubBasket } from '../../store/cartStore';
 import Avatar from '../../components/Avatar';
 import { validateCartAvailability } from '../../services/products';
-import { createOrderSecure, uploadVoiceNote } from '../../services/orders';
+import { createOrderSecure, createVipOrder, uploadVoiceNote } from '../../services/orders';
 import VoiceNoteRecorder from '../../components/VoiceNoteRecorder';
 import * as promosService from '../../services/promotions';
 import { AppliedDiscount } from '../../types/promotions';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { notifyError } from '../../utils/errorUtils';
-import { calculerCommission, calculerPrixClient } from '../../config/payment';
+import { calculerCommission, calculerPrixClient, calculerCommissionVip, calculerPrixClientVip } from '../../config/payment';
 import { PayMethod } from '../../types/payment';
 import PayMethodCard from '../../components/payment/PayMethodCard';
 import * as payService from '../../services/payment';
@@ -96,11 +96,13 @@ interface Props {
   shopName: string;
   onBack: () => void;
   onCheckout: (order: OrderInfo) => void;
+  isVip?: boolean;
+  vipOrderMode?: 'normal' | 'livraison';
 }
 
 const BASKET_PRESETS = ['Pour moi', 'Pour papa', 'Pour maman', 'Pour un ami'];
 
-export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Props) {
+export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip = false, vipOrderMode = 'normal' }: Props) {
   // ── Store ──────────────────────────────────────────────────────────────────
   const baskets = useCartStore(s => s.baskets);
   const activeBasketId = useCartStore(s => s.activeBasketId);
@@ -140,8 +142,8 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
   const subtotal = allMergedItems.reduce((s, i) => s + i.price * i.qty, 0);
   const totalDiscount = discounts.reduce((s, d) => s + d.reductionFcfa, 0);
   const total = Math.max(subtotal - totalDiscount, 0);
-  const commission = calculerCommission(total);
-  const totalClient = calculerPrixClient(total);
+  const commission = isVip ? calculerCommissionVip(total) : calculerCommission(total);
+  const totalClient = isVip ? calculerPrixClientVip(total) : calculerPrixClient(total);
 
   // ── Effets ────────────────────────────────────────────────────────────────
 
@@ -205,8 +207,11 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
       if (freshMerged.length === 0) return;
 
       const sid = shopId || store.shopInfo?.id || '';
-      const allIds = [...new Set(freshBaskets.flatMap(b => b.items.map(i => i.id)))];
-      const unavailable = await validateCartAvailability(sid, allIds);
+
+      // Pour les boutiques VIP, les IDs sont des prestations (pas des produits) — skip la validation products
+      const unavailable = isVip
+        ? []
+        : await validateCartAvailability(sid, [...new Set(freshBaskets.flatMap(b => b.items.map(i => i.id)))]);
 
       if (unavailable.length > 0) {
         removeFromAllBaskets(unavailable.map(u => u.id));
@@ -244,8 +249,8 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
       const freshAllMerged = mergeBasketItems(freshStore.baskets);
       const freshSubtotal = freshAllMerged.reduce((s, i) => s + i.price * i.qty, 0);
       const freshTotal = Math.max(freshSubtotal - totalDiscount, 0);
-      const freshCommission = calculerCommission(freshTotal);
-      const freshTotalClient = calculerPrixClient(freshTotal);
+      const freshCommission = isVip ? calculerCommissionVip(freshTotal) : calculerCommission(freshTotal);
+      const freshTotalClient = isVip ? calculerPrixClientVip(freshTotal) : calculerPrixClient(freshTotal);
 
       const orderItems = freshAllMerged.map(i => ({
         qty: i.qty,
@@ -253,7 +258,6 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         price: i.price * i.qty,
       }));
 
-      const rawItems = freshAllMerged.map(i => ({ productId: i.id, qty: i.qty }));
       const structuredNote = buildOrderNote(freshStore.baskets, note.trim());
       const freshShopInfo = freshStore.shopInfo;
       const freshOrderType = freshShopInfo?.showOrderType ? freshStore.orderType : undefined;
@@ -264,15 +268,30 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
         if (path) voiceNotePath = path;
       }
 
-      const { orderId: realOrderId } = await createOrderSecure(
-        sid,
-        rawItems,
-        structuredNote,
-        freshOrderType,
-        undefined,
-        voiceNotePath,
-        method,
-      );
+      let realOrderId: string;
+      if (isVip) {
+        // Commande VIP : IDs = prestations, pas des products → create-vip-order EF
+        const vipItems = freshAllMerged.map(i => ({ prestationId: i.id, qty: i.qty }));
+        const res = await createVipOrder(
+          sid,
+          vipItems,
+          vipOrderMode === 'livraison' ? 'emporter' : 'emporter',
+          structuredNote ?? undefined,
+        );
+        realOrderId = res.orderId;
+      } else {
+        const rawItems = freshAllMerged.map(i => ({ productId: i.id, qty: i.qty }));
+        const res = await createOrderSecure(
+          sid,
+          rawItems,
+          structuredNote,
+          freshOrderType,
+          undefined,
+          voiceNotePath,
+          method,
+        );
+        realOrderId = res.orderId;
+      }
 
       let preInitiatedPiId: string | undefined;
       let paymentConfirmed = false;
@@ -512,7 +531,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.name}</Text>
                   <Text style={styles.itemPrice}>
-                    {formatPrice(calculerPrixClient(item.price))}
+                    {formatPrice(isVip ? calculerPrixClientVip(item.price) : calculerPrixClient(item.price))}
                   </Text>
                 </View>
                 <View style={styles.qtyWrap}>
@@ -591,14 +610,14 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
               <View style={styles.summaryLine}>
                 <Text style={styles.summaryKey}>Type</Text>
                 <Text style={styles.summaryVal}>
-                  {orderType === 'place' ? '🍽 Sur place' : '🥡 À emporter'}
+                  {orderType === 'place' ? 'Sur place' : 'À emporter'}
                 </Text>
               </View>
             )}
             {discounts.map(d => (
               <View key={d.promoId} style={styles.discountLine}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.discountKey}>🏷️ {d.titre}</Text>
+                  <Text style={styles.discountKey}>{d.titre}</Text>
                   <Text style={styles.discountSub}>{d.label}</Text>
                 </View>
                 <Text style={styles.discountVal}>−{formatPrice(d.reductionFcfa)}</Text>
@@ -616,41 +635,49 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout }: Pro
       {/* Footer fixe — Commander */}
       <View style={styles.footer}>
         <View style={styles.footerRow}>
-          <TouchableOpacity
-            style={[styles.payBtn, (!hasItems || isSubmitting) && styles.payBtnDisabled]}
-            onPress={handleCheckout}
-            activeOpacity={0.85}
-            disabled={!hasItems || isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <ActivityIndicator color={colors.white} size="small" />
-                <Text style={styles.payBtnTxt}>Traitement…</Text>
-              </>
-            ) : (
-              <>
-                <IcoPay />
-                <Text style={styles.payBtnTxt}>
-                  {method === 'wave' ? 'Wave' : 'OM'} · {formatPrice(totalClient)}
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
+          {/* Bouton Commander (paiement direct) — masqué pour VIP + livraison */}
+          {(!isVip || vipOrderMode === 'normal') && (
+            <TouchableOpacity
+              style={[styles.payBtn, (!hasItems || isSubmitting) && styles.payBtnDisabled]}
+              onPress={handleCheckout}
+              activeOpacity={0.85}
+              disabled={!hasItems || isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <ActivityIndicator color={colors.white} size="small" />
+                  <Text style={styles.payBtnTxt}>Traitement…</Text>
+                </>
+              ) : (
+                <>
+                  <IcoPay />
+                  <Text style={styles.payBtnTxt}>
+                    {isVip ? 'Commander' : `${method === 'wave' ? 'Wave' : 'OM'} · ${formatPrice(totalClient)}`}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
 
-          <TouchableOpacity
-            style={[
-              styles.livraisonBtn,
-              (!hasItems || isSubmitting || devisBtn?.horsZone === true) && styles.payBtnDisabled,
-            ]}
-            onPress={() => setShowLivraisonModal(true)}
-            activeOpacity={0.85}
-            disabled={!hasItems || isSubmitting || devisBtn?.horsZone === true}
-          >
-            <Text style={styles.livraisonBtnTxt}>Commander + Livrer</Text>
-            <Text style={styles.livraisonBtnSub}>
-              {devisBtn == null ? '…' : devisBtn.horsZone ? 'Hors zone' : `+${formatPrice(devisBtn.prix)}`}
-            </Text>
-          </TouchableOpacity>
+          {/* Bouton Commander + Livrer — masqué pour VIP + commander simple */}
+          {(!isVip || vipOrderMode === 'livraison') && (
+            <TouchableOpacity
+              style={[
+                styles.livraisonBtn,
+                (!hasItems || isSubmitting || devisBtn?.horsZone === true) && styles.payBtnDisabled,
+              ]}
+              onPress={() => isVip ? handleCheckout() : setShowLivraisonModal(true)}
+              activeOpacity={0.85}
+              disabled={!hasItems || isSubmitting || devisBtn?.horsZone === true}
+            >
+              <Text style={styles.livraisonBtnTxt}>Commander + Livrer</Text>
+              {!isVip && (
+                <Text style={styles.livraisonBtnSub}>
+                  {devisBtn == null ? '…' : devisBtn.horsZone ? 'Hors zone' : `+${formatPrice(devisBtn.prix)}`}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 

@@ -17,8 +17,10 @@ import useGerantStore from '../../store/gerantStore';
 import { TOP_INSET } from '../../theme';
 import { deconnexionVip } from '../authVip';
 
+type TileId = 'profil' | 'registre' | 'horaires' | 'maison' | 'changeMdp' | 'alaune' | 'avis' | 'classement' | 'livraison' | 'autourDeMoi' | 'reservations_table' | 'espaces_config' | 'creneaux_config' | 'rdv_beauty' | 'creneaux_beauty';
+
 interface Tile {
-  id: 'registre' | 'horaires' | 'maison' | 'changeMdp';
+  id: TileId;
   label: string;
   desc: string;
 }
@@ -30,6 +32,25 @@ const TILES: Tile[] = [
   { id: 'changeMdp',  label: 'Mot de passe', desc: 'Changer votre mot de passe d\'accès' },
 ];
 
+const TILES2: Tile[] = [
+  { id: 'alaune',      label: 'À la une',      desc: 'Blocs mis en avant pour vos clients' },
+  { id: 'avis',        label: 'Mes avis',       desc: 'Notes et commentaires reçus' },
+  { id: 'classement',  label: 'Classement',     desc: 'Votre rang dans votre catégorie' },
+  { id: 'livraison',   label: 'Livraison',      desc: 'Demander et suivre une livraison' },
+  { id: 'autourDeMoi', label: 'Autour de moi',  desc: 'Prestataires et services à proximité' },
+];
+
+const TILES_RESTAURATION: Tile[] = [
+  { id: 'reservations_table', label: 'Réservations',  desc: 'Gérer les demandes de table clients' },
+  { id: 'espaces_config',     label: 'Mes espaces',   desc: 'Étages, terrasses, salles — configurer' },
+  { id: 'creneaux_config',    label: 'Mes créneaux',  desc: 'Déjeuner, dîner, brunch — horaires' },
+];
+
+const TILES_BEAUTY: Tile[] = [
+  { id: 'rdv_beauty',      label: 'Mes rendez-vous', desc: 'Gérer les demandes de RDV clients' },
+  { id: 'creneaux_beauty', label: 'Mes créneaux',    desc: 'Horaires disponibles pour les réservations' },
+];
+
 const IcoArrow = () => (
   <Svg width={16} height={16} viewBox="0 0 24 24" fill="none"
     stroke={r.couleur.or} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
@@ -38,13 +59,13 @@ const IcoArrow = () => (
 );
 
 interface Props {
-  onNav: (id: Tile['id']) => void;
+  onNav: (id: TileId) => void;
   onPreview: () => void;
   onLogout: () => void;
 }
 
 export default function GerantDashboard({ onNav, onPreview, onLogout }: Props) {
-  const profil = useGerantStore(s => s.profil);
+  const profil      = useGerantStore(s => s.profil);
   const clearGerant = useGerantStore(s => s.clearGerant);
 
   const handleLogout = async () => {
@@ -60,13 +81,16 @@ export default function GerantDashboard({ onNav, onPreview, onLogout }: Props) {
 
         {/* En-tête */}
         <View style={[s.entete, { paddingTop: TOP_INSET + 12 }]}>
-          <Blason initiale={profil?.initiale ?? 'V'} taille={64} />
           <View style={s.enteteInfo}>
             <Text style={s.nom} numberOfLines={1}>{profil?.nomAffiche ?? '…'}</Text>
             <Text style={[r.caps, s.categorie]}>
               {profil ? VIP_CATEGORIE_LABELS[profil.categorie] : ''}
             </Text>
           </View>
+          {/* Blason cliquable → écran Profil */}
+          <TouchableOpacity onPress={() => onNav('profil')} activeOpacity={0.75}>
+            <Blason initiale={profil?.initiale ?? 'V'} taille={64} />
+          </TouchableOpacity>
         </View>
 
         <Fleuron />
@@ -83,6 +107,57 @@ export default function GerantDashboard({ onNav, onPreview, onLogout }: Props) {
             </TouchableOpacity>
           ))}
         </View>
+
+        <Fleuron />
+
+        {/* Tuiles services */}
+        <View style={s.tuiles}>
+          {TILES2.map(t => (
+            <TouchableOpacity key={t.id} style={s.tuile} onPress={() => onNav(t.id)}>
+              <View style={s.tuileTexte}>
+                <Text style={s.tuileLabel}>{t.label}</Text>
+                <Text style={s.tuileDesc}>{t.desc}</Text>
+              </View>
+              <IcoArrow />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Réservations de table (restauration uniquement) */}
+        {profil?.categorie === 'restauration' && (
+          <>
+            <Fleuron />
+            <View style={s.tuiles}>
+              {TILES_RESTAURATION.map(t => (
+                <TouchableOpacity key={t.id} style={[s.tuile, s.tuileRestau]} onPress={() => onNav(t.id)}>
+                  <View style={s.tuileTexte}>
+                    <Text style={s.tuileLabel}>{t.label}</Text>
+                    <Text style={s.tuileDesc}>{t.desc}</Text>
+                  </View>
+                  <IcoArrow />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* Rendez-vous (beauté / coiffure uniquement) */}
+        {(profil?.categorie === 'beaute_tressage' || profil?.categorie === 'coiffure') && (
+          <>
+            <Fleuron />
+            <View style={s.tuiles}>
+              {TILES_BEAUTY.map(t => (
+                <TouchableOpacity key={t.id} style={[s.tuile, s.tuileBeauty]} onPress={() => onNav(t.id)}>
+                  <View style={s.tuileTexte}>
+                    <Text style={s.tuileLabel}>{t.label}</Text>
+                    <Text style={s.tuileDesc}>{t.desc}</Text>
+                  </View>
+                  <IcoArrow />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
 
         <Fleuron />
 
@@ -134,6 +209,8 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: r.couleur.filetFin,
   },
+  tuileRestau: { backgroundColor: `${r.couleur.orLassi}0A` },
+  tuileBeauty: { backgroundColor: 'rgba(180,120,200,0.06)' },
   tuileTexte: { flex: 1 },
   tuileLabel: {
     fontFamily: VIP_FONTS.palais.util,

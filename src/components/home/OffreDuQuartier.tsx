@@ -76,7 +76,7 @@ export default function OffreDuQuartier({ onPress }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>✨ Offre du Quartier</Text>
+      <Text style={styles.title}>Offre du Quartier</Text>
       <FlatList
         ref={listRef}
         data={produits}
@@ -127,7 +127,7 @@ export default function OffreDuQuartier({ onPress }: Props) {
             </View>
             {!!item.rang_prestataire && (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>👑 Top {item.rang_prestataire}</Text>
+                <Text style={styles.badgeText}>Top {item.rang_prestataire}</Text>
               </View>
             )}
           </TouchableOpacity>

@@ -48,12 +48,12 @@ export default function ActiveSubCard({
       {/* Produit(s) annoncé(s) */}
       {allProducts ? (
         <Text style={styles.product} numberOfLines={1}>
-          🏪 Toute ta vitrine est mise en avant
+          Toute ta vitrine est mise en avant
         </Text>
       ) : (
         !!productName && (
           <Text style={styles.product} numberOfLines={1}>
-            {productEmoji || '🛍️'} {productName}
+            {productEmoji ? `${productEmoji} ` : ''}{productName}
             {productCount > 1
               ? ` + ${productCount - 1} autre${productCount - 1 > 1 ? 's' : ''}`
               : ''}

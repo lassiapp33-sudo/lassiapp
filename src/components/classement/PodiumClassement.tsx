@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { IcoCrown } from '../common/LassiIcons';
 import { colors, fonts } from '../../theme';
 import Avatar from '../Avatar';
 import { ClassementEntry } from '../../services/classementService';
@@ -47,7 +48,7 @@ function PodiumPlace({ entry, place, height, color, variant, crown }: PodiumPlac
   if (!entry) return <View style={{ flex: 1 }} />;
   return (
     <View style={styles.place}>
-      {crown && <Text style={styles.crown}>👑</Text>}
+      {crown && <IcoCrown size={28} />}
       <Avatar
         imageUrl={entry.image_url}
         name={entry.nom_affiche}
@@ -76,7 +77,6 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   place: { flex: 1, alignItems: 'center' },
-  crown: { fontSize: 24, marginBottom: 2 },
   nom: {
     color: colors.white,
     fontSize: 12,

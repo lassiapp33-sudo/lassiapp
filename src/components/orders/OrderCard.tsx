@@ -178,7 +178,7 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
             ))}
             {parsedBaskets.userNote ? (
               <View style={styles.noteRow}>
-                <Text style={styles.noteTxt}>📝 {parsedBaskets.userNote}</Text>
+                <Text style={styles.noteTxt}>{parsedBaskets.userNote}</Text>
               </View>
             ) : null}
           </>
@@ -196,7 +196,7 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
             ))}
             {order.note ? (
               <View style={styles.noteRow}>
-                <Text style={styles.noteTxt}>📝 {order.note}</Text>
+                <Text style={styles.noteTxt}>{order.note}</Text>
               </View>
             ) : null}
           </>
@@ -225,7 +225,7 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
                     { color: order.orderType === 'place' ? '#5FD38A' : colors.accent },
                   ]}
                 >
-                  {order.orderType === 'place' ? '🍽 Sur place' : '🥡 À emporter'}
+                  {order.orderType === 'place' ? 'Sur place' : 'À emporter'}
                 </Text>
               </View>
             )}

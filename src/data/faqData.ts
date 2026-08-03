@@ -16,7 +16,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment passer une commande ?',
     motsCles: ['commander', 'acheter', 'passer commande', 'commande', 'commander comment'],
     reponse:
-      'Ouvre la vitrine du commerçant, choisis tes produits, ajoute au panier, valide. Choisis "Sur place" ou "À emporter" (pour la nourriture), paie via Wave ou Orange Money, et c\'est fait ! 🐝 Le commerçant reçoit ta commande directement.',
+      'Ouvre la vitrine du commerçant, choisis tes produits, ajoute au panier, valide. Choisis "Sur place" ou "À emporter" (pour la nourriture), paie via Wave ou Orange Money, et c\'est fait. 🐝 Le commerçant reçoit ta commande directement.',
   },
   {
     id: 2,
@@ -77,7 +77,7 @@ export const FAQ_ITEMS: FaqItem[] = [
       'commander a nouveau',
     ],
     reponse:
-      'Dans "Mes commandes", sur une commande passée, clique "Commander à nouveau" : tout est repris en un tap. Pratique pour ton tangana de tous les jours ! 🍵',
+      'Dans "Mes commandes", sur une commande passée, clique "Commander à nouveau" : tout est repris en un tap. Pratique pour ton tangana de tous les jours. 🍵',
   },
   {
     id: 8,
@@ -95,7 +95,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "Puis-je commander pour quelqu'un d'autre ?",
     motsCles: ['commander pour', 'cadeau', 'autre personne', 'quelqu un d autre'],
     reponse:
-      "Oui ! Tu commandes normalement, et tu peux préciser au commerçant via le chat si c'est pour une autre personne ou une adresse différente.",
+      "Oui. Tu commandes normalement, et tu peux préciser au commerçant via le chat si c'est pour une autre personne ou une adresse différente.",
   },
   {
     id: 10,
@@ -142,7 +142,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "Est-ce que je paie pour utiliser l'app ?",
     motsCles: ['gratuit', 'payant', 'cout utilisation', 'app gratuite'],
     reponse:
-      "Non, l'app est 100% gratuite pour les clients ! Tu paies seulement tes achats. Pas de frais cachés.",
+      "Non, l'app est 100% gratuite pour les clients. Tu paies seulement tes achats. Pas de frais cachés.",
   },
   {
     id: 15,
@@ -189,7 +189,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment créer un compte ?',
     motsCles: ['creer compte', 'inscription', 's inscrire', 'ouvrir compte', 'nouveau compte'],
     reponse:
-      'Entre ton numéro (+221), choisis client ou prestataire, complète ton profil. Simple et rapide ! 📱',
+      'Entre ton numéro (+221), choisis client ou prestataire, complète ton profil. Simple et rapide. 📱',
   },
   {
     id: 20,
@@ -256,7 +256,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment changer la langue ?',
     motsCles: ['langue', 'francais', 'wolof', 'changer langue'],
     reponse:
-      'Le choix de langue (Français/Wolof) arrive très bientôt dans les paramètres. Reste connecté ! 🌍',
+      'Le choix de langue (Français/Wolof) arrive très bientôt dans les paramètres. Reste connecté. 🌍',
   },
 
   // ── DEVENIR PRESTATAIRE ───────────────────────────────────────────────────────
@@ -273,7 +273,7 @@ export const FAQ_ITEMS: FaqItem[] = [
       'inscription prestataire',
     ],
     reponse:
-      'À l\'inscription, choisis "Prestataire". Indique ta catégorie, le nom de ton commerce, ton adresse, ton numéro. Puis crée ta vitrine. Rapide et gratuit ! 🏪',
+      'À l\'inscription, choisis "Prestataire". Indique ta catégorie, le nom de ton commerce, ton adresse, ton numéro. Puis crée ta vitrine. Rapide et gratuit. 🏪',
   },
   {
     id: 28,
@@ -305,7 +305,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Combien de temps pour être visible ?',
     motsCles: ['visible', 'validation', 'apparaitre', 'delai inscription', 'quand visible'],
     reponse:
-      'Dès que ta vitrine est créée et tes infos remplies, ton commerce apparaît pour les clients. Quasi immédiat ! ⚡',
+      'Dès que ta vitrine est créée et tes infos remplies, ton commerce apparaît pour les clients. Quasi immédiat. ⚡',
   },
 
   // ── ESPACE PRESTATAIRE ────────────────────────────────────────────────────────
@@ -426,7 +426,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment répondre à un avis client ?',
     motsCles: ['repondre avis', 'commentaire client', 'reponse note', 'avis client'],
     reponse:
-      'Quand un client laisse un avis, tu peux y répondre depuis ta vitrine. Une réponse polie rassure les futurs clients ! ⭐',
+      'Quand un client laisse un avis, tu peux y répondre depuis ta vitrine. Une réponse polie rassure les futurs clients. ⭐',
   },
 
   // ── MESSAGERIE ────────────────────────────────────────────────────────────────
@@ -437,7 +437,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment contacter un commerçant ou un client ?',
     motsCles: ['message', 'chat', 'contacter', 'discuter', 'ecrire', 'envoyer message'],
     reponse:
-      "Via le chat intégré ! Depuis une vitrine ou une commande, clique l'icône message. Tu reçois une notification à chaque nouveau message. 💬",
+      "Via le chat intégré. Depuis une vitrine ou une commande, clique l'icône message. Tu reçois une notification à chaque nouveau message. 💬",
   },
   {
     id: 44,
@@ -472,7 +472,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment laisser un avis ?',
     motsCles: ['avis', 'noter', 'note', 'commentaire', 'evaluer', 'laisser avis'],
     reponse:
-      'Après une commande, tu peux donner une note (étoiles) + un commentaire sur le commerçant. Ça aide toute la communauté ! ⭐',
+      'Après une commande, tu peux donner une note (étoiles) + un commentaire sur le commerçant. Ça aide toute la communauté. ⭐',
   },
   {
     id: 47,
@@ -490,7 +490,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Que veut dire le badge "Nouveau" ?',
     motsCles: ['badge nouveau', 'nouveau commerce', 'pas d avis', 'badge'],
     reponse:
-      'Le badge "Nouveau" s\'affiche pendant la 1ère semaine d\'activité d\'un commerce. Sois le premier à le tester et à le noter ! 🆕',
+      'Le badge "Nouveau" s\'affiche pendant la 1ère semaine d\'activité d\'un commerce. Sois le premier à le tester et à le noter. 🆕',
   },
   {
     id: 49,
@@ -557,7 +557,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment chercher un commerce ?',
     motsCles: ['chercher', 'rechercher', 'trouver commerce', 'recherche', 'comment chercher'],
     reponse:
-      'Tape directement ta demande ici (ex : "coiffeur à Patte d\'Oie"), ou utilise la recherche et les catégories sur l\'accueil. Je te trouve ça ! 🔍',
+      'Tape directement ta demande ici (ex : "coiffeur à Patte d\'Oie"), ou utilise la recherche et les catégories sur l\'accueil. Je te trouve ça. 🔍',
   },
   {
     id: 56,
@@ -619,7 +619,7 @@ export const FAQ_ITEMS: FaqItem[] = [
       'lassi application',
     ],
     reponse:
-      'LASSİ est ton app de proximité à Dakar : elle connecte les clients aux commerçants et prestataires du quartier (restos, tangana, coiffeurs, sport, boutiques...). Découvre, commande et paie facilement près de chez toi ! 🐝',
+      'LASSİ est ton app de proximité à Dakar : elle connecte les clients aux commerçants et prestataires du quartier (restos, tangana, coiffeurs, sport, boutiques...). Découvre, commande et paie facilement près de chez toi. 🐝',
   },
   {
     id: 62,
@@ -628,7 +628,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Qui es-tu, Lassi ?',
     motsCles: ['qui es tu', 'lassi qui', 'mascotte', 'abeille', 'c est qui lassi'],
     reponse:
-      "Je suis Lassi, l'abeille assistante de l'app ! 🐝 Je t'aide à trouver des commerces, à comprendre l'app, et à résoudre tes soucis. Pose-moi tes questions !",
+      "Je suis Lassi, l'abeille assistante de l'app. 🐝 Je t'aide à trouver des commerces, à comprendre l'app, et à résoudre tes soucis. Pose-moi tes questions.",
   },
   {
     id: 63,
@@ -644,7 +644,7 @@ export const FAQ_ITEMS: FaqItem[] = [
       'contacter lassi',
     ],
     reponse:
-      'Le service client est disponible sur WhatsApp au +221 76 189 00 03. Appuie sur le bouton "Contacter le service client" ci-dessous pour nous écrire directement ! 💬',
+      'Le service client est disponible sur WhatsApp au +221 76 189 00 03. Appuie sur le bouton "Contacter le service client" ci-dessous pour nous écrire directement. 💬',
   },
   {
     id: 64,
@@ -662,7 +662,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Dans quelles villes LASSİ est disponible ?',
     motsCles: ['ville', 'disponible', 'zone lassi', 'dakar', 'regions', 'ou disponible'],
     reponse:
-      "LASSİ démarre à Dakar et s'étendra à d'autres villes du Sénégal progressivement. Reste connecté ! 🇸🇳",
+      "LASSİ démarre à Dakar et s'étendra à d'autres villes du Sénégal progressivement. Reste connecté. 🇸🇳",
   },
   {
     id: 66,
@@ -671,7 +671,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment proposer une idée ou un retour ?',
     motsCles: ['suggestion', 'idee', 'retour', 'feedback', 'ameliorer', 'proposer idee'],
     reponse:
-      'On adore les retours ! Passe par "Signaler un problème" ou le service client pour partager tes idées. LASSİ grandit avec sa communauté. 💡',
+      'On adore les retours. Passe par "Signaler un problème" ou le service client pour partager tes idées. LASSİ grandit avec sa communauté. 💡',
   },
   {
     id: 67,
@@ -680,7 +680,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "L'app est sur iPhone et Android ?",
     motsCles: ['iphone', 'android', 'ios', 'telecharger', 'store', 'play store', 'app store'],
     reponse:
-      'Oui, sur Android (Play Store) et iPhone (App Store). Télécharge et profite de ton quartier ! 📲',
+      'Oui, sur Android (Play Store) et iPhone (App Store). Télécharge et profite de ton quartier. 📲',
   },
   {
     id: 68,
@@ -689,7 +689,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment inviter des amis ?',
     motsCles: ['inviter', 'parrainage', 'partager', 'ami', 'inviter amis'],
     reponse:
-      "Le partage et le parrainage arrivent bientôt ! Tu pourras inviter tes amis et gagner des avantages. Reste à l'écoute. 🎁",
+      "Le partage et le parrainage arrivent bientôt. Tu pourras inviter tes amis et gagner des avantages. Reste à l'écoute. 🎁",
   },
   {
     id: 69,
@@ -698,7 +698,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "C'est quoi la version de l'app ?",
     motsCles: ['version', 'a propos', 'mise a jour', 'version app'],
     reponse:
-      "Tu trouves la version de l'app dans Profil → À propos. Pense à garder l'app à jour pour les nouveautés !",
+      "Tu trouves la version de l'app dans Profil → À propos. Pense à garder l'app à jour pour les nouveautés.",
   },
   {
     id: 70,
@@ -707,7 +707,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'LASSİ est-elle une app sénégalaise ?',
     motsCles: ['senegalaise', 'made in senegal', 'locale', 'origine lassi'],
     reponse:
-      'Oui ! LASSİ est pensée et faite pour le Sénégal 🇸🇳, pour valoriser les commerces de quartier et la teranga.',
+      'Oui. LASSİ est pensée et faite pour le Sénégal 🇸🇳, pour valoriser les commerces de quartier et la teranga.',
   },
 
   // ── WOLOF ─────────────────────────────────────────────────────────────────────
@@ -718,7 +718,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Naka lañuy commandé ? (Comment commander ?)',
     motsCles: ['naka commande', 'commande naka', 'commandé naka', 'naka lay commande'],
     reponse:
-      'Ubbil vitrine bu commerçant bi, tann li nga bëgg, ajouté ko ci panier bi, validé. Feyal ak Wave walla Orange Money. Pare na ! 🐝\n(Ouvre la vitrine, choisis, ajoute au panier, valide et paie via Wave/OM.)',
+      'Ubbil vitrine bu commerçant bi, tann li nga bëgg, ajouté ko ci panier bi, validé. Feyal ak Wave walla Orange Money. Pare na. 🐝\n(Ouvre la vitrine, choisis, ajoute au panier, valide et paie via Wave/OM.)',
   },
   {
     id: 72,
@@ -770,7 +770,7 @@ export const FAQ_ITEMS: FaqItem[] = [
       'commercant pas inscrit',
     ],
     reponse:
-      "Parle-lui de LASSİ ! Il peut s'inscrire gratuitement comme prestataire en quelques minutes. Plus on est nombreux, mieux c'est. 🙌",
+      "Parle-lui de LASSİ. Il peut s'inscrire gratuitement comme prestataire en quelques minutes. Plus on est nombreux, mieux c'est. 🙌",
   },
   {
     id: 77,
@@ -901,7 +901,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment fonctionne le filtre "Ouvert maintenant" ?',
     motsCles: ['ouvert maintenant', 'filtre ouvert', 'ouverts maintenant', 'filtre ouverts'],
     reponse:
-      "Ce filtre n'affiche que les commerces ouverts à l'instant, selon leurs horaires déclarés. Pratique quand tu as faim tout de suite ! 🟢",
+      "Ce filtre n'affiche que les commerces ouverts à l'instant, selon leurs horaires déclarés. Pratique quand tu as faim tout de suite. 🟢",
   },
   {
     id: 91,
@@ -955,7 +955,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "C'est quoi un Ndéki ?",
     motsCles: ['ndeki', 'ndekki', 'petit dejeuner senegalais', 'mama ndeki'],
     reponse:
-      'Le Ndéki, c\'est le petit-déjeuner sénégalais (souvent chez "Mama") : café touba, mbourou, omelette... Cherche "ndéki" pour en trouver près de toi ! ☕',
+      'Le Ndéki, c\'est le petit-déjeuner sénégalais (souvent chez "Mama") : café touba, mbourou, omelette... Cherche "ndéki" pour en trouver près de toi. ☕',
   },
   {
     id: 97,

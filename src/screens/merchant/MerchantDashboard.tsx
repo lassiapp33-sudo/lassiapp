@@ -170,7 +170,7 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
         />
 
         {/* ③ Récompenses actives */}
-        {!!userId && <MesRecompensesCard userId={userId} />}
+        {!!userId && <MesRecompensesCard userId={userId} shopId={shopId} />}
 
         {/* ④ 4 actions rapides — compteurs réels */}
         <QuickActions

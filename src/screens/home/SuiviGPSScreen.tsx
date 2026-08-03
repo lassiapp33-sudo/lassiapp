@@ -9,7 +9,7 @@ import {
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import Svg, { Path } from 'react-native-svg';
 import * as Location from 'expo-location';
-import { colors, fonts, TOP_INSET } from '../../theme';
+import { fonts, TOP_INSET } from '../../theme';
 import { haversineMeters, formatDistance, walkMinutes } from '../../services/location';
 import Avatar from '../../components/Avatar';
 import useLocationStore from '../../store/locationStore';
@@ -17,12 +17,21 @@ import useLocationStore from '../../store/locationStore';
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  shopLat:    number;
-  shopLng:    number;
-  shopName:   string;
+  shopLat:     number;
+  shopLng:     number;
+  shopName:    string;
   shopLogoUrl: string | null;
-  onBack:     () => void;
+  onBack:      () => void;
 }
+
+// ─── Palette thème clair (miroir de MapScreen) ────────────────────────────────
+
+const L_BG     = '#FFFFFF';
+const L_TEXT   = '#111827';
+const L_MUTED  = '#6B7280';
+const L_BORDER = 'rgba(0,0,0,0.08)';
+const L_SHADOW = 'rgba(0,0,0,0.10)';
+const ACCENT   = '#FDCF34';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,7 +46,7 @@ function esc(s: string): string {
     .replace(/\\/g, '&#092;');
 }
 
-// ─── HTML Leaflet navigation in-app ──────────────────────────────────────────
+// ─── HTML Leaflet navigation thème clair ──────────────────────────────────────
 
 const buildNavHTML = (
   uLat: number, uLng: number,
@@ -46,8 +55,8 @@ const buildNavHTML = (
 ): string => {
   const initial = esc((shopName || '?').charAt(0).toUpperCase());
   const logoContent = logoUrl
-    ? `<img src="${esc(logoUrl)}" style="width:26px;height:26px;border-radius:8px;object-fit:cover;">`
-    : `<span style="color:#14152A;font-weight:700;font-size:18px;font-family:sans-serif;line-height:1;">${initial}</span>`;
+    ? `<img src="${esc(logoUrl)}" style="width:28px;height:28px;border-radius:9px;object-fit:cover;">`
+    : `<span style="color:#111827;font-weight:700;font-size:18px;font-family:sans-serif;line-height:1;">${initial}</span>`;
 
   return `<!DOCTYPE html>
 <html>
@@ -57,14 +66,15 @@ const buildNavHTML = (
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
-    html,body{width:100%;height:100%;background:#14152A;}
+    html,body{width:100%;height:100%;background:#F0EFE9;}
     #map{width:100%;height:100%;}
-    #map::after{content:'';position:absolute;inset:0;background:rgba(10,12,45,.18);pointer-events:none;z-index:400;}
-    .leaflet-control-attribution{font-size:8px!important;background:rgba(20,21,42,.85)!important;color:#5a5c80!important;border-radius:4px!important;}
-    .leaflet-control-attribution a{color:#5a5c80!important;}
-    .ud{width:18px;height:18px;border-radius:50%;background:#4D9FFF;border:3px solid #fff;box-shadow:0 0 0 14px rgba(77,159,255,.22);}
+    .leaflet-control-attribution{font-size:8px!important;background:rgba(255,255,255,.88)!important;color:#9CA3AF!important;border-radius:6px!important;border:none!important;padding:2px 6px!important;}
+    .leaflet-control-attribution a{color:#9CA3AF!important;}
+    /* Dot utilisateur */
+    .ud{width:18px;height:18px;border-radius:50%;background:#3B82F6;border:3px solid #fff;box-shadow:0 2px 8px rgba(59,130,246,.5),0 0 0 12px rgba(59,130,246,.15);}
+    /* Pin boutique */
     .lp{display:flex;flex-direction:column;align-items:center;}
-    .lp-b{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 4px 12px rgba(0,0,0,.6);background:#FDCF34;border:2px solid #fff;}
+    .lp-b{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 4px 14px rgba(253,207,52,.45);background:#FDCF34;border:2.5px solid #fff;}
     .lp-t{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid #FDCF34;margin-top:-1px;}
   </style>
 </head>
@@ -75,20 +85,19 @@ const buildNavHTML = (
 const UL=${uLat},UG=${uLng},SL=${sLat},SG=${sLng};
 const map=L.map('map',{zoomControl:false});
 
-L.tileLayer('https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{
-  attribution:'© OpenStreetMap © CARTO',maxZoom:20
+L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+  attribution:'© OpenStreetMap © CARTO',maxZoom:20,detectRetina:true
 }).addTo(map);
 
 const uIco=L.divIcon({html:'<div class="ud"></div>',iconSize:[18,18],iconAnchor:[9,9],className:''});
 let uMarker=L.marker([UL,UG],{icon:uIco,zIndexOffset:2000}).addTo(map);
 
 const sHtml='<div class="lp"><div class="lp-b">${logoContent}</div><div class="lp-t"></div></div>';
-const sIco=L.divIcon({html:sHtml,iconSize:[40,52],iconAnchor:[20,52],className:''});
+const sIco=L.divIcon({html:sHtml,iconSize:[42,56],iconAnchor:[21,56],className:''});
 L.marker([SL,SG],{icon:sIco,zIndexOffset:1000}).addTo(map);
 
 function sendRN(d){if(window.ReactNativeWebView)window.ReactNativeWebView.postMessage(JSON.stringify(d));}
 
-// Haversine rapide (mètres)
 function haversineM(la1,lo1,la2,lo2){
   const R=6371000,dLa=(la2-la1)*Math.PI/180,dLo=(lo2-lo1)*Math.PI/180;
   const a=Math.sin(dLa/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)**2;
@@ -96,43 +105,31 @@ function haversineM(la1,lo1,la2,lo2){
 }
 
 let routeLayer=null;
-// Position depuis laquelle le tracé a été calculé (évite des appels inutiles)
-let lastCalcLat=UL, lastCalcLng=UG;
+let lastCalcLat=UL,lastCalcLng=UG;
 
 function drawPolyline(coords){
-  if(routeLayer) map.removeLayer(routeLayer);
-  routeLayer=L.polyline(coords,{color:'#4D9FFF',weight:4,opacity:.85}).addTo(map);
+  if(routeLayer)map.removeLayer(routeLayer);
+  routeLayer=L.polyline(coords,{color:'#3B82F6',weight:5,opacity:.9,lineCap:'round',lineJoin:'round'}).addTo(map);
 }
 
 function drawStraight(lat,lng){
   drawPolyline([[lat,lng],[SL,SG]]);
 }
 
-// Calcule et trace le chemin le plus court depuis (lat,lng) vers la boutique.
-// < 500 m → ligne droite (tu vois la destination).
-// ≥ 500 m → OSRM foot (piéton, chemin réel).
-// Si OSRM renvoie un détour > 4× la distance directe → ligne droite.
 function calcRoute(lat,lng){
-  lastCalcLat=lat; lastCalcLng=lng;
+  lastCalcLat=lat;lastCalcLng=lng;
   const dist=haversineM(lat,lng,SL,SG);
-  if(dist<500){
-    drawStraight(lat,lng);
-    return;
-  }
+  if(dist<500){drawStraight(lat,lng);return;}
   fetch('https://router.project-osrm.org/route/v1/foot/'+lng+','+lat+';'+SG+','+SL+'?overview=full&geometries=geojson')
     .then(r=>r.json())
     .then(data=>{
       if(data.routes&&data.routes.length>0&&data.routes[0].distance<=dist*4){
-        const coords=data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
-        drawPolyline(coords);
-      }else{
-        drawStraight(lat,lng);
-      }
+        drawPolyline(data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]));
+      }else{drawStraight(lat,lng);}
     })
     .catch(()=>drawStraight(lat,lng));
 }
 
-// Tracé initial + centrage
 calcRoute(UL,UG);
 map.fitBounds([[UL,UG],[SL,SG]],{padding:[80,80]});
 sendRN({type:'ready'});
@@ -142,10 +139,7 @@ function handleCmd(str){
     const d=JSON.parse(str);
     if(d.type==='updateUser'){
       uMarker.setLatLng([d.lat,d.lng]);
-      // Recalcule le chemin seulement si le client a bougé de plus de 25 m
-      if(haversineM(d.lat,d.lng,lastCalcLat,lastCalcLng)>25){
-        calcRoute(d.lat,d.lng);
-      }
+      if(haversineM(d.lat,d.lng,lastCalcLat,lastCalcLng)>25)calcRoute(d.lat,d.lng);
     }
   }catch(e){}
 }
@@ -163,16 +157,14 @@ const DAKAR = { latitude: 14.7167, longitude: -17.4677 };
 export default function SuiviGPSScreen({
   shopLat, shopLng, shopName, shopLogoUrl, onBack,
 }: Props) {
-  // Coords déjà disponibles grâce à MapScreen (store rempli avant ouverture)
-  const storeCoords  = useLocationStore(s => s.coords);
+  const storeCoords = useLocationStore(s => s.coords);
 
-  const wvRef        = useRef<WebView>(null);
-  const mapReadyRef  = useRef(false);
-  const latestRef    = useRef<{ latitude: number; longitude: number } | null>(null);
+  const wvRef       = useRef<WebView>(null);
+  const mapReadyRef = useRef(false);
+  const latestRef   = useRef<{ latitude: number; longitude: number } | null>(null);
 
   const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  // Construit le HTML UNE SEULE FOIS avec la vraie position GPS (pas le fallback Dakar)
   const [navHTML] = useState(() =>
     buildNavHTML(
       storeCoords?.latitude  ?? DAKAR.latitude,
@@ -181,7 +173,6 @@ export default function SuiviGPSScreen({
     )
   );
 
-  // Surveille la position GPS en temps réel
   useEffect(() => {
     let mounted = true;
     let sub: Location.LocationSubscription | null = null;
@@ -256,7 +247,7 @@ export default function SuiviGPSScreen({
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.75}>
           <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" strokeWidth={2.2}
             strokeLinecap="round" strokeLinejoin="round">
-            <Path d="M19 12H5M12 5l-7 7 7 7" stroke={colors.white} />
+            <Path d="M19 12H5M12 5l-7 7 7 7" stroke={L_TEXT} />
           </Svg>
         </TouchableOpacity>
         <View style={styles.titleBox}>
@@ -279,7 +270,7 @@ export default function SuiviGPSScreen({
                 <Text style={styles.metaWalk}>{walkMinutes(distanceM)}</Text>
               </>
             ) : (
-              <ActivityIndicator size="small" color={colors.accent} />
+              <ActivityIndicator size="small" color={ACCENT} />
             )}
           </View>
         </View>
@@ -295,7 +286,7 @@ export default function SuiviGPSScreen({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: '#F0EFE9' },
 
   topBar: {
     position: 'absolute',
@@ -306,27 +297,37 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   backBtn: {
-    width: 42, height: 42,
-    borderRadius: 13,
-    backgroundColor: 'rgba(20,21,42,.92)',
-    borderWidth: 1, borderColor: colors.border,
+    width: 44, height: 44,
+    borderRadius: 14,
+    backgroundColor: L_BG,
+    borderWidth: 1, borderColor: L_BORDER,
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
+    shadowColor: L_SHADOW,
+    shadowOpacity: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 4,
   },
   titleBox: {
     flex: 1,
-    backgroundColor: 'rgba(20,21,42,.92)',
-    borderWidth: 1, borderColor: colors.border,
-    borderRadius: 13,
-    paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: L_BG,
+    borderWidth: 1, borderColor: L_BORDER,
+    borderRadius: 14,
+    paddingHorizontal: 14, paddingVertical: 9,
+    shadowColor: L_SHADOW,
+    shadowOpacity: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 4,
   },
   titleLabel: {
-    color: colors.muted,
+    color: L_MUTED,
     fontFamily: fonts.body,
     fontSize: 10,
   },
   titleName: {
-    color: colors.white,
+    color: L_TEXT,
     fontFamily: fonts.title,
     fontSize: 13.5,
   },
@@ -335,26 +336,26 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0, left: 0, right: 0,
     zIndex: 30,
-    backgroundColor: colors.bg,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: L_BG,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
     borderTopWidth: 1,
-    borderColor: colors.border,
+    borderColor: L_BORDER,
     paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 34,
+    paddingTop: 20,
+    paddingBottom: 36,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 13,
-    shadowColor: '#000',
-    shadowOpacity: 0.45,
+    shadowColor: 'rgba(0,0,0,0.14)',
+    shadowOpacity: 1,
     shadowOffset: { width: 0, height: -6 },
-    shadowRadius: 16,
+    shadowRadius: 18,
     elevation: 16,
   },
   infoCol: { flex: 1, minWidth: 0 },
   shopName: {
-    color: colors.white,
+    color: L_TEXT,
     fontFamily: fonts.titleXL,
     fontSize: 15,
   },
@@ -365,13 +366,13 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   metaDist: {
-    color: colors.accent,
+    color: '#92600A',
     fontFamily: fonts.title,
     fontSize: 13,
   },
-  metaSep: { color: colors.muted, fontSize: 12 },
+  metaSep: { color: L_MUTED, fontSize: 12 },
   metaWalk: {
-    color: colors.muted,
+    color: L_MUTED,
     fontFamily: fonts.body,
     fontSize: 11.5,
   },
@@ -380,12 +381,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: 'rgba(240,80,80,.15)',
+    backgroundColor: 'rgba(220,38,38,.10)',
     borderWidth: 1,
-    borderColor: 'rgba(240,80,80,.35)',
+    borderColor: 'rgba(220,38,38,.30)',
   },
   stopTxt: {
-    color: '#F05050',
+    color: '#DC2626',
     fontFamily: fonts.ui,
     fontSize: 13,
   },

@@ -20,10 +20,11 @@ import {
 import {
   ActiveSub,
   VisibilityStats,
-  getActiveSub,
+  getActiveSubs,
   getVisibilityStats,
 } from '../../services/visibilityPayment';
 import { formatDateLong, formatPrice } from '../../utils/format';
+import { supabase } from '../../lib/supabase';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -81,7 +82,7 @@ function AnnonceCard({ ad }: { ad: SponsoredAd }) {
     <View style={s.card}>
       {/* Type tag */}
       <View style={s.typeRow}>
-        <Text style={s.typeTag}>📢 Annonce sponsorisée</Text>
+        <Text style={s.typeTag}>Annonce sponsorisée</Text>
         <StatusBadge label={st.label} color={st.color} />
       </View>
 
@@ -104,7 +105,7 @@ function AnnonceCard({ ad }: { ad: SponsoredAd }) {
           <Text style={[s.metricCount, { color: colors.success }]}>
             {(ad.contactCount ?? 0).toLocaleString('fr-SN')}
           </Text>
-          <Text style={s.metricLabel}>contacts</Text>
+          <Text style={s.metricLabel}>voir vitrine</Text>
         </View>
       </View>
 
@@ -150,13 +151,11 @@ function ForfaitCard({
     Math.ceil((new Date(sub.expiresAt).getTime() - Date.now()) / 86_400_000),
   );
   const label = sub.offerType === 'quartier' ? 'Offre du Quartier' : 'Boost Recherche';
-  const emoji = sub.offerType === 'quartier' ? '👑' : '🔍';
-
   return (
     <View style={s.card}>
       {/* Type tag */}
       <View style={s.typeRow}>
-        <Text style={s.typeTag}>{emoji} {label}</Text>
+        <Text style={s.typeTag}>{label}</Text>
         <StatusBadge label="En cours" color={colors.success} />
       </View>
 
@@ -228,37 +227,47 @@ interface Props {
 export default function MaCampagneScreen({ onBack }: Props) {
   const shopId = useShopStore(s => s.shopId);
 
-  const [ads, setAds]                   = useState<SponsoredAd[]>([]);
-  const [sub, setSub]                   = useState<ActiveSub | null>(null);
-  const [stats, setStats]               = useState<VisibilityStats | null>(null);
-  const [loading, setLoading]           = useState(true);
-  const [statsLoading, setStatsLoading] = useState(false);
-  const [refreshing, setRefreshing]     = useState(false);
-  const [lastRefresh, setLastRefresh]   = useState<Date | null>(null);
+  const [ads, setAds]                       = useState<SponsoredAd[]>([]);
+  const [subs, setSubs]                     = useState<ActiveSub[]>([]);
+  const [statsMap, setStatsMap]             = useState<Record<string, VisibilityStats | null>>({});
+  const [statsLoading, setStatsLoading]     = useState(false);
+  const [loading, setLoading]               = useState(true);
+  const [refreshing, setRefreshing]         = useState(false);
+  const [lastRefresh, setLastRefresh]       = useState<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async (silent = false) => {
     if (!shopId) return;
     if (!silent) setLoading(true);
     try {
-      const [adsData, subData] = await Promise.all([
+      const [adsData, subsData] = await Promise.all([
         getMerchantAds(shopId),
-        getActiveSub(shopId).catch(() => null),
+        getActiveSubs(shopId).catch(() => [] as ActiveSub[]),
       ]);
       setAds(adsData);
-      setSub(subData);
+      setSubs(subsData);
       setLastRefresh(new Date());
 
-      // Stats forfait
-      if (subData) {
+      // Stats pour chaque forfait actif
+      if (subsData.length > 0) {
         setStatsLoading(true);
         try {
-          const st = await getVisibilityStats(shopId, subData.offerType);
-          setStats(st);
-        } catch { /* ignore */ }
-        finally { setStatsLoading(false); }
+          const entries = await Promise.all(
+            subsData.map(async sub => {
+              try {
+                const st = await getVisibilityStats(shopId, sub.offerType);
+                return [sub.id, st] as const;
+              } catch {
+                return [sub.id, null] as const;
+              }
+            }),
+          );
+          setStatsMap(Object.fromEntries(entries));
+        } finally {
+          setStatsLoading(false);
+        }
       } else {
-        setStats(null);
+        setStatsMap({});
       }
     } finally {
       if (!silent) setLoading(false);
@@ -273,16 +282,31 @@ export default function MaCampagneScreen({ onBack }: Props) {
 
   useEffect(() => { void load(); }, [load]);
 
-  // Auto-refresh 10s si une campagne est active
+  // Realtime : re-charge les stats dès qu'une annonce du shop est mise à jour
   useEffect(() => {
-    const hasActive = ads.some(a => a.status === 'active') || !!sub;
+    if (!shopId) return;
+    const ch = supabase
+      .channel(`merchant-ads-rt-${shopId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'sponsored_ads',
+        filter: `shop_id=eq.${shopId}`,
+      }, () => { void load(true); })
+      .subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, [shopId, load]);
+
+  // Auto-refresh toutes les 5 min si une campagne est active
+  useEffect(() => {
+    const hasActive = ads.some(a => a.status === 'active') || subs.length > 0;
     if (hasActive) {
       intervalRef.current = setInterval(() => { void load(true); }, 300_000);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [ads, sub, load]);
+  }, [ads, subs, load]);
 
   const refreshLabel = lastRefresh
     ? `${lastRefresh.getHours().toString().padStart(2, '0')}:${lastRefresh.getMinutes().toString().padStart(2, '0')}`
@@ -294,7 +318,7 @@ export default function MaCampagneScreen({ onBack }: Props) {
     return Date.now() - new Date(ad.expiresAt).getTime() < HIDE_AFTER_MS;
   });
 
-  const isEmpty = !loading && visibleAds.length === 0 && !sub;
+  const isEmpty = !loading && visibleAds.length === 0 && subs.length === 0;
 
   return (
     <View style={s.root}>
@@ -338,14 +362,15 @@ export default function MaCampagneScreen({ onBack }: Props) {
           </View>
         ) : (
           <>
-            {/* Forfait Offre du Quartier / Boost en premier si actif */}
-            {sub && (
+            {/* Forfaits actifs (Offre du Quartier / Boost Recherche) en premier */}
+            {subs.map(sub => (
               <ForfaitCard
+                key={sub.id}
                 sub={sub}
-                stats={stats}
+                stats={statsMap[sub.id] ?? null}
                 statsLoading={statsLoading}
               />
-            )}
+            ))}
 
             {/* Annonces sponsorisées dans l'ordre le plus récent */}
             {visibleAds.map(ad => (

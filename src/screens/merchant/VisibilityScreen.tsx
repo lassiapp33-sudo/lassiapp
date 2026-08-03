@@ -22,8 +22,11 @@ import SponsoredAdPanel from '../../components/visibility/SponsoredAdPanel';
 import { colors, fonts, radius } from '../../theme';
 import { IcoChevron } from '../../components/icons';
 import useShopStore from '../../store/shopStore';
+import useGerantStore from '../../store/gerantStore';
 import { getProducts } from '../../services/products';
+import { getMonPrestations } from '../../services/vip';
 import { StoreProduct } from '../../types/store';
+import { VipPrestation } from '../../types/vip';
 import { formatPrice, formatDateLong } from '../../utils/format';
 import {
   PRICE_INCREMENT_PER_EXTRA_PRODUCT,
@@ -43,6 +46,21 @@ import {
   checkPaymentAvailability,
   getPlanPriceFor,
 } from '../../services/visibilityPayment';
+
+// ─── Mapper VipPrestation → StoreProduct (champs utilisés par ProductPicker) ──
+
+function prestationToProduct(p: VipPrestation): StoreProduct {
+  return {
+    id:       p.id,
+    name:     p.nom,
+    price:    p.prix,
+    desc:     p.description ?? '',
+    emoji:    '',
+    category: p.section,
+    stock:    p.disponible ? 'in' : 'out',
+    itemType: 'service',
+  };
+}
 
 // ─── Les trois offres de visibilité ───────────────────────────────────────────
 
@@ -150,7 +168,7 @@ function BoostActivatedBanner({ expiresAt }: { expiresAt: string }) {
       <View style={styles.activatedRow}>
         <IcoActivated />
         <Text style={styles.activatedTxt}>
-          Forfait activé jusqu'au {formatDateLong(expiresAt)} !
+          Forfait activé jusqu'au {formatDateLong(expiresAt)}
         </Text>
       </View>
     </View>
@@ -232,6 +250,8 @@ export default function VisibilityScreen({ onBack }: Props) {
   const shopId = useShopStore(s => s.shopId);
   const creditBalance = useShopStore(s => s.profile?.creditBalance ?? 0);
   const loadMyShop = useShopStore(s => s.loadMyShop);
+  const gerantProfil = useGerantStore(s => s.profil);
+  const isVipGerant = gerantProfil != null;
 
   const [offerType, setOfferType] = useState<OfferType>('quartier');
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -276,12 +296,17 @@ export default function VisibilityScreen({ onBack }: Props) {
   const init = useCallback(async () => {
     setInitLoading(true);
     try {
+      // Pour les gérants VIP, on charge le registre (vip_prestations) à la place des produits vitrine
+      const productsPromise: Promise<StoreProduct[]> = isVipGerant
+        ? getMonPrestations().then(list => list.map(prestationToProduct))
+        : shopId ? getProducts(shopId) : Promise.resolve([]);
+
       const [loadedPlans, loadedBoostPlans, sub, keys, loadedProducts] = await Promise.all([
         getVisibilityPlans(),
         getBoostPlans(),
         shopId ? getActiveSub(shopId) : Promise.resolve(null),
         checkPaymentAvailability(),
-        shopId ? getProducts(shopId) : Promise.resolve([]),
+        productsPromise,
       ]);
       setPlans(loadedPlans);
       setBoostPlans(loadedBoostPlans);
@@ -306,7 +331,7 @@ export default function VisibilityScreen({ onBack }: Props) {
     } finally {
       setInitLoading(false);
     }
-  }, [shopId]);
+  }, [shopId, isVipGerant]);
 
   useEffect(() => {
     init();
@@ -347,8 +372,9 @@ export default function VisibilityScreen({ onBack }: Props) {
         planId: selectedPlan.id,
         payMethod: payMethod as WaveOrangeMethod,
         offerType,
-        productIds: offerType === 'quartier' ? selectedProductIds : [],
-        allProducts: offerType === 'quartier' ? featuredAllProducts : false,
+        // Les gérants VIP ont leurs items dans vip_prestations, pas dans products → allProducts=true bypass la validation
+        productIds: offerType === 'quartier' && !isVipGerant ? selectedProductIds : [],
+        allProducts: offerType === 'quartier' ? (isVipGerant ? true : featuredAllProducts) : false,
       });
 
       if (result.status === 'awaiting_keys') {
@@ -401,6 +427,13 @@ export default function VisibilityScreen({ onBack }: Props) {
         const sub = shopId ? await getActiveSub(shopId) : null;
         setActiveSub(sub);
         setPayState({ type: 'idle' });
+        const expiryFr = result.expiresAt
+          ? new Date(result.expiresAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+          : '';
+        Alert.alert(
+          'Félicitations pour votre achat',
+          `Votre paiement a été confirmé. Votre forfait est maintenant actif${expiryFr ? ` jusqu'au ${expiryFr}` : ''}. Profitez-en pour attirer encore plus de clients.`,
+        );
       } else if (result.status === 'awaiting_keys') {
         setPayState({ type: 'idle' });
         Alert.alert('Configuration en cours', 'Les clés API ne sont pas encore configurées.');
@@ -414,8 +447,21 @@ export default function VisibilityScreen({ onBack }: Props) {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erreur de vérification';
-      setPayState({ type: 'idle' });
-      Alert.alert('Erreur', msg);
+      const isNetworkError = msg.toLowerCase().includes('network') ||
+        msg.toLowerCase().includes('fetch') ||
+        msg.toLowerCase().includes('connexion') ||
+        msg.toLowerCase().includes('timeout');
+      if (isNetworkError) {
+        // Garder l'état pending pour que le bandeau reste affiché
+        setPayState({ type: 'pending', subscriptionId, paymentUrl, qrCode });
+        Alert.alert(
+          'Pas de connexion',
+          "Vérifie ta connexion internet et réessaie.",
+        );
+      } else {
+        setPayState({ type: 'idle' });
+        Alert.alert('Erreur', msg);
+      }
     }
   };
 
@@ -437,8 +483,8 @@ export default function VisibilityScreen({ onBack }: Props) {
       const result = await createCreditPurchase({
         offerType,
         planId: selectedPlan.id,
-        productIds: offerType === 'quartier' ? selectedProductIds : undefined,
-        allProducts: offerType === 'quartier' ? featuredAllProducts : undefined,
+        productIds: offerType === 'quartier' && !isVipGerant ? selectedProductIds : undefined,
+        allProducts: offerType === 'quartier' ? (isVipGerant ? true : featuredAllProducts) : undefined,
       });
 
       await loadMyShop(); // rafraîchit creditBalance + hasGoldenPin / hasRechercheBoost
@@ -451,7 +497,7 @@ export default function VisibilityScreen({ onBack }: Props) {
       }
 
       Alert.alert(
-        'Forfait activé !',
+        'Forfait activé',
         `Ton crédit LASSI a été utilisé pour activer ce forfait. Il te reste ${formatPrice(result.newBalance)} de crédit.`,
       );
     } catch (err) {
@@ -521,6 +567,10 @@ export default function VisibilityScreen({ onBack }: Props) {
                   allProducts={featuredAllProducts}
                   onToggleProduct={toggleProduct}
                   onToggleAllProducts={toggleAllProducts}
+                  allLabel={isVipGerant ? 'Tout mon registre' : undefined}
+                  emptyMessage={isVipGerant
+                    ? 'Ajoute une prestation dans ton registre pour pouvoir la mettre en avant.'
+                    : undefined}
                 />
                 {nbProduits > FREE_PRODUCTS_THRESHOLD && (
                   <Text style={styles.pricingHint}>

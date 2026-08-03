@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import Svg, { Path, Rect } from 'react-native-svg';
+import { IcoCameraLarge } from '../common/LassiIcons';
 import { colors, fonts, radius } from '../../theme';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -129,7 +130,7 @@ export default function QRScannerCamera({ visible, onScan, onClose }: Props) {
         ) : !permission.granted ? (
           // Permission non accordée
           <View style={styles.center}>
-            <Text style={styles.infoEmoji}>📷</Text>
+            <IcoCameraLarge size={56} />
             <Text style={styles.infoTxt}>Accès caméra requis pour scanner</Text>
             <TouchableOpacity style={styles.permBtn} onPress={handleRequestPermission} activeOpacity={0.85}>
               <Text style={styles.permTxt}>Autoriser la caméra</Text>
@@ -233,7 +234,6 @@ const styles = StyleSheet.create({
   },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 20, paddingHorizontal: 32 },
-  infoEmoji: { fontSize: 52 },
   infoTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 14, textAlign: 'center' },
   permBtn: {
     backgroundColor: colors.accent, borderRadius: radius.lg,

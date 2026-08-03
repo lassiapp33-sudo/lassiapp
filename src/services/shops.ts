@@ -24,6 +24,8 @@ export interface Shop {
   openingHours: WeekHours | null;
   galleryUrls: string[];
   isVip: boolean;
+  /** true si le shop est labellisé "5 Étoiles LASSI" par l'admin (vip_exclu). Priorité sur isVip. */
+  isEtoiles: boolean;
   vipRank: number | null; // 1, 2, 3 dans le podium — null si pas VIP
   /** "Épingle dorée" — pin mis en avant sur la carte (offre "carte" active). */
   hasGoldenPin: boolean;
@@ -44,9 +46,9 @@ export interface Shop {
 
 export function rowToShop(row: Record<string, any>): Shop {
   const now = new Date();
-  const isExclu = row.vip_exclu === true;
+  const isEtoiles = Boolean(row.is_etoiles);
   const isVipManual =
-    !isExclu &&
+    !isEtoiles &&
     row.vip_manual === true &&
     (row.vip_manual_until == null || new Date(row.vip_manual_until) > now);
   return {
@@ -66,8 +68,9 @@ export function rowToShop(row: Record<string, any>): Shop {
     isManuallyClose: Boolean(row.is_manually_closed),
     openingHours: row.opening_hours ?? null,
     galleryUrls: Array.isArray(row.gallery_urls) ? row.gallery_urls : [],
-    isVip: !isExclu && (Boolean(row.is_vip) || isVipManual),
-    vipRank: isExclu ? null : (row.vip_rank ?? null),
+    isVip: !isEtoiles && (Boolean(row.is_vip) || isVipManual),
+    isEtoiles,
+    vipRank: isEtoiles ? null : (row.vip_rank ?? null),
     hasGoldenPin: row.carte_pin_until != null && new Date(row.carte_pin_until) > now,
     hasRechercheBoost:
       row.recherche_boost_until != null && new Date(row.recherche_boost_until) > now,

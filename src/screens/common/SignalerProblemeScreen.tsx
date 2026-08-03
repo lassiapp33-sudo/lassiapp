@@ -208,7 +208,7 @@ export default function SignalerProblemeScreen({
       >
         <View style={s.confirmWrap}>
           <IcoCheck />
-          <Text style={s.confirmTitle}>Signalement envoyé !</Text>
+          <Text style={s.confirmTitle}>Signalement envoyé</Text>
           <Text style={s.confirmTxt}>
             Ton signalement a été transmis à{'\n'}
             <Text style={s.confirmEmail}>{SUPPORT_EMAIL}</Text>

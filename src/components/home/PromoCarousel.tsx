@@ -146,7 +146,7 @@ export default function PromoCarousel({ onPress }: Props) {
     <View style={styles.promoWrapper}>
       {/* En-tête */}
       <View style={styles.promoHeader}>
-        <Text style={styles.promoLabel}>🔥 Offres du quartier</Text>
+        <Text style={styles.promoLabel}>Offres du quartier</Text>
         <DotsIndicator total={totalPages} active={page} />
       </View>
 

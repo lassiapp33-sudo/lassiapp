@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
+import { IcoLightning, IcoCart } from '../common/LassiIcons';
 import { colors, fonts, radius } from '../../theme';
 import type { BlocALaUne } from '../../types/aLaUne';
 
@@ -55,7 +56,7 @@ const BlocStoryCard = React.forwardRef<View, Props>(
         {/* ── En-tête ── */}
         <View style={styles.headerRow}>
           <View style={styles.alaUneTag}>
-            <Text style={styles.alaUneIcon}>⚡</Text>
+            <IcoLightning size={14} />
             <Text style={styles.alaUneLabel}>À la une</Text>
           </View>
           <Image source={MASCOTTE} style={styles.mascotte} resizeMode="contain" />
@@ -77,14 +78,15 @@ const BlocStoryCard = React.forwardRef<View, Props>(
             {hasSubInfo && (
               <View style={styles.shopSubRow}>
                 {isShopOpen !== undefined && (
-                  <View style={[styles.statusBadge, isShopOpen ? styles.statusOpen : styles.statusClosed]}>
+                  <View style={[styles.statusBadge, isShopOpen ? styles.statusOpen : styles.statusClosed, { flexDirection: 'row', alignItems: 'center' }]}>
+                    <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: isShopOpen ? colors.success : colors.danger, marginRight: 4 }} />
                     <Text style={[styles.statusTxt, { color: isShopOpen ? colors.success : colors.danger }]}>
-                      {isShopOpen ? '🟢 Ouvert' : '🔴 Fermé'}
+                      {isShopOpen ? 'Ouvert' : 'Fermé'}
                     </Text>
                   </View>
                 )}
                 {shopPhone ? (
-                  <Text style={styles.phoneTxt}>📞 {formatPhone(shopPhone)}</Text>
+                  <Text style={styles.phoneTxt}>{formatPhone(shopPhone)}</Text>
                 ) : null}
               </View>
             )}
@@ -123,11 +125,12 @@ const BlocStoryCard = React.forwardRef<View, Props>(
         <View style={styles.divider} />
 
         {/* ── Countdown ── */}
-        <Text style={styles.countdown}>⏳ Encore {countdown}</Text>
+        <Text style={styles.countdown}>Encore {countdown}</Text>
 
         {/* ── CTA ── */}
         <View style={styles.ctaBox}>
-          <Text style={styles.ctaTxt}>🛒 Commander sur LASSİ</Text>
+          <IcoCart size={14} color="#14152A" />
+          <Text style={styles.ctaTxt}>Commander sur LASSİ</Text>
         </View>
 
         {/* ── Photo produit (optionnelle) ── */}
@@ -194,7 +197,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
   },
-  alaUneIcon: { fontSize: 12 },
   alaUneLabel: {
     color: colors.accent,
     fontFamily: fonts.ui,
@@ -335,6 +337,9 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: 22,
     marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   ctaTxt: {
     color: colors.bg,

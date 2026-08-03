@@ -10,6 +10,7 @@ import {
 import QRCode from 'react-native-qrcode-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
+import { IcoCheckCircle } from '../../components/common/LassiIcons';
 import { formatPrice } from '../../utils/format';
 
 // ─── Helpers date ─────────────────────────────────────────────────────────────
@@ -66,7 +67,7 @@ export default function TerrainQRScreen({
       >
         {/* Badge succès */}
         <View style={styles.successBadge}>
-          <Text style={styles.successEmoji}>✅</Text>
+          <IcoCheckCircle size={56} />
           <Text style={styles.successTitle}>Paiement reçu</Text>
           <Text style={styles.successSub}>
             Présente ce QR code à l'entrée du terrain
@@ -159,7 +160,6 @@ const styles = StyleSheet.create({
   },
 
   successBadge: { alignItems: 'center', marginBottom: 24, gap: 8 },
-  successEmoji: { fontSize: 48 },
   successTitle: { color: colors.white, fontFamily: fonts.titleXL, fontSize: 20 },
   successSub: {
     color: colors.muted,

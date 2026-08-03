@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { IcoTrophy } from '../common/LassiIcons';
 import { colors, fonts } from '../../theme';
 
 interface Props {
@@ -16,7 +17,7 @@ export default function VipScoring({ rank, subtitle, renewIn, progress }: Props)
       {/* En-tête : trophée + titre */}
       <View style={styles.top}>
         <View style={styles.trophy}>
-          <Text style={styles.trophyIcon}>🏆</Text>
+          <IcoTrophy size={26} />
         </View>
         <View style={styles.ti}>
           <Text style={styles.rankTxt}>{rank}</Text>
@@ -71,10 +72,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  trophyIcon: {
-    fontSize: 22,
-  },
-
   ti: { flex: 1 },
   rankTxt: {
     color: colors.white,

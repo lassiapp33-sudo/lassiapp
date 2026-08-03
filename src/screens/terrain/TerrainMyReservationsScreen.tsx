@@ -8,11 +8,30 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
-import { ReservationTerrain, SPORT_EMOJI } from '../../types/terrain';
+import { ReservationTerrain } from '../../types/terrain';
+import {
+  IcoFootball,
+  IcoBasketball,
+  IcoTennis,
+  IcoVolleyball,
+  IcoStadium,
+} from '../../components/common/LassiIcons';
 import { getMyTerrainReservations } from '../../services/terrains';
 import useAuthStore from '../../store/authStore';
 import { getFastCache, setFastCache } from '../../lib/fastCache';
 import logger from '../../utils/logger';
+
+// ─── Icône sport ─────────────────────────────────────────────────────────────
+
+function SportIcon({ sport }: { sport: string }) {
+  switch (sport) {
+    case 'football':   return <IcoFootball size={32} />;
+    case 'basketball': return <IcoBasketball size={32} />;
+    case 'tennis':     return <IcoTennis size={32} />;
+    case 'volleyball': return <IcoVolleyball size={32} />;
+    default:           return <IcoStadium size={32} />;
+  }
+}
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -57,7 +76,7 @@ function ReservationCard({
   return (
     <View style={styles.card}>
       <View style={styles.cardTop}>
-        <Text style={styles.cardEmoji}>{SPORT_EMOJI[sport as keyof typeof SPORT_EMOJI] ?? '🏟️'}</Text>
+        <SportIcon sport={sport} />
         <View style={{ flex: 1 }}>
           <Text style={styles.cardNom} numberOfLines={1}>{nom}</Text>
           <Text style={styles.cardDate}>{formatDateCourt(reservation.date_reservation)}</Text>
@@ -304,7 +323,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg, marginBottom: 10, overflow: 'hidden',
   },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14 },
-  cardEmoji: { fontSize: 28, lineHeight: 34 },
   cardNom: { color: colors.white, fontFamily: fonts.title, fontSize: 14 },
   cardDate: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 2 },
   cardCreneau: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 2 },

@@ -38,7 +38,7 @@ export const genererTextePartage = (params: {
   if (description) texte += `\n${description}\n`;
 
   texte += `\n⏳ Offre valable encore ${hoursLeft}h\n`;
-  texte += `\n🛒 Cliquez sur un produit pour commander directement, ou ouvrez LASSİ pour découvrir tous les « À la une » du jour de vos ${nomCategorie} préférés !\n`;
+  texte += `\n🛒 Cliquez sur un produit pour commander directement, ou ouvrez LASSİ pour découvrir tous les « À la une » du jour de vos ${nomCategorie} préférés.\n`;
   texte += `👉 ${lienCategorie(categorieId)}`;
 
   return texte;

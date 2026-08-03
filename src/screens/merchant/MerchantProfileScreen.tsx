@@ -109,20 +109,6 @@ const IcoBell = () => (
   </Svg>
 );
 
-const IcoCard = () => (
-  <Svg
-    width={18}
-    height={18}
-    viewBox="0 0 24 24"
-    fill="none"
-    strokeWidth={1.8}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <Rect x={2} y={5} width={20} height={14} rx={2} stroke={colors.accent} />
-    <Path d="M2 10h20" stroke={colors.accent} />
-  </Svg>
-);
 
 const IcoWallet = () => (
   <Svg
@@ -539,11 +525,6 @@ export default function MerchantProfileScreen({
             title={t.profile.language}
             subtitle={lang === 'fr' ? t.lang.fr : t.lang.en}
             onPress={() => setShowLangModal(true)}
-          />
-          <ProfileOptionRow
-            icon={<IcoCard />}
-            title={t.profile.merchantNumber}
-            subtitle={t.profile.merchantNumberSub}
             last
           />
         </View>

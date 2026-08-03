@@ -19,6 +19,7 @@ export interface CartShopInfo {
   location: string;
   logoUrl?: string;
   showOrderType?: boolean;
+  isVip?: boolean;
 }
 
 export interface SubBasket {

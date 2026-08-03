@@ -9,7 +9,7 @@ import {
   Modal,
   AppState,
 } from 'react-native';
-import Svg, { Path, Polyline, Circle } from 'react-native-svg';
+import Svg, { Path, Polyline } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { ClientPayment } from '../../services/clientPayments';
 import * as clientPaymentsService from '../../services/clientPayments';
@@ -35,18 +35,6 @@ const IcoReceipt = () => (
   </Svg>
 );
 
-const IcoWave = () => (
-  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round">
-    <Path d="M2 12c2-4 4-6 6-6s4 6 6 6 4-6 6-6" stroke="#1DC8F2" />
-  </Svg>
-);
-
-const IcoOM = () => (
-  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
-    <Circle cx={12} cy={12} r={9} stroke="#F87315" />
-    <Path d="M12 8v8M8 12h8" stroke="#F87315" strokeLinecap="round" />
-  </Svg>
-);
 
 const IcoTrend = () => (
   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round">
@@ -108,7 +96,6 @@ function ClientPaymentCard({
       <View style={cs.footer}>
         <Text style={cs.amount}>{formatPrice(payment.amount)}</Text>
         <View style={cs.method}>
-          {payment.method === 'wave' ? <IcoWave /> : <IcoOM />}
           <Text style={cs.methodTxt}>{payment.method === 'wave' ? 'Wave' : 'OM'}</Text>
         </View>
         {payment.reference && (
@@ -236,10 +223,7 @@ function ClientReceiptModal({
 
           <View style={rm.row}>
             <Text style={rm.rowLabel}>Moyen de paiement</Text>
-            <View style={rm.methodRow}>
-              {payment.method === 'wave' ? <IcoWave /> : <IcoOM />}
-              <Text style={rm.rowValue}>{payment.method === 'wave' ? 'Wave' : 'Orange Money'}</Text>
-            </View>
+            <Text style={rm.rowValue}>{payment.method === 'wave' ? 'Wave' : 'OM'}</Text>
           </View>
 
           {payment.reference && (
@@ -496,12 +480,9 @@ export default function ClientPaymentsScreen({ onBack }: Props) {
               <View style={s.statDivider} />
               <View style={s.statCell2}>
                 <Text style={s.statLabel}>Méthode favorite</Text>
-                <View style={s.methodRow}>
-                  {stats.topMethod === 'wave' ? <IcoWave /> : <IcoOM />}
-                  <Text style={s.statMed}>
-                    {stats.topMethod === 'wave' ? 'Wave' : 'Orange Money'}
-                  </Text>
-                </View>
+                <Text style={s.statMed}>
+                  {stats.topMethod === 'wave' ? 'Wave' : 'OM'}
+                </Text>
               </View>
             </View>
           </View>

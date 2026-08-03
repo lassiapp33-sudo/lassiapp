@@ -207,12 +207,16 @@ export default function MerchantPaymentsScreen({ onBack }: Props) {
               <View style={s.statDivider} />
               <View style={s.statCell2}>
                 <Text style={s.statLabel}>Méthode favorite</Text>
-                <View style={s.methodRow}>
-                  {stats.topMethod === 'wave' ? <IcoWave /> : <IcoOM />}
-                  <Text style={s.statMed}>
-                    {stats.topMethod === 'wave' ? 'Wave' : 'Orange Money'}
-                  </Text>
-                </View>
+                {stats.topMethod ? (
+                  <View style={s.methodRow}>
+                    {stats.topMethod === 'wave' ? <IcoWave /> : <IcoOM />}
+                    <Text style={s.statMed}>
+                      {stats.topMethod === 'wave' ? 'Wave' : 'Orange Money'}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={s.statMed}>—</Text>
+                )}
               </View>
             </View>
           </View>

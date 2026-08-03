@@ -12,6 +12,10 @@ export const PAYMENT_CONFIG = {
   COMMISSION_RATE: 0.01,            // 1% — NE PAS MODIFIER
   COMMISSION_PERCENT_DISPLAY: '1%', // pour affichage UI
 
+  // Commission VIP 5 Étoiles — 2% (doit correspondre à initiate_order_payment côté serveur)
+  VIP_COMMISSION_RATE: 0.02,
+  VIP_COMMISSION_PERCENT_DISPLAY: '2%',
+
   // Reçu
   RECEIPT_VALIDITY_MINUTES: 40,
 
@@ -51,6 +55,16 @@ export const calculerPrixClient = (prixBase: number): number => {
  */
 export const calculerCommission = (prixBase: number): number => {
   return Math.ceil(prixBase * PAYMENT_CONFIG.COMMISSION_RATE);
+};
+
+/** VIP 5 Étoiles — commission 2% */
+export const calculerCommissionVip = (prixBase: number): number =>
+  Math.ceil(prixBase * PAYMENT_CONFIG.VIP_COMMISSION_RATE);
+
+/** VIP 5 Étoiles — prix client final (prix + 2%) */
+export const calculerPrixClientVip = (prixBase: number): number => {
+  if (!Number.isInteger(prixBase) || prixBase <= 0) return 0;
+  return prixBase + calculerCommissionVip(prixBase);
 };
 
 /**

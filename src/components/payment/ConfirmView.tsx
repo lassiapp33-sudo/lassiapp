@@ -118,7 +118,7 @@ export default function ConfirmView({ order, method, onBackToChat }: Props) {
       <Text style={styles.desc}>
         {'Votre paiement a bien été reçu.\nVeuillez patienter la confirmation du vendeur '}
         <Text style={styles.descBold}>{order.shopName}</Text>
-        {'.\nMerci beaucoup !'}
+        {'.\nMerci beaucoup.'}
       </Text>
 
       {/* ── Reçu ────────────────────────────────────────────────────────── */}

@@ -184,7 +184,7 @@ export const getMesVersements = async (): Promise<VersementLivreurRow[]> => {
 
 /**
  * Calcule le solde non versé du livreur.
- * = sum des terminées depuis le dernier versement × 0.85 (net après commission 15%)
+ * = sum des terminées depuis le dernier versement × 0.90 (net après commission 10%)
  */
 export function calcSoldeNonVerse(
   livraisons: Livraison[],
@@ -199,7 +199,7 @@ export function calcSoldeNonVerse(
     brut += l.prix_livraison;
     nb++;
   }
-  return { nbCourses: nb, montantBrut: brut, montantNet: Math.round(brut * 0.85) };
+  return { nbCourses: nb, montantBrut: brut, montantNet: Math.round(brut * 0.90) };
 }
 
 // ADMIN : créer un compte livreur via Edge Function (service_role requis)

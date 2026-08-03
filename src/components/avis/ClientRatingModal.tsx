@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
+import { IcoFaceSad, IcoFaceHappy } from '../common/LassiIcons';
 import { soumettreNote } from '../../services/orderRating';
 import { notifyError } from '../../utils/errorUtils';
 
@@ -65,7 +66,7 @@ export default function ClientRatingModal({ visible, orderId, clientName, onDism
               onPress={() => setSelected(1)}
               activeOpacity={0.8}
             >
-              <Text style={styles.cardEmoji}>😤</Text>
+              <IcoFaceSad size={32} />
               <Text style={styles.cardStars}>★</Text>
               <Text style={[styles.cardLabel, selected === 1 && { color: colors.danger }]}>
                 Peu sérieux
@@ -78,7 +79,7 @@ export default function ClientRatingModal({ visible, orderId, clientName, onDism
               onPress={() => setSelected(5)}
               activeOpacity={0.8}
             >
-              <Text style={styles.cardEmoji}>😊</Text>
+              <IcoFaceHappy size={32} />
               <Text style={[styles.cardStars, styles.cardStarsFull]}>★★★★★</Text>
               <Text style={[styles.cardLabel, selected === 5 && { color: colors.success }]}>
                 Sérieux
@@ -179,9 +180,6 @@ const styles = StyleSheet.create({
   cardSerieux: {
     borderColor: colors.success,
     backgroundColor: 'rgba(95,211,138,0.08)',
-  },
-  cardEmoji: {
-    fontSize: 28,
   },
   cardStars: {
     color: colors.muted,

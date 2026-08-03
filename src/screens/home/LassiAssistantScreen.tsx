@@ -165,7 +165,7 @@ function ShopCard({ shop, onPress }: { shop: ShopResult; onPress: () => void }) 
           <Text style={styles.shopName} numberOfLines={1}>
             {shop.name}
           </Text>
-          {shop.isVip && <Text style={styles.vipBadge}>🥇 VIP</Text>}
+          {shop.isVip && <Text style={styles.vipBadge}>VIP</Text>}
         </View>
         <Text style={styles.shopZone} numberOfLines={1}>
           {shop.zone || shop.category}
@@ -497,7 +497,7 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
       {/* ══ ZONE HAUTE FIXE — ne défile jamais ══════════════════════════════ */}
       <View onLayout={e => setHeaderH(e.nativeEvent.layout.height)}>
         <View style={[styles.header, { paddingTop: TOP_INSET }]}>
-          <Text style={styles.headerTitle}>✨ Assistant LASSİ</Text>
+          <Text style={styles.headerTitle}>Assistant LASSİ</Text>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.75}>
             <IcoClose />
           </TouchableOpacity>

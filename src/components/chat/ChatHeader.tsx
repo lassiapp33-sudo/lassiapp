@@ -4,6 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 import Avatar from '../Avatar';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../icons';
+import { IcoTrophy } from '../common/LassiIcons';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -57,10 +58,10 @@ export default function ChatHeader({
 
       {/* Nom + statut */}
       <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>
-          {name}
-          {isVip ? '  🏆' : ''}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <Text style={styles.name} numberOfLines={1}>{name}</Text>
+          {isVip && <IcoTrophy size={14} />}
+        </View>
         <View style={styles.statusRow}>
           <View
             style={[styles.dot, { backgroundColor: isOnline ? colors.success : colors.muted }]}

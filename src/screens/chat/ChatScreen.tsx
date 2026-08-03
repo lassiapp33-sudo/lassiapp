@@ -99,7 +99,7 @@ const QUICK_CHIPS = [
   "👍 C'est noté",
   "📍 J'arrive dans 5 min",
   'Combien je te dois ?',
-  'Merci ! 🙏',
+  'Merci 🙏',
 ];
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -286,7 +286,7 @@ export default function ChatScreen({
           kind: 'text',
           sender: 'them',
           time: nowTime(),
-          text: 'Reçu ✅ Ta commande sera prête dans 5 min. À tout de suite !',
+          text: 'Reçu ✅ Ta commande sera prête dans 5 min. À tout de suite.',
         },
       ]);
     }, 1400);

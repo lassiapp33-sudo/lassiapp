@@ -45,14 +45,14 @@ export const CGU_SECTIONS: Section[] = [
   {
     titre: '7. Commission, tarification et frais de paiement',
     contenu:
-      "LASSİ prélève une commission de 1 % H.T. sur chaque transaction effectuée par l'intermédiaire de la plateforme. Cette commission est déduite automatiquement du montant reversé au Prestataire.\n\n" +
+      "LASSİ prélève une commission de 1 % H.T. sur chaque transaction effectuée par l'intermédiaire de la plateforme. Cette commission est supportée exclusivement par le Client : elle est ajoutée au montant qu'il règle et ne touche en aucun cas à l'argent du Prestataire.\n\n" +
       "Pour les Prestataires — Frais opérateurs de paiement :\n\n" +
       "• Frais Wave\n" +
       "Les paiements traités via Wave Sénégal sont soumis aux frais de service de l'opérateur, conformément à sa grille tarifaire officielle en vigueur. Wave applique des frais de traitement sur les transactions marchandes (à titre indicatif, environ 1 % du montant de la transaction, sous réserve de modifications unilatérales par l'opérateur). LASSİ ne perçoit ni ne contrôle ces frais ; ils sont prélevés directement par Wave au moment du traitement de la transaction.\n\n" +
       "• Frais Orange Money\n" +
       "Les paiements traités via Orange Money Sénégal sont soumis aux frais de service de l'opérateur, conformément à sa grille tarifaire officielle en vigueur. Ces frais varient selon le montant et le type d'opération (paiement marchand, reversement). LASSİ ne perçoit ni ne contrôle ces frais ; ils sont facturés directement par Orange Money Sénégal conformément à ses conditions générales.\n\n" +
-      "• Montant net reversé au Prestataire\n" +
-      "Après déduction de la commission LASSİ (1 %) et des frais opérateur applicables (Wave ou Orange Money), le Prestataire perçoit le solde net de chaque transaction. À titre indicatif, pour un paiement effectué via Wave, le Prestataire reçoit environ 98 % du montant réglé par le client. Ce pourcentage est susceptible d'évoluer en fonction des grilles tarifaires des opérateurs de paiement partenaires, sans que LASSİ en soit responsable.\n\n" +
+      "• Montant reversé au Prestataire\n" +
+      "Le Prestataire perçoit l'intégralité du prix qu'il a fixé pour sa prestation. LASSİ ne déduit aucune commission sur ses revenus : la commission de 1 % est facturée au Client en sus du prix affiché. Seuls les frais opérateur applicables (Wave ou Orange Money) peuvent réduire le montant effectivement crédité, conformément aux tarifs de l'opérateur. À titre indicatif, pour un paiement effectué via Wave, le Prestataire reçoit environ 98 % du montant réglé par le client, déduction faite des frais Wave uniquement. Ce pourcentage est susceptible d'évoluer en fonction des grilles tarifaires des opérateurs de paiement partenaires, sans que LASSİ en soit responsable.\n\n" +
       "Les tarifs d'abonnement éventuels pour les Prestataires sont définis dans l'espace professionnel de l'Application et peuvent être modifiés avec un préavis de 30 jours.",
   },
   {

@@ -239,7 +239,7 @@ export default function ReceiptScreen({ orderId, onBack }: Props) {
           {isUsed && (
             <View style={s.usedBox}>
               <Text style={s.usedTitle}>✓ Reçu utilisé</Text>
-              <Text style={s.usedSub}>Ta commande a bien été remise. Merci !</Text>
+              <Text style={s.usedSub}>Ta commande a bien été remise. Merci.</Text>
             </View>
           )}
 

@@ -114,7 +114,7 @@ export default function MyDisputesScreen({ onBack }: Props) {
           {/* Résolution admin */}
           {selected.resolution && (
             <View style={styles.resolutionCard}>
-              <Text style={styles.resolutionLbl}>⚖️ Décision de l'admin</Text>
+              <Text style={styles.resolutionLbl}>Décision de l'admin</Text>
               <Text style={styles.resolutionTxt}>{selected.resolution}</Text>
             </View>
           )}
@@ -129,7 +129,7 @@ export default function MyDisputesScreen({ onBack }: Props) {
               return (
                 <View key={msg.id} style={[styles.msgBubble, isAdmin && styles.msgBubbleAdmin]}>
                   <Text style={[styles.msgSender, isAdmin && styles.msgSenderAdmin]}>
-                    {isAdmin ? '🛡 Admin' : msg.senderName}
+                    {isAdmin ? 'Admin' : msg.senderName}
                   </Text>
                   <Text style={styles.msgText}>{msg.message}</Text>
                   <Text style={styles.msgTime}>

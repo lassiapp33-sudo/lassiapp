@@ -4,18 +4,35 @@ import {
   TouchableOpacity, Image, ActivityIndicator,
 } from 'react-native';
 import { getTerrains, calculerPrixAvecMarge } from '../../services/terrains';
-import { Terrain, SportType, SPORT_EMOJI, SPORT_LABEL } from '../../types/terrain';
+import { Terrain, SportType, SPORT_LABEL } from '../../types/terrain';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
+import {
+  IcoFootball,
+  IcoBasketball,
+  IcoTennis,
+  IcoVolleyball,
+  IcoStadium,
+} from '../../components/common/LassiIcons';
+
+function SportIcon({ sport, size = 52 }: { sport: string; size?: number }) {
+  switch (sport) {
+    case 'football':   return <IcoFootball size={size} />;
+    case 'basketball': return <IcoBasketball size={size} />;
+    case 'tennis':     return <IcoTennis size={size} />;
+    case 'volleyball': return <IcoVolleyball size={size} />;
+    default:           return <IcoStadium size={size} />;
+  }
+}
 import { formatPrice } from '../../utils/format';
 
 const SPORTS: { label: string; value: SportType | 'tous' }[] = [
-  { label: '📋 Tous', value: 'tous' },
-  { label: '⚽ Football', value: 'football' },
-  { label: '🏀 Basketball', value: 'basketball' },
-  { label: '🎾 Tennis', value: 'tennis' },
-  { label: '🏐 Volleyball', value: 'volleyball' },
-  { label: '🏟️ Autre', value: 'autre' },
+  { label: 'Tous', value: 'tous' },
+  { label: 'Football', value: 'football' },
+  { label: 'Basketball', value: 'basketball' },
+  { label: 'Tennis', value: 'tennis' },
+  { label: 'Volleyball', value: 'volleyball' },
+  { label: 'Autre', value: 'autre' },
 ];
 
 interface Props {
@@ -90,7 +107,7 @@ export default function TerrainsListScreen({ onBack, onSelectTerrain, initialSpo
                 <Image source={{ uri: item.images[0] }} style={styles.img} />
               ) : (
                 <View style={styles.imgPlaceholder}>
-                  <Text style={styles.imgEmoji}>{SPORT_EMOJI[item.sport_type]}</Text>
+                  <SportIcon sport={item.sport_type} />
                 </View>
               )}
               <View style={styles.info}>
@@ -154,8 +171,6 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.accent}12`,
     alignItems: 'center', justifyContent: 'center',
   },
-  imgEmoji: { fontSize: 48 },
-
   info: { padding: 14 },
   infoTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 6 },
   nom: { color: colors.white, fontFamily: fonts.title, fontSize: 15 },

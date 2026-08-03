@@ -86,11 +86,11 @@ export default function VoiceAssistantScreen({ onClose }: Props) {
       </TouchableOpacity>
 
       {/* Label en-tête */}
-      <Text style={[styles.label, { marginTop: TOP_INSET + 10 }]}>✨ Assistant LASSİ</Text>
+      <Text style={[styles.label, { marginTop: TOP_INSET + 10 }]}>Assistant LASSİ</Text>
 
       {/* Mascotte + message d'accueil */}
       <LassiMascotte forme="welcome" taille={90} style={{ marginTop: 18 }} />
-      <Text style={styles.greeting}>{`Salut ! Je suis ${MASCOTTE_NOM} 🐝`}</Text>
+      <Text style={styles.greeting}>{`Salut, je suis ${MASCOTTE_NOM} 🐝`}</Text>
 
       {/* Espace flexible réduit */}
       <View style={{ flex: 0.4 }} />

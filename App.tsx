@@ -33,7 +33,6 @@ import OfflineBanner     from './src/components/common/OfflineBanner';
 import NotifCardModal    from './src/components/common/NotifCardModal';
 import NotifPopupBanner  from './src/components/common/NotifPopupBanner';
 import AnnonceModal             from './src/components/common/AnnonceModal';
-import NouveauPrestataireBanner from './src/components/common/NouveauPrestataireBanner';
 import { useAnnonces }          from './src/hooks/useAnnonces';
 import { useConnectionWatcher } from './src/hooks/useConnectionWatcher';
 import useAuthStore, { AuthUser } from './src/store/authStore';
@@ -307,20 +306,8 @@ export default function App() {
         onVoirAlaUne={() => setPendingNav({ type: 'a_la_une_feed' })}
       />
 
-      {/* Annonces "Nouveau prestataire" → popup banner avec bouton Voir la vitrine */}
-      {annonceCourante?.titre?.includes('Nouveau prestataire') && annonceCourante.tag ? (
-        <NouveauPrestataireBanner
-          annonce={annonceCourante}
-          onDismiss={marquerLue}
-          onVoirVitrine={() => {
-            marquerLue();
-            setPendingNav({ type: 'new_shop', shopId: annonceCourante.tag!, shopName: '' });
-          }}
-        />
-      ) : (
-        /* Autres annonces système admin (table annonces) — une seule fois par annonce */
-        <AnnonceModal annonce={annonceCourante} nbRestantes={nbRestantes} onFermer={marquerLue} />
-      )}
+      {/* Annonces système admin (table annonces) — une seule fois par annonce, file FIFO */}
+      <AnnonceModal annonce={annonceCourante} nbRestantes={nbRestantes} onFermer={marquerLue} />
 
       <ErrorBoundary>
       {screen === 'splash' && (

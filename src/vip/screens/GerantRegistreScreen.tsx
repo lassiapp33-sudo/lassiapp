@@ -28,6 +28,55 @@ import {
 } from '../../services/vip';
 import useGerantStore from '../../store/gerantStore';
 import { TOP_INSET } from '../../theme';
+import { VipCategorie } from '../../types/vip';
+
+// ─── Suggestions par catégorie ────────────────────────────────────────────────
+
+interface Suggestions {
+  section: string;
+  nom: string;
+  description: string;
+  unite: string;
+  mention: string;
+}
+
+const SUGGESTIONS: Record<VipCategorie, Suggestions> = {
+  restauration: {
+    section:     'Ex : Entrées',
+    nom:         'Ex : Thiéboudienne royale',
+    description: 'Riz au poisson fumé, légumes du marché...',
+    unite:       'Ex : portion, plat, boisson',
+    mention:     'Ex : Nouveau · Populaire',
+  },
+  beaute_tressage: {
+    section:     'Ex : Tressage',
+    nom:         'Ex : Box braids mi-long',
+    description: 'Pose complète avec rajouts inclus...',
+    unite:       'Ex : séance, pose',
+    mention:     'Ex : Best-seller · Nouveau',
+  },
+  coiffure: {
+    section:     'Ex : Coupes',
+    nom:         'Ex : Coupe + défrisage',
+    description: 'Shampoing, soin, coupe et mise en plis...',
+    unite:       'Ex : séance',
+    mention:     'Ex : Populaire · Nouveau',
+  },
+  musculation_fitness: {
+    section:     'Ex : Abonnements',
+    nom:         'Ex : Abonnement mensuel',
+    description: 'Accès illimité à la salle + cours collectifs...',
+    unite:       'Ex : mois, séance',
+    mention:     'Ex : Nouveau · Populaire',
+  },
+  boulangerie_patisserie: {
+    section:     'Ex : Viennoiseries',
+    nom:         'Ex : Croissant beurre',
+    description: 'Feuilletage pur beurre, doré au four...',
+    unite:       'Ex : pièce, kg',
+    mention:     'Ex : Nouveau · Populaire',
+  },
+};
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -111,13 +160,16 @@ interface FormModalProps {
   visible: boolean;
   initial: FormState;
   profilId: string;
+  categorie: VipCategorie;
+  sectionsExistantes: string[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-function FormModal({ visible, initial, profilId, onClose, onSaved }: FormModalProps) {
+function FormModal({ visible, initial, profilId, categorie, sectionsExistantes, onClose, onSaved }: FormModalProps) {
   const [form, setForm] = useState<FormState>(initial);
   const [saving, setSaving] = useState(false);
+  const sg = SUGGESTIONS[categorie] ?? SUGGESTIONS.restauration;
 
   useEffect(() => { setForm(initial); }, [initial, visible]);
 
@@ -202,13 +254,13 @@ function FormModal({ visible, initial, profilId, onClose, onSaved }: FormModalPr
         </View>
 
         <ScrollView style={sf.scroll} keyboardShouldPersistTaps="handled">
-          <Ligne label="Section" value={form.section} onChange={v => maj({ section: v })} placeholder="Ex : Entrées" />
-          <Ligne label="Nom *" value={form.nom} onChange={v => maj({ nom: v })} placeholder="Ex : Thiéboudienne royale" />
-          <Ligne label="Description" value={form.description} onChange={v => maj({ description: v })} placeholder="Riz au poisson fumé, légumes du marché..." multiline />
+          <LigneSection value={form.section} onChange={v => maj({ section: v })} sections={sectionsExistantes} sectionPlaceholder={sg.section} />
+          <Ligne label="Nom *" value={form.nom} onChange={v => maj({ nom: v })} placeholder={sg.nom} />
+          <Ligne label="Description" value={form.description} onChange={v => maj({ description: v })} placeholder={sg.description} multiline />
           <Ligne label="Prix (F CFA) *" value={form.prix} onChange={v => maj({ prix: v })} placeholder="Ex : 4500" keyboardType="numeric" />
           <Ligne label="Prix barré (F CFA)" value={form.prixBarre} onChange={v => maj({ prixBarre: v })} placeholder="Ex : 5500 (facultatif)" keyboardType="numeric" />
-          <Ligne label="Unité" value={form.unite} onChange={v => maj({ unite: v })} placeholder="Ex : séance, kg, portion" />
-          <Ligne label="Mention" value={form.mention} onChange={v => maj({ mention: v })} placeholder="Ex : Nouveau · Populaire" />
+          <Ligne label="Unité" value={form.unite} onChange={v => maj({ unite: v })} placeholder={sg.unite} />
+          <Ligne label="Mention" value={form.mention} onChange={v => maj({ mention: v })} placeholder={sg.mention} />
 
           <View style={sf.switchLigne}>
             <Text style={sf.switchLabel}>Disponible</Text>
@@ -248,6 +300,46 @@ function Ligne({ label, value, onChange, placeholder, multiline, keyboardType }:
         multiline={multiline}
         numberOfLines={multiline ? 3 : 1}
         keyboardType={keyboardType ?? 'default'}
+      />
+    </View>
+  );
+}
+
+function LigneSection({ value, onChange, sections, sectionPlaceholder }: {
+  value: string;
+  onChange: (v: string) => void;
+  sections: string[];
+  sectionPlaceholder?: string;
+}) {
+  return (
+    <View style={sf.champBloc}>
+      <Text style={sf.champLabel}>Section</Text>
+      {sections.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={sf.chipsScroll}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 8 }}>
+          {sections.map(sec => {
+            const actif = value.trim().toLowerCase() === sec.trim().toLowerCase();
+            return (
+              <TouchableOpacity
+                key={sec}
+                style={[sf.chip, actif && sf.chipActif]}
+                onPress={() => onChange(sec)}>
+                <Text style={[sf.chipTxt, actif && sf.chipTxtActif]}>{sec}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+      <TextInput
+        style={sf.champInput}
+        value={value}
+        onChangeText={onChange}
+        placeholder={sections.length > 0 ? 'Nouvelle section...' : (sectionPlaceholder ?? 'Ex : Entrées')}
+        placeholderTextColor={r.couleur.gris}
       />
     </View>
   );
@@ -349,6 +441,7 @@ interface Props {
 
 export default function GerantRegistreScreen({ onBack }: Props) {
   const profilStore = useGerantStore(s => s.profil);
+  const categorie = profilStore?.categorie ?? 'restauration';
   const [profilId, setProfilId] = useState<string>(profilStore?.id ?? '');
   const [prestations, setPrestations] = useState<VipPrestation[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -458,6 +551,8 @@ export default function GerantRegistreScreen({ onBack }: Props) {
           visible={formVisible}
           initial={formInitial}
           profilId={profilId}
+          categorie={categorie}
+          sectionsExistantes={sections}
           onClose={() => setFormVisible(false)}
           onSaved={charger}
         />
@@ -602,6 +697,27 @@ const sf = StyleSheet.create({
   },
   sauver: {
     fontFamily: VIP_FONTS.palais.util, fontSize: 14, color: r.couleur.orLassi,
+  },
+  chipsScroll: { marginBottom: 0 },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: r.couleur.filetFin,
+    marginRight: 8,
+    borderRadius: 2,
+  },
+  chipActif: {
+    borderColor: r.couleur.orLassi,
+    backgroundColor: 'rgba(201,162,39,0.15)',
+  },
+  chipTxt: {
+    fontFamily: VIP_FONTS.palais.util,
+    fontSize: 12,
+    color: r.couleur.gris,
+  },
+  chipTxtActif: {
+    color: r.couleur.orLassi,
   },
   champBloc: { paddingHorizontal: r.espace.md, paddingTop: r.espace.sm },
   champLabel: {

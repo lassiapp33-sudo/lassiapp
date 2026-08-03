@@ -152,7 +152,7 @@ export default function AddAbonnementOffreSheet({ visible, offre, onSave, onDele
               />
               {prixClient > 0 && (
                 <Text style={styles.hint}>
-                  Prix affiché au client : {formatPrice(prixClient)} (+ 10% LASSI)
+                  Prix affiché au client : {formatPrice(prixClient)} (+ 1% LASSI)
                 </Text>
               )}
 

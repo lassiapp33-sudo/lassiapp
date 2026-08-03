@@ -26,7 +26,8 @@ const IcoShareUp = () => (
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
 const PREVIEW_MAX_H = Math.min(STORY_H_BASE + 60, SCREEN_H * 0.55);
-const CARD_MARGIN_LEFT = Math.max(16, (SCREEN_W - STORY_W) / 2);
+// Padding horizontal symétrique : 0 si la carte remplit déjà l'écran, sinon centré
+const CARD_PADDING_H = Math.max(0, (SCREEN_W - STORY_W) / 2);
 
 interface Props {
   visible: boolean;
@@ -104,7 +105,7 @@ export default function StoryShareModal({
 
           <ScrollView
             style={styles.previewScroll}
-            contentContainerStyle={[styles.previewContent, { paddingLeft: CARD_MARGIN_LEFT }]}
+            contentContainerStyle={styles.previewContent}
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
@@ -201,7 +202,7 @@ const styles = StyleSheet.create({
   previewContent: {
     paddingTop: 4,
     paddingBottom: 8,
-    paddingRight: 16,
+    paddingHorizontal: CARD_PADDING_H,
   },
   cardShadow: {
     borderRadius: 12,

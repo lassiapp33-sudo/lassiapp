@@ -68,7 +68,7 @@ function ElCard({ el, highlighted, onShop, onCommander }: ElCardProps) {
 
   return (
     <View style={[styles.elCard, highlighted && styles.elCardHighlight]}>
-      {highlighted && <Text style={styles.elHighlightBadge}>👋 Ce produit t'a été recommandé</Text>}
+      {highlighted && <Text style={styles.elHighlightBadge}>Ce produit t'a été recommandé</Text>}
       <Text style={styles.elNom}>{el.nom}</Text>
 
       {hasPrix ? (
@@ -126,15 +126,6 @@ function CheckoutSheet({ el, shopName, loading, onConfirm, onClose }: CheckoutSh
 
           {/* Résumé prix */}
           <View style={styles.csPriceBox}>
-            <View style={styles.csPriceLine}>
-              <Text style={styles.csPriceKey}>Prix prestataire</Text>
-              <Text style={styles.csPriceVal}>{formatPrice(el.prix)}</Text>
-            </View>
-            <View style={styles.csPriceLine}>
-              <Text style={styles.csPriceKey}>Frais LASSI (1%)</Text>
-              <Text style={styles.csPriceVal}>{formatPrice(commission)}</Text>
-            </View>
-            <View style={styles.csSep} />
             <View style={styles.csPriceLine}>
               <Text style={styles.csTotalKey}>Total</Text>
               <Text style={styles.csTotalVal}>{formatPrice(prixClient)}</Text>

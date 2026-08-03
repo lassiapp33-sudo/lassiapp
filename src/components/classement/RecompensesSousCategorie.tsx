@@ -13,5 +13,5 @@ const items: RecompenseItem[] = topVipRangs.map(rang => ({
 // ─── Liste déroulante des récompenses du Top 3 de la sous-catégorie ──────────
 
 export default function RecompensesSousCategorie() {
-  return <RecompensesAccordion title="🎁 Récompenses de la semaine" items={items} />;
+  return <RecompensesAccordion title="Récompenses de la semaine" items={items} />;
 }

@@ -13,7 +13,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Dimensions,
 } from 'react-native';
+
+const SCREEN_H = Dimensions.get('window').height;
 
 import LassiScreen from '../../components/LassiScreen';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -294,12 +297,11 @@ export default function PromotionsScreen({ onBack }: Props) {
         transparent
         onRequestClose={() => setShowForm(false)}
       >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior="padding"
-          keyboardVerticalOffset={0}
-        >
-          <View style={styles.sheet}>
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.sheet}
+          >
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>
               {editPromo ? 'Modifier la promo' : 'Nouvelle promo'}
@@ -307,8 +309,7 @@ export default function PromotionsScreen({ onBack }: Props) {
 
             <ScrollView
               showsVerticalScrollIndicator={false}
-              style={{ flex: 1 }}
-              contentContainerStyle={{ paddingBottom: 32 }}
+              contentContainerStyle={{ paddingBottom: 16 }}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"
             >
@@ -396,7 +397,7 @@ export default function PromotionsScreen({ onBack }: Props) {
                         {p.photoUrl ? (
                           <Image source={{ uri: p.photoUrl }} style={styles.prodPillImg} />
                         ) : (
-                          <Text style={styles.prodPillEmoji}>{p.emoji || '📦'}</Text>
+                          p.emoji ? <Text style={styles.prodPillEmoji}>{p.emoji}</Text> : null
                         )}
                         <Text
                           style={[
@@ -485,32 +486,33 @@ export default function PromotionsScreen({ onBack }: Props) {
                 />
               </View>
 
-              {/* Boutons */}
-              <View style={styles.formActions}>
-                <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={() => setShowForm(false)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.cancelBtnTxt}>Annuler</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.saveBtn, saving && { opacity: 0.6 }]}
-                  onPress={saving ? undefined : handleSave}
-                  activeOpacity={0.85}
-                >
-                  {saving ? (
-                    <ActivityIndicator color={colors.bg} size="small" />
-                  ) : (
-                    <Text style={styles.saveBtnTxt}>
-                      {editPromo ? 'Enregistrer' : 'Créer la promo'}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              </View>
             </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
+
+            {/* Boutons FIXES — toujours visibles en bas du sheet */}
+            <View style={styles.formActions}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setShowForm(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelBtnTxt}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+                onPress={saving ? undefined : handleSave}
+                activeOpacity={0.85}
+              >
+                {saving ? (
+                  <ActivityIndicator color={colors.bg} size="small" />
+                ) : (
+                  <Text style={styles.saveBtnTxt}>
+                    {editPromo ? 'Enregistrer' : 'Créer la promo'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
     </LassiScreen>
   );
@@ -574,9 +576,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 34,
-    maxHeight: '90%',
-    flex: 1,
+    paddingBottom: 24,
+    height: Math.round(SCREEN_H * 0.88),
   },
   sheetHandle: {
     width: 40,
@@ -658,7 +659,7 @@ const styles = StyleSheet.create({
   },
   activeSub: { color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginTop: 3 },
 
-  formActions: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  formActions: { flexDirection: 'row', gap: 12, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
   cancelBtn: {
     flex: 1,
     height: 50,

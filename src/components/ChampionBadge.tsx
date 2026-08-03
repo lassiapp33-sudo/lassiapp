@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { colors } from '../theme';
 import ShimmerOverlay from './ShimmerOverlay';
+import { IcoCrown } from './common/LassiIcons';
 
 const SIZE = 20;
 
@@ -11,7 +12,7 @@ export default function ChampionBadge() {
   return (
     <View style={styles.badge}>
       <ShimmerOverlay width={SIZE} />
-      <Text style={styles.txt}>👑</Text>
+      <IcoCrown size={13} />
     </View>
   );
 }
@@ -26,5 +27,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  txt: { fontSize: 11, lineHeight: 14 },
 });

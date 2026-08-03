@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { IcoCrown, IcoTrophy } from '../common/LassiIcons';
 import { colors, fonts } from '../../theme';
 import Avatar from '../Avatar';
 
@@ -55,7 +56,7 @@ function PodColumn({ entry, onPress }: { entry: VipEntry; onPress?: () => void }
     >
       {/* Couronne au-dessus du 1er uniquement si VIP réel */}
       {isFirst && !isPlaceholder ? (
-        <Text style={styles.crown}>👑</Text>
+        <IcoCrown size={22} />
       ) : isFirst ? (
         <View style={{ height: 22 }} />
       ) : null}
@@ -159,7 +160,7 @@ export default function VipPodium({ entries, subLabel = '', renewIn = '7j', onPr
     <View style={styles.section}>
       {/* En-tête */}
       <View style={styles.head}>
-        <Text style={styles.headIcon}>🏆</Text>
+        <IcoTrophy size={18} />
         <Text style={styles.headTitle}>Top 3 {subLabel}</Text>
       </View>
 
@@ -208,8 +209,6 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 4,
   },
-  headIcon: { fontSize: 17 },
-  crown: { fontSize: 17 },
   headTitle: {
     color: colors.white,
     fontFamily: fonts.title,

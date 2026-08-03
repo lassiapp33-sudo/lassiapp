@@ -8,6 +8,15 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
+
+const IcoProductFallback = () => (
+  <Svg width={28} height={28} viewBox="0 0 24 24">
+    <Path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4H6z" fill="#FDCF3440" stroke="#FDCF34" strokeWidth={1.5} strokeLinejoin="round"/>
+    <Path d="M3 6h18" stroke="#FDCF34" strokeWidth={1.5}/>
+    <Path d="M16 10a4 4 0 0 1-8 0" stroke="#FDCF34" strokeWidth={1.5} strokeLinecap="round" fill="none"/>
+  </Svg>
+);
 import { radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
 import { calculerPrixClient } from '../../config/payment';
@@ -66,8 +75,10 @@ function PromoCard({
       <View style={styles.imgBox}>
         {item.photoUrl ? (
           <Image source={{ uri: item.photoUrl }} style={styles.img} />
+        ) : item.emoji ? (
+          <Text style={styles.emoji}>{item.emoji}</Text>
         ) : (
-          <Text style={styles.emoji}>{item.emoji || '🛍️'}</Text>
+          <IcoProductFallback />
         )}
       </View>
 
@@ -220,7 +231,7 @@ export default function PromoBanner({ onPress, onView }: Props) {
   return (
     <View style={styles.wrapper}>
       {/* Label section */}
-      <Text style={styles.label}>🔥 Offres du quartier</Text>
+      <Text style={styles.label}>Offres du quartier</Text>
 
       {N < 2 ? (
         // Un seul produit : carte centrée sans boucle

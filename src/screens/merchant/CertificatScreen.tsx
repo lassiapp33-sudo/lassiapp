@@ -13,6 +13,7 @@ import ViewShot, { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
+import { IcoCrown } from '../../components/common/LassiIcons';
 import LassiLogo from '../../components/LassiLogo';
 import useAuthStore from '../../store/authStore';
 import useShopStore from '../../store/shopStore';
@@ -81,7 +82,7 @@ export default function CertificatScreen({ onBack }: Props) {
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.75}>
           <IcoBack />
         </TouchableOpacity>
-        <Text style={styles.title}>🏆 Mon Certificat</Text>
+        <Text style={styles.title}>Mon Certificat</Text>
       </View>
 
       {loading ? (
@@ -109,7 +110,7 @@ export default function CertificatScreen({ onBack }: Props) {
           <ViewShot ref={certRef} style={styles.shot} options={{ format: 'png', quality: 1 }}>
             <View style={styles.cert}>
               <LassiLogo width={130} />
-              <Text style={styles.crown}>👑</Text>
+              <IcoCrown size={52} />
               <Text style={styles.certLabel}>CERTIFICAT OFFICIEL</Text>
               <Text style={styles.badgeTxt}>{certificat.badge}</Text>
               <Text style={styles.periode}>{formatPeriodeLabel(certificat.periode)}</Text>
@@ -129,7 +130,7 @@ export default function CertificatScreen({ onBack }: Props) {
             disabled={sharing}
             activeOpacity={0.85}
           >
-            <Text style={styles.shareBtnTxt}>{sharing ? 'Préparation…' : '📤 Partager'}</Text>
+            <Text style={styles.shareBtnTxt}>{sharing ? 'Préparation…' : 'Partager'}</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
@@ -202,13 +203,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.accent,
     borderRadius: radius.xxl,
-  },
-  crown: {
-    fontSize: 44,
-    marginTop: 14,
-    textShadowColor: 'rgba(253,207,52,0.6)',
-    textShadowRadius: 12,
-    textShadowOffset: { width: 0, height: 0 },
   },
   certLabel: {
     color: colors.muted,

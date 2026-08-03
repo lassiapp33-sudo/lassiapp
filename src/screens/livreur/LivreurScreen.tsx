@@ -51,7 +51,7 @@ export default function LivreurScreen({ onLogout, onShop }: Props) {
   const handleAccepter = useCallback(async (id: string) => {
     const r = await accepterLivraison(id);
     if (!r.success) { Alert.alert('Oups', r.error); charger(); return; }
-    Alert.alert('Acceptée', 'La livraison est à vous. Bonne route !');
+    Alert.alert('Acceptée', 'La livraison est à vous. Bonne route.');
     charger();
     setOnglet('encours');
   }, [charger]);
@@ -64,7 +64,7 @@ export default function LivreurScreen({ onLogout, onShop }: Props) {
         onPress: async () => {
           const r = await terminerLivraison(id);
           if (!r.success) { Alert.alert('Erreur', r.error); return; }
-          Alert.alert('Terminée', 'Livraison confirmée. Merci !');
+          Alert.alert('Terminée', 'Livraison confirmée. Merci.');
           charger();
         },
       },
@@ -144,8 +144,8 @@ export default function LivreurScreen({ onLogout, onShop }: Props) {
                   <Text style={s.detailVal}>{solde.montantBrut.toLocaleString()} F</Text>
                 </View>
                 <View style={s.detailRow}>
-                  <Text style={s.detailLabel}>Commission LASSİ (15%)</Text>
-                  <Text style={s.detailNeg}>− {Math.round(solde.montantBrut * 0.15).toLocaleString()} F</Text>
+                  <Text style={s.detailLabel}>Commission LASSİ (10%)</Text>
+                  <Text style={s.detailNeg}>− {Math.round(solde.montantBrut * 0.10).toLocaleString()} F</Text>
                 </View>
                 <View style={[s.detailRow, s.detailRowLast]}>
                   <Text style={s.detailLabelBold}>Net à recevoir</Text>

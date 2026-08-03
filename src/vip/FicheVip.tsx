@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -26,6 +28,9 @@ import { Fleuron } from './composants/Fleuron';
 import { Ecrin, fcfa } from './composants/Ecrin';
 import { ouvrirNavigation } from '../utils/navigation';
 import { TOP_INSET } from '../theme';
+import useCartStore, { CartShopInfo, selectTotalPrice, selectTotalQty } from '../store/cartStore';
+import CartFloating from '../components/shop/CartFloating';
+import { calculerPrixClientVip } from '../config/payment';
 
 // ─── CTA par catégorie ────────────────────────────────────────────────────────
 
@@ -34,7 +39,7 @@ const CTA_LABEL: Record<VipCategorie, string> = {
   beaute_tressage:       'Prendre rendez-vous',
   coiffure:              'Prendre rendez-vous',
   musculation_fitness:   'Choisir une formule',
-  boulangerie_patisserie:'Commander',
+  boulangerie_patisserie:'Écrire',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -148,11 +153,18 @@ function SectionTitre({ titre, isPalais }: { titre: string; isPalais: boolean })
   return <Text style={s.sectionTextMaison}>{titre}</Text>;
 }
 
-function LigneMets({ presta }: { presta: VipPrestation }) {
+function LigneMets({ presta, onAjouter }: { presta: VipPrestation; onAjouter?: (p: VipPrestation) => void }) {
   const epuise = !presta.disponible;
   return (
     <View style={[s.mets, epuise && s.epuise]}>
-      <Text style={s.metsNom}>{presta.nom}</Text>
+      <View style={s.metsNomRangee}>
+        <Text style={s.metsNom}>{presta.nom}</Text>
+        {!epuise && (
+          <TouchableOpacity style={s.plusBouton} onPress={() => onAjouter?.(presta)} activeOpacity={0.7} hitSlop={8}>
+            <Text style={s.plusTexte}>+</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       {presta.description != null && (
         <Text style={s.metsDesc}>{presta.description}</Text>
       )}
@@ -163,9 +175,9 @@ function LigneMets({ presta }: { presta: VipPrestation }) {
         <Text style={[r.caps, s.epuiseLabel]}>Épuisé</Text>
       ) : (
         <Text style={s.metsPrix}>
-          {fcfa(presta.prix)}
+          {fcfa(calculerPrixClientVip(presta.prix))}
           {presta.prixBarre != null && (
-            <Text style={s.metsBarre}>{'  '}{fcfa(presta.prixBarre)}</Text>
+            <Text style={s.metsBarre}>{'  '}{fcfa(calculerPrixClientVip(presta.prixBarre))}</Text>
           )}
           {presta.unite != null && (
             <Text style={s.metsUnite}> / {presta.unite}</Text>
@@ -176,12 +188,19 @@ function LigneMets({ presta }: { presta: VipPrestation }) {
   );
 }
 
-function LignePresta({ presta }: { presta: VipPrestation }) {
+function LignePresta({ presta, onAjouter }: { presta: VipPrestation; onAjouter?: (p: VipPrestation) => void }) {
   const epuise = !presta.disponible;
   return (
     <View style={[s.prestaLigne, epuise && s.epuise]}>
       <View style={s.prestaGauche}>
-        <Text style={s.prestaNom}>{presta.nom}</Text>
+        <View style={s.prestaNomRangee}>
+          <Text style={s.prestaNom}>{presta.nom}</Text>
+          {!epuise && (
+            <TouchableOpacity style={s.plusBouton} onPress={() => onAjouter?.(presta)} activeOpacity={0.7} hitSlop={8}>
+              <Text style={s.plusTexte}>+</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         {presta.description != null && (
           <Text style={s.prestaDesc}>{presta.description}</Text>
         )}
@@ -191,9 +210,9 @@ function LignePresta({ presta }: { presta: VipPrestation }) {
           <Text style={[r.caps, s.epuiseLabel]}>Épuisé</Text>
         ) : (
           <>
-            <Text style={s.prestaPrix}>{fcfa(presta.prix)}</Text>
+            <Text style={s.prestaPrix}>{fcfa(calculerPrixClientVip(presta.prix))}</Text>
             {presta.prixBarre != null && (
-              <Text style={s.prestaBarre}>{fcfa(presta.prixBarre)}</Text>
+              <Text style={s.prestaBarre}>{fcfa(calculerPrixClientVip(presta.prixBarre))}</Text>
             )}
             {presta.unite != null && (
               <Text style={s.prestaUnite}>/{presta.unite}</Text>
@@ -261,12 +280,22 @@ interface Props {
   shopId: string;
   onBack: () => void;
   onChat: (shopId: string, shopName: string) => void;
+  onGoCart?: (shopId: string, shopName: string, mode: 'normal' | 'livraison') => void;
+  onReserver?: (vipProfilId: string, vipNom: string) => void;
+  onPrendreRdv?: (vipProfilId: string, vipNom: string, categorie: VipCategorie) => void;
+  onGoMap?: (nomBoutique: string) => void;
 }
 
-export default function FicheVip({ shopId, onBack, onChat }: Props) {
+export default function FicheVip({ shopId, onBack, onChat, onGoCart, onReserver, onPrendreRdv, onGoMap }: Props) {
   const [fiche, setFiche] = useState<VipFiche | null>(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
+  const [modalCommander, setModalCommander] = useState(false);
+
+  const addItem    = useCartStore(s => s.addItem);
+  const setOrderType = useCartStore(s => s.setOrderType);
+  const cartCount  = useCartStore(selectTotalQty);
+  const cartTotal  = useCartStore(selectTotalPrice);
 
   const charger = useCallback(async () => {
     setChargement(true);
@@ -304,15 +333,52 @@ export default function FicheVip({ shopId, onBack, onChat }: Props) {
   const jourCourant = new Date().getUTCDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6;
   const ctaLabel = CTA_LABEL[profil.categorie];
 
-  const onNaviguer = () =>
-    ouvrirNavigation({
-      latitude: shop.latitude,
-      longitude: shop.longitude,
-      adresse: profil.adresseCourte,
-      nomLieu: profil.nomAffiche,
-    });
+  const onNaviguer = () => {
+    if (onGoMap) {
+      onGoMap(profil.nomAffiche);
+    } else {
+      ouvrirNavigation({
+        latitude: shop.latitude,
+        longitude: shop.longitude,
+        adresse: profil.adresseCourte,
+        nomLieu: profil.nomAffiche,
+      });
+    }
+  };
 
   const onEcrire = () => onChat(shopId, profil.nomAffiche);
+
+  const onCtaPrimaire = () => {
+    if (profil.categorie === 'restauration' && onReserver) {
+      onReserver(profil.id, profil.nomAffiche);
+    } else if (
+      (profil.categorie === 'beaute_tressage' || profil.categorie === 'coiffure') &&
+      onPrendreRdv
+    ) {
+      onPrendreRdv(profil.id, profil.nomAffiche, profil.categorie);
+    } else {
+      onEcrire();
+    }
+  };
+
+  const shopInfo: CartShopInfo = {
+    id: shop.id,
+    initial: profil.initiale,
+    name: profil.nomAffiche,
+    location: profil.adresseCourte ?? '',
+    logoUrl: shop.logoUrl ?? undefined,
+    showOrderType: false,
+    isVip: true,
+  };
+
+  const onAjouter = (p: VipPrestation) => {
+    addItem(shopInfo, { id: p.id, name: p.nom, emoji: '', price: p.prix });
+  };
+
+  const onCommander = (mode: 'normal' | 'livraison') => {
+    setModalCommander(false);
+    onGoCart?.(shopId, profil.nomAffiche, mode);
+  };
 
   return (
     <View style={s.fond}>
@@ -339,8 +405,8 @@ export default function FicheVip({ shopId, onBack, onChat }: Props) {
             surtitre="Signature maison"
             titre={signature.nom}
             description={signature.description ?? undefined}
-            prix={signature.prix}
-            prixBarre={signature.prixBarre}
+            prix={calculerPrixClientVip(signature.prix)}
+            prixBarre={signature.prixBarre != null ? calculerPrixClientVip(signature.prixBarre) : null}
           />
         )}
 
@@ -352,8 +418,8 @@ export default function FicheVip({ shopId, onBack, onChat }: Props) {
             <SectionTitre titre={sectionNom} isPalais={isPalais} />
             {items.map(p =>
               isPalais
-                ? <LigneMets key={p.id} presta={p} />
-                : <LignePresta key={p.id} presta={p} />
+                ? <LigneMets key={p.id} presta={p} onAjouter={onAjouter} />
+                : <LignePresta key={p.id} presta={p} onAjouter={onAjouter} />
             )}
           </View>
         ))}
@@ -401,15 +467,53 @@ export default function FicheVip({ shopId, onBack, onChat }: Props) {
         <View style={{ height: 96 }} />
       </ScrollView>
 
+      {/* CartFloating — s'affiche dès qu'un article est dans le panier */}
+      <CartFloating
+        count={cartCount}
+        total={calculerPrixClientVip(cartTotal)}
+        onPress={() => onGoCart?.(shopId, profil.nomAffiche, 'normal')}
+        bottom={(Platform.OS === 'ios' ? 34 : 14) + 72}
+      />
+
       {/* Barre d'action fixe */}
       <View style={[s.barre, { paddingBottom: Platform.OS === 'ios' ? 34 : 14 }]}>
-        <TouchableOpacity style={s.boutonSecond} onPress={onEcrire}>
-          <Text style={s.texteSecond}>Écrire</Text>
+        <TouchableOpacity style={s.boutonSecond} onPress={() => setModalCommander(true)} activeOpacity={0.7}>
+          <Text style={s.texteSecond}>Commander</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={s.boutonPrimaire} onPress={onEcrire}>
+        <TouchableOpacity style={s.boutonPrimaire} onPress={onCtaPrimaire} activeOpacity={0.85}>
           <Text style={s.textePrimaire}>{ctaLabel}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Modal — choix du mode de commande */}
+      <Modal
+        visible={modalCommander}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalCommander(false)}
+      >
+        <Pressable style={s.modalOverlay} onPress={() => setModalCommander(false)}>
+          <Pressable style={s.modalCard} onPress={e => e.stopPropagation()}>
+            <Text style={s.modalSurtitre}>COMMENT SOUHAITEZ-VOUS COMMANDER ?</Text>
+            <View style={s.modalFilet} />
+            <TouchableOpacity
+              style={s.modalOption}
+              onPress={() => onCommander('normal')}
+              activeOpacity={0.7}
+            >
+              <Text style={s.modalOptionTitre}>Commander</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.modalOption, s.modalOptionDernier]}
+              onPress={() => onCommander('livraison')}
+              activeOpacity={0.7}
+            >
+              <Text style={s.modalOptionTitre}>Commander + Livrer</Text>
+              <Text style={s.modalOptionSous}>Livraison à domicile</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -473,7 +577,7 @@ const s = StyleSheet.create({
 
   // ── Portique maison ─────────────────────────────────────────────────────────
   panneauVelours: {
-    backgroundColor: r.couleur.velours,
+    backgroundColor: r.couleur.encre,
     alignItems: 'center',
     paddingTop: r.espace.xl,
     paddingBottom: r.espace.xl,
@@ -739,11 +843,88 @@ const s = StyleSheet.create({
     backgroundColor: r.couleur.orLassi,
     alignItems: 'center',
   },
+
+  // ── Petit bouton + par produit ───────────────────────────────────────────────
+  metsNomRangee: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  prestaNomRangee: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  plusBouton: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderColor: r.couleur.or,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plusTexte: {
+    fontFamily: VIP_FONTS.palais.util,
+    fontSize: 14,
+    color: r.couleur.or,
+    lineHeight: 16,
+    includeFontPadding: false,
+  },
   textePrimaire: {
     fontFamily: VIP_FONTS.palais.util,
     fontSize: 14,
     color: r.couleur.encre,
     letterSpacing: 0.5,
+  },
+
+  // ── Modal panier ─────────────────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: r.couleur.encre,
+    borderTopWidth: 1,
+    borderTopColor: r.couleur.filet,
+    paddingTop: r.espace.lg,
+    paddingHorizontal: r.espace.md,
+    paddingBottom: 44,
+  },
+  modalSurtitre: {
+    fontFamily: VIP_FONTS.palais.util,
+    fontSize: 9,
+    letterSpacing: 2.5,
+    color: r.couleur.gris,
+    textAlign: 'center',
+    marginBottom: r.espace.md,
+  },
+  modalFilet: {
+    height: 1,
+    backgroundColor: r.couleur.filetFin,
+    marginBottom: r.espace.sm,
+  },
+  modalOption: {
+    paddingVertical: r.espace.md,
+    borderBottomWidth: 1,
+    borderBottomColor: r.couleur.filetFin,
+    alignItems: 'center',
+  },
+  modalOptionDernier: {
+    borderBottomWidth: 0,
+  },
+  modalOptionTitre: {
+    fontFamily: VIP_FONTS.palais.util,
+    fontSize: 15,
+    letterSpacing: 0.8,
+    color: r.couleur.ivoire,
+  },
+  modalOptionSous: {
+    fontFamily: VIP_FONTS.palais.corpsIt,
+    fontSize: 12,
+    color: r.couleur.gris,
+    marginTop: 4,
   },
 
   // ── Erreur ──────────────────────────────────────────────────────────────────

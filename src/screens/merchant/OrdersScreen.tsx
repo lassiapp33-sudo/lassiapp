@@ -67,7 +67,7 @@ const IcoRefused = () => (
 // ─── État vide par onglet ──────────────────────────────────────────────────────
 
 const EMPTY: Record<MerchantTab, { icon: React.ReactElement; text: string; sub: string }> = {
-  all:       { icon: <IcoAll />,      text: 'Aucune commande pour le moment.',  sub: 'Votre vitrine est en ligne, attendez vos premiers clients !' },
+  all:       { icon: <IcoAll />,      text: 'Aucune commande pour le moment.',  sub: 'Votre vitrine est en ligne, attendez vos premiers clients.' },
   new:       { icon: <IcoNew />,      text: 'Aucune nouvelle commande.',        sub: 'Les nouvelles commandes apparaîtront ici en temps réel.' },
   preparing: { icon: <IcoPreparing />, text: 'Aucune commande en cours.',       sub: 'Confirmez une nouvelle commande pour la démarrer.' },
   done:      { icon: <IcoDone />,     text: 'Aucune commande terminée.',        sub: 'Vos commandes terminées apparaîtront ici.' },

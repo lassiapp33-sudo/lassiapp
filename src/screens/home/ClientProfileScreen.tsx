@@ -270,6 +270,8 @@ interface Props {
   onOrders?: () => void;
   onFavorites?: () => void;
   onTerrainReservations?: () => void;
+  onTableReservations?: () => void;
+  onRdvBeauty?: () => void;
   onClassement?: () => void;
   onAbonnements?: () => void;
   onLogout?: () => void;
@@ -282,6 +284,8 @@ export default function ClientProfileScreen({
   onOrders,
   onFavorites,
   onTerrainReservations,
+  onTableReservations,
+  onRdvBeauty,
   onClassement,
   onAbonnements,
   onLogout,
@@ -419,6 +423,18 @@ export default function ClientProfileScreen({
             title="Mes abonnements fitness"
             subtitle="Salle de sport & musculation"
             onPress={onAbonnements}
+          />
+          <ProfileOptionRow
+            icon={<IcoTerrain />}
+            title="Mes réservations 5 Étoiles"
+            subtitle="Tables dans les restaurants VIP"
+            onPress={onTableReservations}
+          />
+          <ProfileOptionRow
+            icon={<IcoTerrain />}
+            title="Mes rendez-vous beauté"
+            subtitle="Salons de beauté & coiffure 5 Étoiles"
+            onPress={onRdvBeauty}
           />
           <ProfileOptionRow
             icon={<IcoTrophy />}

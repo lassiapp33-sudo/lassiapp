@@ -1,13 +1,13 @@
 import React from 'react';
-import { Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts } from '../../theme';
 import { DebtFilter } from '../../types/debts';
 
-const CHIPS: { id: DebtFilter; label: string }[] = [
+const CHIPS: { id: DebtFilter; label: string; dot?: string }[] = [
   { id: 'all', label: 'Tous' },
-  { id: 'late', label: '🔴 En retard' },
-  { id: 'watch', label: '🟠 À surveiller' },
-  { id: 'good', label: '🟢 Bons payeurs' },
+  { id: 'late', label: 'En retard', dot: '#DC2626' },
+  { id: 'watch', label: 'À surveiller', dot: '#F97316' },
+  { id: 'good', label: 'Bons payeurs', dot: '#16A34A' },
 ];
 
 interface Props {
@@ -32,6 +32,9 @@ export default function FilterChips({ active, onChange }: Props) {
             onPress={() => onChange(chip.id)}
             activeOpacity={0.75}
           >
+            {chip.dot && (
+              <View style={[styles.dot, { backgroundColor: chip.dot }]} />
+            )}
             <Text style={[styles.chipTxt, on ? styles.chipTxtOn : styles.chipTxtOff]}>
               {chip.label}
             </Text>
@@ -56,6 +59,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
     flexShrink: 0,
   },
   chipOn: {
@@ -67,6 +72,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
   chipTxt: {
     fontFamily: fonts.title,

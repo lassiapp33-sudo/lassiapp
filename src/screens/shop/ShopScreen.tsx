@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Image } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Rect, Circle as SvgCircle } from 'react-native-svg';
 
 import ShopCover from '../../components/shop/ShopCover';
 import AvisSection from '../../components/avis/AvisSection';
@@ -91,6 +91,32 @@ const IcoFav = ({ on }: { on: boolean }) => (
       stroke={on ? colors.accent : '#fff'}
       fill={on ? colors.accent : 'none'}
     />
+  </Svg>
+);
+
+const IC = '#FDCF34';
+const IF = '#FDCF3440';
+
+const IcoDineIn = () => (
+  <Svg width={15} height={15} viewBox="0 0 24 24">
+    <SvgCircle cx={12} cy={13} r={7} stroke={IC} strokeWidth={1.5} fill={IF}/>
+    <Path d="M12 6V3M9 4.5l3-3 3 3" stroke={IC} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <Path d="M9 13h6" stroke={IC} strokeWidth={1.5} strokeLinecap="round"/>
+  </Svg>
+);
+
+const IcoTakeout = () => (
+  <Svg width={15} height={15} viewBox="0 0 24 24">
+    <Path d="M7 8h10l2 12H5L7 8z" fill={IF} stroke={IC} strokeWidth={1.5} strokeLinejoin="round"/>
+    <Path d="M9 8V6a3 3 0 0 1 6 0v2" stroke={IC} strokeWidth={1.5} fill="none" strokeLinecap="round"/>
+    <Path d="M9 13h6" stroke={IC} strokeWidth={1.5} strokeLinecap="round"/>
+  </Svg>
+);
+
+const IcoTag = () => (
+  <Svg width={16} height={16} viewBox="0 0 24 24">
+    <Path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" fill={IF} stroke={IC} strokeWidth={1.5} strokeLinejoin="round"/>
+    <SvgCircle cx={7} cy={7} r={1.5} fill={IC}/>
   </Svg>
 );
 
@@ -314,8 +340,8 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const noOrderOptions = ['bakery', 'stores'].includes(shopCategory);
   const showOrderOptions = shopType === 'products' && !noOrderOptions;
   const orderOptions = [
-    { id: 'place', label: 'Sur place', emoji: '🍽' },
-    { id: 'emporter', label: 'À emporter', emoji: '🥡' },
+    { id: 'place', label: 'Sur place' },
+    { id: 'emporter', label: 'À emporter' },
   ];
   const selectedLabel = orderOptions.find(o => o.id === selectedOrder)?.label ?? 'Sur place';
 
@@ -397,7 +423,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     id: stableId,
     initial: displayInitial,
     name: displayName,
-    location: `📍 ${displayZone} · ${selectedLabel}`,
+    location: `${displayZone} · ${selectedLabel}`,
     logoUrl: displayLogoUrl,
     showOrderType: showOrderOptions,
   };
@@ -499,7 +525,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
           {/* 5b — Bandeau promos actives */}
           {shopWidePromos.length > 0 && (
             <View style={styles.promoBanner}>
-              <Text style={styles.promoBannerIco}>🏷️</Text>
+              <IcoTag />
               <View style={{ flex: 1 }}>
                 {shopWidePromos.map(p => (
                   <Text key={p.id} style={styles.promoBannerTxt} numberOfLines={1}>
@@ -528,7 +554,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                     onPress={() => setCartOrder(opt.id as OrderType)}
                     activeOpacity={0.75}
                   >
-                    <Text style={styles.orderEmoji}>{opt.emoji}</Text>
+                    {opt.id === 'place' ? <IcoDineIn /> : <IcoTakeout />}
                     <Text style={[styles.orderLabel, on && styles.orderLabelOn]}>{opt.label}</Text>
                   </TouchableOpacity>
                 );

@@ -19,18 +19,12 @@ export default function AnnonceModal({ annonce, nbRestantes, onFermer }: Props) 
     <Modal visible animationType="fade" transparent onRequestClose={onFermer}>
       <View style={s.overlay}>
         <View style={s.card}>
-          {annonce.tag && (
-            <View style={s.tagPill}>
-              <Text style={s.tagTxt}>{annonce.tag.toUpperCase()}</Text>
-            </View>
-          )}
-
           {!!annonce.icone && <Text style={s.emoji}>{annonce.icone}</Text>}
           <Text style={s.title}>{annonce.titre}</Text>
           <Text style={s.body}>{annonce.corps}</Text>
 
           <TouchableOpacity style={s.cta} onPress={onFermer} activeOpacity={0.85}>
-            <Text style={s.ctaTxt}>{nbRestantes > 0 ? `Suivant (${nbRestantes})` : "C'est compris !"}</Text>
+            <Text style={s.ctaTxt}>{nbRestantes > 0 ? `Suivant (${nbRestantes})` : "C'est compris"}</Text>
           </TouchableOpacity>
         </View>
       </View>

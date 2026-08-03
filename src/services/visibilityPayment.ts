@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { formatPrice } from '../utils/format';
 import { calculateOffreQuartierPrice } from '../utils/offreQuartierPricing';
@@ -188,35 +189,63 @@ export async function getActiveSub(
 }
 
 // ─── Vérifier si les clés de paiement sont configurées côté serveur ──────────
-// Appelé au chargement de l'écran pour choisir entre PayFooter / PayFooterUnavailable.
-// Retourne { wave: false, orange_money: false } en cas d'erreur → mode indisponible.
+
+const PAY_AVAIL_CACHE_KEY = '@lassi/pay_availability';
+const PAY_AVAIL_TTL_MS    = 6 * 60 * 60 * 1000; // 6 heures
 
 export async function checkPaymentAvailability(): Promise<{
   wave: boolean;
   orange_money: boolean;
 }> {
   try {
+    // Le GET ne requiert pas de session user — la anon key suffit comme Bearer
     const res = await fetch(`${FUNCTIONS_BASE}/create-visibility-payment`, {
-      method: 'GET',
-      headers: await authHeaders(),
+      method:  'GET',
+      headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` },
     });
-    if (!res.ok) return { wave: false, orange_money: false };
-    return (await res.json()) as { wave: boolean; orange_money: boolean };
+    if (res.ok) {
+      const result = (await res.json()) as { wave: boolean; orange_money: boolean };
+      // Mettre en cache pour la prochaine fois (mode hors-ligne)
+      AsyncStorage.setItem(PAY_AVAIL_CACHE_KEY, JSON.stringify({ ...result, ts: Date.now() })).catch(() => {});
+      return result;
+    }
   } catch {
-    return { wave: false, orange_money: false };
+    // Pas de réseau — on essaie le cache
   }
+
+  try {
+    const raw = await AsyncStorage.getItem(PAY_AVAIL_CACHE_KEY);
+    if (raw) {
+      const { ts, ...result } = JSON.parse(raw) as { wave: boolean; orange_money: boolean; ts: number };
+      if (Date.now() - ts < PAY_AVAIL_TTL_MS) return result;
+    }
+  } catch {}
+
+  return { wave: false, orange_money: false };
 }
 
 // ─── Initier un paiement ──────────────────────────────────────────────────────
 
+export interface AdMetadata {
+  format: string;
+  titre?: string | null;
+  corps?: string | null;
+  imageUrl?: string | null;
+  durationHours: number;
+  estMin: number;
+  estMax: number;
+}
+
 export async function createVisibilityPayment(params: {
   planId: string;
   payMethod: PayMethod;
-  offerType: 'quartier' | 'recherche';
+  offerType: 'quartier' | 'recherche' | 'carte' | 'annonce';
   /** Produits choisis (ignoré si offerType !== 'quartier'). */
   productIds: string[];
   /** Mettre en avant toute la vitrine plutôt que des produits précis (quartier uniquement). */
   allProducts: boolean;
+  /** Contenu de l'annonce sponsorisée (annonce uniquement) — stocké en metadata pour création directe par le webhook. */
+  adMetadata?: AdMetadata;
 }): Promise<CreatePaymentResult> {
   const res = await fetch(`${FUNCTIONS_BASE}/create-visibility-payment`, {
     method: 'POST',
@@ -314,6 +343,44 @@ export async function updateSubProducts(productIds: string[]): Promise<void> {
     try { const e = await res.json(); errMsg = e.error ?? errMsg; } catch {}
     throw new Error(errMsg);
   }
+}
+
+// ─── Charger TOUS les abonnements actifs (quartier + recherche simultanément) ─
+
+export async function getActiveSubs(shopId: string): Promise<ActiveSub[]> {
+  const now = new Date().toISOString();
+  const { data } = await supabase
+    .from('visibility_subscriptions')
+    .select(
+      'id, plan_id, amount, status, started_at, expires_at, paid_at, pay_method, offer_type, ' +
+        'product_id, product_ids, all_products, ' +
+        'plan:plan_id(label), product:product_id(name, emoji, photo_url)',
+    )
+    .eq('shop_id', shopId)
+    .eq('status', 'active')
+    .gt('expires_at', now)
+    .order('expires_at', { ascending: false });
+
+  if (!data?.length) return [];
+
+  return (data as unknown as VisibilitySubRow[]).map(row => ({
+    id:           row.id,
+    planId:       row.plan_id,
+    planLabel:    row.plan?.label ?? row.plan_id,
+    amount:       row.amount,
+    status:       'active' as const,
+    startedAt:    row.started_at,
+    expiresAt:    row.expires_at,
+    paidAt:       row.paid_at,
+    payMethod:    row.pay_method as PayMethod,
+    productId:    row.product_id,
+    productIds:   row.product_ids,
+    productName:  row.all_products ? null : (row.product?.name ?? null),
+    productEmoji: row.all_products ? null : (row.product?.emoji ?? null),
+    productCount: row.product_ids?.length ?? (row.product_id ? 1 : 0),
+    allProducts:  row.all_products,
+    offerType:    row.offer_type ?? 'quartier',
+  }));
 }
 
 // ─── Statistiques de visibilité réelles ──────────────────────────────────────

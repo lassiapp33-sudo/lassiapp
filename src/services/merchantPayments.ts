@@ -42,14 +42,22 @@ export function computeStats(payments: MerchantPayment[]): PaymentStats {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthOk = success.filter(p => new Date(p.createdAt) >= monthStart);
-  const waveCount = success.filter(p => p.method === 'wave').length;
-  const omCount = success.filter(p => p.method === 'om').length;
+
+  // Méthode favorite : montant total sur les 7 derniers jours
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  cutoff.setHours(0, 0, 0, 0);
+  const last7 = success.filter(p => new Date(p.createdAt) >= cutoff);
+  const waveAmount = last7.filter(p => p.method === 'wave').reduce((s, p) => s + p.amount, 0);
+  const omAmount   = last7.filter(p => p.method === 'om').reduce((s, p) => s + p.amount, 0);
+  const topMethod: MerchantPayMethod | null =
+    last7.length === 0 ? null : waveAmount >= omAmount ? 'wave' : 'om';
 
   return {
     totalRevenue: success.reduce((s, p) => s + p.amount, 0),
     transactionCount: success.length,
     monthRevenue: monthOk.reduce((s, p) => s + p.amount, 0),
-    topMethod: waveCount >= omCount ? 'wave' : 'om',
+    topMethod,
   };
 }
 

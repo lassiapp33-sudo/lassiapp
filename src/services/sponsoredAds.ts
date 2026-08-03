@@ -215,7 +215,7 @@ export async function getActiveSponsoredAds(limit = 5): Promise<SponsoredAd[]> {
   if (error || !data) return [];
 
   const rows: RawAdFeed[] = Array.isArray(data) ? data : [];
-  return rows.map(r => ({
+  return rows.filter(r => r.id).map(r => ({
     id:            r.id,
     format:        r.format as AdFormat,
     titre:         r.titre,

@@ -66,7 +66,7 @@ export default function ShopStats({
       {showNouveauBadge ? (
         // Badge "Nouveau" — âge < 4 mois, aucune commande
         <View style={styles.newBadge}>
-          <Text style={styles.newTxt}>✨ Nouveau</Text>
+          <Text style={styles.newTxt}>Nouveau</Text>
         </View>
       ) : showEtabli ? (
         // "Établi" — âge >= 4 mois mais aucune activité encore
@@ -92,7 +92,7 @@ export default function ShopStats({
           <View style={styles.stat}>
             {distanceText ? (
               <>
-                <Text style={styles.valTxt}>📍 {distanceText.split(' · ')[0]}</Text>
+                <Text style={styles.valTxt}>{distanceText.split(' · ')[0]}</Text>
                 <Text style={styles.lbl}>{distanceText.split(' · ')[1] ?? zone}</Text>
               </>
             ) : (
@@ -104,7 +104,7 @@ export default function ShopStats({
         <>
           <Divider />
           <View style={styles.stat}>
-            <Text style={styles.valTxt}>📍 {zone}</Text>
+            <Text style={styles.valTxt}>{zone}</Text>
           </View>
         </>
       ) : null}

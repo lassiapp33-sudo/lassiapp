@@ -131,6 +131,8 @@ export default function RegisterScreen({
   const [email, setEmail] = useState('');
   const [mdp, setMdp] = useState('');
   const [showMdp, setShowMdp] = useState(false);
+  const [mdpConfirm, setMdpConfirm] = useState('');
+  const [showMdpConfirm, setShowMdpConfirm] = useState(false);
   const [cguAccepted, setCguAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -148,6 +150,10 @@ export default function RegisterScreen({
     }
     if (mdp.length < 8) {
       setErreur('Le mot de passe doit contenir au moins 8 caractères.');
+      return;
+    }
+    if (mdp !== mdpConfirm) {
+      setErreur('Les mots de passe ne correspondent pas.');
       return;
     }
     if (!cguAccepted) {
@@ -240,6 +246,20 @@ export default function RegisterScreen({
           rightIcon={<IconEye off={showMdp} />}
           onRightPress={() => setShowMdp(v => !v)}
           secureTextEntry={!showMdp}
+          autoComplete="new-password"
+          textContentType="newPassword"
+          scrollRef={scrollRef}
+          returnKeyType="next"
+        />
+        <InputField
+          label="Confirmer le mot de passe"
+          placeholder="Répète ton mot de passe"
+          value={mdpConfirm}
+          onChangeText={setMdpConfirm}
+          leftIcon={<IconLock />}
+          rightIcon={<IconEye off={showMdpConfirm} />}
+          onRightPress={() => setShowMdpConfirm(v => !v)}
+          secureTextEntry={!showMdpConfirm}
           autoComplete="new-password"
           textContentType="newPassword"
           scrollRef={scrollRef}

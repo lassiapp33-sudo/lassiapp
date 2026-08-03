@@ -6,6 +6,22 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
+
+const IcoGPS = () => (
+  <Svg width={14} height={14} viewBox="0 0 24 24">
+    <SvgCircle cx={12} cy={12} r={9} stroke="#FDCF34" strokeWidth={1.5} fill="none"/>
+    <SvgCircle cx={12} cy={12} r={4} fill="#FDCF34"/>
+    <Path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke="#FDCF34" strokeWidth={1.5} strokeLinecap="round"/>
+  </Svg>
+);
+
+const IcoMapPin = () => (
+  <Svg width={13} height={14} viewBox="0 0 13 16">
+    <Path d="M6.5 0C3.46 0 1 2.46 1 5.5c0 4.12 5.5 9.5 5.5 9.5S12 9.62 12 5.5C12 2.46 9.54 0 6.5 0z" fill="#FDCF3440" stroke="#FDCF34" strokeWidth={1.2}/>
+    <SvgCircle cx={6.5} cy={5.5} r={2} fill="#FDCF34"/>
+  </Svg>
+);
 import { colors, fonts, radius } from '../../theme';
 import { DakarAddress, searchAddresses, parseGpsCoords } from '../../data/dakarAddresses';
 import { reverseGeocode } from '../../services/location';
@@ -119,7 +135,7 @@ export default function AddressAutocomplete({
               activeOpacity={0.75}
             >
               <View style={s.itemLeft}>
-                <Text style={s.itemPin}>{addr.id === GPS_ID ? '🎯' : '📍'}</Text>
+                {addr.id === GPS_ID ? <IcoGPS /> : <IcoMapPin />}
                 <View style={s.itemText}>
                   <Text style={s.itemLabel} numberOfLines={1}>
                     {addr.label}

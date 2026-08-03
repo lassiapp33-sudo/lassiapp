@@ -184,7 +184,7 @@ export default function DisputeFormScreen({
         {/* Note */}
         <View style={styles.noteBox}>
           <Text style={styles.noteTxt}>
-            ⚖️ Ton signalement sera examiné par l'équipe LASSİ. La partie concernée sera notifiée et
+            Ton signalement sera examiné par l'équipe LASSİ. La partie concernée sera notifiée et
             pourra donner sa version.
           </Text>
         </View>

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { getMesRecompenses, RecompenseAttribuee } from '../../services/classementService';
+import { getActiveSub, ActiveSub } from '../../services/visibilityPayment';
 
 const IcoGift = () => (
   <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
@@ -28,20 +29,22 @@ function expireLabel(r: RecompenseAttribuee): string {
 function buildChips(r: RecompenseAttribuee): string[] {
   const chips: string[] = [];
   if (r.badge) chips.push(r.badge);
-  if (r.certificat) chips.push('🎖️ Certificat officiel');
-  if (r.priorite_recherche) chips.push('⚡ Priorité recherche');
-  if (r.top_vip) chips.push('🏆 Top VIP');
-  if (r.credit_lassi > 0) chips.push(`💰 ${r.credit_lassi.toLocaleString('fr-FR')} F crédit`);
-  if (r.carrousel_produits > 0) chips.push(`👑 ${r.carrousel_produits} offre${r.carrousel_produits > 1 ? 's' : ''} quartier`);
+  if (r.certificat) chips.push('Certificat officiel');
+  if (r.priorite_recherche) chips.push('Priorité recherche');
+  if (r.top_vip) chips.push('Top VIP');
+  if (r.credit_lassi > 0) chips.push(`${r.credit_lassi.toLocaleString('fr-FR')} F crédit`);
+  if (r.carrousel_produits > 0) chips.push(`${r.carrousel_produits} offre${r.carrousel_produits > 1 ? 's' : ''} quartier`);
   return chips;
 }
 
 interface Props {
   userId: string;
+  shopId?: string | null;
 }
 
-export default function MesRecompensesCard({ userId }: Props) {
+export default function MesRecompensesCard({ userId, shopId }: Props) {
   const [recompenses, setRecompenses] = useState<RecompenseAttribuee[]>([]);
+  const [activeSub, setActiveSub] = useState<ActiveSub | null>(null);
 
   useEffect(() => {
     getMesRecompenses(userId)
@@ -57,7 +60,13 @@ export default function MesRecompensesCard({ userId }: Props) {
       .catch(() => {});
   }, [userId]);
 
-  if (recompenses.length === 0) return null;
+  useEffect(() => {
+    if (!shopId) return;
+    getActiveSub(shopId, 'quartier').then(setActiveSub).catch(() => {});
+  }, [shopId]);
+
+  const hasContent = recompenses.length > 0 || !!activeSub;
+  if (!hasContent) return null;
 
   return (
     <View style={styles.card}>
@@ -82,6 +91,34 @@ export default function MesRecompensesCard({ userId }: Props) {
           </View>
         );
       })}
+
+      {activeSub && (
+        <View style={styles.row}>
+          <View style={styles.chips}>
+            <View style={[styles.chip, styles.chipPaid]}>
+              <Text style={styles.chipTxt}>Pack Visibilité actif</Text>
+            </View>
+            {activeSub.allProducts ? (
+              <View style={[styles.chip, styles.chipPaid]}>
+                <Text style={styles.chipTxt}>Toute ta vitrine</Text>
+              </View>
+            ) : (
+              <View style={[styles.chip, styles.chipPaid]}>
+                <Text style={styles.chipTxt}>{activeSub.productCount} produit{activeSub.productCount > 1 ? 's' : ''} en avant</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.expire}>
+            {(() => {
+              const diff = Math.ceil((new Date(activeSub.expiresAt).getTime() - Date.now()) / 86400_000);
+              if (diff <= 0) return 'Expiré';
+              if (diff === 1) return 'Expire demain';
+              if (diff <= 30) return `${diff}j restants`;
+              return `${Math.ceil(diff / 30)} mois restants`;
+            })()}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -121,6 +158,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: 9,
     paddingVertical: 3,
+  },
+  chipPaid: {
+    backgroundColor: 'rgba(95, 211, 138, 0.12)',
+    borderColor: 'rgba(95, 211, 138, 0.35)',
   },
   chipTxt: {
     color: colors.white,

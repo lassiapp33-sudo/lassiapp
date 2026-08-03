@@ -33,7 +33,7 @@ export interface PaymentStats {
   totalRevenue: number;
   transactionCount: number;
   monthRevenue: number;
-  topMethod: MerchantPayMethod;
+  topMethod: MerchantPayMethod | null;
 }
 
 export interface DayRevenue {
