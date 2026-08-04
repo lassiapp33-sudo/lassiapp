@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -47,6 +47,10 @@ export default function AddressAutocomplete({
   const [suggestions, setSuggestions] = useState<DakarAddress[]>([]);
   const [open, setOpen] = useState(false);
   const geocodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (geocodeTimerRef.current) clearTimeout(geocodeTimerRef.current);
+  }, []);
 
   const handleChange = useCallback(
     (text: string) => {

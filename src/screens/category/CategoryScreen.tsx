@@ -201,7 +201,7 @@ export default function CategoryScreen({
 
     channelRef.current = ch;
     return () => {
-      ch.unsubscribe();
+      supabase.removeChannel(ch);
     };
   }, [catId, loadShops]);
 

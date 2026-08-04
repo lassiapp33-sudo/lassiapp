@@ -191,7 +191,7 @@ export default function TerrainReservationsScreen({ terrain, onBack }: Props) {
       .subscribe();
 
     channelRef.current = ch;
-    return () => { ch.unsubscribe(); };
+    return () => { supabase.removeChannel(ch); };
   }, [terrain.id, dateSelected, loadReservations]);
 
   // Validation d'un code (depuis la carte ou le scan manuel)

@@ -90,7 +90,6 @@ export default function ShopTerrainSlotPicker({ terrain, prestataireName, openin
     setPicked(null);
     fetchPris();
 
-    chanRef.current?.unsubscribe();
     const ch = supabase
       .channel(`shop-slots-${terrain.id}-${selDate}`)
       .on('postgres_changes', {
@@ -102,7 +101,7 @@ export default function ShopTerrainSlotPicker({ terrain, prestataireName, openin
       .subscribe();
     chanRef.current = ch;
 
-    return () => { ch.unsubscribe(); };
+    return () => { supabase.removeChannel(ch); };
   }, [terrain.id, selDate, fetchPris]);
 
   // Slots de 30 min sur la journée entière
