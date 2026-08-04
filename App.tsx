@@ -304,6 +304,7 @@ export default function App() {
       <NotifCardModal
         onView={() => setPendingNav({ type: 'notifications' })}
         onVoirAlaUne={() => setPendingNav({ type: 'a_la_une_feed' })}
+        onVoirVitrine={(shopId, shopName) => setPendingNav({ type: 'new_shop', shopId, shopName })}
       />
 
       {/* Annonces système admin (table annonces) — une seule fois par annonce, file FIFO */}

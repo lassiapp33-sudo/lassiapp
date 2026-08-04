@@ -372,7 +372,7 @@ export default function FicheVip({ shopId, onBack, onChat, onGoCart, onReserver,
   };
 
   const onAjouter = (p: VipPrestation) => {
-    addItem(shopInfo, { id: p.id, name: p.nom, emoji: '', price: calculerPrixClientVip(p.prix) });
+    addItem(shopInfo, { id: p.id, name: p.nom, emoji: '', price: p.prix });
   };
 
   const onCommander = (mode: 'normal' | 'livraison') => {
@@ -470,7 +470,7 @@ export default function FicheVip({ shopId, onBack, onChat, onGoCart, onReserver,
       {/* CartFloating — s'affiche dès qu'un article est dans le panier */}
       <CartFloating
         count={cartCount}
-        total={cartTotal}
+        total={calculerPrixClientVip(cartTotal)}
         onPress={() => onGoCart?.(shopId, profil.nomAffiche, 'normal')}
         bottom={(Platform.OS === 'ios' ? 34 : 14) + 72}
       />

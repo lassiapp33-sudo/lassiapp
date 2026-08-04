@@ -5,7 +5,7 @@ import { colors, fonts, radius } from '../../theme';
 import { ProductPromoInfo } from '../../types/promotions';
 import { IcoCartAdd } from '../icons';
 import { formatPrice } from '../../utils/format';
-import { calculerPrixClient } from '../../config/payment';
+import { calculerPrixClient, calculerPrixClientVip } from '../../config/payment';
 import { calcPromoClientPrice } from '../../services/promotions';
 
 export interface Product {
@@ -26,11 +26,13 @@ interface Props {
   onRemove: () => void;
   onPress?: () => void;
   promoInfo?: ProductPromoInfo;
+  isVip?: boolean;
 }
 
-export default function ProductTile({ product, qty, onAdd, onRemove, onPress, promoInfo }: Props) {
+export default function ProductTile({ product, qty, onAdd, onRemove, onPress, promoInfo, isVip = false }: Props) {
   const isOut = product.stock === 'out';
-  const prixPromo = calcPromoClientPrice(product.price, promoInfo);
+  const calcPrix = isVip ? calculerPrixClientVip : calculerPrixClient;
+  const prixPromo = calcPromoClientPrice(product.price, promoInfo, isVip);
 
   return (
     <TouchableOpacity
@@ -117,11 +119,11 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
         {/* Prix barré + prix promo OU prix normal */}
         {prixPromo !== null ? (
           <View style={styles.priceRow}>
-            <Text style={styles.priceOld}>{formatPrice(calculerPrixClient(product.price))}</Text>
+            <Text style={styles.priceOld}>{formatPrice(calcPrix(product.price))}</Text>
             <Text style={styles.pricePromo}>{formatPrice(prixPromo)}</Text>
           </View>
         ) : (
-          <Text style={[styles.price, isOut && styles.priceOut]}>{formatPrice(calculerPrixClient(product.price))}</Text>
+          <Text style={[styles.price, isOut && styles.priceOut]}>{formatPrice(calcPrix(product.price))}</Text>
         )}
       </View>
     </TouchableOpacity>

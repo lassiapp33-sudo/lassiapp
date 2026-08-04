@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { colors, fonts, radius } from '../../theme';
 import { ProductPromoInfo } from '../../types/promotions';
 import { formatPrice } from '../../utils/format';
-import { calculerPrixClient } from '../../config/payment';
+import { calculerPrixClient, calculerPrixClientVip } from '../../config/payment';
 import { calcPromoClientPrice } from '../../services/promotions';
 import { Product } from './ProductTile';
 
@@ -16,6 +16,7 @@ interface Props {
   onPress?: () => void;
   promoInfo?: ProductPromoInfo;
   highlighted?: boolean;
+  isVip?: boolean;
 }
 
 const IMG = 90;
@@ -28,9 +29,11 @@ export default function ProductRow({
   onPress,
   promoInfo,
   highlighted,
+  isVip = false,
 }: Props) {
   const isOut = product.stock === 'out';
-  const prixPromo = calcPromoClientPrice(product.price, promoInfo);
+  const calcPrix = isVip ? calculerPrixClientVip : calculerPrixClient;
+  const prixPromo = calcPromoClientPrice(product.price, promoInfo, isVip);
 
   return (
     <TouchableOpacity
@@ -47,12 +50,12 @@ export default function ProductRow({
         )}
         {prixPromo !== null ? (
           <View style={styles.priceRow}>
-            <Text style={styles.priceOld}>{formatPrice(calculerPrixClient(product.price))}</Text>
+            <Text style={styles.priceOld}>{formatPrice(calcPrix(product.price))}</Text>
             <Text style={styles.pricePromo}>{formatPrice(prixPromo)}</Text>
           </View>
         ) : (
           <Text style={[styles.price, isOut && styles.priceMuted]}>
-            {formatPrice(calculerPrixClient(product.price))}
+            {formatPrice(calcPrix(product.price))}
           </Text>
         )}
         {isOut && <Text style={styles.epuise}>Épuisé</Text>}

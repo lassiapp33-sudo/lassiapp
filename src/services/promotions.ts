@@ -2,7 +2,7 @@ import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import { Promotion, AppliedDiscount, ProductPromoInfo } from '../types/promotions';
 import { CartItem } from '../store/cartStore';
 import { formatPrice } from '../utils/format';
-import { calculerPrixClient } from '../config/payment';
+import { calculerPrixClient, calculerPrixClientVip } from '../config/payment';
 
 // ─── Mapping DB → TS ─────────────────────────────────────────────────────────
 
@@ -251,10 +251,12 @@ export function hasShopWidePromo(promos: Promotion[]): boolean {
  * Calcule le prix promo client (après commission LASSI + réduction promo).
  * Retourne null si la promo ne change pas le prix unitaire (ex: quantite_offerte).
  * prixBase = prix vendeur brut (avant commission LASSI).
+ * isVip = true pour les boutiques 5 Étoiles (commission 2% au lieu de 1%).
  */
-export function calcPromoClientPrice(prixBase: number, promoInfo?: ProductPromoInfo): number | null {
+export function calcPromoClientPrice(prixBase: number, promoInfo?: ProductPromoInfo, isVip = false): number | null {
   if (!promoInfo) return null;
-  const prixTotal = calculerPrixClient(prixBase);
+  const calcPrix = isVip ? calculerPrixClientVip : calculerPrixClient;
+  const prixTotal = calcPrix(prixBase);
   if (promoInfo.discountPct !== undefined) {
     return Math.round(prixTotal * (1 - promoInfo.discountPct / 100));
   }
@@ -262,7 +264,7 @@ export function calcPromoClientPrice(prixBase: number, promoInfo?: ProductPromoI
     return Math.max(0, prixTotal - promoInfo.discountFixed);
   }
   if (promoInfo.promoPrice !== undefined) {
-    return calculerPrixClient(promoInfo.promoPrice);
+    return calcPrix(promoInfo.promoPrice);
   }
   return null;
 }

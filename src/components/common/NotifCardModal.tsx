@@ -47,6 +47,7 @@ function NotifIcon({ type, size }: { type: NotifType | string; size: number }) {
 interface Props {
   onView: () => void;       // ouvre l'écran Notifications complet
   onVoirAlaUne: () => void; // ouvre le feed À la une
+  onVoirVitrine: (shopId: string, shopName: string) => void; // ouvre la vitrine d'un nouveau prestataire
 }
 
 /**
@@ -55,21 +56,28 @@ interface Props {
  * Queue FIFO : si plusieurs notifications sont en attente, le bouton affiche
  * "Suivant (N)" jusqu'à la dernière qui affiche "C'est compris !".
  */
-export default function NotifCardModal({ onView, onVoirAlaUne }: Props) {
+export default function NotifCardModal({ onView, onVoirAlaUne, onVoirVitrine }: Props) {
   const queue   = useNotifPopupStore(s => s.queue);
   const dismiss = useNotifPopupStore(s => s.dismiss);
 
   const current    = queue[0] ?? null;
   const nbRestants = Math.max(queue.length - 1, 0);
 
-  const handleCompris   = useCallback(() => dismiss(), [dismiss]);
-  const handleView      = useCallback(() => { dismiss(); onView(); }, [dismiss, onView]);
+  const handleCompris    = useCallback(() => dismiss(), [dismiss]);
+  const handleView       = useCallback(() => { dismiss(); onView(); }, [dismiss, onView]);
   const handleVoirAlaUne = useCallback(() => { dismiss(); onVoirAlaUne(); }, [dismiss, onVoirAlaUne]);
+  const handleVoirVitrine = useCallback(() => {
+    const shopId   = current?.targetId ?? '';
+    const shopName = (current?.data?.shop_name as string) ?? '';
+    dismiss();
+    onVoirVitrine(shopId, shopName);
+  }, [current, dismiss, onVoirVitrine]);
 
   if (!current || current.type === 'order' || current.type === 'msg') return null;
 
-  const tag   = TAG_LABEL[current.type]  ?? 'LASSI';
-  const isAlaUne = current.targetId === 'a_la_une_feed';
+  const tag        = TAG_LABEL[current.type] ?? 'LASSI';
+  const isAlaUne   = current.targetId === 'a_la_une_feed';
+  const isNewShop  = current.type === 'ann' && !!current.targetId && current.targetId !== 'a_la_une_feed';
 
   return (
     <Modal visible animationType="fade" transparent onRequestClose={handleCompris}>
@@ -103,10 +111,14 @@ export default function NotifCardModal({ onView, onVoirAlaUne }: Props) {
             </Text>
           </TouchableOpacity>
 
-          {/* Bouton secondaire : "Voir à la une" ou "Voir mes notifications" */}
+          {/* Bouton secondaire selon le type d'annonce */}
           {isAlaUne ? (
             <TouchableOpacity style={s.ctaSecondary} onPress={handleVoirAlaUne} activeOpacity={0.85}>
               <Text style={s.ctaSecondaryTxt}>Voir à la une</Text>
+            </TouchableOpacity>
+          ) : isNewShop ? (
+            <TouchableOpacity style={s.ctaSecondary} onPress={handleVoirVitrine} activeOpacity={0.85}>
+              <Text style={s.ctaSecondaryTxt}>Voir la vitrine</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity style={s.viewBtn} onPress={handleView} activeOpacity={0.7}>

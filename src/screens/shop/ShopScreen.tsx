@@ -40,7 +40,7 @@ import {
 } from '../../services/hours';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
-import { calculerPrixClient } from '../../config/payment';
+import { calculerPrixClient, calculerPrixClientVip } from '../../config/payment';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import * as fitnessService from '../../services/fitnessAbonnements';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
@@ -418,7 +418,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const removeItem = useCartStore(s => s.removeItem);
   const setCartOrder = useCartStore(s => s.setOrderType);
 
-  const cartTotal = calculerPrixClient(cartTotalRaw);
+  const cartTotal = isVip ? calculerPrixClientVip(cartTotalRaw) : calculerPrixClient(cartTotalRaw);
 
   const shopInfo = {
     id: stableId,
@@ -725,6 +725,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                                   onAdd={() => addToCart(product)}
                                   onRemove={() => removeItem(product.id)}
                                   promoInfo={productPromoMap[product.id]}
+                                  isVip={isVip}
                                 />
                               </View>
                             ))}
@@ -774,6 +775,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                                 onAdd={() => addToCart(product)}
                                 onRemove={() => removeItem(product.id)}
                                 promoInfo={productPromoMap[product.id]}
+                                isVip={isVip}
                               />
                             </View>
                           ))}

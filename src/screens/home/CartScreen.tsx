@@ -128,6 +128,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
   const [clientCoords, setClientCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [showAddBasket, setShowAddBasket] = useState(false);
   const [newBasketName, setNewBasketName] = useState('');
+  const livraisonFeeRef = useRef(0);
 
   // ── Données agrégées (tous paniers) ───────────────────────────────────────
   const allMergedItems = mergeBasketItems(baskets);
@@ -144,6 +145,12 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
   const total = Math.max(subtotal - totalDiscount, 0);
   const commission = isVip ? calculerCommissionVip(total) : calculerCommission(total);
   const totalClient = isVip ? calculerPrixClientVip(total) : calculerPrixClient(total);
+
+  // Frais de livraison affichés dans le récap pour le mode VIP livraison
+  const livraisonFeeDisplay = (isVip && vipOrderMode === 'livraison' && devisBtn && !devisBtn.horsZone)
+    ? devisBtn.prix
+    : 0;
+  const totalClientFinal = totalClient + livraisonFeeDisplay;
 
   // ── Effets ────────────────────────────────────────────────────────────────
 
@@ -252,6 +259,12 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
       const freshCommission = isVip ? calculerCommissionVip(freshTotal) : calculerCommission(freshTotal);
       const freshTotalClient = isVip ? calculerPrixClientVip(freshTotal) : calculerPrixClient(freshTotal);
 
+      // Frais de livraison : VIP livraison = devisBtn, standard = ref stockée après confirmation LivraisonModal
+      const freshLivraisonFee = (isVip && vipOrderMode === 'livraison' && devisBtn && !devisBtn.horsZone)
+        ? devisBtn.prix
+        : livraisonFeeRef.current;
+      const freshTotalAvecLivraison = freshTotalClient + freshLivraisonFee;
+
       const orderItems = freshAllMerged.map(i => ({
         qty: i.qty,
         name: i.name,
@@ -301,7 +314,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
       try {
         const session = await payService.createPayment({
           ticketId: realOrderId,
-          amount: freshTotalClient,
+          amount: freshTotalAvecLivraison,
           method,
           merchantName: freshShopInfo?.name ?? shopName,
         });
@@ -335,6 +348,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
       }
 
       freshStore.clearCart();
+      livraisonFeeRef.current = 0;
       onCheckout({
         ticketId: realOrderId,
         orderId: '#' + realOrderId.slice(0, 8).toUpperCase(),
@@ -342,7 +356,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         shopName: freshShopInfo?.name ?? shopName,
         shopLocation: freshShopInfo?.location ?? '',
         items: orderItems,
-        total: freshTotalClient,
+        total: freshTotalAvecLivraison,
         commission: freshCommission,
         orderType: freshOrderType,
         preMethod: method,
@@ -623,10 +637,16 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
                 <Text style={styles.discountVal}>−{formatPrice(d.reductionFcfa)}</Text>
               </View>
             ))}
+            {livraisonFeeDisplay > 0 && (
+              <View style={styles.summaryLine}>
+                <Text style={styles.summaryKey}>Frais de livraison</Text>
+                <Text style={styles.summaryVal}>{formatPrice(livraisonFeeDisplay)}</Text>
+              </View>
+            )}
             <View style={styles.separator} />
             <View style={styles.totalRow}>
               <Text style={styles.totalKey}>Total</Text>
-              <Text style={styles.totalVal}>{formatPrice(totalClient)}</Text>
+              <Text style={styles.totalVal}>{formatPrice(totalClientFinal)}</Text>
             </View>
           </View>
         </ScrollView>
@@ -654,6 +674,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
                   <Text style={styles.payBtnTxt}>
                     {isVip ? 'Commander' : `${method === 'wave' ? 'Wave' : 'OM'} · ${formatPrice(totalClient)}`}
                   </Text>
+                  {!isVip && <Text style={styles.payBtnSub}>Sans livraison</Text>}
                 </>
               )}
             </TouchableOpacity>
@@ -670,11 +691,22 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
               activeOpacity={0.85}
               disabled={!hasItems || isSubmitting || devisBtn?.horsZone === true}
             >
-              <Text style={styles.livraisonBtnTxt}>Commander + Livrer</Text>
-              {!isVip && (
-                <Text style={styles.livraisonBtnSub}>
-                  {devisBtn == null ? '…' : devisBtn.horsZone ? 'Hors zone' : `+${formatPrice(devisBtn.prix)}`}
-                </Text>
+              {!isVip && devisBtn && !devisBtn.horsZone ? (
+                <>
+                  <Text style={styles.livraisonBtnTxt}>
+                    {`Commander + Livrer · ${formatPrice(totalClient + devisBtn.prix)}`}
+                  </Text>
+                  <Text style={styles.livraisonBtnSub}>{`Livraison +${formatPrice(devisBtn.prix)}`}</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.livraisonBtnTxt}>Commander + Livrer</Text>
+                  {!isVip && (
+                    <Text style={styles.livraisonBtnSub}>
+                      {devisBtn == null ? '…' : 'Hors zone'}
+                    </Text>
+                  )}
+                </>
               )}
             </TouchableOpacity>
           )}
@@ -688,6 +720,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         onClose={() => setShowLivraisonModal(false)}
         onConfirmed={_livraisonId => {
           setShowLivraisonModal(false);
+          livraisonFeeRef.current = (devisBtn && !devisBtn.horsZone) ? devisBtn.prix : 0;
           handleCheckout();
         }}
       />
@@ -1134,6 +1167,12 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: fonts.ui,
     fontSize: 13,
+  },
+  payBtnSub: {
+    color: colors.muted,
+    fontFamily: fonts.label,
+    fontSize: 10,
+    marginTop: 1,
   },
   footerRow: {
     flexDirection: 'row',
