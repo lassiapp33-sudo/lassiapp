@@ -113,7 +113,7 @@ module.exports = withSecurityPlugins({
         "expo-media-library",
         {
           photosPermission:
-            "LASSİ accède à ta galerie pour sauvegarder les images reçues dans le chat.",
+            "LASSİ accède à ta galerie pour ajouter des photos de produits et sauvegarder les images reçues dans le chat.",
           savePhotosPermission:
             "LASSİ sauvegarde les images reçues dans ta galerie.",
           isAccessMediaLocationEnabled: false,
