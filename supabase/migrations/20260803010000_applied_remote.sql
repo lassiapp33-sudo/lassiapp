@@ -1,0 +1,2 @@
+-- Migration appliquée directement en remote (SQL Editor).
+-- Placeholder local pour aligner l'historique CLI.

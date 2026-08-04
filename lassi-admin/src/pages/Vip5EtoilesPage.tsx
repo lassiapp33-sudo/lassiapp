@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Crown, Search, Plus, Trash2, Power, RefreshCw, X, Eye, EyeOff } from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
+import { Crown, Search, Plus, Trash2, Power, RefreshCw, X, Eye, EyeOff, MapPin } from 'lucide-react'
 import EmptyState from '../components/EmptyState'
 import { SkeletonRow } from '../components/Skeleton'
 import {
@@ -7,10 +7,129 @@ import {
   toggleActif,
   supprimerProfil,
   creerProfilComplet,
+  setShopLocation,
   VIP_CAT_LABELS,
   type Vip5EtoilesProfil,
   type VipCategorie,
 } from '../services/vip5etoiles'
+
+const DAKAR_DEFAULT = { lat: 14.7167, lng: -17.4677 }
+
+// ─── Mini-carte Leaflet GPS (iframe srcdoc) ───────────────────────────────────
+
+function buildGpsMapHTML(initLat: number, initLng: number): string {
+  return `<!DOCTYPE html><html><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>*{margin:0;padding:0;box-sizing:border-box;}html,body,#map{width:100%;height:100%;}</style>
+</head><body>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+var map=L.map('map',{zoomControl:true}).setView([${initLat},${initLng}],13);
+L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+  attribution:'© OpenStreetMap © CARTO',maxZoom:20
+}).addTo(map);
+var marker=null;
+map.on('click',function(e){
+  if(marker)map.removeLayer(marker);
+  marker=L.marker([e.latlng.lat,e.latlng.lng]).addTo(map);
+  if(window.parent)window.parent.postMessage(JSON.stringify({lat:e.latlng.lat,lng:e.latlng.lng}),'*');
+});
+</script></body></html>`
+}
+
+interface GPSModalProps {
+  shopId:   string
+  shopName: string
+  initLat:  number | null
+  initLng:  number | null
+  onClose:  () => void
+  onSaved:  (lat: number, lng: number) => void
+}
+
+function GPSModal({ shopId, shopName, initLat, initLng, onClose, onSaved }: GPSModalProps) {
+  const [picked, setPicked]   = useState<{ lat: number; lng: number } | null>(
+    initLat != null && initLng != null ? { lat: initLat, lng: initLng } : null
+  )
+  const [saving, setSaving]   = useState(false)
+  const [err, setErr]         = useState('')
+  const iframeRef             = useRef<HTMLIFrameElement>(null)
+
+  useEffect(() => {
+    function onMsg(e: MessageEvent) {
+      try {
+        const d = JSON.parse(e.data)
+        if (typeof d.lat === 'number' && typeof d.lng === 'number') {
+          setPicked({ lat: d.lat, lng: d.lng })
+        }
+      } catch { /* ignore */ }
+    }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
+  }, [])
+
+  async function handleSave() {
+    if (!picked) { setErr('Cliquez sur la carte pour placer le pin.'); return }
+    setSaving(true)
+    setErr('')
+    try {
+      await setShopLocation(shopId, picked.lat, picked.lng)
+      onSaved(picked.lat, picked.lng)
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Erreur inconnue')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const mapHTML = buildGpsMapHTML(initLat ?? DAKAR_DEFAULT.lat, initLng ?? DAKAR_DEFAULT.lng)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-surface border border-border rounded-xl w-full max-w-lg flex flex-col overflow-hidden" style={{ maxHeight: '90vh' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
+          <div>
+            <h2 className="text-white font-semibold">Définir la position GPS</h2>
+            <p className="text-muted text-xs mt-0.5">{shopName} — cliquez sur la carte pour placer le pin</p>
+          </div>
+          <button onClick={onClose} className="text-muted hover:text-white"><X size={18} /></button>
+        </div>
+
+        <div className="relative flex-1" style={{ minHeight: 320 }}>
+          <iframe
+            ref={iframeRef}
+            srcDoc={mapHTML}
+            sandbox="allow-scripts allow-same-origin"
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block', minHeight: 320 }}
+            title="Carte GPS"
+          />
+          {picked && (
+            <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg px-3 py-1.5 text-xs text-gray-800 font-mono shadow">
+              {picked.lat.toFixed(6)}, {picked.lng.toFixed(6)}
+            </div>
+          )}
+        </div>
+
+        {err && <p className="text-danger text-sm px-5 pt-3">{err}</p>}
+
+        <div className="flex gap-3 px-5 py-4 border-t border-border flex-shrink-0">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-border text-muted text-sm hover:text-white transition-colors">
+            Annuler
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !picked}
+            className="flex-1 py-2.5 rounded-lg bg-accent text-bg font-semibold text-sm hover:bg-accent/90 disabled:opacity-50 transition-colors"
+          >
+            {saving ? 'Enregistrement…' : 'Confirmer la position'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ─── Formulaire création ──────────────────────────────────────────────────────
 
@@ -37,8 +156,22 @@ function CreerModal({ onClose, onCreated }: CreerModalProps) {
   const [nomAffiche, setNom]        = useState('')
   const [initiale,   setInitiale]   = useState('')
   const [baseline,   setBaseline]   = useState('')
+  const [gpsCoords,  setGpsCoords]  = useState<{ lat: number; lng: number } | null>(null)
   const [saving,     setSaving]     = useState(false)
   const [err,        setErr]        = useState('')
+
+  useEffect(() => {
+    function onMsg(e: MessageEvent) {
+      try {
+        const d = JSON.parse(e.data)
+        if (typeof d.lat === 'number' && typeof d.lng === 'number') {
+          setGpsCoords({ lat: d.lat, lng: d.lng })
+        }
+      } catch { /* ignore */ }
+    }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
+  }, [])
 
   async function handleSubmit() {
     if (!telephone.trim() || !motDePasse || !nomAffiche.trim() || !initiale.trim()) {
@@ -60,10 +193,12 @@ function CreerModal({ onClose, onCreated }: CreerModalProps) {
         gabarit,
         initiale:   initiale.trim().toUpperCase(),
         baseline:   baseline.trim() || undefined,
+        latitude:   gpsCoords?.lat ?? null,
+        longitude:  gpsCoords?.lng ?? null,
       })
       onCreated()
-    } catch (e: any) {
-      setErr(e.message ?? 'Erreur lors de la création')
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Erreur lors de la création')
     } finally {
       setSaving(false)
     }
@@ -188,6 +323,31 @@ function CreerModal({ onClose, onCreated }: CreerModalProps) {
             </Field>
           </div>
 
+          {/* Section GPS */}
+          <div className="border border-border/60 rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 bg-black/20">
+              <div className="flex items-center gap-2">
+                <MapPin size={13} className="text-accent" />
+                <p className="text-xs text-muted uppercase tracking-widest">Position GPS</p>
+              </div>
+              {gpsCoords ? (
+                <span className="text-xs text-green-400 font-mono">
+                  {gpsCoords.lat.toFixed(5)}, {gpsCoords.lng.toFixed(5)}
+                </span>
+              ) : (
+                <span className="text-xs text-orange-400">Cliquez sur la carte</span>
+              )}
+            </div>
+            <div style={{ height: 220 }}>
+              <iframe
+                srcDoc={buildGpsMapHTML(DAKAR_DEFAULT.lat, DAKAR_DEFAULT.lng)}
+                sandbox="allow-scripts allow-same-origin"
+                style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+                title="Carte GPS création"
+              />
+            </div>
+          </div>
+
           {err && <p className="text-danger text-sm">{err}</p>}
         </div>
 
@@ -221,6 +381,7 @@ export default function Vip5EtoilesPage() {
   const [toDelete, setToDelete] = useState<Vip5EtoilesProfil | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [toggling, setToggling] = useState<string | null>(null)
+  const [gpsTarget, setGpsTarget] = useState<Vip5EtoilesProfil | null>(null)
   const [err, setErr]           = useState('')
 
   function load() {
@@ -244,8 +405,8 @@ export default function Vip5EtoilesPage() {
     try {
       await toggleActif(p.id, !p.actif)
       setProfils(prev => prev.map(x => x.id === p.id ? { ...x, actif: !x.actif } : x))
-    } catch (e: any) {
-      setErr(e.message)
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Erreur inconnue')
     } finally {
       setToggling(null)
     }
@@ -258,8 +419,8 @@ export default function Vip5EtoilesPage() {
       await supprimerProfil(toDelete.id, toDelete.shopId)
       setProfils(prev => prev.filter(x => x.id !== toDelete.id))
       setToDelete(null)
-    } catch (e: any) {
-      setErr(e.message)
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Erreur inconnue')
     } finally {
       setDeleting(false)
     }
@@ -321,6 +482,7 @@ export default function Vip5EtoilesPage() {
               <th className="text-left px-4 py-3 text-muted font-medium">Catégorie</th>
               <th className="text-left px-4 py-3 text-muted font-medium">Gabarit</th>
               <th className="text-left px-4 py-3 text-muted font-medium">Téléphone</th>
+              <th className="text-center px-4 py-3 text-muted font-medium">GPS</th>
               <th className="text-center px-4 py-3 text-muted font-medium">Statut</th>
               <th className="text-right px-4 py-3 text-muted font-medium">Actions</th>
             </tr>
@@ -330,11 +492,11 @@ export default function Vip5EtoilesPage() {
               Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={6} />)
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={7}>
                   <EmptyState
                     icon={<Crown size={32} className="text-muted" />}
                     title="Aucun profil 5 Étoiles"
-                    description={search ? 'Aucun résultat pour cette recherche.' : 'Créez le premier établissement 5 Étoiles LASSI.'}
+                    subtitle={search ? 'Aucun résultat pour cette recherche.' : 'Créez le premier établissement 5 Étoiles LASSI.'}
                   />
                 </td>
               </tr>
@@ -364,6 +526,27 @@ export default function Vip5EtoilesPage() {
                     </span>
                   ) : (
                     <span className="text-muted text-xs">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-center">
+                  {p.latitude != null && p.longitude != null ? (
+                    <button
+                      onClick={() => setGpsTarget(p)}
+                      title="Modifier la position GPS"
+                      className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors"
+                    >
+                      <MapPin size={12} />
+                      <span>Défini</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setGpsTarget(p)}
+                      title="Définir la position GPS"
+                      className="inline-flex items-center gap-1 text-xs text-orange-400 hover:text-orange-300 transition-colors font-medium"
+                    >
+                      <MapPin size={12} />
+                      <span>Manquant</span>
+                    </button>
                   )}
                 </td>
                 <td className="px-4 py-3 text-center">
@@ -409,6 +592,23 @@ export default function Vip5EtoilesPage() {
         <CreerModal
           onClose={() => setModal(false)}
           onCreated={() => { setModal(false); load() }}
+        />
+      )}
+
+      {/* Modal GPS */}
+      {gpsTarget && (
+        <GPSModal
+          shopId={gpsTarget.shopId}
+          shopName={gpsTarget.nomAffiche}
+          initLat={gpsTarget.latitude}
+          initLng={gpsTarget.longitude}
+          onClose={() => setGpsTarget(null)}
+          onSaved={(lat, lng) => {
+            setProfils(prev => prev.map(p =>
+              p.id === gpsTarget.id ? { ...p, latitude: lat, longitude: lng } : p
+            ))
+            setGpsTarget(null)
+          }}
         />
       )}
 

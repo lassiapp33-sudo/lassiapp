@@ -49,8 +49,8 @@ export default function SecurityPage() {
       const { data, error: rpcErr } = await supabase.rpc('admin_get_locked_accounts')
       if (rpcErr) throw rpcErr
       setAccounts((data as LockedAccount[]) ?? [])
-    } catch (e: any) {
-      setError(e?.message ?? 'Erreur lors du chargement')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erreur lors du chargement')
     } finally {
       setLoading(false)
     }
@@ -65,8 +65,8 @@ export default function SecurityPage() {
       const { error: rpcErr } = await supabase.rpc('admin_unlock_account', { p_phone: phone })
       if (rpcErr) throw rpcErr
       setAccounts(prev => prev.filter(a => a.phone !== phone))
-    } catch (e: any) {
-      alert(`Erreur : ${e?.message ?? 'Impossible de débloquer'}`)
+    } catch (e: unknown) {
+      alert(`Erreur : ${e instanceof Error ? e.message : 'Impossible de débloquer'}`)
     } finally {
       setUnlocking(null)
     }

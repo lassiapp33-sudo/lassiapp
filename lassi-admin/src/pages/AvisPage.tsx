@@ -55,7 +55,7 @@ export default function AvisPage() {
     try {
       const data = await getAllAvis({ limit: 200 })
       setAvis(data)
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e)
     } finally {
       setLoading(false)

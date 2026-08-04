@@ -172,18 +172,135 @@ serve(async (req) => {
       }
     }
 
-    // Abonnement fitness : payment_intent sans order_id ni reservation_id
-    // OM appelle toujours l'URL du dashboard (webhook-payment), pas le notificationUrl dynamique.
+    // Notifier le prestataire terrain (réservation confirmée et payée)
+    if (result?.ok && !result?.already_processed && !result?.disputed && result?.reservation_id) {
+      try {
+        const { data: resaRow } = await supabase
+          .from('reservations_terrain')
+          .select('prestataire_id, terrain_id, prix_total, date_reservation, heure_debut')
+          .eq('id', result.reservation_id)
+          .maybeSingle();
+        if (resaRow?.prestataire_id) {
+          const { data: terrainRow } = await supabase
+            .from('terrains')
+            .select('nom')
+            .eq('id', resaRow.terrain_id)
+            .maybeSingle();
+          const montantFr = `${Number(resaRow.prix_total).toLocaleString('fr-FR')} FCFA`;
+          const heureStr  = resaRow.heure_debut ? String(resaRow.heure_debut).slice(0, 5) : '';
+          const bodyParts = [terrainRow?.nom, resaRow.date_reservation, heureStr, montantFr].filter(Boolean);
+          await sendPushToUser(supabase, resaRow.prestataire_id, {
+            title:     '🏟️ Nouvelle réservation terrain',
+            body:      `Paiement reçu ✅ ${bodyParts.join(' · ')}`,
+            data:      { type: 'reservation_terrain', reservationId: String(result.reservation_id) },
+            channelId: 'commandes',
+          });
+        }
+      } catch {
+        // best-effort
+      }
+    }
+
+    // Abonnement fitness ET réservation table : payment_intent sans order_id ni reservation_id terrain
     if (result?.ok && !result?.already_processed && !result?.disputed
         && !result?.order_id && !result?.reservation_id) {
       try {
         const { data: piData } = await supabase
           .from('payment_intents')
-          .select('metadata, client_id, prestataire_id, montant_total')
+          .select('type, metadata, client_id, prestataire_id, montant_total')
           .eq('id', piId)
           .maybeSingle();
 
-        if (piData?.metadata) {
+        // ── Réservation table 5 Étoiles ─────────────────────────────────────
+        // Le payout (3 000 FCFA → restaurant) est suspendu jusqu'à l'acceptation du gérant.
+        // confirm_order_from_payment a déjà mis payout_queue en 'queued' — on le met en pause.
+        if (piData?.type === 'table_reservation') {
+          await supabase
+            .from('payout_queue')
+            .update({ statut: 'cancelled' })
+            .eq('payment_intent_id', piId)
+            .eq('statut', 'queued');
+
+          await supabase
+            .from('table_reservations')
+            .update({ paiement_statut: 'paye' })
+            .eq('paiement_ref', piId);
+
+          // Notifier le gérant
+          if (piData.prestataire_id) {
+            await sendPushToUser(supabase, piData.prestataire_id, {
+              title:     '🍽️ Nouvelle réservation de table',
+              body:      'Un client vient de payer son acompte. Acceptez ou refusez la réservation.',
+              data:      { type: 'table_reservation_nouvelle', pi_id: String(piId) },
+              channelId: 'commandes',
+            });
+          }
+
+          console.log('[webhook-payment] table_reservation confirmée, payout suspendu pi', piId);
+        }
+
+        // ── Livraison ─────────────────────────────────────────────────────
+        if (piData?.type === 'livraison') {
+          const { data: lp } = await supabase
+            .from('livraison_paiements')
+            .select('*')
+            .eq('payment_intent_id', piId)
+            .maybeSingle();
+          if (lp && !lp.livraison_id) {
+            const { data: profil } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', lp.demandeur_id)
+              .single();
+            const demandeurType =
+              profil?.role === 'merchant' || profil?.role === 'prestataire'
+                ? 'prestataire'
+                : 'client';
+            const { data: nouvelleL, error: lErr } = await supabase
+              .from('livraisons')
+              .insert({
+                demandeur_id:   lp.demandeur_id,
+                demandeur_type: demandeurType,
+                depart_label:   lp.depart_label,
+                depart_lat:     lp.depart_lat,
+                depart_lng:     lp.depart_lng,
+                arrivee_label:  lp.arrivee_label,
+                arrivee_lat:    lp.arrivee_lat,
+                arrivee_lng:    lp.arrivee_lng,
+                contact_nom:    lp.contact_nom ?? null,
+                contact_tel:    lp.contact_tel ?? null,
+                distance_km:    lp.distance_km,
+                prix_livraison: lp.montant_calcule,
+                statut:         'en_attente',
+              })
+              .select('id')
+              .single();
+            if (lErr) {
+              console.error('[webhook-payment] livraison insert erreur:', lErr.message);
+            } else {
+              await supabase
+                .from('livraison_paiements')
+                .update({ livraison_id: nouvelleL.id })
+                .eq('id', lp.id);
+              const { data: livreurs } = await supabase
+                .from('livreurs')
+                .select('id')
+                .eq('actif', true);
+              const distKm = lp.distance_km ? `${Number(lp.distance_km).toFixed(1)} km` : '';
+              for (const livreur of (livreurs ?? [])) {
+                await sendPushToUser(supabase, livreur.id, {
+                  title:     '🛵 Nouvelle livraison disponible',
+                  body:      `${lp.depart_label} → ${lp.arrivee_label}${distKm ? ' · ' + distKm : ''}`,
+                  data:      { type: 'livraison_nouvelle', livraisonId: String(nouvelleL.id) },
+                  channelId: 'commandes',
+                });
+              }
+              console.log('[webhook-payment] livraison créée pi', piId, 'id', nouvelleL.id, 'livreurs:', (livreurs ?? []).length);
+            }
+          }
+        }
+
+        if (!['table_reservation', 'livraison'].includes(piData?.type ?? '') && piData?.metadata) {
           const meta        = piData.metadata as Record<string, unknown>;
           const offreId     = meta.offre_id   as string;
           const offreNom    = meta.offre_nom   as string;
@@ -223,6 +340,30 @@ serve(async (req) => {
         }
       } catch (fitErr) {
         console.error('[webhook-payment] fitness activation erreur:', fitErr instanceof Error ? fitErr.message : fitErr);
+      }
+    }
+
+    // Push confirmation client OM (best-effort)
+    if (result?.ok && !result?.already_processed && !result?.disputed) {
+      try {
+        const { data: piClient } = await supabase
+          .from('payment_intents')
+          .select('client_id, montant_total')
+          .eq('id', piId)
+          .maybeSingle()
+        if (piClient?.client_id) {
+          const montant = piClient.montant_total
+            ? `${Number(piClient.montant_total).toLocaleString('fr-FR')} FCFA`
+            : ''
+          await sendPushToUser(supabase, piClient.client_id, {
+            title:     '✅ Paiement confirmé',
+            body:      montant ? `Votre paiement de ${montant} a bien été reçu.` : 'Votre paiement a bien été reçu.',
+            data:      { type: 'pay', pi_id: String(piId) },
+            channelId: 'commandes',
+          })
+        }
+      } catch {
+        // best-effort
       }
     }
 
@@ -375,7 +516,7 @@ serve(async (req) => {
     }
   }
 
-  // 7. Push de confirmation au client (best-effort — ne bloque jamais la réponse)
+  // 7. Push de confirmation au client + au marchand (best-effort — ne bloque jamais la réponse)
   if (result?.ok && !result?.already_processed && !result?.ignored && !result?.disputed) {
     try {
       const { data: pi } = await supabase
@@ -397,6 +538,147 @@ serve(async (req) => {
       }
     } catch {
       // best-effort
+    }
+
+    // Push marchand Wave (commandes classiques uniquement — table_reservation et fitness gérés séparément)
+    if (result?.order_id) {
+      try {
+        const { data: orderRow } = await supabase
+          .from('orders')
+          .select('shop_id, client_name, total')
+          .eq('id', result.order_id)
+          .maybeSingle()
+
+        if (orderRow?.shop_id) {
+          const { data: shopRow } = await supabase
+            .from('shops')
+            .select('merchant_id')
+            .eq('id', orderRow.shop_id)
+            .maybeSingle()
+
+          if (shopRow?.merchant_id) {
+            const montantFr = `${Number(orderRow.total).toLocaleString('fr-FR')} FCFA`
+            await sendPushToUser(supabase, shopRow.merchant_id, {
+              title:     'Nouvelle commande 🛎️',
+              body:      `Paiement reçu ✅ Commande de ${orderRow.client_name ?? 'Client'} · ${montantFr}`,
+              data:      { type: 'commande', orderId: String(result.order_id) },
+              channelId: 'commandes',
+            })
+          }
+        }
+      } catch {
+        // best-effort
+      }
+    }
+
+    // ── Terrain Wave — prestataire notifié quand réservation confirmée ────
+    if (result?.reservation_id) {
+      try {
+        const { data: resaRow } = await supabase
+          .from('reservations_terrain')
+          .select('prestataire_id, terrain_id, prix_total, date_reservation, heure_debut')
+          .eq('id', result.reservation_id)
+          .maybeSingle()
+        if (resaRow?.prestataire_id) {
+          const { data: terrainRow } = await supabase
+            .from('terrains')
+            .select('nom')
+            .eq('id', resaRow.terrain_id)
+            .maybeSingle()
+          const montantFr = `${Number(resaRow.prix_total).toLocaleString('fr-FR')} FCFA`
+          const heureStr  = resaRow.heure_debut ? String(resaRow.heure_debut).slice(0, 5) : ''
+          const bodyParts = [terrainRow?.nom, resaRow.date_reservation, heureStr, montantFr].filter(Boolean)
+          await sendPushToUser(supabase, resaRow.prestataire_id, {
+            title:     '🏟️ Nouvelle réservation terrain',
+            body:      `Paiement reçu ✅ ${bodyParts.join(' · ')}`,
+            data:      { type: 'reservation_terrain', reservationId: String(result.reservation_id) },
+            channelId: 'commandes',
+          })
+        }
+      } catch {
+        // best-effort
+      }
+    }
+
+    // ── Livraison Wave ─────────────────────────────────────────────────────
+    if (!result?.order_id && !result?.reservation_id) {
+      try {
+        const { data: piLivData } = await supabase
+          .from('payment_intents')
+          .select('type')
+          .eq('id', piId)
+          .maybeSingle()
+        if (piLivData?.type === 'livraison') {
+          const { data: lp } = await supabase
+            .from('livraison_paiements')
+            .select('*')
+            .eq('payment_intent_id', piId)
+            .maybeSingle()
+          if (lp && !lp.livraison_id) {
+            const { data: profil } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', lp.demandeur_id)
+              .single()
+            const demandeurType =
+              profil?.role === 'merchant' || profil?.role === 'prestataire'
+                ? 'prestataire'
+                : 'client'
+            const { data: nouvelleL, error: lErr } = await supabase
+              .from('livraisons')
+              .insert({
+                demandeur_id:   lp.demandeur_id,
+                demandeur_type: demandeurType,
+                depart_label:   lp.depart_label,
+                depart_lat:     lp.depart_lat,
+                depart_lng:     lp.depart_lng,
+                arrivee_label:  lp.arrivee_label,
+                arrivee_lat:    lp.arrivee_lat,
+                arrivee_lng:    lp.arrivee_lng,
+                contact_nom:    lp.contact_nom ?? null,
+                contact_tel:    lp.contact_tel ?? null,
+                distance_km:    lp.distance_km,
+                prix_livraison: lp.montant_calcule,
+                statut:         'en_attente',
+              })
+              .select('id')
+              .single()
+            if (lErr) {
+              console.error('[webhook-payment] livraison insert erreur:', lErr.message)
+            } else {
+              // Verrouillage optimiste : l'UPDATE n'écrit que si livraison_id est encore null.
+              // Si un webhook concurrent a déjà pris la main, on supprime la livraison créée.
+              const { data: claimed } = await supabase
+                .from('livraison_paiements')
+                .update({ livraison_id: nouvelleL.id })
+                .eq('id', lp.id)
+                .is('livraison_id', null)
+                .select('id')
+              if (!claimed || claimed.length === 0) {
+                console.warn('[webhook-payment] livraison doublon détecté, rollback', piId)
+                await supabase.from('livraisons').delete().eq('id', nouvelleL.id)
+              } else {
+              const { data: livreurs } = await supabase
+                .from('livreurs')
+                .select('id')
+                .eq('actif', true)
+              const distKm = lp.distance_km ? `${Number(lp.distance_km).toFixed(1)} km` : ''
+              for (const livreur of (livreurs ?? [])) {
+                await sendPushToUser(supabase, livreur.id, {
+                  title:     '🛵 Nouvelle livraison disponible',
+                  body:      `${lp.depart_label} → ${lp.arrivee_label}${distKm ? ' · ' + distKm : ''}`,
+                  data:      { type: 'livraison_nouvelle', livraisonId: String(nouvelleL.id) },
+                  channelId: 'commandes',
+                })
+              }
+              console.log('[webhook-payment] livraison créée pi', piId, 'id', nouvelleL.id, 'livreurs:', (livreurs ?? []).length)
+              } // end else (claimed)
+            }
+          }
+        }
+      } catch {
+        // best-effort
+      }
     }
   }
 

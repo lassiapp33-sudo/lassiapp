@@ -39,8 +39,8 @@ function GpsModal({ shop, onClose, onSaved }: GpsModalProps) {
     try {
       await updateShopCoords(shop.id, Number(lat), Number(lng))
       onSaved(Number(lat), Number(lng))
-    } catch (e: any) {
-      setError(e.message ?? 'Erreur lors de la sauvegarde')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erreur lors de la sauvegarde')
     } finally {
       setSaving(false)
     }

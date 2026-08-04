@@ -6,6 +6,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { buildWaveSignature } from '../_shared/waveSign.ts'
+import { sendPushToUser } from '../_shared/push.ts'
 
 const WAVE_API_KEY = Deno.env.get('WAVE_API_KEY') ?? ''
 
@@ -69,16 +70,16 @@ Deno.serve(async (req) => {
 
     // ⑤ Simulation : considéré comme payé
     if (pi.statut === 'simulated') {
-      const livraison = await creerLivraison(admin, user.id, lp)
-      await admin.from('livraison_paiements').update({ livraison_id: livraison.id }).eq('id', lp.id)
-      return json({ paid: true, livraisonId: livraison.id })
+      const livraisonId = await creerLivraisonAtomique(admin, user.id, lp)
+      await notifierLivreurs(admin, livraisonId, lp)
+      return json({ paid: true, livraisonId })
     }
 
-    // ⑥ Déjà complété par webhook
-    if (pi.statut === 'completed') {
-      const livraison = await creerLivraison(admin, user.id, lp)
-      await admin.from('livraison_paiements').update({ livraison_id: livraison.id }).eq('id', lp.id)
-      return json({ paid: true, livraisonId: livraison.id })
+    // ⑥ Déjà complété par webhook (process_payment_webhook → 'split_done')
+    if (['completed', 'split_done', 'confirmed'].includes(pi.statut)) {
+      const livraisonId = await creerLivraisonAtomique(admin, user.id, lp)
+      await notifierLivreurs(admin, livraisonId, lp)
+      return json({ paid: true, livraisonId })
     }
 
     // ⑦ Vérification Wave en temps réel
@@ -94,9 +95,9 @@ Deno.serve(async (req) => {
             .update({ statut: 'completed' })
             .eq('id', piId)
 
-          const livraison = await creerLivraison(admin, user.id, lp)
-          await admin.from('livraison_paiements').update({ livraison_id: livraison.id }).eq('id', lp.id)
-          return json({ paid: true, livraisonId: livraison.id })
+          const livraisonId = await creerLivraisonAtomique(admin, user.id, lp)
+          await notifierLivreurs(admin, livraisonId, lp)
+          return json({ paid: true, livraisonId })
         }
       }
     }
@@ -110,13 +111,38 @@ Deno.serve(async (req) => {
   }
 })
 
-// ── Crée la livraison après paiement confirmé ──────────────────────────────
-async function creerLivraison(
+// ── Notifie tous les livreurs actifs d'une nouvelle livraison ─────────────
+async function notifierLivreurs(
+  admin: ReturnType<typeof createClient>,
+  livraisonId: string,
+  lp: Record<string, unknown>,
+) {
+  try {
+    const { data: livreurs } = await admin
+      .from('livreurs')
+      .select('id')
+      .eq('actif', true)
+    const distKm = lp.distance_km ? `${Number(lp.distance_km).toFixed(1)} km` : ''
+    for (const livreur of (livreurs ?? [])) {
+      await sendPushToUser(admin, livreur.id, {
+        title:     '🛵 Nouvelle livraison disponible',
+        body:      `${lp.depart_label} → ${lp.arrivee_label}${distKm ? ' · ' + distKm : ''}`,
+        data:      { type: 'livraison_nouvelle', livraisonId },
+        channelId: 'commandes',
+      })
+    }
+  } catch (e) {
+    console.error('[verify-livraison-payment] notifierLivreurs erreur:', e instanceof Error ? e.message : e)
+  }
+}
+
+// ── Crée la livraison après paiement confirmé (verrouillage optimiste) ─────
+// Retourne l'id de la livraison créée OU celle déjà existante si race condition.
+async function creerLivraisonAtomique(
   admin: ReturnType<typeof createClient>,
   demandeurId: string,
   lp: Record<string, unknown>,
-) {
-  // Détermine le type depuis le profil — ne pas faire confiance au client
+): Promise<string> {
   const { data: profile } = await admin
     .from('profiles')
     .select('role')
@@ -149,5 +175,29 @@ async function creerLivraison(
     .single()
 
   if (error) throw new Error(error.message)
-  return data as { id: string }
+  const nouvelleId = (data as { id: string }).id
+
+  // Verrouillage optimiste : n'écrit que si livraison_id est encore null.
+  // Si une requête concurrente a déjà pris la main, on rollback la livraison créée
+  // et on retourne l'id existant pour rester idempotent.
+  const { data: claimed } = await admin
+    .from('livraison_paiements')
+    .update({ livraison_id: nouvelleId })
+    .eq('id', lp.id as string)
+    .is('livraison_id', null)
+    .select('id')
+
+  if (!claimed || claimed.length === 0) {
+    console.warn('[verify-livraison-payment] doublon détecté, rollback livraison', nouvelleId)
+    await admin.from('livraisons').delete().eq('id', nouvelleId)
+    // Récupère l'id de la livraison gagnante
+    const { data: existing } = await admin
+      .from('livraison_paiements')
+      .select('livraison_id')
+      .eq('id', lp.id as string)
+      .single()
+    return (existing as { livraison_id: string }).livraison_id
+  }
+
+  return nouvelleId
 }

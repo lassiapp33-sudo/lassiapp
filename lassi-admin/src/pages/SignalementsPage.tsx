@@ -68,8 +68,8 @@ function SignalementDetail({
       await updateSignalementStatus(sig.id, status)
       onStatusChange(sig.id, status)
       setFeedback('Statut mis à jour.')
-    } catch (e: any) {
-      setFeedback(e.message)
+    } catch (e: unknown) {
+      setFeedback(e instanceof Error ? e.message : 'Erreur inconnue')
     } finally {
       setSaving(false)
     }
