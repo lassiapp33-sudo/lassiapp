@@ -27,6 +27,8 @@ export interface Vip5EtoilesProfil {
   gerantUserId:    string | null
   telephoneGerant: string | null
   updatedAt:       string
+  latitude:        number | null
+  longitude:       number | null
 }
 
 export async function getVip5EtoilesProfils(): Promise<Vip5EtoilesProfil[]> {
@@ -35,7 +37,7 @@ export async function getVip5EtoilesProfils(): Promise<Vip5EtoilesProfil[]> {
     .select(`
       id, shop_id, categorie, gabarit, nom_affiche, baseline, actif,
       gerant_user_id, telephone_gerant, updated_at,
-      shops!inner ( name )
+      shops!inner ( name, latitude, longitude )
     `)
     .order('updated_at', { ascending: false })
 
@@ -53,6 +55,8 @@ export async function getVip5EtoilesProfils(): Promise<Vip5EtoilesProfil[]> {
     gerantUserId:    r.gerant_user_id ?? null,
     telephoneGerant: r.telephone_gerant ?? null,
     updatedAt:       r.updated_at,
+    latitude:        r.shops?.latitude ?? null,
+    longitude:       r.shops?.longitude ?? null,
   }))
 }
 
@@ -75,6 +79,14 @@ export async function supprimerProfil(profilId: string, shopId: string): Promise
   await supabase.from('shops').update({ is_vip: false }).eq('id', shopId).throwOnError()
 }
 
+export async function setShopLocation(shopId: string, lat: number, lng: number): Promise<void> {
+  const { error } = await supabase
+    .from('shops')
+    .update({ latitude: lat, longitude: lng })
+    .eq('id', shopId)
+  if (error) throw new Error(error.message)
+}
+
 export async function creerProfilComplet(params: {
   telephone:  string
   motDePasse: string
@@ -83,9 +95,21 @@ export async function creerProfilComplet(params: {
   gabarit:    'palais' | 'maison'
   initiale:   string
   baseline?:  string
+  latitude?:  number | null
+  longitude?: number | null
 }): Promise<void> {
   const { data, error } = await supabase.functions.invoke('create-vip-gerant', {
-    body: params,
+    body: {
+      telephone:  params.telephone,
+      motDePasse: params.motDePasse,
+      nomAffiche: params.nomAffiche,
+      categorie:  params.categorie,
+      gabarit:    params.gabarit,
+      initiale:   params.initiale,
+      baseline:   params.baseline,
+      latitude:   params.latitude ?? null,
+      longitude:  params.longitude ?? null,
+    },
   })
   if (error) {
     // Extraire le vrai message depuis le body de la réponse HTTP

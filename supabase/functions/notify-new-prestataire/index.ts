@@ -6,6 +6,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL  = Deno.env.get('SUPABASE_URL')              ?? '';
 const SUPABASE_SRK  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -57,20 +58,91 @@ Deno.serve(async (req) => {
     if (!shopId || !shopName) return fail('Paramètres manquants', 400);
 
     const categoryLabel = CATEGORY_LABELS[category] ?? category ?? 'Services';
+    const title = '🏪 Nouveau prestataire !';
     const body  = `${shopName} vient de rejoindre LASSI — ${categoryLabel}`;
 
-    // Annonce in-app uniquement (popup dans l'app — le push n'est pas utilisé pour ce cas)
-    // tag = shopId permet la navigation directe vers la vitrine au tap sur l'annonce
-    await sb.from('annonces').insert({
-      titre:     'Nouveau prestataire !',
-      corps:     body,
-      icone:     '🏪',
-      tag:       shopId,
-      audience:  'clients',
-      expire_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    });
+    // 1. Récupérer tous les clients
+    const { data: clients, error: clientErr } = await sb
+      .from('profiles')
+      .select('id')
+      .eq('role', 'client');
 
-    return ok({ sent: true });
+    if (clientErr) throw new Error(clientErr.message);
+
+    const clientIds = (clients ?? []).map(r => r.id as string);
+    if (clientIds.length === 0) return ok({ sent: false, reason: 'Aucun client.' });
+
+    // 2. Insérer une notification individuelle par client (table notifications)
+    //    → déclenche Realtime + popup NotifCardModal + bouton "Voir la vitrine"
+    const notifRows = clientIds.map(userId => ({
+      user_id: userId,
+      type:    'ann',
+      title,
+      body,
+      data:    { type: 'new_shop', shop_id: shopId, shop_name: shopName, target_id: shopId },
+      is_read: false,
+    }));
+
+    // Insérer par lots de 500 pour éviter les timeouts
+    const INSERT_BATCH = 500;
+    for (let i = 0; i < notifRows.length; i += INSERT_BATCH) {
+      await sb.from('notifications').insert(notifRows.slice(i, i + INSERT_BATCH));
+    }
+
+    // 3. Récupérer les tokens push des clients
+    const { data: tokenRows } = await sb
+      .from('push_tokens')
+      .select('token')
+      .in('user_id', clientIds);
+
+    const pushTokens = (tokenRows ?? [])
+      .map(r => r.token as string)
+      .filter(t => t.startsWith('ExponentPushToken[') || t.startsWith('ExpoPushToken['));
+
+    if (pushTokens.length === 0) {
+      return ok({ sent: true, notifsSent: clientIds.length, pushSent: 0, reason: 'Aucun token push.' });
+    }
+
+    // 4. Envoi push en lots de 100 (limite Expo Push API)
+    const BATCH_SIZE = 100;
+    let totalPushed  = 0;
+
+    for (let i = 0; i < pushTokens.length; i += BATCH_SIZE) {
+      const batch    = pushTokens.slice(i, i + BATCH_SIZE);
+      const messages = batch.map(to => ({
+        to,
+        title,
+        body,
+        data:  { type: 'new_shop', shop_id: shopId, shop_name: shopName },
+        sound: 'default',
+      }));
+
+      const expoRes = await fetch(EXPO_PUSH_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body:    JSON.stringify(messages),
+      });
+
+      const expoData = await expoRes.json().catch(() => ({}));
+      const tickets: Array<Record<string, unknown>> = Array.isArray(expoData.data)
+        ? expoData.data : [];
+
+      const expiredTokens: string[] = [];
+      for (let j = 0; j < tickets.length; j++) {
+        const ticket = tickets[j];
+        if (
+          ticket?.status === 'error' &&
+          (ticket.details as Record<string, unknown>)?.error === 'DeviceNotRegistered'
+        ) expiredTokens.push(batch[j]);
+      }
+      if (expiredTokens.length > 0) {
+        await sb.from('push_tokens').delete().in('token', expiredTokens);
+      }
+
+      totalPushed += batch.length;
+    }
+
+    return ok({ sent: true, notifsSent: clientIds.length, pushSent: totalPushed });
 
   } catch (e) {
     console.error('[notify-new-prestataire]', e);

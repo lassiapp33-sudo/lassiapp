@@ -1,7 +1,7 @@
 // ============================================================
 // EDGE FUNCTION : create-fitness-abonnement-payment
 // Crée une session de paiement Wave/OM pour un abonnement fitness.
-// Même modèle économique que les commandes : commission 1% LASSI.
+// Commission LASSI : 2% si boutique VIP 5 Étoiles, 1% sinon (détection via vip_profils).
 // ============================================================
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID } from '../_shared/validation.ts'
@@ -16,10 +16,8 @@ const APP_BASE_URL      = Deno.env.get('APP_BASE_URL') ?? 'lassi://'
 
 const IS_PRODUCTION = WAVE_API_KEY !== '' || isOmReady()
 
-// Commission LASSI : 1% — NE JAMAIS CHANGER (les 10% = livreurs admin interne uniquement)
-function calculerPrixClient(prixBase: number): number {
-  const commission = Math.ceil(prixBase * 0.01)
-  return prixBase + commission
+function calculerPrixClientAvecTaux(prixBase: number, taux: number): number {
+  return prixBase + Math.ceil(prixBase * taux)
 }
 
 Deno.serve(async (req) => {
@@ -69,9 +67,18 @@ Deno.serve(async (req) => {
 
     if (!offre) return json({ error: 'Offre introuvable ou inactive' }, 404)
 
+    // Détecter si la boutique est VIP 5 Étoiles (comme initiate_order_payment)
+    const { data: vipProfil } = await admin
+      .from('vip_profils')
+      .select('id')
+      .eq('shop_id', offre.prestataire_id)
+      .eq('actif', true)
+      .maybeSingle()
+
+    const commissionRate = vipProfil ? 0.02 : 0.01
     const prixBase   = offre.prix as number
-    const commission = Math.ceil(prixBase * 0.01)
-    const prixTotal  = calculerPrixClient(prixBase)
+    const commission = Math.ceil(prixBase * commissionRate)
+    const prixTotal  = calculerPrixClientAvecTaux(prixBase, commissionRate)
     const dureeJours = (offre.duree_jours as number) || 30
 
     // ④ Créer le payment_intent (même table que les paiements classiques)

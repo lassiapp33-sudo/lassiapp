@@ -17,9 +17,9 @@ const APP_BASE_URL      = Deno.env.get('APP_BASE_URL') ?? 'lassi://'
 const IS_PRODUCTION = WAVE_API_KEY !== '' || isOmReady()
 
 // ── Haversine (même logique que config/livraison.ts côté app) ──────────────
-const PRIX_BASE       = 800  // 500 base + 300 forfait
-const PRIX_PAR_KM     = 250
-const PRIX_MINIMUM    = 1000
+const PRIX_BASE       = 600
+const PRIX_PAR_KM     = 150
+const PRIX_MINIMUM    = 800
 const PRIX_MAXIMUM    = 15000
 const DISTANCE_MAX_KM = 30
 const FACTEUR_ROUTE   = 1.3
@@ -102,6 +102,7 @@ Deno.serve(async (req) => {
     const { data: pi, error: piError } = await admin
       .from('payment_intents')
       .insert({
+        type:             'livraison',
         client_id:        user.id,
         prestataire_id:   user.id,    // LASSI collecte : prestataire = demandeur
         montant_total:    devis.prix,

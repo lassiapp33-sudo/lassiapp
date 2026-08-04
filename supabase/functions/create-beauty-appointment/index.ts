@@ -6,6 +6,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID, isSafeString } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
+import { sendPushToUser } from '../_shared/push.ts'
 
 Deno.serve(async (req) => {
   const CORS = corsHeaders(req)
@@ -66,7 +67,7 @@ Deno.serve(async (req) => {
     // ④ Vérifier que le profil VIP existe et est actif
     const { data: profil, error: profilErr } = await admin
       .from('vip_profils')
-      .select('id, nom_affiche, categorie')
+      .select('id, nom_affiche, categorie, gerant_user_id')
       .eq('id', vipProfilId)
       .eq('actif', true)
       .single()
@@ -123,6 +124,19 @@ Deno.serve(async (req) => {
       .single()
 
     if (rdvErr) throw new Error(rdvErr.message)
+
+    // Notifier le gérant (best-effort)
+    if (profil.gerant_user_id) {
+      const categoryLabel = profil.categorie === 'coiffure' ? 'coiffure' : 'beauté'
+      await sendPushToUser(admin, profil.gerant_user_id, {
+        title:     `✂️ Nouveau rendez-vous ${categoryLabel}`,
+        body:      prestationNom
+          ? `${prestationNom} — à confirmer dans votre espace gérant.`
+          : 'Un client demande un rendez-vous. Consultez votre agenda.',
+        data:      { type: 'rdv_beauty_nouveau', appointmentId: rdv.id },
+        channelId: 'commandes',
+      }).catch(() => { /* best-effort */ })
+    }
 
     return json({ success: true, appointmentId: rdv.id })
 

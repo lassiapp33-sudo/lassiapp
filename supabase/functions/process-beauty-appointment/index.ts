@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     // ③ Vérifier que le RDV appartient à un établissement géré par ce gérant
     const { data: rdv, error: rdvErr } = await admin
       .from('beauty_appointments')
-      .select('id, statut, vip_profil_id, client_id')
+      .select('id, statut, vip_profil_id, client_id, prestation_nom, date_rdv, heure_debut')
       .eq('id', appointmentId)
       .single()
 
@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
 
     const { data: profil } = await admin
       .from('vip_profils')
-      .select('gerant_user_id')
+      .select('gerant_user_id, nom_affiche')
       .eq('id', rdv.vip_profil_id)
       .single()
 
@@ -83,6 +83,27 @@ Deno.serve(async (req) => {
       .eq('id', appointmentId)
 
     if (updErr) throw new Error(updErr.message)
+
+    // ⑤ Notifier le client (best-effort)
+    try {
+      const heureLabel = rdv.heure_debut ? rdv.heure_debut.slice(0, 5) : ''
+      const rdvLabel   = rdv.prestation_nom
+        ? `${rdv.prestation_nom}${heureLabel ? ` à ${heureLabel}` : ''}`
+        : heureLabel ? `RDV à ${heureLabel}` : 'votre rendez-vous'
+
+      await admin.functions.invoke('notify-new-message', {
+        body: {
+          userId: rdv.client_id,
+          title:  action === 'confirmer'
+            ? `${profil.nom_affiche} a confirmé votre RDV`
+            : `${profil.nom_affiche} n'est pas disponible`,
+          body:   action === 'confirmer'
+            ? (messageGerant ?? `${rdvLabel} est confirmé — à bientôt !`)
+            : (messageGerant ?? 'Votre demande de rendez-vous a été refusée.'),
+          data:   { type: action === 'confirmer' ? 'rdv_beauty_confirme' : 'rdv_beauty_refuse', appointmentId },
+        },
+      })
+    } catch (_) { /* non bloquant */ }
 
     return json({ success: true, statut: nouveauStatut })
 
