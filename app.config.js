@@ -1,4 +1,15 @@
-module.exports = {
+const { withAndroidManifest } = require('@expo/config-plugins');
+
+// Plugin inline : ajoute usesCleartextTraffic="false" au manifest release.
+// Le debug manifest override via tools:replace — le dev n'est pas affecté.
+const withNoHttpCleartext = config =>
+  withAndroidManifest(config, async androidConfig => {
+    const app = androidConfig.modResults.manifest.application?.[0];
+    if (app) app.$['android:usesCleartextTraffic'] = 'false';
+    return androidConfig;
+  });
+
+module.exports = withNoHttpCleartext({
   expo: {
     name: "LASSI",
     slug: "LassiApp",
@@ -104,4 +115,4 @@ module.exports = {
     },
     owner: "lassiapp",
   },
-};
+});
