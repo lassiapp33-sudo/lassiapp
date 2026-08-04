@@ -53,6 +53,8 @@ module.exports = withSecurityPlugins({
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.lassiapp.lassiapp",
+      googleServicesFile:
+        process.env.GOOGLE_SERVICES_IOS_PLIST ?? "./GoogleService-Info.plist",
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
           "LASSİ utilise ta position pour te montrer les commerces autour de toi.",

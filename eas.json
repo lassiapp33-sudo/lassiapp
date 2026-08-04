@@ -19,6 +19,16 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal"
+      },
+      "ios": {
+        "appleId": "lassiapp33@gmail.com",
+        "ascAppId": "FILL_APP_STORE_CONNECT_APP_ID",
+        "appleTeamId": "FILL_APPLE_TEAM_ID"
+      }
+    }
   }
 }
