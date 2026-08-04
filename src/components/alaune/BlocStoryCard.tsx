@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { IcoLightning, IcoCart } from '../common/LassiIcons';
 import { colors, fonts, radius } from '../../theme';
 import type { BlocALaUne } from '../../types/aLaUne';
@@ -65,7 +66,7 @@ const BlocStoryCard = React.forwardRef<View, Props>(
         {/* ── Boutique ── */}
         <View style={styles.shopRow}>
           {shopLogoUrl ? (
-            <Image source={{ uri: shopLogoUrl }} style={styles.shopLogo} />
+            <ExpoImage source={{ uri: shopLogoUrl }} style={styles.shopLogo} contentFit="cover" />
           ) : (
             <View style={styles.shopAvatarFallback}>
               <Text style={styles.shopAvatarInitial}>{initial}</Text>
@@ -135,12 +136,12 @@ const BlocStoryCard = React.forwardRef<View, Props>(
 
         {/* ── Photo produit (optionnelle) ── */}
         {productImageUri ? (
-          <Image
+          <ExpoImage
             source={{ uri: productImageUri }}
             style={[styles.productImage, { height: imgHeight }]}
-            resizeMode="cover"
+            contentFit="cover"
             onLoad={(e) => {
-              const { width, height } = e.nativeEvent.source;
+              const { width, height } = e.source;
               if (width > 0) setImgHeight(Math.round(STORY_W * height / width));
             }}
           />

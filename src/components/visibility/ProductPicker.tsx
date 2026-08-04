@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
@@ -109,7 +110,7 @@ export default function ProductPicker({
               {/* Image / emoji */}
               <View style={styles.imgBox}>
                 {p.photoUrl ? (
-                  <Image source={{ uri: p.photoUrl }} style={styles.img} />
+                  <ExpoImage source={{ uri: p.photoUrl }} style={styles.img} contentFit="cover" />
                 ) : p.emoji ? (
                   <Text style={styles.emoji}>{p.emoji}</Text>
                 ) : (

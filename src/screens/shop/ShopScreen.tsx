@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import Svg, { Path, Rect, Circle as SvgCircle } from 'react-native-svg';
 
 import ShopCover from '../../components/shop/ShopCover';
@@ -508,7 +509,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
               contentContainerStyle={styles.galleryScroll}
             >
               {galleryUrls.map((url, i) => (
-                <Image key={i} source={{ uri: url }} style={styles.galleryPhoto} />
+                <ExpoImage key={i} source={{ uri: url }} style={styles.galleryPhoto} contentFit="cover" />
               ))}
             </ScrollView>
           )}
