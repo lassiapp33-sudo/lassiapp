@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { rawSecureStorage } from '../lib/secureStorage';
 import { getInitials } from '../utils/getInitials';
 import useCartStore from './cartStore';
 import useDebtsStore from './debtsStore';
@@ -70,8 +70,8 @@ const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'lassi-auth',
-      storage: createJSONStorage(() => AsyncStorage),
-      // On persiste hasSeenOnboarding + user pour un fallback instantané au redémarrage.
+      storage: createJSONStorage(() => rawSecureStorage),
+      // PII chiffrées (AES-256, clé dans Keychain/Keystore via expo-secure-store).
       // La source de vérité reste Supabase (getSessionUser), le cache sert de filet de sécurité
       // quand le réseau est lent : l'app s'ouvre immédiatement, la session est vérifiée en arrière-plan.
       partialize: state => ({

@@ -79,6 +79,11 @@ class LargeSecureStore {
 
 const _rawSecureStorage = new LargeSecureStore();
 
+// Accessible pour les stores Zustand qui doivent chiffrer des données sensibles (PII)
+// sans le verrou de session GoTrue (ex: authStore cache nom/téléphone/email).
+export const rawSecureStorage: Pick<LargeSecureStore, 'getItem' | 'setItem' | 'removeItem'> =
+  _rawSecureStorage;
+
 // Wrapper GoTrue-aware : si SESSION_ACTIVE_KEY absent, retourne null pour tous les
 // getItem() de GoTrue → pas de token stale → pas de refresh réseau → init instantanée.
 // Dès qu'un setItem() est appelé (login réussi), la session est considérée active.

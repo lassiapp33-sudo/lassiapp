@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getCachedJSON, setCachedJSON, removeCachedJSON } from '../../lib/secureCache';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, TOP_INSET, radius } from '../../theme';
 import { IcoClose } from '../../components/icons';
@@ -325,16 +325,15 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
   const sendRef = useRef<(t: string) => void>(() => {});
   const hasLoadedRef = useRef(false); // empêche la sauvegarde avant le chargement
 
-  // ── Chargement historique (72h, privé par userId) ─────────────────────────
+  // ── Chargement historique (72h, privé par userId, chiffré AES-256) ─────────
   useEffect(() => {
-    AsyncStorage.getItem(myKey)
-      .then(raw => {
-        if (raw) {
-          const { msgs, savedAt } = JSON.parse(raw);
+    getCachedJSON<{ msgs: ChatMsg[]; savedAt: number }>(myKey)
+      .then(cached => {
+        if (cached) {
+          const { msgs, savedAt } = cached;
           const isNewFormat =
             Array.isArray(msgs) && msgs.every((m: ChatMsg) => String(m.id).includes('_'));
           if (isNewFormat && msgs.length > 0 && Date.now() - savedAt < CHAT_TTL_MS) {
-            // Retirer les anciens chips/welcome du format précédent (maintenant dans le header fixe)
             const cleaned: ChatMsg[] = msgs.filter(
               (m: ChatMsg) =>
                 m.kind !== 'chips' &&
@@ -342,7 +341,7 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
             );
             setMessages(cleaned.length > 0 ? cleaned : makeInitialMsgs());
           } else {
-            AsyncStorage.removeItem(myKey).catch(() => {});
+            removeCachedJSON(myKey).catch(() => {});
           }
         }
       })
@@ -352,17 +351,11 @@ export default function LassiAssistantScreen({ onClose, onShopPress }: Props) {
       });
   }, [myKey]);
 
-  // ── Sauvegarde automatique (uniquement pour cet utilisateur) ──────────────
+  // ── Sauvegarde automatique (chiffrée, uniquement pour cet utilisateur) ────
   useEffect(() => {
     if (!hasLoadedRef.current) return;
     const toSave = messages.filter(m => m.kind !== 'loading');
-    AsyncStorage.setItem(
-      myKey,
-      JSON.stringify({
-        msgs: toSave,
-        savedAt: Date.now(),
-      }),
-    ).catch(() => {});
+    setCachedJSON(myKey, { msgs: toSave, savedAt: Date.now() }).catch(() => {});
   }, [messages, myKey]);
 
   // ── Auto-scroll ─────────────────────────────────────────────────────────────
