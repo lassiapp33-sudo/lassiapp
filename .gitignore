@@ -47,3 +47,6 @@ yarn-error.*
 # EAS credentials — keystore + credentials.json (JAMAIS dans git)
 credentials.json
 credentials/
+
+# Google Play service account key (JAMAIS dans git)
+google-play-service-account.json
