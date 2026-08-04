@@ -122,9 +122,25 @@ export async function getUserLocation(): Promise<{ lat: number; lng: number } | 
   }
 }
 
+// ─── Cache en mémoire (5 min) ────────────────────────────────────────────────
+// getShops() est appelé depuis HomeScreen, SearchScreen et MapScreen — le cache
+// évite 3 requêtes HTTP identiques lors d'une même session de navigation.
+
+const SHOPS_CACHE_TTL = 5 * 60 * 1000;
+let allShopsCache: { data: Shop[]; ts: number } | null = null;
+const catShopsCache = new Map<string, { data: Shop[]; ts: number }>();
+
+export function clearShopsCache(): void {
+  allShopsCache = null;
+  catShopsCache.clear();
+}
+
 // ─── Requêtes ────────────────────────────────────────────────────────────────
 
 export async function getShops(): Promise<Shop[]> {
+  if (allShopsCache && Date.now() - allShopsCache.ts < SHOPS_CACHE_TTL) {
+    return allShopsCache.data;
+  }
   // Fetch direct avec la clé anon — contourne le GoTrue lock (SecureStore lent au cold start).
   // La table shops a RLS USING (true) : lecture publique sans token utilisateur.
   const controller = new AbortController();
@@ -143,13 +159,17 @@ export async function getShops(): Promise<Shop[]> {
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data: Record<string, unknown>[] = await res.json();
-    return (data ?? []).map(rowToShop);
+    const shops = (data ?? []).map(rowToShop);
+    allShopsCache = { data: shops, ts: Date.now() };
+    return shops;
   } finally {
     clearTimeout(timer);
   }
 }
 
 export async function getShopsByCategory(category: string): Promise<Shop[]> {
+  const hit = catShopsCache.get(category);
+  if (hit && Date.now() - hit.ts < SHOPS_CACHE_TTL) return hit.data;
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/shops?select=*&category=eq.${encodeURIComponent(category)}&order=rating.desc`,
@@ -157,7 +177,9 @@ export async function getShopsByCategory(category: string): Promise<Shop[]> {
     );
     if (!res.ok) return [];
     const data: Record<string, unknown>[] = await res.json();
-    return (data ?? []).map(rowToShop);
+    const shops = (data ?? []).map(rowToShop);
+    catShopsCache.set(category, { data: shops, ts: Date.now() });
+    return shops;
   } catch {
     return [];
   }

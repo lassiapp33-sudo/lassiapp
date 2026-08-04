@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { supabase } from '../lib/supabase';
-import { rowToShop } from '../services/shops';
+import { rowToShop, clearShopsCache } from '../services/shops';
 import type { Shop } from '../services/shops';
 
 /**
@@ -21,6 +21,7 @@ export function useRealtimeShops(onUpdate: (shop: Shop) => void) {
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'shops' },
           payload => {
+            clearShopsCache();
             const shop = rowToShop(payload.new as Record<string, unknown>);
             cbRef.current(shop);
           },
