@@ -234,8 +234,6 @@ export default function MaCampagneScreen({ onBack }: Props) {
   const [loading, setLoading]               = useState(true);
   const [refreshing, setRefreshing]         = useState(false);
   const [lastRefresh, setLastRefresh]       = useState<Date | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const load = useCallback(async (silent = false) => {
     if (!shopId) return;
     if (!silent) setLoading(true);
@@ -300,12 +298,9 @@ export default function MaCampagneScreen({ onBack }: Props) {
   // Auto-refresh toutes les 5 min si une campagne est active
   useEffect(() => {
     const hasActive = ads.some(a => a.status === 'active') || subs.length > 0;
-    if (hasActive) {
-      intervalRef.current = setInterval(() => { void load(true); }, 300_000);
-    } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    if (!hasActive) return;
+    const id = setInterval(() => { void load(true); }, 300_000);
+    return () => clearInterval(id);
   }, [ads, subs, load]);
 
   const refreshLabel = lastRefresh

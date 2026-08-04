@@ -190,7 +190,6 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
   const [myAds, setMyAds]         = useState<SponsoredAd[]>([]);
   const [loadingAds, setLoadingAds] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrollRef   = useRef<ScrollView>(null);
 
   const loadAds = useCallback(async (silent = false) => {
@@ -223,12 +222,9 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
   // Auto-refresh toutes les 60s tant qu'une campagne est active
   useEffect(() => {
     const hasActive = myAds.some(a => a.status === 'active');
-    if (hasActive) {
-      intervalRef.current = setInterval(() => { void loadAds(true); }, 60_000);
-    } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    if (!hasActive) return;
+    const id = setInterval(() => { void loadAds(true); }, 60_000);
+    return () => clearInterval(id);
   }, [myAds, loadAds]);
 
   // Résumé budget/durée/estimations selon la sélection courante

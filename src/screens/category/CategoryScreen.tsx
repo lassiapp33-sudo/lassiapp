@@ -33,10 +33,10 @@ function buildSubcats(catId: CatId): SubCat[] {
 
 /** Retourne title / subLabel / subcats pour l'écran — sans duplication. */
 function getCatMeta(catId: CatId) {
-  const cfg = getCatConfig(catId) ?? getCatConfig('services');
+  const cfg = getCatConfig(catId) ?? getCatConfig('stores');
   return {
-    title: cfg.label,
-    subLabel: cfg.subLabel,
+    title: cfg?.label ?? '',
+    subLabel: cfg?.subLabel ?? '',
     subcats: buildSubcats(catId),
   };
 }

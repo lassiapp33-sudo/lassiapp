@@ -127,8 +127,8 @@ export async function lierGerantVip(): Promise<string | null> {
 }
 
 export async function getMonProfilVip(): Promise<VipProfil | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !user) return null;
   const { data, error } = await supabase
     .from('vip_profils')
     .select('*')
@@ -272,8 +272,8 @@ export async function getMonPrestations(): Promise<VipPrestation[]> {
 }
 
 export async function getMonHoraires(): Promise<VipHoraire[]> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !user) return [];
   const { data: profilRow } = await supabase
     .from('vip_profils')
     .select('id')
@@ -293,11 +293,12 @@ export async function setSignaturePrestation(
   profilId: string,
   prestationId: string,
 ): Promise<void> {
-  await supabase
+  const { error: e1 } = await supabase
     .from('vip_prestations')
     .update({ est_signature: false })
     .eq('vip_profil_id', profilId)
     .eq('est_signature', true);
+  if (e1) throw new Error(e1.message);
   const { error } = await supabase
     .from('vip_prestations')
     .update({ est_signature: true })

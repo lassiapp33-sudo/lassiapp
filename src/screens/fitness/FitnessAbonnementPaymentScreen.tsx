@@ -169,7 +169,7 @@ export default function FitnessAbonnementPaymentScreen({
 
       // Production → ouvrir Wave/OM
       if (data.redirectUrl) {
-        await Linking.openURL(data.redirectUrl);
+        Linking.openURL(data.redirectUrl).catch(() => {});
       }
       setStage('waiting');
     } catch (err: unknown) {

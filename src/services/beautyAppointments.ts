@@ -41,7 +41,8 @@ const ANON_KEY     = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token ?? '';
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Session expirée — reconnecte-toi');
   return {
     'Content-Type':  'application/json',
     'Authorization': `Bearer ${token}`,

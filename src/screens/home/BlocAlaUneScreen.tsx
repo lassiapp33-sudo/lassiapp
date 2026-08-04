@@ -244,8 +244,10 @@ export default function BlocAlaUneScreen({ blocCode, elementIndex, onBack, onSho
           merchantName: rpcShopName,
         });
         preInitiatedPiId = session.reference;
-        if (session.paymentUrl) Linking.openURL(session.paymentUrl);
-      } catch {}
+        if (session.paymentUrl) Linking.openURL(session.paymentUrl).catch(() => {});
+      } catch (payErr: unknown) {
+        notifyError(payErr instanceof Error ? payErr.message : 'Erreur lors du pré-paiement');
+      }
 
       setCheckoutTarget(null);
       onPaymentPress({
@@ -260,8 +262,8 @@ export default function BlocAlaUneScreen({ blocCode, elementIndex, onBack, onSho
         preMethod:   method,
         preInitiatedPiId,
       });
-    } catch (err: any) {
-      notifyError(err?.message ?? 'Impossible de commander. Réessaie.');
+    } catch (err: unknown) {
+      notifyError(err instanceof Error ? err.message : 'Impossible de commander. Réessaie.');
     } finally {
       setCheckoutLoading(false);
     }
