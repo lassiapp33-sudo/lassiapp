@@ -24,6 +24,7 @@ import SignalerProblemeScreen from '../../screens/common/SignalerProblemeScreen'
 import AProposScreen from '../../screens/common/AProposScreen';
 import LanguageModal from '../../components/common/LanguageModal';
 import { contacterServiceClient } from '../../config/contact';
+import DeleteAccountModal from '../../components/common/DeleteAccountModal';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -266,11 +267,12 @@ export default function GerantProfilScreen({ onBack, onNav, onPreview, onLogout 
   const clearGerant = useGerantStore(s => s.clearGerant);
   const lang        = useLanguageStore(s => s.lang);
 
-  const [notifOn,       setNotifOn]       = useState(true);
-  const [showLang,      setShowLang]      = useState(false);
-  const [showHelp,      setShowHelp]      = useState(false);
-  const [showSignaler,  setShowSignaler]  = useState(false);
-  const [showAPropos,   setShowAPropos]   = useState(false);
+  const [notifOn,          setNotifOn]          = useState(true);
+  const [showLang,         setShowLang]         = useState(false);
+  const [showHelp,         setShowHelp]         = useState(false);
+  const [showSignaler,     setShowSignaler]     = useState(false);
+  const [showAPropos,      setShowAPropos]      = useState(false);
+  const [showDeleteModal,  setShowDeleteModal]  = useState(false);
 
   const handleLogout = async () => {
     Alert.alert(
@@ -442,10 +444,21 @@ export default function GerantProfilScreen({ onBack, onNav, onPreview, onLogout 
           <Text style={s.btnLogoutTxt}>Se déconnecter</Text>
         </TouchableOpacity>
 
+        {/* Suppression de compte */}
+        <TouchableOpacity style={s.btnDelete} onPress={() => setShowDeleteModal(true)} activeOpacity={0.7}>
+          <Text style={s.btnDeleteTxt}>Supprimer mon compte</Text>
+        </TouchableOpacity>
+
         <View style={{ height: 48 }} />
       </ScrollView>
 
       <LanguageModal visible={showLang} onClose={() => setShowLang(false)} />
+      <DeleteAccountModal
+        visible={showDeleteModal}
+        role="merchant"
+        onClose={() => setShowDeleteModal(false)}
+        onSuccess={() => { clearGerant(); onLogout(); }}
+      />
     </View>
   );
 }
@@ -530,6 +543,20 @@ const s = StyleSheet.create({
     fontFamily: VIP_FONTS.palais.util,
     fontSize: 13,
     color: r.couleur.gris,
+    letterSpacing: 1,
+  },
+  btnDelete: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(224,122,122,0.3)',
+    alignItems: 'center',
+  },
+  btnDeleteTxt: {
+    fontFamily: VIP_FONTS.palais.util,
+    fontSize: 13,
+    color: 'rgb(224,122,122)',
     letterSpacing: 1,
   },
 });
