@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { Debtor, DebtStatus } from '../types/debts';
+import logger from '../utils/logger';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -82,7 +83,7 @@ export async function addToDebt(debtId: string, amount: number): Promise<void> {
   const { error: txErr } = await supabase
     .from('debt_transactions')
     .insert({ debt_id: debtId, amount });
-  if (txErr) console.warn('[debts] transaction log failed:', txErr.message);
+  if (txErr) logger.warn('[debts] transaction log failed:', txErr.message);
 }
 
 export async function markPaid(debtId: string): Promise<void> {

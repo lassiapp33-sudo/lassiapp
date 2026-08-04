@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logger from '../../utils/logger';
 import {
   Modal,
   View,
@@ -54,7 +55,7 @@ export default function RatingPromptModal({
       onDismiss();
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : String(err);
-      console.error('[RatingPromptModal] échec soumission note:', raw);
+      logger.error('[RatingPromptModal] échec soumission note:', raw);
       // Message selon l'erreur DB réelle
       if (raw.includes('non autorisé')) {
         notifyError('Session expirée — rouvre l\'app et réessaie.');

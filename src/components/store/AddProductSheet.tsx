@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import logger from '../../utils/logger';
 import {
   View,
   Text,
@@ -279,7 +280,7 @@ export default function AddProductSheet({
       const url = await storageService.uploadImage('products', uri, path);
       setPhotoUrl(url);
     } catch (e) {
-      console.error('[upload photo produit]', e);
+      logger.error('[upload photo produit]', e);
       Alert.alert('Erreur', "Impossible d'uploader la photo. Réessaie.");
     } finally {
       setUploading(false);

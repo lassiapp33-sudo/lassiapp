@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import logger from '../../utils/logger';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   FlatList, ActivityIndicator,
@@ -30,7 +31,7 @@ export default function TerrainCreneaux({
       const pris = await getCreneauxPris(terrainId, date);
       setCreneauxPris(pris);
     } catch (e) {
-      console.error(e);
+      logger.error('[TerrainCreneaux] load:', e);
     } finally {
       setLoading(false);
     }

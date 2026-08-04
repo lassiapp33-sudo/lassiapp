@@ -1,6 +1,6 @@
-const { withAndroidManifest } = require('@expo/config-plugins');
+const { withAndroidManifest, withGradleProperties } = require('@expo/config-plugins');
 
-// Plugin inline : ajoute usesCleartextTraffic="false" au manifest release.
+// Plugin 1 : usesCleartextTraffic="false" au manifest release.
 // Le debug manifest override via tools:replace — le dev n'est pas affecté.
 const withNoHttpCleartext = config =>
   withAndroidManifest(config, async androidConfig => {
@@ -9,7 +9,24 @@ const withNoHttpCleartext = config =>
     return androidConfig;
   });
 
-module.exports = withNoHttpCleartext({
+// Plugin 2 : R8 minification + resource shrinking activés pour le build release.
+// Réduit la taille de l'APK/AAB et obfusque les noms de classes Java/Kotlin.
+// Testé avec les règles ProGuard incluses par les modules natifs (AAR).
+const withR8Release = config =>
+  withGradleProperties(config, props => {
+    const set = (key, value) => {
+      const idx = props.findIndex(p => p.type === 'property' && p.key === key);
+      if (idx >= 0) props[idx].value = value;
+      else props.push({ type: 'property', key, value });
+    };
+    set('android.enableMinifyInReleaseBuilds', 'true');
+    set('android.enableShrinkResourcesInReleaseBuilds', 'true');
+    return props;
+  });
+
+const withSecurityPlugins = config => withR8Release(withNoHttpCleartext(config));
+
+module.exports = withSecurityPlugins({
   expo: {
     name: "LASSI",
     slug: "LassiApp",
