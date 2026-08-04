@@ -318,7 +318,7 @@ export async function login(params: LoginParams): Promise<AuthUser> {
     body: JSON.stringify({ p_action: 'login_success' }),
   }).catch(() => {});
 
-  void AsyncStorage.setItem(SESSION_ACTIVE_KEY, '1');
+  AsyncStorage.setItem(SESSION_ACTIVE_KEY, '1').catch(e => logger.warn('[auth] session flag write failed', e));
   return profile;
 }
 
@@ -351,7 +351,7 @@ export async function loginLivreur(telephone: string, password: string): Promise
   const profile = await getProfileById(session.user.id, access_token);
   if (!profile) throw new Error('Profil introuvable. Contacte le support LASSİ.');
 
-  void AsyncStorage.setItem(SESSION_ACTIVE_KEY, '1');
+  AsyncStorage.setItem(SESSION_ACTIVE_KEY, '1').catch(e => logger.warn('[auth] session flag write failed', e));
   return profile;
 }
 
@@ -379,7 +379,7 @@ export async function logout(): Promise<void> {
 
   // Nettoyer immédiatement sans attendre le réseau
   setCachedToken(null);
-  void AsyncStorage.removeItem(SESSION_ACTIVE_KEY).catch(() => {});
+  AsyncStorage.removeItem(SESSION_ACTIVE_KEY).catch(() => {});
   // Nettoyer SecureStore (session locale) en arrière-plan
   supabase.auth.signOut({ scope: 'local' }).catch(() => {});
 }
