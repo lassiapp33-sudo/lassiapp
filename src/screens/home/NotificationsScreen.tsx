@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, SectionList, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, SectionList, StyleSheet, ActivityIndicator } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import useNotificationsStore, { NotifType, Notif } from '../../store/notificationsStore';
@@ -91,6 +91,7 @@ interface Props {
 
 export default function NotificationsScreen({ onBack, onNavigate }: Props) {
   const notifications = useNotificationsStore(s => s.notifications);
+  const loading = useNotificationsStore(s => s.loading);
   const markRead = useNotificationsStore(s => s.markRead);
   const markAllRead = useNotificationsStore(s => s.markAllRead);
   const loadNotifications = useNotificationsStore(s => s.loadNotifications);
@@ -134,7 +135,10 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
         renderSectionHeader={({ section }) => <Text style={styles.dayLbl}>{section.title}</Text>}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyTxt}>Aucune notification</Text>
+            {loading
+              ? <ActivityIndicator color={colors.accent} />
+              : <Text style={styles.emptyTxt}>Aucune notification</Text>
+            }
           </View>
         }
         contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}

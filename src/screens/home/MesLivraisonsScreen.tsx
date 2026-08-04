@@ -29,17 +29,25 @@ export default function MesLivraisonsScreen({ onBack }: Props) {
   const [livraisons, setLivraisons] = useState<Livraison[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
-  const charger = useCallback(async () => {
-    const data = await getLivraisonsDemandeur();
-    setLivraisons(data);
-    setLoading(false);
-    setRefreshing(false);
+  const charger = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    setLoadError(false);
+    try {
+      const data = await getLivraisonsDemandeur();
+      setLivraisons(data);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
   useEffect(() => { charger(); }, [charger]);
 
-  const onRefresh = () => { setRefreshing(true); charger(); };
+  const onRefresh = () => { setRefreshing(true); charger(true); };
 
   return (
     <View style={s.root}>
@@ -53,6 +61,13 @@ export default function MesLivraisonsScreen({ onBack }: Props) {
       {loading ? (
         <View style={s.center}>
           <ActivityIndicator color={colors.accent} size="large" />
+        </View>
+      ) : loadError ? (
+        <View style={s.center}>
+          <Text style={s.empty}>Impossible de charger les livraisons.</Text>
+          <TouchableOpacity style={s.retry} onPress={() => charger()} activeOpacity={0.8}>
+            <Text style={s.retryTxt}>Réessayer</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -157,4 +172,9 @@ const s = StyleSheet.create({
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   empty: { color: colors.muted, fontFamily: fonts.body, fontSize: 14, textAlign: 'center' },
+  retry: {
+    marginTop: 16, paddingHorizontal: 24, paddingVertical: 10,
+    borderRadius: radius.pill, backgroundColor: colors.accent,
+  },
+  retryTxt: { color: colors.bg, fontFamily: fonts.ui, fontSize: 13 },
 });

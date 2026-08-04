@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  RefreshControl, Alert, Linking,
+  RefreshControl, Alert, Linking, ActivityIndicator,
 } from 'react-native';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import {
@@ -23,11 +23,14 @@ export default function LivreurScreen({ onLogout, onShop }: Props) {
   const [miennes,    setMiennes]    = useState<Livraison[]>([]);
   const [terminees,  setTerminees]  = useState<Livraison[]>([]);
   const [versements, setVersements] = useState<VersementLivreurRow[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [loadError,  setLoadError]  = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [onglet,     setOnglet]     = useState<Onglet>('dispo');
 
-  const charger = useCallback(async () => {
-    setRefreshing(true);
+  const charger = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    setLoadError(false);
     try {
       const [d, m, t, v] = await Promise.all([
         getLivraisonsDisponibles(),
@@ -40,8 +43,9 @@ export default function LivreurScreen({ onLogout, onShop }: Props) {
       setTerminees(t);
       setVersements(v);
     } catch {
-      // erreur réseau silencieuse — les listes restent vides
+      setLoadError(true);
     } finally {
+      setLoading(false);
       setRefreshing(false);
     }
   }, []);
@@ -82,6 +86,25 @@ export default function LivreurScreen({ onLogout, onShop }: Props) {
     if (onglet === 'historique') return terminees;
     return [];
   }, [onglet, dispos, miennes, terminees]);
+
+  if (loading) {
+    return (
+      <View style={[s.container, s.centered]}>
+        <ActivityIndicator color={colors.accent} size="large" />
+      </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View style={[s.container, s.centered]}>
+        <Text style={s.empty}>Impossible de charger les livraisons.</Text>
+        <TouchableOpacity style={s.retryBtn} onPress={() => charger()} activeOpacity={0.8}>
+          <Text style={s.retryTxt}>Réessayer</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={s.container}>
@@ -126,7 +149,7 @@ export default function LivreurScreen({ onLogout, onShop }: Props) {
           data={[]}
           keyExtractor={() => ''}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={charger} tintColor={colors.accent} />
+            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); charger(true); }} tintColor={colors.accent} />
           }
           ListHeaderComponent={
             <View style={s.gainsWrap}>
@@ -186,7 +209,7 @@ export default function LivreurScreen({ onLogout, onShop }: Props) {
           data={liste}
           keyExtractor={item => item.id}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={charger} tintColor={colors.accent} />
+            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); charger(true); }} tintColor={colors.accent} />
           }
           contentContainerStyle={s.list}
           removeClippedSubviews
@@ -356,6 +379,12 @@ const s = StyleSheet.create({
   btnDone: { backgroundColor: colors.success },
   btnText: { color: colors.bg, fontFamily: fonts.ui, fontSize: 14 },
 
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
+  retryBtn: {
+    backgroundColor: colors.accent, borderRadius: radius.pill,
+    paddingHorizontal: 24, paddingVertical: 10,
+  },
+  retryTxt: { color: colors.bg, fontFamily: fonts.ui, fontSize: 13 },
   empty: {
     color: colors.muted, textAlign: 'center',
     marginTop: 40, fontFamily: fonts.body, fontSize: 14,

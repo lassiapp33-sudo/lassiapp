@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import TopBar from '../../components/category/TopBar';
 import CatNavBar from '../../components/category/CatNavBar';
 import { CatId, getCatConfig } from '../../config/categories';
@@ -9,7 +9,7 @@ import VipPodium, { VipEntry } from '../../components/category/VipPodium';
 import FilterBar, { FilterId } from '../../components/category/FilterBar';
 import ShopCard, { Shop as ShopCard_Shop } from '../../components/category/ShopCard';
 import BottomNav, { NavTab, NAV_HEIGHT } from '../../components/home/BottomNav';
-import { colors, fonts } from '../../theme';
+import { colors, fonts, radius } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import * as shopsService from '../../services/shops';
 import AlaUneSection from '../../components/category/AlaUneSection';
@@ -156,6 +156,7 @@ export default function CategoryScreen({
   const [shops, setShops] = useState<Shop[]>([]);
   const [badgeMap, setBadgeMap] = useState<Record<string, RecompenseAttribuee>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
 
   const meta = getCatMeta(catId);
@@ -163,6 +164,7 @@ export default function CategoryScreen({
 
   const loadShops = useCallback(async (cat: CatId) => {
     setLoading(true);
+    setLoadError(false);
     try {
       // Phase 1 : boutiques via fetch direct (pas de GoTrue) → affichage immédiat
       const data = await shopsService.getShopsByCategory(cat);
@@ -178,6 +180,7 @@ export default function CategoryScreen({
     } catch {
       setShops([]);
       setBadgeMap({});
+      setLoadError(true);
       setLoading(false);
     }
   }, []);
@@ -400,6 +403,17 @@ export default function CategoryScreen({
             <View style={styles.empty}>
               {loading ? (
                 <ActivityIndicator color={colors.accent} />
+              ) : loadError ? (
+                <>
+                  <Text style={styles.emptyTxt}>Impossible de charger les boutiques.</Text>
+                  <TouchableOpacity
+                    style={styles.retryBtn}
+                    onPress={() => loadShops(catId)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.retryTxt}>Réessayer</Text>
+                  </TouchableOpacity>
+                </>
               ) : (
                 <Text style={styles.emptyTxt}>{t.category.noShops}</Text>
               )}
@@ -423,6 +437,11 @@ const styles = StyleSheet.create({
   },
   listTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
   listCount: { color: colors.muted, fontFamily: fonts.body, fontSize: 12 },
-  empty: { paddingVertical: 32, alignItems: 'center' },
+  empty: { paddingVertical: 32, alignItems: 'center', gap: 12 },
   emptyTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 13 },
+  retryBtn: {
+    backgroundColor: colors.accent, borderRadius: radius.pill,
+    paddingHorizontal: 22, paddingVertical: 9,
+  },
+  retryTxt: { color: colors.bg, fontFamily: fonts.ui, fontSize: 12 },
 });

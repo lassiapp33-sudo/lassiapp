@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import * as shopsService from '../../services/shops';
@@ -93,14 +93,19 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
   const [query, setQuery] = useState(initialQuery);
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
+  const loadShops = useCallback(() => {
+    setLoading(true);
+    setLoadError(false);
     shopsService
       .getShops()
-      .then(setShops)
-      .catch(() => setShops([]))
+      .then(data => { setShops(data); setLoadError(false); })
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { loadShops(); }, [loadShops]);
 
   // Mise à jour temps réel quand un commerce change ses horaires ou son statut
   useRealtimeShops(updated => {
@@ -152,13 +157,22 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
           </View>
         )}
 
-        {!loading && q && !hasResults && (
+        {!loading && loadError && (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTxt}>Impossible de charger les boutiques.</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={loadShops} activeOpacity={0.8}>
+              <Text style={styles.retryTxt}>Réessayer</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!loading && !loadError && q && !hasResults && (
           <View style={styles.empty}>
             <Text style={styles.emptyTxt}>{t.home.noResults}</Text>
           </View>
         )}
 
-        {!loading && !q && !hasResults && (
+        {!loading && !loadError && !q && !hasResults && (
           <View style={styles.empty}>
             <Text style={styles.emptyTxt}>{t.home.noShops}</Text>
           </View>
@@ -320,10 +334,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 8,
   },
-  empty: { paddingVertical: 48, alignItems: 'center' },
+  empty: { paddingVertical: 48, alignItems: 'center', gap: 14 },
   emptyTxt: {
     color: colors.muted,
     fontFamily: fonts.body,
     fontSize: 14,
   },
+  retryBtn: {
+    backgroundColor: colors.accent, borderRadius: 20,
+    paddingHorizontal: 22, paddingVertical: 9,
+  },
+  retryTxt: { color: colors.bg, fontFamily: fonts.ui, fontSize: 13 },
 });
