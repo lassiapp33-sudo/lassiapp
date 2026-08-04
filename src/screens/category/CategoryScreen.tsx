@@ -330,6 +330,15 @@ export default function CategoryScreen({
     [handleShopPress],
   );
 
+  const renderShopItem = useCallback(
+    ({ item: shop }: { item: ShopCard_Shop }) => (
+      <View style={styles.px}>
+        <ShopCard shop={shop} onPress={() => handleShopPress(shop.id, shop.name)} />
+      </View>
+    ),
+    [handleShopPress],
+  );
+
   const listHeader = useMemo(
     () => (
       <>
@@ -392,11 +401,7 @@ export default function CategoryScreen({
         style={styles.scroll}
         contentContainerStyle={{ paddingBottom: NAV_HEIGHT + 20 }}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item: shop }) => (
-          <View style={styles.px}>
-            <ShopCard shop={shop} onPress={() => handleShopPress(shop.id, shop.name)} />
-          </View>
-        )}
+        renderItem={renderShopItem}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={
           <View style={styles.px}>

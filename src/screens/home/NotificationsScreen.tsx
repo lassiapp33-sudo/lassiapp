@@ -62,13 +62,19 @@ const TYPE_CONFIG: Record<
   livraison: { Icon: IcoTruck, color: colors.success, bg: 'rgba(95,211,138,.13)' },
 };
 
-function NotifCard({ notif, onPress }: { notif: Notif; onPress: () => void }) {
+const NotifCard = React.memo(function NotifCard({
+  notif,
+  onPress,
+}: {
+  notif: Notif;
+  onPress: (n: Notif) => void;
+}) {
   const cfg = TYPE_CONFIG[notif.type];
   const { Icon } = cfg;
   return (
     <TouchableOpacity
       style={[styles.card, notif.unread && styles.cardUnread]}
-      onPress={onPress}
+      onPress={() => onPress(notif)}
       activeOpacity={0.75}
     >
       {notif.unread && <View style={styles.dot} />}
@@ -82,7 +88,7 @@ function NotifCard({ notif, onPress }: { notif: Notif; onPress: () => void }) {
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 interface Props {
   onBack: () => void;
@@ -118,6 +124,11 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
     [markRead, onNavigate],
   );
 
+  const renderNotifItem = useCallback(
+    ({ item }: { item: Notif }) => <NotifCard notif={item} onPress={handlePress} />,
+    [handlePress],
+  );
+
   return (
     <View style={styles.root}>
       <View style={[styles.head, { paddingTop: TOP_INSET + 4 }]}>
@@ -131,7 +142,7 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
         style={styles.scroll}
         sections={sections}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => <NotifCard notif={item} onPress={() => handlePress(item)} />}
+        renderItem={renderNotifItem}
         renderSectionHeader={({ section }) => <Text style={styles.dayLbl}>{section.title}</Text>}
         ListEmptyComponent={
           <View style={styles.empty}>

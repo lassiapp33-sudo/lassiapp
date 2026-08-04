@@ -25,6 +25,43 @@ const STATUT_CONFIG: Record<Livraison['statut'], { label: string; color: string 
   annulee:    { label: 'Annulée',     color: colors.danger },
 };
 
+const LivraisonItemCard = React.memo(function LivraisonItemCard({ item }: { item: Livraison }) {
+  const cfg = STATUT_CONFIG[item.statut];
+  return (
+    <View style={s.card}>
+      <View style={s.cardTop}>
+        <View style={[s.badge, { backgroundColor: cfg.color + '22' }]}>
+          <Text style={[s.badgeTxt, { color: cfg.color }]}>{cfg.label}</Text>
+        </View>
+        <Text style={s.prix}>{formatPrice(item.prix_livraison)}</Text>
+      </View>
+
+      <Text style={s.fieldLabel}>Départ</Text>
+      <Text style={s.fieldValue}>{item.depart_label}</Text>
+      <Text style={s.fieldLabel}>Arrivée</Text>
+      <Text style={s.fieldValue}>{item.arrivee_label}</Text>
+
+      {item.contact_nom ? (
+        <>
+          <Text style={s.fieldLabel}>Destinataire</Text>
+          <Text style={s.fieldValue}>
+            {item.contact_nom}{item.contact_tel ? ` · ${item.contact_tel}` : ''}
+          </Text>
+        </>
+      ) : null}
+
+      <Text style={s.meta}>
+        {Number(item.distance_km).toFixed(1)} km
+        {item.created_at
+          ? ` · ${new Date(item.created_at).toLocaleDateString('fr-SN', {
+              day: 'numeric', month: 'short',
+            })}`
+          : ''}
+      </Text>
+    </View>
+  );
+});
+
 export default function MesLivraisonsScreen({ onBack }: Props) {
   const [livraisons, setLivraisons] = useState<Livraison[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,42 +119,7 @@ export default function MesLivraisonsScreen({ onBack }: Props) {
               <Text style={s.empty}>Aucune livraison pour l'instant.</Text>
             </View>
           }
-          renderItem={({ item }) => {
-            const cfg = STATUT_CONFIG[item.statut];
-            return (
-              <View style={s.card}>
-                <View style={s.cardTop}>
-                  <View style={[s.badge, { backgroundColor: cfg.color + '22' }]}>
-                    <Text style={[s.badgeTxt, { color: cfg.color }]}>{cfg.label}</Text>
-                  </View>
-                  <Text style={s.prix}>{formatPrice(item.prix_livraison)}</Text>
-                </View>
-
-                <Text style={s.fieldLabel}>Départ</Text>
-                <Text style={s.fieldValue}>{item.depart_label}</Text>
-                <Text style={s.fieldLabel}>Arrivée</Text>
-                <Text style={s.fieldValue}>{item.arrivee_label}</Text>
-
-                {item.contact_nom ? (
-                  <>
-                    <Text style={s.fieldLabel}>Destinataire</Text>
-                    <Text style={s.fieldValue}>
-                      {item.contact_nom}{item.contact_tel ? ` · ${item.contact_tel}` : ''}
-                    </Text>
-                  </>
-                ) : null}
-
-                <Text style={s.meta}>
-                  {Number(item.distance_km).toFixed(1)} km
-                  {item.created_at
-                    ? ` · ${new Date(item.created_at).toLocaleDateString('fr-SN', {
-                        day: 'numeric', month: 'short',
-                      })}`
-                    : ''}
-                </Text>
-              </View>
-            );
-          }}
+          renderItem={({ item }) => <LivraisonItemCard item={item} />}
         />
       )}
     </View>

@@ -15,15 +15,15 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 interface ConvCardProps {
   conv: Conversation;
   shop: Shop | undefined;
-  onPress: () => void;
+  onPress: (conv: Conversation, shop: Shop | undefined) => void;
 }
 
-function ConvCard({ conv, shop, onPress }: ConvCardProps) {
+const ConvCard = React.memo(function ConvCard({ conv, shop, onPress }: ConvCardProps) {
   const unread = conv.clientUnread;
   const name = shop?.name ?? 'Boutique';
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity style={styles.card} onPress={() => onPress(conv, shop)} activeOpacity={0.8}>
       {/* Logo boutique — Avatar unique, source de vérité shops.logo_url */}
       <Avatar imageUrl={shop?.logoUrl} name={name} size={46} variant="shop" />
 
@@ -46,7 +46,7 @@ function ConvCard({ conv, shop, onPress }: ConvCardProps) {
       )}
     </TouchableOpacity>
   );
-}
+});
 
 interface Props {
   onBack: () => void;
@@ -102,6 +102,23 @@ export default function ClientMessagesScreen({ onBack }: Props) {
     load();
   }, [load]);
 
+  const handleConvPress = useCallback((conv: Conversation, shop: Shop | undefined) => {
+    setOpenChat({
+      conversationId: conv.id,
+      shopId: conv.shopId,
+      shopName: shop?.name ?? 'Boutique',
+      shopInitial: shop?.name.charAt(0).toUpperCase() ?? 'B',
+      shopLogoUrl: shop?.logoUrl ?? null,
+    });
+  }, []);
+
+  const renderConvItem = useCallback(
+    ({ item }: { item: Conversation }) => (
+      <ConvCard conv={item} shop={shops[item.shopId]} onPress={handleConvPress} />
+    ),
+    [shops, handleConvPress],
+  );
+
   if (openChat) {
     return (
       <ChatScreen
@@ -148,24 +165,7 @@ export default function ClientMessagesScreen({ onBack }: Props) {
           keyExtractor={c => c.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => {
-            const shop = shops[item.shopId];
-            return (
-              <ConvCard
-                conv={item}
-                shop={shop}
-                onPress={() =>
-                  setOpenChat({
-                    conversationId: item.id,
-                    shopId: item.shopId,
-                    shopName: shop?.name ?? 'Boutique',
-                    shopInitial: shop?.name.charAt(0).toUpperCase() ?? 'B',
-                    shopLogoUrl: shop?.logoUrl ?? null,
-                  })
-                }
-              />
-            );
-          }}
+          renderItem={renderConvItem}
         />
       )}
     </View>
