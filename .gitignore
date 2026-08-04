@@ -43,3 +43,7 @@ yarn-error.*
 
 # Firebase — google-services.json inclus dans git (config client non-secrète, nécessaire pour EAS)
 # /google-services.json
+
+# EAS credentials — keystore + credentials.json (JAMAIS dans git)
+credentials.json
+credentials/
