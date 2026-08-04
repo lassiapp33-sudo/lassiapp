@@ -268,14 +268,33 @@ export async function getMerchantAds(shopId: string): Promise<SponsoredAd[]> {
   }));
 }
 
-// ─── Enregistrer une vue (fire-and-forget) ───────────────────────────────────
+// ─── Tracking : vue et contact ───────────────────────────────────────────────
+// Retry automatique (jusqu'à 3 tentatives) pour éviter les pertes silencieuses
+// dues aux aléas réseau. Le premier appel est immédiat ; les suivants attendent
+// respectivement 2 s et 5 s.
 
-export function incrementerVue(adId: string): void {
-  void supabase.rpc('incrementer_vue_annonce', { p_ad_id: adId });
+const RETRY_DELAYS_MS = [0, 2000, 5000];
+
+async function callWithRetry(
+  rpcName: string,
+  params: Record<string, unknown>,
+): Promise<void> {
+  for (let attempt = 0; attempt < RETRY_DELAYS_MS.length; attempt++) {
+    if (RETRY_DELAYS_MS[attempt] > 0) {
+      await new Promise(r => setTimeout(r, RETRY_DELAYS_MS[attempt]));
+    }
+    const { error } = await supabase.rpc(rpcName, params);
+    if (!error) return;
+    if (__DEV__) {
+      console.warn(`[SponsoredAds] ${rpcName} tentative ${attempt + 1} échouée :`, error.message ?? error);
+    }
+  }
 }
 
-// ─── Enregistrer un contact (fire-and-forget) ─────────────────────────────────
+export function incrementerVue(adId: string): void {
+  void callWithRetry('incrementer_vue_annonce', { p_ad_id: adId });
+}
 
 export function incrementerContact(adId: string): void {
-  void supabase.rpc('incrementer_contact_annonce', { p_ad_id: adId });
+  void callWithRetry('incrementer_contact_annonce', { p_ad_id: adId });
 }

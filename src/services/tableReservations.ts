@@ -182,11 +182,16 @@ export const validateTableArrival = async (
 // ─── Annuler une réservation (client, seulement si en_attente) ────────────────
 
 export const cancelMyReservation = async (reservationId: string): Promise<void> => {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('table_reservations')
     .update({ statut: 'annulee', updated_at: new Date().toISOString() })
-    .eq('id', reservationId);
+    .eq('id', reservationId)
+    .in('statut', ['en_attente', 'alternative_proposee'])
+    .select('id');
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error('Cette réservation ne peut plus être annulée (déjà acceptée, refusée ou annulée).');
+  }
 };
 
 // ─── Gestion des espaces (gérant) ────────────────────────────────────────────

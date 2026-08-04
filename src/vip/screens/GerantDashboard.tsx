@@ -17,7 +17,7 @@ import useGerantStore from '../../store/gerantStore';
 import { TOP_INSET } from '../../theme';
 import { deconnexionVip } from '../authVip';
 
-type TileId = 'profil' | 'registre' | 'horaires' | 'maison' | 'changeMdp' | 'alaune' | 'avis' | 'classement' | 'livraison' | 'autourDeMoi' | 'reservations_table' | 'espaces_config' | 'creneaux_config' | 'rdv_beauty' | 'creneaux_beauty';
+type TileId = 'profil' | 'registre' | 'horaires' | 'maison' | 'changeMdp' | 'alaune' | 'avis' | 'classement' | 'livraison' | 'autourDeMoi' | 'reservations_table' | 'scan_arrivee' | 'espaces_config' | 'creneaux_config' | 'rdv_beauty' | 'creneaux_beauty';
 
 interface Tile {
   id: TileId;
@@ -42,6 +42,7 @@ const TILES2: Tile[] = [
 
 const TILES_RESTAURATION: Tile[] = [
   { id: 'reservations_table', label: 'Réservations',  desc: 'Gérer les demandes de table clients' },
+  { id: 'scan_arrivee',       label: 'Scan arrivée',  desc: 'Valider le QR code du client à l\'entrée' },
   { id: 'espaces_config',     label: 'Mes espaces',   desc: 'Étages, terrasses, salles — configurer' },
   { id: 'creneaux_config',    label: 'Mes créneaux',  desc: 'Déjeuner, dîner, brunch — horaires' },
 ];

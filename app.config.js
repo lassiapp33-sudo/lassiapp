@@ -56,10 +56,6 @@ module.exports = withSecurityPlugins({
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
           "LASSİ utilise ta position pour te montrer les commerces autour de toi.",
-        NSLocationAlwaysAndWhenInUseUsageDescription:
-          "LASSİ utilise ta position pour te montrer les commerces autour de toi.",
-        NSCameraUsageDescription:
-          "LASSİ accède à ta caméra pour scanner les QR codes de réservation terrain.",
         NSMicrophoneUsageDescription:
           "LASSİ utilise le micro pour enregistrer un message vocal joint à ta commande.",
         ITSAppUsesNonExemptEncryption: false,
@@ -94,7 +90,7 @@ module.exports = withSecurityPlugins({
         "expo-camera",
         {
           cameraPermission:
-            "LASSİ accède à ta caméra pour scanner les QR codes de réservation terrain.",
+            "LASSİ accède à ta caméra pour scanner les QR codes de réservation et photographier tes produits.",
         },
       ],
       [
@@ -110,7 +106,17 @@ module.exports = withSecurityPlugins({
           photosPermission:
             "LASSİ accède à ta galerie pour ajouter des photos de produits.",
           cameraPermission:
-            "LASSİ accède à ta caméra pour photographier tes produits.",
+            "LASSİ accède à ta caméra pour scanner les QR codes de réservation et photographier tes produits.",
+        },
+      ],
+      [
+        "expo-media-library",
+        {
+          photosPermission:
+            "LASSİ accède à ta galerie pour sauvegarder les images reçues dans le chat.",
+          savePhotosPermission:
+            "LASSİ sauvegarde les images reçues dans ta galerie.",
+          isAccessMediaLocationEnabled: false,
         },
       ],
       [

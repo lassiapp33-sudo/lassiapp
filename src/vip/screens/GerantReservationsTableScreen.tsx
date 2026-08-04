@@ -120,6 +120,9 @@ export default function GerantReservationsTableScreen({ onBack, onScanQR }: Prop
   const [modalResa, setModalResa]         = useState<Resa | null>(null);
   const [messageGerant, setMessageGerant] = useState('');
   const [submitting, setSubmitting]       = useState(false);
+  const [showAltFields, setShowAltFields] = useState(false);
+  const [altDate, setAltDate]             = useState('');
+  const [altHeure, setAltHeure]           = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -135,18 +138,43 @@ export default function GerantReservationsTableScreen({ onBack, onScanQR }: Prop
 
   useEffect(() => { load(); }, [load]);
 
+  const resetModal = () => {
+    setModalResa(null);
+    setMessageGerant('');
+    setShowAltFields(false);
+    setAltDate('');
+    setAltHeure('');
+  };
+
   // L'action est passée directement en paramètre pour éviter le timing async de setState
   const handleAction = async (actionParam: 'accepter' | 'refuser' | 'proposer_alternative') => {
     if (!modalResa) return;
+
+    if (actionParam === 'proposer_alternative' && !showAltFields) {
+      setShowAltFields(true);
+      return;
+    }
+
+    if (actionParam === 'proposer_alternative') {
+      const dateOk   = /^\d{4}-\d{2}-\d{2}$/.test(altDate.trim());
+      const heureOk  = /^\d{2}:\d{2}$/.test(altHeure.trim());
+      if (!dateOk || !heureOk) {
+        Alert.alert('Champs requis', 'Saisir une date (AAAA-MM-JJ) et une heure (HH:MM) pour l\'alternative.');
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       await processTableReservation({
-        reservationId: modalResa.id,
-        action:        actionParam,
-        messageGerant: messageGerant.trim() || undefined,
+        reservationId:  modalResa.id,
+        action:         actionParam,
+        messageGerant:  messageGerant.trim() || undefined,
+        altDate:        actionParam === 'proposer_alternative' ? altDate.trim() : undefined,
+        altHeureDebut:  actionParam === 'proposer_alternative' ? altHeure.trim() : undefined,
+        altMessage:     actionParam === 'proposer_alternative' ? (messageGerant.trim() || undefined) : undefined,
       });
-      setModalResa(null);
-      setMessageGerant('');
+      resetModal();
       load();
     } catch (err) {
       Alert.alert('Erreur', getErrorMessage(err));
@@ -212,7 +240,7 @@ export default function GerantReservationsTableScreen({ onBack, onScanQR }: Prop
               <TouchableOpacity
                 key={resa.id}
                 style={s.card}
-                onPress={() => { setModalResa(resa); setMessageGerant(''); }}
+                onPress={() => { setModalResa(resa); setMessageGerant(''); setShowAltFields(false); setAltDate(''); setAltHeure(''); }}
                 activeOpacity={0.85}
               >
                 <View style={s.cardTop}>
@@ -249,7 +277,7 @@ export default function GerantReservationsTableScreen({ onBack, onScanQR }: Prop
         animationType="slide"
         onRequestClose={() => setModalResa(null)}
       >
-        <Pressable style={s.overlay} onPress={() => setModalResa(null)}>
+        <Pressable style={s.overlay} onPress={resetModal}>
           <View style={s.sheet} onStartShouldSetResponder={() => true}>
             {modalResa && (
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -271,7 +299,7 @@ export default function GerantReservationsTableScreen({ onBack, onScanQR }: Prop
                 {modalResa.statut === 'en_attente' && (
                   <>
                     <View style={s.sheetDivider} />
-                    <Text style={s.sheetSectionTxt}>Votre message (optionnel)</Text>
+                    <Text style={s.sheetSectionTxt}>Message (optionnel)</Text>
                     <TextInput
                       style={s.messageInput}
                       placeholder="Ex : Votre table vous attend avec plaisir…"
@@ -281,6 +309,30 @@ export default function GerantReservationsTableScreen({ onBack, onScanQR }: Prop
                       multiline
                       maxLength={500}
                     />
+
+                    {showAltFields && (
+                      <>
+                        <Text style={[s.sheetSectionTxt, { marginTop: 12 }]}>Proposition d'alternative</Text>
+                        <TextInput
+                          style={s.altInput}
+                          placeholder="Date alternative (AAAA-MM-JJ)"
+                          placeholderTextColor={r.couleur.gris}
+                          value={altDate}
+                          onChangeText={setAltDate}
+                          keyboardType="numeric"
+                          maxLength={10}
+                        />
+                        <TextInput
+                          style={[s.altInput, { marginTop: 8 }]}
+                          placeholder="Heure alternative (HH:MM)"
+                          placeholderTextColor={r.couleur.gris}
+                          value={altHeure}
+                          onChangeText={setAltHeure}
+                          keyboardType="numeric"
+                          maxLength={5}
+                        />
+                      </>
+                    )}
 
                     <View style={s.actionsRow}>
                       <TouchableOpacity
@@ -292,12 +344,12 @@ export default function GerantReservationsTableScreen({ onBack, onScanQR }: Prop
                         <Text style={s.btnRefuserTxt}>Refuser</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={[s.actionBtn, s.btnAlternative]}
-                        onPress={() => Alert.alert('Alternative', 'Pour proposer une alternative, utilisez l\'option dans les paramètres avancés.')}
+                        style={[s.actionBtn, s.btnAlternative, showAltFields && s.btnAlternativeOn]}
+                        onPress={() => handleAction('proposer_alternative')}
                         disabled={submitting}
                         activeOpacity={0.8}
                       >
-                        <Text style={s.btnAlternativeTxt}>Alternative</Text>
+                        <Text style={s.btnAlternativeTxt}>{showAltFields ? 'Envoyer' : 'Alternative'}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[s.actionBtn, s.btnAccepter]}
@@ -314,7 +366,7 @@ export default function GerantReservationsTableScreen({ onBack, onScanQR }: Prop
                   </>
                 )}
 
-                <TouchableOpacity style={s.closeSheetBtn} onPress={() => setModalResa(null)} activeOpacity={0.8}>
+                <TouchableOpacity style={s.closeSheetBtn} onPress={resetModal} activeOpacity={0.8}>
                   <Text style={s.closeSheetTxt}>Fermer</Text>
                 </TouchableOpacity>
               </ScrollView>
@@ -443,8 +495,20 @@ const s = StyleSheet.create({
   actionBtn:  { flex: 1, height: 46, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   btnRefuser: { borderColor: '#E55C5C', backgroundColor: 'rgba(229,92,92,0.10)' },
   btnRefuserTxt: { color: '#E55C5C', fontFamily: r.police.util, fontSize: 12 },
-  btnAlternative: { borderColor: r.couleur.or, backgroundColor: 'transparent' },
+  btnAlternative:   { borderColor: r.couleur.or, backgroundColor: 'transparent' },
+  btnAlternativeOn: { backgroundColor: `${r.couleur.or}22` },
   btnAlternativeTxt: { color: r.couleur.or, fontFamily: r.police.util, fontSize: 12 },
+
+  altInput: {
+    borderWidth: 1,
+    borderColor: r.couleur.filet,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: r.couleur.ivoire,
+    fontFamily: r.police.util,
+    fontSize: 13,
+  },
   btnAccepter: { borderColor: 'transparent', backgroundColor: r.couleur.orLassi },
   btnAccepterTxt: { color: r.couleur.encre, fontFamily: r.police.titre, fontSize: 13 },
 

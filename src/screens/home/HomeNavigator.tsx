@@ -67,11 +67,7 @@ function ReservationTicketLoader({ reservationId, onBack }: { reservationId: str
 }
 
 function MesReservationsTableWithTicket({ onBack, onPushTicket }: { onBack: () => void; onPushTicket: (id: string) => void }) {
-  const [ticketResa, setTicketResa] = React.useState<import('../../types/tableReservation').TableReservation | null>(null);
-  if (ticketResa) {
-    return <ReservationTicketScreen reservation={ticketResa} vipNom={ticketResa.vip_profils?.nom_affiche ?? ''} onBack={() => setTicketResa(null)} />;
-  }
-  return <MesReservationsTableScreen onBack={onBack} onViewTicket={(r) => setTicketResa(r)} />;
+  return <MesReservationsTableScreen onBack={onBack} onViewTicket={(r) => onPushTicket(r.id)} />;
 }
 
 // ─── Stack de navigation client ───────────────────────────────────────────────
@@ -164,13 +160,14 @@ export default function HomeNavigator({ onLogout }: Props) {
   const [mapFilter, setMapFilter] = useState('all');
   const [mapSearch, setMapSearch] = useState('');
 
-  // Identifiants des établissements 5 Étoiles actifs (chargé une fois au démarrage)
+  // Identifiants des établissements 5 Étoiles actifs — rafraîchi à chaque retour à l'accueil
   const [vipShopIds, setVipShopIds] = useState<Set<string>>(new Set());
   useEffect(() => {
+    if (screen.id !== 'main') return;
     getVipListe().then(liste => {
       setVipShopIds(new Set(liste.map(v => v.shopId)));
     }).catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [screen.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Unique point de branchement : 5 Étoiles → FicheVip, sinon → ShopScreen
   const pushShop = (shopId: string, shopName: string) => {

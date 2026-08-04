@@ -252,6 +252,7 @@ export default function ClientHomeScreen({
 
   const handleSponsoredContact = () => {
     if (!sponsoredAdModal) return;
+    incrementerContact(sponsoredAdModal.id);
     dismissSponsoredAd();
     onContactShop?.(sponsoredAdModal.shopId, sponsoredAdModal.shopName ?? '', sponsoredAdModal.shopLogoUrl ?? null);
   };

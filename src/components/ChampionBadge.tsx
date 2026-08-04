@@ -1,30 +1,14 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { colors } from '../theme';
-import ShimmerOverlay from './ShimmerOverlay';
-import { IcoCrown } from './common/LassiIcons';
+import { Text, StyleSheet } from 'react-native';
 
-const SIZE = 20;
-
-// Petit badge doré scintillant — affiché à côté du nom sur les cartes de liste
-// quand le prestataire a une récompense de classement active.
+// Badge affiché quand le prestataire a une récompense de classement active.
 export default function ChampionBadge() {
-  return (
-    <View style={styles.badge}>
-      <ShimmerOverlay width={SIZE} />
-      <IcoCrown size={13} />
-    </View>
-  );
+  return <Text style={styles.trophy}>🏆</Text>;
 }
 
 const styles = StyleSheet.create({
-  badge: {
-    width: SIZE,
-    height: SIZE,
-    borderRadius: 6,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
+  trophy: {
+    fontSize: 18,
+    lineHeight: 22,
   },
 });
