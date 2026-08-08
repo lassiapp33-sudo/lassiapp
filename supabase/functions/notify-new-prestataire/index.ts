@@ -49,10 +49,11 @@ Deno.serve(async (req) => {
 
     const sb = createClient(SUPABASE_URL, SUPABASE_SRK);
 
-    const { shopId, shopName, category } = await req.json() as {
-      shopId:   string;
-      shopName: string;
-      category: string;
+    const { shopId, shopName, category, shopCreatedAt } = await req.json() as {
+      shopId:        string;
+      shopName:      string;
+      category:      string;
+      shopCreatedAt: string; // ISO 8601 — timestamp d'insertion du shop dans shops
     };
 
     if (!shopId || !shopName) return fail('Paramètres manquants', 400);
@@ -61,16 +62,21 @@ Deno.serve(async (req) => {
     const title = '🏪 Nouveau prestataire !';
     const body  = `${shopName} vient de rejoindre LASSI — ${categoryLabel}`;
 
-    // 1. Récupérer tous les clients
-    const { data: clients, error: clientErr } = await sb
-      .from('profiles')
-      .select('id')
-      .eq('role', 'client');
+    // 1. Récupérer uniquement les clients qui existaient AVANT (ou au moment)
+    //    de la création du shop.
+    //    pg_net est asynchrone : sans ce filtre, l'EF peut s'exécuter avec un
+    //    délai et inclure des clients inscrits APRÈS le prestataire, leur
+    //    envoyant des notifications sur un "nouveau" prestataire qui était
+    //    en réalité déjà là avant eux.
+    const baseQuery = sb.from('profiles').select('id').eq('role', 'client');
+    const { data: clients, error: clientErr } = await (
+      shopCreatedAt ? baseQuery.lte('created_at', shopCreatedAt) : baseQuery
+    );
 
     if (clientErr) throw new Error(clientErr.message);
 
     const clientIds = (clients ?? []).map(r => r.id as string);
-    if (clientIds.length === 0) return ok({ sent: false, reason: 'Aucun client.' });
+    if (clientIds.length === 0) return ok({ sent: false, reason: 'Aucun client antérieur.' });
 
     // 2. Insérer une notification individuelle par client (table notifications)
     //    → déclenche Realtime + popup NotifCardModal + bouton "Voir la vitrine"
