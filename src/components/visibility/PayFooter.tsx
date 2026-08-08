@@ -11,6 +11,7 @@ import Svg, { Path, Rect, Circle, Polyline } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { VisibilityPlan, type PayMethod } from '../../services/visibilityPayment';
 import { formatPrice } from '../../utils/format';
+import { WAVE_ENABLED } from '../../config/features';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -116,20 +117,22 @@ export default function PayFooter({
         </TouchableOpacity>
 
         {/* Wave */}
-        <TouchableOpacity
-          style={[s.payRow, payMethod === 'wave' && s.payRowActive, !waveOk && s.payRowDisabled]}
-          onPress={() => { if (waveOk) onMethodChange('wave'); }}
-          activeOpacity={waveOk ? 0.8 : 1}
-        >
-          <View style={[s.payRadio, payMethod === 'wave' && s.payRadioActive]}>
-            {payMethod === 'wave' ? <IcoCheck /> : !waveOk ? <IcoLock /> : null}
-          </View>
-          <View style={s.payInfo}>
-            <Text style={[s.payName, payMethod === 'wave' && s.payNameActive]}>Wave</Text>
-            <Text style={s.payDesc}>{waveOk ? 'Paiement mobile sécurisé' : 'Bientôt disponible'}</Text>
-          </View>
-          <Text style={[s.payPrice, payMethod === 'wave' && s.payPriceActive]}>{price}</Text>
-        </TouchableOpacity>
+        {WAVE_ENABLED && (
+          <TouchableOpacity
+            style={[s.payRow, payMethod === 'wave' && s.payRowActive, !waveOk && s.payRowDisabled]}
+            onPress={() => { if (waveOk) onMethodChange('wave'); }}
+            activeOpacity={waveOk ? 0.8 : 1}
+          >
+            <View style={[s.payRadio, payMethod === 'wave' && s.payRadioActive]}>
+              {payMethod === 'wave' ? <IcoCheck /> : !waveOk ? <IcoLock /> : null}
+            </View>
+            <View style={s.payInfo}>
+              <Text style={[s.payName, payMethod === 'wave' && s.payNameActive]}>Wave</Text>
+              <Text style={s.payDesc}>{waveOk ? 'Paiement mobile sécurisé' : 'Bientôt disponible'}</Text>
+            </View>
+            <Text style={[s.payPrice, payMethod === 'wave' && s.payPriceActive]}>{price}</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Orange Money */}
         <TouchableOpacity

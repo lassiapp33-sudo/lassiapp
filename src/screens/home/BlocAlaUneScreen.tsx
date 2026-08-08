@@ -19,6 +19,7 @@ import Avatar from '../../components/Avatar';
 import { formatPrice } from '../../utils/format';
 import { supabase } from '../../lib/supabase';
 import PayMethodCard from '../../components/payment/PayMethodCard';
+import { WAVE_ENABLED } from '../../config/features';
 import * as payService from '../../services/payment';
 import { calculerPrixClient, calculerCommission } from '../../config/payment';
 import { notifyError } from '../../utils/errorUtils';
@@ -106,7 +107,7 @@ interface CheckoutSheetProps {
 }
 
 function CheckoutSheet({ el, shopName, loading, onConfirm, onClose }: CheckoutSheetProps) {
-  const [method, setMethod] = useState<PayMethod>('wave');
+  const [method, setMethod] = useState<PayMethod>(WAVE_ENABLED ? 'wave' : 'om');
   const prixClient = calculerPrixClient(el.prix);
   const commission = calculerCommission(el.prix);
 
@@ -134,7 +135,7 @@ function CheckoutSheet({ el, shopName, loading, onConfirm, onClose }: CheckoutSh
 
           {/* Moyen de paiement */}
           <Text style={styles.csMethodLabel}>Moyen de paiement</Text>
-          <PayMethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />
+          {WAVE_ENABLED && <PayMethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />}
           <PayMethodCard method="om"   selected={method === 'om'}   onSelect={() => setMethod('om')} />
 
           {/* Bouton payer */}

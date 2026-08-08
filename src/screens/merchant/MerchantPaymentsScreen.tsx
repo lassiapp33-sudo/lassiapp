@@ -21,6 +21,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { PaymentWeekChart } from '../../components/merchant/PaymentWeekChart';
 import { PaymentReceiptModal } from '../../components/merchant/PaymentReceiptModal';
 import { MerchantPaymentCard } from '../../components/merchant/MerchantPaymentCard';
+import { WAVE_ENABLED } from '../../config/features';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ const IcoTrend = () => (
 
 const FILTER_TABS: { id: PaymentFilter; label: string }[] = [
   { id: 'all', label: 'Tous' },
-  { id: 'wave', label: 'Wave' },
+  ...(WAVE_ENABLED ? [{ id: 'wave' as PaymentFilter, label: 'Wave' }] : []),
   { id: 'om', label: 'Orange Money' },
 ];
 

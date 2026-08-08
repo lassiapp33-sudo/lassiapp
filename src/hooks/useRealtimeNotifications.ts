@@ -3,10 +3,12 @@ import { AppState } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { Notif } from '../store/notificationsStore';
 import { rowToNotif } from '../services/notifications';
+import useNotificationsStore from '../store/notificationsStore';
 
 /**
  * Abonnement Realtime sur la table notifications, filtré par userId.
  * Appelle onNewNotif à chaque nouvelle notification insérée.
+ * Au retour en foreground, recharge aussi les notifs manquées (offline/background).
  */
 export function useRealtimeNotifications(
   userId: string | null,
@@ -41,6 +43,8 @@ export function useRealtimeNotifications(
       if (state === 'active') {
         supabase.removeChannel(channel);
         channel = subscribe();
+        // Recharge les notifs manquées pendant l'absence (offline/background)
+        useNotificationsStore.getState().loadNotifications();
       }
     });
 

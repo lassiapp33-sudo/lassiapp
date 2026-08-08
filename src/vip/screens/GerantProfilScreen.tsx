@@ -24,6 +24,7 @@ import SignalerProblemeScreen from '../../screens/common/SignalerProblemeScreen'
 import AProposScreen from '../../screens/common/AProposScreen';
 import LanguageModal from '../../components/common/LanguageModal';
 import { contacterServiceClient } from '../../config/contact';
+import { VISIBILITY_PACKS_ENABLED } from '../../config/features';
 import DeleteAccountModal from '../../components/common/DeleteAccountModal';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -347,18 +348,22 @@ export default function GerantProfilScreen({ onBack, onNav, onPreview, onLogout 
             sousTitre="Baseline, mot du gérant, initiale"
             onPress={() => onNav('maison')}
           />
-          <Ligne
-            icone={<IcoTrend />}
-            titre="Visibilité"
-            sousTitre="3 façons d'être plus visible"
-            onPress={() => onNav('visibilite')}
-          />
-          <Ligne
-            icone={<IcoMega />}
-            titre="Ma Campagne"
-            sousTitre="Annonces sponsorisées & forfaits actifs"
-            onPress={() => onNav('campagne')}
-          />
+          {VISIBILITY_PACKS_ENABLED && (
+            <>
+              <Ligne
+                icone={<IcoTrend />}
+                titre="Visibilité"
+                sousTitre="3 façons d'être plus visible"
+                onPress={() => onNav('visibilite')}
+              />
+              <Ligne
+                icone={<IcoMega />}
+                titre="Ma Campagne"
+                sousTitre="Annonces sponsorisées & forfaits actifs"
+                onPress={() => onNav('campagne')}
+              />
+            </>
+          )}
           <Ligne
             icone={<IcoDollar />}
             titre="Mes revenus"

@@ -8,6 +8,7 @@ import { createPayment } from '../../services/payment';
 import { Terrain, ReservationTerrain } from '../../types/terrain';
 import useAuthStore from '../../store/authStore';
 import logger from '../../utils/logger';
+import { WAVE_ENABLED } from '../../config/features';
 
 interface Props {
   visible: boolean;
@@ -40,7 +41,7 @@ export default function ReservationModal({
 }: Props) {
   const user = useAuthStore(s => s.user);
   const [stage, setStage] = useState<Stage>('confirm');
-  const [paiement, setPaiement] = useState<MoyenPaiement>('wave');
+  const [paiement, setPaiement] = useState<MoyenPaiement>(WAVE_ENABLED ? 'wave' : 'orange_money');
   const [loading, setLoading] = useState(false);
   const referenceRef = useRef('');
 
@@ -148,7 +149,7 @@ export default function ReservationModal({
               </Text>
 
               <View style={styles.paiRow}>
-                {(['wave', 'orange_money'] as const).map(m => (
+                {(['wave', 'orange_money'] as const).filter(m => m !== 'wave' || WAVE_ENABLED).map(m => (
                   <TouchableOpacity
                     key={m}
                     style={[styles.paiBtn, paiement === m && styles.paiBtnActive]}

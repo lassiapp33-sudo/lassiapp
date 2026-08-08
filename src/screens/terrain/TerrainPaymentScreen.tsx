@@ -16,6 +16,7 @@ import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { PayMethod } from '../../types/payment';
+import { WAVE_ENABLED } from '../../config/features';
 import useAuthStore from '../../store/authStore';
 import * as terrainsService from '../../services/terrains';
 import * as payService from '../../services/payment';
@@ -158,7 +159,7 @@ export default function TerrainPaymentScreen({
 }: Props) {
   const clientId = useAuthStore(s => s.user?.id ?? '');
   const [stage, setStage] = useState<Stage>('checkout');
-  const [method, setMethod] = useState<PayMethod>('wave');
+  const [method, setMethod] = useState<PayMethod>(WAVE_ENABLED ? 'wave' : 'om');
   const [processing, setProcessing] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const referenceRef = useRef('');
@@ -303,7 +304,7 @@ export default function TerrainPaymentScreen({
 
         {/* Méthode de paiement */}
         <Text style={styles.secLabel}>Mode de paiement</Text>
-        <MethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />
+        {WAVE_ENABLED && <MethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />}
         <MethodCard method="om" selected={method === 'om'} onSelect={() => setMethod('om')} />
 
         <View style={{ height: 20 }} />

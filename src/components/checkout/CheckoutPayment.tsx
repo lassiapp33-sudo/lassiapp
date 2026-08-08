@@ -34,6 +34,7 @@ import {
   PAYMENT_CONFIG,
   MoyenPaiement,
 } from '../../services/paymentService';
+import { WAVE_ENABLED } from '../../config/features';
 
 interface Props {
   orderId: string;
@@ -43,7 +44,7 @@ interface Props {
 }
 
 export default function CheckoutPayment({ orderId, prestataireId, prixBase, onSuccess }: Props) {
-  const [moyen, setMoyen] = useState<MoyenPaiement>('wave');
+  const [moyen, setMoyen] = useState<MoyenPaiement>(WAVE_ENABLED ? 'wave' : 'orange_money');
   const [loading, setLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
 
@@ -104,7 +105,7 @@ export default function CheckoutPayment({ orderId, prestataireId, prixBase, onSu
 
       <Text style={styles.sectionLabel}>Payer avec</Text>
       <View style={styles.moyenRow}>
-        {PAYMENT_CONFIG.MOYENS_PAIEMENT.map((m) => (
+        {PAYMENT_CONFIG.MOYENS_PAIEMENT.filter(m => m !== 'wave' || WAVE_ENABLED).map((m) => (
           <TouchableOpacity
             key={m}
             style={[styles.moyenBtn, moyen === m && styles.moyenBtnActive]}

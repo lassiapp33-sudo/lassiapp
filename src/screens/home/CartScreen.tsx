@@ -28,6 +28,7 @@ import { notifyError } from '../../utils/errorUtils';
 import { calculerCommission, calculerPrixClient, calculerCommissionVip, calculerPrixClientVip } from '../../config/payment';
 import { PayMethod } from '../../types/payment';
 import PayMethodCard from '../../components/payment/PayMethodCard';
+import { WAVE_ENABLED } from '../../config/features';
 import * as payService from '../../services/payment';
 import LivraisonModal from '../../components/livraison/LivraisonModal';
 import { devisLivraison } from '../../config/livraison';
@@ -122,7 +123,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
   const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [discounts, setDiscounts] = useState<AppliedDiscount[]>([]);
-  const [method, setMethod] = useState<PayMethod>('wave');
+  const [method, setMethod] = useState<PayMethod>(WAVE_ENABLED ? 'wave' : 'om');
   const [showLivraisonModal, setShowLivraisonModal] = useState(false);
   const [shopCoords, setShopCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [clientCoords, setClientCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -330,9 +331,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
           });
           if (!paid) {
             notifyError(
-              method === 'om'
-                ? "Orange Money n'est pas encore disponible. Utilise Wave."
-                : 'Paiement simulé non confirmé. Réessaie.',
+              'Paiement simulé non confirmé. Réessaie.',
             );
             return;
           }
@@ -589,11 +588,13 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
 
           {/* Moyen de paiement */}
           <Text style={styles.payMethodTitle}>Moyen de paiement</Text>
-          <PayMethodCard
-            method="wave"
-            selected={method === 'wave'}
-            onSelect={() => setMethod('wave')}
-          />
+          {WAVE_ENABLED && (
+            <PayMethodCard
+              method="wave"
+              selected={method === 'wave'}
+              onSelect={() => setMethod('wave')}
+            />
+          )}
           <PayMethodCard
             method="om"
             selected={method === 'om'}

@@ -22,6 +22,7 @@ import ConfirmView from '../../components/payment/ConfirmView';
 import { colors, fonts, radius } from '../../theme';
 import { OrderInfo, PayMethod } from '../../types/payment';
 import * as payService from '../../services/payment';
+import { WAVE_ENABLED } from '../../config/features';
 import logger from '../../utils/logger';
 import { formatPrice } from '../../utils/format';
 
@@ -125,7 +126,9 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
   const [stage, setStage] = useState<Stage>(
     order.paymentConfirmed ? 'confirm' : order.preInitiatedPiId ? 'waiting' : 'checkout',
   );
-  const [method, setMethod] = useState<PayMethod>(order.preMethod ?? 'wave');
+  const [method, setMethod] = useState<PayMethod>(
+    WAVE_ENABLED ? (order.preMethod ?? 'wave') : 'om',
+  );
   const [processing, setProcessing] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const referenceRef = useRef<string>(order.preInitiatedPiId ?? '');
@@ -260,11 +263,13 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
         <OrderRecap order={order} />
 
         <SectionLabel label="Mode de paiement" />
-        <PayMethodCard
-          method="wave"
-          selected={method === 'wave'}
-          onSelect={() => setMethod('wave')}
-        />
+        {WAVE_ENABLED && (
+          <PayMethodCard
+            method="wave"
+            selected={method === 'wave'}
+            onSelect={() => setMethod('wave')}
+          />
+        )}
         <PayMethodCard method="om" selected={method === 'om'} onSelect={() => setMethod('om')} />
 
         <DeepLinkNote method={method} />

@@ -17,6 +17,7 @@ import { supabase } from '../../lib/supabase';
 import useShopStore from '../../store/shopStore';
 import PayMethodCard from '../../components/payment/PayMethodCard';
 import { PayMethod } from '../../types/payment';
+import { WAVE_ENABLED } from '../../config/features';
 import AddressAutocomplete from '../../components/livraison/AddressAutocomplete';
 import { DakarAddress } from '../../data/dakarAddresses';
 
@@ -53,7 +54,7 @@ export default function MerchantLivraisonScreen({ onBack }: Props) {
 
   const [contactNom, setContactNom] = useState('');
   const [contactTel, setContactTel] = useState('');
-  const [method,     setMethod]     = useState<PayMethod>('wave');
+  const [method,     setMethod]     = useState<PayMethod>(WAVE_ENABLED ? 'wave' : 'om');
   const [loadingCoords, setLoadingCoords] = useState(true);
 
   // ── Paiement ───────────────────────────────────────────────────────────────
@@ -397,7 +398,9 @@ export default function MerchantLivraisonScreen({ onBack }: Props) {
               {/* Moyen de paiement */}
               <Text style={[s.fl, { marginTop: 20 }]}>Moyen de paiement</Text>
               <View style={s.payRow}>
-                <PayMethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />
+                {WAVE_ENABLED && (
+                  <PayMethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />
+                )}
                 <PayMethodCard method="om" selected={method === 'om'}   onSelect={() => setMethod('om')} />
               </View>
 

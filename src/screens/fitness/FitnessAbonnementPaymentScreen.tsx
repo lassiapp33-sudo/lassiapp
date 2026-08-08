@@ -16,6 +16,7 @@ import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { calculerPrixClient } from '../../config/payment';
 import { PayMethod } from '../../types/payment';
+import { WAVE_ENABLED } from '../../config/features';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { supabase } from '../../lib/supabase';
 
@@ -135,7 +136,7 @@ export default function FitnessAbonnementPaymentScreen({
   onSuccess,
 }: Props) {
   const [stage,      setStage]      = useState<Stage>('checkout');
-  const [method,     setMethod]     = useState<PayMethod>('wave');
+  const [method,     setMethod]     = useState<PayMethod>(WAVE_ENABLED ? 'wave' : 'om');
   const [processing, setProcessing] = useState(false);
   const [verifying,  setVerifying]  = useState(false);
   const piIdRef = useRef('');
@@ -267,7 +268,7 @@ export default function FitnessAbonnementPaymentScreen({
 
         {/* Choix méthode */}
         <Text style={styles.sectionTitle}>Moyen de paiement</Text>
-        <MethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />
+        {WAVE_ENABLED && <MethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />}
         <MethodCard method="om"   selected={method === 'om'}   onSelect={() => setMethod('om')} />
 
         {/* Bouton payer */}

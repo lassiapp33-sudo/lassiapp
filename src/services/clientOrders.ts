@@ -75,6 +75,7 @@ export async function getClientOrders(clientId: string): Promise<ClientOrder[]> 
       '*, order_items(*), shops(name, category), avis(id), receipt_code, receipt_status, receipt_valid_until, validated_at',
     )
     .eq('client_id', clientId)
+    .neq('status', 'pending')
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []).map(rowToOrder);

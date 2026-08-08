@@ -31,6 +31,7 @@ import { getMonCarrouselQuota } from '../../services/classementService';
 import { getShopById } from '../../services/shops';
 import StatsGrid from '../../components/visibility/StatsGrid';
 import { VisibilityStats, getVisibilityStats, getActiveSub } from '../../services/visibilityPayment';
+import { VISIBILITY_PACKS_ENABLED } from '../../config/features';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -468,18 +469,22 @@ export default function MerchantProfileScreen({
               onPress={onStore}
             />
           )}
-          <ProfileOptionRow
-            icon={<IcoTrend />}
-            title={t.profile.myVisibility}
-            subtitle={t.profile.myVisibilitySub}
-            onPress={onVisibility}
-          />
-          <ProfileOptionRow
-            icon={<IcoMega />}
-            title="Ma Campagne"
-            subtitle="Annonces sponsorisées & forfaits actifs"
-            onPress={onMaCampagne}
-          />
+          {VISIBILITY_PACKS_ENABLED && (
+            <>
+              <ProfileOptionRow
+                icon={<IcoTrend />}
+                title={t.profile.myVisibility}
+                subtitle={t.profile.myVisibilitySub}
+                onPress={onVisibility}
+              />
+              <ProfileOptionRow
+                icon={<IcoMega />}
+                title="Ma Campagne"
+                subtitle="Annonces sponsorisées & forfaits actifs"
+                onPress={onMaCampagne}
+              />
+            </>
+          )}
           <ProfileOptionRow
             icon={<IcoDollar />}
             title={t.profile.myRevenue}

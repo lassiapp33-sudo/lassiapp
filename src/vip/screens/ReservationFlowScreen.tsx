@@ -30,6 +30,7 @@ import {
 } from '../../types/tableReservation';
 import { getErrorMessage } from '../../utils/errorUtils';
 import logger from '../../utils/logger';
+import { WAVE_ENABLED } from '../../config/features';
 
 // ─── Helpers date ─────────────────────────────────────────────────────────────
 
@@ -223,7 +224,7 @@ export default function ReservationFlowScreen({ vipProfilId, vipNom, onBack, onS
   const [options, setOptions]                 = useState<TableSpecialOption[]>([]);
 
   // Step 4: Payment
-  const [payMethod, setPayMethod] = useState<'wave' | 'orange_money'>('wave');
+  const [payMethod, setPayMethod] = useState<'wave' | 'orange_money'>(WAVE_ENABLED ? 'wave' : 'orange_money');
   const [loading, setLoading]     = useState(false);
   const [step, setStep]           = useState(1);
 
@@ -493,7 +494,7 @@ export default function ReservationFlowScreen({ vipProfilId, vipNom, onBack, onS
             {/* Méthode de paiement */}
             <Text style={s.sectionTitle}>Moyen de paiement</Text>
             <View style={s.methodsRow}>
-              {(['wave', 'orange_money'] as const).map(m => (
+              {(['wave', 'orange_money'] as const).filter(m => m !== 'wave' || WAVE_ENABLED).map(m => (
                 <TouchableOpacity
                   key={m}
                   style={[s.methodCard, payMethod === m && s.methodCardOn]}
