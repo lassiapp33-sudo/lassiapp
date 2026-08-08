@@ -4,7 +4,6 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { formatPrice } from '../../utils/format';
-import { calculerPrixClient } from '../../config/payment';
 
 const IcoPencil = () => (
   <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" strokeWidth={2}>
@@ -20,8 +19,6 @@ interface Props {
 }
 
 export default function AbonnementOffreRow({ offre, onEdit, onToggleActif }: Props) {
-  const prixClient = calculerPrixClient(offre.prix);
-
   return (
     <View style={styles.card}>
       <View style={styles.info}>
@@ -31,7 +28,7 @@ export default function AbonnementOffreRow({ offre, onEdit, onToggleActif }: Pro
         ) : null}
         <View style={styles.metaRow}>
           <Text style={styles.duree}>⏱ {offre.dureeJours} jours</Text>
-          <Text style={styles.prix}>{formatPrice(prixClient)}</Text>
+          <Text style={styles.prix}>{formatPrice(offre.prix)}</Text>
         </View>
       </View>
 

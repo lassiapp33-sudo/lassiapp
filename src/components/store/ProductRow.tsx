@@ -6,8 +6,16 @@ import { colors, fonts } from '../../theme';
 import { StoreProduct, StockStatus } from '../../types/store';
 import { formatPrice } from '../../utils/format';
 import { ProductPromoInfo } from '../../types/promotions';
-import { calculerPrixClient } from '../../config/payment';
-import { calcPromoClientPrice } from '../../services/promotions';
+
+// Calcule le prix promo du VENDEUR (sans commission) pour l'affichage dans la vitrine.
+// La commission est affaire du client au moment du paiement, pas de la vitrine prestataire.
+function calcPromoVendeurPrice(prixBase: number, promoInfo?: ProductPromoInfo): number | null {
+  if (!promoInfo) return null;
+  if (promoInfo.promoPrice   !== undefined) return promoInfo.promoPrice;
+  if (promoInfo.discountPct  !== undefined) return Math.round(prixBase * (1 - promoInfo.discountPct / 100));
+  if (promoInfo.discountFixed !== undefined) return Math.max(0, prixBase - promoInfo.discountFixed);
+  return null;
+}
 
 // ─── Icône crayon ────────────────────────────────────────────────────────────
 
@@ -36,7 +44,7 @@ interface Props {
 
 export default function ProductRow({ product, onEdit, onToggleStock, promoInfo }: Props) {
   const sc = STOCK_CONFIG[product.stock];
-  const prixPromo = calcPromoClientPrice(product.price, promoInfo);
+  const prixPromo = calcPromoVendeurPrice(product.price, promoInfo);
 
   return (
     <View style={styles.card}>
@@ -65,11 +73,11 @@ export default function ProductRow({ product, onEdit, onToggleStock, promoInfo }
         <View style={styles.priceRow}>
           {prixPromo !== null ? (
             <>
-              <Text style={styles.priceOld}>{formatPrice(calculerPrixClient(product.price))}</Text>
+              <Text style={styles.priceOld}>{formatPrice(product.price)}</Text>
               <Text style={styles.price}>{formatPrice(prixPromo)}</Text>
             </>
           ) : (
-            <Text style={styles.price}>{formatPrice(calculerPrixClient(product.price))}</Text>
+            <Text style={styles.price}>{formatPrice(product.price)}</Text>
           )}
           {promoInfo && (
             <View style={styles.promoBadge}>
