@@ -305,6 +305,7 @@ Deno.serve(async (req) => {
         p_note:            note ?? null,
         p_idempotency_key: idempotencyKey ?? null,
         p_items:           orderItems,
+        p_pay_method:      ['wave', 'om', 'cash'].includes(paymentMethod) ? paymentMethod : 'wave',
       })
 
     if (orderError) {
