@@ -8,4 +8,4 @@
 // ============================================================
 
 export const WAVE_ENABLED = false;
-export const VISIBILITY_PACKS_ENABLED = false;
+export const VISIBILITY_PACKS_ENABLED = true;
