@@ -46,8 +46,6 @@ module.exports = withSecurityPlugins({
     userInterfaceStyle: "dark",
     newArchEnabled: false,
     splash: {
-      image: "./assets/icon/lassi-radar-base.png",
-      resizeMode: "contain",
       backgroundColor: "#14152A",
     },
     ios: {
