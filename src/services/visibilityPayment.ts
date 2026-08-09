@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../lib/supabase';
+import { getCachedToken, safeGetSession } from '../lib/supabase';
 import { formatPrice } from '../utils/format';
 import { calculateOffreQuartierPrice } from '../utils/offreQuartierPricing';
 
@@ -8,13 +8,15 @@ const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;
 const ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 async function authHeaders(): Promise<Record<string, string>> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) throw new Error('Session expirée — reconnecte-toi');
+  let token = getCachedToken();
+  if (!token) {
+    const { data: { session } } = await safeGetSession(15_000);
+    token = session?.access_token ?? null;
+  }
+  if (!token) throw new Error('Session expirée — reconnecte-toi');
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${session.access_token}`,
+    Authorization: `Bearer ${token}`,
     apikey: ANON_KEY,
   };
 }

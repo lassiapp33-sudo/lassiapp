@@ -300,7 +300,7 @@ export default function GerantProfilScreen({ onBack, onNav, onPreview, onLogout 
 
   return (
     <View style={s.fond}>
-      <StatusBar barStyle="light-content" backgroundColor={r.couleur.encre} />
+      <StatusBar barStyle="light-content" />
 
       {/* En-tête navigation */}
       <View style={[s.navbar, { paddingTop: TOP_INSET + 8 }]}>

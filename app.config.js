@@ -9,6 +9,29 @@ const withNoHttpCleartext = config =>
     return androidConfig;
   });
 
+// Plugin 3 : Compatibilité grands écrans Android 15.
+// Google Play exige l'absence de screenOrientation dans le manifest.
+// On verrouille le portrait au runtime via expo-screen-orientation (index.ts).
+// tools:remove retire l'attribut ajouté par la lib ML Kit lors du merge Gradle.
+const withLargeScreenCompat = config =>
+  withAndroidManifest(config, async androidConfig => {
+    const manifest = androidConfig.modResults.manifest;
+    if (!manifest.$['xmlns:tools']) {
+      manifest.$['xmlns:tools'] = 'http://schemas.android.com/tools';
+    }
+    const activities = manifest.application?.[0]?.activity ?? [];
+    const mlkitName = 'com.google.mlkit.vision.codescanner.internal.GmsBarcodeScanningDelegateActivity';
+    const existing = activities.find(a => a.$?.['android:name'] === mlkitName);
+    if (existing) {
+      existing.$['tools:remove'] = 'android:screenOrientation';
+      delete existing.$['android:screenOrientation'];
+    } else {
+      activities.push({ $: { 'android:name': mlkitName, 'tools:remove': 'android:screenOrientation' } });
+      manifest.application[0].activity = activities;
+    }
+    return androidConfig;
+  });
+
 // Plugin 2 : R8 minification + resource shrinking activés pour le build release.
 // Réduit la taille de l'APK/AAB et obfusque les noms de classes Java/Kotlin.
 // Testé avec les règles ProGuard incluses par les modules natifs (AAR).
@@ -24,7 +47,8 @@ const withR8Release = config =>
     return props;
   });
 
-const withSecurityPlugins = config => withR8Release(withNoHttpCleartext(config));
+
+const withSecurityPlugins = config => withLargeScreenCompat(withR8Release(withNoHttpCleartext(config)));
 
 module.exports = withSecurityPlugins({
   expo: {
@@ -32,7 +56,7 @@ module.exports = withSecurityPlugins({
     slug: "LassiApp",
     scheme: "lassiapp",
     version: "1.0.0",
-    orientation: "portrait",
+    orientation: "default",
     updates: {
       url: "https://u.expo.dev/e9058ef3-df10-43e4-af04-6830a98025e9",
       enabled: true,
@@ -68,6 +92,8 @@ module.exports = withSecurityPlugins({
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
+      enableProguardInReleaseBuilds: true,
+      extraProguardRules: "-keep class com.lassiapp.** { *; }",
       package: "com.lassiapp.lassiapp",
       googleServicesFile:
         process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
@@ -86,6 +112,13 @@ module.exports = withSecurityPlugins({
       "@react-native-firebase/app",
       "@react-native-firebase/crashlytics",
       "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          backgroundColor: "#14152A",
+          drawable: { icon: "./assets/splash_blank.xml" },
+        },
+      ],
       [
         "expo-camera",
         {

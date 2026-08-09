@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, getCachedToken, safeGetSession } from '../lib/supabase';
 import { Terrain, TerrainHoraire, CreneauPris, ReservationTerrain } from '../types/terrain';
 import { PAYMENT_CONFIG } from '../config/payment';
 
@@ -251,12 +251,15 @@ export const verifyTerrainReceipt = async (
 // ─── Vérification paiement via Edge Function ──────────────────────────────────
 
 async function authHeaders(): Promise<Record<string, string>> {
-  const { data: sessData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
-  const session = sessData?.session ?? null;
-  if (!session) throw new Error('Session expirée — reconnecte-toi');
+  let token = getCachedToken();
+  if (!token) {
+    const { data: { session } } = await safeGetSession(15_000);
+    token = session?.access_token ?? null;
+  }
+  if (!token) throw new Error('Session expirée — reconnecte-toi');
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${session.access_token}`,
+    Authorization: `Bearer ${token}`,
     apikey: ANON_KEY,
   };
 }

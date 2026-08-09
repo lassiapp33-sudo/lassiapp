@@ -1,6 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Animated, Easing } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { View, TextInput, TouchableOpacity, StyleSheet, Animated, Easing, Image } from 'react-native';
 import { colors, fonts } from '../../theme';
 import { IcoSearch } from '../icons';
 
@@ -10,16 +9,6 @@ interface Props {
   onMicPress?: () => void;
   onPress?: () => void; // si fourni → barre en lecture seule, appui navigue vers SearchScreen
 }
-
-const IcoTrophy = () => (
-  <Svg width={26} height={26} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M6 2h12v9a6 6 0 0 1-12 0V2z" stroke={colors.bg} />
-    <Path d="M4 4H6M18 4h2v3a2 2 0 0 1-2 2" stroke={colors.bg} />
-    <Path d="M6 4H4v3a2 2 0 0 0 2 2" stroke={colors.bg} />
-    <Path d="M12 17v4" stroke={colors.bg} />
-    <Path d="M8 21h8" stroke={colors.bg} />
-  </Svg>
-);
 
 export default function SearchBar({ value, onChangeText, onMicPress, onPress }: Props) {
   const pulseScale = useRef(new Animated.Value(1)).current;
@@ -78,7 +67,7 @@ export default function SearchBar({ value, onChangeText, onMicPress, onPress }: 
           style={[styles.ring, { transform: [{ scale: pulseScale }], opacity: pulseOpacity }]}
         />
         <TouchableOpacity style={styles.mic} onPress={onMicPress} activeOpacity={0.85}>
-          <IcoTrophy />
+          <Image source={require('../../../assets/trophy.png')} style={styles.trophyImg} />
         </TouchableOpacity>
       </View>
     </View>
@@ -138,5 +127,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 8,
+  },
+  trophyImg: {
+    width: 36,
+    height: 36,
+    resizeMode: 'contain',
   },
 });

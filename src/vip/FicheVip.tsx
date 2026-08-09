@@ -259,7 +259,7 @@ function ErreurVue({
 }) {
   return (
     <View style={[s.fond, s.centre]}>
-      <StatusBar barStyle="light-content" backgroundColor={r.couleur.encre} />
+      <StatusBar barStyle="light-content" />
       <TouchableOpacity
         onPress={onBack}
         style={[s.backBouton, { position: 'absolute', top: TOP_INSET + 12, left: 20 }]}
@@ -314,7 +314,7 @@ export default function FicheVip({ shopId, onBack, onChat, onGoCart, onReserver,
   if (chargement) {
     return (
       <View style={[s.fond, s.centre]}>
-        <StatusBar barStyle="light-content" backgroundColor={r.couleur.encre} />
+        <StatusBar barStyle="light-content" />
         <ActivityIndicator color={r.couleur.or} size="large" />
       </View>
     );
@@ -382,7 +382,7 @@ export default function FicheVip({ shopId, onBack, onChat, onGoCart, onReserver,
 
   return (
     <View style={s.fond}>
-      <StatusBar barStyle="light-content" backgroundColor={r.couleur.encre} />
+      <StatusBar barStyle="light-content" />
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* En-tête : retour + statut */}

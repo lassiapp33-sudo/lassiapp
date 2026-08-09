@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { View, Image, StyleSheet, Animated, Easing } from 'react-native';
 import { colors, fonts } from '../theme';
 
@@ -17,7 +17,9 @@ export default function SplashScreen({ onFinish }: Props) {
   const onFinishRef = useRef(onFinish);
   useEffect(() => { onFinishRef.current = onFinish; });
 
-  useEffect(() => {
+  // useLayoutEffect : s'exécute avant le premier paint natif → l'aiguille tourne
+  // dès la première frame visible, aucune image statique
+  useLayoutEffect(() => {
     const loop = Animated.loop(
       Animated.timing(rotation, {
         toValue:         1,
@@ -29,6 +31,10 @@ export default function SplashScreen({ onFinish }: Props) {
     loopRef.current = loop;
     loop.start();
 
+    return () => { loopRef.current?.stop(); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     Animated.parallel([
       Animated.timing(tagOpacity, {
         toValue: 1, duration: 700, delay: 500,
@@ -41,10 +47,7 @@ export default function SplashScreen({ onFinish }: Props) {
     ]).start();
 
     const timer = setTimeout(() => onFinishRef.current(), 2600);
-    return () => {
-      clearTimeout(timer);
-      loopRef.current?.stop();
-    };
+    return () => { clearTimeout(timer); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rotate = rotation.interpolate({
@@ -59,6 +62,7 @@ export default function SplashScreen({ onFinish }: Props) {
         <Image
           source={require('../../assets/icon/lassi-radar-base.png')}
           style={styles.layer}
+          fadeDuration={0}
         />
         {/* Aiguille PNG dans Animated.View — évite Animated.Image qui bug sur Android */}
         <Animated.View style={[styles.layer, { transform: [{ rotate }] }]}>

@@ -118,7 +118,7 @@ export default function GerantHorairesScreen({ onBack }: Props) {
     <KeyboardAvoidingView
       style={s.fond}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <StatusBar barStyle="light-content" backgroundColor={r.couleur.encre} />
+      <StatusBar barStyle="light-content" />
 
       {/* En-tête */}
       <View style={[s.header, { paddingTop: TOP_INSET + 12 }]}>

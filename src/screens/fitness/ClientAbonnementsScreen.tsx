@@ -127,13 +127,9 @@ export default function ClientAbonnementsScreen({ onBack }: Props) {
   const [loading, setLoading]         = useState(true);
 
   function sortAbonnements(list: FitnessAbonnement[]) {
-    const actifs = list
+    return list
       .filter(a => !fitnessService.isExpireLocalement(a) && a.statut === 'actif')
       .sort((a, b) => new Date(a.dateExpiration).getTime() - new Date(b.dateExpiration).getTime());
-    const expires = list
-      .filter(a => fitnessService.isExpireLocalement(a) || a.statut === 'expire')
-      .sort((a, b) => new Date(b.dateExpiration).getTime() - new Date(a.dateExpiration).getTime());
-    return [...actifs, ...expires];
   }
 
   const load = useCallback(async () => {

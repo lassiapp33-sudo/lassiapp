@@ -18,7 +18,7 @@ import { calculerPrixClient } from '../../config/payment';
 import { PayMethod } from '../../types/payment';
 import { WAVE_ENABLED } from '../../config/features';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
-import { supabase } from '../../lib/supabase';
+import { getCachedToken, safeGetSession } from '../../lib/supabase';
 
 // ─── Logos partenaires ────────────────────────────────────────────────────────
 const WAVE_LOGO = require('../../../assets/wave.jpg');
@@ -29,11 +29,15 @@ const ANON_KEY       = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;
 
 async function authHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Session expirée — reconnecte-toi');
+  let token = getCachedToken();
+  if (!token) {
+    const { data: { session } } = await safeGetSession(15_000);
+    token = session?.access_token ?? null;
+  }
+  if (!token) throw new Error('Session expirée — reconnecte-toi');
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${session.access_token}`,
+    Authorization: `Bearer ${token}`,
     apikey: ANON_KEY,
   };
 }

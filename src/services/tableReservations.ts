@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, getCachedToken, safeGetSession } from '../lib/supabase';
 import {
   RestaurantSpace,
   RestaurantTimeSlot,
@@ -11,8 +11,11 @@ const SUPABASE_URL  = process.env.EXPO_PUBLIC_SUPABASE_URL  ?? '';
 const ANON_KEY      = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  let token = getCachedToken();
+  if (!token) {
+    const { data: { session } } = await safeGetSession(15_000);
+    token = session?.access_token ?? null;
+  }
   if (!token) throw new Error('Session expirée — reconnecte-toi');
   return {
     'Content-Type':  'application/json',

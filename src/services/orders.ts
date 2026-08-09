@@ -194,6 +194,7 @@ export async function createVipOrder(
   items: { prestationId: string; qty: number }[],
   orderType: 'emporter' | 'place',
   note?: string,
+  payMethod?: 'wave' | 'om' | 'cash',
 ): Promise<{ orderId: string; total: number }> {
   let token = getCachedToken();
   if (!token) {
@@ -209,7 +210,7 @@ export async function createVipOrder(
       Authorization: `Bearer ${token}`,
       apikey: ANON_KEY,
     },
-    body: JSON.stringify({ shopId, items, orderType, note: note ?? null }),
+    body: JSON.stringify({ shopId, items, orderType, note: note ?? null, payMethod: payMethod ?? 'wave' }),
   });
 
   const body = await res.json();

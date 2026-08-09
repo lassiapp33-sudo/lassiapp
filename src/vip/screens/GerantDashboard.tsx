@@ -77,7 +77,7 @@ export default function GerantDashboard({ onNav, onPreview, onLogout }: Props) {
 
   return (
     <View style={s.fond}>
-      <StatusBar barStyle="light-content" backgroundColor={r.couleur.encre} />
+      <StatusBar barStyle="light-content" />
       <ScrollView showsVerticalScrollIndicator={false}>
 
         {/* En-tête */}

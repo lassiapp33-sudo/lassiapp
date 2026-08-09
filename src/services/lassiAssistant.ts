@@ -570,6 +570,7 @@ export async function rechercherPrestataires(
       'id,name,category,zone,logo_url,opening_hours,is_manually_closed,is_vip,vip_manual,vip_manual_until,rating,latitude,longitude',
     )
     .eq('category', categorieId)
+    .eq('is_admin_account', false)
     .limit(20);
 
   if (zone) {

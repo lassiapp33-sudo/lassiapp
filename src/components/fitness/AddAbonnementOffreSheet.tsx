@@ -25,9 +25,10 @@ interface Props {
   onClose: () => void;
 }
 
-const PRESETS = [7, 15, 30, 60, 90];
+const PRESETS = [2, 7, 15, 30, 60, 90];
 
 function labelDuree(j: number): string {
+  if (j === 2)  return '48 heures';
   if (j === 7)  return 'hebdomadaire';
   if (j === 15) return 'bi-mensuel';
   if (j === 30) return 'mensuel';
@@ -167,7 +168,7 @@ export default function AddAbonnementOffreSheet({ visible, offre, onSave, onDele
                     activeOpacity={0.75}
                   >
                     <Text style={[styles.chipTxt, !customMode && dureeJours === j && styles.chipTxtActive]}>
-                      {j}j
+                      {j === 2 ? '48h' : `${j}j`}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -192,7 +193,7 @@ export default function AddAbonnementOffreSheet({ visible, offre, onSave, onDele
               )}
               {dureeFinale > 0 && (
                 <Text style={styles.hint}>
-                  Durée : {dureeFinale} jours ({labelDuree(dureeFinale)})
+                  {dureeFinale === 2 ? 'Durée : 48 heures' : `Durée : ${dureeFinale} jours (${labelDuree(dureeFinale)})`}
                 </Text>
               )}
 

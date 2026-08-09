@@ -494,7 +494,7 @@ export default function GerantRegistreScreen({ onBack }: Props) {
 
   return (
     <View style={s.fond}>
-      <StatusBar barStyle="light-content" backgroundColor={r.couleur.encre} />
+      <StatusBar barStyle="light-content" />
 
       {/* En-tête */}
       <View style={[s.header, { paddingTop: TOP_INSET + 12 }]}>

@@ -4,7 +4,13 @@ import './src/polyfills';
 import { Platform } from 'react-native';
 import { registerRootComponent } from 'expo';
 import Constants from 'expo-constants';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import App from './App';
+
+// Manifest sans restriction (Google Play large screen), portrait verrouillé ici
+if (Platform.OS !== 'web') {
+  ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT).catch(() => {});
+}
 
 const IS_EXPO_GO = Constants.executionEnvironment === 'storeClient';
 

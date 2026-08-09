@@ -291,6 +291,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
           vipItems,
           vipOrderMode === 'livraison' ? 'emporter' : 'emporter',
           structuredNote ?? undefined,
+          method,
         );
         realOrderId = res.orderId;
       } else {

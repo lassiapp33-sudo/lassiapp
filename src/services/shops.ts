@@ -147,7 +147,7 @@ export async function getShops(): Promise<Shop[]> {
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/shops?select=*&order=rating.desc`,
+      `${SUPABASE_URL}/rest/v1/shops?select=*&is_admin_account=neq.true&order=rating.desc`,
       {
         headers: {
           apikey: SUPABASE_ANON,
@@ -172,7 +172,7 @@ export async function getShopsByCategory(category: string): Promise<Shop[]> {
   if (hit && Date.now() - hit.ts < SHOPS_CACHE_TTL) return hit.data;
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/shops?select=*&category=eq.${encodeURIComponent(category)}&order=rating.desc`,
+      `${SUPABASE_URL}/rest/v1/shops?select=*&category=eq.${encodeURIComponent(category)}&is_admin_account=neq.true&order=rating.desc`,
       { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
     );
     if (!res.ok) return [];
@@ -359,6 +359,7 @@ export async function getShopsInBounds(
   const { data, error } = await supabase
     .from('shops')
     .select('*')
+    .eq('is_admin_account', false)
     .not('latitude', 'is', null)
     .not('longitude', 'is', null)
     .gte('latitude', minLat)

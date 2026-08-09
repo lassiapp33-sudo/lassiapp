@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { getCachedToken, safeGetSession } from '../lib/supabase';
 import { PayMethod } from '../types/payment';
 
 const SUPABASE_URL  = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
@@ -7,11 +7,15 @@ const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
 const FETCH_TIMEOUT_MS = 12_000;
 
 async function authHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Session expirée — reconnecte-toi');
+  let token = getCachedToken();
+  if (!token) {
+    const { data: { session } } = await safeGetSession(15_000);
+    token = session?.access_token ?? null;
+  }
+  if (!token) throw new Error('Session expirée — reconnecte-toi');
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${session.access_token}`,
+    Authorization: `Bearer ${token}`,
     apikey: ANON_KEY,
   };
 }

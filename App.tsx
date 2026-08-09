@@ -68,6 +68,7 @@ const getN = (): N | null => {
   return require('expo-notifications') as N;
 };
 
+ExpoSplashScreen.setOptions({ duration: 0 });
 ExpoSplashScreen.preventAutoHideAsync();
 
 type Screen = 'splash' | 'onboarding' | 'auth' | 'client' | 'merchant' | 'livreur' | 'resetPassword';
@@ -144,9 +145,8 @@ export default function App() {
     Inter_400Regular,
   });
 
-  // Cache le splash natif dès le premier rendu React.
+  // Cache le splash natif dès le premier rendu React (fond #14152A sans image statique).
   // Lance getSessionUser() SEULEMENT si une session existait (flag AsyncStorage sans Keystore).
-  // Sans flag → pas de GoTrue au démarrage → mutex jamais bloqué → login instantané.
   useEffect(() => {
     ExpoSplashScreen.hideAsync().catch(() => {});
     AsyncStorage.getItem(SESSION_ACTIVE_KEY)
