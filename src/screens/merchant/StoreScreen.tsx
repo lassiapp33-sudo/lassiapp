@@ -40,6 +40,7 @@ import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { getErrorMessage } from '../../utils/errorUtils';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ScanMenuCamera from '../../components/store/ScanMenuCamera';
+import ScannerMenu from '../../components/prestataire/ScannerMenu';
 import { ProduitExtrait } from '../../utils/parsingMenu';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
@@ -753,6 +754,15 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     onDeleteCat={handleDeleteCat}
                   />
                 )}
+                {/* Bannière scan OCR — visible uniquement si le catalogue est encore vide */}
+                {products.length === 0 && onRelectureMenu && (
+                  <View style={styles.scanBannerWrap}>
+                    <ScannerMenu
+                      onProduitsExtraits={produits => onRelectureMenu(produits)}
+                    />
+                  </View>
+                )}
+
                 <SectionHead
                   title={context.shopType === 'memberships' ? 'Formules' : (activeCatData?.label ?? '')}
                   count={filtered.length}
@@ -1289,6 +1299,12 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontFamily: fonts.ui,
     fontSize: 13,
+  },
+
+  scanBannerWrap: {
+    marginHorizontal: 18,
+    marginTop: 6,
+    marginBottom: 4,
   },
 
   // AddMethodPicker
