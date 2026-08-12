@@ -401,6 +401,59 @@ const IcoPatisserie: React.FC<{ color: string }> = () =>
     React.createElement(Circle, { cx: 33, cy: 31, r: 1.5, fill: '#FFF', opacity: 0.7 }),
   );
 
+// ─── Tangana extras ───────────────────────────────────────────────────────────
+
+const IcoCafeWass: React.FC<{ color: string }> = () =>
+  React.createElement(Svg, { width: 36, height: 36, viewBox: '0 0 56 56' },
+    // Saucer
+    React.createElement(Ellipse, { cx: 28, cy: 50, rx: 20, ry: 4, fill: '#8D6E63' }),
+    React.createElement(Ellipse, { cx: 28, cy: 48, rx: 18, ry: 3.5, fill: '#BCAAA4' }),
+    // Corps de la tasse (trapèze)
+    React.createElement(Path, { d: 'M 12 26 L 15 46 L 41 46 L 44 26 Z', fill: '#6D4C41' }),
+    React.createElement(Path, { d: 'M 14 28 L 17 44 L 39 44 L 42 28 Z', fill: '#4E342E' }),
+    // Rebord de tasse
+    React.createElement(Ellipse, { cx: 28, cy: 26, rx: 16, ry: 4.5, fill: '#5D4037' }),
+    // Surface café
+    React.createElement(Ellipse, { cx: 28, cy: 25, rx: 14, ry: 3.5, fill: '#3E2723' }),
+    // Crema
+    React.createElement(Ellipse, { cx: 24, cy: 24, rx: 5, ry: 1.5, fill: '#8D6E63', opacity: 0.5 }),
+    // Anse (extérieur + intérieur)
+    React.createElement(Path, { d: 'M 44 30 C 56 30 56 44 44 44', stroke: '#6D4C41', strokeWidth: 5, fill: 'none', strokeLinecap: 'round' }),
+    React.createElement(Path, { d: 'M 44 30 C 54 30 54 44 44 44', stroke: '#8D6E63', strokeWidth: 2, fill: 'none', strokeLinecap: 'round' }),
+    // Vapeur × 3
+    React.createElement(Path, { d: 'M 20 20 C 22 16 18 14 20 10', stroke: '#BDBDBD', strokeWidth: 2.5, fill: 'none', strokeLinecap: 'round' }),
+    React.createElement(Path, { d: 'M 28 18 C 30 14 26 12 28 8',  stroke: '#BDBDBD', strokeWidth: 2.5, fill: 'none', strokeLinecap: 'round' }),
+    React.createElement(Path, { d: 'M 36 20 C 38 16 34 14 36 10', stroke: '#BDBDBD', strokeWidth: 2.5, fill: 'none', strokeLinecap: 'round' }),
+  );
+
+const IcoBeignetFataya: React.FC<{ color: string }> = () =>
+  React.createElement(Svg, { width: 36, height: 36, viewBox: '0 0 56 56' },
+    // Assiette
+    React.createElement(Ellipse, { cx: 28, cy: 52, rx: 24, ry: 4, fill: '#EFEBE9' }),
+    React.createElement(Ellipse, { cx: 28, cy: 50, rx: 22, ry: 3, fill: '#D7CCC8' }),
+    // ── Fataya (droite, croissant doré) ──
+    React.createElement(Path, { d: 'M 34 46 C 36 46 52 42 52 30 C 52 20 44 14 36 18 C 30 22 28 36 34 46 Z', fill: '#C8822A' }),
+    React.createElement(Path, { d: 'M 35 44 C 37 44 51 40 51 30 C 51 22 44 17 37 20 C 32 24 30 38 35 44 Z', fill: '#D4922A' }),
+    // Festons bord fataya
+    React.createElement(Circle, { cx: 34, cy: 46, r: 2, fill: '#A0672A' }),
+    React.createElement(Circle, { cx: 40, cy: 48, r: 2, fill: '#A0672A' }),
+    React.createElement(Circle, { cx: 46, cy: 44, r: 2, fill: '#A0672A' }),
+    React.createElement(Circle, { cx: 51, cy: 36, r: 2, fill: '#A0672A' }),
+    // Reflet surface fataya
+    React.createElement(Ellipse, { cx: 42, cy: 24, rx: 4, ry: 2, fill: '#F0C040', opacity: 0.4 }),
+    // ── Beignet (gauche, boule gonflée) ──
+    React.createElement(Ellipse, { cx: 20, cy: 44, rx: 13, ry: 3, fill: '#8D6E63', opacity: 0.25 }),
+    React.createElement(Circle, { cx: 20, cy: 36, r: 14, fill: '#E8B040' }),
+    React.createElement(Circle, { cx: 20, cy: 36, r: 10, fill: '#D4922A' }),
+    // Reflet doré
+    React.createElement(Ellipse, { cx: 17, cy: 31, rx: 8, ry: 5, fill: '#F0C040', opacity: 0.55 }),
+    // Sucre glace (points blancs)
+    React.createElement(Circle, { cx: 16, cy: 31, r: 2,   fill: '#FFFFFF', opacity: 0.7 }),
+    React.createElement(Circle, { cx: 22, cy: 29, r: 1.5, fill: '#FFFFFF', opacity: 0.6 }),
+    React.createElement(Circle, { cx: 25, cy: 35, r: 1.5, fill: '#FFFFFF', opacity: 0.5 }),
+    React.createElement(Circle, { cx: 18, cy: 39, r: 1.5, fill: '#FFFFFF', opacity: 0.5 }),
+  );
+
 // ─── Food ──────────────────────────────────────────────────────────────────────
 
 const IcoRestaurant: React.FC<{ color: string }> = () =>
@@ -745,6 +798,20 @@ export const CATEGORIES: CatConfig[] = [
         desc: 'Soupes, potages, bouillons maison',
         imageUri: IMG_SOUPE,
         imageSize: 44,
+      },
+      {
+        id: 'cafe_wass',
+        emoji: '☕',
+        label: 'Café ak Wass',
+        desc: 'Café, thé, jus, boissons chaudes et fraîches',
+        SvgIcon: IcoCafeWass,
+      },
+      {
+        id: 'beignet_fataya',
+        emoji: '🥐',
+        label: 'Beignet ak Fataya',
+        desc: 'Beignets, fataya, snacks frits',
+        SvgIcon: IcoBeignetFataya,
       },
     ],
     renderIcon: (color, size = 24) =>

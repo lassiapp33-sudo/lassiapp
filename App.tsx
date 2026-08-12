@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, Platform, AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as ExpoSplashScreen from 'expo-splash-screen';
+import * as Updates from 'expo-updates';
 import { useFonts } from 'expo-font';
 import Constants from 'expo-constants';
 import {
@@ -109,6 +110,22 @@ export default function App() {
   // Promesse de session lancée au montage — en parallèle avec l'animation du splash (2,6s).
   // Résultat disponible dès onFinish, sans délai supplémentaire.
   const sessionFetch = React.useRef<Promise<AuthUser | null> | null>(null);
+
+  // Vérifie + télécharge + applique les OTA en foreground au démarrage.
+  // Fonctionne sur tous les appareils (Android/iOS) sans dépendre des process background
+  // qui peuvent être tués par les surcouches constructeurs (EMUI, MagicUI, MIUI…).
+  useEffect(() => {
+    if (__DEV__ || IS_EXPO_GO || Platform.OS === 'web') return;
+    (async () => {
+      try {
+        const { isAvailable } = await Updates.checkForUpdateAsync();
+        if (isAvailable) {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync();
+        }
+      } catch (_) {}
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Charge les IDs de cartes déjà affichées (AsyncStorage) au démarrage
   const loadSeenIds = useNotifPopupStore(s => s.loadSeenIds);

@@ -27,6 +27,8 @@ export interface FitnessAbonnement {
   // Champs joints (optionnels selon la requête)
   prestataireName?: string;
   prestataireAvatar?: string;
+  shopName?: string;
+  shopLogo?: string;
   clientName?: string;
 }
 
@@ -48,6 +50,8 @@ function rowToOffre(r: Record<string, unknown>): FitnessOffre {
 function rowToAbonnement(r: Record<string, unknown>): FitnessAbonnement {
   const profile = r.profile as Record<string, unknown> | null;
   const client  = r.client  as Record<string, unknown> | null;
+  const shops   = profile?.shops as Array<Record<string, unknown>> | null;
+  const shop    = Array.isArray(shops) && shops.length > 0 ? shops[0] : null;
   return {
     id:               r.id as string,
     offreId:          r.offre_id as string,
@@ -61,6 +65,8 @@ function rowToAbonnement(r: Record<string, unknown>): FitnessAbonnement {
     paymentIntentId:  (r.payment_intent_id as string | null) ?? undefined,
     prestataireName:   (profile?.name       as string | null) ?? undefined,
     prestataireAvatar: (profile?.avatar_url as string | null) ?? undefined,
+    shopName:          (shop?.name          as string | null) ?? undefined,
+    shopLogo:          (shop?.logo_url      as string | null) ?? undefined,
     clientName:        (client?.name        as string | null) ?? undefined,
   };
 }
@@ -142,11 +148,11 @@ export async function deleteOffre(offreId: string): Promise<void> {
 
 // ─── Abonnements client ────────────────────────────────────────────────────────
 
-/** Abonnements d'un client (avec nom du fitness). */
+/** Abonnements d'un client (avec nom du fitness et nom de la boutique). */
 export async function getMesAbonnements(clientId: string): Promise<FitnessAbonnement[]> {
   const { data, error } = await supabase
     .from('fitness_abonnements_clients')
-    .select('*, profile:prestataire_id(name, avatar_url)')
+    .select('*, profile:prestataire_id(name, avatar_url, shops(name, logo_url))')
     .eq('client_id', clientId)
     .order('date_achat', { ascending: false });
   if (error) throw new Error(error.message);

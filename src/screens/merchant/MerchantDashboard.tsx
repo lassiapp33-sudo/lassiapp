@@ -17,6 +17,7 @@ import useOrdersStore from '../../store/ordersStore';
 import useDebtsStore from '../../store/debtsStore';
 import useNotificationsStore from '../../store/notificationsStore';
 import useLocationStore from '../../store/locationStore';
+import { supabase } from '../../lib/supabase';
 
 // ─── Sous-composant section header ────────────────────────────────────────────
 
@@ -94,11 +95,15 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
   const debtors = useDebtsStore(s => s.debtors);
   const loadDebts = useDebtsStore(s => s.loadDebts);
 
+  // Recette fitness (abonnements) — montant réel reversé par LASSI
+  const [fitnessRevenue, setFitnessRevenue] = useState(0);
+  const [fitnessCount, setFitnessCount] = useState(0);
+
   // Montage seul — initialisation unique au démarrage du dashboard
   useEffect(() => {
     loadMyShop();
     loadNotifications();
-    refreshLocation(); // vraie position GPS dès le montage
+    refreshLocation();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -107,10 +112,24 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
     loadDebts(shopId);
   }, [shopId, loadOrders, loadDebts]);
 
+  // Recette fitness : charger dès que l'userId est connu
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      const { data } = await supabase.rpc('get_daily_fitness_earnings', { p_prestataire_id: userId });
+      if (data) {
+        const d = data as { revenue: number; count: number };
+        setFitnessRevenue(d.revenue ?? 0);
+        setFitnessCount(d.count ?? 0);
+      }
+    })();
+  }, [userId]);
+
   // ── Calculs réels ──────────────────────────────────────────────────────────
   const activeOrders = orders.filter(o => o.status === 'new' || o.status === 'preparing');
   const doneOrders = orders.filter(o => o.status === 'done');
-  const totalEarnings = doneOrders.reduce((sum, o) => sum + o.total, 0);
+  const normalEarnings = doneOrders.reduce((sum, o) => sum + o.total, 0);
+  const totalEarnings = normalEarnings + fitnessRevenue;
   const totalDebt = debtors.reduce((sum, d) => sum + d.amount, 0);
   const debtorsWithDebt = debtors.filter(d => d.amount > 0).length;
 
@@ -159,13 +178,16 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
         {/* ② Recette du jour — données réelles */}
         <EarningsCard
           amount={totalEarnings}
-          changeLabel={
-            doneOrders.length > 0
-              ? `${doneOrders.length} commande${doneOrders.length > 1 ? 's' : ''} finalisée${doneOrders.length > 1 ? 's' : ''}`
-              : 'Aucune commande finalisée'
-          }
-          orders={orders.length}
-          viaLassi={orders.length}
+          changeLabel={(() => {
+            const parts: string[] = [];
+            if (doneOrders.length > 0)
+              parts.push(`${doneOrders.length} commande${doneOrders.length > 1 ? 's' : ''}`);
+            if (fitnessCount > 0)
+              parts.push(`${fitnessCount} abonnement${fitnessCount > 1 ? 's' : ''}`);
+            return parts.length > 0 ? parts.join(' · ') : 'Aucune recette aujourd\'hui';
+          })()}
+          orders={orders.length + fitnessCount}
+          viaLassi={orders.length + fitnessCount}
           debts={totalDebt}
         />
 

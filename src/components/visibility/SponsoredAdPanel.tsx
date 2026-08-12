@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { WAVE_ENABLED } from '../../config/features';
 import {
   View,
   Text,
@@ -9,6 +10,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Linking,
+  Image,
   findNodeHandle,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -327,9 +329,11 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
         qrCode:         result.qrCode,
       });
 
+      // Ouvrir l'app OM directement — canOpenURL bloque sur Android 11+ pour schemes custom
       if (result.paymentUrl) {
-        const canOpen = await Linking.canOpenURL(result.paymentUrl);
-        if (canOpen) await Linking.openURL(result.paymentUrl);
+        Linking.openURL(result.paymentUrl).catch(() => {
+          // Silencieux : le QR sert de fallback
+        });
       }
     } catch (e) {
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Erreur inattendue');
@@ -465,31 +469,33 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
           </Text>
         </TouchableOpacity>
 
-        {/* Wave */}
-        <TouchableOpacity
-          style={[
-            s.payRow,
-            payMethod === 'wave' && s.payRowActive,
-            !keysAvailable?.wave && s.payRowDisabled,
-          ]}
-          onPress={() => keysAvailable?.wave && setPayMethod('wave')}
-          activeOpacity={keysAvailable?.wave ? 0.8 : 1}
-        >
-          <View style={[s.payRadio, payMethod === 'wave' && s.payRadioActive]}>
-            {payMethod === 'wave' ? <IcoCheck /> : !keysAvailable?.wave ? <IcoLock /> : null}
-          </View>
-          <View style={s.payInfo}>
-            <Text style={[s.payName, payMethod === 'wave' && s.payNameActive]}>
-              Wave
+        {/* Wave — masqué jusqu'à IP statique Supabase Pro */}
+        {WAVE_ENABLED && (
+          <TouchableOpacity
+            style={[
+              s.payRow,
+              payMethod === 'wave' && s.payRowActive,
+              !keysAvailable?.wave && s.payRowDisabled,
+            ]}
+            onPress={() => keysAvailable?.wave && setPayMethod('wave')}
+            activeOpacity={keysAvailable?.wave ? 0.8 : 1}
+          >
+            <View style={[s.payRadio, payMethod === 'wave' && s.payRadioActive]}>
+              {payMethod === 'wave' ? <IcoCheck /> : !keysAvailable?.wave ? <IcoLock /> : null}
+            </View>
+            <View style={s.payInfo}>
+              <Text style={[s.payName, payMethod === 'wave' && s.payNameActive]}>
+                Wave
+              </Text>
+              <Text style={s.payDesc}>
+                {keysAvailable?.wave ? 'Paiement mobile sécurisé' : 'Bientôt disponible'}
+              </Text>
+            </View>
+            <Text style={[s.payPrice, payMethod === 'wave' && s.payPriceActive]}>
+              {formatFcfa(fcfaPrice)}
             </Text>
-            <Text style={s.payDesc}>
-              {keysAvailable?.wave ? 'Paiement mobile sécurisé' : 'Bientôt disponible'}
-            </Text>
-          </View>
-          <Text style={[s.payPrice, payMethod === 'wave' && s.payPriceActive]}>
-            {formatFcfa(fcfaPrice)}
-          </Text>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        )}
 
         {/* Orange Money */}
         <TouchableOpacity
@@ -521,9 +527,31 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
       {/* Bandeau paiement Wave/OM en attente */}
       {pendingPay ? (
         <View style={s.pendingBanner}>
-          <Text style={s.pendingTxt}>
-            Paiement en attente — reviens ici après avoir payé dans l'app.
-          </Text>
+          {/* Bouton rouvrir app OM */}
+          {!!pendingPay.paymentUrl && (
+            <TouchableOpacity
+              style={s.omBtn}
+              onPress={() => Linking.openURL(pendingPay.paymentUrl).catch(() => {})}
+              activeOpacity={0.85}
+            >
+              <Text style={s.omBtnTxt}>Ouvrir Orange Money</Text>
+            </TouchableOpacity>
+          )}
+          {/* QR code — affiché toujours si disponible */}
+          {!!pendingPay.qrCode ? (
+            <>
+              <Text style={s.pendingTxt}>
+                {pendingPay.paymentUrl
+                  ? 'Ou scanne ce QR code avec l\'app Orange Money.'
+                  : 'Scanne ce QR code avec l\'app Orange Money pour payer.'}
+              </Text>
+              <Image source={{ uri: `data:image/png;base64,${pendingPay.qrCode}` }} style={s.qrImage} resizeMode="contain" />
+            </>
+          ) : (
+            <Text style={s.pendingTxt}>
+              Paiement en attente — reviens ici après avoir payé dans l'app.
+            </Text>
+          )}
           <TouchableOpacity
             style={[s.verifyBtn, verifying && { opacity: 0.6 }]}
             onPress={handleVerifyPay}
@@ -759,6 +787,27 @@ const s = StyleSheet.create({
     fontSize: 12,
     marginBottom: 10,
     textAlign: 'center',
+  },
+  omBtn: {
+    height: 46,
+    borderRadius: radius.md,
+    backgroundColor: '#FF6B00',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  omBtnTxt: {
+    color: '#fff',
+    fontFamily: fonts.titleXL,
+    fontSize: 14,
+  },
+  qrImage: {
+    width: 180,
+    height: 180,
+    alignSelf: 'center',
+    marginBottom: 12,
+    borderRadius: 8,
+    backgroundColor: '#fff',
   },
   verifyBtn: {
     height: 44,

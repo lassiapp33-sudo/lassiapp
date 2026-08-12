@@ -12,6 +12,7 @@ import { NotifType } from '../../store/notificationsStore';
 import {
   IcoNotifGift,
   IcoNotifPay,
+  IcoNotifFitness,
   IcoNotifAnn,
   IcoNotifOrder,
   IcoNotifMsg,
@@ -24,6 +25,7 @@ import useNotifPopupStore from '../../store/notifPopupStore';
 const TAG_LABEL: Record<NotifType, string> = {
   vip:       'RÉCOMPENSE',
   pay:       'PAIEMENT',
+  fitness:   'ABONNEMENT',
   ann:       'ANNONCE',
   order:     'COMMANDE',
   msg:       'MESSAGE',
@@ -34,6 +36,7 @@ function NotifIcon({ type, size }: { type: NotifType | string; size: number }) {
   switch (type) {
     case 'vip':       return <IcoNotifGift size={size} />;
     case 'pay':       return <IcoNotifPay size={size} />;
+    case 'fitness':   return <IcoNotifFitness size={size} />;
     case 'ann':       return <IcoNotifAnn size={size} />;
     case 'order':     return <IcoNotifOrder size={size} />;
     case 'msg':       return <IcoNotifMsg size={size} />;

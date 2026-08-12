@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Prévisualisation icône LASSI</title>
+  <style>
+    body {
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      font-family: sans-serif;
+      color: white;
+      gap: 40px;
+    }
+
+    h2 { margin: 0; font-size: 14px; opacity: 0.6; letter-spacing: 2px; text-transform: uppercase; }
+
+    .row {
+      display: flex;
+      align-items: flex-end;
+      gap: 40px;
+    }
+
+    .item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .label {
+      font-size: 11px;
+      opacity: 0.5;
+    }
+
+    /* Simulation launcher Android (cercle) */
+    .launcher-circle img {
+      border-radius: 50%;
+    }
+
+    /* Simulation launcher squircle (TECNO HiOS style) */
+    .launcher-squircle img {
+      border-radius: 28%;
+    }
+
+    /* Simulation Play Store */
+    .playstore img {
+      border-radius: 16%;
+    }
+
+    /* Notification bar (très petite) */
+    .notif {
+      background: #222;
+      padding: 8px 16px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .divider {
+      width: 80%;
+      height: 1px;
+      background: rgba(255,255,255,0.1);
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Prévisualisation icône LASSI</h2>
+
+  <!-- Taille launcher normale -->
+  <div class="row">
+    <div class="item launcher-squircle">
+      <img src="assets/icon.png" width="96" height="96">
+      <span class="label">96px — Squircle (TECNO)</span>
+    </div>
+    <div class="item launcher-circle">
+      <img src="assets/icon.png" width="96" height="96">
+      <span class="label">96px — Cercle</span>
+    </div>
+    <div class="item launcher-squircle">
+      <img src="assets/icon.png" width="72" height="72">
+      <span class="label">72px — Petite</span>
+    </div>
+    <div class="item launcher-squircle">
+      <img src="assets/icon.png" width="60" height="60">
+      <span class="label">60px — Très petite</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Taille Play Store -->
+  <div class="row">
+    <div class="item playstore">
+      <img src="assets/playstore.png" width="200" height="200">
+      <span class="label">200px — Play Store preview</span>
+    </div>
+    <div class="item playstore">
+      <img src="assets/icon.png" width="512" height="512" style="max-width:256px;max-height:256px">
+      <span class="label">256px — Grande icône</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Notification bar simulation -->
+  <div>
+    <div class="notif">
+      <img src="assets/icon.png" width="24" height="24" style="border-radius:4px">
+      <span>LASSI — Nouvelle commande reçue</span>
+    </div>
+    <div style="text-align:center; margin-top:8px;">
+      <span class="label">Barre de notification (24px)</span>
+    </div>
+  </div>
+
+</body>
+</html>

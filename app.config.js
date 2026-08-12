@@ -123,7 +123,7 @@ module.exports = withSecurityPlugins({
         "expo-camera",
         {
           cameraPermission:
-            "LASSİ accède à ta caméra pour scanner les QR codes de réservation et photographier tes produits.",
+            "LASSİ accède à ta caméra pour scanner ton menu, photographier tes produits et scanner les QR codes de réservation.",
         },
       ],
       [
@@ -137,9 +137,9 @@ module.exports = withSecurityPlugins({
         "expo-image-picker",
         {
           photosPermission:
-            "LASSİ accède à ta galerie pour ajouter des photos de produits.",
+            "LASSİ accède à ta galerie pour ajouter des photos de produits et scanner ton menu existant.",
           cameraPermission:
-            "LASSİ accède à ta caméra pour scanner les QR codes de réservation et photographier tes produits.",
+            "LASSİ accède à ta caméra pour scanner ton menu, photographier tes produits et scanner les QR codes de réservation.",
         },
       ],
       [

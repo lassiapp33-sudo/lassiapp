@@ -13,8 +13,13 @@ export interface Coords {
  */
 export async function getCurrentLocation(): Promise<Coords | null> {
   try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') return null;
+    const permResult = await Promise.race([
+      Location.requestForegroundPermissionsAsync(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('perm_timeout')), 5000),
+      ),
+    ]);
+    if (permResult.status !== 'granted') return null;
     const pos = await Promise.race([
       Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error('gps_timeout')), 8000)),

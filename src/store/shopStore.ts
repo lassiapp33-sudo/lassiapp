@@ -55,6 +55,12 @@ interface ShopState {
   addCategory: (label: string) => void;
   removeCategory: (id: string) => Promise<void>;
 
+  createMissingShop: (
+    name: string,
+    catId: string,
+    shopType: 'products' | 'services' | 'memberships' | 'terrains',
+  ) => Promise<void>;
+
   setProducts: (products: StoreProduct[]) => void;
   setLoading: (v: boolean) => void;
 }
@@ -207,6 +213,11 @@ const useShopStore = create<ShopState>()((set, get) => ({
       set(state => ({ context: { ...state.context, galleryUrls: prev } }));
       throw err;
     }
+  },
+
+  createMissingShop: async (name, catId, shopType) => {
+    await shopsService.createShopForMerchant(name, catId, shopType);
+    await get().loadMyShop();
   },
 
   updateLocation: async (lat, lng) => {

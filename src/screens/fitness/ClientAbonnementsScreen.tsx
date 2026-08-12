@@ -81,16 +81,16 @@ function AboCard({ abo }: { abo: FitnessAbonnement }) {
       )}
 
       <View style={[styles.cardContent, isExpired && { opacity: 0.5 }]}>
-        {/* Logo + nom du prestataire */}
-        {abo.prestataireName ? (
+        {/* Logo + nom de la boutique/salle */}
+        {(abo.shopName ?? abo.prestataireName) ? (
           <View style={styles.prestataireRow}>
             <Avatar
-              imageUrl={abo.prestataireAvatar}
-              name={abo.prestataireName}
+              imageUrl={abo.shopLogo ?? abo.prestataireAvatar}
+              name={(abo.shopName ?? abo.prestataireName) as string}
               size={36}
               variant="shop"
             />
-            <Text style={styles.prestataireName}>{abo.prestataireName}</Text>
+            <Text style={styles.prestataireName}>{abo.shopName ?? abo.prestataireName}</Text>
           </View>
         ) : null}
 

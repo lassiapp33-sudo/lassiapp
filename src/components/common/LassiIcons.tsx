@@ -341,3 +341,18 @@ export const IcoNotifPay = ({ size = 40 }: { size?: number }) => (
     <Rect x="12" y="13.5" width="7" height="3" rx="1" fill={IC} opacity={0.5}/>
   </Svg>
 );
+
+export const IcoNotifFitness = ({ size = 40 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    {/* Barre centrale */}
+    <Rect x="7.5" y="11" width="9" height="2" rx="1" fill={IC}/>
+    {/* Poids gauche */}
+    <Rect x="1.5" y="8" width="3" height="8" rx="1.5" fill={IF} stroke={IC} strokeWidth={1.5}/>
+    {/* Manchon gauche */}
+    <Rect x="4.5" y="9.5" width="3" height="5" rx="0.5" fill={IC} opacity={0.6}/>
+    {/* Poids droit */}
+    <Rect x="19.5" y="8" width="3" height="8" rx="1.5" fill={IF} stroke={IC} strokeWidth={1.5}/>
+    {/* Manchon droit */}
+    <Rect x="16.5" y="9.5" width="3" height="5" rx="0.5" fill={IC} opacity={0.6}/>
+  </Svg>
+);

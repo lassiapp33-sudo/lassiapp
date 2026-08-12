@@ -119,14 +119,26 @@ function PendingPaymentBanner({
   qrCode: string;
   paymentUrl: string;
 }) {
-  const showQr = !!qrCode && !paymentUrl;  // QR uniquement si deep link indisponible
-
   return (
     <View style={styles.pendingBanner}>
-      {showQr ? (
+      {/* Bouton pour rouvrir l'app OM si le deep link est disponible */}
+      {!!paymentUrl && (
+        <TouchableOpacity
+          style={styles.omBtn}
+          onPress={() => Linking.openURL(paymentUrl).catch(() => {})}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.omBtnTxt}>Ouvrir Orange Money</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* QR code — affiché toujours quand disponible (fallback scan) */}
+      {!!qrCode ? (
         <>
           <Text style={styles.pendingTxt}>
-            Scanne ce QR code avec l'app Orange Money pour payer.
+            {paymentUrl
+              ? 'Ou scanne ce QR code avec l\'app Orange Money.'
+              : 'Scanne ce QR code avec l\'app Orange Money pour payer.'}
           </Text>
           <Image
             source={{ uri: `data:image/png;base64,${qrCode}` }}
@@ -139,6 +151,7 @@ function PendingPaymentBanner({
           Paiement Orange Money en attente — reviens ici après avoir payé dans l'app.
         </Text>
       )}
+
       <TouchableOpacity
         style={[styles.verifyBtn, loading && { opacity: 0.6 }]}
         onPress={onVerify}
@@ -393,18 +406,11 @@ export default function VisibilityScreen({ onBack }: Props) {
         qrCode:         result.qrCode,
       });
 
+      // Ouvrir l'app OM directement — canOpenURL bloque sur Android 11+ pour schemes custom
       if (result.paymentUrl) {
-        const canOpen = await Linking.canOpenURL(result.paymentUrl);
-        if (canOpen) {
-          await Linking.openURL(result.paymentUrl);
-        } else if (payMethod === 'orange_money' && result.qrCode) {
-          // QR code affiché dans le bandeau PendingPaymentBanner
-        } else {
-          Alert.alert(
-            'Application introuvable',
-            `Installe ${payMethod === 'wave' ? 'Wave' : 'Orange Money'} pour continuer le paiement.`,
-          );
-        }
+        Linking.openURL(result.paymentUrl).catch(() => {
+          // Silencieux : le QR code dans PendingPaymentBanner sert de fallback
+        });
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erreur inattendue';
@@ -817,6 +823,19 @@ const styles = StyleSheet.create({
     fontFamily: fonts.title,
     fontSize: 13,
     textAlign: 'center',
+  },
+  omBtn: {
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: '#FF6B00',  // orange OM
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  omBtnTxt: {
+    color: colors.white,
+    fontFamily: fonts.titleXL,
+    fontSize: 15,
   },
   verifyBtn: {
     height: 46,

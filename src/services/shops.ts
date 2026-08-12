@@ -339,6 +339,27 @@ export async function updateShopLogo(shopId: string, logoUrl: string): Promise<v
   if (error) throw new Error(error.message);
 }
 
+/** Crée la boutique d'un marchand déjà authentifié (inscription interrompue) */
+export async function createShopForMerchant(
+  name: string,
+  category: string,
+  shopType: 'products' | 'services' | 'memberships' | 'terrains',
+): Promise<void> {
+  const userId = useAuthStore.getState().user?.id;
+  if (!userId) throw new Error('Non connecté');
+  const { error } = await supabase.from('shops').insert({
+    merchant_id: userId,
+    name,
+    subtitle: '',
+    category,
+    subcategories: [],
+    shop_type: shopType,
+    zone: '',
+    is_open: true,
+  });
+  if (error) throw new Error(error.message);
+}
+
 /** Enregistre la position GPS d'un commerce dans Supabase */
 export async function updateShopLocation(shopId: string, lat: number, lng: number): Promise<void> {
   const zone = await reverseGeocode(lat, lng);
@@ -346,6 +367,12 @@ export async function updateShopLocation(shopId: string, lat: number, lng: numbe
     .from('shops')
     .update({ latitude: lat, longitude: lng, ...(zone ? { zone } : {}) })
     .eq('id', shopId);
+  if (error) throw new Error(error.message);
+}
+
+/** Enregistre uniquement le nom de zone sans coordonnées GPS (fallback manuel) */
+export async function updateShopZoneManual(shopId: string, zone: string): Promise<void> {
+  const { error } = await supabase.from('shops').update({ zone }).eq('id', shopId);
   if (error) throw new Error(error.message);
 }
 

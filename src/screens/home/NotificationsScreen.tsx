@@ -1,65 +1,41 @@
 import React, { useEffect, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, SectionList, StyleSheet, ActivityIndicator } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import useNotificationsStore, { NotifType, Notif } from '../../store/notificationsStore';
 import { IcoBack } from '../../components/icons';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
-const IcoOrder = ({ color }: { color: string }) => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>
-    <Path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" stroke={color} />
-    <Path d="M3 6h18M16 10a4 4 0 0 1-8 0" stroke={color} />
-  </Svg>
-);
+import {
+  IcoNotifOrder,
+  IcoNotifPay,
+  IcoNotifFitness,
+  IcoNotifGift,
+  IcoNotifMsg,
+  IcoNotifAnn,
+  IcoNotifLivraison,
+} from '../../components/common/LassiIcons';
 
-const IcoPay = ({ color }: { color: string }) => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>
-    <Path d="M20 6 9 17l-5-5" stroke={color} />
-  </Svg>
-);
-
-const IcoStar = ({ color }: { color: string }) => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>
-    <Path d="M12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9z" stroke={color} />
-  </Svg>
-);
-
-const IcoMsg = ({ color }: { color: string }) => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>
-    <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke={color} />
-  </Svg>
-);
-
-// Mégaphone — annonces admin
-const IcoAnn = ({ color }: { color: string }) => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>
-    <Path d="M18 8a2 2 0 0 1 0 4" stroke={color} />
-    <Path d="M3 9v6h3l7 4V5L6 9H3z" stroke={color} strokeLinejoin="round" />
-  </Svg>
-);
-
-// Camion — livraisons
-const IcoTruck = ({ color }: { color: string }) => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.8}>
-    <Path d="M1 3h15v13H1z" stroke={color} />
-    <Path d="M16 8h4l3 3v5h-7V8z" stroke={color} />
-    <Path d="M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" stroke={color} />
-    <Path d="M18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" stroke={color} />
-  </Svg>
-);
+// Adaptateurs taille 19 pour les icônes LASSI dans les cards
+const IcoOrder    = () => <IcoNotifOrder    size={19} />;
+const IcoPay      = () => <IcoNotifPay      size={19} />;
+const IcoFitness  = () => <IcoNotifFitness  size={19} />;
+const IcoStar     = () => <IcoNotifGift     size={19} />;
+const IcoMsg      = () => <IcoNotifMsg      size={19} />;
+const IcoAnn      = () => <IcoNotifAnn      size={19} />;
+const IcoTruck    = () => <IcoNotifLivraison size={19} />;
 
 const TYPE_CONFIG: Record<
   NotifType,
-  { Icon: React.FC<{ color: string }>; color: string; bg: string }
+  { Icon: React.FC; color: string; bg: string }
 > = {
-  order:     { Icon: IcoOrder, color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
-  pay:       { Icon: IcoPay,   color: colors.success, bg: 'rgba(95,211,138,.13)' },
-  vip:       { Icon: IcoStar,  color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
-  msg:       { Icon: IcoMsg,   color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
-  ann:       { Icon: IcoAnn,   color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
-  livraison: { Icon: IcoTruck, color: colors.success, bg: 'rgba(95,211,138,.13)' },
+  order:     { Icon: IcoOrder,   color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+  pay:       { Icon: IcoPay,     color: colors.success, bg: 'rgba(95,211,138,.13)' },
+  fitness:   { Icon: IcoFitness, color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
+  vip:       { Icon: IcoStar,    color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
+  msg:       { Icon: IcoMsg,     color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+  ann:       { Icon: IcoAnn,     color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+  livraison: { Icon: IcoTruck,   color: colors.success, bg: 'rgba(95,211,138,.13)' },
 };
 
 const NotifCard = React.memo(function NotifCard({
@@ -79,7 +55,7 @@ const NotifCard = React.memo(function NotifCard({
     >
       {notif.unread && <View style={styles.dot} />}
       <View style={[styles.iconBox, { backgroundColor: cfg.bg }]}>
-        <Icon color={cfg.color} />
+        <Icon />
       </View>
       <View style={styles.content}>
         <Text style={styles.title}>{notif.title}</Text>

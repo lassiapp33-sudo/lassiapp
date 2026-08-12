@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import * as notifsService from '../services/notifications';
 import logger from '../utils/logger';
 
-export type NotifType = 'order' | 'pay' | 'vip' | 'msg' | 'ann' | 'livraison';
+export type NotifType = 'order' | 'pay' | 'fitness' | 'vip' | 'msg' | 'ann' | 'livraison';
 
 export interface Notif {
   id: string;

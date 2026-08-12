@@ -156,7 +156,7 @@ export default function MerchantPaymentsScreen({ onBack }: Props) {
         <TouchableOpacity style={s.backBtn} onPress={onBack} activeOpacity={0.8}>
           <IcoBack />
         </TouchableOpacity>
-        <Text style={s.title}>Mes paiements</Text>
+        <Text style={s.title}>Mes encaissements</Text>
         <MascoHomeBtn />
       </View>
 

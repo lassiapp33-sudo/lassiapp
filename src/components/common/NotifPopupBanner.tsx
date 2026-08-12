@@ -8,17 +8,19 @@ import {
 } from 'react-native';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { NotifType } from '../../store/notificationsStore';
-import { IcoNotifOrder, IcoNotifMsg } from './LassiIcons';
+import { IcoNotifOrder, IcoNotifMsg, IcoNotifFitness } from './LassiIcons';
 import useNotifPopupStore from '../../store/notifPopupStore';
 
 function BannerIcon({ type }: { type: NotifType }) {
-  if (type === 'msg') return <IcoNotifMsg size={24} />;
+  if (type === 'msg')     return <IcoNotifMsg     size={24} />;
+  if (type === 'fitness') return <IcoNotifFitness size={24} />;
   return <IcoNotifOrder size={24} />;
 }
 
 const COLOR: Record<NotifType, string> = {
   order:     colors.accent,
   pay:       colors.success,
+  fitness:   colors.orange,
   vip:       colors.orange,
   msg:       colors.accent,
   ann:       colors.accent,
@@ -28,6 +30,7 @@ const COLOR: Record<NotifType, string> = {
 const BG: Record<NotifType, string> = {
   order:     'rgba(253,207,52,.13)',
   pay:       'rgba(95,211,138,.13)',
+  fitness:   'rgba(240,168,71,.13)',
   vip:       'rgba(240,168,71,.13)',
   msg:       'rgba(253,207,52,.13)',
   ann:       'rgba(253,207,52,.13)',
@@ -111,7 +114,7 @@ export default function NotifPopupBanner({ onView }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id]);
 
-  if (!current || (current.type !== 'order' && current.type !== 'msg')) return null;
+  if (!current || (current.type !== 'order' && current.type !== 'msg' && current.type !== 'fitness')) return null;
 
   const color = COLOR[current.type];
   const bg    = BG[current.type];

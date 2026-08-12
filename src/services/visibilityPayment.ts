@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getCachedToken, safeGetSession } from '../lib/supabase';
+import { supabase, getCachedToken, safeGetSession } from '../lib/supabase';
 import { formatPrice } from '../utils/format';
 import { calculateOffreQuartierPrice } from '../utils/offreQuartierPricing';
 

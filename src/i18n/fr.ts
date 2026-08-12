@@ -40,7 +40,7 @@ const fr: Translations = {
     noFavorites: 'Aucun favori',
     favoriteOne: 'commerce enregistré',
     favoritesMany: 'commerces enregistrés',
-    myPayments: 'Mes paiements',
+    myPayments: 'Mes encaissements',
     myPaymentsSub: 'Reçus & historique Wave/OM',
     myStore: 'Ma vitrine',
     myStoreSub: 'Produits, photos, horaires',

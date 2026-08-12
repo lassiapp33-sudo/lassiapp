@@ -336,9 +336,12 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
 
   const selectedOrder = useCartStore(s => s.orderType);
 
-  // ── Options "Sur place / À emporter" — masquées pour bakery et stores ────
+  // ── Options "Sur place / À emporter" — masquées pour bakery, stores et certaines sous-cats tangana ────
   const shopCategory = shopData?.category ?? '';
-  const noOrderOptions = ['bakery', 'stores'].includes(shopCategory);
+  const shopSubcats  = shopData?.subcategories ?? [];
+  const noOrderOptions =
+    ['bakery', 'stores'].includes(shopCategory) ||
+    shopSubcats.some(s => ['cafe_wass', 'beignet_fataya'].includes(s));
   const showOrderOptions = shopType === 'products' && !noOrderOptions;
   const orderOptions = [
     { id: 'place', label: 'Sur place' },

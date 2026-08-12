@@ -29,7 +29,10 @@ function toGroup(iso: string): 'today' | 'week' {
 }
 
 // Mappe le type Supabase vers le NotifType local (compatibilité store)
-function mapType(dbType: string): NotifType {
+function mapType(dbType: string, data: Record<string, any>): NotifType {
+  // Paiement fitness (abonnement sportif) → type distinct pour navigation + icône
+  if (dbType === 'payment' && data.type === 'fitness_abonnement_paye') return 'fitness';
+
   const MAP: Record<string, NotifType> = {
     order:    'order',
     payment:  'pay',
@@ -47,7 +50,7 @@ export function rowToNotif(row: Record<string, any>): Notif {
   const data: Record<string, any> = row.data ?? {};
   return {
     id: row.id,
-    type: mapType(row.type),
+    type: mapType(row.type, data),
     title: row.title,
     body: row.body,
     time: timeLabel(row.created_at),

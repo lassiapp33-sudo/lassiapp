@@ -26,6 +26,10 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
+      },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://tsdemraszwtbzgtyjzum.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzZGVtcmFzend0YnpndHlqenVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2Mjc5MjcsImV4cCI6MjA5NTIwMzkyN30.EQ64jUdey9U344pXMDmysM0UJrk3zhKA66JfVuQ3W-s",
