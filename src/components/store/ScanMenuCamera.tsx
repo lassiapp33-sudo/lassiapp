@@ -13,7 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import TextRecognition, { TextRecognitionScript } from '@react-native-ml-kit/text-recognition';
-import { extraireProduits, ProduitExtrait } from '../../utils/parsingMenu';
+import { extraireProduits, ProduitExtrait, MAX_ITEMS_PAR_SCAN } from '../../utils/parsingMenu';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -55,6 +55,7 @@ export default function ScanMenuCamera({ visible, onDone, onClose }: Props) {
     setScanning(true);
     try {
       const result = await TextRecognition.recognize(uri, TextRecognitionScript.LATIN);
+      const rawCount = result.text.split('\n').filter(l => l.trim().length > 1).length;
       const items = extraireProduits(result.text);
       if (items.length === 0) {
         Alert.alert(
@@ -62,6 +63,12 @@ export default function ScanMenuCamera({ visible, onDone, onClose }: Props) {
           'Essaie en améliorant l\'éclairage et en centrant bien le menu dans le cadre.',
         );
         return;
+      }
+      if (rawCount > MAX_ITEMS_PAR_SCAN && items.length === MAX_ITEMS_PAR_SCAN) {
+        Alert.alert(
+          `${MAX_ITEMS_PAR_SCAN} produits affichés`,
+          `Le menu contient beaucoup de lignes. Les ${MAX_ITEMS_PAR_SCAN} produits les plus lisibles sont proposés en relecture. Tu pourras en ajouter d'autres manuellement ensuite.`,
+        );
       }
       onDone(items);
     } catch {

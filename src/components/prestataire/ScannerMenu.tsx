@@ -11,7 +11,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import TextRecognition, { TextRecognitionScript } from '@react-native-ml-kit/text-recognition';
 import { colors, fonts, radius } from '../../theme';
-import { extraireProduits, ProduitExtrait } from '../../utils/parsingMenu';
+import { extraireProduits, ProduitExtrait, MAX_ITEMS_PAR_SCAN } from '../../utils/parsingMenu';
 
 interface Props {
   onProduitsExtraits: (produits: ProduitExtrait[]) => void;
@@ -72,6 +72,7 @@ export default function ScannerMenu({ onProduitsExtraits }: Props) {
         return;
       }
 
+      const rawCount = texteComplet.split('\n').filter(l => l.trim().length > 1).length;
       const produits = extraireProduits(texteComplet);
 
       if (produits.length === 0) {
@@ -80,6 +81,13 @@ export default function ScannerMenu({ onProduitsExtraits }: Props) {
           "Le texte a été lu mais aucun prix n'a été reconnu. Vous pouvez ajouter vos produits manuellement.",
         );
         return;
+      }
+
+      if (rawCount > MAX_ITEMS_PAR_SCAN && produits.length === MAX_ITEMS_PAR_SCAN) {
+        Alert.alert(
+          `${MAX_ITEMS_PAR_SCAN} produits affichés`,
+          `Menu très long — les ${MAX_ITEMS_PAR_SCAN} produits les plus lisibles sont proposés. Ajoutez les autres manuellement.`,
+        );
       }
 
       onProduitsExtraits(produits);

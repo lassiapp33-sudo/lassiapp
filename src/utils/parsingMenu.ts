@@ -6,6 +6,9 @@ export interface ProduitExtrait {
   confiance: 'haute' | 'moyenne' | 'basse';
 }
 
+/** Plafond du nombre d'items renvoyés — évite de saturer l'écran de relecture. */
+export const MAX_ITEMS_PAR_SCAN = 40;
+
 /**
  * Détecte un prix dans une ligne de texte.
  * Gère : "1500", "1500 F", "1500 FCFA", "1 500", "1.500", "1500F"
@@ -68,7 +71,14 @@ export const extraireProduits = (texteBrut: string): ProduitExtrait[] => {
     });
   });
 
-  return produits;
+  // Priorité aux items "haute" confiance si on dépasse le plafond
+  if (produits.length <= MAX_ITEMS_PAR_SCAN) return produits;
+
+  const hauts   = produits.filter(p => p.confiance === 'haute');
+  const moyens  = produits.filter(p => p.confiance === 'moyenne');
+  const bas     = produits.filter(p => p.confiance === 'basse');
+
+  return [...hauts, ...moyens, ...bas].slice(0, MAX_ITEMS_PAR_SCAN);
 };
 
 // Capitalise chaque premier caractère de mot (title case)
