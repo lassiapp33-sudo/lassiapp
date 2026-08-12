@@ -1,57 +1,37 @@
-import { SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
-export type FicheSection =
-  | 'type_contenu'
-  | 'sous_categorie_produit'
-  | 'nom_produit'
-  | 'prix';
-
-export interface SuggestionFiche {
+export interface Suggestion {
   id: string;
-  categorie_id: string;
-  sous_categorie_id: string | null;
-  section: FicheSection;
   valeur: string;
   ordre: number;
 }
 
-export async function getSuggestions(
+type Section = 'type_contenu' | 'sous_categorie_produit' | 'nom_produit' | 'prix';
+
+export const getSuggestions = async (
   categorieId: string,
-  section: FicheSection,
-  sousCategorieId?: string,
-): Promise<SuggestionFiche[]> {
-  let url =
-    `${SUPABASE_URL}/rest/v1/suggestions_fiche` +
-    `?select=id,categorie_id,sous_categorie_id,section,valeur,ordre` +
-    `&categorie_id=eq.${encodeURIComponent(categorieId)}` +
-    `&section=eq.${encodeURIComponent(section)}` +
-    `&actif=eq.true` +
-    `&order=ordre.asc`;
+  section: Section,
+): Promise<Suggestion[]> => {
+  const { data, error } = await supabase
+    .from('suggestions_fiche')
+    .select('id, valeur, ordre')
+    .eq('categorie_id', categorieId)
+    .eq('section', section)
+    .eq('actif', true)
+    .order('ordre', { ascending: true });
 
-  if (sousCategorieId) {
-    url += `&or=(sous_categorie_id.eq.${encodeURIComponent(sousCategorieId)},sous_categorie_id.is.null)`;
-  }
-
-  const res = await fetch(url, {
-    headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` },
-  });
-  if (!res.ok) return [];
-  const data: SuggestionFiche[] = await res.json();
+  if (error) return [];
   return data ?? [];
-}
+};
 
-export async function getAllSuggestions(categorieId: string): Promise<SuggestionFiche[]> {
-  const url =
-    `${SUPABASE_URL}/rest/v1/suggestions_fiche` +
-    `?select=id,categorie_id,sous_categorie_id,section,valeur,ordre` +
-    `&categorie_id=eq.${encodeURIComponent(categorieId)}` +
-    `&actif=eq.true` +
-    `&order=section.asc,ordre.asc`;
-
-  const res = await fetch(url, {
-    headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` },
-  });
-  if (!res.ok) return [];
-  const data: SuggestionFiche[] = await res.json();
-  return data ?? [];
-}
+// Charge les 4 sections en parallèle (évite 4 allers-retours séquentiels)
+export const getToutesSuggestions = async (categorieId: string) => {
+  const sections: Section[] = ['type_contenu', 'sous_categorie_produit', 'nom_produit', 'prix'];
+  const results = await Promise.all(sections.map(s => getSuggestions(categorieId, s)));
+  return {
+    typeContenu:   results[0],
+    sousCategorie: results[1],
+    nomProduit:    results[2],
+    prix:          results[3],
+  };
+};

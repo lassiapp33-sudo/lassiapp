@@ -15,7 +15,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { StoreProduct, StoreCategory } from '../../types/store';
-import { getAllSuggestions, SuggestionFiche, FicheSection } from '../../services/ficheGuidee';
+import { getToutesSuggestions, Suggestion } from '../../services/ficheGuidee';
 import useShopStore from '../../store/shopStore';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -42,12 +42,12 @@ interface SectionState {
 
 const EMPTY_SECTION: SectionState = { selected: '', isCustom: false, custom: '' };
 
-const SECTIONS: { key: FicheSection; label: string }[] = [
-  { key: 'type_contenu',           label: 'Type de contenu' },
-  { key: 'sous_categorie_produit', label: 'Sous-catégorie' },
-  { key: 'nom_produit',            label: 'Nom du produit' },
-  { key: 'prix',                   label: 'Prix (FCFA)' },
-];
+interface SuggsState {
+  typeContenu:   Suggestion[];
+  sousCategorie: Suggestion[];
+  nomProduit:    Suggestion[];
+  prix:          Suggestion[];
+}
 
 const BOTTOM_PAD = Platform.OS === 'ios' ? 28 : 14;
 
@@ -72,11 +72,11 @@ export default function FicheGuideeSheet({
   const shopType     = useShopStore(s => s.context.shopType);
 
   // Suggestions chargées depuis la DB, groupées par section
-  const [suggs, setSuggs] = useState<Record<FicheSection, SuggestionFiche[]>>({
-    type_contenu:           [],
-    sous_categorie_produit: [],
-    nom_produit:            [],
-    prix:                   [],
+  const [suggs, setSuggs] = useState<SuggsState>({
+    typeContenu:   [],
+    sousCategorie: [],
+    nomProduit:    [],
+    prix:          [],
   });
   const [loadingSuggs, setLoadingSuggs] = useState(false);
 
@@ -118,17 +118,8 @@ export default function FicheGuideeSheet({
 
     if (!shopCategory) return;
     setLoadingSuggs(true);
-    getAllSuggestions(shopCategory)
-      .then(list => {
-        const grouped: Record<FicheSection, SuggestionFiche[]> = {
-          type_contenu:           [],
-          sous_categorie_produit: [],
-          nom_produit:            [],
-          prix:                   [],
-        };
-        for (const s of list) grouped[s.section].push(s);
-        setSuggs(grouped);
-      })
+    getToutesSuggestions(shopCategory)
+      .then(setSuggs)
       .catch(() => {})
       .finally(() => setLoadingSuggs(false));
   }, [visible, shopCategory]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -261,7 +252,7 @@ export default function FicheGuideeSheet({
             {/* ── Section 1 : Type de contenu ─────────────────────────────── */}
             <CascadeSection
               label="Type de contenu"
-              chips={suggs.type_contenu.map(s => s.valeur)}
+              chips={suggs.typeContenu.map(s => s.valeur)}
               state={sec1}
               onChip={v => pickSec1(v)}
               onCustom={() => pickSec1('', true)}
@@ -274,7 +265,7 @@ export default function FicheGuideeSheet({
             {visibleSections >= 2 && (
               <CascadeSection
                 label="Sous-catégorie de produit"
-                chips={suggs.sous_categorie_produit.map(s => s.valeur)}
+                chips={suggs.sousCategorie.map(s => s.valeur)}
                 state={sec2}
                 onChip={v => pickSec2(v)}
                 onCustom={() => pickSec2('', true)}
@@ -288,7 +279,7 @@ export default function FicheGuideeSheet({
             {visibleSections >= 3 && (
               <CascadeSection
                 label="Nom du produit"
-                chips={suggs.nom_produit.map(s => s.valeur)}
+                chips={suggs.nomProduit.map(s => s.valeur)}
                 state={sec3}
                 onChip={v => pickSec3(v)}
                 onCustom={() => pickSec3('', true)}
