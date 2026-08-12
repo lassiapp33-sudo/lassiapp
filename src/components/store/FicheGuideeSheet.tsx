@@ -17,8 +17,9 @@ import { colors, fonts, radius } from '../../theme';
 import { StoreProduct, StoreCategory } from '../../types/store';
 import { getToutesSuggestions, Suggestion } from '../../services/ficheGuidee';
 import useShopStore from '../../store/shopStore';
+import SelecteurPuces from './SelecteurPuces';
 
-// ─── Icônes ──────────────────────────────────────────────────────────────────
+// ─── Icône ────────────────────────────────────────────────────────────────────
 
 const IcoCheck = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -26,21 +27,7 @@ const IcoCheck = () => (
   </Svg>
 );
 
-const IcoChevronRight = () => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M9 18l6-6-6-6" stroke={colors.accent} />
-  </Svg>
-);
-
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-interface SectionState {
-  selected: string;   // valeur choisie (chip ou saisie libre)
-  isCustom: boolean;  // true = saisie libre active
-  custom: string;     // texte tapé en mode libre
-}
-
-const EMPTY_SECTION: SectionState = { selected: '', isCustom: false, custom: '' };
 
 interface SuggsState {
   typeContenu:   Suggestion[];
@@ -71,51 +58,31 @@ export default function FicheGuideeSheet({
   const shopCategory = useShopStore(s => s.context.category);
   const shopType     = useShopStore(s => s.context.shopType);
 
-  // Suggestions chargées depuis la DB, groupées par section
   const [suggs, setSuggs] = useState<SuggsState>({
-    typeContenu:   [],
-    sousCategorie: [],
-    nomProduit:    [],
-    prix:          [],
+    typeContenu: [], sousCategorie: [], nomProduit: [], prix: [],
   });
   const [loadingSuggs, setLoadingSuggs] = useState(false);
 
-  // États des 4 sections
-  const [sec1, setSec1] = useState<SectionState>(EMPTY_SECTION);
-  const [sec2, setSec2] = useState<SectionState>(EMPTY_SECTION);
-  const [sec3, setSec3] = useState<SectionState>(EMPTY_SECTION);
-  const [sec4, setSec4] = useState<SectionState>(EMPTY_SECTION);
-  // Description libre (section 5)
-  const [desc, setDesc] = useState('');
-
-  // Catégorie cible dans le catalogue
+  // État de chaque section : simple string (valeur choisie ou tapée)
+  const [sec1, setSec1] = useState('');
+  const [sec2, setSec2] = useState('');
+  const [sec3, setSec3] = useState('');
+  const [sec4, setSec4] = useState('');
+  const [desc, setDesc]  = useState('');
   const [catId, setCatId] = useState(defaultCatId ?? categories[0]?.id ?? '');
 
   const [saving, setSaving] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
-  // Nombre de sections visibles (cascade progressive)
-  const visibleSections = (() => {
-    if (!getValue(sec1)) return 1;
-    if (!getValue(sec2)) return 2;
-    if (!getValue(sec3)) return 3;
-    if (!getValue(sec4)) return 4;
-    return 5;
-  })();
+  // Sections visibles en cascade
+  const visibleSections = !sec1 ? 1 : !sec2 ? 2 : !sec3 ? 3 : !sec4 ? 4 : 5;
+  const canSubmit = !!sec3.trim() && !!sec4.trim();
 
-  const canSubmit = !!getValue(sec3) && !!getValue(sec4);
-
-  // Charge les suggestions à l'ouverture
+  // Chargement des suggestions + reset à l'ouverture
   useEffect(() => {
     if (!visible) return;
-    // Reset
-    setSec1(EMPTY_SECTION);
-    setSec2(EMPTY_SECTION);
-    setSec3(EMPTY_SECTION);
-    setSec4(EMPTY_SECTION);
-    setDesc('');
+    setSec1(''); setSec2(''); setSec3(''); setSec4(''); setDesc('');
     setCatId(defaultCatId ?? categories[0]?.id ?? '');
-
     if (!shopCategory) return;
     setLoadingSuggs(true);
     getToutesSuggestions(shopCategory)
@@ -124,61 +91,17 @@ export default function FicheGuideeSheet({
       .finally(() => setLoadingSuggs(false));
   }, [visible, shopCategory]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-scroll vers le bas quand une nouvelle section devient visible
+  // Auto-scroll vers le bas quand une nouvelle section apparaît
   useEffect(() => {
     if (visibleSections > 1) {
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);
     }
   }, [visibleSections]);
 
-  function getValue(s: SectionState): string {
-    return s.isCustom ? s.custom.trim() : s.selected;
-  }
-
-  function setSectionValue(
-    setter: React.Dispatch<React.SetStateAction<SectionState>>,
-    value: string,
-    isCustom = false,
-  ) {
-    setter({ selected: isCustom ? '' : value, isCustom, custom: isCustom ? '' : '' });
-    // Reset les sections suivantes en cascade
-  }
-
-  // Quand on change sec1 → reset sec2, sec3, sec4
-  function pickSec1(val: string, isCustom = false) {
-    setter1(val, isCustom);
-    setSec2(EMPTY_SECTION);
-    setSec3(EMPTY_SECTION);
-    setSec4(EMPTY_SECTION);
-    setDesc('');
-  }
-  function setter1(val: string, isCustom = false) {
-    setSec1({ selected: isCustom ? '' : val, isCustom, custom: isCustom ? '' : '' });
-  }
-
-  function pickSec2(val: string, isCustom = false) {
-    setSec2({ selected: isCustom ? '' : val, isCustom, custom: isCustom ? '' : '' });
-    setSec3(EMPTY_SECTION);
-    setSec4(EMPTY_SECTION);
-    setDesc('');
-  }
-
-  function pickSec3(val: string, isCustom = false) {
-    setSec3({ selected: isCustom ? '' : val, isCustom, custom: isCustom ? '' : '' });
-    setSec4(EMPTY_SECTION);
-    setDesc('');
-  }
-
-  function pickSec4(val: string, isCustom = false) {
-    setSec4({ selected: isCustom ? '' : val, isCustom, custom: isCustom ? '' : '' });
-    setDesc('');
-  }
-
   const handleSave = async () => {
-    const name  = getValue(sec3);
-    const price = parseInt(getValue(sec4).replace(/\D/g, ''), 10);
-
-    if (!name) { Alert.alert('Champ requis', 'Choisis ou saisis le nom du produit.'); return; }
+    const name  = sec3.trim();
+    const price = parseInt(sec4.replace(/\D/g, ''), 10);
+    if (!name)  { Alert.alert('Champ requis', 'Choisis ou saisis le nom du produit.'); return; }
     if (!price) { Alert.alert('Champ requis', 'Choisis ou saisis le prix du produit.'); return; }
 
     const itemType =
@@ -187,22 +110,21 @@ export default function FicheGuideeSheet({
                                    ('product'    as const);
 
     const product: StoreProduct = {
-      id:       `p_${Date.now()}`,
-      emoji:    '',
+      id: `p_${Date.now()}`,
+      emoji: '',
       name,
-      desc:     desc.trim(),
+      desc: desc.trim(),
       price,
       category: catId,
-      stock:    'in',
+      stock: 'in',
       itemType,
     };
-
     setSaving(true);
     try {
       await onSave(product);
       onClose();
     } catch {
-      Alert.alert('Erreur', "Impossible d'enregistrer le produit. Vérifie ta connexion et réessaie.");
+      Alert.alert('Erreur', "Impossible d'enregistrer le produit. Réessaie.");
     } finally {
       setSaving(false);
     }
@@ -217,7 +139,6 @@ export default function FicheGuideeSheet({
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} />
 
         <View style={[styles.sheet, { paddingBottom: BOTTOM_PAD }]}>
-          {/* Poignée */}
           <View style={styles.grab} />
 
           {/* En-tête */}
@@ -237,7 +158,7 @@ export default function FicheGuideeSheet({
                 style={[
                   styles.progressDot,
                   i <= visibleSections && styles.progressDotActive,
-                  i < visibleSections && styles.progressDotDone,
+                  i < visibleSections  && styles.progressDotDone,
                 ]}
               />
             ))}
@@ -249,78 +170,64 @@ export default function FicheGuideeSheet({
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.scrollContent}
           >
-            {/* ── Section 1 : Type de contenu ─────────────────────────────── */}
-            <CascadeSection
+            {/* Section 1 */}
+            <SelecteurPuces
+              key="sec1"
               label="Type de contenu"
-              chips={suggs.typeContenu.map(s => s.valeur)}
-              state={sec1}
-              onChip={v => pickSec1(v)}
-              onCustom={() => pickSec1('', true)}
-              onCustomChange={v => setSec1(p => ({ ...p, custom: v }))}
-              isDone={!!getValue(sec1)}
-              placeholder="Ex : Menu, Catalogue, Tarifs…"
+              suggestions={suggs.typeContenu}
+              valeurSelectionnee={sec1}
+              onSelectionner={v => { setSec1(v); setSec2(''); setSec3(''); setSec4(''); setDesc(''); }}
+              placeholderLibre="Ex : Menu, Catalogue, Tarifs…"
             />
 
-            {/* ── Section 2 : Sous-catégorie ──────────────────────────────── */}
+            {/* Section 2 */}
             {visibleSections >= 2 && (
-              <CascadeSection
+              <SelecteurPuces
+                key={`sec2-${sec1}`}
                 label="Sous-catégorie de produit"
-                chips={suggs.sousCategorie.map(s => s.valeur)}
-                state={sec2}
-                onChip={v => pickSec2(v)}
-                onCustom={() => pickSec2('', true)}
-                onCustomChange={v => setSec2(p => ({ ...p, custom: v }))}
-                isDone={!!getValue(sec2)}
-                placeholder="Ex : Repas, Boisson, Dessert…"
+                suggestions={suggs.sousCategorie}
+                valeurSelectionnee={sec2}
+                onSelectionner={v => { setSec2(v); setSec3(''); setSec4(''); setDesc(''); }}
+                placeholderLibre="Ex : Repas, Boisson, Dessert…"
               />
             )}
 
-            {/* ── Section 3 : Nom du produit ──────────────────────────────── */}
+            {/* Section 3 */}
             {visibleSections >= 3 && (
-              <CascadeSection
+              <SelecteurPuces
+                key={`sec3-${sec2}`}
                 label="Nom du produit"
-                chips={suggs.nomProduit.map(s => s.valeur)}
-                state={sec3}
-                onChip={v => pickSec3(v)}
-                onCustom={() => pickSec3('', true)}
-                onCustomChange={v => setSec3(p => ({ ...p, custom: v }))}
-                isDone={!!getValue(sec3)}
-                placeholder="Ex : Burger, Tresses, Baguette…"
+                suggestions={suggs.nomProduit}
+                valeurSelectionnee={sec3}
+                onSelectionner={v => { setSec3(v); setSec4(''); setDesc(''); }}
+                placeholderLibre="Ex : Burger, Tresses, Baguette…"
               />
             )}
 
-            {/* ── Section 4 : Prix ────────────────────────────────────────── */}
+            {/* Section 4 */}
             {visibleSections >= 4 && (
-              <CascadeSection
+              <SelecteurPuces
+                key={`sec4-${sec3}`}
                 label="Prix (FCFA)"
-                chips={suggs.prix.map(s => s.valeur)}
-                state={sec4}
-                onChip={v => pickSec4(v)}
-                onCustom={() => pickSec4('', true)}
-                onCustomChange={v => {
-                  const digits = v.replace(/\D/g, '');
-                  setSec4(p => ({ ...p, custom: digits }));
-                }}
-                isDone={!!getValue(sec4)}
-                placeholder="Saisir le prix exact…"
-                keyboardType="numeric"
-                chipSuffix=" F"
+                suggestions={suggs.prix}
+                valeurSelectionnee={sec4}
+                onSelectionner={setSec4}
+                placeholderLibre="Saisir le prix exact…"
               />
             )}
 
-            {/* ── Section 5 : Description (100% libre) ────────────────────── */}
+            {/* Section 5 : description 100% libre */}
             {visibleSections >= 5 && (
-              <View style={styles.section}>
-                <View style={styles.sectionLabelRow}>
-                  <Text style={styles.sectionLabel}>Description</Text>
-                  <Text style={styles.sectionOptional}>(optionnel)</Text>
-                </View>
+              <View style={styles.descSection}>
+                <Text style={styles.descLabel}>
+                  Description <Text style={styles.descOptional}>(optionnel)</Text>
+                </Text>
                 <TextInput
-                  style={[styles.input, styles.inputMulti]}
+                  style={styles.descInput}
                   value={desc}
                   onChangeText={setDesc}
                   placeholder="Décris le produit librement : taille, ingrédients, durée…"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor="#6B6F9E"
                   multiline
                   numberOfLines={3}
                   textAlignVertical="top"
@@ -328,28 +235,30 @@ export default function FicheGuideeSheet({
               </View>
             )}
 
-            {/* ── Catégorie cible (catalogue) ─────────────────────────────── */}
+            {/* Catégorie cible */}
             {visibleSections >= 5 && categories.length > 1 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Ajouter dans</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catRow}>
-                  {categories.map(cat => (
-                    <TouchableOpacity
-                      key={cat.id}
-                      style={[styles.catChip, catId === cat.id && styles.catChipActive]}
-                      onPress={() => setCatId(cat.id)}
-                      activeOpacity={0.75}
-                    >
-                      <Text style={[styles.catChipTxt, catId === cat.id && styles.catChipTxtActive]}>
-                        {cat.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+              <View style={styles.catSection}>
+                <Text style={styles.descLabel}>Ajouter dans</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.catRow}>
+                    {categories.map(cat => (
+                      <TouchableOpacity
+                        key={cat.id}
+                        style={[styles.catChip, catId === cat.id && styles.catChipActive]}
+                        onPress={() => setCatId(cat.id)}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[styles.catChipTxt, catId === cat.id && styles.catChipTxtActive]}>
+                          {cat.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </ScrollView>
               </View>
             )}
 
-            {/* ── Bouton Enregistrer ──────────────────────────────────────── */}
+            {/* Bouton enregistrer */}
             {canSubmit && (
               <TouchableOpacity
                 style={[styles.saveBtn, saving && { opacity: 0.55 }]}
@@ -371,94 +280,11 @@ export default function FicheGuideeSheet({
   );
 }
 
-// ─── Sous-composant : section cascade ────────────────────────────────────────
-
-interface CascadeSectionProps {
-  label: string;
-  chips: string[];
-  state: SectionState;
-  onChip: (v: string) => void;
-  onCustom: () => void;
-  onCustomChange: (v: string) => void;
-  isDone: boolean;
-  placeholder: string;
-  keyboardType?: 'default' | 'numeric';
-  chipSuffix?: string;
-}
-
-function CascadeSection({
-  label, chips, state, onChip, onCustom, onCustomChange,
-  isDone, placeholder, keyboardType = 'default', chipSuffix = '',
-}: CascadeSectionProps) {
-  const value = state.isCustom ? state.custom.trim() : state.selected;
-  const done  = !!value;
-
-  return (
-    <View style={[styles.section, done && !state.isCustom && styles.sectionDone]}>
-      <View style={styles.sectionLabelRow}>
-        <Text style={[styles.sectionLabel, done && styles.sectionLabelDone]}>{label}</Text>
-        {done && !state.isCustom && (
-          <View style={styles.doneBadge}>
-            <Text style={styles.doneBadgeTxt}>{state.selected}{chipSuffix}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Chips */}
-      <View style={styles.chipRow}>
-        {chips.map(chip => {
-          const active = !state.isCustom && state.selected === chip;
-          return (
-            <TouchableOpacity
-              key={chip}
-              style={[styles.chip, active && styles.chipActive]}
-              onPress={() => onChip(chip)}
-              activeOpacity={0.75}
-            >
-              <Text style={[styles.chipTxt, active && styles.chipTxtActive]}>
-                {chip}{chipSuffix}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-
-        {/* Chip "Autre" */}
-        <TouchableOpacity
-          style={[styles.chip, styles.chipAutre, state.isCustom && styles.chipActive]}
-          onPress={onCustom}
-          activeOpacity={0.75}
-        >
-          <Text style={[styles.chipTxt, state.isCustom && styles.chipTxtActive]}>Autre…</Text>
-          <IcoChevronRight />
-        </TouchableOpacity>
-      </View>
-
-      {/* Saisie libre (mode Autre) */}
-      {state.isCustom && (
-        <TextInput
-          style={styles.input}
-          value={state.custom}
-          onChangeText={onCustomChange}
-          placeholder={placeholder}
-          placeholderTextColor={colors.muted}
-          keyboardType={keyboardType}
-          autoFocus
-          returnKeyType="done"
-        />
-      )}
-    </View>
-  );
-}
-
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(10,11,24,.65)',
-  },
+  overlay: { flex: 1, backgroundColor: 'rgba(10,11,24,.65)' },
   sheet: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: 28,
@@ -477,7 +303,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 14,
   },
-
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -495,157 +320,63 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-
-  // Barre de progression
-  progressBar: {
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: 18,
-  },
+  progressBar: { flexDirection: 'row', gap: 6, marginBottom: 18 },
   progressDot: {
     flex: 1,
     height: 3,
     borderRadius: 2,
     backgroundColor: colors.border,
   },
-  progressDotActive: {
-    backgroundColor: 'rgba(253,207,52,.4)',
-  },
-  progressDotDone: {
-    backgroundColor: colors.accent,
-  },
-
+  progressDotActive: { backgroundColor: 'rgba(253,207,52,.4)' },
+  progressDotDone:   { backgroundColor: colors.accent },
   scrollContent: { paddingBottom: 8 },
 
-  // Section cascade
-  section: {
-    marginBottom: 18,
-    padding: 14,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  sectionDone: {
-    borderColor: 'rgba(253,207,52,.25)',
-    backgroundColor: 'rgba(253,207,52,.04)',
-  },
-  sectionLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  // Description
+  descSection: { marginBottom: 20 },
+  descLabel: {
+    color: '#EDEEF7',
+    fontFamily: 'PoppinsSemiBold',
+    fontSize: 14,
     marginBottom: 10,
   },
-  sectionLabel: {
+  descOptional: {
     color: colors.muted,
-    fontFamily: fonts.ui,
-    fontSize: 11,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-  },
-  sectionLabelDone: {
-    color: colors.accent,
-  },
-  sectionOptional: {
-    color: '#3a3c5a',
     fontFamily: fonts.body,
-    fontSize: 11,
-  },
-  doneBadge: {
-    backgroundColor: 'rgba(253,207,52,.15)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  doneBadgeTxt: {
-    color: colors.accent,
-    fontFamily: fonts.title,
     fontSize: 12,
   },
-
-  // Chips
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 2,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+  descInput: {
+    backgroundColor: '#1E2040',
+    borderRadius: 12,
+    padding: 12,
+    color: '#EDEEF7',
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bg,
-  },
-  chipActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  chipAutre: {
-    borderStyle: 'dashed',
-  },
-  chipTxt: {
-    color: colors.muted,
-    fontFamily: fonts.ui,
-    fontSize: 13,
-  },
-  chipTxtActive: {
-    color: colors.bg,
-    fontFamily: fonts.title,
-  },
-
-  // Input
-  input: {
-    marginTop: 10,
-    height: 48,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: 14,
-    color: colors.white,
-    fontFamily: fonts.body,
-    fontSize: 14,
-  },
-  inputMulti: {
-    height: 80,
+    borderColor: '#2A2C52',
+    minHeight: 80,
     textAlignVertical: 'top',
-    paddingTop: 12,
   },
 
   // Catégorie cible
-  catRow: {
-    marginTop: 8,
-    flexGrow: 0,
-  },
+  catSection: { marginBottom: 20 },
+  catRow: { flexDirection: 'row', gap: 8 },
   catChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.bg,
-    marginRight: 8,
+    backgroundColor: '#1E2040',
   },
   catChipActive: {
     backgroundColor: 'rgba(253,207,52,.12)',
     borderColor: colors.accent,
   },
-  catChipTxt: {
-    color: colors.muted,
-    fontFamily: fonts.ui,
-    fontSize: 13,
-  },
+  catChipTxt: { color: '#9A9EC4', fontSize: 13 },
   catChipTxtActive: {
     color: colors.accent,
     fontFamily: fonts.title,
   },
 
-  // Bouton enregistrer
+  // Bouton
   saveBtn: {
     height: 54,
     borderRadius: radius.lg,
@@ -654,7 +385,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 4,
   },
   saveTxt: {
     color: colors.bg,
