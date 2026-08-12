@@ -55,8 +55,9 @@ export default function FicheGuideeSheet({
   onSave,
   onClose,
 }: Props) {
-  const shopCategory = useShopStore(s => s.context.category);
-  const shopType     = useShopStore(s => s.context.shopType);
+  const subcategories = useShopStore(s => s.context.subcategories);
+  const shopType      = useShopStore(s => s.context.shopType);
+  const sousCatId     = subcategories[0] ?? '';
 
   const [suggs, setSuggs] = useState<SuggsState>({
     typeContenu: [], sousCategorie: [], nomProduit: [], prix: [],
@@ -83,13 +84,13 @@ export default function FicheGuideeSheet({
     if (!visible) return;
     setSec1(''); setSec2(''); setSec3(''); setSec4(''); setDesc('');
     setCatId(defaultCatId ?? categories[0]?.id ?? '');
-    if (!shopCategory) return;
+    if (!sousCatId) return;
     setLoadingSuggs(true);
-    getToutesSuggestions(shopCategory)
+    getToutesSuggestions(sousCatId)
       .then(setSuggs)
       .catch(() => {})
       .finally(() => setLoadingSuggs(false));
-  }, [visible, shopCategory]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visible, sousCatId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-scroll vers le bas quand une nouvelle section apparaît
   useEffect(() => {

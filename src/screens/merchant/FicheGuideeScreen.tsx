@@ -38,11 +38,13 @@ interface Props {
 }
 
 export default function FicheGuideeScreen({ onClose }: Props) {
-  const shopId       = useShopStore(s => s.shopId);
-  const shopCategory = useShopStore(s => s.context.category);
-  const shopType     = useShopStore(s => s.context.shopType);
-  const categories   = useShopStore(s => s.categories);
-  const loadMyShop   = useShopStore(s => s.loadMyShop);
+  const shopId         = useShopStore(s => s.shopId);
+  const shopType       = useShopStore(s => s.context.shopType);
+  const subcategories  = useShopStore(s => s.context.subcategories);
+  const categories     = useShopStore(s => s.categories);
+  const loadMyShop     = useShopStore(s => s.loadMyShop);
+  // Suggestions chargées pour la sous-catégorie principale du marchand
+  const sousCatId      = subcategories[0] ?? '';
 
   const [loading,     setLoading]     = useState(true);
   const [suggestions, setSuggestions] = useState<{
@@ -58,12 +60,12 @@ export default function FicheGuideeScreen({ onClose }: Props) {
   const [envoi,       setEnvoi]       = useState(false);
 
   useEffect(() => {
-    if (!shopCategory) { setLoading(false); return; }
-    getToutesSuggestions(shopCategory)
+    if (!sousCatId) { setLoading(false); return; }
+    getToutesSuggestions(sousCatId)
       .then(setSuggestions)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [shopCategory]);
+  }, [sousCatId]);
 
   const modifierLigne = (id: string, champ: keyof LigneProduit, valeur: string) => {
     setLignes(prev => prev.map(l => l.id === id ? { ...l, [champ]: valeur } : l));
