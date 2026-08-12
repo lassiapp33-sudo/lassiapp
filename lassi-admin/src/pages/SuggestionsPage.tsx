@@ -46,7 +46,26 @@ const CATEGORIES = [
 // À compléter au fur et à mesure : { id: slug en base, label: affiché, categorieId }
 
 const SOUS_CATEGORIES: { id: string; label: string; categorieId: string }[] = [
-  // Exemples à remplacer par les vraies listes
+  // ── Restos & Boissons ──────────────────────────────────────────────────────
+  { id: 'restaurant',       label: 'Restaurant / Maquis',       categorieId: 'food'      },
+  { id: 'fast-food',        label: 'Fast-food / Snack',         categorieId: 'food'      },
+  { id: 'boissons',         label: 'Boissons / Jus',            categorieId: 'food'      },
+  // ── Coiffeurs & Salons ─────────────────────────────────────────────────────
+  { id: 'coiffure-femmes',  label: 'Coiffure femmes / Tresses', categorieId: 'hair'      },
+  { id: 'coiffure-hommes',  label: 'Coiffure hommes / Barbier', categorieId: 'hair'      },
+  { id: 'ongles-soins',     label: 'Ongles / Soins beauté',     categorieId: 'hair'      },
+  // ── Tangana ────────────────────────────────────────────────────────────────
+  { id: 'tangana',          label: 'Tangana / Ndéki / Soupe',   categorieId: 'tangana'   },
+  // ── Boulangeries ──────────────────────────────────────────────────────────
+  { id: 'boulangerie',      label: 'Boulangerie / Pâtisserie',  categorieId: 'bakery'    },
+  // ── Commerçants ───────────────────────────────────────────────────────────
+  { id: 'epicerie',         label: 'Épicerie / Alimentation',   categorieId: 'stores'    },
+  { id: 'boutique',         label: 'Boutique / Vêtements',      categorieId: 'stores'    },
+  // ── Fruiterie ─────────────────────────────────────────────────────────────
+  { id: 'fruiterie',        label: 'Fruits & Légumes',          categorieId: 'fruiterie' },
+  // ── Sport ─────────────────────────────────────────────────────────────────
+  { id: 'salle-sport',      label: 'Salle de sport / Fitness',  categorieId: 'sport'     },
+  { id: 'terrain-sport',    label: 'Terrain de sport',          categorieId: 'sport'     },
 ]
 
 const SECTIONS: { id: FicheSection; label: string }[] = [
