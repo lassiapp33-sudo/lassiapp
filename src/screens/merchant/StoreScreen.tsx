@@ -20,6 +20,7 @@ import ShopProfileCard from '../../components/store/ShopProfileCard';
 import CategoryTabs from '../../components/store/CategoryTabs';
 import ProductRow from '../../components/store/ProductRow';
 import AddProductSheet from '../../components/store/AddProductSheet';
+import FicheGuideeSheet from '../../components/store/FicheGuideeSheet';
 import OpeningHoursCard from '../../components/store/OpeningHoursCard';
 import AbonnementOffreRow from '../../components/fitness/AbonnementOffreRow';
 import AddAbonnementOffreSheet from '../../components/fitness/AddAbonnementOffreSheet';
@@ -30,6 +31,8 @@ import { ProductPromoInfo } from '../../types/promotions';
 import useShopStore from '../../store/shopStore';
 import useAuthStore from '../../store/authStore';
 import { getCurrentLocation, reverseGeocode } from '../../services/location';
+import { updateShopZoneManual } from '../../services/shops';
+import { CATEGORIES } from '../../config/categories';
 import * as storageService from '../../services/storage';
 import * as promoService from '../../services/promotions';
 import * as fitnessService from '../../services/fitnessAbonnements';
@@ -53,6 +56,48 @@ const IcoPin = () => (
     <Path d="M12 10m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0" stroke={colors.accent} />
   </Svg>
 );
+
+// ─── AddMethodPicker : 3 façons d'ajouter un produit ─────────────────────────
+
+function AddMethodPicker({
+  label,
+  onManuel,
+  onFicheGuidee,
+}: {
+  label: string;
+  onManuel: () => void;
+  onFicheGuidee: () => void;
+}) {
+  return (
+    <View style={styles.addPickerWrap}>
+      {/* Option 1 : Fiche Guidée (recommandée) */}
+      <TouchableOpacity
+        style={[styles.addPickerBtn, styles.addPickerBtnPrimary]}
+        onPress={onFicheGuidee}
+        activeOpacity={0.82}
+      >
+        <Text style={styles.addPickerIcon}>✦</Text>
+        <View style={styles.addPickerText}>
+          <Text style={styles.addPickerTitle}>Fiche Guidée</Text>
+          <Text style={styles.addPickerSub}>Choix prédéfinis</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Option 2 : Manuel */}
+      <TouchableOpacity
+        style={styles.addPickerBtn}
+        onPress={onManuel}
+        activeOpacity={0.82}
+      >
+        <Text style={styles.addPickerIcon}>✏️</Text>
+        <View style={styles.addPickerText}>
+          <Text style={[styles.addPickerTitle, { color: colors.white }]}>Manuel</Text>
+          <Text style={styles.addPickerSub}>Formulaire libre</Text>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 // ─── SectionHead (label adapté au shop_type) ──────────────────────────────────
 
@@ -110,12 +155,15 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
   const loadMyShop = useShopStore(s => s.loadMyShop);
   const addCategory = useShopStore(s => s.addCategory);
   const removeCategory = useShopStore(s => s.removeCategory);
+  const createMissingShop = useShopStore(s => s.createMissingShop);
 
   // ── Catalogue ─────────────────────────────────────────────────────────────
   const [activeCat, setActiveCat] = useState('petitdej');
   const [editTarget, setEditTarget] = useState<StoreProduct | null>(null);
   const [showSheet, setShowSheet] = useState(false);
   const [sheetDefaultCat, setSheetDefaultCat] = useState<string | undefined>(undefined);
+  const [showFicheGuidee, setShowFicheGuidee] = useState(false);
+  const [ficheDefaultCat, setFicheDefaultCat] = useState<string | undefined>(undefined);
 
   // ── Promos actives (pour badges sur les produits) ─────────────────────────
   const [promoMap, setPromoMap] = useState<Record<string, ProductPromoInfo>>({});
@@ -130,9 +178,17 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
   const [showOffreSheet, setShowOffreSheet] = useState(false);
   const userId = useAuthStore(s => s.user?.id);
 
+  // ── Récupération vitrine manquante ────────────────────────────────────────
+  const [recoveryName, setRecoveryName] = useState('');
+  const [recoveryCatId, setRecoveryCatId] = useState(CATEGORIES[0]?.id ?? '');
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+
   // ── Géolocalisation ────────────────────────────────────────────────────────
   const [locLoading, setLocLoading] = useState(false);
   const [locZone, setLocZone] = useState<string | null>(null);
+  const [manualZoneMode, setManualZoneMode] = useState(false);
+  const [manualZoneText, setManualZoneText] = useState('');
 
   // ── Infos boutique (description / adresse / téléphone) ─────────────────────
   const [desc, setDesc] = useState(profile.description ?? '');
@@ -203,6 +259,10 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
     setSheetDefaultCat(defaultCat);
     setShowSheet(true);
   };
+  const openFicheGuidee = (defaultCat?: string) => {
+    setFicheDefaultCat(defaultCat);
+    setShowFicheGuidee(true);
+  };
 
   // Labels adaptatifs selon le shop_type
   const itemLabel =
@@ -220,23 +280,67 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
+  const handleCreateMissingShop = async () => {
+    const name = recoveryName.trim();
+    if (!name) { setRecoveryError('Donne un nom à ta boutique.'); return; }
+    const cat = CATEGORIES.find(c => c.id === recoveryCatId);
+    if (!cat) return;
+    setRecoveryLoading(true);
+    setRecoveryError(null);
+    try {
+      await createMissingShop(name, cat.id, cat.shopType);
+    } catch (e: unknown) {
+      setRecoveryError(e instanceof Error ? e.message : 'Erreur inconnue. Réessaie.');
+      setRecoveryLoading(false);
+    }
+  };
+
   const handleCaptureLocation = async () => {
     setLocLoading(true);
     try {
       const coords = await getCurrentLocation();
       if (!coords) {
         Alert.alert(
-          'Permission refusée',
-          'Autorise LASSİ à accéder à ta position dans les réglages.',
+          'GPS indisponible',
+          'Le GPS est inaccessible sur cet appareil. Tu peux saisir ton quartier manuellement.',
+          [
+            { text: 'Annuler', style: 'cancel' },
+            {
+              text: 'Saisir manuellement',
+              onPress: () => {
+                setManualZoneMode(true);
+                setManualZoneText('');
+              },
+            },
+          ],
         );
         return;
       }
       await useShopStore.getState().updateLocation(coords.latitude, coords.longitude);
       const zone = await reverseGeocode(coords.latitude, coords.longitude);
       setLocZone(zone);
+      setManualZoneMode(false);
       Alert.alert('Position enregistrée ✓', `Ton commerce est localisé à : ${zone}`);
     } catch {
       Alert.alert('Erreur', "Impossible d'enregistrer la position. Réessaie.");
+    } finally {
+      setLocLoading(false);
+    }
+  };
+
+  const handleSaveManualZone = async () => {
+    const zone = manualZoneText.trim();
+    if (!zone) return;
+    const { shopId } = useShopStore.getState();
+    if (!shopId) return;
+    setLocLoading(true);
+    try {
+      await updateShopZoneManual(shopId, zone);
+      setLocZone(zone);
+      setManualZoneMode(false);
+      setManualZoneText('');
+    } catch {
+      Alert.alert('Erreur', "Impossible d'enregistrer la zone. Réessaie.");
     } finally {
       setLocLoading(false);
     }
@@ -381,25 +485,67 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
 
   if (shopNotFound) {
     return (
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.root}>
         <StoreHeader onBack={onBack} onPreview={onPreview ?? (() => {})} onPromos={onPromos} />
-        <View style={styles.loader}>
-          <Text style={styles.notFoundTxt}>
-            Ta vitrine n'a pas encore été créée.{'\n'}
-            Cela peut arriver si ton inscription s'est interrompue.
+        <ScrollView
+          contentContainerStyle={styles.recoveryScroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.recoveryTitle}>Finalise ta vitrine</Text>
+          <Text style={styles.recoverySubtitle}>
+            Ton inscription a été interrompue avant la création de ta boutique.{'\n'}
+            Renseigne les informations ci-dessous pour continuer.
           </Text>
+
+          <Text style={styles.recoveryLabel}>Nom de ta boutique</Text>
+          <TextInput
+            style={styles.recoveryInput}
+            placeholder="Ex : Tangana de Coumba"
+            placeholderTextColor={colors.muted}
+            value={recoveryName}
+            onChangeText={t => { setRecoveryName(t); setRecoveryError(null); }}
+            autoCorrect={false}
+            returnKeyType="done"
+          />
+
+          <Text style={styles.recoveryLabel}>Type de commerce</Text>
+          {CATEGORIES.map(cat => (
+            <TouchableOpacity
+              key={cat.id}
+              style={[styles.recoveryCatRow, recoveryCatId === cat.id && styles.recoveryCatRowOn]}
+              onPress={() => setRecoveryCatId(cat.id)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.recoveryRadio, recoveryCatId === cat.id && styles.recoveryRadioOn]}>
+                {recoveryCatId === cat.id && <View style={styles.recoveryRadioDot} />}
+              </View>
+              <Text style={[styles.recoveryCatLabel, recoveryCatId === cat.id && styles.recoveryCatLabelOn]}>
+                {cat.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+
+          {recoveryError && <Text style={styles.recoveryError}>{recoveryError}</Text>}
+
           <TouchableOpacity
-            style={styles.retryBtn}
-            onPress={() => loadMyShop()}
+            style={[styles.retryBtn, { opacity: recoveryLoading ? 0.6 : 1 }]}
+            onPress={handleCreateMissingShop}
+            disabled={recoveryLoading}
             activeOpacity={0.8}
           >
-            <Text style={styles.retryTxt}>Réessayer</Text>
+            {recoveryLoading
+              ? <ActivityIndicator color={colors.bg} />
+              : <Text style={styles.retryTxt}>Créer ma vitrine</Text>
+            }
           </TouchableOpacity>
-          <TouchableOpacity onPress={onBack} activeOpacity={0.7}>
+          <TouchableOpacity onPress={onBack} activeOpacity={0.7} style={{ marginTop: 12 }}>
             <Text style={styles.backLinkTxt}>← Retour</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </View>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -604,14 +750,11 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
                     }}
                   />
                 ))}
-                <TouchableOpacity
-                  style={styles.addProd}
-                  onPress={() => openAdd(context.shopType === 'memberships' ? 'formules' : undefined)}
-                  activeOpacity={0.8}
-                >
-                  <IcoPlus />
-                  <Text style={styles.addProdTxt}>{addItemLabel}</Text>
-                </TouchableOpacity>
+                <AddMethodPicker
+                  label={addItemLabel}
+                  onManuel={() => openAdd(context.shopType === 'memberships' ? 'formules' : undefined)}
+                  onFicheGuidee={() => openFicheGuidee(context.shopType === 'memberships' ? 'formules' : undefined)}
+                />
               </>
             )}
 
@@ -685,10 +828,11 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
                     </>
                   );
                 })()}
-                <TouchableOpacity style={styles.addProd} onPress={() => openAdd('produits')} activeOpacity={0.8}>
-                  <IcoPlus />
-                  <Text style={styles.addProdTxt}>Ajouter un produit</Text>
-                </TouchableOpacity>
+                <AddMethodPicker
+                  label="Ajouter un produit"
+                  onManuel={() => openAdd('produits')}
+                  onFicheGuidee={() => openFicheGuidee('produits')}
+                />
               </>
             )}
 
@@ -709,6 +853,36 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
               </Text>
             </TouchableOpacity>
 
+            {manualZoneMode && (
+              <View style={styles.manualZoneBox}>
+                <TextInput
+                  style={styles.manualZoneInput}
+                  placeholder="Ex : Guédiawaye, Parcelles Assainies…"
+                  placeholderTextColor={colors.muted}
+                  value={manualZoneText}
+                  onChangeText={setManualZoneText}
+                  autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={handleSaveManualZone}
+                />
+                <View style={styles.manualZoneActions}>
+                  <TouchableOpacity
+                    style={[styles.manualZoneBtn, styles.manualZoneBtnCancel]}
+                    onPress={() => setManualZoneMode(false)}
+                  >
+                    <Text style={styles.manualZoneBtnTxtCancel}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.manualZoneBtn, { opacity: manualZoneText.trim() ? 1 : 0.4 }]}
+                    onPress={handleSaveManualZone}
+                    disabled={!manualZoneText.trim() || locLoading}
+                  >
+                    <Text style={styles.manualZoneBtnTxt}>Enregistrer</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
             <View style={{ height: 32 }} />
           </ScrollView>
       )}
@@ -721,6 +895,14 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
         onSave={saveProduct}
         onDelete={editTarget ? () => handleDeleteProduct(editTarget.id) : undefined}
         onClose={() => setShowSheet(false)}
+      />
+
+      <FicheGuideeSheet
+        visible={showFicheGuidee}
+        categories={categories}
+        defaultCatId={ficheDefaultCat}
+        onSave={saveProduct}
+        onClose={() => setShowFicheGuidee(false)}
       />
 
       <AddAbonnementOffreSheet
@@ -742,6 +924,87 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingTop: 4, flexGrow: 1 },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  recoveryScroll: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 40 },
+  recoveryTitle: {
+    color: colors.white,
+    fontFamily: fonts.title,
+    fontSize: 22,
+    marginBottom: 8,
+  },
+  recoverySubtitle: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 28,
+  },
+  recoveryLabel: {
+    color: colors.white,
+    fontFamily: fonts.ui,
+    fontSize: 13,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  recoveryInput: {
+    height: 48,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 14,
+    color: colors.white,
+    fontFamily: fonts.ui,
+    fontSize: 15,
+    marginBottom: 20,
+  },
+  recoveryCatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    marginBottom: 8,
+    gap: 12,
+  },
+  recoveryCatRowOn: {
+    borderColor: colors.accent,
+    backgroundColor: 'rgba(253,207,52,.08)',
+  },
+  recoveryRadio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: colors.muted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recoveryRadioOn: { borderColor: colors.accent },
+  recoveryRadioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.accent,
+  },
+  recoveryCatLabel: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 14,
+    flex: 1,
+  },
+  recoveryCatLabelOn: { color: colors.white },
+  recoveryError: {
+    color: colors.danger,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    marginBottom: 12,
+    marginTop: 4,
+  },
+
   notFoundTxt: {
     color: colors.muted,
     fontFamily: fonts.body,
@@ -942,5 +1205,100 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontFamily: fonts.ui,
     fontSize: 13,
+  },
+
+  manualZoneBox: {
+    marginHorizontal: 18,
+    marginTop: 10,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(253,207,52,.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(253,207,52,.2)',
+    padding: 12,
+    gap: 10,
+  },
+  manualZoneInput: {
+    height: 44,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(253,207,52,.3)',
+    backgroundColor: colors.bg,
+    paddingHorizontal: 12,
+    color: colors.white,
+    fontFamily: fonts.ui,
+    fontSize: 14,
+  },
+  manualZoneActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  manualZoneBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualZoneBtnCancel: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.muted,
+  },
+  manualZoneBtnTxt: {
+    color: colors.bg,
+    fontFamily: fonts.ui,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  manualZoneBtnTxtCancel: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 13,
+  },
+
+  // AddMethodPicker
+  addPickerWrap: {
+    marginHorizontal: 18,
+    marginTop: 2,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  addPickerBtn: {
+    flex: 1,
+    height: 64,
+    borderRadius: 15,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 8,
+  },
+  addPickerBtnPrimary: {
+    borderStyle: 'solid',
+    borderColor: 'rgba(253,207,52,.5)',
+    backgroundColor: 'rgba(253,207,52,.07)',
+  },
+  addPickerIcon: {
+    fontSize: 18,
+    color: colors.accent,
+  },
+  addPickerText: {
+    flexShrink: 1,
+  },
+  addPickerTitle: {
+    color: colors.accent,
+    fontFamily: fonts.title,
+    fontSize: 13,
+  },
+  addPickerSub: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 10,
+    marginTop: 1,
   },
 });
