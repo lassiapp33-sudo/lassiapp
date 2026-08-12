@@ -107,6 +107,17 @@ export default function SuggestionsPage() {
     setTimeout(() => setSuccess(null), 3000)
   }
 
+  // Sous-catégories : hardcodées (SOUS_CATEGORIES) + celles présentes en DB non encore listées
+  const sousCatsDB = [...new Set(
+    suggestions.map(s => s.sous_categorie_id).filter((v): v is string => !!v)
+  )].sort()
+  const sousCatsHardcoded = SOUS_CATEGORIES.map(s => s.id)
+  const sousCatsExtra = sousCatsDB.filter(id => !sousCatsHardcoded.includes(id))
+  // Liste finale : hardcodées d'abord, puis celles venant uniquement de la DB
+  const allSousCats: { id: string; label: string }[] = [
+    ...SOUS_CATEGORIES.map(s => ({ id: s.id, label: s.label })),
+    ...sousCatsExtra.map(id => ({ id, label: id })),
+  ]
 
   async function handleToggle(s: Suggestion) {
     const { error: err } = await supabase
@@ -210,7 +221,7 @@ export default function SuggestionsPage() {
           >
             Toutes
           </button>
-          {SOUS_CATEGORIES.map(sc => (
+          {allSousCats.map(sc => (
             <button
               key={sc.id}
               onClick={() => setFilterSousCat(sc.id)}
@@ -269,7 +280,7 @@ export default function SuggestionsPage() {
                 className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-white text-sm placeholder-muted"
               />
               <datalist id="sousCatList">
-                {SOUS_CATEGORIES.map(sc => <option key={sc.id} value={sc.id} />)}
+                {allSousCats.map(sc => <option key={sc.id} value={sc.id} />)}
               </datalist>
             </div>
             <div>
@@ -336,7 +347,7 @@ export default function SuggestionsPage() {
       {filterSousCat && !loading && (
         <p className="text-muted text-xs">
           <span className="text-white font-ui">
-            {SOUS_CATEGORIES.find(s => s.id === filterSousCat)?.label ?? filterSousCat}
+            {allSousCats.find(s => s.id === filterSousCat)?.label ?? filterSousCat}
           </span>
           {' — '}{filtered.length} suggestion{filtered.length > 1 ? 's' : ''}
           {filterSection !== 'toutes' ? ` · ${SECTIONS.find(s => s.id === filterSection)?.label}` : ''}
