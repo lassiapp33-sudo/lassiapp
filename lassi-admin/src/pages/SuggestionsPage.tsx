@@ -1,6 +1,6 @@
 /**
  * SuggestionsPage — Gestion des suggestions prédéfinies de la Fiche Guidée.
- * Éditables sans toucher au code : l'admin ajoute, désactive, réactive, supprime.
+ * Navigation par sous-catégorie (granularité fine) + section.
  */
 import React, { useEffect, useState } from 'react'
 import { Plus, Trash2, ToggleLeft, ToggleRight, Save } from 'lucide-react'
@@ -44,7 +44,7 @@ const CATEGORIES = [
 
 const SECTIONS: { id: FicheSection; label: string }[] = [
   { id: 'type_contenu',           label: 'Type de contenu' },
-  { id: 'sous_categorie_produit', label: 'Sous-catégorie de produit' },
+  { id: 'sous_categorie_produit', label: 'Sous-catégorie produit' },
   { id: 'nom_produit',            label: 'Nom du produit' },
   { id: 'prix',                   label: 'Prix' },
 ]
@@ -52,7 +52,7 @@ const SECTIONS: { id: FicheSection; label: string }[] = [
 const EMPTY_FORM: NewForm = {
   categorie_id:      'food',
   sous_categorie_id: '',
-  section:           'type_contenu',
+  section:           'nom_produit',
   valeur:            '',
   ordre:             '0',
 }
@@ -66,8 +66,8 @@ export default function SuggestionsPage() {
   const [success,     setSuccess]     = useState<string | null>(null)
 
   // Filtres
-  const [filterCat,     setFilterCat]     = useState<string>('food')
-  const [filterSection, setFilterSection] = useState<FicheSection | 'toutes'>('toutes')
+  const [filterSousCat,  setFilterSousCat]  = useState<string | null>(null)
+  const [filterSection,  setFilterSection]  = useState<FicheSection | 'toutes'>('toutes')
 
   // Formulaire ajout
   const [showForm, setShowForm] = useState(false)
@@ -81,11 +81,17 @@ export default function SuggestionsPage() {
       const { data, error: err } = await supabase
         .from('suggestions_fiche')
         .select('*')
-        .order('categorie_id')
+        .order('sous_categorie_id')
         .order('section')
         .order('ordre')
       if (err) throw err
-      setSuggestions(data ?? [])
+      const rows = data ?? []
+      setSuggestions(rows)
+      // Sélectionne la première sous-catégorie disponible au chargement
+      if (!filterSousCat) {
+        const first = rows.find(s => s.sous_categorie_id)?.sous_categorie_id ?? null
+        setFilterSousCat(first)
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erreur de chargement')
     } finally {
@@ -93,12 +99,17 @@ export default function SuggestionsPage() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function notify(msg: string) {
     setSuccess(msg)
     setTimeout(() => setSuccess(null), 3000)
   }
+
+  // Sous-catégories uniques présentes dans les données, triées
+  const sousCats: string[] = [...new Set(
+    suggestions.map(s => s.sous_categorie_id).filter((v): v is string => !!v)
+  )].sort()
 
   async function handleToggle(s: Suggestion) {
     const { error: err } = await supabase
@@ -119,7 +130,8 @@ export default function SuggestionsPage() {
   }
 
   async function handleSave() {
-    if (!form.valeur.trim()) { setError('La valeur est requise.'); return }
+    if (!form.valeur.trim())         { setError('La valeur est requise.'); return }
+    if (!form.sous_categorie_id.trim()) { setError('La sous-catégorie est requise.'); return }
     setSaving(true)
     setError(null)
     try {
@@ -127,7 +139,7 @@ export default function SuggestionsPage() {
         .from('suggestions_fiche')
         .insert({
           categorie_id:      form.categorie_id,
-          sous_categorie_id: form.sous_categorie_id.trim() || null,
+          sous_categorie_id: form.sous_categorie_id.trim(),
           section:           form.section,
           valeur:            form.valeur.trim(),
           ordre:             parseInt(form.ordre, 10) || 0,
@@ -137,8 +149,9 @@ export default function SuggestionsPage() {
         .single()
       if (err) throw err
       setSuggestions(prev => [...prev, data])
-      setForm({ ...EMPTY_FORM, categorie_id: form.categorie_id, section: form.section })
+      setForm(f => ({ ...f, valeur: '', ordre: '0' }))
       setShowForm(false)
+      setFilterSousCat(form.sous_categorie_id.trim())
       notify('Suggestion ajoutée ✓')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erreur lors de la sauvegarde')
@@ -149,7 +162,7 @@ export default function SuggestionsPage() {
 
   // Filtrage
   const filtered = suggestions.filter(s => {
-    if (s.categorie_id !== filterCat) return false
+    if (filterSousCat && s.sous_categorie_id !== filterSousCat) return false
     if (filterSection !== 'toutes' && s.section !== filterSection) return false
     return true
   })
@@ -167,11 +180,14 @@ export default function SuggestionsPage() {
         <div>
           <h1 className="text-white font-title text-2xl">Fiche Guidée — Suggestions</h1>
           <p className="text-muted text-sm mt-1">
-            Listes prédéfinies affichées dans l'application lors de la création de produits.
+            Listes prédéfinies par sous-catégorie affichées dans l'app lors de la création de produits.
           </p>
         </div>
         <button
-          onClick={() => { setShowForm(true); setForm({ ...EMPTY_FORM, categorie_id: filterCat }) }}
+          onClick={() => {
+            setShowForm(true)
+            setForm({ ...EMPTY_FORM, sous_categorie_id: filterSousCat ?? '' })
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-accent text-bg rounded-xl font-title text-sm hover:opacity-90 transition-opacity"
         >
           <Plus size={16} />
@@ -183,23 +199,28 @@ export default function SuggestionsPage() {
       {error   && <div className="bg-red-900/30 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">{error}</div>}
       {success && <div className="bg-green-900/30 border border-green-500/30 rounded-xl px-4 py-3 text-green-400 text-sm">{success}</div>}
 
-      {/* Filtres */}
-      <div className="flex flex-wrap gap-3">
-        <div className="flex gap-2 flex-wrap">
-          {CATEGORIES.map(cat => (
+      {/* Filtre sous-catégories (dynamique depuis les données) */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {sousCats.length === 0 && !loading && (
+            <span className="text-muted text-xs italic">Aucune sous-catégorie trouvée — ajoutez des suggestions.</span>
+          )}
+          {sousCats.map(sc => (
             <button
-              key={cat.id}
-              onClick={() => setFilterCat(cat.id)}
+              key={sc}
+              onClick={() => setFilterSousCat(sc)}
               className={`px-3 py-1.5 rounded-full text-xs font-ui border transition-all ${
-                filterCat === cat.id
+                filterSousCat === sc
                   ? 'bg-accent text-bg border-accent'
                   : 'bg-surface text-muted border-border hover:border-accent/40'
               }`}
             >
-              {cat.label}
+              {sc}
             </button>
           ))}
         </div>
+
+        {/* Filtre sections */}
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setFilterSection('toutes')}
@@ -233,17 +254,21 @@ export default function SuggestionsPage() {
           <h3 className="text-white font-title text-base">Nouvelle suggestion</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-muted text-xs uppercase tracking-wide block mb-1">Catégorie</label>
-              <select
-                value={form.categorie_id}
-                onChange={e => setForm(p => ({ ...p, categorie_id: e.target.value }))}
-                className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-white text-sm"
-              >
-                {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
+              <label className="text-muted text-xs uppercase tracking-wide block mb-1">Sous-catégorie *</label>
+              <input
+                type="text"
+                value={form.sous_categorie_id}
+                onChange={e => setForm(p => ({ ...p, sous_categorie_id: e.target.value }))}
+                placeholder="Ex : Coiffure hommes, Fast-food, Pâtisserie…"
+                list="sousCatList"
+                className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-white text-sm placeholder-muted"
+              />
+              <datalist id="sousCatList">
+                {sousCats.map(sc => <option key={sc} value={sc} />)}
+              </datalist>
             </div>
             <div>
-              <label className="text-muted text-xs uppercase tracking-wide block mb-1">Section</label>
+              <label className="text-muted text-xs uppercase tracking-wide block mb-1">Section *</label>
               <select
                 value={form.section}
                 onChange={e => setForm(p => ({ ...p, section: e.target.value as FicheSection }))}
@@ -258,7 +283,7 @@ export default function SuggestionsPage() {
                 type="text"
                 value={form.valeur}
                 onChange={e => setForm(p => ({ ...p, valeur: e.target.value }))}
-                placeholder="Ex : Menu, Burger, 2000…"
+                placeholder="Ex : Menu du jour, Burger, 2000…"
                 className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-white text-sm placeholder-muted"
               />
             </div>
@@ -272,17 +297,15 @@ export default function SuggestionsPage() {
                 min={0}
               />
             </div>
-            <div className="col-span-2">
-              <label className="text-muted text-xs uppercase tracking-wide block mb-1">
-                Sous-catégorie (optionnel — filtre les noms de produit)
-              </label>
-              <input
-                type="text"
-                value={form.sous_categorie_id}
-                onChange={e => setForm(p => ({ ...p, sous_categorie_id: e.target.value }))}
-                placeholder="Ex : Boisson, Repas… (laisser vide pour toutes)"
-                className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-white text-sm placeholder-muted"
-              />
+            <div>
+              <label className="text-muted text-xs uppercase tracking-wide block mb-1">Catégorie parente</label>
+              <select
+                value={form.categorie_id}
+                onChange={e => setForm(p => ({ ...p, categorie_id: e.target.value }))}
+                className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-white text-sm"
+              >
+                {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+              </select>
             </div>
           </div>
           <div className="flex gap-3 pt-2">
@@ -304,13 +327,22 @@ export default function SuggestionsPage() {
         </div>
       )}
 
+      {/* Compteur */}
+      {filterSousCat && !loading && (
+        <p className="text-muted text-xs">
+          <span className="text-white font-ui">{filterSousCat}</span>
+          {' — '}{filtered.length} suggestion{filtered.length > 1 ? 's' : ''}
+          {filterSection !== 'toutes' ? ` · ${SECTIONS.find(s => s.id === filterSection)?.label}` : ''}
+        </p>
+      )}
+
       {/* Contenu */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState title="Aucune suggestion pour cette catégorie." />
+        <EmptyState title={filterSousCat ? `Aucune suggestion pour « ${filterSousCat} ».` : 'Sélectionnez une sous-catégorie.'} />
       ) : (
         <div className="space-y-6">
           {grouped.map(group => group.items.length > 0 && (
@@ -324,11 +356,8 @@ export default function SuggestionsPage() {
                   <div key={s.id} className="flex items-center gap-3 px-5 py-3">
                     <span className={`flex-1 text-sm font-ui ${s.actif ? 'text-white' : 'text-muted line-through'}`}>
                       {s.valeur}
-                      {s.sous_categorie_id && (
-                        <span className="ml-2 text-xs text-muted/60 font-body">↳ {s.sous_categorie_id}</span>
-                      )}
                     </span>
-                    <span className="text-muted text-xs w-12 text-center">#{s.ordre}</span>
+                    <span className="text-muted text-xs w-8 text-center">#{s.ordre}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${s.actif ? 'bg-green-900/30 text-green-400' : 'bg-red-900/20 text-red-400/70'}`}>
                       {s.actif ? 'Actif' : 'Inactif'}
                     </span>
