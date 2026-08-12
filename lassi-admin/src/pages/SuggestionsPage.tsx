@@ -46,26 +46,40 @@ const CATEGORIES = [
 // À compléter au fur et à mesure : { id: slug en base, label: affiché, categorieId }
 
 const SOUS_CATEGORIES: { id: string; label: string; categorieId: string }[] = [
-  // ── Restos & Boissons ──────────────────────────────────────────────────────
-  { id: 'restaurant',       label: 'Restaurant / Maquis',       categorieId: 'food'      },
-  { id: 'fast-food',        label: 'Fast-food / Snack',         categorieId: 'food'      },
-  { id: 'boissons',         label: 'Boissons / Jus',            categorieId: 'food'      },
-  // ── Coiffeurs & Salons ─────────────────────────────────────────────────────
-  { id: 'coiffure-femmes',  label: 'Coiffure femmes / Tresses', categorieId: 'hair'      },
-  { id: 'coiffure-hommes',  label: 'Coiffure hommes / Barbier', categorieId: 'hair'      },
-  { id: 'ongles-soins',     label: 'Ongles / Soins beauté',     categorieId: 'hair'      },
+  // ── Commerçants (stores) ───────────────────────────────────────────────────
+  { id: 'nexx_sow',                    label: 'Nexx sow',                       categorieId: 'stores'    },
+  { id: 'sombi_ak_thiere',             label: 'Sombi ak Thiéré',                categorieId: 'stores'    },
+  { id: 'alimentation',                label: 'Alimentation / Boutique',        categorieId: 'stores'    },
+  { id: 'quincaillerie',               label: 'Quincaillerie',                  categorieId: 'stores'    },
   // ── Tangana ────────────────────────────────────────────────────────────────
-  { id: 'tangana',          label: 'Tangana / Ndéki / Soupe',   categorieId: 'tangana'   },
-  // ── Boulangeries ──────────────────────────────────────────────────────────
-  { id: 'boulangerie',      label: 'Boulangerie / Pâtisserie',  categorieId: 'bakery'    },
-  // ── Commerçants ───────────────────────────────────────────────────────────
-  { id: 'epicerie',         label: 'Épicerie / Alimentation',   categorieId: 'stores'    },
-  { id: 'boutique',         label: 'Boutique / Vêtements',      categorieId: 'stores'    },
+  { id: 'tangana',                     label: 'Tangana',                        categorieId: 'tangana'   },
+  { id: 'ndeki',                       label: 'Ndéki (Mama)',                   categorieId: 'tangana'   },
+  { id: 'soupe',                       label: 'Soupe',                          categorieId: 'tangana'   },
+  { id: 'cafe_wass',                   label: 'Café ak Wass',                   categorieId: 'tangana'   },
+  { id: 'beignet_fataya',              label: 'Beignet ak Fataya',              categorieId: 'tangana'   },
+  // ── Boulangeries (bakery) ─────────────────────────────────────────────────
+  { id: 'boulangerie',                 label: 'Boulangerie',                    categorieId: 'bakery'    },
+  { id: 'patisserie',                  label: 'Pâtisserie',                     categorieId: 'bakery'    },
+  // ── Restos & Boissons (food) ──────────────────────────────────────────────
+  { id: 'restaurant',                  label: 'Restaurant',                     categorieId: 'food'      },
+  { id: 'fastfood',                    label: 'Fast-food',                      categorieId: 'food'      },
+  { id: 'malibu',                      label: 'Malibu',                         categorieId: 'food'      },
+  { id: 'dibiterie',                   label: 'Dibiterie',                      categorieId: 'food'      },
+  { id: 'seras',                       label: 'Séraas',                         categorieId: 'food'      },
+  { id: 'jus',                         label: 'Jus & Boissons',                 categorieId: 'food'      },
+  { id: 'snack',                       label: 'Snack & Gourmandise',            categorieId: 'food'      },
   // ── Fruiterie ─────────────────────────────────────────────────────────────
-  { id: 'fruiterie',        label: 'Fruits & Légumes',          categorieId: 'fruiterie' },
+  { id: 'fruits',                      label: 'Fruits frais',                   categorieId: 'fruiterie' },
+  { id: 'fruits_marines',              label: 'Fruits marinés',                 categorieId: 'fruiterie' },
+  // ── Coiffeurs & Salons (hair) ─────────────────────────────────────────────
+  { id: 'hommes',                      label: 'Hommes',                         categorieId: 'hair'      },
+  { id: 'femmes',                      label: 'Femmes',                         categorieId: 'hair'      },
+  { id: 'esthetique',                  label: 'Esthétique & Ongles',            categorieId: 'hair'      },
   // ── Sport ─────────────────────────────────────────────────────────────────
-  { id: 'salle-sport',      label: 'Salle de sport / Fitness',  categorieId: 'sport'     },
-  { id: 'terrain-sport',    label: 'Terrain de sport',          categorieId: 'sport'     },
+  { id: 'musculation',                 label: 'Musculation / Fitness',          categorieId: 'sport'     },
+  { id: 'reservation_terrain_foot',   label: 'Réservation terrain foot',       categorieId: 'sport'     },
+  { id: 'reservation_terrain_basket', label: 'Réservation terrain basket',     categorieId: 'sport'     },
+  { id: 'arts_martiaux',              label: 'Arts martiaux',                  categorieId: 'sport'     },
 ]
 
 const SECTIONS: { id: FicheSection; label: string }[] = [
