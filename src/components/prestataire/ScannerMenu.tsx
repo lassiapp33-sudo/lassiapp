@@ -11,7 +11,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import TextRecognition, { TextRecognitionScript } from '@react-native-ml-kit/text-recognition';
 import { colors, fonts, radius } from '../../theme';
-import { extraireProduits, ProduitExtrait } from '../../utils/menuParser';
+import { extraireProduits, ProduitExtrait } from '../../utils/parsingMenu';
 
 interface Props {
   onProduitsExtraits: (produits: ProduitExtrait[]) => void;

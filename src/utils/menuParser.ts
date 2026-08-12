@@ -1,6 +1,3 @@
-/** Alias sémantique utilisé dans les composants prestataire. */
-export type ProduitExtrait = ParsedMenuItem;
-
 export interface ParsedMenuItem {
   id: string;
   name: string;
@@ -34,9 +31,6 @@ function parseLine(line: string): ParsedMenuItem | null {
 
   return null;
 }
-
-/** Alias sémantique de parseMenuText pour les composants prestataire. */
-export const extraireProduits = parseMenuText;
 
 export function parseMenuText(rawText: string): ParsedMenuItem[] {
   return rawText
