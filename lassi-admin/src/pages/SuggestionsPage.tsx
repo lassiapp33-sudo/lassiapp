@@ -85,13 +85,7 @@ export default function SuggestionsPage() {
         .order('section')
         .order('ordre')
       if (err) throw err
-      const rows = data ?? []
-      setSuggestions(rows)
-      // Sélectionne la première sous-catégorie disponible au chargement
-      if (!filterSousCat) {
-        const first = rows.find(s => s.sous_categorie_id)?.sous_categorie_id ?? null
-        setFilterSousCat(first)
-      }
+      setSuggestions(data ?? [])
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erreur de chargement')
     } finally {
@@ -199,12 +193,20 @@ export default function SuggestionsPage() {
       {error   && <div className="bg-red-900/30 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">{error}</div>}
       {success && <div className="bg-green-900/30 border border-green-500/30 rounded-xl px-4 py-3 text-green-400 text-sm">{success}</div>}
 
-      {/* Filtre sous-catégories (dynamique depuis les données) */}
+      {/* Filtre sous-catégories */}
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2">
-          {sousCats.length === 0 && !loading && (
-            <span className="text-muted text-xs italic">Aucune sous-catégorie trouvée — ajoutez des suggestions.</span>
-          )}
+          {/* Toutes */}
+          <button
+            onClick={() => setFilterSousCat(null)}
+            className={`px-3 py-1.5 rounded-full text-xs font-ui border transition-all ${
+              filterSousCat === null
+                ? 'bg-accent text-bg border-accent'
+                : 'bg-surface text-muted border-border hover:border-accent/40'
+            }`}
+          >
+            Toutes
+          </button>
           {sousCats.map(sc => (
             <button
               key={sc}
@@ -342,7 +344,7 @@ export default function SuggestionsPage() {
           <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState title={filterSousCat ? `Aucune suggestion pour « ${filterSousCat} ».` : 'Sélectionnez une sous-catégorie.'} />
+        <EmptyState title={filterSousCat ? `Aucune suggestion pour « ${filterSousCat} ».` : 'Aucune suggestion trouvée.'} />
       ) : (
         <div className="space-y-6">
           {grouped.map(group => group.items.length > 0 && (
