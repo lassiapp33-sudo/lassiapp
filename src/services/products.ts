@@ -108,6 +108,40 @@ export async function deleteProduct(productId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+// ─── Création en masse (Fiche Guidée) ────────────────────────────────────────
+
+interface ProduitACreer {
+  nom:         string;
+  prix:        number;
+  description: string;
+  sousCategorie: string;
+  category:    string;  // catégorie cible dans le catalogue (onglet)
+  itemType:    'product' | 'service' | 'membership';
+}
+
+export async function creerProduitsEnMasse(
+  shopId: string,
+  produits: ProduitACreer[],
+): Promise<{ success: boolean; count: number }> {
+  if (produits.length === 0) return { success: true, count: 0 };
+
+  const rows = produits.map(p => ({
+    shop_id:     shopId,
+    name:        p.nom,
+    description: p.description,
+    emoji:       '',
+    photo_url:   '',
+    price:       p.prix,
+    category:    p.category,
+    stock:       'in',
+    item_type:   p.itemType,
+  }));
+
+  const { error, count } = await supabase.from('products').insert(rows);
+  if (error) throw new Error(error.message);
+  return { success: true, count: count ?? produits.length };
+}
+
 // ─── Validation panier avant commande ────────────────────────────────────────
 // Retourne les articles devenus indisponibles depuis l'ajout au panier.
 
