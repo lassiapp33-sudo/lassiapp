@@ -26,6 +26,7 @@ import ResetPasswordPage   from './pages/ResetPasswordPage'
 import FinancePage         from './pages/FinancePage'
 import VisibilityPlansPage from './pages/VisibilityPlansPage'
 import Vip5EtoilesPage    from './pages/Vip5EtoilesPage'
+import SuggestionsPage    from './pages/SuggestionsPage'
 
 // ─── Garde de route ───────────────────────────────────────────────────────────
 
@@ -72,6 +73,7 @@ function AppRoutes() {
         <Route path="finance"      element={<FinancePage />} />
         <Route path="visibility"   element={<VisibilityPlansPage />} />
         <Route path="5etoiles"     element={<Vip5EtoilesPage />} />
+        <Route path="suggestions"  element={<SuggestionsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
