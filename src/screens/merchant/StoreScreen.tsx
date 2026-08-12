@@ -74,33 +74,7 @@ function AddMethodPicker({
 }) {
   return (
     <View style={styles.addPickerWrap}>
-      {/* Option 1 : Fiche Guidée (recommandée) */}
-      <TouchableOpacity
-        style={[styles.addPickerBtn, styles.addPickerBtnPrimary]}
-        onPress={onFicheGuidee}
-        activeOpacity={0.82}
-      >
-        <Text style={styles.addPickerIcon}>✦</Text>
-        <View style={styles.addPickerText}>
-          <Text style={styles.addPickerTitle}>Fiche Guidée</Text>
-          <Text style={styles.addPickerSub}>Choix prédéfinis</Text>
-        </View>
-      </TouchableOpacity>
-
-      {/* Option 2 : Manuel */}
-      <TouchableOpacity
-        style={styles.addPickerBtn}
-        onPress={onManuel}
-        activeOpacity={0.82}
-      >
-        <Text style={styles.addPickerIcon}>✏️</Text>
-        <View style={styles.addPickerText}>
-          <Text style={[styles.addPickerTitle, { color: colors.white }]}>Manuel</Text>
-          <Text style={styles.addPickerSub}>Formulaire libre</Text>
-        </View>
-      </TouchableOpacity>
-
-      {/* Option 3 : Scanner le menu (si disponible) */}
+      {/* Option 1 : Scanner le menu (si disponible) */}
       {onScan && (
         <TouchableOpacity
           style={styles.addPickerBtn}
@@ -109,11 +83,37 @@ function AddMethodPicker({
         >
           <Text style={styles.addPickerIcon}>📷</Text>
           <View style={styles.addPickerText}>
-            <Text style={[styles.addPickerTitle, { color: colors.white }]}>Scanner le menu</Text>
-            <Text style={styles.addPickerSub}>Photo → détection automatique</Text>
+            <Text style={[styles.addPickerTitle, { color: colors.white }]}>Scanner mon menu</Text>
+            <Text style={styles.addPickerSub}>J'ai déjà un menu (photo, carte imprimée)</Text>
           </View>
         </TouchableOpacity>
       )}
+
+      {/* Option 2 : Fiche Guidée (recommandée) */}
+      <TouchableOpacity
+        style={[styles.addPickerBtn, styles.addPickerBtnPrimary]}
+        onPress={onFicheGuidee}
+        activeOpacity={0.82}
+      >
+        <Text style={styles.addPickerIcon}>📝</Text>
+        <View style={styles.addPickerText}>
+          <Text style={styles.addPickerTitle}>Fiche Guidée</Text>
+          <Text style={styles.addPickerSub}>Je n'ai pas de menu, on me propose des choix</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Option 3 : Manuel */}
+      <TouchableOpacity
+        style={styles.addPickerBtn}
+        onPress={onManuel}
+        activeOpacity={0.82}
+      >
+        <Text style={styles.addPickerIcon}>✍️</Text>
+        <View style={styles.addPickerText}>
+          <Text style={[styles.addPickerTitle, { color: colors.white }]}>Ajouter manuellement</Text>
+          <Text style={styles.addPickerSub}>Je préfère tout écrire moi-même</Text>
+        </View>
+      </TouchableOpacity>
     </View>
   );
 }
