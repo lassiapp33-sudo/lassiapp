@@ -39,6 +39,9 @@ import * as fitnessService from '../../services/fitnessAbonnements';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { getErrorMessage } from '../../utils/errorUtils';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import ScanMenuCamera from '../../components/store/ScanMenuCamera';
+import ScanMenuReviewSheet from '../../components/store/ScanMenuReviewSheet';
+import { ParsedMenuItem } from '../../utils/menuParser';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -57,16 +60,18 @@ const IcoPin = () => (
   </Svg>
 );
 
-// ─── AddMethodPicker : 3 façons d'ajouter un produit ─────────────────────────
+// ─── AddMethodPicker : façons d'ajouter un produit ───────────────────────────
 
 function AddMethodPicker({
   label,
   onManuel,
   onFicheGuidee,
+  onScan,
 }: {
   label: string;
   onManuel: () => void;
   onFicheGuidee: () => void;
+  onScan?: () => void;
 }) {
   return (
     <View style={styles.addPickerWrap}>
@@ -95,6 +100,21 @@ function AddMethodPicker({
           <Text style={styles.addPickerSub}>Formulaire libre</Text>
         </View>
       </TouchableOpacity>
+
+      {/* Option 3 : Scanner le menu (si disponible) */}
+      {onScan && (
+        <TouchableOpacity
+          style={styles.addPickerBtn}
+          onPress={onScan}
+          activeOpacity={0.82}
+        >
+          <Text style={styles.addPickerIcon}>📷</Text>
+          <View style={styles.addPickerText}>
+            <Text style={[styles.addPickerTitle, { color: colors.white }]}>Scanner le menu</Text>
+            <Text style={styles.addPickerSub}>Photo → détection automatique</Text>
+          </View>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -162,6 +182,9 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
   const [editTarget, setEditTarget] = useState<StoreProduct | null>(null);
   const [showSheet, setShowSheet] = useState(false);
   const [sheetDefaultCat, setSheetDefaultCat] = useState<string | undefined>(undefined);
+  const [scanCameraVisible, setScanCameraVisible] = useState(false);
+  const [scanReviewVisible, setScanReviewVisible] = useState(false);
+  const [scannedItems, setScannedItems] = useState<ParsedMenuItem[]>([]);
   const [showFicheGuidee, setShowFicheGuidee] = useState(false);
   const [ficheDefaultCat, setFicheDefaultCat] = useState<string | undefined>(undefined);
 
@@ -754,6 +777,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
                   label={addItemLabel}
                   onManuel={() => openAdd(context.shopType === 'memberships' ? 'formules' : undefined)}
                   onFicheGuidee={() => openFicheGuidee(context.shopType === 'memberships' ? 'formules' : undefined)}
+                  onScan={() => setScanCameraVisible(true)}
                 />
               </>
             )}
@@ -832,6 +856,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
                   label="Ajouter un produit"
                   onManuel={() => openAdd('produits')}
                   onFicheGuidee={() => openFicheGuidee('produits')}
+                  onScan={() => setScanCameraVisible(true)}
                 />
               </>
             )}
@@ -911,6 +936,24 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
         onSave={handleSaveOffre}
         onDelete={editOffre ? handleDeleteOffre : undefined}
         onClose={() => setShowOffreSheet(false)}
+      />
+
+      <ScanMenuCamera
+        visible={scanCameraVisible}
+        onDone={items => {
+          setScannedItems(items);
+          setScanCameraVisible(false);
+          setScanReviewVisible(true);
+        }}
+        onClose={() => setScanCameraVisible(false)}
+      />
+
+      <ScanMenuReviewSheet
+        visible={scanReviewVisible}
+        items={scannedItems}
+        categories={categories}
+        onClose={() => setScanReviewVisible(false)}
+        onPublished={() => setScanReviewVisible(false)}
       />
     </LassiScreen>
     </KeyboardAvoidingView>

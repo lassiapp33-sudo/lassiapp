@@ -186,6 +186,8 @@ interface Props {
   product: StoreProduct | null; // null = nouveau produit
   categories: StoreCategory[];
   defaultCatId?: string;
+  /** Données pré-remplies (scan menu). Ignorées si product !== null. */
+  prefill?: { name?: string; price?: number; desc?: string };
   onSave: (p: StoreProduct) => Promise<void>;
   onDelete?: () => void;
   onClose: () => void;
@@ -196,6 +198,7 @@ export default function AddProductSheet({
   product,
   categories,
   defaultCatId,
+  prefill,
   onSave,
   onDelete,
   onClose,
@@ -250,16 +253,16 @@ export default function AddProductSheet({
     } else {
       setEmoji('');
       setPhotoUrl(undefined);
-      setName('');
-      setDesc('');
-      setPrice('');
+      setName(prefill?.name ?? '');
+      setDesc(prefill?.desc ?? '');
+      setPrice(prefill?.price != null ? String(prefill.price) : '');
       setCatId(defaultCatId ?? categories[0]?.id ?? '');
       setDuration('');
       setFormulaPeriod('seance');
     }
     setShowEmojiPicker(false);
     setUploading(false);
-  }, [visible, product, defaultCatId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visible, product, defaultCatId, prefill]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sélection et upload de photo ────────────────────────────────────────────
   const handlePickPhoto = async (source: 'gallery' | 'camera') => {
