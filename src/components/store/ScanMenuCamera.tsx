@@ -13,7 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import TextRecognition, { TextRecognitionScript } from '@react-native-ml-kit/text-recognition';
-import { parseMenuText, ParsedMenuItem } from '../../utils/menuParser';
+import { extraireProduits, ProduitExtrait } from '../../utils/parsingMenu';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -42,7 +42,7 @@ const IcoGallery = () => (
 
 interface Props {
   visible: boolean;
-  onDone: (items: ParsedMenuItem[]) => void;
+  onDone: (items: ProduitExtrait[]) => void;
   onClose: () => void;
 }
 
@@ -55,7 +55,7 @@ export default function ScanMenuCamera({ visible, onDone, onClose }: Props) {
     setScanning(true);
     try {
       const result = await TextRecognition.recognize(uri, TextRecognitionScript.LATIN);
-      const items = parseMenuText(result.text);
+      const items = extraireProduits(result.text);
       if (items.length === 0) {
         Alert.alert(
           'Aucun texte détecté',

@@ -40,8 +40,7 @@ import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { getErrorMessage } from '../../utils/errorUtils';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ScanMenuCamera from '../../components/store/ScanMenuCamera';
-import ScanMenuReviewSheet from '../../components/store/ScanMenuReviewSheet';
-import { ParsedMenuItem } from '../../utils/menuParser';
+import { ProduitExtrait } from '../../utils/parsingMenu';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -148,13 +147,15 @@ interface Props {
   onPreview?: () => void;
   onPromos?: () => void;
   onAbonnes?: () => void;
+  onFicheGuidee?: () => void;
+  onRelectureMenu?: (produits: ProduitExtrait[]) => void;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
 const MAX_GALLERY = 5;
 
-export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: Props) {
+export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, onFicheGuidee, onRelectureMenu }: Props) {
   const profileRaw = useShopStore(s => s.profile);
   const avatarUrl = useAuthStore(s => s.user?.avatarUrl);
   const profile = { ...profileRaw, logoUrl: avatarUrl ?? profileRaw.logoUrl ?? undefined };
@@ -183,8 +184,6 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
   const [showSheet, setShowSheet] = useState(false);
   const [sheetDefaultCat, setSheetDefaultCat] = useState<string | undefined>(undefined);
   const [scanCameraVisible, setScanCameraVisible] = useState(false);
-  const [scanReviewVisible, setScanReviewVisible] = useState(false);
-  const [scannedItems, setScannedItems] = useState<ParsedMenuItem[]>([]);
   const [showFicheGuidee, setShowFicheGuidee] = useState(false);
   const [ficheDefaultCat, setFicheDefaultCat] = useState<string | undefined>(undefined);
 
@@ -283,6 +282,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
     setShowSheet(true);
   };
   const openFicheGuidee = (defaultCat?: string) => {
+    if (onFicheGuidee) { onFicheGuidee(); return; }
     setFicheDefaultCat(defaultCat);
     setShowFicheGuidee(true);
   };
@@ -941,19 +941,10 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes }: 
       <ScanMenuCamera
         visible={scanCameraVisible}
         onDone={items => {
-          setScannedItems(items);
           setScanCameraVisible(false);
-          setScanReviewVisible(true);
+          onRelectureMenu?.(items);
         }}
         onClose={() => setScanCameraVisible(false)}
-      />
-
-      <ScanMenuReviewSheet
-        visible={scanReviewVisible}
-        items={scannedItems}
-        categories={categories}
-        onClose={() => setScanReviewVisible(false)}
-        onPublished={() => setScanReviewVisible(false)}
       />
     </LassiScreen>
     </KeyboardAvoidingView>
