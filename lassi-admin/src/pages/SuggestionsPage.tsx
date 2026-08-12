@@ -42,6 +42,13 @@ const CATEGORIES = [
   { id: 'sport',     label: 'Sport' },
 ]
 
+// ─── Sous-catégories ──────────────────────────────────────────────────────────
+// À compléter au fur et à mesure : { id: slug en base, label: affiché, categorieId }
+
+const SOUS_CATEGORIES: { id: string; label: string; categorieId: string }[] = [
+  // Exemples à remplacer par les vraies listes
+]
+
 const SECTIONS: { id: FicheSection; label: string }[] = [
   { id: 'type_contenu',           label: 'Type de contenu' },
   { id: 'sous_categorie_produit', label: 'Sous-catégorie produit' },
@@ -100,10 +107,6 @@ export default function SuggestionsPage() {
     setTimeout(() => setSuccess(null), 3000)
   }
 
-  // Sous-catégories uniques présentes dans les données, triées
-  const sousCats: string[] = [...new Set(
-    suggestions.map(s => s.sous_categorie_id).filter((v): v is string => !!v)
-  )].sort()
 
   async function handleToggle(s: Suggestion) {
     const { error: err } = await supabase
@@ -207,17 +210,17 @@ export default function SuggestionsPage() {
           >
             Toutes
           </button>
-          {sousCats.map(sc => (
+          {SOUS_CATEGORIES.map(sc => (
             <button
-              key={sc}
-              onClick={() => setFilterSousCat(sc)}
+              key={sc.id}
+              onClick={() => setFilterSousCat(sc.id)}
               className={`px-3 py-1.5 rounded-full text-xs font-ui border transition-all ${
-                filterSousCat === sc
+                filterSousCat === sc.id
                   ? 'bg-accent text-bg border-accent'
                   : 'bg-surface text-muted border-border hover:border-accent/40'
               }`}
             >
-              {sc}
+              {sc.label}
             </button>
           ))}
         </div>
@@ -266,7 +269,7 @@ export default function SuggestionsPage() {
                 className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-white text-sm placeholder-muted"
               />
               <datalist id="sousCatList">
-                {sousCats.map(sc => <option key={sc} value={sc} />)}
+                {SOUS_CATEGORIES.map(sc => <option key={sc.id} value={sc.id} />)}
               </datalist>
             </div>
             <div>
@@ -332,7 +335,9 @@ export default function SuggestionsPage() {
       {/* Compteur */}
       {filterSousCat && !loading && (
         <p className="text-muted text-xs">
-          <span className="text-white font-ui">{filterSousCat}</span>
+          <span className="text-white font-ui">
+            {SOUS_CATEGORIES.find(s => s.id === filterSousCat)?.label ?? filterSousCat}
+          </span>
           {' — '}{filtered.length} suggestion{filtered.length > 1 ? 's' : ''}
           {filterSection !== 'toutes' ? ` · ${SECTIONS.find(s => s.id === filterSection)?.label}` : ''}
         </p>
