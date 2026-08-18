@@ -10,10 +10,36 @@ jobs:
     steps:
       - name: Download IPA from draft release
         run: |
-          gh release download v-ipa-submit \
-            --pattern "*.ipa" \
-            --dir ./ipa \
-            --repo lassiapp33-sudo/lassiapp
+          mkdir -p ./ipa
+
+          # Trouver la draft release par tag (fonctionne même sans tag git)
+          RELEASE_ID=$(gh api repos/lassiapp33-sudo/lassiapp/releases \
+            --jq '[.[] | select(.tag_name == "v-ipa-submit")][0].id')
+
+          if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
+            echo "Erreur : draft release v-ipa-submit introuvable"
+            exit 1
+          fi
+
+          echo "Release ID: $RELEASE_ID"
+
+          # Récupérer l'URL de l'asset IPA
+          ASSET_API_URL=$(gh api repos/lassiapp33-sudo/lassiapp/releases/$RELEASE_ID/assets \
+            --jq '[.[] | select(.name | endswith(".ipa"))][0].url')
+
+          if [ -z "$ASSET_API_URL" ] || [ "$ASSET_API_URL" = "null" ]; then
+            echo "Erreur : aucun .ipa trouvé dans la release"
+            exit 1
+          fi
+
+          echo "Téléchargement de : $ASSET_API_URL"
+
+          # Télécharger l'IPA via l'API (fonctionne avec les drafts privés)
+          gh api "$ASSET_API_URL" \
+            --header "Accept: application/octet-stream" \
+            > ./ipa/app.ipa
+
+          ls -lh ./ipa/
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -39,5 +65,6 @@ jobs:
         if: always()
         run: |
           gh release delete v-ipa-submit --yes --repo lassiapp33-sudo/lassiapp || true
+          git push origin :v-ipa-submit 2>/dev/null || true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
