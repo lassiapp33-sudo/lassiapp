@@ -1,0 +1,43 @@
+name: Submit iOS to App Store
+
+on:
+  workflow_dispatch:
+
+jobs:
+  submit:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download IPA from draft release
+        run: |
+          gh release download v-ipa-submit \
+            --pattern "*.ipa" \
+            --dir ./ipa \
+            --repo lassiapp33-sudo/lassiapp
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Apple API Key
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys/
+          echo "${{ secrets.APPLE_API_KEY_P8 }}" > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+
+      - name: Submit to App Store Connect
+        run: |
+          IPA_PATH=$(find ./ipa -name "*.ipa" | head -1)
+          echo "Submitting: $IPA_PATH"
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey ${{ secrets.APPLE_API_KEY_ID }} \
+            --apiIssuer ${{ secrets.APPLE_API_ISSUER_ID }} \
+            --verbose
+        timeout-minutes: 25
+
+      - name: Cleanup draft release
+        if: always()
+        run: |
+          gh release delete v-ipa-submit --yes --repo lassiapp33-sudo/lassiapp || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
