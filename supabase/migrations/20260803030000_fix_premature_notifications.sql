@@ -30,7 +30,7 @@ BEGIN
 
   INSERT INTO public.notifications (user_id, type, title, body, data)
   VALUES (
-    v_merchant_id, 'order', 'Nouvelle commande ! 🛎',
+    v_merchant_id, 'order', 'Nouvelle commande',
     'Commande de ' || NEW.client_name || ' · ' || NEW.total || ' FCFA',
     jsonb_build_object('order_id', NEW.id, 'shop_id', NEW.shop_id)
   );

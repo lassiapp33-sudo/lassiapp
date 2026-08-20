@@ -16,13 +16,13 @@ BEGIN
 
   CASE NEW.status
     WHEN 'preparing' THEN
-      v_title := 'En préparation 🔥';
+      v_title := 'En préparation';
       v_body  := 'Ta commande est en cours de préparation.';
     WHEN 'ready' THEN
-      v_title := 'Commande prête ! 🛎️';
+      v_title := 'Commande prête';
       v_body  := 'Ta commande est prête, viens la récupérer !';
     WHEN 'done' THEN
-      v_title := 'Terminée ⭐';
+      v_title := 'Terminée';
       v_body  := 'Bonne dégustation ! Merci.';
     ELSE RETURN NEW;
   END CASE;

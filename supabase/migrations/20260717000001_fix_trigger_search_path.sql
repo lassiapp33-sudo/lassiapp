@@ -78,7 +78,7 @@ BEGIN
   VALUES (
     v_merchant_id,
     'order',
-    'Nouvelle commande ! 🛎',
+    'Nouvelle commande',
     'Commande de ' || NEW.client_name || ' · ' || NEW.total || ' FCFA',
     jsonb_build_object('order_id', NEW.id, 'shop_id', NEW.shop_id)
   );

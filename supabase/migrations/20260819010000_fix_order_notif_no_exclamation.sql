@@ -1,6 +1,4 @@
--- FIX : notify_client_order_status manquait SET search_path = public
--- Sans ça, quand appelée depuis confirm_order_from_payment (search_path=''),
--- "notifications" n'est pas trouvée → erreur 42P01.
+-- Supprime les points d'exclamation dans les textes de notifications de commande
 
 CREATE OR REPLACE FUNCTION public.notify_client_order_status()
 RETURNS TRIGGER
@@ -21,10 +19,10 @@ BEGIN
       v_body  := 'Ta commande est en cours de préparation.';
     WHEN 'ready' THEN
       v_title := 'Commande prête';
-      v_body  := 'Ta commande est prête, viens la récupérer !';
+      v_body  := 'Ta commande est prête, viens la récupérer.';
     WHEN 'done' THEN
       v_title := 'Terminée';
-      v_body  := 'Bonne dégustation ! Merci.';
+      v_body  := 'Bonne dégustation. Merci.';
     ELSE RETURN NEW;
   END CASE;
 

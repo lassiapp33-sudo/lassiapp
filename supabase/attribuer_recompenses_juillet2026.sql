@@ -47,21 +47,21 @@ BEGIN
 
       -- ── Palier selon le rang ────────────────────────────────────────────
       IF    v_winner.rang = 1  THEN
-        v_badge='👑 Champion National'; v_certificat=true; v_priorite=true; v_credit_lassi=8000; v_carrousel=5; v_valide_jusqu_a=v_expiry;
+        v_badge='Champion National'; v_certificat=true; v_priorite=true; v_credit_lassi=8000; v_carrousel=5; v_valide_jusqu_a=v_expiry;
       ELSIF v_winner.rang = 2  THEN
-        v_badge='🥈 Vice-Champion';     v_certificat=true; v_priorite=true; v_credit_lassi=5000; v_carrousel=4; v_valide_jusqu_a=v_expiry;
+        v_badge='Vice-Champion';     v_certificat=true; v_priorite=true; v_credit_lassi=5000; v_carrousel=4; v_valide_jusqu_a=v_expiry;
       ELSIF v_winner.rang = 3  THEN
-        v_badge='🥉 3e National';       v_certificat=true; v_priorite=true; v_credit_lassi=3000; v_carrousel=3; v_valide_jusqu_a=v_expiry;
+        v_badge='3e National';       v_certificat=true; v_priorite=true; v_credit_lassi=3000; v_carrousel=3; v_valide_jusqu_a=v_expiry;
       ELSIF v_winner.rang = 4  THEN
-        v_badge='🏅 Top 4 National';    v_certificat=true; v_priorite=true; v_credit_lassi=2000; v_carrousel=2; v_valide_jusqu_a=v_expiry;
+        v_badge='Top 4 National';    v_certificat=true; v_priorite=true; v_credit_lassi=2000; v_carrousel=2; v_valide_jusqu_a=v_expiry;
       ELSIF v_winner.rang = 5  THEN
-        v_badge='🏅 Top 5 National';    v_certificat=true; v_priorite=true; v_credit_lassi=1500; v_carrousel=1; v_valide_jusqu_a=v_expiry;
+        v_badge='Top 5 National';    v_certificat=true; v_priorite=true; v_credit_lassi=1500; v_carrousel=1; v_valide_jusqu_a=v_expiry;
       ELSIF v_winner.rang <= 10 THEN
-        v_badge='⭐ Top 10 National';   v_certificat=true; v_priorite=true; v_credit_lassi=1000; v_carrousel=0; v_valide_jusqu_a=v_expiry;
+        v_badge='Top 10 National';   v_certificat=true; v_priorite=true; v_credit_lassi=1000; v_carrousel=0; v_valide_jusqu_a=v_expiry;
       ELSIF v_winner.rang <= 20 THEN
-        v_badge='📈 Top 20 National';   v_certificat=true; v_priorite=false; v_credit_lassi=0;   v_carrousel=0; v_valide_jusqu_a=NULL;
+        v_badge='Top 20 National';   v_certificat=true; v_priorite=false; v_credit_lassi=0;   v_carrousel=0; v_valide_jusqu_a=NULL;
       ELSE
-        v_badge='📋 Top 40 National';   v_certificat=false; v_priorite=false; v_credit_lassi=0;  v_carrousel=0; v_valide_jusqu_a=NULL;
+        v_badge='Top 40 National';   v_certificat=false; v_priorite=false; v_credit_lassi=0;  v_carrousel=0; v_valide_jusqu_a=NULL;
       END IF;
 
       -- ── Insérer la récompense ────────────────────────────────────────────
@@ -96,8 +96,8 @@ BEGIN
         v_winner.prestataire_id,
         'vip',
         CASE WHEN v_winner.rang <= 3
-          THEN '🏆 Classement Juillet 2026 — Félicitations !'
-          ELSE '📊 Classement Juillet 2026 — Vos résultats'
+          THEN 'Classement Juillet 2026 — Félicitations'
+          ELSE 'Classement Juillet 2026 — Vos résultats'
         END,
         format(
           'Vous terminez %se du classement national Juillet 2026. Badge : %s%s.',

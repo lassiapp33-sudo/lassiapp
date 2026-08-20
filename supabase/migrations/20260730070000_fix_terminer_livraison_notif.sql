@@ -31,7 +31,7 @@ BEGIN
     SELECT
       l.demandeur_id,
       'livraison',
-      'Livraison arrivée ✅',
+      'Livraison arrivée',
       'Votre livraison est arrivée à destination.',
       jsonb_build_object('livraison_id', p_livraison_id)
     FROM public.livraisons l

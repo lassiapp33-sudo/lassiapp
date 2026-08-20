@@ -44,7 +44,7 @@ BEGIN
     SELECT
       l.demandeur_id,
       'livraison',
-      'Livraison prise en charge 🚴',
+      'Livraison prise en charge',
       'Un livreur est en route pour récupérer votre colis.',
       jsonb_build_object('livraison_id', p_livraison_id)
     FROM public.livraisons l

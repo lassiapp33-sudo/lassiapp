@@ -38,7 +38,7 @@ BEGIN
     'bienvenue',
     TO_CHAR(NOW(), 'YYYY-MM'),
     0,
-    '🎁 Bienvenue sur LASSI',
+    'Bienvenue sur LASSI',
     FALSE,
     FALSE,
     0,

@@ -71,7 +71,7 @@ BEGIN
     INSERT INTO public.notifications (user_id, type, title, body, data)
     VALUES (
       v_pi.client_id, 'payment',
-      '🏋️ Abonnement activé !',
+      'Abonnement activé',
       'Ton abonnement « ' || COALESCE(v_offre_nom, 'fitness') || ' » est maintenant actif.',
       jsonb_build_object('type', 'fitness_abonnement')
     );

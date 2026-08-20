@@ -129,7 +129,7 @@ select cron.schedule(
     select
       client_id,
       'pay',
-      '❌ Abonnement fitness expiré',
+      'Abonnement fitness expiré',
       'Ton abonnement « ' || nom_offre || ' » a expiré aujourd''hui.',
       jsonb_build_object('type', 'fitness_abonnement')
     from fitness_abonnements_clients
