@@ -3,16 +3,10 @@ import { supabase, getCachedToken, SUPABASE_URL, SUPABASE_ANON } from '../lib/su
 
 export type RatingDirection = 'client_to_merchant' | 'merchant_to_client';
 
-export async function uploadVocalRating(
-  orderId: string,
-  direction: RatingDirection,
-  localUri: string,
-): Promise<string> {
-  const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
-  const user = authData?.user ?? null;
-  if (!user) throw new Error('non authentifié');
-
-  const path = `${user.id}/${orderId}_${direction}.m4a`;
+async function uploadAudioViaEF(path: string, localUri: string): Promise<string> {
+  const { data: sessData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+  const token = sessData?.session?.access_token;
+  if (!token) throw new Error('session expirée');
 
   // Lecture base64 — plus fiable que fetch() sur file:// Android
   const base64 = await FileSystem.readAsStringAsync(localUri, {
@@ -24,15 +18,32 @@ export async function uploadVocalRating(
     bytes[i] = binary.charCodeAt(i);
   }
 
-  const { error } = await supabase.storage
-    .from('order-vocals')
-    .upload(path, bytes, { contentType: 'audio/m4a', upsert: true });
-  if (error) throw new Error(error.message);
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-image`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: SUPABASE_ANON,
+      'Content-Type': 'audio/m4a',
+      'x-bucket': 'order-vocals',
+      'x-path': path,
+    },
+    body: bytes,
+  });
+  const result = await res.json() as { url?: string; error?: string };
+  if (!res.ok || !result.url) throw new Error(result.error ?? String(res.status));
+  return result.url;
+}
 
-  const { data: { publicUrl } } = supabase.storage
-    .from('order-vocals')
-    .getPublicUrl(path);
-  return publicUrl;
+export async function uploadVocalRating(
+  orderId: string,
+  direction: RatingDirection,
+  localUri: string,
+): Promise<string> {
+  const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+  const user = authData?.user ?? null;
+  if (!user) throw new Error('non authentifié');
+
+  return uploadAudioViaEF(`${user.id}/${orderId}_${direction}.m4a`, localUri);
 }
 
 export async function uploadVocalAvis(
@@ -43,27 +54,7 @@ export async function uploadVocalAvis(
   const user = authData?.user ?? null;
   if (!user) throw new Error('non authentifié');
 
-  const path = `${user.id}/avis_${shopId}.m4a`;
-
-  // Lecture base64 — plus fiable que fetch() sur file:// Android
-  const base64 = await FileSystem.readAsStringAsync(localUri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-
-  const { error } = await supabase.storage
-    .from('order-vocals')
-    .upload(path, bytes, { contentType: 'audio/m4a', upsert: true });
-  if (error) throw new Error(error.message);
-
-  const { data: { publicUrl } } = supabase.storage
-    .from('order-vocals')
-    .getPublicUrl(path);
-  return publicUrl;
+  return uploadAudioViaEF(`${user.id}/avis_${shopId}.m4a`, localUri);
 }
 
 export async function soumettreNote(
