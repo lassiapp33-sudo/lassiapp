@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
       acompteADeduire: result.acompte_montant,  // rappel : déduire de la note finale
       motif:          result.motif,
       options:        result.options ?? [],
-      message:        `Bienvenue ! Pensez à déduire ${result.acompte_montant ?? 3000} FCFA de la note finale.`,
+      message:        `Bienvenue. Pensez à déduire ${result.acompte_montant ?? 3000} FCFA de la note finale.`,
     })
 
   } catch (err) {

@@ -359,7 +359,7 @@ Deno.serve(async (req) => {
         const tokens: string[] = (tokenRows ?? []).map((r: any) => r.token)
         const clientName = profile?.name ?? 'Un client'
         const totalFr    = `${Number(total).toLocaleString('fr-FR')} FCFA`
-        const voiceSuffix = voiceNoteUrl ? ' 🎙️ Message vocal joint.' : ''
+        const voiceSuffix = voiceNoteUrl ? ' Message vocal joint.' : ''
         const notifBody  = `${clientName} vient de passer une commande de ${totalFr}.${voiceSuffix}`
 
         if (tokens.length > 0) {
@@ -368,7 +368,7 @@ Deno.serve(async (req) => {
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify(tokens.map(to => ({
               to,
-              title:     'Nouvelle commande 🛎️',
+              title:     'Nouvelle commande',
               body:      notifBody,
               data:      { type: 'commande', orderId },
               sound:     'default',

@@ -199,7 +199,7 @@ Deno.serve(async (req) => {
       // Notifier le gérant (même en simulation, pour permettre les tests end-to-end)
       if (profil.gerant_user_id) {
         await sendPushToUser(admin, profil.gerant_user_id, {
-          title:     '🍽️ Nouvelle réservation de table [SIM]',
+          title:     'Nouvelle réservation de table [SIM]',
           body:      'Un client vient de payer son acompte. Acceptez ou refusez la réservation.',
           data:      { type: 'table_reservation_nouvelle', pi_id: String(piId) },
           channelId: 'commandes',

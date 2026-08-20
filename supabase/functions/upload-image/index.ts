@@ -12,7 +12,7 @@ const SUPABASE_SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const ALLOWED_BUCKETS = new Set([
   'products', 'logos', 'covers', 'avatars',
   'gallery', 'signalements', 'avis', 'disputes',
-  'chat-media',
+  'chat-media', 'order-vocals',
 ]);
 
 const cors = {

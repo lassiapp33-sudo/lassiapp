@@ -41,7 +41,7 @@ serve(async (req) => {
       return ok({ sent: false, reason: 'Aucun bloc À la une actif.' });
     }
 
-    const title = '✨ Nouveautés À la une !';
+    const title = 'Nouveautés À la une';
     const body  = `${count} offre${count > 1 ? 's' : ''} vous attend${count > 1 ? 'ent' : ''} sur LASSI. Découvrez-les maintenant.`;
 
     // 2. Récupérer tous les clients

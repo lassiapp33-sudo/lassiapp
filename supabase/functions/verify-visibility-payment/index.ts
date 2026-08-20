@@ -332,15 +332,15 @@ Deno.serve(async (req) => {
     const offerLabel = OFFER_LABELS[offerType] ?? offerType
 
     const notifBody = offerType === 'annonce'
-      ? `Votre paiement de ${amountFCFA} FCFA a été reçu et votre annonce sponsorisée est maintenant en ligne. Bonne visibilité !`
+      ? `Votre paiement de ${amountFCFA} FCFA a été reçu et votre annonce sponsorisée est maintenant en ligne. Bonne visibilité.`
       : `Grâce à votre achat du forfait « ${planLabel} » (${amountFCFA} FCFA), ` +
         `vous avez activé ${offerLabel} jusqu'au ${expiryFr}. ` +
-        `Profitez-en pour attirer encore plus de clients !`
+        `Profitez-en pour attirer encore plus de clients.`
 
     await admin.from('notifications').insert({
       user_id: sub.merchant_id,
       type:    'vip',
-      title:   '🎉 Félicitations pour votre achat',
+      title:   'Félicitations pour votre achat',
       body:    notifBody,
       data:    { subscription_id: sub.id, offer_type: offerType },
     })

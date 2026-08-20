@@ -23,14 +23,14 @@ interface Palier {
 }
 
 const PALIERS: Palier[] = [
-  { rangMin: 1,  rangMax: 1,  badge: '👑 Champion National', certificat: true,  prioriteRecherche: true,  creditLassi: 8000, carrouselProduits: 5 },
-  { rangMin: 2,  rangMax: 2,  badge: '🥈 Vice-Champion',     certificat: true,  prioriteRecherche: true,  creditLassi: 5000, carrouselProduits: 4 },
-  { rangMin: 3,  rangMax: 3,  badge: '🥉 3e National',       certificat: true,  prioriteRecherche: true,  creditLassi: 3000, carrouselProduits: 3 },
-  { rangMin: 4,  rangMax: 4,  badge: '🏅 Top 4 National',    certificat: true,  prioriteRecherche: true,  creditLassi: 2000, carrouselProduits: 2 },
-  { rangMin: 5,  rangMax: 5,  badge: '🏅 Top 5 National',    certificat: true,  prioriteRecherche: true,  creditLassi: 1500, carrouselProduits: 1 },
-  { rangMin: 6,  rangMax: 10, badge: '⭐ Top 10 National',   certificat: true,  prioriteRecherche: true,  creditLassi: 1000, carrouselProduits: 0 },
-  { rangMin: 11, rangMax: 20, badge: '📈 Top 20 National',   certificat: true,  prioriteRecherche: false, creditLassi: 0,    carrouselProduits: 0 },
-  { rangMin: 21, rangMax: 40, badge: '📋 Top 40 National',   certificat: false, prioriteRecherche: false, creditLassi: 0,    carrouselProduits: 0 },
+  { rangMin: 1,  rangMax: 1,  badge: 'Champion National', certificat: true,  prioriteRecherche: true,  creditLassi: 8000, carrouselProduits: 5 },
+  { rangMin: 2,  rangMax: 2,  badge: 'Vice-Champion',     certificat: true,  prioriteRecherche: true,  creditLassi: 5000, carrouselProduits: 4 },
+  { rangMin: 3,  rangMax: 3,  badge: '3e National',       certificat: true,  prioriteRecherche: true,  creditLassi: 3000, carrouselProduits: 3 },
+  { rangMin: 4,  rangMax: 4,  badge: 'Top 4 National',    certificat: true,  prioriteRecherche: true,  creditLassi: 2000, carrouselProduits: 2 },
+  { rangMin: 5,  rangMax: 5,  badge: 'Top 5 National',    certificat: true,  prioriteRecherche: true,  creditLassi: 1500, carrouselProduits: 1 },
+  { rangMin: 6,  rangMax: 10, badge: 'Top 10 National',   certificat: true,  prioriteRecherche: true,  creditLassi: 1000, carrouselProduits: 0 },
+  { rangMin: 11, rangMax: 20, badge: 'Top 20 National',   certificat: true,  prioriteRecherche: false, creditLassi: 0,    carrouselProduits: 0 },
+  { rangMin: 21, rangMax: 40, badge: 'Top 40 National',   certificat: false, prioriteRecherche: false, creditLassi: 0,    carrouselProduits: 0 },
 ]
 
 function getPalier(rang: number): Palier | null {
@@ -251,8 +251,8 @@ Deno.serve(async (req) => {
     const palier = getPalier(row.rang)!
 
     const title = row.rang <= 3
-      ? `🏆 Classement ${moisLabel} — Félicitations !`
-      : `📊 Classement ${moisLabel} — Vos résultats`
+      ? `Classement ${moisLabel} — Félicitations`
+      : `Classement ${moisLabel} — Vos résultats`
 
     const details: string[] = [`Badge : ${palier.badge}`]
     if (palier.creditLassi > 0)       details.push(`${palier.creditLassi} FCFA de crédit LASSI`)

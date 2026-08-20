@@ -9,6 +9,8 @@ import { isUUID } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { buildWaveSignature } from '../_shared/waveSign.ts'
 
+const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send'
+
 const WAVE_API_KEY = Deno.env.get('WAVE_API_KEY') ?? ''
 
 Deno.serve(async (req) => {
@@ -122,14 +124,68 @@ Deno.serve(async (req) => {
 
     if (insertErr) throw new Error(insertErr.message)
 
-    // Notification in-app
+    const clientBody = `Ton abonnement « ${meta.offre_nom} » est actif jusqu'au ${dateExpiration.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`
+
+    // Notification in-app au client
     await admin.from('notifications').insert({
       user_id: user.id,
       type:    'payment',
-      title:   '🏋️ Abonnement activé',
-      body:    `Ton abonnement « ${meta.offre_nom} » est actif jusqu'au ${dateExpiration.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`,
+      title:   'Abonnement activé',
+      body:    clientBody,
       data:    { type: 'fitness_abonnement' },
-    }).catch(() => null)
+    })
+
+    // Push au client (bannière)
+    const { data: clientTokenRows } = await admin.from('push_tokens').select('token').eq('user_id', user.id)
+    const clientTokens = ((clientTokenRows ?? []) as { token: string }[]).map(r => r.token)
+    console.log('[verify-fitness] client_id:', user.id, 'tokens:', clientTokens.length)
+    if (clientTokens.length > 0) {
+      const expoRes = await fetch(EXPO_PUSH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(clientTokens.map(to => ({
+          to, title: 'Abonnement activé', body: clientBody,
+          data: { type: 'fitness_abonnement' }, sound: 'default',
+        }))),
+      }).catch((e) => { console.error('[verify-fitness] push client err:', e); return null })
+      const expoData = await expoRes?.json().catch(() => null)
+      console.log('[verify-fitness] expo client response:', JSON.stringify(expoData))
+    }
+
+    // Push + notif in-app immédiate au prestataire (comme "Nouvelle commande")
+    try {
+      const { data: cp } = await admin.from('profiles').select('name').eq('id', user.id).maybeSingle()
+      const clientName = (cp?.name as string) ?? 'Un client'
+      const prestTitle = 'Nouvel abonné'
+      const prestBody  = `${clientName} a souscrit à "${meta.offre_nom}".`
+
+      const { data: prestTokenRows } = await admin.from('push_tokens').select('token').eq('user_id', pi.prestataire_id)
+      const prestTokens = ((prestTokenRows ?? []) as { token: string }[]).map(r => r.token)
+      console.log('[verify-fitness] prestataire_id:', pi.prestataire_id, 'tokens:', prestTokens.length)
+      if (prestTokens.length > 0) {
+        const expoRes2 = await fetch(EXPO_PUSH_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(prestTokens.map(to => ({
+            to, title: prestTitle, body: prestBody,
+            data: { type: 'fitness_abonnement_nouveau', offre_id: meta.offre_id },
+            sound: 'default', channelId: 'commandes',
+          }))),
+        }).catch(() => null)
+        const expoData2 = await expoRes2?.json().catch(() => null)
+        console.log('[verify-fitness] expo prestataire response:', JSON.stringify(expoData2))
+      }
+
+      await admin.from('notifications').insert({
+        user_id: pi.prestataire_id,
+        type:    'commande',
+        title:   prestTitle,
+        body:    prestBody,
+        data:    { type: 'fitness_abonnement_nouveau', offre_id: meta.offre_id },
+      })
+    } catch {
+      // best-effort
+    }
 
     return json({ paid: true, statut: 'completed' })
 

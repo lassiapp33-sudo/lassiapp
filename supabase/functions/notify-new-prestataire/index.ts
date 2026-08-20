@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     if (!shopId || !shopName) return fail('Paramètres manquants', 400);
 
     const categoryLabel = CATEGORY_LABELS[category] ?? category ?? 'Services';
-    const title = '🏪 Nouveau prestataire !';
+    const title = 'Nouveau prestataire';
     const body  = `${shopName} vient de rejoindre LASSI — ${categoryLabel}`;
 
     // 1. Récupérer uniquement les clients qui existaient AVANT (ou au moment)

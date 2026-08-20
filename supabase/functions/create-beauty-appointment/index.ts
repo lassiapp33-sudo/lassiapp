@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
     if (profil.gerant_user_id) {
       const categoryLabel = profil.categorie === 'coiffure' ? 'coiffure' : 'beauté'
       await sendPushToUser(admin, profil.gerant_user_id, {
-        title:     `✂️ Nouveau rendez-vous ${categoryLabel}`,
+        title:     `Nouveau rendez-vous ${categoryLabel}`,
         body:      prestationNom
           ? `${prestationNom} — à confirmer dans votre espace gérant.`
           : 'Un client demande un rendez-vous. Consultez votre agenda.',

@@ -100,8 +100,8 @@ serve(async (req) => {
                 if (shopRow?.merchant_id) {
                   const montantFr = `${Number(orderRow.total).toLocaleString('fr-FR')} FCFA`;
                   await sendPushToUser(supabase, shopRow.merchant_id, {
-                    title:     '💳 Paiement confirmé',
-                    body:      `Paiement reçu ✅ Commande de ${orderRow.client_name ?? 'Client'} · ${montantFr}`,
+                    title:     'Paiement confirmé',
+                    body:      `Paiement reçu — Commande de ${orderRow.client_name ?? 'Client'} · ${montantFr}`,
                     data:      { type: 'commande', orderId: confirmResult.order_id },
                     channelId: 'commandes',
                   });

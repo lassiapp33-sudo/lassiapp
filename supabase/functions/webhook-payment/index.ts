@@ -158,9 +158,9 @@ serve(async (req) => {
 
           if (shopRow?.merchant_id) {
             const montantFr = `${Number(orderRow.total).toLocaleString('fr-FR')} FCFA`;
-            const body = `Paiement reçu ✅ Commande de ${orderRow.client_name ?? 'Client'} · ${montantFr}`;
+            const body = `Paiement reçu — Commande de ${orderRow.client_name ?? 'Client'} · ${montantFr}`;
             await sendPushToUser(supabase, shopRow.merchant_id, {
-              title:     '💳 Paiement confirmé',
+              title:     'Paiement confirmé',
               body,
               data:      { type: 'commande', orderId: result.order_id },
               channelId: 'commandes',
@@ -190,8 +190,8 @@ serve(async (req) => {
           const heureStr  = resaRow.heure_debut ? String(resaRow.heure_debut).slice(0, 5) : '';
           const bodyParts = [terrainRow?.nom, resaRow.date_reservation, heureStr, montantFr].filter(Boolean);
           await sendPushToUser(supabase, resaRow.prestataire_id, {
-            title:     '🏟️ Nouvelle réservation terrain',
-            body:      `Paiement reçu ✅ ${bodyParts.join(' · ')}`,
+            title:     'Nouvelle réservation terrain',
+            body:      `Paiement reçu — ${bodyParts.join(' · ')}`,
             data:      { type: 'reservation_terrain', reservationId: String(result.reservation_id) },
             channelId: 'commandes',
           });
@@ -229,7 +229,7 @@ serve(async (req) => {
           // Notifier le gérant
           if (piData.prestataire_id) {
             await sendPushToUser(supabase, piData.prestataire_id, {
-              title:     '🍽️ Nouvelle réservation de table',
+              title:     'Nouvelle réservation de table',
               body:      'Un client vient de payer son acompte. Acceptez ou refusez la réservation.',
               data:      { type: 'table_reservation_nouvelle', pi_id: String(piId) },
               channelId: 'commandes',
@@ -289,7 +289,7 @@ serve(async (req) => {
               const distKm = lp.distance_km ? `${Number(lp.distance_km).toFixed(1)} km` : '';
               for (const livreur of (livreurs ?? [])) {
                 await sendPushToUser(supabase, livreur.id, {
-                  title:     '🛵 Nouvelle livraison disponible',
+                  title:     'Nouvelle livraison disponible',
                   body:      `${lp.depart_label} → ${lp.arrivee_label}${distKm ? ' · ' + distKm : ''}`,
                   data:      { type: 'livraison_nouvelle', livraisonId: String(nouvelleL.id) },
                   channelId: 'commandes',
@@ -327,13 +327,63 @@ serve(async (req) => {
               payment_intent_id: piId,
             });
 
+            const clientBody = `Ton abonnement « ${offreNom} » est actif jusqu'au ${dateExp.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`
+
             await supabase.from('notifications').insert({
               user_id: piData.client_id,
               type:    'payment',
-              title:   '🏋️ Abonnement activé',
-              body:    `Ton abonnement « ${offreNom} » est actif jusqu\'au ${dateExp.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`,
+              title:   'Abonnement activé',
+              body:    clientBody,
               data:    { type: 'fitness_abonnement' },
-            }).catch(() => null);
+            })
+
+            // Push bannière au client
+            const { data: cTokRows } = await supabase.from('push_tokens').select('token').eq('user_id', piData.client_id)
+            const cTokens = ((cTokRows ?? []) as { token: string }[]).map(r => r.token)
+            console.log('[abo-notif-om] client_id:', piData.client_id, 'tokens:', cTokens.length)
+            if (cTokens.length > 0) {
+              const eRes = await fetch('https://exp.host/--/api/v2/push/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify(cTokens.map(to => ({
+                  to, title: 'Abonnement activé', body: clientBody,
+                  data: { type: 'fitness_abonnement' }, sound: 'default',
+                }))),
+              }).catch(() => null)
+              const eData = await eRes?.json().catch(() => null)
+              console.log('[abo-notif-om] expo client response:', JSON.stringify(eData))
+            }
+
+            // In-app + push bannière au prestataire ("Nouvel abonné")
+            const { data: cpRow } = await supabase.from('profiles').select('name').eq('id', piData.client_id as string).maybeSingle()
+            const cName  = (cpRow?.name as string) ?? 'Un client'
+            const pTitle = 'Nouvel abonné'
+            const pBody  = `${cName} a souscrit à "${offreNom}".`
+
+            await supabase.from('notifications').insert({
+              user_id: piData.prestataire_id,
+              type:    'commande',
+              title:   pTitle,
+              body:    pBody,
+              data:    { type: 'fitness_abonnement_nouveau', offre_id: offreId },
+            })
+
+            const { data: pTokRows } = await supabase.from('push_tokens').select('token').eq('user_id', piData.prestataire_id)
+            const pTokens = ((pTokRows ?? []) as { token: string }[]).map(r => r.token)
+            console.log('[abo-notif-om] prestataire_id:', piData.prestataire_id, 'tokens:', pTokens.length)
+            if (pTokens.length > 0) {
+              const eRes2 = await fetch('https://exp.host/--/api/v2/push/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify(pTokens.map(to => ({
+                  to, title: pTitle, body: pBody,
+                  data: { type: 'fitness_abonnement_nouveau', offre_id: offreId },
+                  sound: 'default', channelId: 'commandes',
+                }))),
+              }).catch(() => null)
+              const eData2 = await eRes2?.json().catch(() => null)
+              console.log('[abo-notif-om] expo prestataire response:', JSON.stringify(eData2))
+            }
 
             console.log('[webhook-payment] fitness abonnement activé pi', piId, 'client', piData.client_id);
           }
@@ -356,7 +406,7 @@ serve(async (req) => {
             ? `${Number(piClient.montant_total).toLocaleString('fr-FR')} FCFA`
             : ''
           await sendPushToUser(supabase, piClient.client_id, {
-            title:     '✅ Paiement confirmé',
+            title:     'Paiement confirmé',
             body:      montant ? `Votre paiement de ${montant} a bien été reçu.` : 'Votre paiement a bien été reçu.',
             data:      { type: 'pay', pi_id: String(piId) },
             channelId: 'commandes',
@@ -528,7 +578,7 @@ serve(async (req) => {
       if (pi?.client_id) {
         const montant = pi.amount ? `${Number(pi.amount).toLocaleString('fr-FR')} FCFA` : ''
         await sendPushToUser(supabase, pi.client_id, {
-          title: '✅ Paiement confirmé',
+          title: 'Paiement confirmé',
           body: montant
             ? `Votre paiement de ${montant} a bien été reçu.`
             : 'Votre paiement a bien été reçu.',
@@ -559,8 +609,8 @@ serve(async (req) => {
           if (shopRow?.merchant_id) {
             const montantFr = `${Number(orderRow.total).toLocaleString('fr-FR')} FCFA`
             await sendPushToUser(supabase, shopRow.merchant_id, {
-              title:     'Nouvelle commande 🛎️',
-              body:      `Paiement reçu ✅ Commande de ${orderRow.client_name ?? 'Client'} · ${montantFr}`,
+              title:     'Nouvelle commande',
+              body:      `Paiement reçu — Commande de ${orderRow.client_name ?? 'Client'} · ${montantFr}`,
               data:      { type: 'commande', orderId: String(result.order_id) },
               channelId: 'commandes',
             })
@@ -589,8 +639,8 @@ serve(async (req) => {
           const heureStr  = resaRow.heure_debut ? String(resaRow.heure_debut).slice(0, 5) : ''
           const bodyParts = [terrainRow?.nom, resaRow.date_reservation, heureStr, montantFr].filter(Boolean)
           await sendPushToUser(supabase, resaRow.prestataire_id, {
-            title:     '🏟️ Nouvelle réservation terrain',
-            body:      `Paiement reçu ✅ ${bodyParts.join(' · ')}`,
+            title:     'Nouvelle réservation terrain',
+            body:      `Paiement reçu — ${bodyParts.join(' · ')}`,
             data:      { type: 'reservation_terrain', reservationId: String(result.reservation_id) },
             channelId: 'commandes',
           })
@@ -665,7 +715,7 @@ serve(async (req) => {
               const distKm = lp.distance_km ? `${Number(lp.distance_km).toFixed(1)} km` : ''
               for (const livreur of (livreurs ?? [])) {
                 await sendPushToUser(supabase, livreur.id, {
-                  title:     '🛵 Nouvelle livraison disponible',
+                  title:     'Nouvelle livraison disponible',
                   body:      `${lp.depart_label} → ${lp.arrivee_label}${distKm ? ' · ' + distKm : ''}`,
                   data:      { type: 'livraison_nouvelle', livraisonId: String(nouvelleL.id) },
                   channelId: 'commandes',

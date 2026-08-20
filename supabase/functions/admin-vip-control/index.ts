@@ -56,9 +56,7 @@ Deno.serve(async (req) => {
 
     // ── Relancer le calcul VIP ──────────────────────────────────────────────
     if (action === 'recalculate') {
-      const { data, error } = await admin.rpc('update_vip_rankings', {
-        p_run_by: user.id,
-      })
+      const { data, error } = await admin.rpc('update_vip_rankings')
       if (error) throw error
 
       await admin.from('admin_actions_log').insert({

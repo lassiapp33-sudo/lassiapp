@@ -278,7 +278,7 @@ Deno.serve(async (req) => {
       await admin.from('notifications').insert({
         user_id: user.id,
         type:    'vip',
-        title:   '🎉 Forfait activé avec ton crédit LASSI',
+        title:   'Forfait activé avec ton crédit LASSI',
         body:    `Ton crédit LASSI a été utilisé pour activer le forfait « ${planLabel} » de ${OFFER_LABELS.quartier} jusqu'au ${expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}. Il te reste ${newBalance.toLocaleString('fr-FR')} FCFA de crédit.`,
         data:    { subscription_id: sub.id, offer_type: 'quartier' },
       })
@@ -300,7 +300,7 @@ Deno.serve(async (req) => {
       await admin.from('notifications').insert({
         user_id: user.id,
         type:    'vip',
-        title:   '🎉 Forfait activé avec ton crédit LASSI',
+        title:   'Forfait activé avec ton crédit LASSI',
         body:    `Ton crédit LASSI a été utilisé pour activer « ${planLabel} » de ${OFFER_LABELS.recherche} jusqu'au ${responseExpiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}. Il te reste ${newBalance.toLocaleString('fr-FR')} FCFA de crédit.`,
         data:    { offer_type: 'recherche' },
       })
@@ -322,7 +322,7 @@ Deno.serve(async (req) => {
       await admin.from('notifications').insert({
         user_id: user.id,
         type:    'vip',
-        title:   '🎉 Forfait activé avec ton crédit LASSI',
+        title:   'Forfait activé avec ton crédit LASSI',
         body:    `Ton crédit LASSI a été utilisé pour activer « ${planLabel} » de ${OFFER_LABELS.carte} jusqu'au ${responseExpiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}. Il te reste ${newBalance.toLocaleString('fr-FR')} FCFA de crédit.`,
         data:    { offer_type: 'carte' },
       })

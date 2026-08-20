@@ -27,7 +27,7 @@ serve(async (req) => {
     const { data: { user }, error: authErr } = await admin.auth.getUser(token)
     if (authErr || !user) return fail('Session invalide', 401)
 
-    const { shopId, items, orderType, note } = await req.json()
+    const { shopId, items, orderType, note, payMethod } = await req.json()
 
     if (!shopId || !Array.isArray(items) || items.length === 0) {
       return fail('Paramètres manquants')
@@ -88,6 +88,8 @@ serve(async (req) => {
       .maybeSingle()
 
     // Créer la commande via create_order_atomic (items en texte libre, pas de productId)
+    const safePayMethod = ['wave', 'om', 'cash'].includes(payMethod) ? payMethod : 'wave'
+
     const { data: orderResult, error: orderErr } = await admin.rpc('create_order_atomic', {
       p_shop_id:         shopId,
       p_client_id:       user.id,
@@ -99,6 +101,7 @@ serve(async (req) => {
       p_note:            note?.trim()?.slice(0, 300) ?? null,
       p_idempotency_key: null,
       p_items:           orderItems,
+      p_pay_method:      safePayMethod,
     })
 
     if (orderErr) throw new Error(orderErr.message)

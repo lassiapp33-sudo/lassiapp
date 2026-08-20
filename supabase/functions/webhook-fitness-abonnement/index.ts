@@ -6,6 +6,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID } from '../_shared/validation.ts'
 
+const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send'
+
 const OM_WEBHOOK_SECRET = Deno.env.get('OM_WEBHOOK_SECRET') ?? ''
 
 // Mêmes statuts que webhook-payment — OM peut envoyer plusieurs variantes
@@ -169,12 +171,66 @@ async function activerAbonnement(
     throw new Error(error.message)
   }
 
+  const clientBody = `Ton abonnement « ${offreNom} » est actif jusqu'au ${dateExpiration.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`
+
   // Notification in-app au client
   await admin.from('notifications').insert({
     user_id: pi.client_id,
     type:    'payment',
-    title:   '🏋️ Abonnement activé',
-    body:    `Ton abonnement « ${offreNom} » est actif jusqu'au ${dateExpiration.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`,
+    title:   'Abonnement activé',
+    body:    clientBody,
     data:    { type: 'fitness_abonnement' },
-  }).catch(() => null)
+  })
+
+  // Push au client (bannière)
+  const { data: clientTokenRows, error: clientTokErr } = await admin.from('push_tokens').select('token').eq('user_id', pi.client_id)
+  const clientTokens = ((clientTokenRows ?? []) as { token: string }[]).map(r => r.token)
+  console.log('[abo-notif] client_id:', pi.client_id, 'tokens:', clientTokens.length, 'err:', clientTokErr?.message)
+  if (clientTokens.length > 0) {
+    const expoRes = await fetch(EXPO_PUSH_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(clientTokens.map(to => ({
+        to, title: 'Abonnement activé', body: clientBody,
+        data: { type: 'fitness_abonnement' }, sound: 'default',
+      }))),
+    }).catch(e => { console.error('[abo-notif] push client fetch err:', e); return null })
+    const expoData = await expoRes?.json().catch(() => null)
+    console.log('[abo-notif] expo client response:', JSON.stringify(expoData))
+  }
+
+  // Push + notif in-app immédiate au prestataire (comme "Nouvelle commande")
+  try {
+    const { data: cp } = await admin.from('profiles').select('name').eq('id', pi.client_id as string).maybeSingle()
+    const clientName = (cp?.name as string) ?? 'Un client'
+    const prestTitle = 'Nouvel abonné'
+    const prestBody  = `${clientName} a souscrit à "${offreNom}".`
+
+    const { data: prestTokenRows, error: prestTokErr } = await admin.from('push_tokens').select('token').eq('user_id', pi.prestataire_id)
+    const prestTokens = ((prestTokenRows ?? []) as { token: string }[]).map(r => r.token)
+    console.log('[abo-notif] prestataire_id:', pi.prestataire_id, 'tokens:', prestTokens.length, 'err:', prestTokErr?.message)
+    if (prestTokens.length > 0) {
+      const expoRes2 = await fetch(EXPO_PUSH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(prestTokens.map(to => ({
+          to, title: prestTitle, body: prestBody,
+          data: { type: 'fitness_abonnement_nouveau', offre_id: offreId },
+          sound: 'default', channelId: 'commandes',
+        }))),
+      })
+      const expoData2 = await expoRes2.json().catch(() => null)
+      console.log('[abo-notif] expo prestataire response:', JSON.stringify(expoData2))
+    }
+
+    await admin.from('notifications').insert({
+      user_id: pi.prestataire_id,
+      type:    'commande',
+      title:   prestTitle,
+      body:    prestBody,
+      data:    { type: 'fitness_abonnement_nouveau', offre_id: offreId },
+    })
+  } catch (e) {
+    console.error('[abo-notif] prestataire bloc erreur:', e instanceof Error ? e.message : e)
+  }
 }

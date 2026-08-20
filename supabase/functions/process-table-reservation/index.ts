@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
           body: {
             userId:  resa.client_id,
             title:   `${profil.nom_affiche} a accepté votre réservation`,
-            body:    messageGerant ?? 'Votre table est confirmée ! Présentez votre ticket à l\'arrivée.',
+            body:    messageGerant ?? 'Votre table est confirmée. Présentez votre ticket à l\'arrivée.',
             data:    { type: 'reservation_acceptee', reservationId },
           },
         })

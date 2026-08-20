@@ -125,7 +125,7 @@ async function notifierLivreurs(
     const distKm = lp.distance_km ? `${Number(lp.distance_km).toFixed(1)} km` : ''
     for (const livreur of (livreurs ?? [])) {
       await sendPushToUser(admin, livreur.id, {
-        title:     '🛵 Nouvelle livraison disponible',
+        title:     'Nouvelle livraison disponible',
         body:      `${lp.depart_label} → ${lp.arrivee_label}${distKm ? ' · ' + distKm : ''}`,
         data:      { type: 'livraison_nouvelle', livraisonId },
         channelId: 'commandes',

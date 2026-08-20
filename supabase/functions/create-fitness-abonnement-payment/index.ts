@@ -123,6 +123,16 @@ Deno.serve(async (req) => {
         payment_intent_id: piId,
       })
 
+      // Notifications simulation
+      const simClientBody = `Ton abonnement « ${offre.nom} » est actif jusqu'au ${dateExpiration.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`
+      await admin.from('notifications').insert({
+        user_id: user.id, type: 'payment', title: 'Abonnement activé', body: simClientBody, data: { type: 'fitness_abonnement' },
+      })
+      await admin.from('notifications').insert({
+        user_id: offre.prestataire_id, type: 'commande', title: 'Nouvel abonné',
+        body: `Un client a souscrit à "${offre.nom}".`, data: { type: 'fitness_abonnement_nouveau', offre_id: offre.id },
+      })
+
       return json({
         success:    true,
         mode:       'simulation',

@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
             ? `${profil.nom_affiche} a confirmé votre RDV`
             : `${profil.nom_affiche} n'est pas disponible`,
           body:   action === 'confirmer'
-            ? (messageGerant ?? `${rdvLabel} est confirmé — à bientôt !`)
+            ? (messageGerant ?? `${rdvLabel} est confirmé — à bientôt`)
             : (messageGerant ?? 'Votre demande de rendez-vous a été refusée.'),
           data:   { type: action === 'confirmer' ? 'rdv_beauty_confirme' : 'rdv_beauty_refuse', appointmentId },
         },

@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
     if (!KEYS_READY[payMethod as keyof typeof KEYS_READY]) {
       return json({
         status:  'awaiting_keys',
-        message: "Le paiement mobile est en cours d'intégration. Revenez bientôt !",
+        message: "Le paiement mobile est en cours d'intégration. Revenez bientôt.",
       })
     }
 

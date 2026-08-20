@@ -223,14 +223,79 @@ serve(async (req) => {
       omLastSentAt.set(phone, Date.now());
     }
 
-    // Notification prestataire : Cash In OM direct (pas d'acceptation manuelle requise)
-    if (payout.moyen_paiement === 'orange_money') {
-      await sendPushToUser(supabase, payout.prestataire_id, {
-        title: 'Reversement reçu ✅',
-        body: `${payout.montant} FCFA ont été envoyés sur votre Orange Money.`,
-        data: { type: 'om_cashin_done', montant: payout.montant },
-        channelId: 'paiements',
-      });
+    // ── Notification prestataire après reversement confirmé (OM ET Wave) ──────
+    // Règle : la notif ne part QUE quand l'argent est réellement reversé (ici).
+    {
+      const montantStr = `${payout.montant} FCFA`;
+      const moyenStr   = payout.moyen_paiement === 'orange_money' ? 'Orange Money' : 'Wave';
+
+      let title     = 'Reversement reçu';
+      let body      = `${montantStr} reversés sur votre ${moyenStr}.`;
+      let notifType = 'payout_done';
+
+      try {
+        // Abonnement fitness : metadata contient offre_nom
+        const { data: piData, error: piErr } = await supabase
+          .from('payment_intents')
+          .select('metadata, client_id')
+          .eq('id', payout.payment_intent_id)
+          .maybeSingle();
+
+        if (piErr) {
+          console.error('[notif] payment_intents query error:', piErr.message);
+        } else {
+          const meta     = piData?.metadata as Record<string, unknown> | null;
+          const offreNom = meta?.offre_nom as string | undefined;
+
+          if (offreNom) {
+            let clientName = 'Un client';
+            if (piData?.client_id) {
+              const { data: cp } = await supabase
+                .from('profiles')
+                .select('name')
+                .eq('id', piData.client_id)
+                .maybeSingle();
+              if (cp?.name) clientName = cp.name as string;
+            }
+            title     = 'Nouvel abonné payé';
+            body      = `${clientName} a souscrit à "${offreNom}". ${montantStr} reversés sur votre ${moyenStr}.`;
+            notifType = 'fitness_abonnement_paye';
+          }
+        }
+      } catch (e) {
+        console.error('[notif] erreur lecture metadata:', e instanceof Error ? e.message : e);
+      }
+
+      // Push notification (bannière)
+      try {
+        await sendPushToUser(supabase, payout.prestataire_id, {
+          title,
+          body,
+          data:      { type: notifType, montant: payout.montant, payment_intent_id: payout.payment_intent_id },
+          channelId: 'paiements',
+        });
+        console.log('[notif] push envoyé prestataire', payout.prestataire_id);
+      } catch (e) {
+        console.error('[notif] push erreur:', e instanceof Error ? e.message : e);
+      }
+
+      // Notification in-app (onglet Notifications)
+      try {
+        const { error: notifErr } = await supabase.from('notifications').insert({
+          user_id: payout.prestataire_id,
+          type:    'payment',
+          title,
+          body,
+          data:    { type: notifType, montant: payout.montant, payment_intent_id: payout.payment_intent_id },
+        });
+        if (notifErr) {
+          console.error('[notif] insert notifications erreur:', notifErr.message, notifErr.details, notifErr.hint);
+        } else {
+          console.log('[notif] notification in-app insérée prestataire', payout.prestataire_id);
+        }
+      } catch (e) {
+        console.error('[notif] insert notifications exception:', e instanceof Error ? e.message : e);
+      }
     }
   }
 
