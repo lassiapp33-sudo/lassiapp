@@ -52,6 +52,12 @@ function horaireVide(jour: 0 | 1 | 2 | 3 | 4 | 5 | 6): LigneHoraire {
   return { jour, ferme: false, ouverture: '', fermeture: '', note: '' };
 }
 
+const formatHeure = (raw: string): string => {
+  const digits = raw.replace(/\D/g, '').slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return digits.slice(0, 2) + ':' + digits.slice(2);
+};
+
 interface Props {
   onBack: () => void;
 }
@@ -138,7 +144,7 @@ export default function GerantHorairesScreen({ onBack }: Props) {
           {/* Légende colonnes */}
           <View style={s.legende}>
             <Text style={[s.legendeTxt, { flex: 1 }]}>Jour</Text>
-            <Text style={[s.legendeTxt, { width: 70, textAlign: 'center' }]}>Fermé</Text>
+            <Text style={[s.legendeTxt, { width: 70, textAlign: 'center' }]}>Ouvert</Text>
             <Text style={[s.legendeTxt, { width: 72, textAlign: 'center' }]}>Ouvre</Text>
             <Text style={[s.legendeTxt, { width: 72, textAlign: 'center' }]}>Ferme</Text>
           </View>
@@ -147,30 +153,30 @@ export default function GerantHorairesScreen({ onBack }: Props) {
             <View key={l.jour} style={s.ligne}>
               <Text style={s.jourTxt}>{JOURS_SEMAINE[l.jour]}</Text>
               <Switch
-                value={l.ferme}
-                onValueChange={v => maj(l.jour, { ferme: v })}
-                thumbColor={l.ferme ? r.couleur.or : r.couleur.gris}
+                value={!l.ferme}
+                onValueChange={v => maj(l.jour, { ferme: !v })}
+                thumbColor={!l.ferme ? r.couleur.or : r.couleur.gris}
                 trackColor={{ false: r.couleur.velours, true: 'rgba(201,162,39,0.4)' }}
                 style={{ width: 50, marginHorizontal: 10 }}
               />
               <TextInput
                 style={[s.heureInput, l.ferme && s.inputDisabled]}
                 value={l.ouverture}
-                onChangeText={v => maj(l.jour, { ouverture: v })}
+                onChangeText={v => maj(l.jour, { ouverture: formatHeure(v) })}
                 placeholder="08:00"
                 placeholderTextColor={r.couleur.gris}
                 editable={!l.ferme}
-                keyboardType="numbers-and-punctuation"
+                keyboardType="number-pad"
                 maxLength={5}
               />
               <TextInput
                 style={[s.heureInput, l.ferme && s.inputDisabled]}
                 value={l.fermeture}
-                onChangeText={v => maj(l.jour, { fermeture: v })}
+                onChangeText={v => maj(l.jour, { fermeture: formatHeure(v) })}
                 placeholder="22:00"
                 placeholderTextColor={r.couleur.gris}
                 editable={!l.ferme}
-                keyboardType="numbers-and-punctuation"
+                keyboardType="number-pad"
                 maxLength={5}
               />
             </View>

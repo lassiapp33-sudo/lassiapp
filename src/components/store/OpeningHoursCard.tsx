@@ -19,6 +19,12 @@ import {
   formatDayHours,
 } from '../../services/hours';
 
+const formatHeure = (raw: string): string => {
+  const digits = raw.replace(/\D/g, '').slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return digits.slice(0, 2) + ':' + digits.slice(2);
+};
+
 interface Props {
   hours: WeekHours | null;
   isManuallyClose: boolean;
@@ -92,8 +98,8 @@ export default function OpeningHoursCard({
                 <TextInput
                   style={styles.timeInput}
                   value={dh.open}
-                  onChangeText={v => updateDay(day, { open: v })}
-                  keyboardType="default"
+                  onChangeText={v => updateDay(day, { open: formatHeure(v) })}
+                  keyboardType="number-pad"
                   maxLength={5}
                   placeholder="07:00"
                   placeholderTextColor={colors.muted}
@@ -102,8 +108,8 @@ export default function OpeningHoursCard({
                 <TextInput
                   style={styles.timeInput}
                   value={dh.close}
-                  onChangeText={v => updateDay(day, { close: v })}
-                  keyboardType="default"
+                  onChangeText={v => updateDay(day, { close: formatHeure(v) })}
+                  keyboardType="number-pad"
                   maxLength={5}
                   placeholder="22:00"
                   placeholderTextColor={colors.muted}
