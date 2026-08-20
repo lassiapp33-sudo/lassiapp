@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, KeyboardTypeOptions } from 'react-native';
 
 interface Props {
   label: string;
@@ -7,10 +7,11 @@ interface Props {
   valeurSelectionnee: string;
   onSelectionner: (valeur: string) => void;
   placeholderLibre?: string;
+  keyboardType?: KeyboardTypeOptions;
 }
 
 export default function SelecteurPuces({
-  label, suggestions, valeurSelectionnee, onSelectionner, placeholderLibre,
+  label, suggestions, valeurSelectionnee, onSelectionner, placeholderLibre, keyboardType,
 }: Props) {
   const [modeLibre, setModeLibre] = useState(false);
   const [texteLibre, setTexteLibre] = useState('');
@@ -42,7 +43,9 @@ export default function SelecteurPuces({
           style={[s.puce, modeLibre && s.puceActive]}
           onPress={() => setModeLibre(true)}
         >
-          <Text style={[s.puceText, modeLibre && s.puceTextActive]}>✏️ Autre</Text>
+          <Text style={[s.puceText, modeLibre && s.puceTextActive]}>
+            {modeLibre && texteLibre ? texteLibre : '✏️ Autre'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -53,6 +56,7 @@ export default function SelecteurPuces({
           onChangeText={(v) => { setTexteLibre(v); onSelectionner(v); }}
           placeholder={placeholderLibre ?? 'Précisez…'}
           placeholderTextColor="#6B6F9E"
+          keyboardType={keyboardType ?? 'default'}
           autoFocus
           returnKeyType="done"
         />

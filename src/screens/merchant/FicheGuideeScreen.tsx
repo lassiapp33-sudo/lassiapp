@@ -21,19 +21,18 @@ const IcoBack = () => (
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface LigneProduit {
-  id:            string;
-  sousCategorie: string;
-  nom:           string;
-  prix:          string;
-  description:   string;
-  imageUri:      string | null;
-  imageUrl:      string | null;
+  id:          string;
+  nom:         string;
+  prix:        string;
+  description: string;
+  imageUri:    string | null;
+  imageUrl:    string | null;
 }
 
 function nouvelleLigne(): LigneProduit {
   return {
     id: `l-${Date.now()}-${Math.random()}`,
-    sousCategorie: '', nom: '', prix: '', description: '',
+    nom: '', prix: '', description: '',
     imageUri: null, imageUrl: null,
   };
 }
@@ -52,19 +51,22 @@ export default function FicheGuideeScreen({ onClose }: Props) {
   const loadMyShop    = useShopStore(s => s.loadMyShop);
   const sousCatId     = subcategories[0] ?? '';
 
-  const [loading,          setLoading]          = useState(true);
-  const [suggestions,      setSuggestions]      = useState<{
+  const [loading, setLoading] = useState(true);
+  const [suggestions, setSuggestions] = useState<{
     typeContenu:   { id: string; valeur: string }[];
     sousCategorie: { id: string; valeur: string }[];
     nomProduit:    { id: string; valeur: string }[];
     prix:          { id: string; valeur: string }[];
   }>({ typeContenu: [], sousCategorie: [], nomProduit: [], prix: [] });
 
-  const [typeContenu,      setTypeContenu]      = useState('');
-  const [typeContenuLibre, setTypeContenuLibre] = useState(false);
-  const [catId,            setCatId]            = useState(categories[0]?.id ?? '');
-  const [lignes,           setLignes]           = useState<LigneProduit[]>([nouvelleLigne()]);
-  const [envoi,            setEnvoi]            = useState(false);
+  // ── Destination unifiée (radio) ──────────────────────────────────────────────
+  // Format : "cat:<id>"  |  "type:<valeur>"  |  "sous:<valeur>"  |  "libre"
+  const [dest, setDest] = useState(`cat:${categories[0]?.id ?? ''}`);
+  const [destLibreText, setDestLibreText] = useState('');
+
+  // ── Lignes produit ────────────────────────────────────────────────────────────
+  const [lignes, setLignes] = useState<LigneProduit[]>([nouvelleLigne()]);
+  const [envoi,  setEnvoi]  = useState(false);
 
   useEffect(() => {
     if (!sousCatId) { setLoading(false); return; }
@@ -73,6 +75,18 @@ export default function FicheGuideeScreen({ onClose }: Props) {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [sousCatId]);
+
+  // Helpers pour récupérer catId / sousCategorie au moment de publier
+  const getDestValues = (): { catId: string; sousCategorie: string } => {
+    if (dest.startsWith('cat:'))  return { catId: dest.slice(4), sousCategorie: '' };
+    if (dest.startsWith('type:')) return { catId: dest.slice(5), sousCategorie: '' };
+    if (dest.startsWith('sous:')) return { catId: dest.slice(5), sousCategorie: '' };
+    if (dest === 'libre') {
+      const label = destLibreText.trim();
+      return { catId: label || categories[0]?.id || '', sousCategorie: '' };
+    }
+    return { catId: categories[0]?.id ?? '', sousCategorie: '' };
+  };
 
   const modifierLigne = (id: string, champ: keyof LigneProduit, valeur: string | null) => {
     setLignes(prev => prev.map(l => l.id === id ? { ...l, [champ]: valeur } : l));
@@ -86,7 +100,6 @@ export default function FicheGuideeScreen({ onClose }: Props) {
   };
 
   const ajouterLigne = () => setLignes(prev => [...prev, nouvelleLigne()]);
-
   const supprimerLigne = (id: string) => setLignes(prev => prev.filter(l => l.id !== id));
 
   const publier = async () => {
@@ -100,6 +113,7 @@ export default function FicheGuideeScreen({ onClose }: Props) {
       return;
     }
 
+    const { catId, sousCategorie } = getDestValues();
     const itemType =
       shopType === 'services'    ? ('service'    as const) :
       shopType === 'memberships' ? ('membership' as const) :
@@ -107,7 +121,6 @@ export default function FicheGuideeScreen({ onClose }: Props) {
 
     setEnvoi(true);
     try {
-      // Upload des photos avant création des produits
       const avecImages = await Promise.all(valides.map(async (l) => {
         if (!l.imageUri) return l;
         try {
@@ -122,7 +135,7 @@ export default function FicheGuideeScreen({ onClose }: Props) {
         nom:           l.nom.trim(),
         prix:          parseInt(l.prix.replace(/\D/g, ''), 10),
         description:   l.description.trim(),
-        sousCategorie: l.sousCategorie,
+        sousCategorie,
         category:      catId,
         itemType,
         imageUrl:      l.imageUrl ?? undefined,
@@ -167,58 +180,68 @@ export default function FicheGuideeScreen({ onClose }: Props) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Section "Ajouter dans" — onglets catalogue + type de contenu */}
-        <View style={s.catSection}>
+        {/* ── Section "Ajouter dans" — sélection radio unifiée ── */}
+        <View style={s.destSection}>
           <Text style={s.label}>Ajouter dans</Text>
-
-          {/* Onglets catalogue (Formules, Produits…) */}
-          {categories.length > 1 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-              <View style={s.catRow}>
-                {categories.map(cat => (
-                  <TouchableOpacity
-                    key={cat.id}
-                    style={[s.catChip, catId === cat.id && s.catChipActive]}
-                    onPress={() => setCatId(cat.id)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={[s.catChipTxt, catId === cat.id && s.catChipTxtActive]}>
-                      {cat.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-          )}
-
-          {/* Puces type de contenu (Tarif, Catalogue, Programme…) */}
           <View style={s.puces}>
+
+            {/* Catégories du catalogue (Formules, Produits…) */}
+            {categories.map(cat => (
+              <TouchableOpacity
+                key={cat.id}
+                style={[s.chip, dest === `cat:${cat.id}` && s.chipActive]}
+                onPress={() => setDest(`cat:${cat.id}`)}
+                activeOpacity={0.75}
+              >
+                <Text style={[s.chipTxt, dest === `cat:${cat.id}` && s.chipTxtActive]}>
+                  {cat.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            {/* Suggestions type de contenu (Tarif, Carte des abonnements…) */}
             {suggestions.typeContenu.map(sug => (
               <TouchableOpacity
                 key={sug.id}
-                style={[s.catChip, !typeContenuLibre && typeContenu === sug.valeur && s.catChipActive]}
-                onPress={() => { setTypeContenuLibre(false); setTypeContenu(sug.valeur); }}
+                style={[s.chip, dest === `type:${sug.valeur}` && s.chipActive]}
+                onPress={() => setDest(`type:${sug.valeur}`)}
                 activeOpacity={0.75}
               >
-                <Text style={[s.catChipTxt, !typeContenuLibre && typeContenu === sug.valeur && s.catChipTxtActive]}>
+                <Text style={[s.chipTxt, dest === `type:${sug.valeur}` && s.chipTxtActive]}>
                   {sug.valeur}
                 </Text>
               </TouchableOpacity>
             ))}
+
+            {/* Suggestions sous-catégorie (Coaching, Séances…) */}
+            {suggestions.sousCategorie.map(sug => (
+              <TouchableOpacity
+                key={sug.id}
+                style={[s.chip, dest === `sous:${sug.valeur}` && s.chipActive]}
+                onPress={() => setDest(`sous:${sug.valeur}`)}
+                activeOpacity={0.75}
+              >
+                <Text style={[s.chipTxt, dest === `sous:${sug.valeur}` && s.chipTxtActive]}>
+                  {sug.valeur}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            {/* Autre (saisie libre) */}
             <TouchableOpacity
-              style={[s.catChip, typeContenuLibre && s.catChipActive]}
-              onPress={() => setTypeContenuLibre(true)}
+              style={[s.chip, dest === 'libre' && s.chipActive]}
+              onPress={() => setDest('libre')}
               activeOpacity={0.75}
             >
-              <Text style={[s.catChipTxt, typeContenuLibre && s.catChipTxtActive]}>✏️ Autre</Text>
+              <Text style={[s.chipTxt, dest === 'libre' && s.chipTxtActive]}>✏️ Autre</Text>
             </TouchableOpacity>
           </View>
 
-          {typeContenuLibre && (
+          {dest === 'libre' && (
             <TextInput
               style={s.inputLibre}
-              value={typeContenu}
-              onChangeText={setTypeContenu}
+              value={destLibreText}
+              onChangeText={setDestLibreText}
               placeholder="Ex : Menu, Catalogue, Tarifs…"
               placeholderTextColor="#6B6F9E"
               autoFocus
@@ -227,7 +250,7 @@ export default function FicheGuideeScreen({ onClose }: Props) {
           )}
         </View>
 
-        {/* Une carte par produit */}
+        {/* ── Une carte par produit ── */}
         {lignes.map((ligne) => (
           <View key={ligne.id} style={s.carteProduit}>
 
@@ -267,15 +290,6 @@ export default function FicheGuideeScreen({ onClose }: Props) {
               )}
             </View>
 
-            {/* Sous-catégorie */}
-            <SelecteurPuces
-              label="Catégorie du produit"
-              suggestions={suggestions.sousCategorie}
-              valeurSelectionnee={ligne.sousCategorie}
-              onSelectionner={(v) => modifierLigne(ligne.id, 'sousCategorie', v)}
-              placeholderLibre="Ex : Repas, Boisson, Soin…"
-            />
-
             {/* Nom du produit */}
             <SelecteurPuces
               label="Nom du produit"
@@ -292,6 +306,7 @@ export default function FicheGuideeScreen({ onClose }: Props) {
               valeurSelectionnee={ligne.prix}
               onSelectionner={(v) => modifierLigne(ligne.id, 'prix', v)}
               placeholderLibre="Prix en F CFA"
+              keyboardType="numeric"
             />
 
             {/* Description */}
@@ -368,13 +383,14 @@ const s = StyleSheet.create({
   scroll:  { flex: 1 },
   content: { padding: 20, paddingBottom: 40 },
 
-  label:   { color: '#EDEEF7', fontFamily: 'PoppinsSemiBold', fontSize: 14, marginBottom: 10 },
-  optionnel: { color: '#6B6F9E', fontFamily: 'PoppinsRegular', fontSize: 12 },
+  label:    { color: '#EDEEF7', fontFamily: 'PoppinsSemiBold', fontSize: 14, marginBottom: 10 },
+  optionnel:{ color: '#6B6F9E', fontFamily: 'PoppinsRegular', fontSize: 12 },
 
-  // Ajouter dans
-  catSection: { marginBottom: 20 },
-  catRow:    { flexDirection: 'row', gap: 8 },
-  catChip:   {
+  // Section destination unifiée
+  destSection: { marginBottom: 20 },
+  puces: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+
+  chip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
@@ -382,11 +398,10 @@ const s = StyleSheet.create({
     borderColor: '#2A2C52',
     backgroundColor: '#1E2040',
   },
-  catChipActive: { backgroundColor: 'rgba(253,207,52,.12)', borderColor: '#FDCF34' },
-  catChipTxt:    { color: '#9A9EC4', fontSize: 13 },
-  catChipTxtActive: { color: '#FDCF34', fontFamily: 'PoppinsSemiBold' },
+  chipActive:   { backgroundColor: 'rgba(253,207,52,.12)', borderColor: '#FDCF34' },
+  chipTxt:      { color: '#9A9EC4', fontSize: 13 },
+  chipTxtActive:{ color: '#FDCF34', fontFamily: 'PoppinsSemiBold' },
 
-  puces: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   inputLibre: {
     marginTop: 10,
     backgroundColor: '#1E2040',
@@ -408,15 +423,8 @@ const s = StyleSheet.create({
   },
 
   // Photo produit
-  imagePreview: {
-    width: '100%',
-    height: 180,
-    borderRadius: 12,
-  },
-  imagePickerRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
+  imagePreview: { width: '100%', height: 180, borderRadius: 12 },
+  imagePickerRow: { flexDirection: 'row', gap: 10 },
   imagePickerBtn: {
     flex: 1,
     backgroundColor: '#14152A',
