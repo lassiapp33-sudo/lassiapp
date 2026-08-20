@@ -15,6 +15,9 @@ import { colors, fonts, radius } from '../../theme';
 import TextRecognition, { TextRecognitionScript } from '@react-native-ml-kit/text-recognition';
 import { extraireProduits, ProduitExtrait, MAX_ITEMS_PAR_SCAN } from '../../utils/parsingMenu';
 
+// ML Kit JNI is unstable on Android 9 (API 28) — causes SIGABRT in libreactnative.so
+const ML_KIT_SUPPORTED = Platform.OS !== 'android' || Number(Platform.Version) >= 29;
+
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
 const IcoClose = () => (
@@ -52,6 +55,13 @@ export default function ScanMenuCamera({ visible, onDone, onClose }: Props) {
   const [scanning, setScanning] = useState(false);
 
   const processImage = async (uri: string) => {
+    if (!ML_KIT_SUPPORTED) {
+      Alert.alert(
+        'Non disponible',
+        'La reconnaissance de texte n\'est pas disponible sur Android 9. Ajoute tes produits manuellement.',
+      );
+      return;
+    }
     setScanning(true);
     try {
       const result = await TextRecognition.recognize(uri, TextRecognitionScript.LATIN);
@@ -79,6 +89,10 @@ export default function ScanMenuCamera({ visible, onDone, onClose }: Props) {
   };
 
   const handleCamera = async () => {
+    if (!ML_KIT_SUPPORTED) {
+      Alert.alert('Non disponible', 'La reconnaissance de texte n\'est pas disponible sur Android 9. Ajoute tes produits manuellement.');
+      return;
+    }
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
       Alert.alert('Permission refusée', 'Active l\'accès caméra dans les réglages de ton téléphone.');
@@ -94,6 +108,10 @@ export default function ScanMenuCamera({ visible, onDone, onClose }: Props) {
   };
 
   const handleGallery = async () => {
+    if (!ML_KIT_SUPPORTED) {
+      Alert.alert('Non disponible', 'La reconnaissance de texte n\'est pas disponible sur Android 9. Ajoute tes produits manuellement.');
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 0.85,

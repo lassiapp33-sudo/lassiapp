@@ -185,11 +185,11 @@ export interface SendMessageParams {
 function pushPreview(type: SendMessageParams['type'], content: string): string {
   switch (type) {
     case 'voice':
-      return '🎤 Message vocal';
+      return 'Message vocal';
     case 'image':
-      return '🖼️ Photo';
+      return 'Photo';
     case 'ticket':
-      return '🧾 Ticket de commande';
+      return 'Ticket de commande';
     default:
       return content.length > 100 ? content.substring(0, 100) + '…' : content;
   }

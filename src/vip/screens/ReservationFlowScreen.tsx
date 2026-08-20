@@ -486,9 +486,32 @@ export default function ReservationFlowScreen({ vipProfilId, vipNom, onBack, onS
               <SummaryRow label="Acompte"     value="3 000 FCFA" />
               <SummaryRow label="Frais LASSI" value="200 FCFA" />
               <SummaryRow label="Total"       value="3 200 FCFA" accent />
-              <Text style={s.summaryNote}>
-                L'acompte de 3 000 FCFA est déduit de votre note sur place.
-              </Text>
+              <View style={s.acompteNotice}>
+                <Text style={s.acompteNoticeTitle}>
+                  Pas d'inquiétude pour les{' '}
+                  <Text style={s.acompteNoticeHighlight}>3 000 F</Text>
+                </Text>
+
+                <Text style={s.acompteNoticeBody}>
+                  Cet argent n'est <Text style={s.acompteNoticeHighlight}>PAS en plus.</Text>{'\n'}
+                  Il sera <Text style={s.acompteNoticeHighlight}>DÉDUIT</Text> de ton addition{'\n'}
+                  quand tu arriveras au restaurant.
+                </Text>
+
+                <View style={s.acompteExemple}>
+                  <Text style={s.acompteExempleTitle}>Exemple :</Text>
+                  <Text style={s.acompteExempleLigne}>
+                    Note totale {'       '}= <Text style={s.acompteNoticeHighlight}>15 000 F</Text>
+                  </Text>
+                  <Text style={s.acompteExempleLigne}>
+                    Moins tes 3 000 F = <Text style={s.acompteNoticeHighlight}>− 3 000 F</Text>
+                  </Text>
+                  <View style={s.acompteExempleDivider} />
+                  <Text style={s.acompteExempleTotal}>
+                    Tu paies sur place = <Text style={s.acompteNoticeHighlight}>12 000 F</Text> ✅
+                  </Text>
+                </View>
+              </View>
             </View>
 
             {/* Méthode de paiement */}
@@ -752,14 +775,71 @@ const s = StyleSheet.create({
   summaryVal:      { color: r.couleur.ivoire, fontFamily: r.police.util, fontSize: 12, textAlign: 'right', flex: 1 },
   summaryValAccent:{ color: r.couleur.orLassi, fontFamily: r.police.titre, fontSize: 15 },
   summaryDivider:  { height: 1, backgroundColor: r.couleur.filetFin, marginVertical: 4 },
-  summaryNote: {
-    color: r.couleur.gris,
-    fontFamily: r.police.util,
-    fontSize: 11,
-    marginTop: 8,
-    lineHeight: 16,
-    fontStyle: 'italic',
+  acompteNotice: {
+    marginTop: 14,
+    backgroundColor: 'rgba(253, 207, 52, 0.10)',
+    borderWidth: 2,
+    borderColor: r.couleur.orLassi,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
   },
+  acompteNoticeTitle: {
+    color: r.couleur.ivoire,
+    fontFamily: r.police.titre,
+    fontSize: 17,
+    lineHeight: 24,
+  },
+  acompteNoticeBody: {
+    color: r.couleur.ivoire,
+    fontFamily: r.police.util,
+    fontSize: 15,
+    lineHeight: 24,
+  },
+  acompteNoticeHighlight: {
+    color: r.couleur.orLassi,
+    fontFamily: r.police.titre,
+    fontSize: 15,
+  },
+  // Bloc exemple chiffré
+  acompteExemple: {
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderRadius: 8,
+    padding: 12,
+    gap: 4,
+  },
+  acompteExempleTitle: {
+    color: r.couleur.orLassi,
+    fontFamily: r.police.titre,
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  acompteExempleLigne: {
+    color: r.couleur.ivoire,
+    fontFamily: r.police.util,
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  acompteExempleDivider: {
+    height: 1,
+    backgroundColor: r.couleur.orLassi,
+    opacity: 0.4,
+    marginVertical: 4,
+  },
+  acompteExempleTotal: {
+    color: r.couleur.ivoire,
+    fontFamily: r.police.titre,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  // Conservé mais inutilisé
+  acompteEquation:   {},
+  acompteEqCol:      {},
+  acompteEqNumber:   {},
+  acompteEqLabel:    {},
+  acompteEqOp:       {},
+  acompteNoticeFinal:{},
+  acompteNoticeSub:  {},
 
   // Méthodes de paiement
   methodsRow: { flexDirection: 'row', gap: 12, marginBottom: 4 },

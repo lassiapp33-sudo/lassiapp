@@ -444,8 +444,8 @@ export default function ClientProfileScreen({
           />
           <ProfileOptionRow
             icon={<IcoCard />}
-            title={t.profile.myPayments}
-            subtitle={t.profile.myPaymentsSub}
+            title="Mes paiements"
+            subtitle="Historique de vos paiements Wave/OM"
             last
             onPress={() => setShowPayments(true)}
           />

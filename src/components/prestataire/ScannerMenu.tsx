@@ -7,11 +7,15 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import TextRecognition, { TextRecognitionScript } from '@react-native-ml-kit/text-recognition';
 import { colors, fonts, radius } from '../../theme';
 import { extraireProduits, ProduitExtrait, MAX_ITEMS_PAR_SCAN } from '../../utils/parsingMenu';
+
+// ML Kit JNI is unstable on Android 9 (API 28) — causes SIGABRT in libreactnative.so
+const ML_KIT_SUPPORTED = Platform.OS !== 'android' || Number(Platform.Version) >= 29;
 
 interface Props {
   onProduitsExtraits: (produits: ProduitExtrait[]) => void;
@@ -22,6 +26,10 @@ export default function ScannerMenu({ onProduitsExtraits }: Props) {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   const prendrePhoto = async () => {
+    if (!ML_KIT_SUPPORTED) {
+      Alert.alert('Non disponible', 'La reconnaissance de texte n\'est pas disponible sur Android 9. Ajoutez vos produits manuellement.');
+      return;
+    }
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       Alert.alert('Permission requise', 'Autorisez la caméra pour scanner votre menu.');
@@ -41,6 +49,10 @@ export default function ScannerMenu({ onProduitsExtraits }: Props) {
   };
 
   const choisirDepuisGalerie = async () => {
+    if (!ML_KIT_SUPPORTED) {
+      Alert.alert('Non disponible', 'La reconnaissance de texte n\'est pas disponible sur Android 9. Ajoutez vos produits manuellement.');
+      return;
+    }
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert('Permission requise', "Autorisez l'accès aux photos.");
@@ -59,6 +71,7 @@ export default function ScannerMenu({ onProduitsExtraits }: Props) {
   };
 
   const analyserImage = async (uri: string) => {
+    if (!ML_KIT_SUPPORTED) return;
     setLoading(true);
     try {
       const resultat = await TextRecognition.recognize(uri, TextRecognitionScript.LATIN);
@@ -100,7 +113,7 @@ export default function ScannerMenu({ onProduitsExtraits }: Props) {
 
   return (
     <View style={s.container}>
-      <Text style={s.title}>📷 Scanner mon menu</Text>
+      <Text style={s.title}>Scanner mon menu</Text>
       <Text style={s.subtitle}>
         Prenez une photo de votre menu existant — LASSİ va essayer de reconnaître
         vos plats et leurs prix automatiquement.
@@ -118,16 +131,16 @@ export default function ScannerMenu({ onProduitsExtraits }: Props) {
       ) : (
         <View style={s.buttons}>
           <TouchableOpacity style={s.btnPrimary} onPress={prendrePhoto} activeOpacity={0.85}>
-            <Text style={s.btnPrimaryText}>📸 Prendre une photo</Text>
+            <Text style={s.btnPrimaryText}>Prendre une photo</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.btnSecondary} onPress={choisirDepuisGalerie} activeOpacity={0.85}>
-            <Text style={s.btnSecondaryText}>🖼️ Choisir depuis la galerie</Text>
+            <Text style={s.btnSecondaryText}>Choisir depuis la galerie</Text>
           </TouchableOpacity>
         </View>
       )}
 
       <Text style={s.hint}>
-        💡 Astuce : posez le menu bien à plat, cadrez tout le texte, évitez les ombres.
+        Astuce : posez le menu bien à plat, cadrez tout le texte, évitez les ombres.
       </Text>
     </View>
   );

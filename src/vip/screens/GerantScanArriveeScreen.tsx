@@ -153,7 +153,7 @@ export default function GerantScanArriveeScreen({ onBack }: Props) {
         {result?.type === 'success' && (
           <View style={s.resultBox}>
             <IcoCheck />
-            <Text style={s.successTitle}>Client validé !</Text>
+            <Text style={s.successTitle}>Client validé</Text>
             <Text style={s.successSub}>{result.nbPersonnes} personne{result.nbPersonnes > 1 ? 's' : ''}</Text>
 
             {result.motif && <Text style={s.successMotif}>{result.motif}</Text>}

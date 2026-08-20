@@ -180,7 +180,7 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
 
         {vipShops.length > 0 && (
           <>
-            <GroupLabel emoji="🏆" label={`Top VIP`} vip />
+            <GroupLabel label={`Top VIP`} vip />
             {vipShops.map(s => (
               <ResultCard key={s.id} shop={s} onPress={() => {
                 if (s.hasRechercheBoost) recordRechercheClick(s.id).catch(() => {});
@@ -193,8 +193,7 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
         {otherShops.length > 0 && (
           <>
             <GroupLabel
-              emoji="📍"
-              label={q ? t.home.allResults.replace('📋 ', '') : t.home.nearby.replace('📍 ', '')}
+              label={q ? t.home.allResults : t.home.nearby}
             />
             {otherShops.map(s => (
               <ResultCard key={s.id} shop={s} onPress={() => {

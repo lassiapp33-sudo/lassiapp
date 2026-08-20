@@ -115,16 +115,16 @@ export default function MerchantPaymentsScreen({ onBack }: Props) {
 
     const subscribe = () => {
       const ch = supabase
-        .channel(`payments:${user.id}`)
+        .channel(`encaissements:${user.id}`)
         .on(
           'postgres_changes',
           {
-            event: 'INSERT',
+            event: '*',
             schema: 'public',
-            table: 'payments',
+            table: 'payout_queue',
             filter: `prestataire_id=eq.${user.id}`,
           },
-          () => load(), // recharge simplement la liste
+          () => load(),
         )
         .subscribe();
       channelRef.current = ch;

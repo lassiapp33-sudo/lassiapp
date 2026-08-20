@@ -204,14 +204,14 @@ export function buildShareMessage(params: {
   const prix = params.elementPrix.toLocaleString('fr-FR') + ' F CFA';
   const link = lienElement(params.blocCode, params.elementIndex);
   const lines = [
-    `✨ *${params.elementNom}* — ${prix}`,
-    `📌 ${params.blocTitre} · ${params.shopName}`,
+    `*${params.elementNom}* — ${prix}`,
+    `${params.blocTitre} · ${params.shopName}`,
   ];
   if (params.blocDescription) lines.push('', params.blocDescription);
   lines.push(
     '',
-    `⏳ Offre valable encore ${hoursLeft}h`,
-    `👉 ${link}`,
+    `Offre valable encore ${hoursLeft}h`,
+    link,
     '',
     '─────────────────────',
     'Propulsé par LASSİ 🇸🇳',

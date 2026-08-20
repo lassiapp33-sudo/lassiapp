@@ -79,6 +79,11 @@ export interface VipListeItem {
   longitude: number | null;
   rating: number;
   estOuvert: boolean;
+  // Champs pour recalcul côté client (même logique que FicheVip)
+  isManuallyClose: boolean;
+  todayFerme: boolean;
+  todayOuverture: string | null;
+  todayFermeture: string | null;
 }
 
 export const VIP_CATEGORIE_LABELS: Record<VipCategorie, string> = {

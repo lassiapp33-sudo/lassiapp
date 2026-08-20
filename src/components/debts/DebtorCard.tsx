@@ -28,9 +28,9 @@ const IcoWA = () => (
 // Génère le message WhatsApp pré-rempli
 function buildWaUrl(debtor: Debtor): string {
   const msg =
-    `Bonjour ${debtor.name} 👋\n\n` +
+    `Bonjour ${debtor.name},\n\n` +
     `Tu as une dette de *${formatPrice(debtor.amount)}*.\n\n` +
-    `Merci de régulariser dès que possible 🙏\n` +
+    `Merci de régulariser dès que possible.\n` +
     `— LASSİ`;
   const phone = debtor.phone ?? '';
   return `whatsapp://send?phone=${phone}&text=${encodeURIComponent(msg)}`;

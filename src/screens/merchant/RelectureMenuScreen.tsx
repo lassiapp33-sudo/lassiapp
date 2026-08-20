@@ -78,7 +78,7 @@ export default function RelectureMenuScreen({ produits: produitInit, onBack }: P
       );
       await loadMyShop();
       Alert.alert(
-        '✅ Menu publié',
+        'Menu publié',
         `${r.count} produit(s) ajouté(s) à votre vitrine.\nVous pouvez compléter les détails (photo, catégorie) depuis la boutique.`,
         [{ text: 'OK', onPress: onBack }],
       );
@@ -131,7 +131,7 @@ export default function RelectureMenuScreen({ produits: produitInit, onBack }: P
         renderItem={({ item }) => (
           <View style={[s.card, item.confiance === 'basse' && s.cardAlerte]}>
             {item.confiance === 'basse' && (
-              <Text style={s.badgeAlerte}>⚠️ À vérifier</Text>
+              <Text style={s.badgeAlerte}>À vérifier</Text>
             )}
             <TextInput
               style={s.inputNom}
@@ -151,7 +151,7 @@ export default function RelectureMenuScreen({ produits: produitInit, onBack }: P
               />
               <Text style={s.fcfa}>F CFA</Text>
               <TouchableOpacity onPress={() => supprimerLigne(item.id)} hitSlop={8}>
-                <Text style={s.supprimer}>🗑️</Text>
+                <Text style={s.supprimer}>×</Text>
               </TouchableOpacity>
             </View>
           </View>

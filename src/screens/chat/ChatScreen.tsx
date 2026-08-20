@@ -96,10 +96,10 @@ function toMsg(m: ChatMessage, currentUserId: string): Msg {
 }
 
 const QUICK_CHIPS = [
-  "👍 C'est noté",
-  "📍 J'arrive dans 5 min",
+  "C'est noté",
+  "J'arrive dans 5 min",
   'Combien je te dois ?',
-  'Merci 🙏',
+  'Merci',
 ];
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -286,7 +286,7 @@ export default function ChatScreen({
           kind: 'text',
           sender: 'them',
           time: nowTime(),
-          text: 'Reçu ✅ Ta commande sera prête dans 5 min. À tout de suite.',
+          text: 'Reçu. Ta commande sera prête dans 5 min. À tout de suite.',
         },
       ]);
     }, 1400);
@@ -335,7 +335,7 @@ export default function ChatScreen({
         orderId: ticket.orderId,
         shopInitial: resolvedInitial,
         shopName: resolvedName,
-        shopLocation: '📍',
+        shopLocation: '',
         items: ticket.items,
         total: ticket.total,
         orderType: 'emporter',

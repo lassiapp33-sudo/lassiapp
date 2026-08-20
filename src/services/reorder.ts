@@ -123,7 +123,7 @@ export async function prepareReorder(
     id: shopId,
     initial: shopName.charAt(0).toUpperCase(),
     name: shopName,
-    location: `📍 ${shop.zone ?? ''}`,
+    location: shop.zone ?? '',
     logoUrl: shop.logoUrl ?? undefined,
   };
 

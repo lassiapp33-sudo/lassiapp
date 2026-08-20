@@ -8,12 +8,13 @@ import {
 } from 'react-native';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { NotifType } from '../../store/notificationsStore';
-import { IcoNotifOrder, IcoNotifMsg, IcoNotifFitness } from './LassiIcons';
+import { IcoNotifOrder, IcoNotifMsg, IcoNotifFitness, IcoNotifAnn } from './LassiIcons';
 import useNotifPopupStore from '../../store/notifPopupStore';
 
 function BannerIcon({ type }: { type: NotifType }) {
   if (type === 'msg')     return <IcoNotifMsg     size={24} />;
   if (type === 'fitness') return <IcoNotifFitness size={24} />;
+  if (type === 'ann')     return <IcoNotifAnn     size={24} />;
   return <IcoNotifOrder size={24} />;
 }
 
@@ -37,22 +38,21 @@ const BG: Record<NotifType, string> = {
   livraison: 'rgba(95,211,138,.13)',
 };
 
-const AUTO_MS = 5000;
-
 interface Props {
   onView: () => void;
+  onVoirAlaUne: () => void;
+  onVoirVitrine: (shopId: string, shopName: string) => void;
 }
 
-// Bannière style PUBG : slide depuis le haut, auto-dismiss 5 s.
+// Bannière slide depuis le haut, auto-dismiss 5s (3s pour les annonces).
 // Chaque notification n'apparaît qu'une seule fois (tracké par ID via AsyncStorage).
-export default function NotifPopupBanner({ onView }: Props) {
+export default function NotifPopupBanner({ onView, onVoirAlaUne, onVoirVitrine }: Props) {
   const current = useNotifPopupStore(s => s.queue[0] ?? null);
   const dismiss  = useNotifPopupStore(s => s.dismiss);
 
   const slideY   = useRef(new Animated.Value(-160)).current;
   const progress = useRef(new Animated.Value(1)).current;
 
-  // On stocke TOUTES les animations en cours pour pouvoir les stopper
   const anims = useRef<{
     slideIn?: Animated.CompositeAnimation;
     timer?:   Animated.CompositeAnimation;
@@ -63,7 +63,6 @@ export default function NotifPopupBanner({ onView }: Props) {
     (done?: () => void) => {
       if (exitingRef.current) return;
       exitingRef.current = true;
-      // Annule le slide-in s'il est encore en cours, puis le timer
       anims.current.slideIn?.stop();
       anims.current.timer?.stop();
       const anim = Animated.timing(slideY, {
@@ -87,6 +86,8 @@ export default function NotifPopupBanner({ onView }: Props) {
     progress.setValue(1);
     slideY.setValue(-160);
 
+    const autoMs = current.type === 'ann' ? 3000 : 5000;
+
     const slideIn = Animated.timing(slideY, {
       toValue: 0,
       duration: 340,
@@ -95,10 +96,10 @@ export default function NotifPopupBanner({ onView }: Props) {
     anims.current.slideIn = slideIn;
 
     slideIn.start(({ finished }) => {
-      if (!finished) return;           // annulé → pas de timer
+      if (!finished) return;
       const t = Animated.timing(progress, {
         toValue: 0,
-        duration: AUTO_MS,
+        duration: autoMs,
         useNativeDriver: false,        // width% ne peut pas passer sur le thread natif
       });
       anims.current.timer = t;
@@ -114,18 +115,39 @@ export default function NotifPopupBanner({ onView }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id]);
 
-  if (!current || (current.type !== 'order' && current.type !== 'msg' && current.type !== 'fitness')) return null;
+  if (!current || (
+    current.type !== 'order' &&
+    current.type !== 'msg' &&
+    current.type !== 'fitness' &&
+    current.type !== 'ann'
+  )) return null;
 
   const color = COLOR[current.type];
   const bg    = BG[current.type];
 
+  const isAnn     = current.type === 'ann';
+  const isAlaUne  = isAnn && current.targetId === 'a_la_une_feed';
+  const isNewShop = isAnn && !!current.targetId && current.targetId !== 'a_la_une_feed';
+
+  const handleAnnAction = () => {
+    if (isAlaUne) {
+      slideOut(onVoirAlaUne);
+    } else if (isNewShop) {
+      const shopId   = current.targetId ?? '';
+      const shopName = (current.data?.shop_name as string) ?? '';
+      slideOut(() => onVoirVitrine(shopId, shopName));
+    } else {
+      slideOut(onView);
+    }
+  };
+
   return (
     <Animated.View style={[s.wrap, { transform: [{ translateY: slideY }] }]}>
       <View style={s.row}>
-        {/* Zone principale → ouvre l'écran Notifications */}
+        {/* Zone principale cliquable */}
         <TouchableOpacity
           style={s.pressArea}
-          onPress={() => slideOut(onView)}
+          onPress={isAnn ? handleAnnAction : () => slideOut(onView)}
           activeOpacity={0.82}
         >
           <View style={[s.iconBox, { backgroundColor: bg }]}>
@@ -136,6 +158,13 @@ export default function NotifPopupBanner({ onView }: Props) {
             <Text style={s.body}  numberOfLines={2}>{current.body}</Text>
           </View>
         </TouchableOpacity>
+
+        {/* Bouton "Voir" compact pour les annonces (à la une + nouveau prestataire) */}
+        {isAnn && (
+          <TouchableOpacity style={s.voirBtn} onPress={handleAnnAction} activeOpacity={0.85}>
+            <Text style={s.voirTxt}>Voir</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Bouton fermer */}
         <TouchableOpacity
@@ -148,7 +177,7 @@ export default function NotifPopupBanner({ onView }: Props) {
         </TouchableOpacity>
       </View>
 
-      {/* Barre de progression qui se vide en 5 s */}
+      {/* Barre de progression qui se vide (3s ann / 5s autres) */}
       <Animated.View
         style={[
           s.bar,
@@ -214,6 +243,19 @@ const s = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
     lineHeight: 15,
+  },
+  voirBtn: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    marginRight: 8,
+    flexShrink: 0,
+  },
+  voirTxt: {
+    color: colors.bg,
+    fontFamily: fonts.title,
+    fontSize: 12,
   },
   closeBtn: {
     paddingRight: 14,

@@ -27,9 +27,9 @@ const fr: Translations = {
   profile: {
     myProfile: 'Mon profil',
     myAccount: 'Mon compte',
-    client: '👤 Client',
-    merchant: '🏪 Prestataire',
-    merchantVip: '🏪 Prestataire · Top 3 VIP',
+    client: 'Client',
+    merchant: 'Prestataire',
+    merchantVip: 'Prestataire · Top 3 VIP',
     myActivity: 'Mon activité',
     myBusiness: 'Mon business',
     preferences: 'Préférences',
@@ -227,7 +227,7 @@ const fr: Translations = {
     en: 'English',
   },
   auth: {
-    welcomeBack: 'Content de te\nrevoir 👋',
+    welcomeBack: 'Content de te\nrevoir',
     welcomeBackSub: 'Connecte-toi pour retrouver ton quartier.',
     phoneLabel: 'Numéro de téléphone',
     phonePlaceholder: '78 137 61 61',
@@ -259,7 +259,7 @@ const fr: Translations = {
     search: 'Rechercher',
     searchPlaceholder: 'Cherche un commerce, un plat…',
     searchTitle: 'Recherche',
-    allResults: '📋 Tous les résultats',
+    allResults: 'Tous les résultats',
     noResults: 'Aucun résultat pour cette recherche.',
   },
   favorites: {

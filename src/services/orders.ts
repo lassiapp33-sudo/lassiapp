@@ -226,22 +226,26 @@ export interface RevenueOrder {
   status: string; // 'new' | 'preparing' | 'ready' | 'done'
 }
 
-/** Retourne toutes les commandes non-refusées des 6 derniers mois pour le calcul des revenus. */
-export async function getShopRevenueOrders(shopId: string): Promise<RevenueOrder[]> {
+/**
+ * Retourne les 6 derniers mois de revenus depuis payout_queue (montant NET
+ * reversé par LASSI, après commission et frais OM/Wave).
+ * Couvre toutes les sources : commandes Wave/OM + abonnements fitness.
+ * RLS garantit que seul le prestataire connecté voit ses propres lignes.
+ */
+export async function getPayoutRevenue(): Promise<RevenueOrder[]> {
   const since = new Date();
   since.setMonth(since.getMonth() - 6);
   const { data, error } = await supabase
-    .from('orders')
-    .select('total, created_at, status')
-    .eq('shop_id', shopId)
-    .neq('status', 'refused')
+    .from('payout_queue')
+    .select('montant, statut, created_at, processed_at')
+    .in('statut', ['queued', 'processing', 'paid'])
     .gte('created_at', since.toISOString())
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []).map(row => ({
-    total: row.total,
-    createdAt: row.created_at,
-    status: row.status,
+    total: row.montant as number,
+    createdAt: ((row.statut === 'paid' ? row.processed_at : null) ?? row.created_at) as string,
+    status: row.statut === 'paid' ? 'done' : 'new',
   }));
 }
 

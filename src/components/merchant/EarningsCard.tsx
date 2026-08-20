@@ -67,7 +67,7 @@ export default function EarningsCard({ amount, changeLabel, orders, viaLassi, de
       {/* Label */}
       <View style={styles.label}>
         <IcoCoin />
-        <Text style={styles.labelTxt}>Recette du jour</Text>
+        <Text style={styles.labelTxt}>Recette</Text>
       </View>
 
       {/* Montant principal — gros chiffre lisible en plein soleil */}

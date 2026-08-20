@@ -184,7 +184,7 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
               parts.push(`${doneOrders.length} commande${doneOrders.length > 1 ? 's' : ''}`);
             if (fitnessCount > 0)
               parts.push(`${fitnessCount} abonnement${fitnessCount > 1 ? 's' : ''}`);
-            return parts.length > 0 ? parts.join(' · ') : 'Aucune recette aujourd\'hui';
+            return parts.length > 0 ? parts.join(' · ') : 'Aucune recette ce mois';
           })()}
           orders={orders.length + fitnessCount}
           viaLassi={orders.length + fitnessCount}

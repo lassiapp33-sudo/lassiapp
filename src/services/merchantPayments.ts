@@ -6,33 +6,30 @@ import {
   DayRevenue,
 } from '../types/merchantPayments';
 
-// ─── Mapping ──────────────────────────────────────────────────────────────────
+// ─── Mapping méthode ──────────────────────────────────────────────────────────
 
-function rowToPayment(row: Record<string, any>): MerchantPayment {
-  return {
-    id: row.id,
-    orderId: row.order_id ?? undefined,
-    clientName: row.client_name ?? '—',
-    clientPhone: undefined,
-    items: Array.isArray(row.items) ? row.items : [],
-    amount: Number(row.amount ?? 0),
-    method: (row.method ?? 'wave') as MerchantPayMethod,
-    status: row.status ?? 'pending',
-    reference: row.reference ?? undefined,
-    createdAt: row.created_at,
-  };
+function mapMethod(moyen: string | null): MerchantPayMethod {
+  if (moyen === 'wave') return 'wave';
+  return 'om'; // orange_money ou tout autre → om
 }
 
-// ─── Requête principale ───────────────────────────────────────────────────────
+// ─── Requête principale via RPC payout_queue (montant NET) ────────────────────
 
-export async function getMerchantPayments(prestataireId: string): Promise<MerchantPayment[]> {
-  const { data, error } = await supabase
-    .from('payments')
-    .select('*')
-    .eq('prestataire_id', prestataireId)
-    .order('created_at', { ascending: false });
+export async function getMerchantPayments(_prestataireId: string): Promise<MerchantPayment[]> {
+  const { data, error } = await supabase.rpc('get_merchant_encaissements');
   if (error) throw new Error(error.message);
-  return (data ?? []).map(rowToPayment);
+  return (data ?? []).map((row: Record<string, any>) => ({
+    id:          row.id,
+    orderId:     row.order_id ?? undefined,
+    clientName:  row.client_name ?? '—',
+    clientPhone: undefined,
+    items:       row.type_op === 'fitness' ? [{ name: 'Abonnement fitness', qty: 1, price: row.montant }] : [],
+    amount:      Number(row.montant ?? 0),
+    method:      mapMethod(row.moyen_paiement),
+    status:      row.statut ?? 'pending',
+    reference:   row.external_ref ?? undefined,
+    createdAt:   row.date_op,
+  }));
 }
 
 // ─── Calculs stats (client-side sur les données déjà chargées) ────────────────
@@ -43,7 +40,6 @@ export function computeStats(payments: MerchantPayment[]): PaymentStats {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthOk = success.filter(p => new Date(p.createdAt) >= monthStart);
 
-  // Méthode favorite : montant total sur les 7 derniers jours
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 7);
   cutoff.setHours(0, 0, 0, 0);
@@ -54,9 +50,9 @@ export function computeStats(payments: MerchantPayment[]): PaymentStats {
     last7.length === 0 ? null : waveAmount >= omAmount ? 'wave' : 'om';
 
   return {
-    totalRevenue: success.reduce((s, p) => s + p.amount, 0),
+    totalRevenue:     success.reduce((s, p) => s + p.amount, 0),
     transactionCount: success.length,
-    monthRevenue: monthOk.reduce((s, p) => s + p.amount, 0),
+    monthRevenue:     monthOk.reduce((s, p) => s + p.amount, 0),
     topMethod,
   };
 }

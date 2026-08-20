@@ -12,6 +12,18 @@ import { colors, fonts, spacing, TOP_INSET } from '../theme';
 import { VipCategorie, VipListeItem, VIP_CATEGORIE_LABELS } from '../types/vip';
 import { getVipListe } from '../services/vip';
 
+// Même logique que calculerStatut() dans FicheVip — calcul en temps réel côté client
+function isCurrentlyOpen(item: VipListeItem): boolean {
+  if (item.isManuallyClose) return false;
+  if (item.todayFerme) return false;
+  if (!item.todayOuverture || !item.todayFermeture) return false;
+  const now = new Date();
+  const min = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const [ho, mo] = item.todayOuverture.split(':').map(Number);
+  const [hf, mf] = item.todayFermeture.split(':').map(Number);
+  return min >= ho * 60 + mo && min < hf * 60 + mf;
+}
+
 type Filtre = 'all' | VipCategorie;
 
 const FILTRES: { id: Filtre; label: string }[] = [
@@ -43,6 +55,7 @@ function CarteListe({
   item: VipListeItem;
   onPress: () => void;
 }) {
+  const estOuvert = isCurrentlyOpen(item);
   return (
     <TouchableOpacity style={styles.carte} onPress={onPress} activeOpacity={0.82}>
       <View style={styles.carteLeft}>
@@ -51,8 +64,8 @@ function CarteListe({
       <View style={styles.carteBody}>
         <View style={styles.carteRow}>
           <Text style={styles.nomAffiche} numberOfLines={1}>{item.nomAffiche}</Text>
-          <View style={[styles.statutBadge, item.estOuvert ? styles.ouvert : styles.ferme]}>
-            <Text style={styles.statutTxt}>{item.estOuvert ? 'Ouvert' : 'Fermé'}</Text>
+          <View style={[styles.statutBadge, estOuvert ? styles.ouvert : styles.ferme]}>
+            <Text style={styles.statutTxt}>{estOuvert ? 'Ouvert' : 'Fermé'}</Text>
           </View>
         </View>
         <Text style={styles.categorieTxt}>{VIP_CATEGORIE_LABELS[item.categorie]}</Text>

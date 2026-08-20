@@ -77,9 +77,9 @@ const buildMapHTML = (lat: number, lng: number): string => `
 const IMG_STYLE='width:28px;height:28px;border-radius:9px;object-fit:cover;';
 const map=L.map('map',{center:[${lat},${lng}],zoom:15,zoomControl:false});
 
-L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',{
   attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>',
-  maxZoom:20,detectRetina:true
+  maxZoom:20,subdomains:'abcd',keepBuffer:3,updateWhenZooming:false
 }).addTo(map);
 
 // Marqueur utilisateur — zIndex bas pour ne pas couvrir les pins de prestataires
@@ -694,7 +694,7 @@ export default function MapScreen({
         mixedContentMode="always"
         overScrollMode="never"
         scrollEnabled={false}
-        // Cache la WebView le temps que Leaflet charge les tuiles
+        cacheEnabled
         renderLoading={() => <View style={[StyleSheet.absoluteFill, { backgroundColor: '#F0EFE9' }]} />}
         startInLoadingState
       />

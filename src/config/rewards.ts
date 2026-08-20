@@ -19,7 +19,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 1,
     rangMax: 1,
-    badge: '👑 Champion National',
+    badge: 'Champion National',
     certificat: true,
     prioriteRecherche: true,
     notifVille: true,
@@ -30,7 +30,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 2,
     rangMax: 2,
-    badge: '🥈 Vice-Champion',
+    badge: 'Vice-Champion',
     certificat: true,
     prioriteRecherche: true,
     notifVille: true,
@@ -41,7 +41,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 3,
     rangMax: 3,
-    badge: '🥉 3e National',
+    badge: '3e National',
     certificat: true,
     prioriteRecherche: true,
     notifVille: true,
@@ -52,7 +52,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 4,
     rangMax: 4,
-    badge: '🏅 Top 4 National',
+    badge: 'Top 4 National',
     certificat: true,
     prioriteRecherche: true,
     notifVille: false,
@@ -63,7 +63,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 5,
     rangMax: 5,
-    badge: '🏅 Top 5 National',
+    badge: 'Top 5 National',
     certificat: true,
     prioriteRecherche: true,
     notifVille: false,
@@ -74,7 +74,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 6,
     rangMax: 10,
-    badge: '⭐ Top 10 National',
+    badge: 'Top 10 National',
     certificat: true,
     prioriteRecherche: true,
     notifVille: false,
@@ -85,7 +85,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 11,
     rangMax: 20,
-    badge: '📈 Top 20 National',
+    badge: 'Top 20 National',
     certificat: true,
     prioriteRecherche: false,
     notifVille: false,
@@ -96,7 +96,7 @@ export const PALIERS_MONDIAL: PalierRecompense[] = [
   {
     rangMin: 21,
     rangMax: 40,
-    badge: '📋 Top 40 National',
+    badge: 'Top 40 National',
     certificat: false,
     prioriteRecherche: false,
     notifVille: false,
@@ -112,16 +112,16 @@ export const RECOMPENSE_SOUS_CATEGORIE = {
   topVipRangs: [1, 2, 3],
   dureeJours: 7,
   badges: {
-    1: '🏆 Champion de la semaine',
-    2: '🥈 2e de la semaine',
-    3: '🥉 3e de la semaine',
+    1: 'Champion de la semaine',
+    2: '2e de la semaine',
+    3: '3e de la semaine',
   } as Record<number, string>,
 };
 
 // --- Récompense CLIENTS ---
 export const RECOMPENSE_CLIENT = {
   topClientsAffiches: 10,
-  badgeSupporter: '🎖️ Supporter n°1',
+  badgeSupporter: 'Supporter n°1',
 };
 
 // --- Récompense BIENVENUE (nouveau compte prestataire) ---
@@ -129,7 +129,7 @@ export const RECOMPENSE_CLIENT = {
 // (20260612160000_recompense_bienvenue.sql).
 export const RECOMPENSE_BIENVENUE = {
   carrouselProduits: 4,
-  badge: '🎁 Bienvenue sur LASSI',
+  badge: 'Bienvenue sur LASSI',
 };
 
 // --- Helper : trouver le palier d'un rang mondial ---

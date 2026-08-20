@@ -3,9 +3,8 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } 
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import useShopStore from '../../store/shopStore';
-import * as ordersService from '../../services/orders';
 import * as debtsService from '../../services/debts';
-import { RevenueOrder } from '../../services/orders';
+import { RevenueOrder, getPayoutRevenue } from '../../services/orders';
 import { Debtor } from '../../types/debts';
 import { getErrorMessage } from '../../utils/errorUtils';
 import { IcoBack } from '../../components/icons';
@@ -204,7 +203,7 @@ export default function RevenueScreen({ onBack }: Props) {
       setError(null);
       try {
         const [rev, dbt] = await Promise.all([
-          ordersService.getShopRevenueOrders(shopId),
+          getPayoutRevenue(),
           debtsService.getDebts(shopId),
         ]);
         setOrders(rev);
@@ -228,17 +227,16 @@ export default function RevenueScreen({ onBack }: Props) {
   useEffect(() => { loadRef.current = load; }, [load]);
 
   useEffect(() => {
-    if (!shopId) return;
     const channel = supabase
-      .channel(`revenue_orders_${shopId}`)
+      .channel('revenue_payout_queue')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders', filter: `shop_id=eq.${shopId}` },
+        { event: '*', schema: 'public', table: 'payout_queue' },
         () => { loadRef.current(true); },
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [shopId]);
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);

@@ -71,6 +71,10 @@ function rowToListeItem(r: Record<string, any>): VipListeItem {
     longitude: r.longitude ?? null,
     rating: Number(r.rating ?? 0),
     estOuvert: Boolean(r.est_ouvert),
+    isManuallyClose: Boolean(r.is_manually_closed),
+    todayFerme: Boolean(r.today_ferme ?? true),
+    todayOuverture: r.today_ouverture ?? null,
+    todayFermeture: r.today_fermeture ?? null,
   };
 }
 

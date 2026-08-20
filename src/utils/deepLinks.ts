@@ -32,14 +32,14 @@ export const genererTextePartage = (params: {
 
   elements.forEach((el, index) => {
     const lien = lienElement(blocCode, index);
-    texte += `• ${el.nom} : ${el.prix.toLocaleString('fr-FR')} F CFA\n  👉 ${lien}\n`;
+    texte += `• ${el.nom} : ${el.prix.toLocaleString('fr-FR')} F CFA\n  ${lien}\n`;
   });
 
   if (description) texte += `\n${description}\n`;
 
-  texte += `\n⏳ Offre valable encore ${hoursLeft}h\n`;
-  texte += `\n🛒 Cliquez sur un produit pour commander directement, ou ouvrez LASSİ pour découvrir tous les « À la une » du jour de vos ${nomCategorie} préférés.\n`;
-  texte += `👉 ${lienCategorie(categorieId)}`;
+  texte += `\nOffre valable encore ${hoursLeft}h\n`;
+  texte += `\nCliquez sur un produit pour commander directement, ou ouvrez LASSİ pour découvrir tous les « À la une » du jour de vos ${nomCategorie} préférés.\n`;
+  texte += lienCategorie(categorieId);
 
   return texte;
 };
