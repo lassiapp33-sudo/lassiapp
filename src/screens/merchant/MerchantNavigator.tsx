@@ -8,7 +8,6 @@ import MerchantPaymentsScreen from './MerchantPaymentsScreen';
 import MerchantAvisScreen from './MerchantAvisScreen';
 import DebtsScreen from './DebtsScreen';
 import StoreScreen from './StoreScreen';
-import RelectureMenuScreen from './RelectureMenuScreen';
 import FicheGuideeScreen from './FicheGuideeScreen';
 import OrdersScreen from './OrdersScreen';
 import VisibilityScreen from './VisibilityScreen';
@@ -26,7 +25,6 @@ import BlocAlaUneScreen from '../home/BlocAlaUneScreen';
 import MerchantLivraisonScreen from './MerchantLivraisonScreen';
 import MaCampagneScreen from './MaCampagneScreen';
 import { Terrain } from '../../types/terrain';
-import { ProduitExtrait } from '../../utils/parsingMenu';
 import NotificationsScreen from '../home/NotificationsScreen';
 import ChatScreen from '../chat/ChatScreen';
 import ShopScreen from '../shop/ShopScreen';
@@ -102,7 +100,7 @@ type MerchantScreen =
   | 'ma_campagne'
   | 'fiche_guidee'
   | { id: 'orders'; initialTab: 'new' | 'preparing' }
-  | { id: 'relecture_menu'; produits: ProduitExtrait[] };
+;
 
 interface Props {
   onLogout: () => void;
@@ -461,14 +459,6 @@ export default function MerchantNavigator({ onLogout }: Props) {
   if (screen === 'fiche_guidee')
     return <FicheGuideeScreen onClose={() => setScreen('store')} />;
 
-  if (typeof screen === 'object' && screen.id === 'relecture_menu')
-    return (
-      <RelectureMenuScreen
-        produits={screen.produits}
-        onBack={() => setScreen('store')}
-      />
-    );
-
   if (screen === 'store')
     return (
       <StoreScreen
@@ -477,7 +467,6 @@ export default function MerchantNavigator({ onLogout }: Props) {
         onPromos={() => setScreen('promotions')}
         onAbonnes={() => setScreen('fitness_abonnements')}
         onFicheGuidee={() => setScreen('fiche_guidee')}
-        onRelectureMenu={produits => setScreen({ id: 'relecture_menu', produits })}
       />
     );
   if (screen === 'orders') return <OrdersScreen onBack={() => setScreen('dashboard')} />;

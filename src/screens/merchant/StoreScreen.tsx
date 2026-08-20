@@ -39,9 +39,6 @@ import * as fitnessService from '../../services/fitnessAbonnements';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { getErrorMessage } from '../../utils/errorUtils';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import ScanMenuCamera from '../../components/store/ScanMenuCamera';
-import ScannerMenu from '../../components/prestataire/ScannerMenu';
-import { ProduitExtrait } from '../../utils/parsingMenu';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -66,54 +63,31 @@ function AddMethodPicker({
   label,
   onManuel,
   onFicheGuidee,
-  onScan,
 }: {
   label: string;
   onManuel: () => void;
   onFicheGuidee: () => void;
-  onScan?: () => void;
 }) {
   return (
     <View style={styles.addPickerWrap}>
-      {/* Option 1 : Scanner le menu (si disponible) */}
-      {onScan && (
-        <TouchableOpacity
-          style={styles.addPickerBtn}
-          onPress={onScan}
-          activeOpacity={0.82}
-        >
-          <Text style={styles.addPickerIcon}>📷</Text>
-          <View style={styles.addPickerText}>
-            <Text style={[styles.addPickerTitle, { color: colors.white }]}>Scanner mon menu</Text>
-            <Text style={styles.addPickerSub}>J'ai déjà un menu (photo, carte imprimée)</Text>
-          </View>
-        </TouchableOpacity>
-      )}
-
-      {/* Option 2 : Fiche Guidée (recommandée) */}
+      {/* Option 1 : Fiche Guidée (recommandée) */}
       <TouchableOpacity
         style={[styles.addPickerBtn, styles.addPickerBtnPrimary]}
         onPress={onFicheGuidee}
         activeOpacity={0.82}
       >
-        <Text style={styles.addPickerIcon}>📝</Text>
-        <View style={styles.addPickerText}>
-          <Text style={styles.addPickerTitle}>Fiche Guidée</Text>
-          <Text style={styles.addPickerSub}>Je n'ai pas de menu, on me propose des choix</Text>
-        </View>
+        <Text style={styles.addPickerIcon}>+</Text>
+        <Text style={styles.addPickerTitle}>Fiche Guidée</Text>
       </TouchableOpacity>
 
-      {/* Option 3 : Manuel */}
+      {/* Option 2 : Manuel */}
       <TouchableOpacity
         style={styles.addPickerBtn}
         onPress={onManuel}
         activeOpacity={0.82}
       >
-        <Text style={styles.addPickerIcon}>✍️</Text>
-        <View style={styles.addPickerText}>
-          <Text style={[styles.addPickerTitle, { color: colors.white }]}>Ajouter manuellement</Text>
-          <Text style={styles.addPickerSub}>Je préfère tout écrire moi-même</Text>
-        </View>
+        <Text style={styles.addPickerIcon}>✎</Text>
+        <Text style={[styles.addPickerTitle, { color: colors.white }]}>Ajouter manuellement</Text>
       </TouchableOpacity>
     </View>
   );
@@ -149,14 +123,13 @@ interface Props {
   onPromos?: () => void;
   onAbonnes?: () => void;
   onFicheGuidee?: () => void;
-  onRelectureMenu?: (produits: ProduitExtrait[]) => void;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
 const MAX_GALLERY = 5;
 
-export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, onFicheGuidee, onRelectureMenu }: Props) {
+export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, onFicheGuidee }: Props) {
   const profileRaw = useShopStore(s => s.profile);
   const avatarUrl = useAuthStore(s => s.user?.avatarUrl);
   const profile = { ...profileRaw, logoUrl: avatarUrl ?? profileRaw.logoUrl ?? undefined };
@@ -184,7 +157,6 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   const [editTarget, setEditTarget] = useState<StoreProduct | null>(null);
   const [showSheet, setShowSheet] = useState(false);
   const [sheetDefaultCat, setSheetDefaultCat] = useState<string | undefined>(undefined);
-  const [scanCameraVisible, setScanCameraVisible] = useState(false);
   const [showFicheGuidee, setShowFicheGuidee] = useState(false);
   const [ficheDefaultCat, setFicheDefaultCat] = useState<string | undefined>(undefined);
 
@@ -724,6 +696,13 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
               />
             </View>
 
+            {/* ── Ajouter un produit ───────────────────────────────────────── */}
+            <AddMethodPicker
+              label={addItemLabel}
+              onManuel={() => openAdd(context.shopType === 'memberships' ? 'formules' : undefined)}
+              onFicheGuidee={() => openFicheGuidee(context.shopType === 'memberships' ? 'formules' : undefined)}
+            />
+
             {/* ── Sélecteur d'onglets fitness (uniquement pour memberships) ── */}
             {context.shopType === 'memberships' && (
               <View style={styles.fitnessTabBar}>
@@ -754,15 +733,6 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     onDeleteCat={handleDeleteCat}
                   />
                 )}
-                {/* Bannière scan OCR — visible uniquement si le catalogue est encore vide */}
-                {products.length === 0 && onRelectureMenu && (
-                  <View style={styles.scanBannerWrap}>
-                    <ScannerMenu
-                      onProduitsExtraits={produits => onRelectureMenu(produits)}
-                    />
-                  </View>
-                )}
-
                 <SectionHead
                   title={context.shopType === 'memberships' ? 'Formules' : (activeCatData?.label ?? '')}
                   count={filtered.length}
@@ -783,12 +753,6 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     }}
                   />
                 ))}
-                <AddMethodPicker
-                  label={addItemLabel}
-                  onManuel={() => openAdd(context.shopType === 'memberships' ? 'formules' : undefined)}
-                  onFicheGuidee={() => openFicheGuidee(context.shopType === 'memberships' ? 'formules' : undefined)}
-                  onScan={() => setScanCameraVisible(true)}
-                />
               </>
             )}
 
@@ -862,12 +826,6 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     </>
                   );
                 })()}
-                <AddMethodPicker
-                  label="Ajouter un produit"
-                  onManuel={() => openAdd('produits')}
-                  onFicheGuidee={() => openFicheGuidee('produits')}
-                  onScan={() => setScanCameraVisible(true)}
-                />
               </>
             )}
 
@@ -948,14 +906,6 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
         onClose={() => setShowOffreSheet(false)}
       />
 
-      <ScanMenuCamera
-        visible={scanCameraVisible}
-        onDone={items => {
-          setScanCameraVisible(false);
-          onRelectureMenu?.(items);
-        }}
-        onClose={() => setScanCameraVisible(false)}
-      />
     </LassiScreen>
     </KeyboardAvoidingView>
   );
@@ -1301,12 +1251,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  scanBannerWrap: {
-    marginHorizontal: 18,
-    marginTop: 6,
-    marginBottom: 4,
-  },
-
   // AddMethodPicker
   addPickerWrap: {
     marginHorizontal: 18,
@@ -1316,7 +1260,7 @@ const styles = StyleSheet.create({
   },
   addPickerBtn: {
     flex: 1,
-    height: 64,
+    height: 52,
     borderRadius: 15,
     borderWidth: 1.5,
     borderColor: colors.border,
