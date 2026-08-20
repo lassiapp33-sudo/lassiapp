@@ -201,7 +201,7 @@ export default function DisputeDetailPage() {
                 <p className={`text-xs font-medium mb-1 ${
                   msg.senderRole === 'admin' ? 'text-accent' : 'text-muted'
                 }`}>
-                  {msg.senderRole === 'admin' ? '🛡 Admin' : msg.senderName}
+                  {msg.senderRole === 'admin' ? 'Admin' : msg.senderName}
                 </p>
                 <p className="text-white">{msg.message}</p>
                 <p className="text-muted text-xs mt-1">

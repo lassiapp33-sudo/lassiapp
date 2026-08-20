@@ -178,7 +178,7 @@ export default function FinancePage() {
             <p className="text-2xl font-bold text-accent">{formatFcfa(data.balance)}</p>
             <p className="text-xs text-muted">{data.name}</p>
             {data.barred !== 'No' && (
-              <span className="text-xs text-danger">⚠ Compte barré</span>
+              <span className="text-xs text-danger">Compte barré</span>
             )}
           </div>
 

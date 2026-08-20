@@ -193,7 +193,7 @@ export default function ShopsPage() {
                     <td className="px-4 py-3 text-center">
                       {disp ? (
                         <span className={`text-xs font-bold ${isRed ? 'text-danger' : 'text-muted'}`}>
-                          {disp.disputesCount} {isRed && '⚠️'}
+                          {disp.disputesCount} {isRed && '!'}
                         </span>
                       ) : (
                         <span className="text-muted text-xs">0</span>

@@ -39,7 +39,7 @@ function DeleteModal({ user, onConfirm, onCancel, loading }: DeleteModalProps) {
 
         <div className="p-5 space-y-4">
           <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-sm text-red-300 space-y-1">
-            <p className="font-semibold">⚠ Cette action est irréversible</p>
+            <p className="font-semibold">Cette action est irréversible</p>
             <p>
               Le compte de <span className="text-white font-medium">{user.name}</span>{' '}
               ({user.role === 'merchant' ? 'Prestataire' : 'Client'}) sera définitivement supprimé
@@ -421,7 +421,7 @@ export default function UsersPage() {
                   <td className="px-4 py-3">
                     <p className="text-white font-medium">{p.name}</p>
                     {p.email && <p className="text-muted text-xs">{p.email}</p>}
-                    {p.isAdmin && <span className="text-xs text-accent">🛡 Admin</span>}
+                    {p.isAdmin && <span className="text-xs text-accent">Admin</span>}
                   </td>
                   <td className="px-4 py-3 text-muted font-mono text-xs">
                     {p.phone || '—'}

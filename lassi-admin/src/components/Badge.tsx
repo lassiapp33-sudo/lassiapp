@@ -17,10 +17,10 @@ const STYLES: Record<Variant, string> = {
 }
 
 const LABELS: Record<Variant, string> = {
-  'vip-scoring': '🏆 VIP scoring',
-  'vip-manual':  '✋ VIP manuel',
-  'reco-paid':   '💰 Reco payée',
-  'reco-manual': '✋ Offre offerte',
+  'vip-scoring': 'VIP scoring',
+  'vip-manual':  'VIP manuel',
+  'reco-paid':   'Reco payée',
+  'reco-manual': 'Offre offerte',
   'open':        'Ouvert',
   'in_review':   'En examen',
   'resolved':    'Résolu',

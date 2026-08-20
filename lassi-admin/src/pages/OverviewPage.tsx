@@ -194,7 +194,7 @@ export default function OverviewPage() {
       {!loading && summary && summary.gtv === 0 && (
         <div className="bg-surface border border-border rounded-xl p-5">
           <p className="text-muted text-sm text-center">
-            📊 Le dashboard affiche <span className="text-white font-medium">0 FCFA</span> parce qu'aucune commande n'a encore été traitée.
+            Le dashboard affiche <span className="text-white font-medium">0 FCFA</span> parce qu'aucune commande n'a encore été traitée.
             C'est normal au démarrage — les chiffres se mettront à jour automatiquement.
           </p>
         </div>

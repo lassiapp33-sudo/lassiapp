@@ -37,7 +37,7 @@ interface FormState {
 const EMPTY_FORM: FormState = {
   titre:      '',
   corps:      '',
-  icone:      '📢',
+  icone:      '',
   tag:        '',
   audience:   'tous',
   expireDans: null,
@@ -83,7 +83,7 @@ export default function AnnoncesPage() {
       await creerAnnoncePersonnalisee({
         titre:      form.titre.trim(),
         corps:      form.corps.trim(),
-        icone:      form.icone.trim() || '📢',
+        icone:      form.icone.trim() || '',
         tag:        form.tag.trim() || null,
         audience:   form.audience,
         expireDans: form.expireDans,
@@ -226,7 +226,7 @@ export default function AnnoncesPage() {
                 <input
                   value={form.titre}
                   onChange={e => setForm(f => ({ ...f, titre: e.target.value }))}
-                  placeholder="Ex : Offre spéciale Korité 🌙"
+                  placeholder="Ex : Offre spéciale Korité"
                   className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm
                              focus:outline-none focus:border-accent placeholder-muted"
                 />

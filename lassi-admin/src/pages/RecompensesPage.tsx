@@ -22,10 +22,10 @@ const DURATIONS = [
 const CREDIT_PRESETS = [500, 1_000, 2_000, 5_000, 10_000]
 
 const BADGE_SUGGESTIONS = [
-  '🏆 Champion de la semaine',
-  '⭐ Supporter n°1',
-  '🎖️ Partenaire LASSI',
-  '🔥 Coup de cœur',
+  'Champion de la semaine',
+  'Supporter n°1',
+  'Partenaire LASSI',
+  'Coup de cœur',
 ]
 
 interface Target {
@@ -386,7 +386,7 @@ export default function RecompensesPage() {
                         form.targetType === t ? 'bg-accent text-bg' : 'text-muted hover:text-white'
                       }`}
                     >
-                      {t === 'prestataire' ? '🏪 Prestataire' : '👤 Client'}
+                      {t === 'prestataire' ? 'Prestataire' : 'Client'}
                     </button>
                   ))}
                 </div>
@@ -395,7 +395,7 @@ export default function RecompensesPage() {
                   <div className="flex items-center justify-between bg-accent/8 border border-accent/25 rounded-xl px-4 py-3">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-sm">
-                        {form.target.type === 'prestataire' ? '🏪' : '👤'}
+                        {form.target.type === 'prestataire' ? 'P' : 'C'}
                       </div>
                       <div>
                         <p className="text-white text-sm font-medium">{form.target.name}</p>
@@ -458,7 +458,7 @@ export default function RecompensesPage() {
                   <input
                     value={form.badge}
                     onChange={e => setForm(f => ({ ...f, badge: e.target.value }))}
-                    placeholder="Ex : 🏆 Champion de la semaine"
+                    placeholder="Ex : Champion de la semaine"
                     className="w-full bg-bg border border-border rounded-xl px-3 py-2.5 text-white text-sm
                                focus:outline-none focus:border-accent placeholder-muted transition-colors"
                   />

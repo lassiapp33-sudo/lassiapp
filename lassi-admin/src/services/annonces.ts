@@ -65,7 +65,7 @@ export async function creerAnnoncePersonnalisee(params: CreerAnnonceParams): Pro
   const { error } = await supabase.from('annonces').insert({
     titre:     params.titre,
     corps:     params.corps,
-    icone:     params.icone || '📢',
+    icone:     params.icone || '',
     tag:       params.tag || null,
     audience:  params.audience,
     expire_at: expireAt,
