@@ -45,8 +45,11 @@
       },
       "ios": {
         "appleId": "lassiapp33@gmail.com",
-        "ascAppId": "FILL_APP_STORE_CONNECT_APP_ID",
-        "appleTeamId": "FILL_APPLE_TEAM_ID"
+        "ascAppId": "6802453488",
+        "appleTeamId": "8DH7238995",
+        "ascApiKeyPath": "D:/Downloads/AuthKey_M8F4FKAHFF.p8",
+        "ascApiKeyId": "M8F4FKAHFF",
+        "ascApiKeyIssuerId": "a0fdec1a-f1a6-4713-8d80-cc20b67b2260"
       }
     }
   }

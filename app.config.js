@@ -73,7 +73,7 @@ module.exports = withSecurityPlugins({
       backgroundColor: "#14152A",
     },
     ios: {
-      supportsTablet: true,
+      supportsTablet: false,
       bundleIdentifier: "com.lassiapp.lassiapp",
       googleServicesFile:
         process.env.GOOGLE_SERVICES_IOS_PLIST ?? "./GoogleService-Info.plist",
@@ -161,6 +161,15 @@ module.exports = withSecurityPlugins({
         },
       ],
       "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          ios: {
+            deploymentTarget: "16.0",
+            useFrameworks: "static",
+          },
+        },
+      ],
     ],
     extra: {
       eas: {
