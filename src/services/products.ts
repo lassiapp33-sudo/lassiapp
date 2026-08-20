@@ -115,8 +115,9 @@ interface ProduitACreer {
   prix:        number;
   description: string;
   sousCategorie: string;
-  category:    string;  // catégorie cible dans le catalogue (onglet)
+  category:    string;
   itemType:    'product' | 'service' | 'membership';
+  imageUrl?:   string;
 }
 
 export async function creerProduitsEnMasse(
@@ -130,7 +131,7 @@ export async function creerProduitsEnMasse(
     name:        p.nom,
     description: p.description,
     emoji:       '',
-    photo_url:   '',
+    photo_url:   p.imageUrl ?? '',
     price:       p.prix,
     category:    p.category,
     stock:       'in',
