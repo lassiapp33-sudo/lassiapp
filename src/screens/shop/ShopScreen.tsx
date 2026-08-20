@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Svg, { Path, Rect, Circle as SvgCircle } from 'react-native-svg';
 
@@ -813,7 +813,13 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
         <View style={styles.ctrlRight} pointerEvents="box-none">
           <TouchableOpacity
             style={styles.ctrlBtn}
-            onPress={() => toggleFav(stableId)}
+            onPress={() => {
+              if (!currentUserId) {
+                Alert.alert('Connexion requise', 'Connectez-vous pour enregistrer vos favoris.', [{ text: 'OK' }]);
+                return;
+              }
+              toggleFav(stableId);
+            }}
             activeOpacity={0.8}
           >
             <IcoFav on={isFav} />

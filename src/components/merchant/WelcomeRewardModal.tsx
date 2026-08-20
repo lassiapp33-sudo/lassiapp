@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { IcoGift } from '../common/LassiIcons';
 import { colors, fonts, radius } from '../../theme';
@@ -20,7 +20,7 @@ export default function WelcomeRewardModal({
   onDiscover,
 }: Props) {
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="fade" transparent presentationStyle="overFullScreen" onRequestClose={onClose}>
       <View style={s.overlay}>
         <View style={s.card}>
           <IcoGift size={56} />
@@ -98,3 +98,4 @@ const s = StyleSheet.create({
     fontSize: 13,
   },
 });
+

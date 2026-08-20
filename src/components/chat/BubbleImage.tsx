@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import {
   View,
   Image,
@@ -153,7 +153,7 @@ export default function BubbleImage({ sender, imageUrl, time, read }: Props) {
       {/* ── Vue plein écran ───────────────────────────────────────── */}
       <Modal
         visible={fullscreen}
-        transparent
+        transparent presentationStyle="overFullScreen"
         animationType="fade"
         onRequestClose={() => setFullscreen(false)}
       >
@@ -257,3 +257,4 @@ const styles = StyleSheet.create({
     height: '80%',
   },
 });
+

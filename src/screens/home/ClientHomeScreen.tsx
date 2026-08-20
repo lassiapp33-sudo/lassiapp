@@ -26,6 +26,7 @@ import { colors, fonts, TOP_INSET } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import useAuthStore from '../../store/authStore';
 import useFavoritesStore from '../../store/favoritesStore';
+import { supabase } from '../../lib/supabase';
 import useNotificationsStore from '../../store/notificationsStore';
 import useLocationStore from '../../store/locationStore';
 import * as shopsService from '../../services/shops';
@@ -182,6 +183,13 @@ export default function ClientHomeScreen({
     loadShops();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Sauvegarde silencieuse du quartier GPS dans profiles.zone → alimente le classement quartier.
+  useEffect(() => {
+    const invalid = ['Localisation…', 'Position non disponible'];
+    if (!userId || !zoneName || invalid.includes(zoneName)) return;
+    supabase.from('profiles').update({ zone: zoneName }).eq('id', userId).then(() => {});
+  }, [userId, zoneName]);
+
   // Pré-charge toutes les données authentifiées en arrière-plan dès que GoTrue libère.
   // Au cold start, GoTrue prend 1-5s. L'utilisateur est sur home → quand il
   // navigue vers n'importe quel écran profil, le cache est déjà prêt.
@@ -265,6 +273,13 @@ export default function ClientHomeScreen({
   };
 
   const handleNavPress = (t: NavTab) => {
+    // En mode invité, les onglets protégés déclenchent l'alerte sans changer l'onglet actif
+    if (!userId && (t === 'favorites' || t === 'messages' || t === 'profile')) {
+      if (t === 'favorites') onFavorites?.();
+      if (t === 'messages') onMessages?.();
+      if (t === 'profile') onProfile?.();
+      return;
+    }
     setNavTab(t);
     if (t === 'favorites') onFavorites?.();
     if (t === 'voice') onVoice?.();
@@ -383,7 +398,7 @@ export default function ClientHomeScreen({
 
       <WelcomeClientModal visible={showWelcome} onClose={dismissWelcome} />
 
-      {sponsoredAdModal ? (
+      {sponsoredAdModal && !showWelcome ? (
         <SponsoredAdModal
           ad={sponsoredAdModal}
           onDismiss={dismissSponsoredAd}

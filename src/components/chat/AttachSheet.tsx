@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   Modal,
   View,
@@ -124,7 +124,7 @@ export default function AttachSheet({ visible, onClose, onImagePicked }: Props) 
   return (
     <Modal
       visible={visible}
-      transparent
+      transparent presentationStyle="overFullScreen"
       animationType="slide"
       onRequestClose={onClose}
       statusBarTranslucent
@@ -255,3 +255,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+

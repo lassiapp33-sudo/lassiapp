@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import logger from '../../utils/logger';
 import {
   Modal,
@@ -84,7 +84,7 @@ export default function RatingPromptModal({
   return (
     <Modal
       visible={visible}
-      transparent
+      transparent presentationStyle="overFullScreen"
       animationType="slide"
       onRequestClose={handleDismiss}
     >
@@ -251,3 +251,4 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 });
+

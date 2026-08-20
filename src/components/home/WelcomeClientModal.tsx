@@ -33,7 +33,7 @@ interface Props {
 // 20260612170000_recompense_bienvenue_client.sql).
 export default function WelcomeClientModal({ visible, onClose }: Props) {
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="fade" transparent presentationStyle="overFullScreen" onRequestClose={onClose}>
       <View style={s.overlay}>
         <View style={s.card}>
           <IcoWave size={48} />

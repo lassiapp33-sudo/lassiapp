@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -78,7 +78,7 @@ export default function SponsoredAdModal({ ad, onDismiss, onContact, onViewShop 
   const imgHeight = imgRatio != null ? Math.round(CARD_IMG_W / imgRatio) : CARD_IMG_W;
 
   return (
-    <Modal visible animationType="fade" transparent onRequestClose={onDismiss}>
+    <Modal visible animationType="fade" transparent presentationStyle="overFullScreen" onRequestClose={onDismiss}>
       <View style={s.overlay}>
         <View style={s.card}>
 
@@ -304,3 +304,4 @@ const s = StyleSheet.create({
     fontSize: 13.5,
   },
 });
+

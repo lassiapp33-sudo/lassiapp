@@ -147,9 +147,10 @@ type HomeStack =
 
 interface Props {
   onLogout: () => void;
+  onLoginRequired?: () => void;
 }
 
-export default function HomeNavigator({ onLogout }: Props) {
+export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
   const [history, setHistory] = useState<HomeStack[]>([{ id: 'main' }]);
 
   const screen = history[history.length - 1];
@@ -193,6 +194,22 @@ export default function HomeNavigator({ onLogout }: Props) {
 
   // Abonnement Realtime + carte rich au démarrage
   const userId       = useAuthStore(s => s.user?.id ?? null);
+
+  // En mode invité (userId null), bloque les actions nécessitant un compte
+  const requireAuth = (action: () => void) => {
+    if (!userId) {
+      Alert.alert(
+        'Connexion requise',
+        'Connectez-vous ou créez un compte pour accéder à cette fonctionnalité.',
+        [
+          { text: 'Plus tard', style: 'cancel' },
+          { text: 'Se connecter', onPress: () => onLoginRequired?.() },
+        ],
+      );
+      return;
+    }
+    action();
+  };
   const addNotif     = useNotificationsStore(s => s.addNotif);
   const enqueueCard  = useNotifPopupStore(s => s.enqueue);
   const cardReady    = useNotifPopupStore(s => s.ready);
@@ -286,7 +303,7 @@ export default function HomeNavigator({ onLogout }: Props) {
         onBack={pop}
         onShopPress={pushShop}
         onPaymentPress={order =>
-          push({ id: 'payment', order, from: 'cart' })
+          requireAuth(() => push({ id: 'payment', order, from: 'cart' }))
         }
       />
     );
@@ -301,9 +318,9 @@ export default function HomeNavigator({ onLogout }: Props) {
         onShopPress={pushShop}
         onBlocPress={(blocCode, elementIndex) => push({ id: 'a_la_une_bloc', blocCode, elementIndex })}
         onSearch={() => setHistory([{ id: 'main' }, { id: 'search' }])}
-        onFavorites={() => setHistory([{ id: 'main' }, { id: 'favorites' }])}
-        onMessages={() => setHistory([{ id: 'main' }, { id: 'messages' }])}
-        onProfile={() => setHistory([{ id: 'main' }, { id: 'profile' }])}
+        onFavorites={() => requireAuth(() => setHistory([{ id: 'main' }, { id: 'favorites' }]))}
+        onMessages={() => requireAuth(() => setHistory([{ id: 'main' }, { id: 'messages' }]))}
+        onProfile={() => requireAuth(() => setHistory([{ id: 'main' }, { id: 'profile' }]))}
         onVoice={() => setHistory([{ id: 'main' }, { id: 'voice' }])}
         vip5EtoilesShopIds={vipShopIds}
       />
@@ -499,40 +516,46 @@ export default function HomeNavigator({ onLogout }: Props) {
         targetProductId={screen.targetProductId}
         onBack={pop}
         onChat={(logoUrl, isVip) =>
-          push({
-            id: 'chat',
-            shopId: screen.shopId,
-            shopInitial: screen.shopName.charAt(0).toUpperCase(),
-            shopName: screen.shopName,
-            shopLogoUrl: logoUrl,
-            isVip,
-          })
+          requireAuth(() =>
+            push({
+              id: 'chat',
+              shopId: screen.shopId,
+              shopInitial: screen.shopName.charAt(0).toUpperCase(),
+              shopName: screen.shopName,
+              shopLogoUrl: logoUrl,
+              isVip,
+            })
+          )
         }
-        onCheckout={() => push({ id: 'cart', shopId: screen.shopId, shopName: screen.shopName })}
+        onCheckout={() => requireAuth(() => push({ id: 'cart', shopId: screen.shopId, shopName: screen.shopName }))}
         onBookTerrain={params =>
-          push({
-            id: 'terrain_booking',
-            terrain: params.terrain,
-            prestataireName: params.prestataireName,
-          })
+          requireAuth(() =>
+            push({
+              id: 'terrain_booking',
+              terrain: params.terrain,
+              prestataireName: params.prestataireName,
+            })
+          )
         }
         onBookTerrainDirect={params =>
-          push({
-            id: 'terrain_payment',
-            terrainId: params.terrainId,
-            terrainNom: params.terrainNom,
-            prestataireId: params.prestataireId,
-            prestataireName: params.prestataireName,
-            dateReservation: params.dateReservation,
-            heureDebut: params.heureDebut,
-            heureFin: params.heureFin,
-            dureeHeures: params.dureeHeures,
-            prixTotal: params.prixTotal,
-          })
+          requireAuth(() =>
+            push({
+              id: 'terrain_payment',
+              terrainId: params.terrainId,
+              terrainNom: params.terrainNom,
+              prestataireId: params.prestataireId,
+              prestataireName: params.prestataireName,
+              dateReservation: params.dateReservation,
+              heureDebut: params.heureDebut,
+              heureFin: params.heureFin,
+              dureeHeures: params.dureeHeures,
+              prixTotal: params.prixTotal,
+            })
+          )
         }
         onSuivi={params => push({ id: 'suivi_gps', ...params })}
         onFitnessAboPayment={(offre, fitnessName) =>
-          push({ id: 'fitness_abo_payment', offre, fitnessName, shopId: screen.shopId })
+          requireAuth(() => push({ id: 'fitness_abo_payment', offre, fitnessName, shopId: screen.shopId }))
         }
       />
     );
@@ -545,22 +568,24 @@ export default function HomeNavigator({ onLogout }: Props) {
         shopId={screen.shopId}
         onBack={pop}
         onChat={(shopId, shopName) =>
-          push({
-            id: 'chat',
-            shopId,
-            shopInitial: shopName.charAt(0).toUpperCase(),
-            shopName,
-            isVip: true,
-          })
+          requireAuth(() =>
+            push({
+              id: 'chat',
+              shopId,
+              shopInitial: shopName.charAt(0).toUpperCase(),
+              shopName,
+              isVip: true,
+            })
+          )
         }
         onGoCart={(shopId, shopName, mode) =>
-          push({ id: 'cart', shopId, shopName, isVip: true, vipOrderMode: mode })
+          requireAuth(() => push({ id: 'cart', shopId, shopName, isVip: true, vipOrderMode: mode }))
         }
         onReserver={(vipProfilId, vipNom) =>
-          push({ id: 'reservation_flow', vipProfilId, vipNom })
+          requireAuth(() => push({ id: 'reservation_flow', vipProfilId, vipNom }))
         }
         onPrendreRdv={(vipProfilId, vipNom, categorie) =>
-          push({ id: 'beauty_booking_flow', vipProfilId, vipNom, categorie })
+          requireAuth(() => push({ id: 'beauty_booking_flow', vipProfilId, vipNom, categorie }))
         }
         onGoMap={(nomBoutique) => {
           setMapSearch(nomBoutique);
@@ -641,9 +666,9 @@ export default function HomeNavigator({ onLogout }: Props) {
           })
         }
         onSearch={() => setHistory([{ id: 'main' }, { id: 'search' }])}
-        onFavorites={() => setHistory([{ id: 'main' }, { id: 'favorites' }])}
-        onMessages={() => setHistory([{ id: 'main' }, { id: 'messages' }])}
-        onProfile={() => setHistory([{ id: 'main' }, { id: 'profile' }])}
+        onFavorites={() => requireAuth(() => setHistory([{ id: 'main' }, { id: 'favorites' }]))}
+        onMessages={() => requireAuth(() => setHistory([{ id: 'main' }, { id: 'messages' }]))}
+        onProfile={() => requireAuth(() => setHistory([{ id: 'main' }, { id: 'profile' }]))}
         onVoice={() => setHistory([{ id: 'main' }, { id: 'voice' }])}
         vip5EtoilesShopIds={vipShopIds}
       />
@@ -790,22 +815,24 @@ export default function HomeNavigator({ onLogout }: Props) {
       onClassement={() => push({ id: 'classement' })}
       onAlaUneFeed={() => push({ id: 'a_la_une_feed' })}
       onVipListePress={() => push({ id: 'vip_liste' })}
-      onFavorites={() => push({ id: 'favorites' })}
+      onFavorites={() => requireAuth(() => push({ id: 'favorites' }))}
       onRecent={() => push({ id: 'recent' })}
-      onMessages={() => push({ id: 'messages' })}
+      onMessages={() => requireAuth(() => push({ id: 'messages' }))}
       onNotifications={() => push({ id: 'notifications' })}
-      onProfile={() => push({ id: 'profile' })}
+      onProfile={() => requireAuth(() => push({ id: 'profile' }))}
       onMap={() => push({ id: 'map' })}
       onTerrains={() => push({ id: 'terrain_list' })}
       onContactShop={(shopId, shopName, shopLogoUrl) =>
-        push({
-          id: 'chat',
-          shopId,
-          shopInitial: shopName.charAt(0).toUpperCase(),
-          shopName,
-          shopLogoUrl,
-          isVip: false,
-        })
+        requireAuth(() =>
+          push({
+            id: 'chat',
+            shopId,
+            shopInitial: shopName.charAt(0).toUpperCase(),
+            shopName,
+            shopLogoUrl,
+            isVip: false,
+          })
+        )
       }
     />
   );

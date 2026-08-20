@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -126,7 +126,7 @@ export default function AddDebtSheet({ visible, clients, onSave, onClose }: Prop
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent presentationStyle="overFullScreen" animationType="slide" onRequestClose={onClose}>
       {/* Fond semi-transparent */}
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} />
 
@@ -564,3 +564,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+

@@ -17,6 +17,7 @@ import { Shop, calcDistanceMeters, calcDistance, getUserLocation } from '../../s
 import { getBadgesActifsBatch, RecompenseAttribuee } from '../../services/classementService';
 import { computeStatus, WeekHours } from '../../services/hours';
 import { useT } from '../../i18n';
+import useAuthStore from '../../store/authStore';
 
 /** Construit les SubCat[] — imageUri/SvgIcon viennent directement de categories.ts (source unique). */
 function buildSubcats(catId: CatId): SubCat[] {
@@ -146,6 +147,7 @@ export default function CategoryScreen({
   vip5EtoilesShopIds,
 }: Props) {
   const t = useT();
+  const userId = useAuthStore(s => s.user?.id ?? null);
 
   const [catId, setCatId] = useState<CatId>(initialCatId);
   const [subCat, setSubCat] = useState<string>(
@@ -224,6 +226,13 @@ export default function CategoryScreen({
   );
 
   const handleNavPress = (t: NavTab) => {
+    // En mode invité, les onglets protégés déclenchent l'alerte sans changer l'onglet actif
+    if (!userId && (t === 'favorites' || t === 'messages' || t === 'profile')) {
+      if (t === 'favorites') onFavorites?.();
+      if (t === 'messages') onMessages?.();
+      if (t === 'profile') onProfile?.();
+      return;
+    }
     setNavTab(t);
     if (t === 'favorites') onFavorites?.();
     if (t === 'voice') onVoice?.();
@@ -243,7 +252,7 @@ export default function CategoryScreen({
     () => {
       const pool = meta.subcats.length <= 1
         ? shops
-        : shops.filter(s => s.subcategories.includes(subCat));
+        : shops.filter(s => s.subcategories.length === 0 || s.subcategories.includes(subCat));
       return pool
         .filter(s => s.isVip)
         .sort((a, b) => {
@@ -289,7 +298,10 @@ export default function CategoryScreen({
 
   // Filtrer + trier — mémorisé : applyFilter('near') = O(n log n) × calcDistanceMeters
   const bySubCat = useMemo(
-    () => (meta.subcats.length <= 1 ? shops : shops.filter(s => s.subcategories.includes(subCat))),
+    () =>
+      meta.subcats.length <= 1
+        ? shops
+        : shops.filter(s => s.subcategories.length === 0 || s.subcategories.includes(subCat)),
     [shops, subCat, meta.subcats.length],
   );
 

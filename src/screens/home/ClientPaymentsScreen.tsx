@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -179,7 +179,7 @@ function ClientReceiptModal({
   const cfg = STATUS_CFG[payment.status];
 
   return (
-    <Modal visible animationType="fade" transparent onRequestClose={onClose}>
+    <Modal visible animationType="fade" transparent presentationStyle="overFullScreen" onRequestClose={onClose}>
       <View style={rm.overlay}>
         <View style={rm.card}>
           <View style={rm.header}>
@@ -637,3 +637,4 @@ const s = StyleSheet.create({
     lineHeight: 20,
   },
 });
+

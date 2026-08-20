@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -112,7 +112,7 @@ function CheckoutSheet({ el, shopName, loading, onConfirm, onClose }: CheckoutSh
   const commission = calculerCommission(el.prix);
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible transparent presentationStyle="overFullScreen" animationType="slide" onRequestClose={onClose}>
       <View style={styles.csOverlay}>
         <TouchableOpacity style={styles.csBackdrop} onPress={onClose} activeOpacity={1} />
         <View style={styles.csSheet}>
@@ -630,3 +630,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 import { Annonce } from '../../hooks/useAnnonces';
@@ -16,7 +16,7 @@ export default function AnnonceModal({ annonce, nbRestantes, onFermer }: Props) 
   if (!annonce) return null;
 
   return (
-    <Modal visible animationType="fade" transparent onRequestClose={onFermer}>
+    <Modal visible animationType="fade" transparent presentationStyle="overFullScreen" onRequestClose={onFermer}>
       <View style={s.overlay}>
         <View style={s.card}>
           {!!annonce.icone && <Text style={s.emoji}>{annonce.icone}</Text>}
@@ -95,3 +95,4 @@ const s = StyleSheet.create({
     fontSize: 15,
   },
 });
+

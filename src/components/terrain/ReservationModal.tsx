@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+﻿import React, { useRef, useState } from 'react';
 import {
   Modal, View, Text, Image, StyleSheet, TouchableOpacity,
   ActivityIndicator, Alert, Linking,
@@ -123,7 +123,7 @@ export default function ReservationModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+    <Modal visible={visible} transparent presentationStyle="overFullScreen" animationType="slide" onRequestClose={handleClose}>
       <View style={styles.overlay}>
         <View style={styles.sheet}>
 
@@ -262,3 +262,4 @@ const styles = StyleSheet.create({
   },
   waitAmount: { color: '#FDCF34', fontFamily: 'PlusJakartaSans_700Bold' },
 });
+

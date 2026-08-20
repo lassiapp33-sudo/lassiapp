@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -294,7 +294,7 @@ export default function PromotionsScreen({ onBack }: Props) {
       <Modal
         visible={showForm}
         animationType="slide"
-        transparent
+        transparent presentationStyle="overFullScreen"
         onRequestClose={() => setShowForm(false)}
       >
         <View style={styles.modalOverlay}>
@@ -680,3 +680,4 @@ const styles = StyleSheet.create({
   },
   saveBtnTxt: { color: colors.bg, fontFamily: fonts.titleXL, fontSize: 15 },
 });
+

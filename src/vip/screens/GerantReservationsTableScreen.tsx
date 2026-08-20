@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -273,7 +273,7 @@ export default function GerantReservationsTableScreen({ onBack, onScanQR }: Prop
       {/* Modal détail + action */}
       <Modal
         visible={modalResa != null}
-        transparent
+        transparent presentationStyle="overFullScreen"
         animationType="slide"
         onRequestClose={() => setModalResa(null)}
       >
@@ -523,3 +523,4 @@ const s = StyleSheet.create({
   },
   closeSheetTxt: { color: r.couleur.gris, fontFamily: r.police.util, fontSize: 13 },
 });
+

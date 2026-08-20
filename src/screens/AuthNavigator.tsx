@@ -23,9 +23,10 @@ type StackItem =
 
 interface Props {
   onComplete: (role: UserRole) => void;
+  onGuest?: () => void;
 }
 
-export default function AuthNavigator({ onComplete }: Props) {
+export default function AuthNavigator({ onComplete, onGuest }: Props) {
   const [stack, setStack] = useState<StackItem[]>([{ id: 'role' }]);
   // CGU et Confidentialité s'ouvrent en modal pour ne pas démonter l'écran
   // d'inscription (ce qui remettrait tous les champs à zéro).
@@ -49,6 +50,7 @@ export default function AuthNavigator({ onComplete }: Props) {
           onSelectClient={() => push({ id: 'register', role: 'client' })}
           onSelectMerchant={() => push({ id: 'register', role: 'merchant' })}
           onLogin={() => push({ id: 'login' })}
+          onGuest={onGuest}
         />
       );
       break;

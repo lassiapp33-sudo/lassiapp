@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -304,7 +304,7 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+    <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         style={styles.modalOverlay}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -924,3 +924,4 @@ const styles = StyleSheet.create({
   },
   submitTxt: { color: colors.bg, fontFamily: fonts.title, fontSize: 15 },
 });
+

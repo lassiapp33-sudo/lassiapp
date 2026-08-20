@@ -9,6 +9,7 @@ interface Props {
   onSelectClient: () => void;
   onSelectMerchant: () => void;
   onLogin: () => void;
+  onGuest?: () => void;
 }
 
 // Icône panier (Client)
@@ -46,7 +47,7 @@ const IconStore = () => (
   </Svg>
 );
 
-export default function RoleSelectScreen({ onSelectClient, onSelectMerchant, onLogin }: Props) {
+export default function RoleSelectScreen({ onSelectClient, onSelectMerchant, onLogin, onGuest }: Props) {
   const t = useT();
   return (
     <View style={styles.screen}>
@@ -87,6 +88,12 @@ export default function RoleSelectScreen({ onSelectClient, onSelectMerchant, onL
           <Text style={styles.loginLink} onPress={onLogin}>{t.auth.signIn}</Text>
         </Text>
       </View>
+
+      {onGuest && (
+        <TouchableOpacity style={styles.guestRow} onPress={onGuest} activeOpacity={0.7}>
+          <Text style={styles.guestTxt}>Parcourir sans créer de compte</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -146,7 +153,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   cardDesc: {
-    color: colors.muted,
+    color: 'rgba(255,255,255,0.55)',
     fontFamily: fonts.body,
     fontSize: 12,
     lineHeight: 17,
@@ -172,5 +179,16 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontFamily: fonts.ui,
     fontSize: 13.5,
+  },
+  guestRow: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  guestTxt: {
+    color: 'rgba(255,255,255,0.35)',
+    fontFamily: fonts.body,
+    fontSize: 13,
+    textDecorationLine: 'underline',
   },
 });

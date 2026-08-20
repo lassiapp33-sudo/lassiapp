@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 import { IncomingOrder } from '../../types/orders';
@@ -22,7 +22,7 @@ export default function RefuseSheet({ visible, order, onRefuse, onClose }: Props
   if (!order) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent presentationStyle="overFullScreen" animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} />
 
       <View style={[styles.sheet, { paddingBottom: BOTTOM_PAD }]}>
@@ -218,3 +218,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+

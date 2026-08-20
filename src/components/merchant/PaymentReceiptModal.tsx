@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
@@ -50,7 +50,7 @@ export function PaymentReceiptModal({ payment, onClose }: PaymentReceiptModalPro
   const cfg = STATUS_CFG[payment.status];
 
   return (
-    <Modal visible animationType="fade" transparent onRequestClose={onClose}>
+    <Modal visible animationType="fade" transparent presentationStyle="overFullScreen" onRequestClose={onClose}>
       <View style={s.overlay}>
         <View style={s.card}>
           <View style={s.header}>
@@ -191,3 +191,4 @@ const s = StyleSheet.create({
   itemPrice: { color: colors.muted, fontFamily: fonts.ui, fontSize: 12 },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 4 },
 });
+

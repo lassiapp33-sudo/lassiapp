@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+﻿import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -84,7 +84,7 @@ export default function StoryShareModal({
     <Modal
       visible={visible}
       animationType="slide"
-      transparent
+      transparent presentationStyle="overFullScreen"
       statusBarTranslucent
       onRequestClose={onClose}
     >
@@ -247,3 +247,4 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
   },
 });
+

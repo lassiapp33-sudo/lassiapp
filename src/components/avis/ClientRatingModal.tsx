@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Modal,
   View,
@@ -46,7 +46,7 @@ export default function ClientRatingModal({ visible, orderId, clientName, onDism
   return (
     <Modal
       visible={visible}
-      transparent
+      transparent presentationStyle="overFullScreen"
       animationType="slide"
       onRequestClose={handleDismiss}
     >
@@ -238,3 +238,4 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 });
+

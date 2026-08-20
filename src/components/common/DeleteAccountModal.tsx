@@ -1,4 +1,4 @@
-/**
+﻿/**
  * DeleteAccountModal — confirmation en 2 étapes avant suppression définitive.
  *
  * Étape 1 : Explication des conséquences + case à cocher.
@@ -124,7 +124,7 @@ export default function DeleteAccountModal({ visible, role, onClose, onSuccess }
     <Modal
       visible={visible}
       animationType="slide"
-      transparent
+      transparent presentationStyle="overFullScreen"
       statusBarTranslucent
       onRequestClose={handleClose}
     >
@@ -324,3 +324,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+

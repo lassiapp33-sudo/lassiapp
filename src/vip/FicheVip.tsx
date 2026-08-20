@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+﻿import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -488,7 +488,7 @@ export default function FicheVip({ shopId, onBack, onChat, onGoCart, onReserver,
       {/* Modal — choix du mode de commande */}
       <Modal
         visible={modalCommander}
-        transparent
+        transparent presentationStyle="overFullScreen"
         animationType="fade"
         onRequestClose={() => setModalCommander(false)}
       >
@@ -946,3 +946,4 @@ const s = StyleSheet.create({
     color: r.couleur.or,
   },
 });
+

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   Modal,
   View,
@@ -129,7 +129,7 @@ export default function LivraisonModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.overlay}
@@ -318,3 +318,4 @@ const styles = StyleSheet.create({
   confirmTxt: { color: colors.bg, fontFamily: fonts.ui, fontSize: 14 },
   btnDisabled: { opacity: 0.5 },
 });
+

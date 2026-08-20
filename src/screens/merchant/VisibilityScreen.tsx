@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -216,7 +216,7 @@ function OfferPickerModal({
   onClose: () => void;
 }) {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent presentationStyle="overFullScreen" animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
         <View style={styles.modalCard} onStartShouldSetResponder={() => true}>
           <Text style={styles.modalTitle}>Choisis ton offre</Text>
@@ -862,3 +862,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   ScrollView,
   StyleSheet,
   Platform,
+  TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
@@ -51,13 +53,12 @@ const IcoCheck = () => (
 
 // ─── Slots de temps ───────────────────────────────────────────────────────────
 
-const FAST_SLOTS = ['5-10 min', '10-15 min', '15-20 min', '20-30 min', '30-45 min', '45-60 min'];
+const FAST_SLOTS = ['Maintenant', '5-10 min', '10-15 min', '15-20 min', '20-30 min', '30-45 min', '45-60 min'];
 const SLOW_SLOTS = ['1h - 2h', '2h - 3h', "Aujourd'hui", 'Demain'];
 const CUSTOM_SLOT = '+ Perso';
 
 const BOTTOM_PAD = Platform.OS === 'ios' ? 28 : 14;
 
-// Découpe en rangées de 3
 function rows<T>(arr: T[]): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += 3) out.push(arr.slice(i, i + 3));
@@ -69,11 +70,12 @@ function rows<T>(arr: T[]): T[][] {
 interface GridProps {
   slots: string[];
   selected: string;
-  custom?: boolean; // ajoute le bouton "+ Perso" en fin de grille
+  custom?: boolean;
   onSelect: (s: string) => void;
+  onCustom?: () => void;
 }
 
-function TimeGrid({ slots, selected, custom, onSelect }: GridProps) {
+function TimeGrid({ slots, selected, custom, onSelect, onCustom }: GridProps) {
   const all = custom ? [...slots, CUSTOM_SLOT] : slots;
   return (
     <View style={sg.grid}>
@@ -86,8 +88,8 @@ function TimeGrid({ slots, selected, custom, onSelect }: GridProps) {
               <TouchableOpacity
                 key={slot}
                 style={[sg.slot, isSel && sg.slotSel, isCustom && sg.slotCustom]}
-                onPress={() => !isCustom && onSelect(slot)}
-                activeOpacity={isCustom ? 0.5 : 0.75}
+                onPress={() => (isCustom ? onCustom?.() : onSelect(slot))}
+                activeOpacity={0.75}
               >
                 <Text style={[sg.slotTxt, isSel && sg.slotTxtSel, isCustom && sg.slotTxtCustom]}>
                   {slot}
@@ -95,7 +97,6 @@ function TimeGrid({ slots, selected, custom, onSelect }: GridProps) {
               </TouchableOpacity>
             );
           })}
-          {/* Spacers si rangée incomplète */}
           {Array.from({ length: 3 - row.length }).map((_, i) => (
             <View key={`sp${i}`} style={sg.spacer} />
           ))}
@@ -147,14 +148,25 @@ interface Props {
 }
 
 export default function PrepTimeSheet({ visible, order, onAccept, onClose }: Props) {
-  const [selected, setSelected] = useState('5-10 min');
+  const [selected, setSelected] = useState('Maintenant');
+  const [showCustom, setShowCustom] = useState(false);
+  const [customText, setCustomText] = useState('');
 
   if (!order) return null;
 
   const summaryItems = order.items.map(i => `${i.qty}× ${i.name}`).join(', ');
 
+  const confirmCustom = () => {
+    const t = customText.trim();
+    if (t) {
+      setSelected(t);
+      setShowCustom(false);
+      setCustomText('');
+    }
+  };
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent presentationStyle="overFullScreen" animationType="slide" onRequestClose={onClose}>
       {/* Fond sombre */}
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} />
 
@@ -193,7 +205,13 @@ export default function PrepTimeSheet({ visible, order, onAccept, onClose }: Pro
             <IcoClock />
             <Text style={styles.groupTxt}>Plus long</Text>
           </View>
-          <TimeGrid slots={SLOW_SLOTS} selected={selected} custom onSelect={setSelected} />
+          <TimeGrid
+            slots={SLOW_SLOTS}
+            selected={selected}
+            custom
+            onSelect={setSelected}
+            onCustom={() => setShowCustom(true)}
+          />
 
           {/* Bouton confirmer */}
           <TouchableOpacity
@@ -216,6 +234,46 @@ export default function PrepTimeSheet({ visible, order, onAccept, onClose }: Pro
           <View style={{ height: 8 }} />
         </ScrollView>
       </View>
+
+      {/* Modal saisie personnalisée */}
+      <Modal
+        visible={showCustom}
+        transparent presentationStyle="overFullScreen"
+        animationType="fade"
+        onRequestClose={() => setShowCustom(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={cm.overlay}
+        >
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={() => setShowCustom(false)}
+            activeOpacity={1}
+          />
+          <View style={cm.card}>
+            <Text style={cm.title}>Temps personnalisé</Text>
+            <TextInput
+              style={cm.input}
+              value={customText}
+              onChangeText={setCustomText}
+              placeholder="Ex : 3h30, Lundi 10h..."
+              placeholderTextColor={colors.muted}
+              autoFocus
+              onSubmitEditing={confirmCustom}
+              returnKeyType="done"
+            />
+            <View style={cm.actions}>
+              <TouchableOpacity style={cm.btnCancel} onPress={() => setShowCustom(false)}>
+                <Text style={cm.btnCancelTxt}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={cm.btnConfirm} onPress={confirmCustom}>
+                <Text style={cm.btnConfirmTxt}>Confirmer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </Modal>
   );
 }
@@ -244,7 +302,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // Mini carte client
   clientCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -348,3 +405,72 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
 });
+
+const cm = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(10,11,24,.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  card: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 20,
+  },
+  title: {
+    color: colors.white,
+    fontFamily: fonts.titleXL,
+    fontSize: 16,
+    marginBottom: 14,
+  },
+  input: {
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+    color: colors.white,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    marginBottom: 14,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  btnCancel: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnCancelTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 14,
+  },
+  btnConfirm: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnConfirmTxt: {
+    color: colors.bg,
+    fontFamily: fonts.titleXL,
+    fontSize: 14,
+  },
+});
+

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -106,7 +106,7 @@ export default function VerifyReceiptSheet({ visible, onClose, onVerified }: Pro
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+    <Modal visible={visible} transparent presentationStyle="overFullScreen" animationType="slide" onRequestClose={handleClose}>
       <View style={s.overlay}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -362,3 +362,4 @@ const s = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 });
+

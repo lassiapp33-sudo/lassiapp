@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   ActivityIndicator, RefreshControl, TextInput, Alert,
@@ -162,7 +162,7 @@ export default function GerantRdvBeautyScreen({ onBack }: Props) {
       {/* Modal détail + action */}
       <Modal
         visible={modalRdv != null}
-        transparent
+        transparent presentationStyle="overFullScreen"
         animationType="slide"
         onRequestClose={() => setModalRdv(null)}
       >
@@ -329,3 +329,4 @@ const s = StyleSheet.create({
   },
   closeSheetTxt: { color: r.couleur.gris, fontFamily: r.police.util, fontSize: 13 },
 });
+

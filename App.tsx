@@ -1,5 +1,13 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, Platform, AppState } from 'react-native';
+import { View, StyleSheet, Platform, Text } from 'react-native';
+
+// Désactive la sélection sur tous les Text de l'app → supprime les soulignements
+// bleus du correcteur Android et empêche la sélection accidentelle de texte.
+(Text as unknown as { defaultProps: Record<string, unknown> }).defaultProps =
+  Object.assign(
+    (Text as unknown as { defaultProps?: Record<string, unknown> }).defaultProps ?? {},
+    { selectable: false },
+  );
 import { StatusBar } from 'expo-status-bar';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import * as Updates from 'expo-updates';
@@ -50,11 +58,6 @@ import { SESSION_ACTIVE_KEY }   from './src/services/auth';
 import { usePushToken, removeCurrentDeviceToken } from './src/hooks/usePushToken';
 import { usePaymentDeepLink } from './src/hooks/usePaymentDeepLink';
 import usePendingNavStore from './src/store/pendingNavStore';
-import {
-  markAppBackgrounded,
-  clearBackgroundMark,
-  hasInactivityTimeoutElapsed,
-} from './src/lib/sessionTimeout';
 
 // ─── Détection Expo Go / Web ──────────────────────────────────────────────────
 // SDK 53+ : les push notifications Android ne fonctionnent plus dans Expo Go.
@@ -72,7 +75,7 @@ const getN = (): N | null => {
 ExpoSplashScreen.setOptions({ duration: 0 });
 ExpoSplashScreen.preventAutoHideAsync();
 
-type Screen = 'splash' | 'onboarding' | 'auth' | 'client' | 'merchant' | 'livreur' | 'resetPassword';
+type Screen = 'splash' | 'onboarding' | 'auth' | 'guest' | 'client' | 'merchant' | 'livreur' | 'resetPassword';
 
 // Décode les données d'une notification push et stocke la navigation en attente
 function handleNotifData(data: Record<string, any> | undefined | null) {
@@ -276,7 +279,7 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChange((user) => {
       useAuthStore.getState().setUser(user);
-      if (!user && screen !== 'splash' && screen !== 'onboarding' && screen !== 'auth') {
+      if (!user && screen !== 'splash' && screen !== 'onboarding' && screen !== 'auth' && screen !== 'guest') {
         setScreen('auth');
       }
     });
@@ -288,25 +291,6 @@ export default function App() {
     return authService.onPasswordRecovery(() => setScreen('resetPassword'));
   }, []);
 
-  // Déconnexion automatique après inactivité prolongée (Section 7) :
-  // on note l'heure de mise en arrière-plan, et au retour au premier plan
-  // on déconnecte si le délai INACTIVITY_TIMEOUT_MS est dépassé.
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') {
-        (async () => {
-          const expired = await hasInactivityTimeoutElapsed();
-          await clearBackgroundMark();
-          if (expired && useAuthStore.getState().isAuthenticated) {
-            await handleLogout();
-          }
-        })();
-      } else if (nextState === 'background' || nextState === 'inactive') {
-        markAppBackgrounded();
-      }
-    });
-    return () => sub.remove();
-  }, [handleLogout]);
 
 
   return (
@@ -314,15 +298,15 @@ export default function App() {
       <StatusBar style="light" />
       <OfflineBanner />
 
-      {/* Bannière slide-top pour commandes et messages (auto-dismiss 5s) */}
-      <NotifPopupBanner onView={() => setPendingNav({ type: 'notifications' })} />
-
-      {/* Carte rich-notification pour récompenses, paiements, annonces-notif */}
-      <NotifCardModal
+      {/* Bannière slide-top : commandes/messages (5s) + annonces à la une/nouveau prestataire (3s) */}
+      <NotifPopupBanner
         onView={() => setPendingNav({ type: 'notifications' })}
         onVoirAlaUne={() => setPendingNav({ type: 'a_la_une_feed' })}
         onVoirVitrine={(shopId, shopName) => setPendingNav({ type: 'new_shop', shopId, shopName })}
       />
+
+      {/* Carte rich-notification pour récompenses et paiements */}
+      <NotifCardModal onView={() => setPendingNav({ type: 'notifications' })} />
 
       {/* Annonces système admin (table annonces) — une seule fois par annonce, file FIFO */}
       <AnnonceModal annonce={annonceCourante} nbRestantes={nbRestantes} onFermer={marquerLue} />
@@ -332,16 +316,6 @@ export default function App() {
         <SplashScreen onFinish={async () => {
           try {
             const { hasSeenOnboarding, user: cachedUser } = useAuthStore.getState();
-
-            // Section 7 : redémarrage à froid après inactivité prolongée → déconnexion forcée
-            const expired = await hasInactivityTimeoutElapsed();
-            await clearBackgroundMark();
-            if (expired) {
-              await authService.logout().catch(() => {});
-              useAuthStore.getState().setLoading(false);
-              setScreen(hasSeenOnboarding ? 'auth' : 'onboarding');
-              return;
-            }
 
             // Utilise la promesse lancée au montage (en parallèle avec le splash).
             // Si elle n'existe pas (rare), on en lance une nouvelle avec un timeout court.
@@ -401,9 +375,11 @@ export default function App() {
             else if (role === 'livreur') setScreen('livreur');
             else setScreen('client');
           }}
+          onGuest={() => setScreen('guest')}
         />
       )}
 
+      {screen === 'guest'    && <HomeNavigator     onLogout={() => setScreen('auth')} onLoginRequired={() => setScreen('auth')} />}
       {screen === 'client'   && <HomeNavigator     onLogout={handleLogout} />}
       {screen === 'merchant' && (
         gerantActive

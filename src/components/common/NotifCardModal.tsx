@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+﻿import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -48,9 +48,7 @@ function NotifIcon({ type, size }: { type: NotifType | string; size: number }) {
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 interface Props {
-  onView: () => void;       // ouvre l'écran Notifications complet
-  onVoirAlaUne: () => void; // ouvre le feed À la une
-  onVoirVitrine: (shopId: string, shopName: string) => void; // ouvre la vitrine d'un nouveau prestataire
+  onView: () => void;
 }
 
 /**
@@ -59,31 +57,22 @@ interface Props {
  * Queue FIFO : si plusieurs notifications sont en attente, le bouton affiche
  * "Suivant (N)" jusqu'à la dernière qui affiche "C'est compris !".
  */
-export default function NotifCardModal({ onView, onVoirAlaUne, onVoirVitrine }: Props) {
+export default function NotifCardModal({ onView }: Props) {
   const queue   = useNotifPopupStore(s => s.queue);
   const dismiss = useNotifPopupStore(s => s.dismiss);
 
   const current    = queue[0] ?? null;
   const nbRestants = Math.max(queue.length - 1, 0);
 
-  const handleCompris    = useCallback(() => dismiss(), [dismiss]);
-  const handleView       = useCallback(() => { dismiss(); onView(); }, [dismiss, onView]);
-  const handleVoirAlaUne = useCallback(() => { dismiss(); onVoirAlaUne(); }, [dismiss, onVoirAlaUne]);
-  const handleVoirVitrine = useCallback(() => {
-    const shopId   = current?.targetId ?? '';
-    const shopName = (current?.data?.shop_name as string) ?? '';
-    dismiss();
-    onVoirVitrine(shopId, shopName);
-  }, [current, dismiss, onVoirVitrine]);
+  const handleCompris = useCallback(() => dismiss(), [dismiss]);
+  const handleView    = useCallback(() => { dismiss(); onView(); }, [dismiss, onView]);
 
-  if (!current || current.type === 'order' || current.type === 'msg') return null;
+  if (!current || current.type === 'order' || current.type === 'msg' || current.type === 'ann') return null;
 
-  const tag        = TAG_LABEL[current.type] ?? 'LASSI';
-  const isAlaUne   = current.targetId === 'a_la_une_feed';
-  const isNewShop  = current.type === 'ann' && !!current.targetId && current.targetId !== 'a_la_une_feed';
+  const tag = TAG_LABEL[current.type] ?? 'LASSI';
 
   return (
-    <Modal visible animationType="fade" transparent onRequestClose={handleCompris}>
+    <Modal visible animationType="fade" transparent presentationStyle="overFullScreen" onRequestClose={handleCompris}>
       <View style={s.overlay}>
         <View style={s.card}>
 
@@ -114,20 +103,9 @@ export default function NotifCardModal({ onView, onVoirAlaUne, onVoirVitrine }: 
             </Text>
           </TouchableOpacity>
 
-          {/* Bouton secondaire selon le type d'annonce */}
-          {isAlaUne ? (
-            <TouchableOpacity style={s.ctaSecondary} onPress={handleVoirAlaUne} activeOpacity={0.85}>
-              <Text style={s.ctaSecondaryTxt}>Voir à la une</Text>
-            </TouchableOpacity>
-          ) : isNewShop ? (
-            <TouchableOpacity style={s.ctaSecondary} onPress={handleVoirVitrine} activeOpacity={0.85}>
-              <Text style={s.ctaSecondaryTxt}>Voir la vitrine</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={s.viewBtn} onPress={handleView} activeOpacity={0.7}>
-              <Text style={s.viewTxt}>Voir mes notifications</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={s.viewBtn} onPress={handleView} activeOpacity={0.7}>
+            <Text style={s.viewTxt}>Voir mes notifications</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -229,3 +207,4 @@ const s = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 });
+

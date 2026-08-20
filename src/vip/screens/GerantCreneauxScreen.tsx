@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -313,7 +313,7 @@ export default function GerantCreneauxScreen({ onBack }: Props) {
       {/* Modal création / édition */}
       <Modal
         visible={modalOpen}
-        transparent
+        transparent presentationStyle="overFullScreen"
         animationType="slide"
         onRequestClose={() => setModalOpen(false)}
       >
@@ -638,3 +638,4 @@ const s = StyleSheet.create({
   },
   cancelBtnTxt: { color: r.couleur.gris, fontFamily: r.police.util, fontSize: 13 },
 });
+

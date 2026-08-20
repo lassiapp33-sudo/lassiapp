@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Polyline } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
@@ -33,7 +33,7 @@ export default function LanguageModal({ visible, onClose }: Props) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent presentationStyle="overFullScreen" animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
         <View style={styles.card} onStartShouldSetResponder={() => true}>
           <Text style={styles.title}>Langue / Language</Text>
@@ -124,3 +124,4 @@ const styles = StyleSheet.create({
     height: 16,
   },
 });
+
