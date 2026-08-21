@@ -108,11 +108,6 @@ export default function FicheGuideeScreen({ onClose }: Props) {
 
   const getDestValues = (): { catId: string; sousCategorie: string } => {
     if (dest.startsWith('cat:')) return { catId: dest.slice(4), sousCategorie: '' };
-    if (dest.startsWith('type:') || dest.startsWith('sous:')) {
-      const label = dest.slice(5);
-      const existing = findCat(label);
-      return { catId: existing ? existing.id : toId(label), sousCategorie: '' };
-    }
     if (dest === 'libre') {
       const label = destLibreText.trim();
       if (!label) return { catId: categories[0]?.id ?? '', sousCategorie: '' };
@@ -215,12 +210,11 @@ export default function FicheGuideeScreen({ onClose }: Props) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Section "Ajouter dans" — sélection radio unifiée ── */}
+        {/* ── Section "Ajouter dans" — catégories existantes uniquement ── */}
         <View style={s.destSection}>
           <Text style={s.label}>Ajouter dans</Text>
           <View style={s.puces}>
 
-            {/* Catégories du catalogue (Formules, Produits…) */}
             {categories.map(cat => (
               <TouchableOpacity
                 key={cat.id}
@@ -234,41 +228,13 @@ export default function FicheGuideeScreen({ onClose }: Props) {
               </TouchableOpacity>
             ))}
 
-            {/* Suggestions type de contenu (Tarif, Carte des abonnements…) */}
-            {suggestions.typeContenu.map(sug => (
-              <TouchableOpacity
-                key={sug.id}
-                style={[s.chip, dest === `type:${sug.valeur}` && s.chipActive]}
-                onPress={() => setDest(`type:${sug.valeur}`)}
-                activeOpacity={0.75}
-              >
-                <Text style={[s.chipTxt, dest === `type:${sug.valeur}` && s.chipTxtActive]}>
-                  {sug.valeur}
-                </Text>
-              </TouchableOpacity>
-            ))}
-
-            {/* Suggestions sous-catégorie (Coaching, Séances…) */}
-            {suggestions.sousCategorie.map(sug => (
-              <TouchableOpacity
-                key={sug.id}
-                style={[s.chip, dest === `sous:${sug.valeur}` && s.chipActive]}
-                onPress={() => setDest(`sous:${sug.valeur}`)}
-                activeOpacity={0.75}
-              >
-                <Text style={[s.chipTxt, dest === `sous:${sug.valeur}` && s.chipTxtActive]}>
-                  {sug.valeur}
-                </Text>
-              </TouchableOpacity>
-            ))}
-
-            {/* Autre (saisie libre) */}
+            {/* Nouvelle catégorie libre */}
             <TouchableOpacity
               style={[s.chip, dest === 'libre' && s.chipActive]}
-              onPress={() => setDest('libre')}
+              onPress={() => { setDest('libre'); scrollToField(); }}
               activeOpacity={0.75}
             >
-              <Text style={[s.chipTxt, dest === 'libre' && s.chipTxtActive]}>✏️ Autre</Text>
+              <Text style={[s.chipTxt, dest === 'libre' && s.chipTxtActive]}>✏️ Nouvelle catégorie</Text>
             </TouchableOpacity>
           </View>
 
