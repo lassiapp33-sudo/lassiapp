@@ -96,8 +96,11 @@ export default function FicheGuideeScreen({ onClose }: Props) {
       .finally(() => setLoading(false));
   }, [sousCatId]);
 
-  // Normalise un label en ID stable (minuscules, tirets bas)
-  const toId = (label: string) => label.trim().toLowerCase().replace(/\s+/g, '_');
+  const toId = (label: string) =>
+    label.trim().toLowerCase().normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '');
 
   // Cherche une catégorie existante par ID ou label (insensible à la casse)
   const findCat = (label: string) =>

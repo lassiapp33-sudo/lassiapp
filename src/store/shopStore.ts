@@ -106,14 +106,17 @@ const useShopStore = create<ShopState>()((set, get) => ({
 
       // Dériver les catégories à partir des produits existants
       // Normalise les IDs pour éviter les doublons dus à des différences de casse/espaces
-      const toNormalId = (s: string) => s.trim().toLowerCase().replace(/\s+/g, '_');
+      const toNormalId = (s: string) =>
+        s.trim().toLowerCase().normalize('NFD')
+          .replace(/[̀-ͯ]/g, '')
+          .replace(/\s+/g, '_')
+          .replace(/[^a-z0-9_]/g, '');
       const rawCatIds = products.map(p => p.category as string).filter(Boolean);
-      // Déduplique en normalisant (ex: "Formules" et "formules" → même entrée "formules")
       const seenNorm = new Set<string>();
       const catIds: string[] = [];
       for (const raw of rawCatIds) {
         const norm = toNormalId(raw);
-        if (!seenNorm.has(norm)) { seenNorm.add(norm); catIds.push(toNormalId(raw)); }
+        if (!seenNorm.has(norm)) { seenNorm.add(norm); catIds.push(norm); }
       }
       const catMeta: Record<string, { label: string; emoji: string }> = {
         petitdej:                  { label: 'Petit-déj',                emoji: '🍳' },
@@ -133,7 +136,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
         seances_a_l_unite:         { label: 'Séances à l\'unité',        emoji: '🎯' },
         coaching_personnel:        { label: 'Coaching personnel',        emoji: '💪' },
         cours_collectifs:          { label: 'Cours collectifs',          emoji: '👥' },
-        supplements_&_nutrition:   { label: 'Suppléments & Nutrition',   emoji: '💊' },
+        supplements_nutrition:     { label: 'Suppléments & Nutrition',   emoji: '💊' },
         programmes_speciaux:       { label: 'Programmes spéciaux',       emoji: '⭐' },
       };
       // Label : capitalisé proprement si inconnu du catMeta
