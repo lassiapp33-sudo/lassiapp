@@ -3,18 +3,33 @@ import {
   View, Text, ScrollView, TextInput, TouchableOpacity, Image,
   StyleSheet, Alert, ActivityIndicator, SafeAreaView,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Circle } from 'react-native-svg';
 import SelecteurPuces from '../../components/store/SelecteurPuces';
 import { getToutesSuggestions } from '../../services/ficheGuidee';
 import { creerProduitsEnMasse } from '../../services/products';
 import { pickImageFromCamera, pickImageFromGallery, uploadImage } from '../../services/storage';
 import useShopStore from '../../store/shopStore';
 
-// ─── Icône retour ─────────────────────────────────────────────────────────────
+// ─── Icônes ───────────────────────────────────────────────────────────────────
 
 const IcoBack = () => (
   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <Path d="M19 12H5M12 19l-7-7 7-7" stroke="#EDEEF7" />
+  </Svg>
+);
+
+const IcoCamera = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="#FDCF34" />
+    <Circle cx={12} cy={13} r={4} stroke="#FDCF34" />
+  </Svg>
+);
+
+const IcoGallery = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14" stroke="#FDCF34" />
+    <Path d="m2 19 7-7 4 4 3-3 5 5" stroke="#FDCF34" />
+    <Path d="M22 19H2" stroke="#FDCF34" />
   </Svg>
 );
 
@@ -277,14 +292,16 @@ export default function FicheGuideeScreen({ onClose }: Props) {
                     onPress={() => pickImageForLigne(ligne.id, 'camera')}
                     activeOpacity={0.8}
                   >
-                    <Text style={s.imagePickerTxt}>📷 Caméra</Text>
+                    <IcoCamera />
+                    <Text style={s.imagePickerTxt}>Caméra</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={s.imagePickerBtn}
                     onPress={() => pickImageForLigne(ligne.id, 'gallery')}
                     activeOpacity={0.8}
                   >
-                    <Text style={s.imagePickerTxt}>🖼 Galerie</Text>
+                    <IcoGallery />
+                    <Text style={s.imagePickerTxt}>Galerie</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -430,7 +447,10 @@ const s = StyleSheet.create({
     backgroundColor: '#14152A',
     borderRadius: 12,
     padding: 14,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
     borderWidth: 1,
     borderColor: '#2A2C52',
   },
