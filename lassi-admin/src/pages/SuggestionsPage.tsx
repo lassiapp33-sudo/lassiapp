@@ -82,9 +82,9 @@ const SOUS_CATEGORIES: { id: string; label: string; categorieId: string }[] = [
   { id: 'arts_martiaux',              label: 'Arts martiaux',                  categorieId: 'sport'     },
 ]
 
-const SECTIONS: { id: FicheSection; label: string }[] = [
-  { id: 'type_contenu',           label: 'Type de contenu' },
-  { id: 'sous_categorie_produit', label: 'Sous-catégorie produit' },
+const SECTIONS: { id: FicheSection; label: string; hint?: string }[] = [
+  { id: 'type_contenu',           label: 'Type de contenu',        hint: 'Aussi affiché dans « Ajouter dans »' },
+  { id: 'sous_categorie_produit', label: 'Sous-catégorie produit', hint: 'Aussi affiché dans « Ajouter dans »' },
   { id: 'nom_produit',            label: 'Nom du produit' },
   { id: 'prix',                   label: 'Prix' },
 ]
@@ -221,7 +221,8 @@ export default function SuggestionsPage() {
         <div>
           <h1 className="text-white font-title text-2xl">Fiche Guidée — Suggestions</h1>
           <p className="text-muted text-sm mt-1">
-            Listes prédéfinies par sous-catégorie affichées dans l'app lors de la création de produits.
+            Listes prédéfinies par sous-catégorie affichées lors de la création de produits.
+            Les sections <strong className="text-white/70">Type de contenu</strong> et <strong className="text-white/70">Sous-catégorie produit</strong> alimentent aussi le sélecteur <em>« Ajouter dans »</em> (si non déjà présents en onglet boutique).
           </p>
         </div>
         <button
@@ -399,7 +400,10 @@ export default function SuggestionsPage() {
           {grouped.map(group => group.items.length > 0 && (
             <div key={group.id} className="bg-surface border border-border rounded-2xl overflow-hidden">
               <div className="px-5 py-3 border-b border-border flex items-center justify-between">
-                <span className="text-white font-title text-sm">{group.label}</span>
+                <div>
+                  <span className="text-white font-title text-sm">{group.label}</span>
+                  {group.hint && <span className="ml-2 text-accent/60 text-xs">· {group.hint}</span>}
+                </div>
                 <span className="text-muted text-xs">{group.items.length} suggestion{group.items.length > 1 ? 's' : ''}</span>
               </div>
               <div className="divide-y divide-border">
