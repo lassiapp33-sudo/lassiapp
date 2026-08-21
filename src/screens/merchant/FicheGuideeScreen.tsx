@@ -108,6 +108,11 @@ export default function FicheGuideeScreen({ onClose }: Props) {
 
   const getDestValues = (): { catId: string; sousCategorie: string } => {
     if (dest.startsWith('cat:')) return { catId: dest.slice(4), sousCategorie: '' };
+    if (dest.startsWith('type:') || dest.startsWith('sous:')) {
+      const label = dest.slice(5);
+      const existing = findCat(label);
+      return { catId: existing ? existing.id : toId(label), sousCategorie: '' };
+    }
     if (dest === 'libre') {
       const label = destLibreText.trim();
       if (!label) return { catId: categories[0]?.id ?? '', sousCategorie: '' };
@@ -215,6 +220,7 @@ export default function FicheGuideeScreen({ onClose }: Props) {
           <Text style={s.label}>Ajouter dans</Text>
           <View style={s.puces}>
 
+            {/* Catégories existantes de la boutique */}
             {categories.map(cat => (
               <TouchableOpacity
                 key={cat.id}
@@ -227,6 +233,38 @@ export default function FicheGuideeScreen({ onClose }: Props) {
                 </Text>
               </TouchableOpacity>
             ))}
+
+            {/* Suggestions type de contenu (non dupliquées) */}
+            {suggestions.typeContenu
+              .filter(sug => !findCat(sug.valeur))
+              .map(sug => (
+                <TouchableOpacity
+                  key={`type-${sug.id}`}
+                  style={[s.chip, dest === `type:${sug.valeur}` && s.chipActive]}
+                  onPress={() => setDest(`type:${sug.valeur}`)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[s.chipTxt, dest === `type:${sug.valeur}` && s.chipTxtActive]}>
+                    {sug.valeur}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+
+            {/* Suggestions sous-catégorie (non dupliquées) */}
+            {suggestions.sousCategorie
+              .filter(sug => !findCat(sug.valeur))
+              .map(sug => (
+                <TouchableOpacity
+                  key={`sous-${sug.id}`}
+                  style={[s.chip, dest === `sous:${sug.valeur}` && s.chipActive]}
+                  onPress={() => setDest(`sous:${sug.valeur}`)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[s.chipTxt, dest === `sous:${sug.valeur}` && s.chipTxtActive]}>
+                    {sug.valeur}
+                  </Text>
+                </TouchableOpacity>
+              ))}
 
             {/* Nouvelle catégorie libre */}
             <TouchableOpacity
