@@ -8,10 +8,11 @@ interface Props {
   onSelectionner: (valeur: string) => void;
   placeholderLibre?: string;
   keyboardType?: KeyboardTypeOptions;
+  onInputFocus?: () => void;
 }
 
 export default function SelecteurPuces({
-  label, suggestions, valeurSelectionnee, onSelectionner, placeholderLibre, keyboardType,
+  label, suggestions, valeurSelectionnee, onSelectionner, placeholderLibre, keyboardType, onInputFocus,
 }: Props) {
   const [modeLibre, setModeLibre] = useState(false);
   const [texteLibre, setTexteLibre] = useState('');
@@ -59,6 +60,7 @@ export default function SelecteurPuces({
           keyboardType={keyboardType ?? 'default'}
           autoFocus
           returnKeyType="done"
+          onFocus={onInputFocus}
         />
       )}
     </View>

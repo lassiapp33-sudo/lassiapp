@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity, Image,
   StyleSheet, Alert, ActivityIndicator, SafeAreaView,
@@ -82,6 +82,11 @@ export default function FicheGuideeScreen({ onClose }: Props) {
   // ── Lignes produit ────────────────────────────────────────────────────────────
   const [lignes, setLignes] = useState<LigneProduit[]>([nouvelleLigne()]);
   const [envoi,  setEnvoi]  = useState(false);
+
+  const scrollRef = useRef<import('react-native').ScrollView>(null);
+  const scrollToField = () => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+  };
 
   useEffect(() => {
     if (!sousCatId) { setLoading(false); return; }
@@ -190,6 +195,7 @@ export default function FicheGuideeScreen({ onClose }: Props) {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         style={s.scroll}
         contentContainerStyle={s.content}
         keyboardShouldPersistTaps="handled"
@@ -314,6 +320,7 @@ export default function FicheGuideeScreen({ onClose }: Props) {
               valeurSelectionnee={ligne.nom}
               onSelectionner={(v) => modifierLigne(ligne.id, 'nom', v)}
               placeholderLibre="Nom de votre produit"
+              onInputFocus={scrollToField}
             />
 
             {/* Prix */}
@@ -324,6 +331,7 @@ export default function FicheGuideeScreen({ onClose }: Props) {
               onSelectionner={(v) => modifierLigne(ligne.id, 'prix', v)}
               placeholderLibre="Prix en F CFA"
               keyboardType="numeric"
+              onInputFocus={scrollToField}
             />
 
             {/* Description */}
