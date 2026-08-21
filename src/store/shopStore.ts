@@ -54,6 +54,7 @@ interface ShopState {
 
   addCategory: (label: string) => void;
   removeCategory: (id: string) => Promise<void>;
+  purgeCategoryAndProducts: (id: string) => Promise<void>;
 
   createMissingShop: (
     name: string,
@@ -119,38 +120,48 @@ const useShopStore = create<ShopState>()((set, get) => ({
         if (!seenNorm.has(norm)) { seenNorm.add(norm); catIds.push(norm); }
       }
       const catMeta: Record<string, { label: string; emoji: string }> = {
-        petitdej:                  { label: 'Petit-déj',                emoji: '🍳' },
-        boissons:                  { label: 'Boissons',                  emoji: '☕' },
-        plats:                     { label: 'Plats',                     emoji: '🍽' },
-        autres:                    { label: 'Autres',                    emoji: '📦' },
-        catalogue:                 { label: 'Catalogue',                 emoji: '📦' },
-        prestations:               { label: 'Prestations',               emoji: '✂️' },
-        formules:                  { label: 'Formules',                  emoji: '📋' },
-        produits:                  { label: 'Produits',                  emoji: '🛍️' },
-        abonnements:               { label: 'Abonnements',               emoji: '🔄' },
-        tarif:                     { label: 'Tarif',                     emoji: '💰' },
-        carte_des_abonnements:     { label: 'Carte des abonnements',     emoji: '🗂️' },
-        catalogue_de_services:     { label: 'Catalogue de services',     emoji: '📋' },
-        programme:                 { label: 'Programme',                 emoji: '📅' },
-        liste_des_forfaits:        { label: 'Liste des forfaits',        emoji: '📝' },
-        seances_a_l_unite:         { label: 'Séances à l\'unité',        emoji: '🎯' },
-        coaching_personnel:        { label: 'Coaching personnel',        emoji: '💪' },
-        cours_collectifs:          { label: 'Cours collectifs',          emoji: '👥' },
-        supplements_nutrition:     { label: 'Suppléments & Nutrition',   emoji: '💊' },
-        programmes_speciaux:       { label: 'Programmes spéciaux',       emoji: '⭐' },
+        petitdej:              { label: 'Petit-déj',                emoji: '🍳' },
+        boissons:              { label: 'Boissons',                  emoji: '☕' },
+        plats:                 { label: 'Plats',                     emoji: '🍽' },
+        autres:                { label: 'Autres',                    emoji: '📦' },
+        catalogue:             { label: 'Catalogue',                 emoji: '📦' },
+        prestations:           { label: 'Prestations',               emoji: '✂️' },
+        formules:              { label: 'Formules',                  emoji: '📋' },
+        produits:              { label: 'Produits',                  emoji: '🛍️' },
+        abonnements:           { label: 'Abonnements',               emoji: '🔄' },
+        tarif:                 { label: 'Tarif',                     emoji: '💰' },
+        carte_des_abonnements: { label: 'Carte des abonnements',     emoji: '🗂️' },
+        catalogue_de_services: { label: 'Catalogue de services',     emoji: '📋' },
+        programme:             { label: 'Programme',                 emoji: '📅' },
+        liste_des_forfaits:    { label: 'Liste des forfaits',        emoji: '📝' },
+        seances_a_l_unite:     { label: 'Séances à l\'unité',        emoji: '🎯' },
+        coaching_personnel:    { label: 'Coaching personnel',        emoji: '💪' },
+        cours_collectifs:      { label: 'Cours collectifs',          emoji: '👥' },
+        supplements_nutrition: { label: 'Suppléments & Nutrition',   emoji: '💊' },
+        programmes_speciaux:   { label: 'Programmes spéciaux',       emoji: '⭐' },
       };
-      // Label : capitalisé proprement si inconnu du catMeta
       const toLabel = (id: string) =>
-        catMeta[id]?.label ??
-        id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      const categories: StoreCategory[] =
-        catIds.length > 0
-          ? catIds.map(id => ({
-              id,
-              label: toLabel(id),
-              emoji: catMeta[id]?.emoji ?? '📦',
-            }))
+        catMeta[id]?.label ?? id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+      const BASE_FITNESS: StoreCategory[] = [
+        { id: 'formules',    label: 'Formules',    emoji: '📋' },
+        { id: 'abonnements', label: 'Abonnements', emoji: '🔄' },
+        { id: 'produits',    label: 'Produits',    emoji: '🛍️' },
+      ];
+
+      let categories: StoreCategory[];
+      if (shop.shopType === 'memberships') {
+        // Les 3 onglets de base sont TOUJOURS présents pour un shop fitness
+        const baseIds = new Set(['formules', 'abonnements', 'produits']);
+        const extras = catIds
+          .filter(id => !baseIds.has(id))
+          .map(id => ({ id, label: toLabel(id), emoji: catMeta[id]?.emoji ?? '📦' }));
+        categories = [...BASE_FITNESS, ...extras];
+      } else {
+        categories = catIds.length > 0
+          ? catIds.map(id => ({ id, label: toLabel(id), emoji: catMeta[id]?.emoji ?? '📦' }))
           : getDefaultCats(shop.shopType);
+      }
 
       // Si la boutique n'a pas de logo, utiliser la photo de profil du marchand
       const { default: useAuthStore } = await import('./authStore');
@@ -303,26 +314,36 @@ const useShopStore = create<ShopState>()((set, get) => ({
       set(state => ({ products: [...state.products, saved] }));
     }
 
-    // Recalculer les onglets en préservant les catégories personnalisées
+    // Recalculer les onglets avec normalisation (évite les doublons de casse)
     const allProds = get().products;
     const existing = get().categories;
-    const catIds = [...new Set(allProds.map(p => p.category))];
-    const catMeta: Record<string, { label: string; emoji: string }> = {
-      petitdej: { label: 'Petit-déj', emoji: '🍳' },
-      boissons: { label: 'Boissons', emoji: '☕' },
-      plats: { label: 'Plats', emoji: '🍽' },
-      autres: { label: 'Autres', emoji: '📦' },
-    };
-    if (catIds.length > 0) {
-      const fromProducts = catIds.map(
-        id =>
-          existing.find(c => c.id === id) ?? {
-            id,
-            label: catMeta[id]?.label ?? id,
-            emoji: catMeta[id]?.emoji ?? '📦',
-          },
+    const shopCtx = get().context.shopType;
+    const normId = (s: string) =>
+      s.trim().toLowerCase().normalize('NFD')
+        .replace(/[̀-ͯ]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const rawCats = allProds.map(p => p.category as string).filter(Boolean);
+    const seen = new Set<string>();
+    const normCatIds: string[] = [];
+    for (const raw of rawCats) {
+      const n = normId(raw);
+      if (!seen.has(n)) { seen.add(n); normCatIds.push(n); }
+    }
+    if (shopCtx === 'memberships') {
+      const BASE_FITNESS: StoreCategory[] = [
+        { id: 'formules',    label: 'Formules',    emoji: '📋' },
+        { id: 'abonnements', label: 'Abonnements', emoji: '🔄' },
+        { id: 'produits',    label: 'Produits',    emoji: '🛍️' },
+      ];
+      const baseSet = new Set(['formules', 'abonnements', 'produits']);
+      const extras = normCatIds
+        .filter(id => !baseSet.has(id))
+        .map(id => existing.find(c => c.id === id) ?? { id, label: id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), emoji: '📦' });
+      set({ categories: [...BASE_FITNESS, ...extras] });
+    } else if (normCatIds.length > 0) {
+      const fromProducts = normCatIds.map(
+        id => existing.find(c => c.id === id) ?? { id, label: id, emoji: '📦' },
       );
-      const extras = existing.filter(c => !catIds.includes(c.id));
+      const extras = existing.filter(c => !normCatIds.includes(c.id));
       set({ categories: [...fromProducts, ...extras] });
     }
   },
@@ -352,6 +373,25 @@ const useShopStore = create<ShopState>()((set, get) => ({
       await productsService.deleteProduct(id);
     } catch (err) {
       set({ products: prev });
+      throw err;
+    }
+  },
+
+  purgeCategoryAndProducts: async catId => {
+    const { categories, products } = get();
+    const remaining = categories.filter(c => c.id !== catId);
+    if (remaining.length === 0) return;
+    const toDelete = products.filter(p => p.category === catId);
+    const prevCats = categories;
+    const prevProds = products;
+    set({
+      categories: remaining,
+      products: products.filter(p => p.category !== catId),
+    });
+    try {
+      await Promise.all(toDelete.map(p => productsService.deleteProduct(p.id)));
+    } catch (err) {
+      set({ categories: prevCats, products: prevProds });
       throw err;
     }
   },

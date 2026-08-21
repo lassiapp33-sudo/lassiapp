@@ -148,8 +148,8 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   const removeProduct = useShopStore(s => s.removeProduct);
   const toggleStock = useShopStore(s => s.toggleStock);
   const loadMyShop = useShopStore(s => s.loadMyShop);
-  const addCategory = useShopStore(s => s.addCategory);
   const removeCategory = useShopStore(s => s.removeCategory);
+  const purgeCategoryAndProducts = useShopStore(s => s.purgeCategoryAndProducts);
   const createMissingShop = useShopStore(s => s.createMissingShop);
 
   // ── Catalogue ─────────────────────────────────────────────────────────────
@@ -164,10 +164,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   const [promoMap, setPromoMap] = useState<Record<string, ProductPromoInfo>>({});
 
   // ── Onglets fitness (uniquement pour shopType === 'memberships') ───────────
-  // 'formules' = catalogue existant | 'abonnements' = nouveau | 'produits' = nouveau
-  type FitnessTab = 'formules' | 'abonnements' | 'produits';
-  const [fitnessTab, setFitnessTab] = useState<FitnessTab>('formules');
-  const [offres,     setOffres]     = useState<FitnessOffre[]>([]);
+  const [offres, setOffres] = useState<FitnessOffre[]>([]);
   const [offresLoading, setOffresLoading] = useState(false);
   const [editOffre, setEditOffre] = useState<FitnessOffre | null>(null);
   const [showOffreSheet, setShowOffreSheet] = useState(false);
@@ -239,8 +236,8 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   }, [userId, context.shopType]);
 
   useEffect(() => {
-    if (fitnessTab === 'abonnements') loadOffres();
-  }, [fitnessTab, loadOffres]);
+    if (activeCat === 'abonnements') loadOffres();
+  }, [activeCat, loadOffres]);
 
   const activeCatData = categories.find(c => c.id === activeCat);
   const filtered = products.filter(p => p.category === activeCat);
@@ -360,7 +357,13 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     ]);
   };
 
+  const FITNESS_BASE = ['formules', 'abonnements', 'produits'];
+
   const handleDeleteCat = (catId: string) => {
+    if (context.shopType === 'memberships' && FITNESS_BASE.includes(catId)) {
+      Alert.alert('Onglet fixe', 'Les onglets Formules, Abonnements et Produits sont permanents.');
+      return;
+    }
     const count = products.filter(p => p.category === catId).length;
     const doDelete = async () => {
       if (activeCat === catId) {
@@ -368,15 +371,21 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
         if (next) setActiveCat(next.id);
       }
       try {
-        await removeCategory(catId);
+        if (context.shopType === 'memberships') {
+          await purgeCategoryAndProducts(catId);
+        } else {
+          await removeCategory(catId);
+        }
       } catch {
-        Alert.alert('Erreur', 'Impossible de supprimer ce menu. Réessaie.');
+        Alert.alert('Erreur', 'Impossible de supprimer cet onglet. Réessaie.');
       }
     };
     if (count > 0) {
       Alert.alert(
-        'Supprimer ce menu ?',
-        `${count} ${itemLabel}${count > 1 ? 's' : ''} seront déplacés vers le premier menu restant.`,
+        'Supprimer cet onglet ?',
+        context.shopType === 'memberships'
+          ? `${count} produit${count > 1 ? 's' : ''} ser${count > 1 ? 'ont' : 'a'} supprimé${count > 1 ? 's' : ''} définitivement.`
+          : `${count} ${itemLabel}${count > 1 ? 's' : ''} seront déplacés vers le premier onglet restant.`,
         [
           { text: 'Annuler', style: 'cancel' },
           { text: 'Supprimer', style: 'destructive', onPress: doDelete },
@@ -699,71 +708,22 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
             {/* ── Ajouter un produit ───────────────────────────────────────── */}
             <AddMethodPicker
               label={addItemLabel}
-              onManuel={() => openAdd(context.shopType === 'memberships' ? 'formules' : undefined)}
-              onFicheGuidee={() => openFicheGuidee(context.shopType === 'memberships' ? 'formules' : undefined)}
+              onManuel={() => openAdd(activeCat)}
+              onFicheGuidee={() => openFicheGuidee(activeCat)}
             />
 
-            {/* ── Sélecteur d'onglets fitness (uniquement pour memberships) ── */}
-            {context.shopType === 'memberships' && (
-              <View style={styles.fitnessTabBar}>
-                {(['formules', 'abonnements', 'produits'] as const).map(tab => (
-                  <TouchableOpacity
-                    key={tab}
-                    style={[styles.fitnessTab, fitnessTab === tab && styles.fitnessTabActive]}
-                    onPress={() => setFitnessTab(tab)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.fitnessTabTxt, fitnessTab === tab && styles.fitnessTabTxtActive]}>
-                      {tab === 'formules' ? 'Formules' : tab === 'abonnements' ? 'Abonnements' : 'Produits'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+            {/* ── Onglets unifiés (un seul système pour tous les shop types) ── */}
+            <CategoryTabs
+              categories={categories}
+              active={activeCat}
+              onSelect={setActiveCat}
+              onDeleteCat={handleDeleteCat}
+            />
 
-            {/* ── Onglet Formules (existant) OU catalogue non-fitness ───────── */}
-            {(context.shopType !== 'memberships' || fitnessTab === 'formules') && (
+            {/* ── Contenu de l'onglet actif ───────────────────────────────── */}
+            {context.shopType === 'memberships' && activeCat === 'abonnements' ? (
               <>
-                <CategoryTabs
-                  categories={context.shopType === 'memberships'
-                    ? categories.filter(c => c.id !== 'produits')
-                    : categories}
-                  active={activeCat}
-                  onSelect={setActiveCat}
-                  onAddCat={addCategory}
-                  onDeleteCat={handleDeleteCat}
-                />
-                <SectionHead
-                  title={activeCatData?.label ?? ''}
-                  count={filtered.length}
-                  itemLabel={itemLabel}
-                />
-                {filtered.map(product => (
-                  <ProductRow
-                    key={product.id}
-                    product={product}
-                    promoInfo={promoMap[product.id]}
-                    onEdit={() => openEdit(product)}
-                    onToggleStock={async () => {
-                      try {
-                        await toggleStock(product.id);
-                      } catch {
-                        Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
-                      }
-                    }}
-                  />
-                ))}
-              </>
-            )}
-
-            {/* ── Onglet Abonnements (fitness uniquement) ───────────────────── */}
-            {context.shopType === 'memberships' && fitnessTab === 'abonnements' && (
-              <>
-                <SectionHead
-                  title="Offres d'abonnement"
-                  count={offres.length}
-                  itemLabel="offre"
-                />
+                <SectionHead title="Offres d'abonnement" count={offres.length} itemLabel="offre" />
                 {offresLoading ? (
                   <ActivityIndicator color={colors.accent} style={{ marginVertical: 20 }} />
                 ) : (
@@ -794,38 +754,28 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                   </TouchableOpacity>
                 )}
               </>
-            )}
-
-            {/* ── Onglet Produits (fitness uniquement) — réutilise le catalogue ─ */}
-            {context.shopType === 'memberships' && fitnessTab === 'produits' && (
+            ) : (
               <>
-                {(() => {
-                  const produitsFiltered = products.filter(p => p.category === 'produits');
-                  return (
-                    <>
-                      <SectionHead
-                        title="Produits"
-                        count={produitsFiltered.length}
-                        itemLabel="produit"
-                      />
-                      {produitsFiltered.map(product => (
-                        <ProductRow
-                          key={product.id}
-                          product={product}
-                          promoInfo={promoMap[product.id]}
-                          onEdit={() => openEdit(product)}
-                          onToggleStock={async () => {
-                            try {
-                              await toggleStock(product.id);
-                            } catch {
-                              Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
-                            }
-                          }}
-                        />
-                      ))}
-                    </>
-                  );
-                })()}
+                <SectionHead
+                  title={activeCatData?.label ?? ''}
+                  count={filtered.length}
+                  itemLabel={itemLabel}
+                />
+                {filtered.map(product => (
+                  <ProductRow
+                    key={product.id}
+                    product={product}
+                    promoInfo={promoMap[product.id]}
+                    onEdit={() => openEdit(product)}
+                    onToggleStock={async () => {
+                      try {
+                        await toggleStock(product.id);
+                      } catch {
+                        Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
+                      }
+                    }}
+                  />
+                ))}
               </>
             )}
 
@@ -1151,36 +1101,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addProdTxt: { color: colors.accent, fontFamily: fonts.title, fontSize: 14 },
-
-  // Onglets fitness
-  fitnessTabBar: {
-    flexDirection: 'row',
-    marginHorizontal: 18,
-    marginBottom: 4,
-    marginTop: 6,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 3,
-  },
-  fitnessTab: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  fitnessTabActive: {
-    backgroundColor: colors.accent,
-  },
-  fitnessTabTxt: {
-    color: colors.muted,
-    fontFamily: fonts.title,
-    fontSize: 12.5,
-  },
-  fitnessTabTxtActive: {
-    color: colors.bg,
-  },
 
   locBtn: {
     marginHorizontal: 18,
