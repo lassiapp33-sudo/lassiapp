@@ -74,6 +74,7 @@ export default function FicheGuideeSheet({
 
   const [saving, setSaving] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const scrollToField = () => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
 
   // Sections visibles en cascade
   const visibleSections = !sec1 ? 1 : !sec2 ? 2 : !sec3 ? 3 : !sec4 ? 4 : 5;
@@ -179,6 +180,7 @@ export default function FicheGuideeSheet({
               valeurSelectionnee={sec1}
               onSelectionner={v => { setSec1(v); setSec2(''); setSec3(''); setSec4(''); setDesc(''); }}
               placeholderLibre="Ex : Menu, Catalogue, Tarifs…"
+              onInputFocus={scrollToField}
             />
 
             {/* Section 2 */}
@@ -190,6 +192,7 @@ export default function FicheGuideeSheet({
                 valeurSelectionnee={sec2}
                 onSelectionner={v => { setSec2(v); setSec3(''); setSec4(''); setDesc(''); }}
                 placeholderLibre="Ex : Repas, Boisson, Dessert…"
+                onInputFocus={scrollToField}
               />
             )}
 
@@ -202,6 +205,7 @@ export default function FicheGuideeSheet({
                 valeurSelectionnee={sec3}
                 onSelectionner={v => { setSec3(v); setSec4(''); setDesc(''); }}
                 placeholderLibre="Ex : Burger, Tresses, Baguette…"
+                onInputFocus={scrollToField}
               />
             )}
 
@@ -214,6 +218,7 @@ export default function FicheGuideeSheet({
                 valeurSelectionnee={sec4}
                 onSelectionner={setSec4}
                 placeholderLibre="Saisir le prix exact…"
+                onInputFocus={scrollToField}
               />
             )}
 
@@ -232,6 +237,7 @@ export default function FicheGuideeSheet({
                   multiline
                   numberOfLines={3}
                   textAlignVertical="top"
+                  onFocus={scrollToField}
                 />
               </View>
             )}

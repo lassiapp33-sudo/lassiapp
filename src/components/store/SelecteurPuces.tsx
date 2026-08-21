@@ -42,7 +42,7 @@ export default function SelecteurPuces({
 
         <TouchableOpacity
           style={[s.puce, modeLibre && s.puceActive]}
-          onPress={() => setModeLibre(true)}
+          onPress={() => { setModeLibre(true); onInputFocus?.(); }}
         >
           <Text style={[s.puceText, modeLibre && s.puceTextActive]}>
             {modeLibre && texteLibre ? texteLibre : '✏️ Autre'}

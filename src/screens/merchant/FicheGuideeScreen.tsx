@@ -345,6 +345,7 @@ export default function FicheGuideeScreen({ onClose }: Props) {
                 placeholderTextColor="#6B6F9E"
                 multiline
                 textAlignVertical="top"
+                onFocus={scrollToField}
               />
             </View>
 
