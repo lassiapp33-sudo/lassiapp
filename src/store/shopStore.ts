@@ -105,22 +105,46 @@ const useShopStore = create<ShopState>()((set, get) => ({
       ]);
 
       // Dériver les catégories à partir des produits existants
-      const catIds = [...new Set(products.map(p => p.category))];
+      // Normalise les IDs pour éviter les doublons dus à des différences de casse/espaces
+      const toNormalId = (s: string) => s.trim().toLowerCase().replace(/\s+/g, '_');
+      const rawCatIds = products.map(p => p.category as string).filter(Boolean);
+      // Déduplique en normalisant (ex: "Formules" et "formules" → même entrée "formules")
+      const seenNorm = new Set<string>();
+      const catIds: string[] = [];
+      for (const raw of rawCatIds) {
+        const norm = toNormalId(raw);
+        if (!seenNorm.has(norm)) { seenNorm.add(norm); catIds.push(toNormalId(raw)); }
+      }
       const catMeta: Record<string, { label: string; emoji: string }> = {
-        petitdej: { label: 'Petit-déj', emoji: '🍳' },
-        boissons: { label: 'Boissons', emoji: '☕' },
-        plats: { label: 'Plats', emoji: '🍽' },
-        autres: { label: 'Autres', emoji: '📦' },
-        catalogue: { label: 'Catalogue', emoji: '📦' },
-        prestations: { label: 'Prestations', emoji: '✂️' },
-        formules: { label: 'Formules', emoji: '🏋️' },
-        produits: { label: 'Produits', emoji: '🛍️' },
+        petitdej:                  { label: 'Petit-déj',                emoji: '🍳' },
+        boissons:                  { label: 'Boissons',                  emoji: '☕' },
+        plats:                     { label: 'Plats',                     emoji: '🍽' },
+        autres:                    { label: 'Autres',                    emoji: '📦' },
+        catalogue:                 { label: 'Catalogue',                 emoji: '📦' },
+        prestations:               { label: 'Prestations',               emoji: '✂️' },
+        formules:                  { label: 'Formules',                  emoji: '📋' },
+        produits:                  { label: 'Produits',                  emoji: '🛍️' },
+        abonnements:               { label: 'Abonnements',               emoji: '🔄' },
+        tarif:                     { label: 'Tarif',                     emoji: '💰' },
+        carte_des_abonnements:     { label: 'Carte des abonnements',     emoji: '🗂️' },
+        catalogue_de_services:     { label: 'Catalogue de services',     emoji: '📋' },
+        programme:                 { label: 'Programme',                 emoji: '📅' },
+        liste_des_forfaits:        { label: 'Liste des forfaits',        emoji: '📝' },
+        seances_a_l_unite:         { label: 'Séances à l\'unité',        emoji: '🎯' },
+        coaching_personnel:        { label: 'Coaching personnel',        emoji: '💪' },
+        cours_collectifs:          { label: 'Cours collectifs',          emoji: '👥' },
+        supplements_&_nutrition:   { label: 'Suppléments & Nutrition',   emoji: '💊' },
+        programmes_speciaux:       { label: 'Programmes spéciaux',       emoji: '⭐' },
       };
+      // Label : capitalisé proprement si inconnu du catMeta
+      const toLabel = (id: string) =>
+        catMeta[id]?.label ??
+        id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
       const categories: StoreCategory[] =
         catIds.length > 0
           ? catIds.map(id => ({
               id,
-              label: catMeta[id]?.label ?? id,
+              label: toLabel(id),
               emoji: catMeta[id]?.emoji ?? '📦',
             }))
           : getDefaultCats(shop.shopType);

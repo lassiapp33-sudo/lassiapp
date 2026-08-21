@@ -96,14 +96,25 @@ export default function FicheGuideeScreen({ onClose }: Props) {
       .finally(() => setLoading(false));
   }, [sousCatId]);
 
-  // Helpers pour récupérer catId / sousCategorie au moment de publier
+  // Normalise un label en ID stable (minuscules, tirets bas)
+  const toId = (label: string) => label.trim().toLowerCase().replace(/\s+/g, '_');
+
+  // Cherche une catégorie existante par ID ou label (insensible à la casse)
+  const findCat = (label: string) =>
+    categories.find(c => c.id === label || c.label.toLowerCase() === label.toLowerCase());
+
   const getDestValues = (): { catId: string; sousCategorie: string } => {
-    if (dest.startsWith('cat:'))  return { catId: dest.slice(4), sousCategorie: '' };
-    if (dest.startsWith('type:')) return { catId: dest.slice(5), sousCategorie: '' };
-    if (dest.startsWith('sous:')) return { catId: dest.slice(5), sousCategorie: '' };
+    if (dest.startsWith('cat:')) return { catId: dest.slice(4), sousCategorie: '' };
+    if (dest.startsWith('type:') || dest.startsWith('sous:')) {
+      const label = dest.slice(5);
+      const existing = findCat(label);
+      return { catId: existing ? existing.id : toId(label), sousCategorie: '' };
+    }
     if (dest === 'libre') {
       const label = destLibreText.trim();
-      return { catId: label || categories[0]?.id || '', sousCategorie: '' };
+      if (!label) return { catId: categories[0]?.id ?? '', sousCategorie: '' };
+      const existing = findCat(label);
+      return { catId: existing ? existing.id : toId(label), sousCategorie: '' };
     }
     return { catId: categories[0]?.id ?? '', sousCategorie: '' };
   };
