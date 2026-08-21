@@ -508,7 +508,7 @@ export default function ReservationFlowScreen({ vipProfilId, vipNom, onBack, onS
                   </Text>
                   <View style={s.acompteExempleDivider} />
                   <Text style={s.acompteExempleTotal}>
-                    Tu paies sur place = <Text style={s.acompteNoticeHighlight}>12 000 F</Text> ✅
+                    Tu paies sur place = <Text style={s.acompteNoticeHighlight}>12 000 F</Text>
                   </Text>
                 </View>
               </View>
