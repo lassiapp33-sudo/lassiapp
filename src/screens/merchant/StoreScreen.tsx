@@ -357,13 +357,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     ]);
   };
 
-  const FITNESS_BASE = ['formules', 'abonnements', 'produits'];
-
   const handleDeleteCat = (catId: string) => {
-    if (context.shopType === 'memberships' && FITNESS_BASE.includes(catId)) {
-      Alert.alert('Onglet fixe', 'Les onglets Formules, Abonnements et Produits sont permanents.');
-      return;
-    }
     const count = products.filter(p => p.category === catId).length;
     const doDelete = async () => {
       if (activeCat === catId) {

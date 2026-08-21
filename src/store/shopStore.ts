@@ -150,17 +150,12 @@ const useShopStore = create<ShopState>()((set, get) => ({
       ];
 
       let categories: StoreCategory[];
-      if (shop.shopType === 'memberships') {
-        // Les 3 onglets de base sont TOUJOURS présents pour un shop fitness
-        const baseIds = new Set(['formules', 'abonnements', 'produits']);
-        const extras = catIds
-          .filter(id => !baseIds.has(id))
-          .map(id => ({ id, label: toLabel(id), emoji: catMeta[id]?.emoji ?? '📦' }));
-        categories = [...BASE_FITNESS, ...extras];
+      if (catIds.length > 0) {
+        // Dériver uniquement depuis les produits existants (tous types)
+        categories = catIds.map(id => ({ id, label: toLabel(id), emoji: catMeta[id]?.emoji ?? '📦' }));
       } else {
-        categories = catIds.length > 0
-          ? catIds.map(id => ({ id, label: toLabel(id), emoji: catMeta[id]?.emoji ?? '📦' }))
-          : getDefaultCats(shop.shopType);
+        // Boutique vide : onglets par défaut selon le type
+        categories = shop.shopType === 'memberships' ? BASE_FITNESS : getDefaultCats(shop.shopType);
       }
 
       // Si la boutique n'a pas de logo, utiliser la photo de profil du marchand
@@ -328,20 +323,9 @@ const useShopStore = create<ShopState>()((set, get) => ({
       const n = normId(raw);
       if (!seen.has(n)) { seen.add(n); normCatIds.push(n); }
     }
-    if (shopCtx === 'memberships') {
-      const BASE_FITNESS: StoreCategory[] = [
-        { id: 'formules',    label: 'Formules',    emoji: '📋' },
-        { id: 'abonnements', label: 'Abonnements', emoji: '🔄' },
-        { id: 'produits',    label: 'Produits',    emoji: '🛍️' },
-      ];
-      const baseSet = new Set(['formules', 'abonnements', 'produits']);
-      const extras = normCatIds
-        .filter(id => !baseSet.has(id))
-        .map(id => existing.find(c => c.id === id) ?? { id, label: id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), emoji: '📦' });
-      set({ categories: [...BASE_FITNESS, ...extras] });
-    } else if (normCatIds.length > 0) {
+    if (normCatIds.length > 0) {
       const fromProducts = normCatIds.map(
-        id => existing.find(c => c.id === id) ?? { id, label: id, emoji: '📦' },
+        id => existing.find(c => c.id === id) ?? { id, label: id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), emoji: '📦' },
       );
       const extras = existing.filter(c => !normCatIds.includes(c.id));
       set({ categories: [...fromProducts, ...extras] });
