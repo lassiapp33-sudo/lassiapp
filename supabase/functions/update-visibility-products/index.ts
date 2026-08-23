@@ -3,10 +3,14 @@ import { isUUID } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 
 // ─── Mise à jour des produits mis en avant d'un abonnement "Offre du Quartier" ─
-// Permet au marchand de changer quels produits sont affichés dans le carrousel
-// sans racheter un forfait. Le quota (nombre de produits achetés) est respecté.
+// Permet au marchand de changer quels éléments sont affichés dans le carrousel
+// sans racheter un forfait. Supporte les produits, abonnements fitness et terrains.
 
 const MAX_FEATURED_PRODUCTS = 50
+
+const SPORT_EMOJI: Record<string, string> = {
+  football: '⚽', basketball: '🏀', tennis: '🎾', volleyball: '🏐', autre: '🏟️',
+}
 
 Deno.serve(async (req) => {
   const CORS = corsHeaders(req)
@@ -66,82 +70,99 @@ Deno.serve(async (req) => {
 
     if (!sub) return json({ error: 'Aucun abonnement Offre du Quartier actif trouvé' }, 404)
 
-    // Pas de cap strict : si allProducts=true, tout est éligible.
-    // Si allProducts=false, on garde le quota d'origine (slots achetés).
     const uniqueIds = Array.from(new Set(productIds as string[]))
 
-    // ⑥ Vérifier que tous les produits appartiennent à la boutique
-    const { data: ownedProducts } = await admin
-      .from('products')
-      .select('id')
-      .eq('shop_id', shop.id)
-      .in('id', uniqueIds)
+    // ⑤ Vérifier que tous les IDs appartiennent au marchand (produit, abonnement fitness, ou terrain)
+    const [{ data: ownedProducts }, { data: ownedAbonnements }, { data: ownedTerrains }] = await Promise.all([
+      admin.from('products')
+        .select('id, name, price, emoji, photo_url')
+        .eq('shop_id', shop.id)
+        .in('id', uniqueIds),
+      admin.from('fitness_abonnement_offres')
+        .select('id, nom, prix')
+        .eq('prestataire_id', user.id)
+        .in('id', uniqueIds),
+      admin.from('terrains')
+        .select('id, nom, prix_horaire, sport_type')
+        .eq('prestataire_id', user.id)
+        .in('id', uniqueIds),
+    ])
 
-    if (!ownedProducts || ownedProducts.length !== uniqueIds.length) {
-      return json({ error: "Un ou plusieurs produits n'appartiennent pas à votre boutique" }, 400)
+    type ProductRow = { id: string; name: string; price: number; emoji: string; photo_url: string }
+    type AboRow    = { id: string; nom: string; prix: number }
+    type TerrainRow = { id: string; nom: string; prix_horaire: number; sport_type: string }
+
+    const productMap   = new Map((ownedProducts   ?? []).map((p: ProductRow)  => [p.id, p]))
+    const aboMap       = new Map((ownedAbonnements ?? []).map((a: AboRow)     => [a.id, a]))
+    const terrainMap   = new Map((ownedTerrains   ?? []).map((t: TerrainRow)  => [t.id, t]))
+
+    const foundCount = productMap.size + aboMap.size + terrainMap.size
+    if (foundCount !== uniqueIds.length) {
+      return json({ error: "Un ou plusieurs éléments n'appartiennent pas à votre boutique" }, 400)
     }
 
-    // ⑦ Mettre à jour l'abonnement (passe all_products à false si sélection précise)
+    // ⑥ Mettre à jour l'abonnement
     const { error: subError } = await admin
       .from('visibility_subscriptions')
       .update({ product_id: uniqueIds[0] ?? null, product_ids: uniqueIds, all_products: false })
       .eq('id', sub.id)
     if (subError) throw subError
 
-    // ⑧ Synchroniser shops.featured_product_ids
+    // ⑦ Synchroniser shops.featured_product_ids (produits uniquement pour la bannière promo)
+    const featuredProductIds = uniqueIds.filter(id => productMap.has(id))
     const { error: shopError } = await admin
       .from('shops')
       .update({
-        featured_product_id:   uniqueIds[0] ?? null,
-        featured_product_ids:  uniqueIds,
+        featured_product_id:   featuredProductIds[0] ?? null,
+        featured_product_ids:  featuredProductIds,
         featured_all_products: false,
         is_featured:           true,
       })
       .eq('id', shop.id)
     if (shopError) throw shopError
 
-    // ⑨ Mettre à jour le carrousel "Offre du Quartier" (même source que les récompenses classement)
-    const { data: prodDetails } = await admin
-      .from('products')
-      .select('id, name, price, emoji, photo_url')
-      .in('id', uniqueIds)
+    // ⑧ Mettre à jour le carrousel "Offre du Quartier" (best-effort)
+    const rows = uniqueIds
+      .map((id, index) => {
+        const base = {
+          prestataire_id: user.id,
+          rang_prestataire: null as null,
+          ordre:          index,
+          periode:        'paid',
+          est_actif:      true,
+          is_paid_pack:   true,
+        }
 
-    if (prodDetails && prodDetails.length > 0) {
-      // Supprimer les anciennes entrées payantes du marchand
-      await admin
-        .from('carrousel_offre_quartier')
+        if (productMap.has(id)) {
+          const p = productMap.get(id) as ProductRow
+          const imageUrl = (typeof p.photo_url === 'string' && p.photo_url.startsWith('http'))
+            ? p.photo_url
+            : (p.emoji ?? '')
+          return { ...base, product_id: id, terrain_id: null, abonnement_id: null, nom: p.name, prix: p.price, image_url: imageUrl }
+        }
+        if (aboMap.has(id)) {
+          const a = aboMap.get(id) as AboRow
+          return { ...base, product_id: null, terrain_id: null, abonnement_id: id, nom: a.nom, prix: a.prix, image_url: '🏋️' }
+        }
+        if (terrainMap.has(id)) {
+          const t = terrainMap.get(id) as TerrainRow
+          const emoji = SPORT_EMOJI[t.sport_type] ?? '🏟️'
+          return { ...base, product_id: null, terrain_id: id, abonnement_id: null, nom: t.nom, prix: t.prix_horaire, image_url: emoji }
+        }
+        return null
+      })
+      .filter(Boolean)
+
+    if (rows.length > 0) {
+      await admin.from('carrousel_offre_quartier')
         .delete()
         .eq('prestataire_id', user.id)
         .eq('is_paid_pack', true)
+        .catch(() => null)
 
-      // Insérer les nouvelles entrées
-      const rows = uniqueIds
-        .map((id, index) => {
-          const p = prodDetails.find((pr: { id: string }) => pr.id === id)
-          if (!p) return null
-          const imageUrl =
-            typeof (p as { photo_url?: string }).photo_url === 'string' &&
-            (p as { photo_url: string }).photo_url.startsWith('http')
-              ? (p as { photo_url: string }).photo_url
-              : ((p as { emoji?: string }).emoji ?? '')
-          return {
-            prestataire_id: user.id,
-            product_id:     id,
-            nom:            (p as { name: string }).name,
-            prix:           (p as { price: number }).price,
-            image_url:      imageUrl,
-            rang_prestataire: null,
-            ordre:          index,
-            periode:        'paid',
-            est_actif:      true,
-            is_paid_pack:   true,
-          }
-        })
-        .filter(Boolean)
-
-      if (rows.length > 0) {
-        await admin.from('carrousel_offre_quartier').insert(rows)
-      }
+      await admin.from('carrousel_offre_quartier')
+        .insert(rows)
+        .catch(() => null)
     }
 
     return json({ status: 'updated', productIds: uniqueIds })

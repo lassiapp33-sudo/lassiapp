@@ -295,9 +295,16 @@ supabase functions deploy [nom-function]
 |---|---|---|
 | Splash seamless (assets déjà dans le repo) | `app.config.js` → `expo-splash-screen` plugin | ⏳ Prêt — inclure au build |
 | **Icône agrandie** : L + aiguille ×1.9 plus grands (crop-zoom source 2020×2020, CROP=880) — `assets/icon.png` + `assets/adaptive-icon.png` déjà régénérés | `scripts/generate-icon.mjs` (Sharp) | ⏳ Prêt — nécessite rebuild natif (ne passe PAS en OTA) |
+| **🔔 PUSH iOS** : credentials APNs configurés dans EAS (clé `8B2UX9XA8J`, team `8DH7238995`) — le binaire aura `aps-environment:production` signé → tokens iOS fonctionnels | Automatique via EAS — aucune action code requise | ⏳ Build seul corrige le bug |
+
+### Après le build iOS — vérifier push
+1. Installer TestFlight, ouvrir l'app 30s
+2. Vérifier `push_log` (Supabase Dashboard → Table Editor) → `status='token_saved'` doit apparaître
+3. Si `device_token_error` toujours présent → voir **Section 20** pour diagnostic
 
 ### Commande de build
 ```bash
+eas build --platform ios --profile production
 eas build --platform android --profile production
 ```
 
@@ -571,6 +578,484 @@ L'autolinking Expo (`expo-autolinking-settings`) inclura ML Kit automatiquement 
 
 ---
 
+---
+
+## 19. MÉTHODOLOGIE PAIEMENTS — DÉMARCHE UNIVERSELLE OM → WAVE (2026-08-21)
+
+> **Section de référence.** Quand on fait Wave, lire ici d'abord. Même consignes, même résultat attendu — seul l'API change.
+
+---
+
+### 19.1 Vue d'ensemble — ce qu'on a fait pour OM sur chaque catégorie
+
+| Catégorie | EF création | Table créée | Webhook | Reversement |
+|---|---|---|---|---|
+| Commandes simples | `create-payment` | `payment_intents` | `webhook-payment` | `process-payouts` (payout_queue) |
+| Abonnements fitness | `create-fitness-payment` | `fitness_abonnements_clients` | `webhook-payment` | `process-payouts` (payout_queue) |
+| Terrains | `create-terrain-payment` | `reservations_terrain` | `verify-terrain-payment` + `webhook-payment` | `terrainPayout.ts` |
+| Pack visibilité | `create-visibility-payment` | `visibility_subscriptions` | `verify-visibility-payment` | Aucun (LASSI garde) |
+
+---
+
+### 19.2 La démarche identique pour chaque catégorie (OM)
+
+**ÉTAPE 1 — Edge Function création (backend)**
+- Reçoit le montant + identifiants (clientId, prestataireId, typeService)
+- Calcule commission LASSI (1% standard, 2% VIP)
+- Crée un enregistrement en statut **pending/en_attente** dans la table cible
+- Appelle l'API OM : `POST /api/eWallet/v4/qrcode` avec `amount`, `orderId`, `notifUrl`
+- Retourne `{ paymentUrl, qrCode, [entitéId] }` à l'app
+
+**ÉTAPE 2 — App mobile (frontend)**
+- Affiche le QR code dès que `result.qrCode` est non-vide (**toujours**, fallback garanti)
+- Ouvre l'app OM : `Linking.openURL(result.paymentUrl)` — **sans `canOpenURL` avant** (Android 11+ bug)
+- Affiche un bouton "J'ai payé — vérifier" pour déclencher la vérification manuelle
+- Ne jamais bloquer sur le deeplink : le QR code est toujours le fallback
+
+**ÉTAPE 3 — Webhook OM (backend)**
+- OM appelle `notifUrl` après paiement
+- L'EF vérifie le `secret` dans les query params (protection)
+- Idempotence : `external_event_id` UNIQUE dans `payment_logs` — ignore les doublons
+- Confirme l'enregistrement (`status = 'active'` / `statut = 'confirme'` / `status = 'new'`)
+- Insère dans `payout_queue` si c'est un flux avec reversement au prestataire
+
+**ÉTAPE 4 — Reversement au prestataire (backend)**
+- `process-payouts` (pg_cron toutes les 2 min) → lit `payout_queue` → Cash In OM
+- Notification push + in-app après reversement réussi
+- `payout_queue.statut = 'paid'` après succès
+
+**ÉTAPE 5 — Vérification depuis l'app**
+- `verifyPayment(id)` → lit directement la DB (pas une EF) — le webhook a déjà fait le travail
+- Affiche le résultat à l'utilisateur
+
+---
+
+### 19.3 Les invariants qui ne changent JAMAIS (OM ou Wave)
+
+| Invariant | Règle |
+|---|---|
+| **Idempotence** | `external_event_id` UNIQUE dans `payment_logs`. Jamais supprimer cette contrainte. |
+| **Pending d'abord** | Toujours créer l'enregistrement en statut pending AVANT d'appeler l'API paiement |
+| **QR visible toujours** | Afficher le QR code indépendamment du deeplink — jamais conditionner à l'absence de paymentUrl |
+| **Pas de `canOpenURL`** | `Linking.openURL()` direct — `canOpenURL` bloque Android 11+ pour les schemes custom |
+| **WAVE_ENABLED flag** | Toutes les UIs de paiement doivent vérifier ce flag avant d'afficher Wave |
+| **SERVICE_ROLE_KEY** | Jamais dans React Native. Uniquement dans les Edge Functions. |
+| **Notification catch** | Jamais `catch {}` silencieux sur les notifications — logger toujours l'erreur |
+| **CRON_SECRET sync** | 3 endroits simultanément : `supabase secrets set`, SQL cron header, Vault Supabase |
+| **Notifications type** | Vérifier la contrainte CHECK sur `notifications.type` avant d'ajouter un nouveau type |
+| **Deeplink scheme** | Toujours `lassiapp://` dans APP_BASE_URL — jamais `lassi://` |
+
+---
+
+### 19.4 Ce qu'on change pour Wave (même consignes, API différente)
+
+**Différences API Wave vs OM :**
+
+| Aspect | Orange Money | Wave |
+|---|---|---|
+| Endpoint paiement | `POST /api/eWallet/v4/qrcode` | `POST /v1/checkout/sessions` |
+| Ce que retourne l'API | `{ paymentUrl, qrCode }` | `{ wave_launch_url }` |
+| QR code intégré | Oui (base64 PNG) | Non — Wave ouvre son propre checkout dans le browser |
+| Deeplink | `orangemoney://` (QR + deeplink) | URL Wave dans le browser natif |
+| Authentification | Token Bearer OM (rotation) | `Authorization: Bearer ${WAVE_API_KEY}` (clé statique) |
+| Webhook confirmation | `notifUrl` dans le body | URL configurée dans le portail Wave |
+| Request signing | Non requis | Requis (HMAC signature sur chaque requête) |
+| Reversement | Cash In API OM | B2C Transfer Wave (`/v1/b2c/transfer-money`) |
+| IP whitelist | Non | Oui — bloqué jusqu'à IP statique Supabase Pro |
+| Status actuel | ✅ PROD | ⏳ En attente IP statique |
+
+**Pour chaque catégorie (commandes, fitness, terrain, visibilité) — démarche Wave :**
+1. Dupliquer l'EF OM correspondante → remplacer l'appel OM par l'appel Wave checkout
+2. L'app reçoit `wave_launch_url` → `Linking.openURL(wave_launch_url)` (même pattern, pas de QR code)
+3. Wave redirige vers `APP_BASE_URL/payment/success` ou `failure` après paiement
+4. Le webhook Wave (ou redirect callback) confirme côté serveur
+5. Reversement Wave : appel `/v1/b2c/transfer-money` avec signature HMAC
+6. Vérifier `WAVE_ENABLED` dans `features.ts` avant toute UI Wave
+
+**Ce qui ne change pas pour Wave :**
+- Structure `payment_intents` / `payout_queue` / tables métier
+- Logique de commission (1% / 2%)
+- Statuts (`pending` → `confirme` → payout)
+- Notifications push + in-app
+- Idempotence webhook
+- Bouton "J'ai payé — vérifier"
+- CRON_SECRET sync sur 3 endroits
+
+---
+
+### 19.5 Checklist pour intégrer Wave sur une nouvelle catégorie
+
+```
+[ ] 1. Créer EF `create-[categorie]-wave-payment`
+        → POST /v1/checkout/sessions avec wave_launch_url_lifetime_secs + success_url
+        → success_url = APP_BASE_URL/payment/success?type=[categorie]&id=[entiteId]
+[ ] 2. Enregistrement pending en DB AVANT l'appel Wave (même patron OM)
+[ ] 3. Ajouter request signing HMAC sur chaque requête Wave (clé WAVE_SECRET_KEY)
+[ ] 4. App : Linking.openURL(wave_launch_url) — vérifier WAVE_ENABLED avant
+[ ] 5. Webhook Wave (ou redirect) → confirme en DB + insère payout_queue si applicable
+[ ] 6. Reversement : /v1/b2c/transfer-money — IP whitelist requise (Supabase Pro)
+[ ] 7. Notification push + in-app après reversement
+[ ] 8. Vérification depuis l'app = lecture DB directe (pas EF)
+[ ] 9. Test complet : paiement → webhook → reversement → notification
+[ ] 10. Activer : WAVE_ENABLED = true dans features.ts + eas update prod
+```
+
+---
+
+### 19.6 Phrase secrète d'activation Wave
+
+Quand Pauline Mendy dit **"Pauline c'est bon"** → WAVE est prêt côté Wave (IP whitelist OK) :
+1. Ouvrir `Lassi/src/config/features.ts`
+2. `WAVE_ENABLED = true`
+3. `VISIBILITY_PACKS_ENABLED = true`
+4. `eas update --channel production --message "activate Wave + visibility packs"`
+
+**Prérequis avant d'activer :**
+- Supabase Pro souscrit (IP dédiée générée)
+- IP Supabase ajoutée dans le portail Wave Business → Settings → IP Whitelist
+- Tous les secrets Wave présents : `WAVE_API_KEY`, `WAVE_SECRET_KEY`, `WAVE_WEBHOOK_SECRET`
+
+---
+
+### 19.7 Terrain — flux complet et correctifs validés prod (2026-08-22)
+
+> Cette section documente tout ce qu'on a fait pour OM sur la catégorie **Terrain** (basket/football).  
+> Quand on activera Wave → dupliquer chaque point en remplaçant l'API OM par Wave.
+
+---
+
+#### A. Architecture EF terrain (3 Edge Functions, pas 2)
+
+Les terrains ont un flux différent des commandes/fitness car le prestataire doit **valider physiquement** via QR.
+
+| EF | Rôle | Appelé par |
+|---|---|---|
+| `create-terrain-payment` | Crée réservation `en_attente` → appelle OM QR API → retourne `{ reference, paymentUrl, qrCode }` | App mobile (client clique "Payer") |
+| `verify-terrain-payment` | Vérifie auprès de l'API OM si le paiement est passé → si oui, met `statut = 'paye'`, génère `receipt_code`, déclenche reversement | App mobile (client clique "J'ai payé — Vérifier") + Webhook OM |
+| `validate-terrain-receipt` | Prestataire scanne le QR client → RPC `verify_terrain_receipt` → pose `validated_at` → envoie notif client | App mobile (prestataire) |
+
+**Différence clé vs commandes/fitness :** `verify-terrain-payment` fait office à la fois de vérification manuelle ET de webhook handler. L'idempotence est assurée par la vérification `statut = 'paye'` en DB avant tout appel OM.
+
+---
+
+#### B. Idempotence dans `verify-terrain-payment`
+
+```typescript
+// 1. Vérifier DB d'abord — si déjà payé, retourner immédiatement
+if (resaCheck.statut === 'paye') {
+  return json({ paid: true, receipt_code: resaCheck.receipt_code });
+}
+// 2. Seulement ensuite appeler l'API OM
+```
+
+**Règle :** Ce pattern s'applique à TOUTES les EF de vérification Wave aussi. Jamais appeler l'API opérateur si la DB dit déjà confirmé.
+
+---
+
+#### C. Retry côté app (nouveau invariant validé en prod)
+
+**Problème :** Le client clique "J'ai payé — Vérifier" avant que l'API OM ait enregistré le paiement → `paid: false` → alerte trop tôt.
+
+**Fix appliqué dans `TerrainPaymentScreen.handleVerify` :**
+```typescript
+const MAX_ATTEMPTS = 3;
+for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+  if (attempt > 0) await new Promise<void>(r => setTimeout(r, 3000));
+  const result = await verifyTerrainPaymentById(...);
+  if (result.paid) { onSuccess(result.receiptCode ?? ''); return; }
+}
+// Afficher l'alerte seulement après 3 échecs (~9s)
+Alert.alert('Paiement non confirmé', '...');
+```
+
+**À appliquer pour Wave identiquement.** Wave peut aussi avoir un délai entre le paiement et la confirmation API.
+
+---
+
+#### D. Type de notification `reservation_terrain` — exclusion du modal bloquant
+
+**Problème :** La notification de validation QR (`type: 'reservation_terrain'`) ouvrait un modal plein écran qui bloquait l'utilisateur.
+
+**Fix dans `NotifCardModal.tsx` ligne 70 :**
+```typescript
+if (!current || current.type === 'order' || current.type === 'msg'
+    || current.type === 'ann' || current.type === 'reservation_terrain') return null;
+```
+
+**Règle :** Tout nouveau type de notification terrain/fitness doit être ajouté à cette liste pour éviter le modal bloquant. Les seuls types qui méritent le modal plein écran : `vip`, `pay`, `fitness`, `livraison`.
+
+---
+
+#### E. Scoring classement — architecture directe SQL, PAS de trigger
+
+**Problème initial :** On a créé un trigger `trg_reservations_terrain_scoring` qui appelait `ajouter_points_commande()`. Cette fonction n'existe PAS dans le schéma.
+
+**Vraie solution (migration `20260822010000`) :** Le scoring terrain se fait directement dans les CTEs des fonctions classement via un `SELECT` sur `reservations_terrain` — pas besoin de trigger. Trigger **supprimé** en prod.
+
+```sql
+-- SUPPRIMER ce trigger (appelle une fonction inexistante) :
+DROP TRIGGER IF EXISTS trg_reservations_terrain_scoring ON reservations_terrain;
+DROP FUNCTION IF EXISTS trg_scoring_terrain_valide();
+
+-- À la place, les fonctions calcul_classements_semaine/mois ont un CTE :
+cmds_terrain AS (
+  SELECT s.id AS shop_id, rt.client_id
+  FROM reservations_terrain rt
+  JOIN shops s ON s.merchant_id = rt.prestataire_id
+  WHERE rt.statut IN ('paye', 'utilise')   -- ← INCLUT les réservations validées QR
+    AND rt.created_at >= v_week_start AND rt.created_at < v_week_end
+)
+```
+
+**Règle CRITIQUE :** `statut IN ('paye', 'utilise')` — JAMAIS `statut = 'paye'` seul. Après scan QR, le statut passe à `'utilise'`. Si on filtre uniquement `'paye'`, les réservations validées disparaissent du scoring → score figé pour tous les terrains.
+
+**Règle :** Cette architecture directe (CTE dans les fonctions) s'applique à tous les nouveaux types de service. Wave ne change rien — même CTEs, même logique.
+
+---
+
+#### F. Multi-terrains — sélecteur côté client
+
+**Problème :** Quand un prestataire a plusieurs terrains, `ShopScreen.tsx` affichait uniquement `terrains[0]` (hardcodé).
+
+**Fix — `ShopScreen.tsx` :**
+```tsx
+const [selectedTerrainIdx, setSelectedTerrainIdx] = useState(0);
+// ...
+{terrains.length > 1 && (
+  <View style={styles.slotTerrainPicker}>
+    {terrains.map((t, i) => (
+      <TouchableOpacity key={t.id} onPress={() => setSelectedTerrainIdx(i)}>
+        <Text>{SPORT_EMOJI[t.sport_type]} {t.nom}</Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+)}
+<ShopTerrainSlotPicker terrain={terrains[selectedTerrainIdx] ?? terrains[0]} ... />
+```
+
+**Règle :** `getTerrainsByMerchant` retourne tous les terrains du prestataire (sans filtre `actif`). Le client ne voit que ceux avec `actif = true` via RLS. L'UI doit gérer le cas N terrains.
+
+---
+
+#### G. RLS terrains (rappel)
+
+```sql
+"terrains_public_read"       : FOR SELECT USING (actif = true)         -- clients
+"terrains_prestataire_manage": FOR ALL    USING (auth.uid() = prestataire_id)  -- propriétaire
+```
+
+`prestataire_id` sur la table `terrains` = `profiles.id` (pas `shops.id`). Important pour les triggers scoring.
+
+---
+
+#### H. NotifPopupBanner slide-top pour terrain (2026-08-22) ✅
+
+**Ce qu'on a fait :** En plus de la notification push classique, les terrains déclenchent maintenant la bannière slide-top (comme "À la une").
+
+**Fichiers modifiés :**
+- `NotifPopupBanner.tsx` — ajout type `reservation_terrain` dans `COLOR`, `BG`, condition d'affichage, bouton "Voir", handler `handleTerrainAction` avec prop `onVoirTerrain`
+- `MerchantNavigator.tsx` → `shouldShowCard` : ajouter `|| type === 'reservation_terrain'`
+- `HomeNavigator.tsx` → `shouldShowCard` : idem
+- `App.tsx` → `<NotifPopupBanner onVoirTerrain={(terrainId) => setPendingNav({ type: 'terrain_resa', terrainId })} />`
+
+**Quand :**
+1. LASSI reverse au prestataire (étape 5 du flux) → bannière prestataire : "Nouvelle réservation à valider"
+2. Prestataire valide QR (étape 6 du flux) → bannière client : "Réservation confirmée"
+
+**Règle :** Pour tout nouveau type de notification (`type='xxx'`), ajouter dans ces 4 endroits + dans la contrainte CHECK de `notifications.type`.
+
+---
+
+#### I. Classements live-first (correctif 2026-08-22) ✅
+
+**Problème :** `ClassementScreen.tsx` lisait le snapshot DB en premier. Si une migration force un recalcul mi-semaine, le snapshot est créé et devient la source → scores figés même après nouveaux achats.
+
+**Fix dans `ClassementScreen.tsx` :**
+```typescript
+// AVANT (snapshot-first → fige les scores après migration mi-semaine)
+data = await getClassementSousCategorie(classeKey, getPeriodeSemaine());
+if (data.length === 0) data = await getClassementLiveSousCategorie(classeKey);
+
+// APRÈS (live-first → toujours frais)
+data = await getClassementLiveSousCategorie(classeKey);
+if (data.length === 0) data = await getClassementSousCategorie(classeKey, getPeriodeSemaine());
+```
+
+**Appliqué sur :** "Ma catégorie" (hebdo) ET "National" (mensuel). "Mon quartier" était déjà live-first.
+
+**Règle :** Les snapshots servent uniquement d'archive et de fallback de secours. Ne jamais les mettre en lecture primaire pour l'affichage temps réel.
+
+---
+
+#### J. Checklist Wave pour la catégorie Terrain
+
+```
+[ ] 1. Dupliquer create-terrain-payment → remplacer POST OM QR par POST Wave /v1/checkout/sessions
+        → wave_launch_url_lifetime_secs = 3600
+        → success_url = APP_BASE_URL/payment/success?type=terrain&id={reservationId}
+[ ] 2. Linking.openURL(wave_launch_url) — pas de QR code Wave (Wave ouvre son propre browser)
+        → Toujours afficher le bouton "J'ai payé — Vérifier" comme fallback
+[ ] 3. verify-terrain-payment : ajouter branche Wave (chercher transaction via /v1/transactions)
+        → Status Wave à accepter : 'succeeded'
+        → Garder le même retry 3×3s côté app
+[ ] 4. Webhook Wave → même pattern idempotence (vérifier statut DB avant tout)
+[ ] 5. Reversement Wave : /v1/b2c/transfer-money avec signature HMAC
+        → Même helper terrainPayout.ts, juste changer l'appel API
+[ ] 6. Vérifier WAVE_ENABLED avant d'afficher le bouton Wave dans TerrainPaymentScreen
+[ ] 7. Notification type 'reservation_terrain' : déjà câblé bannière slide-top + push + exclu modal bloquant ✅
+[ ] 8. Scoring : CTEs classement déjà en place avec statut IN ('paye','utilise'), indépendant du moyen de paiement ✅
+[ ] 9. Multi-terrains : sélecteur déjà en place ✅
+[ ] 10. Classements live-first déjà en place ✅
+[ ] 11. Test complet : payer Wave → verify (3 retries) → receipt_code → QR scan prestataire → notif client bannière
+```
+
+---
+
+## 20. PUSH NOTIFICATIONS — ÉTAT COMPLET & CHECKLIST BUILD (2026-08-23)
+
+> **Lire AVANT tout rebuild iOS/Android.** Tout ce qui a été configuré le 23/08/2026 pour que les notifs push arrivent sur écran verrouillé.
+
+---
+
+### 20.1 Architecture push LASSI (2 couches)
+
+| Couche | Mécanisme | État |
+|--------|-----------|------|
+| **In-app** | Supabase Realtime WebSocket → `useRealtimeNotifications` | ✅ Toujours fonctionnel |
+| **Background / Lock screen** | Edge Functions → `sendPushToUser` → Expo Push API → APNs/FCM → device | ✅ Android OK / iOS : rebuild requis |
+
+---
+
+### 20.2 Credentials configurés dans EAS (via API GraphQL le 23/08/2026)
+
+#### iOS — APNs Push Key ✅ CONFIGURÉ
+| Champ | Valeur |
+|-------|--------|
+| Key ID | `8B2UX9XA8J` |
+| Fichier | `c:\Users\USER\Downloads\AuthKey_8B2UX9XA8J.p8` |
+| Team ID | `8DH7238995` (ABY BABEL SOW — Individual) |
+| EAS Apple Team ID (interne) | `71e04e35-91dc-4a19-8af1-303af2429932` |
+| EAS Push Key ID (interne) | `688d9b25-c9b5-4125-b779-0beb05b5130e` |
+| Associé à | `com.lassiapp.lassiapp` — credentials `52bb213d-60c9-4fe4-a10a-8a37643a85c0` |
+| Vérifié sur Apple Dev Portal | aps-environment=production ✅, App ID push activé ✅ |
+
+**Comment a-t-on configuré ?** Via API EAS GraphQL (pas `eas credentials` — ne fonctionne pas sans terminal interactif avec le compte Apple owner). Mutations utilisées :
+- `appleTeam.createAppleTeam` → créer l'équipe Apple dans EAS
+- `applePushKey.createApplePushKey` → uploader la clé `.p8`
+- `iosAppCredentials.setPushKey` → lier la clé à l'app
+
+#### Android — FCM v1 Service Account ✅ CONFIGURÉ
+| Champ | Valeur |
+|-------|--------|
+| Fichier | `c:\Users\USER\Desktop\lassiapp\KEY\lassiapp-firebase-adminsdk-fbsvc-d3f10adf25.json` |
+| Project ID Firebase | `lassiapp` |
+| Client email | `firebase-adminsdk-fbsvc@lassiapp.iam.gserviceaccount.com` |
+| EAS GSA Key ID (interne) | `21b65d1d-aa56-438f-a2e3-bb7f6e97ac3a` |
+| Associé à | `com.lassiapp.lassiapp` ET `com.lassiapp.LassiApp` |
+
+**Comment ?** Via API EAS GraphQL, mutations :
+- `googleServiceAccountKey.createGoogleServiceAccountKey`
+- `androidAppCredentials.setGoogleServiceAccountKeyForFcmV1`
+
+**Test Android :** `status: "ok"` sur 2 tickets Expo → push Android **FONCTIONNE** ✅
+
+---
+
+### 20.3 Pourquoi iOS ne fonctionne pas encore (build 18)
+
+**Root cause identifiée par diagnostic Supabase (table `push_log`) :**
+```
+getDevicePushTokenAsync timeout 10s
+```
+
+iOS ne retourne jamais le token APNs natif. Cause : le **binaire du build 18 (22/08/2026) n'a pas l'entitlement `aps-environment` correctement signé dans sa signature de code** (le `.entitlements` n'avait pas été généré avec push au moment du build, avant qu'on configure la clé APNs dans EAS).
+
+Pourtant :
+- Le provisioning profile `4V89HC89RH` A `aps-environment: production` ✅ (vérifié via ASC API)
+- L'App ID `com.lassiapp.lassiapp` a PUSH_NOTIFICATIONS activé ✅
+
+**Solution : REBUILD iOS obligatoire.** Aucun OTA ne peut corriger l'entitlement dans le binaire natif.
+
+Avec les credentials configurés aujourd'hui, le prochain build EAS va :
+1. Régénérer le provisioning profile avec push
+2. Signer le binaire AVEC `aps-environment: production`
+3. Les tokens iOS s'enregistreront immédiatement
+
+---
+
+### 20.4 Infrastructure de diagnostic créée (23/08/2026)
+
+#### Table `push_log`
+Migration : `supabase/migrations/20260823190000_push_log_table.sql`
+Colonnes : `user_id, platform, status, token_prefix, error_msg, created_at`
+Rôle : reçoit les événements de `usePushToken.ts` pour diagnostiquer à distance sans Xcode
+
+Statuts loggés par le hook :
+- `hook_started` → hook lancé
+- `permission_granted` / `permission_denied` → résultat iOS permission
+- `device_token_ok` / `device_token_error` → résultat `getDevicePushTokenAsync`
+- `expo_token_error` → échec `getExpoPushTokenAsync`
+- `token_saved` → token enregistré en DB avec succès
+- `error` / `fatal_error` → erreur inattendue
+
+#### Edge Functions déployées
+- `push-log` : reçoit les diagnostics depuis l'app (no-verify-jwt)
+- `test-push` : envoie un push de test à un userId (no-verify-jwt, pas d'auth requise)
+
+#### Requête de vérification push (à utiliser après rebuild)
+```powershell
+$key = "eyJ...service_role_key..."
+Invoke-RestMethod -Uri "https://tsdemraszwtbzgtyjzum.supabase.co/rest/v1/push_log?select=*&order=created_at.desc&limit=10" -Headers @{Authorization="Bearer $key"; apikey=$key} | ConvertTo-Json -Depth 3
+```
+
+---
+
+### 20.5 ⚡ CHECKLIST OBLIGATOIRE — Prochain build iOS (inclure push)
+
+> Ces étapes sont déjà faites côté EAS credentials. Le build EAS va les utiliser automatiquement.
+
+```
+[x] APNs Key 8B2UX9XA8J uploadée dans EAS ✅
+[x] Apple Team 8DH7238995 enregistré dans EAS ✅
+[x] Clé liée à com.lassiapp.lassiapp dans EAS ✅
+[x] App ID push notifications activé sur Apple Dev Portal ✅
+[x] Provisioning profile 4V89HC89RH actif avec aps-environment:production ✅
+
+[ ] LANCER : eas build --platform ios --profile production
+[ ] Après build : soumettre à TestFlight via eas submit ou App Store Connect
+[ ] Après installation TestFlight : ouvrir l'app 30s → vérifier push_log → status doit être "token_saved"
+[ ] Tester push end-to-end : POST /functions/v1/test-push → status "sent" sur iOS
+```
+
+---
+
+### 20.6 Commande de test push (après rebuild)
+
+```powershell
+# Tester le push vers un utilisateur spécifique
+Invoke-RestMethod -Uri "https://tsdemraszwtbzgtyjzum.supabase.co/functions/v1/test-push" -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"userId":"<USER_ID>"}' | ConvertTo-Json -Depth 5
+
+# Vérifier les tokens enregistrés pour tous les users (limite 10)
+$key="<SERVICE_ROLE_KEY>"
+Invoke-RestMethod -Uri "https://tsdemraszwtbzgtyjzum.supabase.co/rest/v1/push_tokens?select=user_id,platform,updated_at&order=updated_at.desc&limit=10" -Headers @{Authorization="Bearer $key"; apikey=$key} | ConvertTo-Json
+```
+
+---
+
+### 20.7 Compte Apple Developer — accès EAS credentials
+
+**Problème connu :** `eas credentials --platform ios` nécessite un terminal interactif avec le compte Apple Developer **owner** (`abybabel2002@icloud.com` — ABY BABEL SOW).  
+`lassiapp33@gmail.com` est Admin App Store Connect mais pas propriétaire du compte → `eas credentials` échoue.
+
+**Solution alternative (utilisée le 23/08/2026) :** API EAS GraphQL directe avec la session `lassiapp` + clé `.p8` téléchargée par le propriétaire manuellement.
+
+Si de nouvelles clés APNs sont nécessaires dans le futur :
+1. Propriétaire (Aby) va sur developer.apple.com → Keys → crée une clé APNs
+2. Télécharge le `.p8` → donne le fichier + Key ID
+3. On uploade via API EAS GraphQL (mutations ci-dessus)
+
+---
+
 ## 13. POUR AJOUTER UNE MÉMOIRE
 
 Dis à Claude : **"mémorise que [information]"** ou **"souviens-toi de [information]"**  
@@ -578,4 +1063,4 @@ Claude ajoutera le bloc dans la section appropriée de ce fichier.
 
 ---
 
-*Dernière mise à jour : 2026-08-10*
+*Dernière mise à jour : 2026-08-22*

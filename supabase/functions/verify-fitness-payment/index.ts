@@ -106,23 +106,46 @@ Deno.serve(async (req) => {
     const dateAchat      = new Date()
     const dateExpiration = new Date(dateAchat.getTime() + dureeJours * 86_400_000)
 
+    // Passer à 'confirmed' puis appeler confirm_order_from_payment pour créer
+    // le payout_queue (même flux que le webhook OM) → classement + recette cohérents
     await admin.from('payment_intents')
-      .update({ statut: 'completed' })
+      .update({
+        statut:          'confirmed',
+        confirmed_at:    dateAchat.toISOString(),
+        external_status: 'succeeded',
+        updated_at:      dateAchat.toISOString(),
+      })
       .eq('id', piId as string)
 
-    const { error: insertErr } = await admin.from('fitness_abonnements_clients').insert({
-      offre_id:          meta.offre_id,
-      client_id:         user.id,
-      prestataire_id:    pi.prestataire_id,
-      nom_offre:         meta.offre_nom,
-      prix_paye:         pi.montant_total,
-      date_achat:        dateAchat.toISOString(),
-      date_expiration:   dateExpiration.toISOString(),
-      statut:            'actif',
-      payment_intent_id: piId,
+    const { error: confirmErr } = await admin.rpc('confirm_order_from_payment', {
+      p_payment_intent_id: piId,
     })
+    if (confirmErr) {
+      console.warn('[verify-fitness] confirm_order_from_payment:', confirmErr.message)
+      // Non-bloquant : continuer pour activer l'abonnement quand même
+    }
 
-    if (insertErr) throw new Error(insertErr.message)
+    // Idempotence : vérifier que l'abonnement n'existe pas déjà (double appel)
+    const { data: existingAbo } = await admin
+      .from('fitness_abonnements_clients')
+      .select('id')
+      .eq('payment_intent_id', piId as string)
+      .maybeSingle()
+
+    if (!existingAbo) {
+      const { error: insertErr } = await admin.from('fitness_abonnements_clients').insert({
+        offre_id:          meta.offre_id,
+        client_id:         user.id,
+        prestataire_id:    pi.prestataire_id,
+        nom_offre:         meta.offre_nom,
+        prix_paye:         pi.montant_total,
+        date_achat:        dateAchat.toISOString(),
+        date_expiration:   dateExpiration.toISOString(),
+        statut:            'actif',
+        payment_intent_id: piId,
+      })
+      if (insertErr) throw new Error(insertErr.message)
+    }
 
     const clientBody = `Ton abonnement « ${meta.offre_nom} » est actif jusqu'au ${dateExpiration.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`
 

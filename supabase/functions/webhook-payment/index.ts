@@ -18,9 +18,21 @@ import { crypto } from 'https://deno.land/std@0.177.0/crypto/mod.ts';
 import { isUUID } from '../_shared/validation.ts';
 import { logAuditEvent } from '../_shared/audit.ts';
 import { sendPushToUser } from '../_shared/push.ts';
+import { getOmToken, OM_BASE_URL, isOmReady } from '../_shared/omAuth.ts';
+import { buildWaveSignature } from '../_shared/waveSign.ts';
+import { triggerTerrainPayout } from '../_shared/terrainPayout.ts';
 
-const WAVE_WEBHOOK_SECRET = Deno.env.get('WAVE_WEBHOOK_SECRET') ?? '';
-const OM_WEBHOOK_SECRET   = Deno.env.get('OM_WEBHOOK_SECRET')   ?? '';
+const WAVE_WEBHOOK_SECRET       = Deno.env.get('WAVE_WEBHOOK_SECRET')       ?? '';
+const OM_WEBHOOK_SECRET         = Deno.env.get('OM_WEBHOOK_SECRET')         ?? '';
+const WAVE_API_KEY              = Deno.env.get('WAVE_API_KEY')              ?? '';
+const OM_RETAILER_MSISDN        = Deno.env.get('OM_RETAILER_MSISDN')        ?? '';
+const OM_RETAILER_PIN_ENCRYPTED = Deno.env.get('OM_RETAILER_PIN_ENCRYPTED') ?? '';
+const PHONE_RE                  = /^7[05678][0-9]{7}$/;
+
+function genReceiptCode(): string {
+  const chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
 
 serve(async (req) => {
   const supabase = createClient(
@@ -87,6 +99,127 @@ serve(async (req) => {
       omPayload = JSON.parse(body);
     } catch {
       return new Response('Body invalide', { status: 400 });
+    }
+
+    // ── Chemin terrain : terrain_r en query param (réservations_terrain) ──────
+    const terrainRFromUrl = url.searchParams.get('terrain_r') ?? '';
+    if (isUUID(terrainRFromUrl)) {
+      // Charger la réservation (paiement_ref nécessaire pour vérification API fallback)
+      const { data: resa } = await supabase
+        .from('reservations_terrain')
+        .select('statut, paiement_ref, date_reservation, heure_fin, heure_debut, prestataire_id, client_id, montant_prestataire, moyen_paiement, terrain_id, prix_total')
+        .eq('id', terrainRFromUrl)
+        .single();
+
+      if (!resa || resa.statut !== 'en_attente') {
+        console.log('[webhook-om-terrain] déjà traité ou introuvable statut=', resa?.statut);
+        return new Response('OK', { status: 200 });
+      }
+
+      // ── Détection du statut OM : multi-champ (OM peut varier) ──────────────
+      const externalStatus = String(
+        omPayload.status ?? omPayload.txStatus ?? omPayload.paymentStatus ??
+        (omPayload.data as Record<string, unknown> | undefined)?.status ?? ''
+      );
+      let confirmed = ['SUCCESS', 'SUCCESSFUL', 'success', 'successful',
+                       'PAYMENT_SUCCESS', 'COMPLETED', 'completed'].includes(externalStatus);
+
+      console.log('[webhook-om-terrain]', JSON.stringify({
+        terrainR: terrainRFromUrl, externalStatus, confirmed,
+        payloadKeys: Object.keys(omPayload),
+      }));
+
+      // ── Fallback : vérification via OM API si payload ambigu ───────────────
+      if (!confirmed && isOmReady() && resa.paiement_ref) {
+        try {
+          const omToken = await getOmToken();
+          const ref = encodeURIComponent(resa.paiement_ref as string);
+          const r = await fetch(`${OM_BASE_URL}/api/eWallet/v4/qrcode/${ref}`, {
+            headers: { Authorization: `Bearer ${omToken}` },
+          });
+          if (r.ok) {
+            const d = await r.json() as Record<string, unknown>;
+            const st = String(d.status ?? d.statut ?? d.txStatus ?? '').toUpperCase();
+            confirmed = ['PAID', 'COMPLETED', 'SUCCESS', 'SUCCESSFULL', 'SUCCESSFUL', 'PAYMENT_SUCCESS'].includes(st);
+            console.log('[webhook-om-terrain] API fallback:', { st, confirmed });
+          }
+        } catch (e) {
+          console.error('[webhook-om-terrain] API fallback erreur:', e instanceof Error ? e.message : e);
+        }
+      }
+
+      if (!confirmed) {
+        console.log('[webhook-om-terrain] paiement non confirmé — aucune action');
+        return new Response('OK', { status: 200 });
+      }
+
+      // ── Confirmer la réservation en DB ─────────────────────────────────────
+      const receiptCode       = genReceiptCode();
+      const heureFin          = (resa.heure_fin as string).slice(0, 5);
+      const receiptValidUntil = new Date(`${resa.date_reservation}T${heureFin}:00`).toISOString();
+
+      const { error: updateErr } = await supabase
+        .from('reservations_terrain')
+        .update({
+          statut:              'paye',
+          receipt_status:      'valide',
+          receipt_code:        receiptCode,
+          receipt_valid_until: receiptValidUntil,
+          payout_statut:       'pending',
+        })
+        .eq('id', terrainRFromUrl)
+        .eq('statut', 'en_attente'); // garde atomique
+
+      if (updateErr) {
+        console.error('[webhook-om-terrain] update DB erreur:', updateErr.message);
+        return new Response('Erreur DB', { status: 500 });
+      }
+
+      // ── Reversement au prestataire (shared function avec retry DB) ─────────
+      await triggerTerrainPayout(supabase, {
+        reservationId:             terrainRFromUrl,
+        prestataireId:             resa.prestataire_id as string,
+        montant:                   resa.montant_prestataire as number,
+        moyenPaiement:             (resa.moyen_paiement ?? 'orange_money') as string,
+        WAVE_API_KEY,
+        OM_RETAILER_MSISDN,
+        OM_RETAILER_PIN_ENCRYPTED,
+      });
+
+      // ── Notification client — paiement confirmé (best-effort) ──────────────
+      // ⚠ Notification prestataire intentionnellement ABSENTE ici.
+      //   Elle est émise dans triggerTerrainPayout uniquement après payout réussi,
+      //   garantissant que l'argent a bien été versé avant d'inviter la validation.
+      try {
+        const { data: terrainRow } = await supabase.from('terrains').select('nom').eq('id', resa.terrain_id as string).maybeSingle();
+        const terrainNomOm = (terrainRow?.nom as string | undefined) ?? 'Terrain';
+        const heureStr     = resa.heure_debut ? String(resa.heure_debut).slice(0, 5) : '';
+        const heureFinStr  = resa.heure_fin   ? String(resa.heure_fin).slice(0, 5)   : '';
+        const creneauOm    = heureStr && heureFinStr ? `${heureStr} → ${heureFinStr}` : '';
+
+        if (resa.client_id) {
+          const notifBodyClient = creneauOm
+            ? `Ta réservation de ${terrainNomOm} · ${creneauOm} est confirmée ✓`
+            : `Ta réservation de ${terrainNomOm} est confirmée ✓`;
+          await Promise.allSettled([
+            sendPushToUser(supabase, resa.client_id as string, {
+              title:     'Réservation confirmée ✓',
+              body:      notifBodyClient,
+              data:      { type: 'reservation_terrain', reservationId: terrainRFromUrl },
+              channelId: 'commandes',
+            }),
+            supabase.from('notifications').insert({
+              user_id: resa.client_id,
+              type:    'reservation_terrain',
+              title:   'Réservation confirmée ✓',
+              body:    notifBodyClient,
+              data:    { type: 'reservation_terrain', reservationId: terrainRFromUrl },
+            }),
+          ]);
+        }
+      } catch { /* best-effort */ }
+
+      return new Response('OK', { status: 200 });
     }
 
     // pi_id : depuis l'URL (notificationUrl dynamique) OU depuis metadata (URL statique portail OM)
@@ -172,29 +305,40 @@ serve(async (req) => {
       }
     }
 
-    // Notifier le prestataire terrain (réservation confirmée et payée)
+    // Notification client terrain — paiement confirmé
+    // ⚠ Prestataire notifié dans triggerTerrainPayout après payout réussi uniquement.
     if (result?.ok && !result?.already_processed && !result?.disputed && result?.reservation_id) {
       try {
         const { data: resaRow } = await supabase
           .from('reservations_terrain')
-          .select('prestataire_id, terrain_id, prix_total, date_reservation, heure_debut')
+          .select('client_id, terrain_id, date_reservation, heure_debut, heure_fin')
           .eq('id', result.reservation_id)
           .maybeSingle();
-        if (resaRow?.prestataire_id) {
+        if (resaRow?.client_id) {
           const { data: terrainRow } = await supabase
-            .from('terrains')
-            .select('nom')
-            .eq('id', resaRow.terrain_id)
-            .maybeSingle();
-          const montantFr = `${Number(resaRow.prix_total).toLocaleString('fr-FR')} FCFA`;
-          const heureStr  = resaRow.heure_debut ? String(resaRow.heure_debut).slice(0, 5) : '';
-          const bodyParts = [terrainRow?.nom, resaRow.date_reservation, heureStr, montantFr].filter(Boolean);
-          await sendPushToUser(supabase, resaRow.prestataire_id, {
-            title:     'Nouvelle réservation terrain',
-            body:      `Paiement reçu — ${bodyParts.join(' · ')}`,
-            data:      { type: 'reservation_terrain', reservationId: String(result.reservation_id) },
-            channelId: 'commandes',
-          });
+            .from('terrains').select('nom').eq('id', resaRow.terrain_id).maybeSingle();
+          const terrainNomR = (terrainRow?.nom as string | undefined) ?? 'Terrain';
+          const heureStr    = resaRow.heure_debut ? String(resaRow.heure_debut).slice(0, 5) : '';
+          const heureFinR   = resaRow.heure_fin   ? String(resaRow.heure_fin).slice(0, 5)   : '';
+          const creneauR    = heureStr && heureFinR ? `${heureStr} → ${heureFinR}` : '';
+          const notifBodyCR = creneauR
+            ? `Ta réservation de ${terrainNomR} · ${creneauR} est confirmée ✓`
+            : `Ta réservation de ${terrainNomR} est confirmée ✓`;
+          await Promise.allSettled([
+            sendPushToUser(supabase, resaRow.client_id, {
+              title:     'Réservation confirmée ✓',
+              body:      notifBodyCR,
+              data:      { type: 'reservation_terrain', reservationId: String(result.reservation_id) },
+              channelId: 'commandes',
+            }),
+            supabase.from('notifications').insert({
+              user_id: resaRow.client_id,
+              type:    'reservation_terrain',
+              title:   'Réservation confirmée ✓',
+              body:    notifBodyCR,
+              data:    { type: 'reservation_terrain', reservationId: String(result.reservation_id) },
+            }),
+          ]);
         }
       } catch {
         // best-effort
@@ -621,29 +765,40 @@ serve(async (req) => {
       }
     }
 
-    // ── Terrain Wave — prestataire notifié quand réservation confirmée ────
+    // ── Terrain Wave — notification client uniquement ──────────────────────
+    // ⚠ Prestataire notifié dans triggerTerrainPayout après payout réussi uniquement.
     if (result?.reservation_id) {
       try {
         const { data: resaRow } = await supabase
           .from('reservations_terrain')
-          .select('prestataire_id, terrain_id, prix_total, date_reservation, heure_debut')
+          .select('client_id, terrain_id, date_reservation, heure_debut, heure_fin')
           .eq('id', result.reservation_id)
           .maybeSingle()
-        if (resaRow?.prestataire_id) {
+        if (resaRow?.client_id) {
           const { data: terrainRow } = await supabase
-            .from('terrains')
-            .select('nom')
-            .eq('id', resaRow.terrain_id)
-            .maybeSingle()
-          const montantFr = `${Number(resaRow.prix_total).toLocaleString('fr-FR')} FCFA`
-          const heureStr  = resaRow.heure_debut ? String(resaRow.heure_debut).slice(0, 5) : ''
-          const bodyParts = [terrainRow?.nom, resaRow.date_reservation, heureStr, montantFr].filter(Boolean)
-          await sendPushToUser(supabase, resaRow.prestataire_id, {
-            title:     'Nouvelle réservation terrain',
-            body:      `Paiement reçu — ${bodyParts.join(' · ')}`,
-            data:      { type: 'reservation_terrain', reservationId: String(result.reservation_id) },
-            channelId: 'commandes',
-          })
+            .from('terrains').select('nom').eq('id', resaRow.terrain_id).maybeSingle()
+          const terrainNomW = (terrainRow?.nom as string | undefined) ?? 'Terrain'
+          const heureStr    = resaRow.heure_debut ? String(resaRow.heure_debut).slice(0, 5) : ''
+          const heureFinW   = resaRow.heure_fin   ? String(resaRow.heure_fin).slice(0, 5)   : ''
+          const creneauW    = heureStr && heureFinW ? `${heureStr} → ${heureFinW}` : ''
+          const notifBodyCW = creneauW
+            ? `Ta réservation de ${terrainNomW} · ${creneauW} est confirmée ✓`
+            : `Ta réservation de ${terrainNomW} est confirmée ✓`
+          await Promise.allSettled([
+            sendPushToUser(supabase, resaRow.client_id, {
+              title:     'Réservation confirmée ✓',
+              body:      notifBodyCW,
+              data:      { type: 'reservation_terrain', reservationId: String(result.reservation_id) },
+              channelId: 'commandes',
+            }),
+            supabase.from('notifications').insert({
+              user_id: resaRow.client_id,
+              type:    'reservation_terrain',
+              title:   'Réservation confirmée ✓',
+              body:    notifBodyCW,
+              data:    { type: 'reservation_terrain', reservationId: String(result.reservation_id) },
+            }),
+          ])
         }
       } catch {
         // best-effort

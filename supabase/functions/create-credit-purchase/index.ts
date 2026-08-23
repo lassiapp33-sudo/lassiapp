@@ -15,6 +15,14 @@ const PLAN_ID_RE = /^[a-z0-9_]+$/i
 const MAX_FEATURED_PRODUCTS = 50
 const BOOST_DURATION_LABELS: Record<string, string> = { '1m': '1 mois', '3m': '3 mois', '6m': '6 mois' }
 
+const SPORT_EMOJI: Record<string, string> = {
+  football: '⚽', basketball: '🏀', tennis: '🎾', volleyball: '🏐', autre: '🏟️',
+}
+
+type ProductRow = { id: string; name: string; price: number; emoji: string; photo_url: string }
+type AboRow     = { id: string; nom: string; prix: number }
+type TerrainRow = { id: string; nom: string; prix_horaire: number; sport_type: string }
+
 type OfferType = 'quartier' | 'recherche' | 'carte'
 
 const OFFER_LABELS: Record<OfferType, string> = {
@@ -84,6 +92,9 @@ Deno.serve(async (req) => {
     let durationDays: number
     let planLabel: string
     let featuredProductIds: string[] = []
+    let featuredProductDetails: ProductRow[] = []
+    let featuredAboDetails: AboRow[] = []
+    let featuredTerrainDetails: TerrainRow[] = []
 
     if (offerType === 'quartier') {
       const { data: plan } = await admin
@@ -97,16 +108,21 @@ Deno.serve(async (req) => {
 
       if (!wantsAllProducts) {
         const uniqueIds = Array.from(new Set(productIds as string[]))
-        const { data: ownedProducts } = await admin
-          .from('products')
-          .select('id')
-          .eq('shop_id', shop.id)
-          .in('id', uniqueIds)
 
-        if (!ownedProducts || ownedProducts.length !== uniqueIds.length) {
+        const [{ data: ownedProducts }, { data: ownedAbonnements }, { data: ownedTerrains }] = await Promise.all([
+          admin.from('products').select('id, name, price, emoji, photo_url').eq('shop_id', shop.id).in('id', uniqueIds),
+          admin.from('fitness_abonnement_offres').select('id, nom, prix').eq('prestataire_id', user.id).in('id', uniqueIds),
+          admin.from('terrains').select('id, nom, prix_horaire, sport_type').eq('prestataire_id', user.id).in('id', uniqueIds),
+        ])
+
+        const foundCount = (ownedProducts?.length ?? 0) + (ownedAbonnements?.length ?? 0) + (ownedTerrains?.length ?? 0)
+        if (foundCount !== uniqueIds.length) {
           return json({ error: 'Produit invalide' }, 400)
         }
         featuredProductIds = uniqueIds
+        featuredProductDetails = ownedProducts ?? []
+        featuredAboDetails     = ownedAbonnements ?? []
+        featuredTerrainDetails = ownedTerrains ?? []
       }
 
       let nbProduits = featuredProductIds.length
@@ -235,42 +251,43 @@ Deno.serve(async (req) => {
 
       // Alimenter le carrousel "Offre du Quartier" (best-effort)
       if (!wantsAllProducts && featuredProductIds.length > 0) {
-        const { data: prodDetails } = await admin
-          .from('products')
-          .select('id, name, price, emoji, photo_url')
-          .in('id', featuredProductIds)
+        const pMap = new Map(featuredProductDetails.map(p => [p.id, p]))
+        const aMap = new Map(featuredAboDetails.map(a => [a.id, a]))
+        const tMap = new Map(featuredTerrainDetails.map(t => [t.id, t]))
 
-        if (prodDetails && prodDetails.length > 0) {
+        const rows = featuredProductIds
+          .map((id, index) => {
+            const base = {
+              prestataire_id:   user.id,
+              rang_prestataire: null as null,
+              ordre:            index,
+              periode:          'paid',
+              est_actif:        true,
+              is_paid_pack:     true,
+            }
+            if (pMap.has(id)) {
+              const p = pMap.get(id) as ProductRow
+              const imageUrl = (typeof p.photo_url === 'string' && p.photo_url.startsWith('http'))
+                ? p.photo_url : (p.emoji ?? '')
+              return { ...base, product_id: id, terrain_id: null, abonnement_id: null, nom: p.name, prix: p.price, image_url: imageUrl }
+            }
+            if (aMap.has(id)) {
+              const a = aMap.get(id) as AboRow
+              return { ...base, product_id: null, terrain_id: null, abonnement_id: id, nom: a.nom, prix: a.prix, image_url: '🏋️' }
+            }
+            if (tMap.has(id)) {
+              const t = tMap.get(id) as TerrainRow
+              return { ...base, product_id: null, terrain_id: id, abonnement_id: null, nom: t.nom, prix: t.prix_horaire, image_url: SPORT_EMOJI[t.sport_type] ?? '🏟️' }
+            }
+            return null
+          })
+          .filter(Boolean)
+
+        if (rows.length > 0) {
           await admin.from('carrousel_offre_quartier').delete()
             .eq('prestataire_id', user.id).eq('is_paid_pack', true)
-
-          const rows = featuredProductIds
-            .map((id, index) => {
-              const p = prodDetails.find((pr: { id: string }) => pr.id === id)
-              if (!p) return null
-              const imageUrl =
-                typeof (p as { photo_url?: string }).photo_url === 'string' &&
-                (p as { photo_url: string }).photo_url.startsWith('http')
-                  ? (p as { photo_url: string }).photo_url
-                  : ((p as { emoji?: string }).emoji ?? '')
-              return {
-                prestataire_id: user.id,
-                product_id:     id,
-                nom:            (p as { name: string }).name,
-                prix:           (p as { price: number }).price,
-                image_url:      imageUrl,
-                rang_prestataire: null,
-                ordre:          index,
-                periode:        'paid',
-                est_actif:      true,
-                is_paid_pack:   true,
-              }
-            })
-            .filter(Boolean)
-
-          if (rows.length > 0) {
-            await admin.from('carrousel_offre_quartier').insert(rows).catch(() => null)
-          }
+            .catch(() => null)
+          await admin.from('carrousel_offre_quartier').insert(rows).catch(() => null)
         }
       }
 

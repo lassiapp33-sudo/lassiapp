@@ -11,11 +11,19 @@ export interface PushMessage {
 
 export async function sendExpoPush(messages: PushMessage[]): Promise<void> {
   if (messages.length === 0) return
-  await fetch(EXPO_PUSH_URL, {
+  const res = await fetch(EXPO_PUSH_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify(messages),
   })
+  const result = await res.json().catch(() => null)
+  if (result?.data) {
+    const errors = (result.data as Array<{ status: string; message?: string; details?: unknown }>)
+      .filter(t => t.status === 'error')
+    if (errors.length > 0) {
+      console.error('[push] Expo delivery errors:', JSON.stringify(errors))
+    }
+  }
 }
 
 // Récupère les tokens Expo valides d'un utilisateur depuis push_tokens
