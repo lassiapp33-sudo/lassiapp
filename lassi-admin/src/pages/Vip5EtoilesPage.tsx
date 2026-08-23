@@ -156,22 +156,8 @@ function CreerModal({ onClose, onCreated }: CreerModalProps) {
   const [nomAffiche, setNom]        = useState('')
   const [initiale,   setInitiale]   = useState('')
   const [baseline,   setBaseline]   = useState('')
-  const [gpsCoords,  setGpsCoords]  = useState<{ lat: number; lng: number } | null>(null)
   const [saving,     setSaving]     = useState(false)
   const [err,        setErr]        = useState('')
-
-  useEffect(() => {
-    function onMsg(e: MessageEvent) {
-      try {
-        const d = JSON.parse(e.data)
-        if (typeof d.lat === 'number' && typeof d.lng === 'number') {
-          setGpsCoords({ lat: d.lat, lng: d.lng })
-        }
-      } catch { /* ignore */ }
-    }
-    window.addEventListener('message', onMsg)
-    return () => window.removeEventListener('message', onMsg)
-  }, [])
 
   async function handleSubmit() {
     if (!telephone.trim() || !motDePasse || !nomAffiche.trim() || !initiale.trim()) {
@@ -193,8 +179,6 @@ function CreerModal({ onClose, onCreated }: CreerModalProps) {
         gabarit,
         initiale:   initiale.trim().toUpperCase(),
         baseline:   baseline.trim() || undefined,
-        latitude:   gpsCoords?.lat ?? null,
-        longitude:  gpsCoords?.lng ?? null,
       })
       onCreated()
     } catch (e: unknown) {
@@ -321,31 +305,6 @@ function CreerModal({ onClose, onCreated }: CreerModalProps) {
                 className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
               />
             </Field>
-          </div>
-
-          {/* Section GPS */}
-          <div className="border border-border/60 rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2.5 bg-black/20">
-              <div className="flex items-center gap-2">
-                <MapPin size={13} className="text-accent" />
-                <p className="text-xs text-muted uppercase tracking-widest">Position GPS</p>
-              </div>
-              {gpsCoords ? (
-                <span className="text-xs text-green-400 font-mono">
-                  {gpsCoords.lat.toFixed(5)}, {gpsCoords.lng.toFixed(5)}
-                </span>
-              ) : (
-                <span className="text-xs text-orange-400">Cliquez sur la carte</span>
-              )}
-            </div>
-            <div style={{ height: 220 }}>
-              <iframe
-                srcDoc={buildGpsMapHTML(DAKAR_DEFAULT.lat, DAKAR_DEFAULT.lng)}
-                sandbox="allow-scripts allow-same-origin"
-                style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-                title="Carte GPS création"
-              />
-            </div>
           </div>
 
           {err && <p className="text-danger text-sm">{err}</p>}

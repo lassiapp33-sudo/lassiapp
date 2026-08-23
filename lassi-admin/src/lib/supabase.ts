@@ -12,7 +12,8 @@ function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise
   const url = typeof input === 'string' ? input
     : input instanceof URL ? input.href
     : (input as Request).url
-  if (url.includes('/auth/')) return fetch(input, init)
+  // Auth et Edge Functions : pas de timeout court (cold start peut prendre > 15s)
+  if (url.includes('/auth/') || url.includes('/functions/v1/')) return fetch(input, init)
   const ctrl  = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 15_000)
   return fetch(input, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(timer))
