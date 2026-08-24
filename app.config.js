@@ -55,7 +55,7 @@ module.exports = withSecurityPlugins({
     name: "LASSI",
     slug: "LassiApp",
     scheme: "lassiapp",
-    version: "1.0.0",
+    version: "1.0.1",
     orientation: "default",
     updates: {
       url: "https://u.expo.dev/e9058ef3-df10-43e4-af04-6830a98025e9",
@@ -79,10 +79,18 @@ module.exports = withSecurityPlugins({
         process.env.GOOGLE_SERVICES_IOS_PLIST ?? "./GoogleService-Info.plist",
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
-          "LASSİ utilise ta position pour te montrer les commerces autour de toi.",
+          "LASSİ utilise ta position pour afficher les commerces et prestataires proches de toi (ex. : voir les restaurants à 500 m sur la carte) et pour te guider en navigation GPS jusqu'au prestataire sélectionné.",
         NSMicrophoneUsageDescription:
-          "LASSİ utilise le micro pour enregistrer un message vocal joint à ta commande.",
+          "LASSİ utilise le microphone pour enregistrer des messages vocaux dans le chat (ex. : dicter les détails d'une commande à un prestataire) et pour enregistrer un commentaire vocal lors d'un avis client.",
+        NSCameraUsageDescription:
+          "LASSİ utilise ta caméra pour photographier tes produits (ex. : prendre la photo d'un plat pour l'ajouter à ta vitrine), scanner les QR codes de réservation présentés par les clients, numériser ton menu papier et prendre des photos à partager dans le chat.",
+        NSPhotoLibraryUsageDescription:
+          "LASSİ accède à ta bibliothèque de photos pour sélectionner des images de produits (ex. : choisir la photo d'un article pour ta vitrine marchande ou ton profil) et partager des images dans la messagerie avec tes clients ou prestataires.",
+        NSPhotoLibraryAddUsageDescription:
+          "LASSİ enregistre dans ta bibliothèque les images reçues dans tes conversations. Exemple : sauvegarder la photo d'un produit envoyée par un prestataire dans le chat.",
         ITSAppUsesNonExemptEncryption: false,
+        // Sans FirebaseMessaging, GULAppDelegateSwizzler avale didRegisterForRemoteNotificationsWithDeviceToken → getDevicePushTokenAsync ne résout jamais.
+        FirebaseAppDelegateProxyEnabled: false,
       },
     },
     android: {
@@ -123,32 +131,32 @@ module.exports = withSecurityPlugins({
         "expo-camera",
         {
           cameraPermission:
-            "LASSİ accède à ta caméra pour scanner ton menu, photographier tes produits et scanner les QR codes de réservation.",
+            "LASSİ utilise ta caméra pour photographier tes produits (ex. : prendre la photo d'un plat pour l'ajouter à ta vitrine), scanner les QR codes de réservation présentés par les clients, numériser ton menu papier et prendre des photos à partager dans le chat.",
         },
       ],
       [
         "expo-location",
         {
           locationWhenInUsePermission:
-            "LASSİ utilise ta position pour te montrer les commerces autour de toi.",
+            "LASSİ utilise ta position pour afficher les commerces et prestataires proches de toi (ex. : voir les restaurants à 500 m sur la carte) et pour te guider en navigation GPS jusqu'au prestataire sélectionné.",
         },
       ],
       [
         "expo-image-picker",
         {
           photosPermission:
-            "LASSİ accède à ta galerie pour ajouter des photos de produits et scanner ton menu existant.",
+            "LASSİ accède à ta bibliothèque de photos pour sélectionner des images de produits (ex. : choisir la photo d'un article pour ta vitrine marchande ou ton profil) et partager des images dans la messagerie avec tes clients ou prestataires.",
           cameraPermission:
-            "LASSİ accède à ta caméra pour scanner ton menu, photographier tes produits et scanner les QR codes de réservation.",
+            "LASSİ utilise ta caméra pour photographier tes produits (ex. : prendre la photo d'un plat pour l'ajouter à ta vitrine), scanner les QR codes de réservation présentés par les clients, numériser ton menu papier et prendre des photos à partager dans le chat.",
         },
       ],
       [
         "expo-media-library",
         {
           photosPermission:
-            "LASSİ accède à ta galerie pour ajouter des photos de produits et sauvegarder les images reçues dans le chat.",
+            "LASSİ accède à ta bibliothèque de photos pour sélectionner des images de produits (ex. : choisir la photo d'un article pour ta vitrine marchande ou ton profil) et partager des images dans la messagerie avec tes clients ou prestataires.",
           savePhotosPermission:
-            "LASSİ sauvegarde les images reçues dans ta galerie.",
+            "LASSİ enregistre dans ta bibliothèque les images reçues dans tes conversations. Exemple : sauvegarder la photo d'un produit envoyée par un prestataire dans le chat.",
           isAccessMediaLocationEnabled: false,
         },
       ],

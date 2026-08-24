@@ -124,7 +124,7 @@ BEGIN
   VALUES (
     v_merchant_id,
     'order',
-    'Nouvelle commande ! 🛎',
+    'Nouvelle commande',
     'Commande de ' || NEW.client_name || ' · ' || NEW.total || ' FCFA',
     jsonb_build_object('order_id', NEW.id, 'shop_id', NEW.shop_id)
   );
@@ -150,14 +150,14 @@ BEGIN
 
   CASE NEW.status
     WHEN 'preparing' THEN
-      v_title := 'En préparation 🔥';
+      v_title := 'En préparation';
       v_body  := 'Ta commande est en cours de préparation.';
     WHEN 'ready' THEN
-      v_title := 'Commande prête ! 🛎️';
-      v_body  := 'Ta commande est prête, viens la récupérer !';
+      v_title := 'Commande prête';
+      v_body  := 'Ta commande est prête, viens la récupérer.';
     WHEN 'done' THEN
-      v_title := 'Terminée ⭐';
-      v_body  := 'Bonne dégustation ! Merci.';
+      v_title := 'Terminée';
+      v_body  := 'Bonne dégustation. Merci.';
     ELSE RETURN NEW;
   END CASE;
 
@@ -190,8 +190,8 @@ BEGIN
   SELECT name INTO v_sender_name FROM profiles WHERE id = NEW.sender_id;
 
   v_preview := CASE NEW.type
-    WHEN 'ticket' THEN '📋 Ticket de commande'
-    WHEN 'voice'  THEN '🎤 Message vocal'
+    WHEN 'ticket' THEN 'Ticket de commande'
+    WHEN 'voice'  THEN 'Message vocal'
     ELSE LEFT(NEW.content, 60)
   END;
 

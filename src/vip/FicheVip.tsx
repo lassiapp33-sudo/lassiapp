@@ -56,8 +56,9 @@ function calculerStatut(
   if (!h || h.ferme || !h.ouverture || !h.fermeture) return { ouvert: false, fermeA: null };
   const [ho, mo] = h.ouverture.split(':').map(Number);
   const [hf, mf] = h.fermeture.split(':').map(Number);
+  const closeMin = hf * 60 + mf || 1440; // "00:00" = minuit de la nuit suivante
   return {
-    ouvert: minCourant >= ho * 60 + mo && minCourant < hf * 60 + mf,
+    ouvert: minCourant >= ho * 60 + mo && minCourant < closeMin,
     fermeA: h.fermeture.slice(0, 5),
   };
 }

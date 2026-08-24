@@ -59,6 +59,25 @@ const DEFAULT_HORAIRES: HoraireForm[] = Array.from({ length: 7 }, (_, i) => ({
   jour_semaine: i, heure_ouverture: '08:00', heure_fermeture: '22:00', ferme: false,
 }));
 
+// Formate automatiquement les chiffres saisis en HH:MM
+// "2356" → "23:56" | "8" → "8" | "85" → "08:5" clampé ensuite sur blur
+function formatTimeInput(text: string): string {
+  const digits = text.replace(/\D/g, '').slice(0, 4);
+  if (digits.length <= 2) return digits;
+  const hh = digits.slice(0, 2);
+  const mm = digits.slice(2);
+  return `${hh}:${mm}`;
+}
+
+// Normalise l'heure finale (clamp heures 0-23, minutes 0-59, padStart)
+function normalizeTime(text: string): string {
+  const digits = text.replace(/\D/g, '');
+  if (digits.length < 3) return text;
+  const hh = Math.min(parseInt(digits.slice(0, 2), 10), 23);
+  const mm = Math.min(parseInt(digits.slice(2, 4).padEnd(2, '0'), 10), 59);
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -217,7 +236,7 @@ export default function TerrainEditScreen({ terrain, onBack, onSaved }: Props) {
           ))}
         </View>
 
-        <Text style={styles.fieldLabel}>Prix horaire (FCFA) *</Text>
+        <Text style={styles.fieldLabel}>Prix de la session (FCFA) *</Text>
         <TextInput
           style={styles.input}
           value={form.prixHoraire}
@@ -317,20 +336,22 @@ export default function TerrainEditScreen({ terrain, onBack, onSaved }: Props) {
                     <TextInput
                       style={styles.timeInput}
                       value={h.heure_ouverture}
-                      onChangeText={v => updateHoraire(h.jour_semaine, 'heure_ouverture', v)}
+                      onChangeText={v => updateHoraire(h.jour_semaine, 'heure_ouverture', formatTimeInput(v))}
+                      onBlur={() => updateHoraire(h.jour_semaine, 'heure_ouverture', normalizeTime(h.heure_ouverture))}
                       placeholder="08:00"
                       placeholderTextColor={colors.muted}
-                      keyboardType="numbers-and-punctuation"
+                      keyboardType="numeric"
                       maxLength={5}
                     />
                     <Text style={styles.timeSep}>—</Text>
                     <TextInput
                       style={styles.timeInput}
                       value={h.heure_fermeture}
-                      onChangeText={v => updateHoraire(h.jour_semaine, 'heure_fermeture', v)}
+                      onChangeText={v => updateHoraire(h.jour_semaine, 'heure_fermeture', formatTimeInput(v))}
+                      onBlur={() => updateHoraire(h.jour_semaine, 'heure_fermeture', normalizeTime(h.heure_fermeture))}
                       placeholder="22:00"
                       placeholderTextColor={colors.muted}
-                      keyboardType="numbers-and-punctuation"
+                      keyboardType="numeric"
                       maxLength={5}
                     />
                   </View>

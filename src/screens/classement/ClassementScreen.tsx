@@ -56,19 +56,20 @@ export default function ClassementScreen({ variant, onBack }: Props) {
     try {
       let data: ClassementEntry[];
       if (onglet === 'categorie' && classeKey) {
-        data = await getClassementSousCategorie(classeKey, getPeriodeSemaine());
-        // Fallback live si pg_cron n'a pas encore tourné pour cette semaine
-        if (data.length === 0) data = await getClassementLiveSousCategorie(classeKey);
+        // Live en premier : reflète chaque achat immédiatement.
+        // Snapshot en fallback si la RPC live échoue ou renvoie vide.
+        data = await getClassementLiveSousCategorie(classeKey);
+        if (data.length === 0) data = await getClassementSousCategorie(classeKey, getPeriodeSemaine());
       } else if (onglet === 'mondial') {
-        data = await getClassementMondial(getPeriodeMois(), 0, 40);
-        // Fallback live si pg_cron n'a pas encore tourné pour ce mois
-        if (data.length === 0) data = await getClassementLiveMondial();
+        // Live en premier : idem, pas d'attente du cron hebdo.
+        data = await getClassementLiveMondial();
+        if (data.length === 0) data = await getClassementMondial(getPeriodeMois(), 0, 40);
       } else if (onglet === 'quartier') {
-        data = await getClassementQuartiers(getPeriodeMois());
-        if (data.length === 0) data = await getClassementLiveQuartiers();
+        data = await getClassementLiveQuartiers();
+        if (data.length === 0) data = await getClassementQuartiers(getPeriodeMois());
       } else {
-        data = await getClassementClients(getPeriodeMois());
-        if (data.length === 0) data = await getClassementLiveClients();
+        data = await getClassementLiveClients();
+        if (data.length === 0) data = await getClassementClients(getPeriodeMois());
       }
       setEntries(data);
     } catch (e) {

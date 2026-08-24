@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StatusBar,
@@ -16,6 +17,9 @@ import Svg, { Path } from 'react-native-svg';
 import { royal as r } from '../theme';
 import { VIP_FONTS } from '../useVipFonts';
 import { getMonProfilVip, updateProfilEditorial } from '../../services/vip';
+import * as Location from 'expo-location';
+import { getCurrentLocation, reverseGeocode } from '../../services/location';
+import { supabase } from '../../lib/supabase';
 import useGerantStore from '../../store/gerantStore';
 import { TOP_INSET } from '../../theme';
 import { VipCategorie } from '../../types/vip';
@@ -67,6 +71,8 @@ export default function GerantMaisonScreen({ onBack, onPreview }: Props) {
   const [signatureMot, setSignatureMot] = useState(profilStore?.signatureMot ?? '');
   const [chargement, setChargement] = useState(true);
   const [sauvegarde, setSauvegarde] = useState(false);
+  const [locZone, setLocZone] = useState<string | null>(null);
+  const [locLoading, setLocLoading] = useState(false);
 
   const charger = useCallback(async () => {
     const profil = await getMonProfilVip();
@@ -104,6 +110,50 @@ export default function GerantMaisonScreen({ onBack, onPreview }: Props) {
       Alert.alert('Erreur', 'Impossible d\'enregistrer les modifications.');
     } finally {
       setSauvegarde(false);
+    }
+  };
+
+  const capturerPosition = async () => {
+    const shopId = profilStore?.shopId;
+    if (!shopId) {
+      Alert.alert('Erreur', 'Profil non chargé, veuillez réessayer.');
+      return;
+    }
+    setLocLoading(true);
+    try {
+      const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        if (!canAskAgain) {
+          Alert.alert(
+            'Permission GPS bloquée',
+            'Autorisez l\'accès à la localisation dans les paramètres de l\'appareil.',
+            [
+              { text: 'Annuler', style: 'cancel' },
+              { text: 'Ouvrir les paramètres', onPress: () => Linking.openSettings() },
+            ],
+          );
+        } else {
+          Alert.alert('GPS', 'Permission refusée.');
+        }
+        return;
+      }
+      const coords = await getCurrentLocation();
+      if (!coords) {
+        Alert.alert('GPS', 'Position indisponible, réessayez.');
+        return;
+      }
+      const { error } = await supabase
+        .from('shops')
+        .update({ latitude: coords.latitude, longitude: coords.longitude })
+        .eq('id', shopId);
+      if (error) throw new Error(error.message);
+      const zone = await reverseGeocode(coords.latitude, coords.longitude);
+      setLocZone(zone);
+      Alert.alert('Position enregistrée', `Zone détectée : ${zone}`);
+    } catch {
+      Alert.alert('Erreur', 'Impossible de récupérer la position.');
+    } finally {
+      setLocLoading(false);
     }
   };
 
@@ -163,6 +213,24 @@ export default function GerantMaisonScreen({ onBack, onPreview }: Props) {
             placeholder="Ex : Mamadou, propriétaire"
             hint="Nom affiché sous le mot du gérant"
           />
+
+          {/* GPS — localisation de l'établissement */}
+          <View style={sg2.gpsBloc}>
+            <Text style={sg2.gpsLabel}>LOCALISATION GPS</Text>
+            <Text style={sg2.gpsHint}>
+              {locZone ? `Zone enregistrée : ${locZone}` : 'Position non encore définie'}
+            </Text>
+            <TouchableOpacity
+              style={[sg2.gpsBtn, locLoading && s.btnDisabled]}
+              onPress={capturerPosition}
+              disabled={locLoading}>
+              {locLoading
+                ? <ActivityIndicator color={r.couleur.encre} size="small" />
+                : <Text style={sg2.gpsBtnTxt}>
+                    {locZone ? '↻  Mettre à jour la position' : '⊕  Définir ma position GPS'}
+                  </Text>}
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             style={[s.btnSave, sauvegarde && s.btnDisabled]}
@@ -265,6 +333,42 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: r.couleur.orClair,
     letterSpacing: 1,
+  },
+});
+
+const sg2 = StyleSheet.create({
+  gpsBloc: {
+    marginHorizontal: r.espace.md,
+    marginTop: r.espace.md,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: r.couleur.filetFin,
+    backgroundColor: r.couleur.velours,
+  },
+  gpsLabel: {
+    fontFamily: VIP_FONTS.palais.util,
+    fontSize: 11,
+    letterSpacing: 2,
+    color: r.couleur.orClair,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  gpsHint: {
+    fontFamily: VIP_FONTS.palais.util,
+    fontSize: 11,
+    color: r.couleur.gris,
+    marginBottom: 12,
+  },
+  gpsBtn: {
+    backgroundColor: r.couleur.orLassi,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  gpsBtnTxt: {
+    fontFamily: VIP_FONTS.palais.util,
+    fontSize: 13,
+    color: r.couleur.encre,
+    letterSpacing: 0.8,
   },
 });
 

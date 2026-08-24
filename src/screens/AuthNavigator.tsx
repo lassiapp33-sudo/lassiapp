@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Modal } from 'react-native';
+import * as Location from 'expo-location';
 import RoleSelectScreen from './auth/RoleSelectScreen';
 import RegisterScreen, { RegisterData } from './auth/RegisterScreen';
 import LoginScreen from './auth/LoginScreen';
@@ -10,6 +11,7 @@ import CGUScreen from './common/CGUScreen';
 import ConfidentialiteScreen from './common/ConfidentialiteScreen';
 import useAuthStore, { UserRole } from '../store/authStore';
 import * as authService from '../services/auth';
+import { supabase } from '../lib/supabase';
 
 type Role = 'client' | 'merchant';
 
@@ -79,6 +81,19 @@ export default function AuthNavigator({ onComplete, onGuest }: Props) {
               role: 'client',
             });
             useAuthStore.getState().setUser(user);
+
+            // Détection automatique du quartier via GPS (non bloquant)
+            Location.requestForegroundPermissionsAsync().then(async ({ status }) => {
+              if (status !== 'granted') return;
+              const loc = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+              });
+              const [geo] = await Location.reverseGeocodeAsync(loc.coords);
+              const zone = geo?.subregion ?? geo?.district ?? geo?.city ?? null;
+              if (zone) {
+                supabase.from('profiles').update({ zone }).eq('id', user.id).then(() => {});
+              }
+            }).catch(() => {});
 
             if (userData.email.trim()) {
               push({ id: 'emailVerify', email: userData.email.trim() });

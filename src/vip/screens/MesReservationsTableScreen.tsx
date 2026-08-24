@@ -65,13 +65,15 @@ export default function MesReservationsTableScreen({ onBack, onViewTicket }: Pro
   const [reservations, setReservations] = useState<TableReservation[]>([]);
   const [loading, setLoading]           = useState(true);
   const [refreshing, setRefreshing]     = useState(false);
+  const [erreur, setErreur]             = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setErreur(null);
     try {
       const data = await getMyTableReservations();
       setReservations(data);
-    } catch {
-      // silencieux
+    } catch (e) {
+      setErreur((e as Error).message ?? 'Erreur de chargement');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -92,6 +94,10 @@ export default function MesReservationsTableScreen({ onBack, onViewTicket }: Pro
       {loading ? (
         <View style={s.loadingBox}>
           <ActivityIndicator color={r.couleur.or} size="large" />
+        </View>
+      ) : erreur ? (
+        <View style={s.emptyBox}>
+          <Text style={[s.emptySub, { color: '#E55C5C' }]}>{erreur}</Text>
         </View>
       ) : reservations.length === 0 ? (
         <View style={s.emptyBox}>

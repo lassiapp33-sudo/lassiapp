@@ -56,7 +56,7 @@ BEGIN
 
       -- Attribuer Top VIP aux 3 premiers + notification mérite
       IF v_rang <= 3 THEN
-        v_badge := CASE v_rang WHEN 1 THEN '🏆 Champion de la semaine' WHEN 2 THEN '🥈 2e de la semaine' ELSE '🥉 3e de la semaine' END;
+        v_badge := CASE v_rang WHEN 1 THEN 'Champion de la semaine' WHEN 2 THEN '2e de la semaine' ELSE '3e de la semaine' END;
 
         INSERT INTO recompenses_attribuees (prestataire_id, type_classement, periode, rang, badge, top_vip, valide_jusqu_a, est_actif)
         VALUES (
@@ -66,7 +66,7 @@ BEGIN
 
         INSERT INTO notifications (user_id, type, title, body, data) VALUES (
           v_rec.prestataire_id, 'vip',
-          '🏆 Félicitations, ' || v_badge || ' !',
+          'Félicitations, ' || v_badge || ' !',
           'Grâce à votre travail et à la confiance de vos clients, vous terminez ' || v_ordinal || ' de la catégorie « ' || v_sous_cat || ' » cette semaine. En récompense, vous obtenez le badge ' || v_badge || ' et une mise en avant Top VIP sur la page d''accueil pendant 7 jours. Bravo, et continuez sur cette lancée pour décrocher encore plus de récompenses !',
           jsonb_build_object('type_classement', 'sous_categorie', 'rang', v_rang, 'periode', p_periode)
         );
@@ -75,7 +75,7 @@ BEGIN
       -- Notification hebdo : classement mis à jour (tous les prestataires classés)
       INSERT INTO notifications (user_id, type, title, body, data) VALUES (
         v_rec.prestataire_id, 'vip',
-        '📊 Votre classement de la semaine est arrivé',
+        'Votre classement de la semaine est arrivé',
         'Bonjour ! Le classement de la catégorie « ' || v_sous_cat || ' » vient d''être mis à jour : vous terminez ' || v_ordinal || ' cette semaine. Rendez-vous dans la section Classement pour voir le détail et votre évolution. Merci pour votre sérieux, continuez sur cette belle dynamique !',
         jsonb_build_object('sous_categorie', v_sous_cat, 'rang', v_rang, 'periode', p_periode)
       );

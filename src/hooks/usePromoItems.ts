@@ -110,12 +110,14 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
           id: string;
           prestataire_id: string;
           product_id: string | null;
+          terrain_id: string | null;
+          abonnement_id: string | null;
           nom: string;
           prix: number;
           image_url: string;
         };
         const rewardRows = await pgFetch<RewardRow>(
-          'carrousel_offre_quartier?select=id,prestataire_id,product_id,nom,prix,image_url&est_actif=eq.true&order=ordre&limit=25',
+          'carrousel_offre_quartier?select=id,prestataire_id,product_id,terrain_id,abonnement_id,nom,prix,image_url&est_actif=eq.true&order=ordre&limit=25',
           signal,
         );
 
@@ -131,12 +133,12 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
           const paidProductIds = new Set(paidItems.map(i => i.id));
 
           rewardItems = rewardRows
-            .filter(r => r.product_id && !paidProductIds.has(r.product_id))
+            .filter(r => (r.product_id || r.terrain_id || r.abonnement_id) && (!r.product_id || !paidProductIds.has(r.product_id)))
             .map(r => {
               const shop = shopByMerchant.get(r.prestataire_id);
               const isUrl = typeof r.image_url === 'string' && r.image_url.startsWith('http');
               return {
-                id: r.product_id ?? '',
+                id: r.product_id ?? r.terrain_id ?? r.abonnement_id ?? '',
                 name: r.nom,
                 price: r.prix,
                 emoji: isUrl ? '' : (r.image_url ?? ''),

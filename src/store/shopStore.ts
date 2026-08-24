@@ -3,6 +3,7 @@ import { StoreProduct, StoreCategory, StoreProfile, ShopContext } from '../types
 import { WeekHours } from '../services/hours';
 import * as shopsService from '../services/shops';
 import * as productsService from '../services/products';
+import * as fitnessService from '../services/fitnessAbonnements';
 import logger from '../utils/logger';
 
 const DEFAULT_CATS: StoreCategory[] = [
@@ -160,6 +161,20 @@ const useShopStore = create<ShopState>()((set, get) => ({
 
       // Si la boutique n'a pas de logo, utiliser la photo de profil du marchand
       const { default: useAuthStore } = await import('./authStore');
+
+      // Pour les shops fitness : ajouter les onglets qui ont des offres d'abonnement
+      // même si ces onglets n'ont aucun produit dans la table products
+      if (shop.shopType === 'memberships') {
+        const merchantId = useAuthStore.getState().user?.id;
+        if (merchantId) {
+          const offerTabIds = await fitnessService.getOffreTabs(merchantId);
+          for (const tabId of offerTabIds) {
+            if (!categories.find(c => c.id === tabId)) {
+              categories.push({ id: tabId, label: toLabel(tabId), emoji: catMeta[tabId]?.emoji ?? '📋' });
+            }
+          }
+        }
+      }
       const avatarUrl = useAuthStore.getState().user?.avatarUrl;
       const logoUrl = shop.logoUrl ?? avatarUrl ?? undefined;
 

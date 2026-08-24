@@ -24,6 +24,7 @@ import GerantEspacesScreen from './screens/GerantEspacesScreen';
 import GerantCreneauxScreen from './screens/GerantCreneauxScreen';
 import GerantRdvBeautyScreen from './screens/GerantRdvBeautyScreen';
 import GerantCreneauxBeautyScreen from './screens/GerantCreneauxBeautyScreen';
+import GerantNotificationsScreen from './screens/GerantNotificationsScreen';
 
 type GerantScreen =
   | 'dashboard'
@@ -37,6 +38,7 @@ type GerantScreen =
   | 'classement'
   | 'livraison'
   | 'autourDeMoi'
+  | 'notifications'
   | 'visibilite'
   | 'campagne'
   | 'revenus'
@@ -122,6 +124,11 @@ export default function GerantNavigator({ onLogout }: Props) {
   // ── Mot de passe ─────────────────────────────────────────────────────────
   if (screen === 'changeMdp') {
     return <GerantChangeMdpScreen onBack={pop} />;
+  }
+
+  // ── Notifications ────────────────────────────────────────────────────────
+  if (screen === 'notifications') {
+    return <GerantNotificationsScreen onBack={pop} />;
   }
 
   // ── À la une ─────────────────────────────────────────────────────────────

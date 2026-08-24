@@ -25,7 +25,11 @@ import useShopStore from '../../store/shopStore';
 import useGerantStore from '../../store/gerantStore';
 import { getProducts } from '../../services/products';
 import { getMonPrestations } from '../../services/vip';
+import { getMesOffres } from '../../services/fitnessAbonnements';
+import { getTerrainsByMerchant } from '../../services/terrains';
+import { SPORT_EMOJI } from '../../types/terrain';
 import { StoreProduct } from '../../types/store';
+import useAuthStore from '../../store/authStore';
 import { VipPrestation } from '../../types/vip';
 import { formatPrice, formatDateLong } from '../../utils/format';
 import {
@@ -265,6 +269,7 @@ export default function VisibilityScreen({ onBack }: Props) {
   const loadMyShop = useShopStore(s => s.loadMyShop);
   const gerantProfil = useGerantStore(s => s.profil);
   const isVipGerant = gerantProfil != null;
+  const userId = useAuthStore(s => s.user?.id);
 
   const [offerType, setOfferType] = useState<OfferType>('quartier');
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -332,8 +337,25 @@ export default function VisibilityScreen({ onBack }: Props) {
       } else {
         setPayMethod('credit');
       }
-      setProducts(loadedProducts);
-      const defaultProduct = loadedProducts.find(p => p.stock === 'in') ?? loadedProducts[0];
+
+      // Enrichir la liste avec les abonnements fitness et terrains (non-VIP uniquement)
+      let allItems: StoreProduct[] = loadedProducts;
+      if (!isVipGerant && userId) {
+        const [abonnements, terrains] = await Promise.all([
+          getMesOffres(userId).catch(() => []),
+          getTerrainsByMerchant(userId).catch(() => []),
+        ]);
+        const aboItems: StoreProduct[] = abonnements
+          .filter(a => a.actif)
+          .map(a => ({ id: a.id, name: a.nom, price: a.prix, desc: a.description ?? '', emoji: '🏋️', category: 'fitness', stock: 'in' as const, itemType: 'membership' as const }));
+        const terrainItems: StoreProduct[] = terrains
+          .filter(t => t.actif && ['football', 'basketball'].includes(t.sport_type))
+          .map(t => ({ id: t.id, name: t.nom, price: t.prix_horaire, desc: '', emoji: SPORT_EMOJI[t.sport_type], category: 'terrain', stock: 'in' as const, itemType: 'service' as const }));
+        allItems = [...loadedProducts, ...aboItems, ...terrainItems];
+      }
+
+      setProducts(allItems);
+      const defaultProduct = allItems.find(p => p.stock === 'in') ?? allItems[0];
       setSelectedProductIds(defaultProduct ? [defaultProduct.id] : []);
       if (sub) {
         setActiveSub(sub);
@@ -344,7 +366,7 @@ export default function VisibilityScreen({ onBack }: Props) {
     } finally {
       setInitLoading(false);
     }
-  }, [shopId, isVipGerant]);
+  }, [shopId, isVipGerant, userId]);
 
   useEffect(() => {
     init();

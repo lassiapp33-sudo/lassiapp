@@ -190,6 +190,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const [shopData, setShopData] = useState<Shop | null>(null);
   const [realProducts, setRealProducts] = useState<StoreProduct[]>([]);
   const [terrains, setTerrains] = useState<Terrain[]>([]);
+  const [selectedTerrainIdx, setSelectedTerrainIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [activeTab, setActiveTab] = useState<MenuTabId>('all');
@@ -336,12 +337,12 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
 
   const selectedOrder = useCartStore(s => s.orderType);
 
-  // ── Options "Sur place / À emporter" — masquées pour bakery, stores et certaines sous-cats tangana ────
+  // ── Options "Sur place / À emporter" — masquées pour bakery, stores, fruiterie et certaines sous-cats ────
   const shopCategory = shopData?.category ?? '';
   const shopSubcats  = shopData?.subcategories ?? [];
   const noOrderOptions =
-    ['bakery', 'stores'].includes(shopCategory) ||
-    shopSubcats.some(s => ['cafe_wass', 'beignet_fataya'].includes(s));
+    ['bakery', 'stores', 'fruiterie'].includes(shopCategory) ||
+    shopSubcats.some(s => ['cafe_wass', 'beignet_fataya', 'jus', 'snack'].includes(s));
   const showOrderOptions = shopType === 'products' && !noOrderOptions;
   const orderOptions = [
     { id: 'place', label: 'Sur place' },
@@ -613,24 +614,42 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
           {/* 9 — Catalogue / Terrains / Créneaux foot-basket */}
           {isSlotShop ? (
             terrains.length > 0 ? (
-              <ShopTerrainSlotPicker
-                terrain={terrains[0]}
-                prestataireName={displayName}
-                openingHours={effectiveHours}
-                onBook={(p: SlotBookParams) =>
-                  onBookTerrainDirect?.({
-                    terrainId: p.terrain.id,
-                    terrainNom: p.terrain.nom,
-                    prestataireId: p.terrain.prestataire_id,
-                    prestataireName: p.prestataireName,
-                    dateReservation: p.dateReservation,
-                    heureDebut: p.heureDebut,
-                    heureFin: p.heureFin,
-                    dureeHeures: p.dureeHeures,
-                    prixTotal: p.prixTotal,
-                  })
-                }
-              />
+              <>
+                {terrains.length > 1 && (
+                  <View style={styles.slotTerrainPicker}>
+                    {terrains.map((t, i) => (
+                      <TouchableOpacity
+                        key={t.id}
+                        style={[styles.slotTerrainChip, selectedTerrainIdx === i && styles.slotTerrainChipOn]}
+                        onPress={() => setSelectedTerrainIdx(i)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.slotTerrainChipTxt, selectedTerrainIdx === i && styles.slotTerrainChipTxtOn]}>
+                          {SPORT_EMOJI[t.sport_type]} {t.nom}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                <ShopTerrainSlotPicker
+                  terrain={terrains[selectedTerrainIdx] ?? terrains[0]}
+                  prestataireName={displayName}
+                  openingHours={effectiveHours}
+                  onBook={(p: SlotBookParams) =>
+                    onBookTerrainDirect?.({
+                      terrainId: p.terrain.id,
+                      terrainNom: p.terrain.nom,
+                      prestataireId: p.terrain.prestataire_id,
+                      prestataireName: p.prestataireName,
+                      dateReservation: p.dateReservation,
+                      heureDebut: p.heureDebut,
+                      heureFin: p.heureFin,
+                      dureeHeures: p.dureeHeures,
+                      prixTotal: p.prixTotal,
+                    })
+                  }
+                />
+              </>
             ) : (
               <View style={styles.emptyProducts}>
                 <Text style={styles.emptyTxt}>Aucun terrain configuré pour l'instant.</Text>
@@ -662,7 +681,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                         </View>
                         <View style={{ alignItems: 'flex-end' }}>
                           <Text style={styles.terrainPrice}>{formatPrice(terrainsService.calculerPrixAvecMarge(terrain.prix_horaire))}</Text>
-                          <Text style={styles.terrainPriceSub}>/ heure</Text>
+                          <Text style={styles.terrainPriceSub}>/ session</Text>
                         </View>
                       </View>
                       {terrain.description ? (
@@ -1024,6 +1043,11 @@ const styles = StyleSheet.create({
   },
 
   // Terrains
+  slotTerrainPicker: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20, marginTop: 16, marginBottom: 4 },
+  slotTerrainChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface },
+  slotTerrainChipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  slotTerrainChipTxt: { color: colors.muted, fontFamily: fonts.ui, fontSize: 13 },
+  slotTerrainChipTxtOn: { color: colors.bg },
   terrainsContainer: { paddingHorizontal: 20, gap: 14 },
   terrainCard: {
     backgroundColor: colors.surface,

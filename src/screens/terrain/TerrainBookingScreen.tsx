@@ -87,7 +87,7 @@ export default function TerrainBookingScreen({ terrain, prestataireName, onBack,
   const dayOfWeek = selectedDate.getDay();
   const horaire = horaires.find(h => h.jour_semaine === dayOfWeek);
   const ferme = !horaire || horaire.ferme;
-  const prixBase = Math.round((terrain.prix_horaire * selectedDuration) / 60);
+  const prixBase = terrain.prix_horaire;
   const prixTotal = calculerPrixAvecMarge(prixBase);
   const commission = calculerCommission(prixTotal);
 
@@ -129,7 +129,7 @@ export default function TerrainBookingScreen({ terrain, prestataireName, onBack,
       >
         {/* Prix + infos */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoPrice}>{formatPrice(calculerPrixAvecMarge(terrain.prix_horaire))} / heure</Text>
+          <Text style={styles.infoPrice}>{formatPrice(calculerPrixAvecMarge(terrain.prix_horaire))} / session</Text>
           {terrain.capacite > 0 && (
             <Text style={styles.infoSub}>{terrain.capacite} joueurs max</Text>
           )}
@@ -208,9 +208,7 @@ export default function TerrainBookingScreen({ terrain, prestataireName, onBack,
               {selectedSlot.debut} {'→'} {selectedSlot.fin}
             </Text>
             <View style={styles.recapPriceRow}>
-              <Text style={styles.recapPriceLabel}>
-                {formatPrice(terrain.prix_horaire)} x {selectedSlot.duree}h
-              </Text>
+              <Text style={styles.recapPriceLabel}>Prix de la session</Text>
               <Text style={styles.recapVal}>{formatPrice(prixBase)}</Text>
             </View>
             <View style={styles.recapSubRow}>

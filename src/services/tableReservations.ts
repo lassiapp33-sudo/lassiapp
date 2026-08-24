@@ -93,14 +93,17 @@ export const createTableReservation = async (
 // ─── Réservations du client ───────────────────────────────────────────────────
 
 export const getMyTableReservations = async (): Promise<TableReservation[]> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
   const { data, error } = await supabase
     .from('table_reservations')
     .select(`
       *,
-      restaurant_spaces ( nom, photo_url ),
+      restaurant_spaces!space_id ( nom, photo_url ),
       restaurant_time_slots ( label, heure_debut, heure_fin ),
       vip_profils ( nom_affiche )
     `)
+    .eq('client_id', user.id)
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as TableReservation[];

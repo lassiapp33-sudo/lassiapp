@@ -31,7 +31,7 @@ export default function PlanCard({ plan, selected, onSelect }: Props) {
       {/* Badge "POPULAIRE" */}
       {pop && (
         <View style={styles.badge}>
-          <Text style={styles.badgeTxt}>⭐ POPULAIRE</Text>
+          <Text style={styles.badgeTxt}>POPULAIRE</Text>
         </View>
       )}
 

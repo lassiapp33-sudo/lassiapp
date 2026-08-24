@@ -71,15 +71,13 @@ export default function CheckoutPayment({ orderId, prestataireId, prixBase, onSu
       }
 
       if (result.redirectUrl) {
-        const canOpen = await Linking.canOpenURL(result.redirectUrl);
-        if (canOpen) {
-          await Linking.openURL(result.redirectUrl);
-          // Vérification au retour via deep link : lassiapp://paiement/succes?pi=...
-        } else if (moyen === 'orange_money' && result.qrCode) {
-          setQrCode(result.qrCode);
-        } else {
-          Alert.alert('Erreur', "Impossible d'ouvrir l'application de paiement. Vérifie que Wave ou Orange Money est installé.");
-        }
+        await Linking.openURL(result.redirectUrl).catch(() => {
+          if (moyen === 'orange_money' && result.qrCode) {
+            setQrCode(result.qrCode);
+          } else {
+            Alert.alert('Erreur', "Impossible d'ouvrir l'application de paiement. Vérifie que Wave ou Orange Money est installé.");
+          }
+        });
       }
     } catch (e: unknown) {
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Erreur inattendue');

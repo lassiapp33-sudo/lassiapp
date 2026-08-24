@@ -29,13 +29,14 @@ const TYPE_CONFIG: Record<
   NotifType,
   { Icon: React.FC; color: string; bg: string }
 > = {
-  order:     { Icon: IcoOrder,   color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
-  pay:       { Icon: IcoPay,     color: colors.success, bg: 'rgba(95,211,138,.13)' },
-  fitness:   { Icon: IcoFitness, color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
-  vip:       { Icon: IcoStar,    color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
-  msg:       { Icon: IcoMsg,     color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
-  ann:       { Icon: IcoAnn,     color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
-  livraison: { Icon: IcoTruck,   color: colors.success, bg: 'rgba(95,211,138,.13)' },
+  order:               { Icon: IcoOrder,   color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+  pay:                 { Icon: IcoPay,     color: colors.success, bg: 'rgba(95,211,138,.13)' },
+  fitness:             { Icon: IcoFitness, color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
+  vip:                 { Icon: IcoStar,    color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
+  msg:                 { Icon: IcoMsg,     color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+  ann:                 { Icon: IcoAnn,     color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+  livraison:           { Icon: IcoTruck,   color: colors.success, bg: 'rgba(95,211,138,.13)' },
+  reservation_terrain: { Icon: IcoFitness, color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
 };
 
 const NotifCard = React.memo(function NotifCard({

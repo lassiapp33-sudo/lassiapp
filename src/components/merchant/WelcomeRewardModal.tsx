@@ -1,6 +1,5 @@
 ﻿import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import { IcoGift } from '../common/LassiIcons';
 import { colors, fonts, radius } from '../../theme';
 
 interface Props {
@@ -23,7 +22,6 @@ export default function WelcomeRewardModal({
     <Modal visible={visible} animationType="fade" transparent presentationStyle="overFullScreen" onRequestClose={onClose}>
       <View style={s.overlay}>
         <View style={s.card}>
-          <IcoGift size={56} />
           <Text style={s.title}>Bienvenue sur LASSI</Text>
           <Text style={s.txt}>
             Pour démarrer, tu reçois {carrouselProduits} emplacement

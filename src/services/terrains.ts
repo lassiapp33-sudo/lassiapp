@@ -30,6 +30,16 @@ export const getTerrains = async (sportType?: string): Promise<Terrain[]> => {
   return (data ?? []) as Terrain[];
 };
 
+export const getTerrainById = async (terrainId: string): Promise<Terrain | null> => {
+  const { data, error } = await supabase
+    .from('terrains')
+    .select('*, horaires:terrain_horaires(*)')
+    .eq('id', terrainId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as Terrain;
+};
+
 // ─── Terrains d'un prestataire (vitrine + gestion merchant) ──────────────────
 
 export const getTerrainsByMerchant = async (prestataireId: string): Promise<Terrain[]> => {
@@ -230,7 +240,7 @@ export const saveTerrainHoraires = async (
 
 export const verifyTerrainReceipt = async (
   receiptCode: string,
-  prestataireId: string,
+  _prestataireId: string,
 ): Promise<{
   success: boolean;
   error?: string;
@@ -240,12 +250,14 @@ export const verifyTerrainReceipt = async (
   heure_fin?: string;
   date_reservation?: string;
 }> => {
-  const { data, error } = await supabase.rpc('verify_terrain_receipt', {
-    p_receipt_code: receiptCode.toUpperCase(),
-    p_prestataire_id: prestataireId,
+  const headers = await authHeaders();
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/validate-terrain-receipt`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ receiptCode: receiptCode.toUpperCase() }),
   });
-  if (error) return { success: false, error: error.message };
-  return data;
+  const data = await res.json() as Record<string, unknown>;
+  return data as { success: boolean; error?: string; client_id?: string; terrain_id?: string; heure_debut?: string; heure_fin?: string; date_reservation?: string };
 };
 
 // ─── Vérification paiement via Edge Function ──────────────────────────────────
@@ -264,6 +276,7 @@ async function authHeaders(): Promise<Record<string, string>> {
   };
 }
 
+// Ancien flux (basket) : vérifie uniquement, ne met pas à jour la DB
 export const verifyTerrainPayment = async (params: {
   reference: string;
   method: 'wave' | 'orange_money';
@@ -276,4 +289,101 @@ export const verifyTerrainPayment = async (params: {
   const data = await res.json();
   if (!res.ok) throw new Error((data as { error?: string }).error ?? 'Erreur vérification');
   return (data as { paid?: boolean }).paid === true;
+};
+
+// ─── Flux terrain football (pre-réservation → paiement → confirmation) ────────
+
+export const createPendingReservation = async (params: {
+  clientId: string;
+  terrainId: string;
+  prestataireId: string;
+  date: string;
+  heureDebut: string;
+  heureFin: string;
+  dureeHeures: number;
+  prixTotal: number;
+}): Promise<ReservationTerrain> => {
+  const commission = calculerCommission(params.prixTotal);
+  const { data, error } = await supabase
+    .from('reservations_terrain')
+    .insert({
+      client_id:           params.clientId,
+      terrain_id:          params.terrainId,
+      prestataire_id:      params.prestataireId,
+      date_reservation:    params.date,
+      heure_debut:         params.heureDebut,
+      heure_fin:           params.heureFin,
+      duree_heures:        params.dureeHeures,
+      prix_total:          params.prixTotal,
+      commission_lassi:    commission,
+      montant_prestataire: params.prixTotal - commission,
+      statut:              'en_attente',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    // Code 23P01 = exclusion_violation (EXCLUDE constraint PostgreSQL).
+    // Si c'est une ancienne réservation en_attente du MÊME client sur ce créneau,
+    // on la réutilise au lieu d'afficher une erreur générique.
+    const isExclusion = (error.code === '23P01') ||
+      (error.message ?? '').toLowerCase().includes('exclusion') ||
+      (error.message ?? '').toLowerCase().includes('overlap');
+    if (isExclusion) {
+      const { data: existing } = await supabase
+        .from('reservations_terrain')
+        .select()
+        .eq('client_id', params.clientId)
+        .eq('terrain_id', params.terrainId)
+        .eq('date_reservation', params.date)
+        .eq('heure_debut', params.heureDebut)
+        .eq('statut', 'en_attente')
+        .maybeSingle();
+      if (existing) return existing as ReservationTerrain;
+      // Pas de réservation à réutiliser → créneau pris par un autre client
+    }
+    throw error;
+  }
+  return data as ReservationTerrain;
+};
+
+export const cancelPendingReservation = async (reservationId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('reservations_terrain')
+    .update({ statut: 'annule' })
+    .eq('id', reservationId)
+    .eq('statut', 'en_attente');
+  if (error) console.warn('[terrains] cancelPendingReservation:', error.message);
+};
+
+export const createTerrainPaymentSession = async (params: {
+  reservationId: string;
+  moyenPaiement: 'wave' | 'orange_money';
+}): Promise<{ reference: string; paymentUrl: string | null; qrCode?: string | null; simulation: boolean }> => {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/create-terrain-payment`, {
+    method: 'POST',
+    headers: await authHeaders(),
+    body: JSON.stringify(params),
+  });
+  const data = await res.json() as Record<string, unknown>;
+  if (!res.ok) throw new Error((data.error as string | undefined) ?? "Impossible d'initier le paiement");
+  return data as { reference: string; paymentUrl: string | null; qrCode?: string | null; simulation: boolean };
+};
+
+export const verifyTerrainPaymentById = async (params: {
+  reference: string;
+  reservationId: string;
+  method: 'wave' | 'orange_money';
+}): Promise<{ paid: boolean; receiptCode?: string }> => {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-terrain-payment`, {
+    method: 'POST',
+    headers: await authHeaders(),
+    body: JSON.stringify(params),
+  });
+  const data = await res.json() as Record<string, unknown>;
+  if (!res.ok) throw new Error((data.error as string | undefined) ?? 'Erreur vérification paiement');
+  return {
+    paid:        data.paid === true,
+    receiptCode: data.receipt_code as string | undefined,
+  };
 };

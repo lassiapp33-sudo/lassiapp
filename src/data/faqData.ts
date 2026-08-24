@@ -34,7 +34,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "Comment m'abonner à une salle de sport ?",
     motsCles: ['abonnement', 'salle de sport', 's abonner', 'formule', 'abonner sport'],
     reponse:
-      'Va sur la vitrine de la salle, choisis une formule (mensuel, trimestriel...), clique "S\'abonner", paie via Wave/Orange Money. Ton abonnement est actif. 💪',
+      'Va sur la vitrine de la salle, choisis une formule (mensuel, trimestriel...), clique "S\'abonner", paie via Wave/Orange Money. Ton abonnement est actif.',
   },
   {
     id: 4,
@@ -238,7 +238,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     profil: 'tous',
     question: 'Comment gérer mes favoris ?',
     motsCles: ['favoris', 'enregistrer', 'coeur', 'sauvegarder', 'ajouter favoris'],
-    reponse: "Clique sur le cœur ❤️ sur une vitrine. Retrouve tout dans l'onglet Favoris.",
+    reponse: "Clique sur le cœur sur une vitrine. Retrouve tout dans l'onglet Favoris.",
   },
   {
     id: 25,
@@ -282,7 +282,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "Quels commerces peuvent s'inscrire ?",
     motsCles: ['types commerce', 'categories commerces', 'qui peut vendre', 'quels commerces'],
     reponse:
-      'Tangana/Ndéki, restos & boissons (fast-food, dibiterie, séraas, jus...), coiffeurs & salons, salles de sport, boulangeries-pâtisseries, commerçants du quartier (alimentation, quincaillerie). 🌟',
+      'Tangana/Ndéki, restos & boissons (fast-food, dibiterie, séraas, jus...), coiffeurs & salons, salles de sport, boulangeries-pâtisseries, commerçants du quartier (alimentation, quincaillerie).',
   },
   {
     id: 29,
@@ -399,7 +399,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment créer une promo ?',
     motsCles: ['promo', 'promotion', 'reduction', 'offre', 'solde', 'creer promo'],
     reponse:
-      'Dans ton espace prestataire → Promotions, crée une offre ("-20% aujourd\'hui", "2 achetés = 1 offert"). Elle s\'affiche sur ta vitrine pour attirer les clients. 🎉',
+      'Dans ton espace prestataire → Promotions, crée une offre ("-20% aujourd\'hui", "2 achetés = 1 offert"). Elle s\'affiche sur ta vitrine pour attirer les clients.',
   },
   {
     id: 40,
@@ -426,7 +426,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment répondre à un avis client ?',
     motsCles: ['repondre avis', 'commentaire client', 'reponse note', 'avis client'],
     reponse:
-      'Quand un client laisse un avis, tu peux y répondre depuis ta vitrine. Une réponse polie rassure les futurs clients. ⭐',
+      'Quand un client laisse un avis, tu peux y répondre depuis ta vitrine. Une réponse polie rassure les futurs clients.',
   },
 
   // ── MESSAGERIE ────────────────────────────────────────────────────────────────
@@ -472,7 +472,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment laisser un avis ?',
     motsCles: ['avis', 'noter', 'note', 'commentaire', 'evaluer', 'laisser avis'],
     reponse:
-      'Après une commande, tu peux donner une note (étoiles) + un commentaire sur le commerçant. Ça aide toute la communauté. ⭐',
+      'Après une commande, tu peux donner une note (étoiles) + un commentaire sur le commerçant. Ça aide toute la communauté.',
   },
   {
     id: 47,
@@ -481,7 +481,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Pourquoi laisser un avis ?',
     motsCles: ['pourquoi avis', 'utilite avis', 'importance note', 'pourquoi noter'],
     reponse:
-      "Tes avis aident les autres à choisir et encouragent les bons commerçants. C'est l'esprit communautaire de LASSİ. 🤝",
+      "Tes avis aident les autres à choisir et encouragent les bons commerçants. C'est l'esprit communautaire de LASSİ.",
   },
   {
     id: 48,
@@ -671,7 +671,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment proposer une idée ou un retour ?',
     motsCles: ['suggestion', 'idee', 'retour', 'feedback', 'ameliorer', 'proposer idee'],
     reponse:
-      'On adore les retours. Passe par "Signaler un problème" ou le service client pour partager tes idées. LASSİ grandit avec sa communauté. 💡',
+      'On adore les retours. Passe par "Signaler un problème" ou le service client pour partager tes idées. LASSİ grandit avec sa communauté.',
   },
   {
     id: 67,
@@ -689,7 +689,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Comment inviter des amis ?',
     motsCles: ['inviter', 'parrainage', 'partager', 'ami', 'inviter amis'],
     reponse:
-      "Le partage et le parrainage arrivent bientôt. Tu pourras inviter tes amis et gagner des avantages. Reste à l'écoute. 🎁",
+      "Le partage et le parrainage arrivent bientôt. Tu pourras inviter tes amis et gagner des avantages. Reste à l'écoute.",
   },
   {
     id: 69,
@@ -770,7 +770,7 @@ export const FAQ_ITEMS: FaqItem[] = [
       'commercant pas inscrit',
     ],
     reponse:
-      "Parle-lui de LASSİ. Il peut s'inscrire gratuitement comme prestataire en quelques minutes. Plus on est nombreux, mieux c'est. 🙌",
+      "Parle-lui de LASSİ. Il peut s'inscrire gratuitement comme prestataire en quelques minutes. Plus on est nombreux, mieux c'est.",
   },
   {
     id: 77,
@@ -815,7 +815,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Puis-je suivre un commerçant ?',
     motsCles: ['suivre', 'favori commercant', 'abonner commercant', 'suivre commerce'],
     reponse:
-      'Ajoute-le en favori (cœur ❤️) pour le retrouver vite et ne rien rater de ses nouveautés.',
+      'Ajoute-le en favori pour le retrouver vite et ne rien rater de ses nouveautés.',
   },
   {
     id: 82,
@@ -833,7 +833,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'C\'est quoi un commerce "recommandé" ?',
     motsCles: ['recommande', 'reco', 'suggestion', 'mis en avant', 'commerce recommande'],
     reponse:
-      "Ce sont des commerces mis en avant par LASSİ (qualité, activité, ou forfait visibilité). Une bonne porte d'entrée pour découvrir. 🌟",
+      "Ce sont des commerces mis en avant par LASSİ (qualité, activité, ou forfait visibilité). Une bonne porte d'entrée pour découvrir.",
   },
   {
     id: 84,
@@ -1010,7 +1010,7 @@ export const FAQ_ITEMS: FaqItem[] = [
       'vip rapidement',
     ],
     reponse:
-      "Sois actif : vitrine complète, photos, horaires à jour, bonnes réponses aux clients, bons avis. Un forfait visibilité peut aussi t'aider. 🚀",
+      "Sois actif : vitrine complète, photos, horaires à jour, bonnes réponses aux clients, bons avis. Un forfait visibilité peut aussi t'aider.",
   },
 ];
 

@@ -23,7 +23,11 @@ export async function getMerchantPayments(_prestataireId: string): Promise<Merch
     orderId:     row.order_id ?? undefined,
     clientName:  row.client_name ?? '—',
     clientPhone: undefined,
-    items:       row.type_op === 'fitness' ? [{ name: 'Abonnement fitness', qty: 1, price: row.montant }] : [],
+    items:       row.type_op === 'fitness'
+      ? [{ name: 'Abonnement fitness', qty: 1, price: row.montant }]
+      : row.type_op === 'terrain'
+        ? [{ name: 'Réservation terrain', qty: 1, price: row.montant }]
+        : [],
     amount:      Number(row.montant ?? 0),
     method:      mapMethod(row.moyen_paiement),
     status:      row.statut ?? 'pending',

@@ -18,6 +18,7 @@ import useAuthStore from '../../store/authStore';
 import useShopStore from '../../store/shopStore';
 import { getProducts } from '../../services/products';
 import { getTerrainsByMerchant } from '../../services/terrains';
+import { getMesOffres, FitnessOffre } from '../../services/fitnessAbonnements';
 import { StoreProduct } from '../../types/store';
 import { Terrain, SPORT_EMOJI } from '../../types/terrain';
 import {
@@ -34,7 +35,7 @@ import { Promotion, ProductPromoInfo } from '../../types/promotions';
 const TERRAIN_SPORTS_ELIGIBLES = ['football', 'basketball'] as const;
 
 interface EligibleItem {
-  kind: 'product' | 'terrain';
+  kind: 'product' | 'terrain' | 'abonnement';
   id: string;
   nom: string;
   prix: number;
@@ -137,6 +138,7 @@ export default function OffreQuartierScreen({ onBack }: Props) {
   const [activeSub, setActiveSub] = useState<ActiveSub | null>(null);
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [terrains, setTerrains] = useState<Terrain[]>([]);
+  const [abonnements, setAbonnements] = useState<FitnessOffre[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [paidSelectedIds, setPaidSelectedIds] = useState<string[]>([]);
   const [promoMap, setPromoMap] = useState<Record<string, ProductPromoInfo>>({});
@@ -145,11 +147,12 @@ export default function OffreQuartierScreen({ onBack }: Props) {
     if (!userId || !shopId) { setLoading(false); return; }
     setLoading(true);
     try {
-      const [reward, mine, allProducts, myTerrains, sub, activePromos] = await Promise.all([
+      const [reward, mine, allProducts, myTerrains, myAbonnements, sub, activePromos] = await Promise.all([
         getMonCarrouselQuota(userId),
         getMesProduitsCarrousel(userId),
         getProducts(shopId),
         getTerrainsByMerchant(userId),
+        getMesOffres(userId),
         getActiveSub(shopId, 'quartier'),
         getActivePromos(shopId),
       ]);
@@ -157,6 +160,7 @@ export default function OffreQuartierScreen({ onBack }: Props) {
       setActiveSub(sub);
       setProducts(allProducts);
       setPromoMap(buildProductPromoMap(activePromos));
+      setAbonnements(myAbonnements.filter(a => a.actif));
       setTerrains(
         myTerrains.filter(
           t => t.actif && (TERRAIN_SPORTS_ELIGIBLES as readonly string[]).includes(t.sport_type),
@@ -210,22 +214,38 @@ export default function OffreQuartierScreen({ onBack }: Props) {
     })),
   ];
 
-  // Produits uniquement (section payante — le pack ne gère pas les terrains)
-  const paidEligibleItems: EligibleItem[] = products
-    .filter(p => (p.photoUrl || p.emoji) && p.stock === 'in')
-    .map(p => {
-      const promoInfo = promoMap[p.id];
-      const prixPromo = promoInfo ? (calcPromoClientPrice(p.price, promoInfo) ?? undefined) : undefined;
-      return {
-        kind: 'product' as const,
-        id: p.id,
-        nom: p.name,
-        prix: calculerPrixClient(p.price),
-        image: p.photoUrl || p.emoji,
-        prixPromo,
-        promoBadge: promoInfo?.badge,
-      };
-    });
+  // Produits, abonnements fitness et terrains (section payante)
+  const paidEligibleItems: EligibleItem[] = [
+    ...products
+      .filter(p => p.stock === 'in')
+      .map(p => {
+        const promoInfo = promoMap[p.id];
+        const prixPromo = promoInfo ? (calcPromoClientPrice(p.price, promoInfo) ?? undefined) : undefined;
+        return {
+          kind: 'product' as const,
+          id: p.id,
+          nom: p.name,
+          prix: calculerPrixClient(p.price),
+          image: p.photoUrl || p.emoji || '🛍️',
+          prixPromo,
+          promoBadge: promoInfo?.badge,
+        };
+      }),
+    ...abonnements.map(a => ({
+      kind: 'abonnement' as const,
+      id: a.id,
+      nom: a.nom,
+      prix: a.prix,
+      image: '🏋️',
+    })),
+    ...terrains.map(t => ({
+      kind: 'terrain' as const,
+      id: t.id,
+      nom: t.nom,
+      prix: calculerPrixClient(t.prix_horaire),
+      image: SPORT_EMOJI[t.sport_type],
+    })),
+  ];
 
   const toggleAdmin = (id: string) => {
     setSelectedIds(prev => {
@@ -385,7 +405,7 @@ export default function OffreQuartierScreen({ onBack }: Props) {
                     FORFAIT ACTIF · {activeSub.planLabel.toUpperCase()}
                   </Text>
                 </View>
-                <Text style={styles.paidBannerTitle}>⭐ Pack Visibilité payant</Text>
+                <Text style={styles.paidBannerTitle}>Pack Visibilité payant</Text>
                 <View style={styles.bannerRow}>
                   <Text style={styles.bannerMeta}>
                     {activeSub.allProducts

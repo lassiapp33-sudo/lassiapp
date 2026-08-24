@@ -45,7 +45,7 @@ export default function ReservationModal({
   const [loading, setLoading] = useState(false);
   const referenceRef = useRef('');
 
-  const prixTotal = calculerPrixAvecMarge(terrain.prix_horaire * dureeHeures);
+  const prixTotal = calculerPrixAvecMarge(terrain.prix_horaire);
 
   const handleClose = () => {
     setStage('confirm');

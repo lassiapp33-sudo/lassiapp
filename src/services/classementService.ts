@@ -216,6 +216,7 @@ export const getBadgesActifsBatch = async (
     .select('*')
     .in('prestataire_id', ids)
     .eq('est_actif', true)
+    .neq('type_classement', 'bienvenue')
     .or(`valide_jusqu_a.is.null,valide_jusqu_a.gt.${now}`)
     .order('rang')
     .order('created_at', { ascending: false });

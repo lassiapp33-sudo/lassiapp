@@ -262,7 +262,7 @@ export function ClientOrderCard({
       {/* Invitation avis (commande terminée sans avis) */}
       {canAvis && (
         <TouchableOpacity style={s.avisBtn} onPress={onLeaveAvis} activeOpacity={0.85}>
-          <Text style={s.avisBtnTxt}>⭐ Comment s'est passée ta commande ?</Text>
+          <Text style={s.avisBtnTxt}>Comment s'est passée ta commande ?</Text>
         </TouchableOpacity>
       )}
 

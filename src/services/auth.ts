@@ -72,6 +72,7 @@ export interface RegisterParams {
   email: string; // email réel — peut être '' si non fourni
   password: string;
   role: UserRole;
+  zone?: string;
 }
 
 export async function register(params: RegisterParams): Promise<AuthUser> {
@@ -114,6 +115,7 @@ export async function register(params: RegisterParams): Promise<AuthUser> {
       auth_email: authEmail,
       email: realEmail || null,
       role: params.role,
+      ...(params.zone ? { zone: params.zone } : {}),
     },
     { onConflict: 'id' },
   );

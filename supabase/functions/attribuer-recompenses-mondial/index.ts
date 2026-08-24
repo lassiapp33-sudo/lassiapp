@@ -17,14 +17,14 @@ const EXPO_BATCH_SIZE = 100
 
 // Paliers (miroir de src/config/rewards.ts PALIERS_MONDIAL — garder synchro)
 const PALIERS = [
-  { min: 1,  max: 1,  badge: '👑 Champion National', certificat: true,  priorite: true,  notif: true,  credit: 5000, carrousel: 5, newsletter: true },
-  { min: 2,  max: 2,  badge: '🥈 Vice-Champion',     certificat: true,  priorite: true,  notif: true,  credit: 3000, carrousel: 4, newsletter: true },
-  { min: 3,  max: 3,  badge: '🥉 3e National',       certificat: true,  priorite: true,  notif: true,  credit: 2000, carrousel: 3, newsletter: true },
-  { min: 4,  max: 4,  badge: '🏅 Top 4 National',    certificat: true,  priorite: true,  notif: false, credit: 1000, carrousel: 2, newsletter: false },
-  { min: 5,  max: 5,  badge: '🏅 Top 5 National',    certificat: true,  priorite: true,  notif: false, credit: 1000, carrousel: 1, newsletter: false },
-  { min: 6,  max: 10, badge: '⭐ Top 10 National',   certificat: true,  priorite: true,  notif: false, credit: 500,  carrousel: 0, newsletter: false },
-  { min: 11, max: 20, badge: '📈 Top 20 National',   certificat: true,  priorite: false, notif: false, credit: 0,    carrousel: 0, newsletter: false },
-  { min: 21, max: 40, badge: '📋 Top 40 National',   certificat: false, priorite: false, notif: false, credit: 0,    carrousel: 0, newsletter: false },
+  { min: 1,  max: 1,  badge: 'Champion National', certificat: true,  priorite: true,  notif: true,  credit: 5000, carrousel: 5, newsletter: true },
+  { min: 2,  max: 2,  badge: 'Vice-Champion',     certificat: true,  priorite: true,  notif: true,  credit: 3000, carrousel: 4, newsletter: true },
+  { min: 3,  max: 3,  badge: '3e National',       certificat: true,  priorite: true,  notif: true,  credit: 2000, carrousel: 3, newsletter: true },
+  { min: 4,  max: 4,  badge: 'Top 4 National',    certificat: true,  priorite: true,  notif: false, credit: 1000, carrousel: 2, newsletter: false },
+  { min: 5,  max: 5,  badge: 'Top 5 National',    certificat: true,  priorite: true,  notif: false, credit: 1000, carrousel: 1, newsletter: false },
+  { min: 6,  max: 10, badge: 'Top 10 National',   certificat: true,  priorite: true,  notif: false, credit: 500,  carrousel: 0, newsletter: false },
+  { min: 11, max: 20, badge: 'Top 20 National',   certificat: true,  priorite: false, notif: false, credit: 0,    carrousel: 0, newsletter: false },
+  { min: 21, max: 40, badge: 'Top 40 National',   certificat: false, priorite: false, notif: false, credit: 0,    carrousel: 0, newsletter: false },
 ]
 
 function ordinal(rang: number): string {
@@ -150,15 +150,15 @@ Deno.serve(async (req: Request) => {
     notificationsMerite.push({
       user_id: entry.prestataire_id,
       type: 'vip',
-      title: '🏆 Félicitations pour votre classement national !',
-      body: `Grâce à votre travail et à la confiance de vos clients, vous terminez ${ordinal(entry.rang)} au classement National LASSI de ce mois-ci. Vous obtenez ${describeRecompenses(palier)}. Continuez sur cette lancée pour gagner encore plus de récompenses le mois prochain !`,
+      title: 'Félicitations pour votre classement national',
+      body: `Grâce à votre travail et à la confiance de vos clients, vous terminez ${ordinal(entry.rang)} au classement National LASSI de ce mois-ci. Vous obtenez ${describeRecompenses(palier)}. Continuez sur cette lancée pour gagner encore plus de récompenses le mois prochain.`,
       data: { type_classement: 'mondial', periode, rang: entry.rang },
     })
 
     // Notification ville (top 3)
     if (palier.notif) {
       const nom = entry.nom_affiche ?? 'Un prestataire'
-      messagesVille.push(`${nom} est ${palier.badge} ce mois-ci ! 🎉`)
+      messagesVille.push(`${nom} est ${palier.badge} ce mois-ci`)
     }
   }
 
@@ -209,7 +209,7 @@ Deno.serve(async (req: Request) => {
       for (let i = 0; i < pushTokens.length; i += EXPO_BATCH_SIZE) {
         const batch = pushTokens.slice(i, i + EXPO_BATCH_SIZE).map(to => ({
           to,
-          title: '🏆 Champion LASSİ !',
+          title: 'Champion LASSİ',
           body: message,
           sound: 'default',
         }))

@@ -8,7 +8,10 @@ import SelecteurPuces from '../../components/store/SelecteurPuces';
 import { getToutesSuggestions } from '../../services/ficheGuidee';
 import { creerProduitsEnMasse } from '../../services/products';
 import { pickImageFromCamera, pickImageFromGallery, uploadImage } from '../../services/storage';
+import * as fitnessService from '../../services/fitnessAbonnements';
 import useShopStore from '../../store/shopStore';
+import useAuthStore from '../../store/authStore';
+import { FITNESS_SUBSCRIPTION_CATS } from '../../config/fitnessConfig';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -64,6 +67,7 @@ export default function FicheGuideeScreen({ onClose }: Props) {
   const subcategories = useShopStore(s => s.context.subcategories);
   const categories    = useShopStore(s => s.categories);
   const loadMyShop    = useShopStore(s => s.loadMyShop);
+  const userId        = useAuthStore(s => s.user?.id);
   const sousCatId     = subcategories[0] ?? '';
 
   const [loading, setLoading] = useState(true);
@@ -165,7 +169,7 @@ export default function FicheGuideeScreen({ onClose }: Props) {
         }
       }));
 
-      await creerProduitsEnMasse(shopId, avecImages.map(l => ({
+      const prodsData = avecImages.map(l => ({
         nom:           l.nom.trim(),
         prix:          parseInt(l.prix.replace(/\D/g, ''), 10),
         description:   l.description.trim(),
@@ -173,7 +177,22 @@ export default function FicheGuideeScreen({ onClose }: Props) {
         category:      catId,
         itemType,
         imageUrl:      l.imageUrl ?? undefined,
-      })));
+      }));
+
+      if (userId && shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(catId)) {
+        // Onglet abonnement fitness : créer UNIQUEMENT l'offre, pas de produit dans la liste
+        await Promise.allSettled(prodsData.map(p =>
+          fitnessService.createOffre(userId, {
+            nom:         p.nom,
+            description: p.description,
+            prix:        p.prix,
+            dureeJours:  30,
+          }, catId),
+        ));
+      } else {
+        await creerProduitsEnMasse(shopId, prodsData);
+      }
+
       await loadMyShop();
       Alert.alert(
         'Fiche publiée',

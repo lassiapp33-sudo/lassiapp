@@ -289,9 +289,10 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         const res = await createVipOrder(
           sid,
           vipItems,
-          vipOrderMode === 'livraison' ? 'emporter' : 'emporter',
+          'emporter',
           structuredNote ?? undefined,
           method,
+          freshLivraisonFee,
         );
         realOrderId = res.orderId;
       } else {
@@ -676,7 +677,6 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
                   <Text style={styles.payBtnTxt}>
                     {isVip ? 'Commander' : `${method === 'wave' ? 'Wave' : 'OM'} · ${formatPrice(totalClient)}`}
                   </Text>
-                  {!isVip && <Text style={styles.payBtnSub}>Sans livraison</Text>}
                 </>
               )}
             </TouchableOpacity>
@@ -689,7 +689,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
                 styles.livraisonBtn,
                 (!hasItems || isSubmitting || devisBtn?.horsZone === true) && styles.payBtnDisabled,
               ]}
-              onPress={() => isVip ? handleCheckout() : setShowLivraisonModal(true)}
+              onPress={() => setShowLivraisonModal(true)}
               activeOpacity={0.85}
               disabled={!hasItems || isSubmitting || devisBtn?.horsZone === true}
             >

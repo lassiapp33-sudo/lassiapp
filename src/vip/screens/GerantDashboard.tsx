@@ -17,7 +17,7 @@ import useGerantStore from '../../store/gerantStore';
 import { TOP_INSET } from '../../theme';
 import { deconnexionVip } from '../authVip';
 
-type TileId = 'profil' | 'registre' | 'horaires' | 'maison' | 'changeMdp' | 'alaune' | 'avis' | 'classement' | 'livraison' | 'autourDeMoi' | 'reservations_table' | 'scan_arrivee' | 'espaces_config' | 'creneaux_config' | 'rdv_beauty' | 'creneaux_beauty';
+type TileId = 'profil' | 'registre' | 'horaires' | 'maison' | 'changeMdp' | 'alaune' | 'avis' | 'classement' | 'livraison' | 'autourDeMoi' | 'notifications' | 'reservations_table' | 'scan_arrivee' | 'espaces_config' | 'creneaux_config' | 'rdv_beauty' | 'creneaux_beauty';
 
 interface Tile {
   id: TileId;
@@ -33,11 +33,12 @@ const TILES: Tile[] = [
 ];
 
 const TILES2: Tile[] = [
-  { id: 'alaune',      label: 'À la une',      desc: 'Blocs mis en avant pour vos clients' },
-  { id: 'avis',        label: 'Mes avis',       desc: 'Notes et commentaires reçus' },
-  { id: 'classement',  label: 'Classement',     desc: 'Votre rang dans votre catégorie' },
-  { id: 'livraison',   label: 'Livraison',      desc: 'Demander et suivre une livraison' },
-  { id: 'autourDeMoi', label: 'Autour de moi',  desc: 'Prestataires et services à proximité' },
+  { id: 'notifications', label: 'Notifications',  desc: 'Réservations, alertes et messages' },
+  { id: 'alaune',        label: 'À la une',        desc: 'Blocs mis en avant pour vos clients' },
+  { id: 'avis',          label: 'Mes avis',         desc: 'Notes et commentaires reçus' },
+  { id: 'classement',    label: 'Classement',       desc: 'Votre rang dans votre catégorie' },
+  { id: 'livraison',     label: 'Livraison',        desc: 'Demander et suivre une livraison' },
+  { id: 'autourDeMoi',   label: 'Autour de moi',    desc: 'Prestataires et services à proximité' },
 ];
 
 const TILES_RESTAURATION: Tile[] = [

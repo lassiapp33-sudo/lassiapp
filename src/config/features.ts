@@ -7,5 +7,5 @@
 //   3. eas update → déploiement immédiat sans rebuild
 // ============================================================
 
-export const WAVE_ENABLED = false;
+export const WAVE_ENABLED = true;
 export const VISIBILITY_PACKS_ENABLED = true;

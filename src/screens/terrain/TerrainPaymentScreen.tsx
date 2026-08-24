@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,8 +19,6 @@ import { PayMethod } from '../../types/payment';
 import { WAVE_ENABLED } from '../../config/features';
 import useAuthStore from '../../store/authStore';
 import * as terrainsService from '../../services/terrains';
-import * as payService from '../../services/payment';
-import { PAYMENT_CONFIG } from '../../config/payment';
 import logger from '../../utils/logger';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -163,28 +161,60 @@ export default function TerrainPaymentScreen({
   const [processing, setProcessing] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const referenceRef = useRef('');
-  // Garde synchrone anti-double-tap : useRef se met à jour immédiatement,
-  // contrairement à useState qui est stale dans la closure du premier appel.
+  const reservationIdRef = useRef('');
+  // useRef anti-double-tap : se met à jour immédiatement (vs useState stale en closure)
   const processingRef = useRef(false);
+
+  const moyenPaiement = method === 'wave' ? 'wave' : 'orange_money' as const;
 
   const handlePay = async () => {
     if (processingRef.current || !clientId) return;
     processingRef.current = true;
     setProcessing(true);
     try {
-      // 1. Ouvrir SenePay (pas de réservation avant paiement confirmé)
-      const session = await payService.createPayment({
-        ticketId: `${terrainId}_${dateReservation}_${heureDebut}`,
-        amount: prixTotal,
-        method,
-        merchantName: prestataireName,
+      // 1. Pré-créer la réservation en_attente (bloque le créneau dès maintenant)
+      if (!reservationIdRef.current) {
+        const resa = await terrainsService.createPendingReservation({
+          clientId,
+          terrainId,
+          prestataireId,
+          date: dateReservation,
+          heureDebut,
+          heureFin,
+          dureeHeures,
+          prixTotal,
+        });
+        reservationIdRef.current = resa.id;
+      }
+
+      // 2. Initier le paiement (montant chargé côté serveur depuis la DB)
+      const session = await terrainsService.createTerrainPaymentSession({
+        reservationId: reservationIdRef.current,
+        moyenPaiement,
       });
       referenceRef.current = session.reference;
-      await Linking.openURL(session.paymentUrl);
+
+      // 3. Ouvrir l'app de paiement (null en simulation → on passe directement à waiting)
+      if (session.paymentUrl) {
+        await Linking.openURL(session.paymentUrl);
+      }
       setStage('waiting');
     } catch (err) {
       logger.warn('[TerrainPayment] handlePay:', err);
-      Alert.alert('Erreur', "Impossible d'initier le paiement. Réessaie.");
+      // PostgrestError (depuis supabase.insert) n'est pas une instance d'Error —
+      // il faut lire .code et .message directement.
+      const pgCode = (err as { code?: string }).code ?? '';
+      const anyMsg = (err instanceof Error ? err.message : (err as { message?: string }).message ?? '').toLowerCase();
+      const isExclusionErr =
+        pgCode === '23P01' ||
+        anyMsg.includes('exclusion') ||
+        anyMsg.includes('overlap') ||
+        anyMsg.includes('exclude');
+      if (isExclusionErr) {
+        Alert.alert('Créneau indisponible', "Ce créneau vient d'être réservé par quelqu'un d'autre. Choisis un autre créneau.");
+      } else {
+        Alert.alert('Erreur', "Impossible d'initier la réservation. Réessaie.");
+      }
     } finally {
       processingRef.current = false;
       setProcessing(false);
@@ -195,55 +225,47 @@ export default function TerrainPaymentScreen({
     if (verifying || !clientId) return;
     setVerifying(true);
     try {
-      // 1. Vérifier le paiement auprès de l'opérateur
-      const moyenPaiement: 'wave' | 'orange_money' = method === 'wave' ? 'wave' : 'orange_money';
-
-      const paid = await terrainsService.verifyTerrainPayment({
-        reference: referenceRef.current,
-        method: moyenPaiement,
-      });
-
-      if (!paid) {
-        Alert.alert(
-          'Paiement non confirme',
-          "Le paiement n'est pas encore confirme. Attends quelques secondes et reessaie.",
-        );
-        return;
+      // Retry up to 3 times with 3s delay — covers the OM/Wave processing window
+      const MAX_ATTEMPTS = 3;
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        if (attempt > 0) await new Promise<void>(r => setTimeout(r, 3000));
+        const result = await terrainsService.verifyTerrainPaymentById({
+          reference:     referenceRef.current,
+          reservationId: reservationIdRef.current,
+          method:        moyenPaiement,
+        });
+        if (result.paid) {
+          onSuccess(result.receiptCode ?? '');
+          return;
+        }
       }
-
-      // 2. Créer la réservation (bloque le créneau via contrainte GIST)
-      const reservation = await terrainsService.createReservation({
-        clientId,
-        terrainId,
-        prestataireId,
-        date: dateReservation,
-        heureDebut,
-        heureFin,
-        dureeHeures,
-        prixTotal,
-        moyenPaiement,
-        paiementRef: referenceRef.current,
-      });
-
-      onSuccess(reservation.receipt_code);
+      Alert.alert(
+        'Paiement non confirmé',
+        "Le paiement n'est pas encore confirmé. Attends quelques secondes et réessaie.",
+      );
     } catch (err) {
       logger.warn('[TerrainPayment] handleVerify:', err);
-      const msg = err instanceof Error ? err.message : '';
-      if (msg.includes('overlap') || msg.includes('EXCLUDE')) {
-        Alert.alert('Créneau indisponible', "Ce créneau vient d'être pris. Choisis un autre.");
-      } else {
-        Alert.alert('Erreur', 'Impossible de confirmer la réservation. Réessaie.');
-      }
+      Alert.alert('Erreur', 'Impossible de confirmer le paiement. Réessaie.');
     } finally {
       setVerifying(false);
     }
   };
 
+  const handleCancel = useCallback(async () => {
+    // Ne pas annuler si un paiement est en cours (race condition)
+    if (processingRef.current) return;
+    if (reservationIdRef.current) {
+      await terrainsService.cancelPendingReservation(reservationIdRef.current).catch(() => {});
+      reservationIdRef.current = '';
+    }
+    onBack();
+  }, [onBack]);
+
   if (stage === 'waiting') {
     return (
       <View style={styles.root}>
         <View style={[styles.topBar, { paddingTop: TOP_INSET + 4 }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.backBtn} onPress={handleCancel} activeOpacity={0.8}>
             <IcoBack />
           </TouchableOpacity>
           <Text style={styles.topTitle}>Paiement en cours</Text>
@@ -253,7 +275,7 @@ export default function TerrainPaymentScreen({
           total={prixTotal}
           verifying={verifying}
           onVerify={handleVerify}
-          onBack={onBack}
+          onBack={handleCancel}
         />
       </View>
     );
@@ -263,7 +285,7 @@ export default function TerrainPaymentScreen({
     <View style={styles.root}>
       {/* Header */}
       <View style={[styles.topBar, { paddingTop: TOP_INSET + 4 }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.backBtn} onPress={handleCancel} activeOpacity={0.8}>
           <IcoBack />
         </TouchableOpacity>
         <Text style={styles.topTitle}>Confirmer la réservation</Text>
@@ -297,9 +319,6 @@ export default function TerrainPaymentScreen({
             <Text style={styles.recapKey}>Total</Text>
             <Text style={styles.recapTotal}>{formatPrice(prixTotal)}</Text>
           </View>
-          <Text style={styles.recapNote}>
-            Frais de service LASSİ ({PAYMENT_CONFIG.COMMISSION_PERCENT_DISPLAY}) inclus · Aucun remboursement après paiement
-          </Text>
         </View>
 
         {/* Méthode de paiement */}
@@ -381,14 +400,6 @@ const styles = StyleSheet.create({
   recapKey: { color: colors.muted, fontFamily: fonts.body, fontSize: 13 },
   recapVal: { color: colors.white, fontFamily: fonts.ui, fontSize: 13 },
   recapTotal: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 18 },
-  recapNote: {
-    color: colors.muted,
-    fontFamily: fonts.body,
-    fontSize: 10,
-    marginTop: 10,
-    lineHeight: 14,
-    fontStyle: 'italic',
-  },
 
   methodCard: {
     flexDirection: 'row',

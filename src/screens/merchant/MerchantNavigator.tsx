@@ -25,6 +25,7 @@ import BlocAlaUneScreen from '../home/BlocAlaUneScreen';
 import MerchantLivraisonScreen from './MerchantLivraisonScreen';
 import MaCampagneScreen from './MaCampagneScreen';
 import { Terrain } from '../../types/terrain';
+import { getTerrainById } from '../../services/terrains';
 import NotificationsScreen from '../home/NotificationsScreen';
 import ChatScreen from '../chat/ChatScreen';
 import ShopScreen from '../shop/ShopScreen';
@@ -46,7 +47,7 @@ import { getRecompenseBienvenue } from '../../services/classementService';
 import { OrderInfo } from '../../types/payment';
 
 function shouldShowCard(type: string): boolean {
-  return type === 'vip' || type === 'pay' || type === 'order' || type === 'msg';
+  return type === 'vip' || type === 'pay' || type === 'order' || type === 'msg' || type === 'reservation_terrain';
 }
 
 // Navigateur du cockpit prestataire — tous les modules sont câblés ici.
@@ -195,6 +196,15 @@ export default function MerchantNavigator({ onLogout }: Props) {
     } else if (pendingNav.type === 'a_la_une_categorie') {
       // Pour le prestataire en mode acheteur, on revient au dashboard
       setScreen('dashboard');
+    } else if (pendingNav.type === 'terrain_resa') {
+      const tId = pendingNav.terrainId;
+      if (tId) {
+        getTerrainById(tId)
+          .then(t => setScreen(t ? { id: 'terrain_reservations', terrain: t } : 'terrains'))
+          .catch(() => setScreen('terrains'));
+      } else {
+        setScreen('terrains');
+      }
     }
   }, [pendingNav, clearPending]);
 
@@ -377,6 +387,17 @@ export default function MerchantNavigator({ onLogout }: Props) {
           if (type === 'msg' && targetId) {
             // 1 tap → directement dans la bonne conversation
             setScreen({ id: 'chat', conversationId: targetId });
+            return;
+          }
+          if (type === 'reservation_terrain') {
+            const terrainId = (data ?? {}).terrainId as string | undefined;
+            if (terrainId) {
+              getTerrainById(terrainId)
+                .then(terrain => { if (terrain) setScreen({ id: 'terrain_reservations', terrain }); else setScreen('terrains'); })
+                .catch(() => setScreen('terrains'));
+            } else {
+              setScreen('terrains');
+            }
             return;
           }
           if (type === 'fitness') {

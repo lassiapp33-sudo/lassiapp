@@ -431,27 +431,32 @@ const IcoBeignetFataya: React.FC<{ color: string }> = () =>
     // Assiette
     React.createElement(Ellipse, { cx: 28, cy: 52, rx: 24, ry: 4, fill: '#EFEBE9' }),
     React.createElement(Ellipse, { cx: 28, cy: 50, rx: 22, ry: 3, fill: '#D7CCC8' }),
-    // ── Fataya (droite, croissant doré) ──
-    React.createElement(Path, { d: 'M 34 46 C 36 46 52 42 52 30 C 52 20 44 14 36 18 C 30 22 28 36 34 46 Z', fill: '#C8822A' }),
-    React.createElement(Path, { d: 'M 35 44 C 37 44 51 40 51 30 C 51 22 44 17 37 20 C 32 24 30 38 35 44 Z', fill: '#D4922A' }),
-    // Festons bord fataya
-    React.createElement(Circle, { cx: 34, cy: 46, r: 2, fill: '#A0672A' }),
-    React.createElement(Circle, { cx: 40, cy: 48, r: 2, fill: '#A0672A' }),
-    React.createElement(Circle, { cx: 46, cy: 44, r: 2, fill: '#A0672A' }),
-    React.createElement(Circle, { cx: 51, cy: 36, r: 2, fill: '#A0672A' }),
-    // Reflet surface fataya
-    React.createElement(Ellipse, { cx: 42, cy: 24, rx: 4, ry: 2, fill: '#F0C040', opacity: 0.4 }),
-    // ── Beignet (gauche, boule gonflée) ──
-    React.createElement(Ellipse, { cx: 20, cy: 44, rx: 13, ry: 3, fill: '#8D6E63', opacity: 0.25 }),
-    React.createElement(Circle, { cx: 20, cy: 36, r: 14, fill: '#E8B040' }),
-    React.createElement(Circle, { cx: 20, cy: 36, r: 10, fill: '#D4922A' }),
-    // Reflet doré
-    React.createElement(Ellipse, { cx: 17, cy: 31, rx: 8, ry: 5, fill: '#F0C040', opacity: 0.55 }),
-    // Sucre glace (points blancs)
-    React.createElement(Circle, { cx: 16, cy: 31, r: 2,   fill: '#FFFFFF', opacity: 0.7 }),
-    React.createElement(Circle, { cx: 22, cy: 29, r: 1.5, fill: '#FFFFFF', opacity: 0.6 }),
-    React.createElement(Circle, { cx: 25, cy: 35, r: 1.5, fill: '#FFFFFF', opacity: 0.5 }),
-    React.createElement(Circle, { cx: 18, cy: 39, r: 1.5, fill: '#FFFFFF', opacity: 0.5 }),
+    // Ombre beignet bas gauche
+    React.createElement(Ellipse, { cx: 18, cy: 47, rx: 11, ry: 2.5, fill: '#8D6E63', opacity: 0.2 }),
+    // Beignet bas gauche
+    React.createElement(Circle, { cx: 18, cy: 39, r: 11, fill: '#C8772A' }),
+    React.createElement(Circle, { cx: 18, cy: 39, r: 9,  fill: '#D9922A' }),
+    React.createElement(Ellipse, { cx: 15, cy: 34, rx: 5.5, ry: 3.5, fill: '#F0B840', opacity: 0.55 }),
+    React.createElement(Circle, { cx: 14, cy: 34, r: 1.5, fill: '#FFFFFF', opacity: 0.7 }),
+    React.createElement(Circle, { cx: 20, cy: 32, r: 1.2, fill: '#FFFFFF', opacity: 0.6 }),
+    React.createElement(Circle, { cx: 23, cy: 38, r: 1.2, fill: '#FFFFFF', opacity: 0.5 }),
+    // Ombre beignet bas droit
+    React.createElement(Ellipse, { cx: 38, cy: 47, rx: 11, ry: 2.5, fill: '#8D6E63', opacity: 0.2 }),
+    // Beignet bas droit
+    React.createElement(Circle, { cx: 38, cy: 39, r: 11, fill: '#C8772A' }),
+    React.createElement(Circle, { cx: 38, cy: 39, r: 9,  fill: '#D9922A' }),
+    React.createElement(Ellipse, { cx: 35, cy: 34, rx: 5.5, ry: 3.5, fill: '#F0B840', opacity: 0.55 }),
+    React.createElement(Circle, { cx: 34, cy: 34, r: 1.5, fill: '#FFFFFF', opacity: 0.7 }),
+    React.createElement(Circle, { cx: 40, cy: 32, r: 1.2, fill: '#FFFFFF', opacity: 0.6 }),
+    React.createElement(Circle, { cx: 43, cy: 38, r: 1.2, fill: '#FFFFFF', opacity: 0.5 }),
+    // Beignet haut centre
+    React.createElement(Circle, { cx: 28, cy: 23, r: 12, fill: '#C8772A' }),
+    React.createElement(Circle, { cx: 28, cy: 23, r: 10, fill: '#D9922A' }),
+    React.createElement(Ellipse, { cx: 25, cy: 17, rx: 7, ry: 4.5, fill: '#F0B840', opacity: 0.6 }),
+    React.createElement(Circle, { cx: 24, cy: 17, r: 2,   fill: '#FFFFFF', opacity: 0.75 }),
+    React.createElement(Circle, { cx: 31, cy: 15, r: 1.5, fill: '#FFFFFF', opacity: 0.65 }),
+    React.createElement(Circle, { cx: 34, cy: 22, r: 1.5, fill: '#FFFFFF', opacity: 0.55 }),
+    React.createElement(Circle, { cx: 22, cy: 27, r: 1.5, fill: '#FFFFFF', opacity: 0.5 }),
   );
 
 // ─── Food ──────────────────────────────────────────────────────────────────────
@@ -802,7 +807,7 @@ export const CATEGORIES: CatConfig[] = [
       {
         id: 'cafe_wass',
         emoji: '☕',
-        label: 'Café ak Wass',
+        label: 'Café ak Thé',
         desc: 'Café, thé, jus, boissons chaudes et fraîches',
         SvgIcon: IcoCafeWass,
       },

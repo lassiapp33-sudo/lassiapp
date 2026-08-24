@@ -89,6 +89,13 @@ function handleNotifData(data: Record<string, any> | undefined | null) {
     setPendingNav({ type: 'new_shop', shopId: data.shop_id as string, shopName: (data.shop_name as string) ?? '' });
   } else if (data.type === 'a_la_une_feed') {
     setPendingNav({ type: 'a_la_une_feed' });
+  } else if (
+    data.type === 'reservation_terrain' ||
+    data.type === 'terrain_acces_valide'
+  ) {
+    // Prestataire → terrain_reservations (MerchantNavigator gère via terrainId)
+    // Client      → terrain_my_reservations (HomeNavigator gère)
+    setPendingNav({ type: 'terrain_resa', terrainId: data.terrainId as string | undefined });
   }
 }
 
@@ -298,11 +305,12 @@ export default function App() {
       <StatusBar style="light" />
       <OfflineBanner />
 
-      {/* Bannière slide-top : commandes/messages (5s) + annonces à la une/nouveau prestataire (3s) */}
+      {/* Bannière slide-top : commandes/messages (5s) + annonces à la une/nouveau prestataire (3s) + réservations terrain */}
       <NotifPopupBanner
         onView={() => setPendingNav({ type: 'notifications' })}
         onVoirAlaUne={() => setPendingNav({ type: 'a_la_une_feed' })}
         onVoirVitrine={(shopId, shopName) => setPendingNav({ type: 'new_shop', shopId, shopName })}
+        onVoirTerrain={(terrainId) => setPendingNav({ type: 'terrain_resa', terrainId })}
       />
 
       {/* Carte rich-notification pour récompenses et paiements */}

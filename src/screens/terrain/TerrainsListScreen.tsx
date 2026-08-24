@@ -116,7 +116,7 @@ export default function TerrainsListScreen({ onBack, onSelectTerrain, initialSpo
                     <Text style={styles.nom}>{item.nom}</Text>
                     <Text style={styles.sport}>{SPORT_LABEL[item.sport_type]}</Text>
                   </View>
-                  <Text style={styles.prix}>{formatPrice(calculerPrixAvecMarge(item.prix_horaire))}/h</Text>
+                  <Text style={styles.prix}>{formatPrice(calculerPrixAvecMarge(item.prix_horaire))}</Text>
                 </View>
                 {item.adresse ? (
                   <Text style={styles.adresse} numberOfLines={1}>{item.adresse}</Text>

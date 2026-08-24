@@ -47,39 +47,43 @@ function rowToOffre(r: Record<string, unknown>): FitnessOffre {
   };
 }
 
-function rowToAbonnement(r: Record<string, unknown>): FitnessAbonnement {
-  const profile = r.profile as Record<string, unknown> | null;
-  const client  = r.client  as Record<string, unknown> | null;
-  const shops   = profile?.shops as Array<Record<string, unknown>> | null;
-  const shop    = Array.isArray(shops) && shops.length > 0 ? shops[0] : null;
+type ShopEntry = { name: string; logo_url: string | null };
+
+function rowToAbonnement(
+  r: Record<string, unknown>,
+  shopMap: Record<string, ShopEntry> = {},
+): FitnessAbonnement {
+  const prestataireId = r.prestataire_id as string;
+  const shop = shopMap[prestataireId] ?? null;
   return {
     id:               r.id as string,
     offreId:          r.offre_id as string,
     clientId:         r.client_id as string,
-    prestataireId:    r.prestataire_id as string,
+    prestataireId,
     nomOffre:         r.nom_offre as string,
     prixPaye:         r.prix_paye as number,
     dateAchat:        r.date_achat as string,
     dateExpiration:   r.date_expiration as string,
     statut:           r.statut as 'actif' | 'expire',
     paymentIntentId:  (r.payment_intent_id as string | null) ?? undefined,
-    prestataireName:   (profile?.name       as string | null) ?? undefined,
-    prestataireAvatar: (profile?.avatar_url as string | null) ?? undefined,
-    shopName:          (shop?.name          as string | null) ?? undefined,
-    shopLogo:          (shop?.logo_url      as string | null) ?? undefined,
-    clientName:        (client?.name        as string | null) ?? undefined,
+    shopName:         (shop?.name          as string | null) ?? undefined,
+    shopLogo:         (shop?.logo_url      as string | null) ?? undefined,
   };
 }
 
 // ─── Offres (prestataire) ─────────────────────────────────────────────────────
 
-/** Toutes les offres d'un fitness (actives + inactives) — pour le prestataire. */
-export async function getMesOffres(prestataireId: string): Promise<FitnessOffre[]> {
-  const { data, error } = await supabase
+/** Offres d'un fitness pour UN onglet spécifique (ou toutes si pas de tab). */
+export async function getMesOffres(prestataireId: string, categoriTab?: string): Promise<FitnessOffre[]> {
+  let query = supabase
     .from('fitness_abonnement_offres')
     .select('*')
     .eq('prestataire_id', prestataireId)
     .order('created_at', { ascending: false });
+  if (categoriTab) {
+    query = query.eq('categorie_tab', categoriTab);
+  }
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data ?? []).map(rowToOffre);
 }
@@ -99,10 +103,11 @@ export async function getOffresActives(prestataireId: string): Promise<FitnessOf
   }
 }
 
-/** Crée une offre d'abonnement. */
+/** Crée une offre d'abonnement liée à un onglet spécifique. */
 export async function createOffre(
   prestataireId: string,
   data: Pick<FitnessOffre, 'nom' | 'description' | 'prix' | 'dureeJours'>,
+  categoriTab?: string,
 ): Promise<FitnessOffre> {
   const { data: row, error } = await supabase
     .from('fitness_abonnement_offres')
@@ -112,6 +117,7 @@ export async function createOffre(
       description:    data.description?.trim() || null,
       prix:           data.prix,
       duree_jours:    data.dureeJours,
+      categorie_tab:  categoriTab ?? null,
     })
     .select()
     .single();
@@ -148,15 +154,33 @@ export async function deleteOffre(offreId: string): Promise<void> {
 
 // ─── Abonnements client ────────────────────────────────────────────────────────
 
-/** Abonnements d'un client (avec nom du fitness et nom de la boutique). */
+/** Abonnements d'un client (avec nom et logo de la boutique via shops.merchant_id). */
 export async function getMesAbonnements(clientId: string): Promise<FitnessAbonnement[]> {
   const { data, error } = await supabase
     .from('fitness_abonnements_clients')
-    .select('*, profile:prestataire_id(name, avatar_url, shops(name, logo_url))')
+    .select('*')
     .eq('client_id', clientId)
     .order('date_achat', { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []).map(r => rowToAbonnement(r as Record<string, unknown>));
+
+  const rows = data ?? [];
+  const prestataireIds = [...new Set(rows.map(r => r.prestataire_id as string).filter(Boolean))];
+
+  let shopMap: Record<string, ShopEntry> = {};
+  if (prestataireIds.length > 0) {
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/shops?select=merchant_id,name,logo_url&merchant_id=in.(${prestataireIds.map(encodeURIComponent).join(',')})`,
+        { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
+      );
+      if (res.ok) {
+        const shops: Array<{ merchant_id: string; name: string; logo_url: string | null }> = await res.json();
+        shopMap = Object.fromEntries(shops.map(s => [s.merchant_id, { name: s.name, logo_url: s.logo_url }]));
+      }
+    } catch {}
+  }
+
+  return rows.map(r => rowToAbonnement(r as Record<string, unknown>, shopMap));
 }
 
 /** Abonnés d'un fitness (avec nom réel du client via RPC SECURITY DEFINER). */
@@ -177,6 +201,38 @@ export async function getMesAbonnes(_prestataireId: string): Promise<FitnessAbon
     paymentIntentId:  (r.payment_intent_id as string | null) ?? undefined,
     clientName:       (r.client_name as string | null) ?? undefined,
   }));
+}
+
+/** Onglets (categorie_tab) ayant au moins une offre pour ce prestataire. */
+export async function getOffreTabs(prestataireId: string): Promise<string[]> {
+  const { data } = await supabase
+    .from('fitness_abonnement_offres')
+    .select('categorie_tab')
+    .eq('prestataire_id', prestataireId)
+    .not('categorie_tab', 'is', null);
+  const tabs = (data ?? []).map(r => r.categorie_tab as string).filter(Boolean);
+  return [...new Set(tabs)];
+}
+
+/** Renvoie true si un onglet spécifique a des abonnés actifs. */
+export async function hasActiveAbonnesForTab(categoriTab: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc('has_active_abonnes_for_tab', {
+      p_categorie_tab: categoriTab,
+    });
+    if (error) return false;
+    return data === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Supprime toutes les offres d'un onglet (cascade sur abonnements clients). */
+export async function deleteOffresForTab(categoriTab: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_offres_for_tab', {
+    p_categorie_tab: categoriTab,
+  });
+  if (error) throw new Error(error.message);
 }
 
 // ─── Helpers d'affichage ──────────────────────────────────────────────────────

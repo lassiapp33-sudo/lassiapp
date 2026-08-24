@@ -50,7 +50,7 @@ import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
 import { recordView, recordCarouselClick, recordCarouselVue } from '../../services/recentlyViewed';
 
 function shouldShowCard(type: string): boolean {
-  return type === 'vip' || type === 'pay' || type === 'order' || type === 'msg' || type === 'ann';
+  return type === 'vip' || type === 'pay' || type === 'order' || type === 'msg' || type === 'ann' || type === 'reservation_terrain';
 }
 
 // ─── Wrappers réservation table ───────────────────────────────────────────────
@@ -270,6 +270,8 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
       push({ id: 'shop', shopId: pendingNav.shopId, shopName: pendingNav.shopName });
     } else if (pendingNav.type === 'a_la_une_feed') {
       push({ id: 'a_la_une_feed' });
+    } else if (pendingNav.type === 'terrain_resa') {
+      setHistory([{ id: 'main' }, { id: 'terrain_my_reservations' }]);
     }
   }, [pendingNav, clearPending]);
 
@@ -731,7 +733,10 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
       <NotificationsScreen
         onBack={pop}
         onNavigate={(type, targetId) => {
-          if (type === 'msg' && targetId) {
+          if (type === 'fitness') {
+            // Abonnement activé → Mes abonnements
+            setHistory(h => [...h.slice(0, -1), { id: 'mes_abonnements' }]);
+          } else if (type === 'msg' && targetId) {
             // 1 tap → directement dans la bonne conversation
             // ChatScreen résoudra le vrai nom depuis Supabase via conversationId
             setHistory(h => [
@@ -744,6 +749,8 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
                 isVip: false,
               },
             ]);
+          } else if (type === 'reservation_terrain') {
+            setHistory(h => [...h.slice(0, -1), { id: 'terrain_my_reservations' }]);
           } else if (type === 'ann' && targetId === 'a_la_une_feed') {
             // Annonce À la une → ouvrir le feed À la une
             setHistory(h => [...h.slice(0, -1), { id: 'a_la_une_feed' }]);

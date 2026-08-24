@@ -42,14 +42,14 @@ function heureFmt(h: VipHoraire): LigneHoraire {
   return {
     jour: h.jour,
     ferme: h.ferme,
-    ouverture: h.ouverture ?? '',
-    fermeture: h.fermeture ?? '',
+    ouverture: h.ouverture?.slice(0, 5) ?? '08:00',
+    fermeture: h.fermeture?.slice(0, 5) ?? '22:00',
     note: h.note ?? '',
   };
 }
 
 function horaireVide(jour: 0 | 1 | 2 | 3 | 4 | 5 | 6): LigneHoraire {
-  return { jour, ferme: false, ouverture: '', fermeture: '', note: '' };
+  return { jour, ferme: false, ouverture: '08:00', fermeture: '22:00', note: '' };
 }
 
 const formatHeure = (raw: string): string => {
@@ -91,13 +91,17 @@ export default function GerantHorairesScreen({ onBack }: Props) {
   const enregistrer = async () => {
     if (!profilId) return;
     // Validation légère des formats HH:MM
+    const re = /^([01]\d|2[0-3]):[0-5]\d$/;
     const invalides = lignes.filter(l => {
       if (l.ferme) return false;
-      const re = /^([01]\d|2[0-3]):[0-5]\d$/;
-      return (l.ouverture && !re.test(l.ouverture)) || (l.fermeture && !re.test(l.fermeture));
+      if (!l.ouverture || !l.fermeture) return true;
+      return !re.test(l.ouverture) || !re.test(l.fermeture);
     });
     if (invalides.length > 0) {
-      Alert.alert('Format incorrect', 'Utilise le format HH:MM (ex: 08:30).');
+      Alert.alert(
+        'Horaires incomplets',
+        'Chaque jour ouvert doit avoir une heure d\'ouverture et de fermeture valide (ex: 08:30).',
+      );
       return;
     }
     setSauvegarde(true);
@@ -154,7 +158,14 @@ export default function GerantHorairesScreen({ onBack }: Props) {
               <Text style={s.jourTxt}>{JOURS_SEMAINE[l.jour]}</Text>
               <Switch
                 value={!l.ferme}
-                onValueChange={v => maj(l.jour, { ferme: !v })}
+                onValueChange={v => {
+                  const updates: Partial<LigneHoraire> = { ferme: !v };
+                  if (v) {
+                    if (!l.ouverture) updates.ouverture = '08:00';
+                    if (!l.fermeture) updates.fermeture = '22:00';
+                  }
+                  maj(l.jour, updates);
+                }}
                 thumbColor={!l.ferme ? r.couleur.or : r.couleur.gris}
                 trackColor={{ false: r.couleur.velours, true: 'rgba(201,162,39,0.4)' }}
                 style={{ width: 50, marginHorizontal: 10 }}

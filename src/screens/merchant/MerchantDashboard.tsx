@@ -99,6 +99,10 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
   const [fitnessRevenue, setFitnessRevenue] = useState(0);
   const [fitnessCount, setFitnessCount] = useState(0);
 
+  // Recette terrain — réservations avec payout réussi ce mois
+  const [terrainRevenue, setTerrainRevenue] = useState(0);
+  const [terrainCount, setTerrainCount] = useState(0);
+
   // Montage seul — initialisation unique au démarrage du dashboard
   useEffect(() => {
     loadMyShop();
@@ -125,11 +129,30 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
     })();
   }, [userId]);
 
+  // Recette terrain : réservations payées ce mois-ci
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const { data } = await supabase
+        .from('reservations_terrain')
+        .select('montant_prestataire')
+        .eq('prestataire_id', userId)
+        .eq('payout_statut', 'ok')
+        .gte('date_reservation', monthStart.toISOString().slice(0, 10));
+      const rows = (data ?? []) as Array<{ montant_prestataire: number }>;
+      setTerrainRevenue(rows.reduce((s, r) => s + r.montant_prestataire, 0));
+      setTerrainCount(rows.length);
+    })();
+  }, [userId]);
+
   // ── Calculs réels ──────────────────────────────────────────────────────────
   const activeOrders = orders.filter(o => o.status === 'new' || o.status === 'preparing');
   const doneOrders = orders.filter(o => o.status === 'done');
   const normalEarnings = doneOrders.reduce((sum, o) => sum + o.total, 0);
-  const totalEarnings = normalEarnings + fitnessRevenue;
+  const totalEarnings = normalEarnings + fitnessRevenue + terrainRevenue;
   const totalDebt = debtors.reduce((sum, d) => sum + d.amount, 0);
   const debtorsWithDebt = debtors.filter(d => d.amount > 0).length;
 
@@ -184,10 +207,12 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
               parts.push(`${doneOrders.length} commande${doneOrders.length > 1 ? 's' : ''}`);
             if (fitnessCount > 0)
               parts.push(`${fitnessCount} abonnement${fitnessCount > 1 ? 's' : ''}`);
+            if (terrainCount > 0)
+              parts.push(`${terrainCount} terrain${terrainCount > 1 ? 's' : ''}`);
             return parts.length > 0 ? parts.join(' · ') : 'Aucune recette ce mois';
           })()}
-          orders={orders.length + fitnessCount}
-          viaLassi={orders.length + fitnessCount}
+          orders={orders.length + fitnessCount + terrainCount}
+          viaLassi={orders.length + fitnessCount + terrainCount}
           debts={totalDebt}
         />
 

@@ -195,6 +195,7 @@ export async function createVipOrder(
   orderType: 'emporter' | 'place',
   note?: string,
   payMethod?: 'wave' | 'om' | 'cash',
+  livraisonFee?: number,
 ): Promise<{ orderId: string; total: number }> {
   let token = getCachedToken();
   if (!token) {
@@ -210,7 +211,7 @@ export async function createVipOrder(
       Authorization: `Bearer ${token}`,
       apikey: ANON_KEY,
     },
-    body: JSON.stringify({ shopId, items, orderType, note: note ?? null, payMethod: payMethod ?? 'wave' }),
+    body: JSON.stringify({ shopId, items, orderType, note: note ?? null, payMethod: payMethod ?? 'wave', livraisonFee: livraisonFee ?? 0 }),
   });
 
   const body = await res.json();
@@ -235,18 +236,45 @@ export interface RevenueOrder {
 export async function getPayoutRevenue(): Promise<RevenueOrder[]> {
   const since = new Date();
   since.setMonth(since.getMonth() - 6);
-  const { data, error } = await supabase
-    .from('payout_queue')
-    .select('montant, statut, created_at, processed_at')
-    .in('statut', ['queued', 'processing', 'paid'])
-    .gte('created_at', since.toISOString())
-    .order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
-  return (data ?? []).map(row => ({
+  const sinceIso = since.toISOString();
+
+  const [payoutResult, sessionResult] = await Promise.all([
+    supabase
+      .from('payout_queue')
+      .select('montant, statut, created_at, processed_at')
+      .in('statut', ['queued', 'processing', 'paid'])
+      .gte('created_at', sinceIso)
+      .order('created_at', { ascending: false }),
+    supabase.auth.getSession(),
+  ]);
+  if (payoutResult.error) throw new Error(payoutResult.error.message);
+
+  const fromPayout: RevenueOrder[] = (payoutResult.data ?? []).map(row => ({
     total: row.montant as number,
     createdAt: ((row.statut === 'paid' ? row.processed_at : null) ?? row.created_at) as string,
     status: row.statut === 'paid' ? 'done' : 'new',
   }));
+
+  const uid = sessionResult.data.session?.user?.id;
+  let fromTerrain: RevenueOrder[] = [];
+  if (uid) {
+    const { data: terrainData } = await supabase
+      .from('reservations_terrain')
+      .select('montant_prestataire, payout_at, created_at')
+      .eq('prestataire_id', uid)
+      .eq('payout_statut', 'ok')
+      .gte('created_at', sinceIso)
+      .order('created_at', { ascending: false });
+    fromTerrain = (terrainData ?? []).map(r => ({
+      total: (r as { montant_prestataire: number }).montant_prestataire,
+      createdAt: ((r as { payout_at: string | null }).payout_at ?? (r as { created_at: string }).created_at),
+      status: 'done' as const,
+    }));
+  }
+
+  return [...fromPayout, ...fromTerrain].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
 }
 
 // ─── Commande directe (legacy — sans Edge Function) ───────────────────────────

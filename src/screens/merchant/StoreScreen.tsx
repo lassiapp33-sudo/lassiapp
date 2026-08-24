@@ -39,6 +39,7 @@ import * as fitnessService from '../../services/fitnessAbonnements';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { getErrorMessage } from '../../utils/errorUtils';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { FITNESS_SUBSCRIPTION_CATS } from '../../config/fitnessConfig';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
 
@@ -226,21 +227,23 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     if (!userId || context.shopType !== 'memberships') return;
     setOffresLoading(true);
     try {
-      const list = await fitnessService.getMesOffres(userId);
+      const list = await fitnessService.getMesOffres(userId, activeCat);
       setOffres(list);
     } catch {
       // Silencieux : les offres restent vides
     } finally {
       setOffresLoading(false);
     }
-  }, [userId, context.shopType]);
+  }, [userId, context.shopType, activeCat]);
 
   useEffect(() => {
-    if (activeCat === 'abonnements') loadOffres();
-  }, [activeCat, loadOffres]);
+    if (context.shopType === 'memberships') loadOffres();
+  }, [context.shopType, activeCat, loadOffres]);
 
+  const normCat = (s: string) =>
+    s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
   const activeCatData = categories.find(c => c.id === activeCat);
-  const filtered = products.filter(p => p.category === activeCat);
+  const filtered = products.filter(p => normCat(p.category ?? '') === activeCat);
   const openEdit = (p: StoreProduct) => {
     setSheetDefaultCat(undefined);
     setEditTarget(p);
@@ -357,14 +360,34 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     ]);
   };
 
-  const handleDeleteCat = (catId: string) => {
-    const count = products.filter(p => p.category === catId).length;
+  const handleDeleteCat = async (catId: string) => {
+    // Protection : abonnés actifs pour un onglet de type abonnement fitness
+    if (context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(catId)) {
+      try {
+        const hasActive = await fitnessService.hasActiveAbonnesForTab(catId);
+        if (hasActive) {
+          Alert.alert(
+            'Suppression impossible',
+            "Des abonnements sont encore actifs. Attendez qu'ils expirent avant de supprimer cet onglet.",
+          );
+          return;
+        }
+      } catch {
+        // Erreur réseau → laisser passer
+      }
+    }
+
+    const count = products.filter(p => normCat(p.category ?? '') === catId).length;
     const doDelete = async () => {
       if (activeCat === catId) {
         const next = categories.find(c => c.id !== catId);
         if (next) setActiveCat(next.id);
       }
       try {
+        // Supprimer les offres d'abonnement liées à cet onglet
+        if (context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(catId)) {
+          await fitnessService.deleteOffresForTab(catId);
+        }
         if (context.shopType === 'memberships') {
           await purgeCategoryAndProducts(catId);
         } else {
@@ -446,6 +469,34 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     ]);
   };
 
+  // ── Sauvegarde produit avec auto-création offre pour tabs abonnement ─────
+
+  const handleSaveProduct = async (product: StoreProduct) => {
+    if (userId && context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(product.category as string)) {
+      // Onglet abonnement fitness : créer UNIQUEMENT l'offre, pas de produit dans la liste
+      const isNew = !products.find(p => p.id === product.id);
+      if (isNew) {
+        try {
+          await fitnessService.createOffre(
+            userId,
+            {
+              nom:         product.name,
+              description: product.desc ?? '',
+              prix:        product.price,
+              dureeJours:  30,
+            },
+            product.category as string,
+          );
+          await loadOffres();
+        } catch {
+          Alert.alert('Erreur', "Impossible d'ajouter l'offre. Réessaie.");
+        }
+      }
+    } else {
+      await saveProduct(product);
+    }
+  };
+
   // ── Handlers offres abonnement fitness ────────────────────────────────────
 
   const handleSaveOffre = async (data: {
@@ -455,7 +506,8 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     if (editOffre) {
       await fitnessService.updateOffre(editOffre.id, data);
     } else {
-      await fitnessService.createOffre(userId, data);
+      // Lier la nouvelle offre à l'onglet actif
+      await fitnessService.createOffre(userId, data, activeCat);
     }
     await loadOffres();
   };
@@ -714,12 +766,41 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
               onDeleteCat={handleDeleteCat}
             />
 
-            {/* ── Contenu de l'onglet actif ───────────────────────────────── */}
-            {context.shopType === 'memberships' && activeCat === 'abonnements' ? (
-              <>
-                <SectionHead title="Offres d'abonnement" count={offres.length} itemLabel="offre" />
+            {/* ── Contenu de l'onglet actif (produits) ───────────────────── */}
+            <SectionHead
+              title={activeCatData?.label ?? ''}
+              count={filtered.length}
+              itemLabel={itemLabel}
+            />
+            {filtered.map(product => (
+              <ProductRow
+                key={product.id}
+                product={product}
+                promoInfo={promoMap[product.id]}
+                onEdit={() => openEdit(product)}
+                onToggleStock={async () => {
+                  try {
+                    await toggleStock(product.id);
+                  } catch {
+                    Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
+                  }
+                }}
+              />
+            ))}
+
+            {/* ── Offres d'abonnement (uniquement pour les onglets abonnement) ── */}
+            {context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat) && (
+              <View style={styles.fitnessSection}>
+                <View style={styles.fitnessSectionHeader}>
+                  <Text style={styles.fitnessSectionTitle}>Offres d'abonnement</Text>
+                  <Text style={styles.fitnessSectionCount}>
+                    {offres.length} offre{offres.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
                 {offresLoading ? (
-                  <ActivityIndicator color={colors.accent} style={{ marginVertical: 20 }} />
+                  <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
+                ) : offres.length === 0 ? (
+                  <Text style={styles.fitnessEmpty}>Aucune offre d'abonnement créée</Text>
                 ) : (
                   offres.map(offre => (
                     <AbonnementOffreRow
@@ -731,12 +812,12 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                   ))
                 )}
                 <TouchableOpacity
-                  style={styles.addProd}
+                  style={[styles.addProd, { marginTop: 10 }]}
                   onPress={() => { setEditOffre(null); setShowOffreSheet(true); }}
                   activeOpacity={0.8}
                 >
                   <IcoPlus />
-                  <Text style={styles.addProdTxt}>Ajouter un abonnement</Text>
+                  <Text style={styles.addProdTxt}>Ajouter une offre d'abonnement</Text>
                 </TouchableOpacity>
                 {onAbonnes && (
                   <TouchableOpacity
@@ -747,30 +828,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     <Text style={[styles.addProdTxt, { color: colors.accent }]}>Voir mes abonnés →</Text>
                   </TouchableOpacity>
                 )}
-              </>
-            ) : (
-              <>
-                <SectionHead
-                  title={activeCatData?.label ?? ''}
-                  count={filtered.length}
-                  itemLabel={itemLabel}
-                />
-                {filtered.map(product => (
-                  <ProductRow
-                    key={product.id}
-                    product={product}
-                    promoInfo={promoMap[product.id]}
-                    onEdit={() => openEdit(product)}
-                    onToggleStock={async () => {
-                      try {
-                        await toggleStock(product.id);
-                      } catch {
-                        Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
-                      }
-                    }}
-                  />
-                ))}
-              </>
+              </View>
             )}
 
             {/* ── Géolocalisation ──────────────────────────────────────────── */}
@@ -829,7 +887,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
         product={editTarget}
         categories={categories}
         defaultCatId={sheetDefaultCat}
-        onSave={saveProduct}
+        onSave={handleSaveProduct}
         onDelete={editTarget ? () => handleDeleteProduct(editTarget.id) : undefined}
         onClose={() => setShowSheet(false)}
       />
@@ -838,7 +896,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
         visible={showFicheGuidee}
         categories={categories}
         defaultCatId={ficheDefaultCat}
-        onSave={saveProduct}
+        onSave={handleSaveProduct}
         onClose={() => setShowFicheGuidee(false)}
       />
 
@@ -1163,6 +1221,41 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontFamily: fonts.ui,
     fontSize: 13,
+  },
+
+  // Section Offres d'abonnement (fitness)
+  fitnessSection: {
+    marginHorizontal: 18,
+    marginTop: 18,
+    marginBottom: 4,
+    padding: 14,
+    backgroundColor: 'rgba(20,21,42,0.8)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(253,207,52,.2)',
+  },
+  fitnessSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  fitnessSectionTitle: {
+    color: colors.white,
+    fontFamily: fonts.title,
+    fontSize: 14,
+  },
+  fitnessSectionCount: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+  },
+  fitnessEmpty: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    textAlign: 'center' as const,
+    paddingVertical: 10,
   },
 
   // AddMethodPicker

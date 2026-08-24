@@ -31,16 +31,17 @@ function toGroup(iso: string): 'today' | 'week' {
 // Mappe le type Supabase vers le NotifType local (compatibilité store)
 function mapType(dbType: string, data: Record<string, any>): NotifType {
   // Paiement fitness (abonnement sportif) → type distinct pour navigation + icône
-  if (dbType === 'payment' && data.type === 'fitness_abonnement_paye') return 'fitness';
+  if (dbType === 'payment' && (data.type === 'fitness_abonnement' || data.type === 'fitness_abonnement_paye')) return 'fitness';
 
   const MAP: Record<string, NotifType> = {
-    order:    'order',
-    payment:  'pay',
-    vip:      'vip',
-    message:  'msg',
-    debt:     'msg',
-    livraison:'livraison',
-    ann:      'ann',  // annonces À la une / broadcast par client
+    order:               'order',
+    payment:             'pay',
+    vip:                 'vip',
+    message:             'msg',
+    debt:                'msg',
+    livraison:           'livraison',
+    ann:                 'ann',
+    reservation_terrain: 'reservation_terrain',
   };
   return (MAP[dbType] as NotifType) ?? 'msg';
 }
@@ -142,8 +143,13 @@ export async function markAllRead(): Promise<void> {
 }
 
 // Upsert du token push dans push_tokens (multi-device, un token par appareil)
+// Fallback sur supabase.auth.getUser() pour le gérant VIP (pas dans useAuthStore)
 export async function savePushToken(token: string, platform?: string): Promise<void> {
-  const userId = useAuthStore.getState().user?.id;
+  let userId = useAuthStore.getState().user?.id;
+  if (!userId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    userId = user?.id ?? undefined;
+  }
   if (!userId) return;
   await supabase
     .from('push_tokens')

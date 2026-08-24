@@ -93,7 +93,7 @@ BEGIN
         INSERT INTO recompenses_attribuees (prestataire_id, type_classement, periode, rang, badge, top_vip, valide_jusqu_a, est_actif)
         VALUES (
           v_rec.prestataire_id, 'sous_categorie', p_periode, v_rang,
-          CASE v_rang WHEN 1 THEN '🏆 Champion de la semaine' WHEN 2 THEN '🥈 2e de la semaine' ELSE '🥉 3e de la semaine' END,
+          CASE v_rang WHEN 1 THEN 'Champion de la semaine' WHEN 2 THEN '2e de la semaine' ELSE '3e de la semaine' END,
           true, now() + interval '7 days', true
         );
       END IF;
@@ -179,7 +179,7 @@ BEGIN
 
     IF v_rang = 1 THEN
       INSERT INTO recompenses_attribuees (client_id, type_classement, periode, rang, badge, est_actif)
-      VALUES (v_rec.client_id, 'client', p_periode, 1, '🎖️ Supporter n°1', true);
+      VALUES (v_rec.client_id, 'client', p_periode, 1, 'Supporter n°1', true);
     END IF;
   END LOOP;
   -- Reset mensuel (points_semaine n'est pas utilisé pour les clients : pas de

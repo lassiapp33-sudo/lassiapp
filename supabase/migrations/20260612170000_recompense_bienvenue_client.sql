@@ -25,11 +25,11 @@ BEGIN
         badge, carrousel_produits, est_actif
       ) VALUES (
         NEW.id, 'bienvenue', to_char(now(), 'YYYY-MM'), 0,
-        '🎁 Bienvenue sur LASSI', 4, true
+        'Bienvenue sur LASSI', 4, true
       );
 
       INSERT INTO notifications (user_id, type, title, body, data) VALUES (
-        NEW.id, 'vip', '🎁 Bienvenue sur LASSI !',
+        NEW.id, 'vip', 'Bienvenue sur LASSI',
         'Pour démarrer, tu reçois 4 emplacements offerts dans le carrousel "Offre du Quartier" pour mettre en avant tes produits auprès de tous les clients.',
         '{}'::jsonb
       );
@@ -37,7 +37,7 @@ BEGIN
 
   ELSIF NEW.role = 'client' THEN
     INSERT INTO notifications (user_id, type, title, body, data) VALUES (
-      NEW.id, 'vip', '👋 Bienvenue sur LASSI !',
+      NEW.id, 'vip', 'Bienvenue sur LASSI',
       'LASSI te connecte aux commerces et prestataires de ton quartier à Dakar : explore, commande en quelques clics, suis ta commande en direct, discute avec le commerçant et cumule des points pour grimper dans le classement "Top clients".',
       '{}'::jsonb
     );

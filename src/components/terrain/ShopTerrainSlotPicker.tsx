@@ -131,7 +131,7 @@ export default function ShopTerrainSlotPicker({ terrain, prestataireName, openin
       heureDebut: picked,
       heureFin,
       dureeHeures: 1.5,
-      prixTotal: calculerPrixAvecMarge(Math.round(terrain.prix_horaire * 1.5)),
+      prixTotal: calculerPrixAvecMarge(terrain.prix_horaire),
     });
   };
 
@@ -167,7 +167,7 @@ export default function ShopTerrainSlotPicker({ terrain, prestataireName, openin
 
       {/* Grille des créneaux */}
       <Text style={styles.heading}>Créneaux disponibles</Text>
-      <Text style={styles.sub}>Réservation de 1h30 · Choisissez votre heure de début</Text>
+      <Text style={styles.sub}>Choisissez votre heure de début</Text>
 
       {loading ? (
         <ActivityIndicator color={colors.accent} style={{ marginVertical: 20 }} />
@@ -217,7 +217,7 @@ export default function ShopTerrainSlotPicker({ terrain, prestataireName, openin
           <View style={styles.recapRow}>
             <Text style={styles.recapLbl}>Prix</Text>
             <Text style={[styles.recapVal, styles.recapGold]}>
-              {formatPrice(calculerPrixAvecMarge(Math.round(terrain.prix_horaire * 1.5)))}
+              {formatPrice(calculerPrixAvecMarge(terrain.prix_horaire))}
             </Text>
           </View>
           <TouchableOpacity style={styles.bookBtn} onPress={handleBook} activeOpacity={0.85}>

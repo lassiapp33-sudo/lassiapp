@@ -67,7 +67,7 @@ export default function NotifCardModal({ onView }: Props) {
   const handleCompris = useCallback(() => dismiss(), [dismiss]);
   const handleView    = useCallback(() => { dismiss(); onView(); }, [dismiss, onView]);
 
-  if (!current || current.type === 'order' || current.type === 'msg' || current.type === 'ann') return null;
+  if (!current || current.type === 'order' || current.type === 'msg' || current.type === 'ann' || current.type === 'reservation_terrain') return null;
 
   const tag = TAG_LABEL[current.type] ?? 'LASSI';
 

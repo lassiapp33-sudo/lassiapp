@@ -26,9 +26,12 @@ function expireLabel(r: RecompenseAttribuee): string {
   return `${Math.ceil(diff / 30)} mois restants`;
 }
 
+const EMOJI_RE = /[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}]/gu;
+function cleanText(s: string): string { return s.replace(EMOJI_RE, '').trim(); }
+
 function buildChips(r: RecompenseAttribuee): string[] {
   const chips: string[] = [];
-  if (r.badge) chips.push(r.badge);
+  if (r.badge) chips.push(cleanText(r.badge));
   if (r.certificat) chips.push('Certificat officiel');
   if (r.priorite_recherche) chips.push('Priorité recherche');
   if (r.top_vip) chips.push('Top VIP');

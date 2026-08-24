@@ -14,7 +14,8 @@ export type PendingNav =
   | { type: 'a_la_une_bloc'; blocCode: string; elementIndex?: number }
   | { type: 'a_la_une_categorie'; categorieId: string }
   | { type: 'new_shop'; shopId: string; shopName: string }
-  | { type: 'a_la_une_feed' };
+  | { type: 'a_la_une_feed' }
+  | { type: 'terrain_resa'; terrainId?: string };
 
 interface PendingNavState {
   pendingNav: PendingNav | null;

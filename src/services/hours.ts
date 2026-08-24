@@ -115,7 +115,7 @@ export function computeStatus(hours: WeekHours | null, manuallyClose: boolean): 
 
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const openMin = toMinutes(today.open);
-  const closeMin = toMinutes(today.close);
+  const closeMin = toMinutes(today.close) || 1440; // "00:00" = minuit de la nuit suivante
 
   if (nowMin >= openMin && nowMin < closeMin) {
     const remaining = closeMin - nowMin;

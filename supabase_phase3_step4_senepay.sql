@@ -52,14 +52,14 @@ BEGIN
   -- Notif pour le commerçant
   IF v_shop_id IS NOT NULL THEN
     INSERT INTO notifications (user_id, type, title, body)
-    SELECT merchant_id, 'payment', 'Paiement reçu 💰', 'Un client vient de payer sa commande.'
+    SELECT merchant_id, 'payment', 'Paiement reçu', 'Un client vient de payer sa commande.'
     FROM shops WHERE id = v_shop_id AND merchant_id IS NOT NULL;
   END IF;
 
   -- Notif pour le client (confirmation)
   IF v_client_id IS NOT NULL THEN
     INSERT INTO notifications (user_id, type, title, body)
-    VALUES (v_client_id, 'payment', 'Paiement confirmé ✅', 'Ton paiement a bien été reçu.');
+    VALUES (v_client_id, 'payment', 'Paiement confirmé', 'Ton paiement a bien été reçu.');
   END IF;
 END;
 $$;

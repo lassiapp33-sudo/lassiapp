@@ -19,34 +19,37 @@ function BannerIcon({ type }: { type: NotifType }) {
 }
 
 const COLOR: Record<NotifType, string> = {
-  order:     colors.accent,
-  pay:       colors.success,
-  fitness:   colors.orange,
-  vip:       colors.orange,
-  msg:       colors.accent,
-  ann:       colors.accent,
-  livraison: colors.success,
+  order:               colors.accent,
+  pay:                 colors.success,
+  fitness:             colors.orange,
+  vip:                 colors.orange,
+  msg:                 colors.accent,
+  ann:                 colors.accent,
+  livraison:           colors.success,
+  reservation_terrain: colors.accent,
 };
 
 const BG: Record<NotifType, string> = {
-  order:     'rgba(253,207,52,.13)',
-  pay:       'rgba(95,211,138,.13)',
-  fitness:   'rgba(240,168,71,.13)',
-  vip:       'rgba(240,168,71,.13)',
-  msg:       'rgba(253,207,52,.13)',
-  ann:       'rgba(253,207,52,.13)',
-  livraison: 'rgba(95,211,138,.13)',
+  order:               'rgba(253,207,52,.13)',
+  pay:                 'rgba(95,211,138,.13)',
+  fitness:             'rgba(240,168,71,.13)',
+  vip:                 'rgba(240,168,71,.13)',
+  msg:                 'rgba(253,207,52,.13)',
+  ann:                 'rgba(253,207,52,.13)',
+  livraison:           'rgba(95,211,138,.13)',
+  reservation_terrain: 'rgba(253,207,52,.13)',
 };
 
 interface Props {
   onView: () => void;
   onVoirAlaUne: () => void;
   onVoirVitrine: (shopId: string, shopName: string) => void;
+  onVoirTerrain: (terrainId?: string) => void;
 }
 
 // Bannière slide depuis le haut, auto-dismiss 5s (3s pour les annonces).
 // Chaque notification n'apparaît qu'une seule fois (tracké par ID via AsyncStorage).
-export default function NotifPopupBanner({ onView, onVoirAlaUne, onVoirVitrine }: Props) {
+export default function NotifPopupBanner({ onView, onVoirAlaUne, onVoirVitrine, onVoirTerrain }: Props) {
   const current = useNotifPopupStore(s => s.queue[0] ?? null);
   const dismiss  = useNotifPopupStore(s => s.dismiss);
 
@@ -119,13 +122,15 @@ export default function NotifPopupBanner({ onView, onVoirAlaUne, onVoirVitrine }
     current.type !== 'order' &&
     current.type !== 'msg' &&
     current.type !== 'fitness' &&
-    current.type !== 'ann'
+    current.type !== 'ann' &&
+    current.type !== 'reservation_terrain'
   )) return null;
 
   const color = COLOR[current.type];
   const bg    = BG[current.type];
 
   const isAnn     = current.type === 'ann';
+  const isTerrain = current.type === 'reservation_terrain';
   const isAlaUne  = isAnn && current.targetId === 'a_la_une_feed';
   const isNewShop = isAnn && !!current.targetId && current.targetId !== 'a_la_une_feed';
 
@@ -141,13 +146,18 @@ export default function NotifPopupBanner({ onView, onVoirAlaUne, onVoirVitrine }
     }
   };
 
+  const handleTerrainAction = () => {
+    const terrainId = current.targetId ?? (current.data?.terrainId as string | undefined);
+    slideOut(() => onVoirTerrain(terrainId));
+  };
+
   return (
     <Animated.View style={[s.wrap, { transform: [{ translateY: slideY }] }]}>
       <View style={s.row}>
         {/* Zone principale cliquable */}
         <TouchableOpacity
           style={s.pressArea}
-          onPress={isAnn ? handleAnnAction : () => slideOut(onView)}
+          onPress={isTerrain ? handleTerrainAction : isAnn ? handleAnnAction : () => slideOut(onView)}
           activeOpacity={0.82}
         >
           <View style={[s.iconBox, { backgroundColor: bg }]}>
@@ -159,9 +169,13 @@ export default function NotifPopupBanner({ onView, onVoirAlaUne, onVoirVitrine }
           </View>
         </TouchableOpacity>
 
-        {/* Bouton "Voir" compact pour les annonces (à la une + nouveau prestataire) */}
-        {isAnn && (
-          <TouchableOpacity style={s.voirBtn} onPress={handleAnnAction} activeOpacity={0.85}>
+        {/* Bouton "Voir" compact pour les annonces et réservations terrain */}
+        {(isAnn || isTerrain) && (
+          <TouchableOpacity
+            style={s.voirBtn}
+            onPress={isTerrain ? handleTerrainAction : handleAnnAction}
+            activeOpacity={0.85}
+          >
             <Text style={s.voirTxt}>Voir</Text>
           </TouchableOpacity>
         )}

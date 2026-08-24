@@ -73,6 +73,17 @@ const STATUT_CFG: Record<string, { label: string; color: string }> = {
 
 type CardResult = { type: 'success' | 'error'; msg: string } | null;
 
+function isCreneauExpire(reservation: ReservationTerrain): boolean {
+  try {
+    const fin = String(reservation.heure_fin ?? '').slice(0, 5); // "HH:MM"
+    const date = String(reservation.date_reservation ?? '');
+    if (!fin || !date) return false;
+    return new Date(`${date}T${fin}:00`) < new Date();
+  } catch {
+    return false;
+  }
+}
+
 function ReservationCard({
   reservation,
   onValidate,
@@ -83,6 +94,7 @@ function ReservationCard({
   const [verifying, setVerifying] = useState(false);
   const [result, setResult] = useState<CardResult>(null);
   const cfg = STATUT_CFG[reservation.statut] ?? { label: reservation.statut, color: colors.muted };
+  const expire = isCreneauExpire(reservation);
 
   const handleValidate = async () => {
     setVerifying(true);
@@ -118,8 +130,8 @@ function ReservationCard({
         </View>
       )}
 
-      {/* Bouton valider (seulement si statut paye + pas encore validé) */}
-      {reservation.statut === 'paye' && !result && (
+      {/* Bouton valider — masqué si créneau expiré ou déjà traité */}
+      {reservation.statut === 'paye' && !result && !expire && (
         <TouchableOpacity
           style={[styles.validerBtn, verifying && { opacity: 0.6 }]}
           onPress={handleValidate}
@@ -131,6 +143,11 @@ function ReservationCard({
             : <Text style={styles.validerTxt}>Valider l'accès ✓</Text>
           }
         </TouchableOpacity>
+      )}
+
+      {/* Mention créneau passé non validé */}
+      {reservation.statut === 'paye' && expire && !result && (
+        <Text style={styles.expireTxt}>Créneau passé — accès non présenté</Text>
       )}
     </View>
   );
@@ -438,6 +455,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   validerTxt: { color: colors.bg, fontFamily: fonts.title, fontSize: 13 },
+  expireTxt: { marginTop: 8, fontFamily: fonts.ui, fontSize: 12, color: colors.muted, fontStyle: 'italic' },
 
   emptyBox: { alignItems: 'center', paddingVertical: 48, gap: 10 },
   emptyIco: { marginBottom: 6 },
