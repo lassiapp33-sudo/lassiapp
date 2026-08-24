@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import useGerantStore from '../store/gerantStore';
 import useShopStore from '../store/shopStore';
+import useAuthStore from '../store/authStore';
+import useNotificationsStore from '../store/notificationsStore';
+import useNotifPopupStore from '../store/notifPopupStore';
+import usePendingNavStore from '../store/pendingNavStore';
+import { useRealtimeNotifications } from '../hooks/useRealtimeNotifications';
 import GerantDashboard from './screens/GerantDashboard';
 import GerantRegistreScreen from './screens/GerantRegistreScreen';
 import GerantHorairesScreen from './screens/GerantHorairesScreen';
@@ -52,6 +57,10 @@ type GerantScreen =
   | 'creneaux_beauty'
   | { id: 'apercu'; shopId: string };
 
+function shouldShowCard(type: string): boolean {
+  return type === 'order' || type === 'pay' || type === 'msg' || type === 'fitness' || type === 'reservation_terrain';
+}
+
 interface Props {
   onLogout: () => void;
 }
@@ -67,6 +76,41 @@ export default function GerantNavigator({ onLogout }: Props) {
   }, [shopId, loadMyShop]);
 
   const [history, setHistory] = useState<GerantScreen[]>(['dashboard']);
+
+  const userId      = useAuthStore(s => s.user?.id ?? null);
+  const addNotif    = useNotificationsStore(s => s.addNotif);
+  const enqueueCard = useNotifPopupStore(s => s.enqueue);
+  const cardReady   = useNotifPopupStore(s => s.ready);
+  const pendingNav   = usePendingNavStore(s => s.pendingNav);
+  const clearPending = usePendingNavStore(s => s.clearPendingNav);
+
+  // Realtime : badge + banner pour les nouvelles commandes/messages
+  useRealtimeNotifications(userId, notif => {
+    addNotif(notif);
+    if (shouldShowCard(notif.type)) enqueueCard(notif);
+  });
+
+  // Démarrage : banner pour les notifs non lues importantes
+  useEffect(() => {
+    if (!userId || !cardReady) return;
+    useNotificationsStore.getState().loadNotifications().then(() => {
+      const notifs = useNotificationsStore.getState().notifications;
+      [...notifs].reverse().forEach(n => {
+        if (n.unread && shouldShowCard(n.type)) enqueueCard(n);
+      });
+    }).catch(() => {});
+  }, [userId, cardReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Deep link depuis notification push (banner tapé ou notification OS)
+  useEffect(() => {
+    if (!pendingNav) return;
+    clearPending();
+    if (pendingNav.type === 'notifications') {
+      setHistory(h => [...h, 'notifications']);
+    } else if (pendingNav.type === 'order' || pendingNav.type === 'payment_success') {
+      setHistory(h => [...h, 'registre']);
+    }
+  }, [pendingNav, clearPending]);
 
   const screen = history[history.length - 1];
   const push = (s: GerantScreen) => setHistory(h => [...h, s]);
@@ -128,7 +172,15 @@ export default function GerantNavigator({ onLogout }: Props) {
 
   // ── Notifications ────────────────────────────────────────────────────────
   if (screen === 'notifications') {
-    return <GerantNotificationsScreen onBack={pop} />;
+    return (
+      <GerantNotificationsScreen
+        onBack={pop}
+        onNavigate={type => {
+          pop();
+          if (type === 'order' || type === 'pay') push('registre');
+        }}
+      />
+    );
   }
 
   // ── À la une ─────────────────────────────────────────────────────────────

@@ -40,9 +40,12 @@ const IcoBack = () => (
   </Svg>
 );
 
-interface Props { onBack: () => void }
+interface Props {
+  onBack: () => void;
+  onNavigate?: (type: string) => void;
+}
 
-export default function GerantNotificationsScreen({ onBack }: Props) {
+export default function GerantNotificationsScreen({ onBack, onNavigate }: Props) {
   const [notifs, setNotifs]       = useState<Notif[]>([]);
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -103,13 +106,18 @@ export default function GerantNotificationsScreen({ onBack }: Props) {
               <Text style={s.emptyTxt}>Aucune notification récente</Text>
             </View>
           ) : notifs.map(n => (
-            <View key={n.id} style={[s.card, !n.is_read && s.cardUnread]}>
+            <TouchableOpacity
+              key={n.id}
+              style={[s.card, !n.is_read && s.cardUnread]}
+              onPress={() => onNavigate?.(n.type)}
+              activeOpacity={onNavigate ? 0.75 : 1}
+            >
               <View style={s.cardHeader}>
                 <Text style={s.cardTitle} numberOfLines={1}>{n.title}</Text>
                 <Text style={s.cardTime}>{timeLabel(n.created_at)}</Text>
               </View>
               <Text style={s.cardBody}>{n.body}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
           <View style={{ height: 40 }} />
         </ScrollView>

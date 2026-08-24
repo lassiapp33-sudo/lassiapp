@@ -733,7 +733,9 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
       <NotificationsScreen
         onBack={pop}
         onNavigate={(type, targetId) => {
-          if (type === 'fitness') {
+          if (type === 'order' || type === 'pay') {
+            setHistory(h => [...h.slice(0, -1), { id: 'orders' }]);
+          } else if (type === 'fitness') {
             // Abonnement activé → Mes abonnements
             setHistory(h => [...h.slice(0, -1), { id: 'mes_abonnements' }]);
           } else if (type === 'msg' && targetId) {
