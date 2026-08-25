@@ -44,6 +44,7 @@ import { calculerPrixClient, calculerPrixClientVip } from '../../config/payment'
 import LoadingSpinner from '../../components/LoadingSpinner';
 import * as fitnessService from '../../services/fitnessAbonnements';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
+import { FITNESS_SUBSCRIPTION_CATS } from '../../config/fitnessConfig';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -363,7 +364,12 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
             : selectedLabel;
 
   // ── Catalogue ─────────────────────────────────────────────────────────────
-  const catIds = [...new Set(realProducts.map(p => p.category))];
+  // Pour les shops memberships, exclure les catégories abonnement fitness des tabs produits
+  // (elles sont gérées via l'onglet 'abonnements' dédié, pas via les produits)
+  const rawCatIds = [...new Set(realProducts.map(p => p.category))];
+  const catIds = shopType === 'memberships'
+    ? rawCatIds.filter(id => !FITNESS_SUBSCRIPTION_CATS.has(id))
+    : rawCatIds;
   const hasAvisTab = !isSlotShop && !isTerrainShop && (catIds.length > 0 || shopType === 'memberships');
   const membershipAboTab = shopType === 'memberships' && fitnessOffres.length > 0
     ? [{ id: 'abonnements', label: 'Abonnements' }]
@@ -382,7 +388,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     shopType === 'services'
       ? "Aucune prestation disponible pour l'instant."
       : shopType === 'memberships'
-        ? "Aucune formule disponible pour l'instant."
+        ? "Aucun abonnement disponible pour l'instant."
         : "Aucun produit disponible pour l'instant.";
 
   // ── Infos pratiques ───────────────────────────────────────────────────────
@@ -431,6 +437,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     location: `${displayZone} · ${selectedLabel}`,
     logoUrl: displayLogoUrl,
     showOrderType: showOrderOptions,
+    paymentMethods: shopData?.paymentMethods ?? (['wave', 'om'] as ('wave' | 'om')[]),
   };
 
   const addToCart = (p: StoreProduct) => {
@@ -724,43 +731,38 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                   ))}
                 </View>
               ) : null}
-              {/* Formules et Produits — filtrées selon l'onglet actif */}
-              {[
-                { id: 'formules', label: 'Formules' },
-                { id: 'produits', label: 'Produits' },
-              ]
-                .filter(section => activeTab === 'all' || activeTab === section.id)
-                .map(section => {
-                  const sectionItems = realProducts.filter(p => p.category === section.id);
-                  if (sectionItems.length === 0) return null;
-                  return (
-                    <View key={section.id} onLayout={section.id === 'formules' ? e => { productSectionY.current = e.nativeEvent.layout.y; } : undefined}>
-                      <Text style={styles.catTitle}>{section.label}</Text>
-                      <View style={styles.grid}>
-                        {toPairs(sectionItems).map((pair, i) => (
-                          <View key={i} style={styles.gridRow}>
-                            {pair.map(product => (
-                              <View key={product.id} style={styles.tileWrapper}>
-                                <ProductTile
-                                  product={storeProductToProduct(product)}
-                                  qty={product.stock === 'out' ? 0 : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)}
-                                  onAdd={() => addToCart(product)}
-                                  onRemove={() => removeItem(product.id)}
-                                  promoInfo={productPromoMap[product.id]}
-                                  isVip={isVip}
-                                />
-                              </View>
-                            ))}
-                            {pair.length === 1 && <View style={styles.tileSpacer} />}
-                          </View>
-                        ))}
-                      </View>
+              {/* Tous les produits non-abonnement — toutes catégories visibles selon onglet */}
+              {visibleSections.map(section => {
+                const sectionItems = realProducts.filter(p => p.category === section.id);
+                if (sectionItems.length === 0) return null;
+                return (
+                  <View key={section.id} onLayout={e => { productSectionY.current = e.nativeEvent.layout.y; }}>
+                    <Text style={styles.catTitle}>{section.label}</Text>
+                    <View style={styles.grid}>
+                      {toPairs(sectionItems).map((pair, i) => (
+                        <View key={i} style={styles.gridRow}>
+                          {pair.map(product => (
+                            <View key={product.id} style={styles.tileWrapper}>
+                              <ProductTile
+                                product={storeProductToProduct(product)}
+                                qty={product.stock === 'out' ? 0 : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)}
+                                onAdd={() => addToCart(product)}
+                                onRemove={() => removeItem(product.id)}
+                                promoInfo={productPromoMap[product.id]}
+                                isVip={isVip}
+                              />
+                            </View>
+                          ))}
+                          {pair.length === 1 && <View style={styles.tileSpacer} />}
+                        </View>
+                      ))}
                     </View>
-                  );
-                })}
-              {fitnessOffres.length === 0 && realProducts.length === 0 ? (
+                  </View>
+                );
+              })}
+              {fitnessOffres.length === 0 && visibleSections.length === 0 ? (
                 <View style={styles.emptyProducts}>
-                  <Text style={styles.emptyTxt}>Aucune formule disponible pour l'instant.</Text>
+                  <Text style={styles.emptyTxt}>Aucun abonnement disponible pour l'instant.</Text>
                 </View>
               ) : null}
             </View>

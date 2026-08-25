@@ -42,7 +42,7 @@ export const FOOTER_HEIGHT = 88 + BOTTOM_EXTRA;
 const LABELS: Record<string, { main: string; sub: string }> = {
   products: { main: 'Commander', sub: 'Payer via Wave / OM' },
   services: { main: 'Réserver', sub: 'Confirmer la réservation' },
-  memberships: { main: 'Réserver', sub: 'Voir les formules' },
+  memberships: { main: 'S\'abonner', sub: 'Voir les offres' },
 };
 
 interface Props {

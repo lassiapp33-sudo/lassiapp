@@ -240,6 +240,19 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     if (context.shopType === 'memberships') loadOffres();
   }, [context.shopType, activeCat, loadOffres]);
 
+  // Auto-suppression des produits shop_items orphelins dans les catégories abonnement fitness
+  const cleanupDone = React.useRef(false);
+  useEffect(() => {
+    if (cleanupDone.current) return;
+    if (context.shopType !== 'memberships' || products.length === 0) return;
+    const norm = (s: string) => s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const stale = products.filter(p => FITNESS_SUBSCRIPTION_CATS.has(norm(p.category ?? '')));
+    if (stale.length === 0) return;
+    cleanupDone.current = true;
+    Promise.allSettled(stale.map(p => removeProduct(p.id))).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products.length, context.shopType]);
+
   const normCat = (s: string) =>
     s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
   const activeCatData = categories.find(c => c.id === activeCat);
@@ -751,12 +764,14 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
               />
             </View>
 
-            {/* ── Ajouter un produit ───────────────────────────────────────── */}
-            <AddMethodPicker
-              label={addItemLabel}
-              onManuel={() => openAdd(activeCat)}
-              onFicheGuidee={() => openFicheGuidee(activeCat)}
-            />
+            {/* ── Ajouter un produit (masqué pour les onglets abonnement fitness) ── */}
+            {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
+              <AddMethodPicker
+                label={addItemLabel}
+                onManuel={() => openAdd(activeCat)}
+                onFicheGuidee={() => openFicheGuidee(activeCat)}
+              />
+            )}
 
             {/* ── Onglets unifiés (un seul système pour tous les shop types) ── */}
             <CategoryTabs
@@ -766,27 +781,31 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
               onDeleteCat={handleDeleteCat}
             />
 
-            {/* ── Contenu de l'onglet actif (produits) ───────────────────── */}
-            <SectionHead
-              title={activeCatData?.label ?? ''}
-              count={filtered.length}
-              itemLabel={itemLabel}
-            />
-            {filtered.map(product => (
-              <ProductRow
-                key={product.id}
-                product={product}
-                promoInfo={promoMap[product.id]}
-                onEdit={() => openEdit(product)}
-                onToggleStock={async () => {
-                  try {
-                    await toggleStock(product.id);
-                  } catch {
-                    Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
-                  }
-                }}
-              />
-            ))}
+            {/* ── Contenu de l'onglet actif (produits — masqué pour onglets abonnement) ── */}
+            {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
+              <>
+                <SectionHead
+                  title={activeCatData?.label ?? ''}
+                  count={filtered.length}
+                  itemLabel={itemLabel}
+                />
+                {filtered.map(product => (
+                  <ProductRow
+                    key={product.id}
+                    product={product}
+                    promoInfo={promoMap[product.id]}
+                    onEdit={() => openEdit(product)}
+                    onToggleStock={async () => {
+                      try {
+                        await toggleStock(product.id);
+                      } catch {
+                        Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
+                      }
+                    }}
+                  />
+                ))}
+              </>
+            )}
 
             {/* ── Offres d'abonnement (uniquement pour les onglets abonnement) ── */}
             {context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat) && (
