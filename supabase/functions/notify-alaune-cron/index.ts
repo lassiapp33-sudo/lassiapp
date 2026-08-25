@@ -1,5 +1,5 @@
 // Edge Function — notification quotidienne "À la une"
-// Appelée par pg_cron à 13h00 et 20h00 UTC via pg_net.
+// Appelée par pg_cron à 13h00 et 19h00 UTC via pg_net.
 // N'envoie que si au moins 1 bloc "À la une" est actif au moment de l'appel.
 // Déployer : supabase functions deploy notify-alaune-cron
 
