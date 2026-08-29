@@ -211,6 +211,7 @@ export async function registerMerchant(params: RegisterMerchantParams): Promise<
           },
         });
       }
+      markExplicitSignOut();
       await supabase.auth.signOut();
     } catch {
       /* ignore — signOut seul si delete-account échoue */
@@ -365,6 +366,14 @@ export async function loginLivreur(telephone: string, password: string): Promise
 // Empêche onAuthStateChange de kicker l'utilisateur sur un simple échec de refresh réseau.
 let _explicitSignOut = false;
 
+// À appeler AVANT tout supabase.auth.signOut() extérieur à logout()
+// (suppression de compte, déconnexion VIP, nettoyage registration…)
+export function markExplicitSignOut(): void {
+  _explicitSignOut = true;
+  // Sécurité : auto-reset si SIGNED_OUT ne se déclenche jamais (réseau coupé)
+  setTimeout(() => { _explicitSignOut = false; }, 10_000);
+}
+
 export async function logout(): Promise<void> {
   const token = getCachedToken();
 
@@ -386,7 +395,7 @@ export async function logout(): Promise<void> {
   }
 
   // Nettoyer immédiatement sans attendre le réseau
-  _explicitSignOut = true;
+  markExplicitSignOut();
   setCachedToken(null);
   AsyncStorage.removeItem(SESSION_ACTIVE_KEY).catch(() => {});
   // Nettoyer SecureStore (session locale) en arrière-plan
