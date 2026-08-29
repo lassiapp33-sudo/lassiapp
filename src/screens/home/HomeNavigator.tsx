@@ -556,6 +556,10 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
           )
         }
         onSuivi={params => push({ id: 'suivi_gps', ...params })}
+        onGoMap={nomBoutique => {
+          setMapSearch(nomBoutique);
+          push({ id: 'map' });
+        }}
         onFitnessAboPayment={(offre, fitnessName) =>
           requireAuth(() => push({ id: 'fitness_abo_payment', offre, fitnessName, shopId: screen.shopId }))
         }
@@ -672,6 +676,10 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
         onMessages={() => requireAuth(() => setHistory([{ id: 'main' }, { id: 'messages' }]))}
         onProfile={() => requireAuth(() => setHistory([{ id: 'main' }, { id: 'profile' }]))}
         onVoice={() => setHistory([{ id: 'main' }, { id: 'voice' }])}
+        onMapPress={filter => {
+          setMapFilter(filter);
+          push({ id: 'map' });
+        }}
         vip5EtoilesShopIds={vipShopIds}
       />
     );

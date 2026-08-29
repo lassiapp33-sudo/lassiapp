@@ -5,7 +5,7 @@ import CatNavBar from '../../components/category/CatNavBar';
 import { CatId, getCatConfig } from '../../config/categories';
 import { supabase } from '../../lib/supabase';
 import SubCatTabs, { SubCat } from '../../components/category/SubCatTabs';
-import VipPodium, { VipEntry } from '../../components/category/VipPodium';
+import CategoryMapPreview from '../../components/category/CategoryMapPreview';
 import FilterBar, { FilterId } from '../../components/category/FilterBar';
 import ShopCard, { Shop as ShopCard_Shop } from '../../components/category/ShopCard';
 import BottomNav, { NavTab, NAV_HEIGHT } from '../../components/home/BottomNav';
@@ -23,7 +23,8 @@ import useAuthStore from '../../store/authStore';
 function buildSubcats(catId: CatId): SubCat[] {
   const cfg = getCatConfig(catId);
   if (!cfg) return [];
-  return cfg.subcats.map(sub => ({
+  const HIDDEN_SUBCATS = ['soupe'];
+  return cfg.subcats.filter(sub => !HIDDEN_SUBCATS.includes(sub.id)).map(sub => ({
     id: sub.id,
     label: sub.imageUri || sub.SvgIcon ? sub.label : `${sub.emoji} ${sub.label}`,
     imageUri: sub.imageUri,
@@ -129,6 +130,7 @@ interface Props {
   onMessages?: () => void;
   onProfile?: () => void;
   onVoice?: () => void;
+  onMapPress?: (filter: string) => void;
   vip5EtoilesShopIds?: Set<string>;
 }
 
@@ -144,6 +146,7 @@ export default function CategoryScreen({
   onMessages,
   onProfile,
   onVoice,
+  onMapPress,
   vip5EtoilesShopIds,
 }: Props) {
   const t = useT();
@@ -247,54 +250,6 @@ export default function CategoryScreen({
     return sub?.label ?? meta.subLabel;
   }, [catId, subCat, meta]);
 
-  // Top 3 VIP — filtré par sous-catégorie active (même logique que bySubCat)
-  const vipShops = useMemo(
-    () => {
-      const pool = meta.subcats.length <= 1
-        ? shops
-        : shops.filter(s => s.subcategories.length === 0 || s.subcategories.includes(subCat));
-      return pool
-        .filter(s => s.isVip)
-        .sort((a, b) => {
-          if (a.vipRank !== null && b.vipRank !== null) return a.vipRank - b.vipRank;
-          if (a.vipRank !== null) return -1;
-          if (b.vipRank !== null) return 1;
-          return b.rating - a.rating;
-        })
-        .slice(0, 3);
-    },
-    [shops, subCat, meta.subcats.length],
-  );
-
-  const vipEntries: VipEntry[] = useMemo(
-    () =>
-      ([1, 2, 3] as const).map(rank => {
-        const s = vipShops[rank - 1];
-        if (s) {
-          return {
-            rank,
-            id: s.id,
-            initial: s.name.charAt(0).toUpperCase(),
-            name: s.name,
-            zone: s.zone,
-            rating: s.rating,
-            logoUrl: s.logoUrl,
-            isPlaceholder: false,
-          };
-        }
-        return {
-          rank,
-          id: '',
-          initial: ['A', 'B', 'C'][rank - 1],
-          name: t.category.availableSlot,
-          zone: '',
-          rating: 0,
-          logoUrl: null,
-          isPlaceholder: true,
-        };
-      }),
-    [vipShops, t],
-  );
 
   // Filtrer + trier — mémorisé : applyFilter('near') = O(n log n) × calcDistanceMeters
   const bySubCat = useMemo(
@@ -335,12 +290,10 @@ export default function CategoryScreen({
     [onShopPress],
   );
 
-  const handleVipPress = useCallback(
-    (entry: VipEntry) => {
-      if (!entry.isPlaceholder && entry.id) handleShopPress(entry.id, entry.name);
-    },
-    [handleShopPress],
-  );
+  const handleMapPress = useCallback(() => {
+    const filter = meta.subcats.length > 1 ? subCat : catId;
+    onMapPress?.(filter);
+  }, [meta.subcats.length, subCat, catId, onMapPress]);
 
   const renderShopItem = useCallback(
     ({ item: shop }: { item: ShopCard_Shop }) => (
@@ -358,11 +311,10 @@ export default function CategoryScreen({
         {meta.subcats.length > 1 && (
           <SubCatTabs tabs={meta.subcats} active={subCat} onChange={handleSubCatChange} />
         )}
-        <VipPodium
-          entries={vipEntries}
-          subLabel={activeSubCatLabel}
-          renewIn="7j"
-          onPress={handleVipPress}
+        <CategoryMapPreview
+          categoryLabel={meta.title}
+          subLabel={meta.subcats.length > 1 ? activeSubCatLabel : undefined}
+          onPress={handleMapPress}
         />
         <AlaUneSection
           catId={catId}
@@ -389,14 +341,13 @@ export default function CategoryScreen({
       meta,
       subCat,
       activeSubCatLabel,
-      vipEntries,
       filter,
       t,
       filteredShops.length,
       onBlocPress,
       handleCatChange,
       handleSubCatChange,
-      handleVipPress,
+      handleMapPress,
       setFilter,
       meta.subcats.length,
     ],
