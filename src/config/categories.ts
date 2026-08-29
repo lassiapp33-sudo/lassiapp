@@ -1023,18 +1023,16 @@ export const CATEGORIES: CatConfig[] = [
           React.createElement(
             Svg,
             { width: 28, height: 28, viewBox: '0 0 24 24', fill: 'none', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' },
-            // Feuille gauche
-            React.createElement(Path, { d: 'M12 8C12 8 9 4.5 6.5 5 6.5 5 7 8.5 12 8z', stroke: color, fill: color + '25' }),
-            // Feuille droite
-            React.createElement(Path, { d: 'M12 8C12 8 15 4.5 17.5 5 17.5 5 17 8.5 12 8z', stroke: color, fill: color + '25' }),
-            // Tige
-            React.createElement(Path, { d: 'M12 5.5v2.5', stroke: color }),
-            // Couvercle pot
-            React.createElement(Rect, { x: 4, y: 9, width: 16, height: 3, rx: 1, stroke: color }),
-            // Corps pot
-            React.createElement(Path, { d: 'M5 12h14v7a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7z', stroke: color }),
-            // Reflet pot
-            React.createElement(Path, { d: 'M7.5 14v4', stroke: color, strokeOpacity: '0.35', strokeWidth: 1 }),
+            // Grande feuille naturelle (Lucide leaf)
+            React.createElement(Path, {
+              d: 'M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z',
+              stroke: color, fill: color + '22',
+            }),
+            // Tige / nervure centrale courbe
+            React.createElement(Path, {
+              d: 'M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12',
+              stroke: color,
+            }),
           )
         ) as React.FC<{ color: string }>,
       },
