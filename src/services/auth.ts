@@ -161,6 +161,7 @@ export interface RegisterMerchantParams {
   latitude?: number | null;
   longitude?: number | null;
   zone?: string;
+  paymentMethods?: ('wave' | 'om')[];
 }
 
 export async function registerMerchant(params: RegisterMerchantParams): Promise<AuthUser> {
@@ -190,6 +191,7 @@ export async function registerMerchant(params: RegisterMerchantParams): Promise<
       zone: params.zone ?? '',
       is_open: true,
       opening_hours: params.openingHours ?? null,
+      payment_methods: params.paymentMethods ?? ['wave', 'om'],
     })
     .select('id')
     .single();
@@ -359,6 +361,10 @@ export async function loginLivreur(telephone: string, password: string): Promise
 
 // ─── Déconnexion ────────────────────────────────────────────────────────────
 
+// true uniquement quand l'utilisateur appuie explicitement sur "Se déconnecter".
+// Empêche onAuthStateChange de kicker l'utilisateur sur un simple échec de refresh réseau.
+let _explicitSignOut = false;
+
 export async function logout(): Promise<void> {
   const token = getCachedToken();
 
@@ -380,6 +386,7 @@ export async function logout(): Promise<void> {
   }
 
   // Nettoyer immédiatement sans attendre le réseau
+  _explicitSignOut = true;
   setCachedToken(null);
   AsyncStorage.removeItem(SESSION_ACTIVE_KEY).catch(() => {});
   // Nettoyer SecureStore (session locale) en arrière-plan
@@ -416,9 +423,8 @@ export async function getSessionUser(): Promise<AuthUser | null> {
     const { data: { session }, error } = await safeGetSession(15_000);
 
     if (error) {
-      if (!isNetworkError(error.message)) {
-        supabase.auth.signOut().catch(() => {});
-      }
+      // Ne pas signOut() ici — évite de déclencher SIGNED_OUT (et le kick vers login)
+      // si c'est juste un timeout réseau alors qu'un cache valide existe dans authStore.
       return null;
     }
 
@@ -463,9 +469,14 @@ export function onAuthStateChange(callback: (user: AuthUser | null) => void): ()
     // reçoit immédiatement INITIAL_SESSION (parfois avec session null) ce qui
     // déclencherait callback(null) et déconnecterait l'utilisateur.
     if (event === 'INITIAL_SESSION') return;
-    // TOKEN_REFRESHED_FAILED ou SIGNED_OUT : session terminée
     if (!session?.user) {
-      callback(null);
+      // Déconnecter UNIQUEMENT si l'utilisateur a appuyé sur "Se déconnecter".
+      // Les SIGNED_OUT causés par un échec de refresh réseau (GoTrue, Android surcouche)
+      // ne doivent PAS kicker l'utilisateur — il a un cache valide dans authStore.
+      if (_explicitSignOut) {
+        _explicitSignOut = false;
+        callback(null);
+      }
       return;
     }
     const profile = await getProfileById(session.user.id).catch(() => null);
