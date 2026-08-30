@@ -354,7 +354,6 @@ export default function CategoryScreen({
       header={<TopBar title={meta.title} onBack={onBack} onSearch={onSearch} />}
       footer={<BottomNav active={navTab} onPress={handleNavPress} />}
     >
-      <CatNavBar active={catId} onSelect={handleCatChange} />
       <FlatList
         data={loading ? [] : shopCards}
         keyExtractor={item => item.id}
