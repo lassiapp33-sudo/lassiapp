@@ -34,9 +34,29 @@ export async function getCurrentLocation(): Promise<Coords | null> {
 
 /**
  * Convertit des coordonnées GPS en nom de quartier/zone lisible.
- * Priorité : sous-région (quartier) → district → ville → région.
+ * Nominatim OSM en priorité (suburb/neighbourhood = quartier précis ex: "Grand Mbao").
+ * Fallback Expo Location si Nominatim échoue.
  */
 export async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  // Nominatim — retourne le quartier précis (suburb > neighbourhood > city_district > city)
+  try {
+    const res = await Promise.race([
+      fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
+        { headers: { 'Accept-Language': 'fr', 'User-Agent': 'LassiApp/1.0' } },
+      ),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+    ]);
+    if (res.ok) {
+      const data = await res.json() as { address?: Record<string, string> };
+      const a = data.address ?? {};
+      const zone =
+        a.suburb ?? a.neighbourhood ?? a.city_district ?? a.town ?? a.city ?? a.county;
+      if (zone) return zone;
+    }
+  } catch { /* fallback ci-dessous */ }
+
+  // Fallback Expo Location
   try {
     const [result] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
     if (!result) return 'Ma position';
