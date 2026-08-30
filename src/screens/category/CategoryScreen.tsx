@@ -23,8 +23,7 @@ import useAuthStore from '../../store/authStore';
 function buildSubcats(catId: CatId): SubCat[] {
   const cfg = getCatConfig(catId);
   if (!cfg) return [];
-  const HIDDEN_SUBCATS = ['soupe', 'reservation_terrain_basket', 'arts_martiaux', 'seras', 'snack', 'quincaillerie', 'nexx_sow', 'sombi_ak_thiere'];
-  return cfg.subcats.filter(sub => !HIDDEN_SUBCATS.includes(sub.id)).map(sub => ({
+  return cfg.subcats.filter(sub => !sub.hidden).map(sub => ({
     id: sub.id,
     label: sub.imageUri || sub.SvgIcon ? sub.label : `${sub.emoji} ${sub.label}`,
     imageUri: sub.imageUri,
@@ -307,7 +306,6 @@ export default function CategoryScreen({
   const listHeader = useMemo(
     () => (
       <>
-        <CatNavBar active={catId} onSelect={handleCatChange} />
         {meta.subcats.length > 1 && (
           <SubCatTabs tabs={meta.subcats} active={subCat} onChange={handleSubCatChange} />
         )}
@@ -337,7 +335,6 @@ export default function CategoryScreen({
       </>
     ),
     [
-      catId,
       meta,
       subCat,
       activeSubCatLabel,
@@ -345,7 +342,6 @@ export default function CategoryScreen({
       t,
       filteredShops.length,
       onBlocPress,
-      handleCatChange,
       handleSubCatChange,
       handleMapPress,
       setFilter,
@@ -358,6 +354,7 @@ export default function CategoryScreen({
       header={<TopBar title={meta.title} onBack={onBack} onSearch={onSearch} />}
       footer={<BottomNav active={navTab} onPress={handleNavPress} />}
     >
+      <CatNavBar active={catId} onSelect={handleCatChange} />
       <FlatList
         data={loading ? [] : shopCards}
         keyExtractor={item => item.id}

@@ -235,7 +235,7 @@ const SUBCAT_FILTERS: FilterItem[] = [
   { id: 'all',  label: 'Tout',      emoji: null, imageUri: null, SvgIcon: null },
   { id: 'vip',  label: '5 Étoiles', emoji: null, imageUri: null, SvgIcon: null },
   ...CATEGORIES.flatMap(cat =>
-    cat.subcats.map(sub => ({
+    cat.subcats.filter(sub => !sub.hidden).map(sub => ({
       id: sub.id,
       label: sub.label,
       emoji: sub.emoji,

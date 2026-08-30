@@ -24,7 +24,7 @@ export default function CategoryGrid({ onSelect }: Props) {
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.list}
     >
-      {CATEGORIES.filter(cat => cat.id !== 'fruiterie' && cat.id !== 'photo_video' && cat.id !== 'tangana').map(cat => {
+      {CATEGORIES.filter(cat => cat.id !== 'tangana').map(cat => {
         const d = DISPLAY[cat.id] ?? {};
         const label = d.label ?? cat.label;
         const oneLine = d.oneLine ?? false;

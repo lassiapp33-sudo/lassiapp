@@ -252,7 +252,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.catLabel, on && styles.catLabelOn]}>{cat.label}</Text>
-                  <Text style={styles.catSub}>{cat.subcats.map(s => s.label).join(', ')}</Text>
+                  <Text style={styles.catSub}>{cat.subcats.filter(s => !s.hidden).map(s => s.label).join(', ')}</Text>
                 </View>
                 <View style={[styles.radio, on && styles.radioOn]}>
                   {on && <View style={styles.radioDot} />}
@@ -295,7 +295,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
           </Text>
           <View style={{ height: 20 }} />
 
-          {catConfig.subcats.map(sub => {
+          {catConfig.subcats.filter(sub => !sub.hidden).map(sub => {
             const on = subcats.includes(sub.id);
             return (
               <TouchableOpacity

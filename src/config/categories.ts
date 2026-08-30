@@ -702,6 +702,8 @@ export interface SubcatOption {
   imageSize?: number;
   /** true → vitrine affiche la réservation de créneaux (TerrainCreneaux) */
   hasSlots?: boolean;
+  /** true → masquée partout (filtre carte, inscription, tabs) */
+  hidden?: boolean;
 }
 
 export interface CatConfig {
@@ -713,6 +715,8 @@ export interface CatConfig {
   /** Mode de sélection à l'inscription : 'single' = radio, 'multiple' = cases */
   subcatMode: 'single' | 'multiple';
   subcats: SubcatOption[];
+  /** true → masquée partout (carte, inscription, CatNavBar) */
+  hidden?: boolean;
   /** Icône SVG vectorielle — couleur et taille paramétrables */
   renderIcon: (color: string, size?: number) => React.ReactNode;
 }
@@ -733,6 +737,7 @@ const ALL_CATEGORIES: CatConfig[] = [
         desc: 'Lait frais, produits laitiers',
         imageUri: IMG_NEXX_SOW,
         imageSize: 60,
+        hidden: true,
       },
       {
         id: 'sombi_ak_thiere',
@@ -740,6 +745,7 @@ const ALL_CATEGORIES: CatConfig[] = [
         label: 'Sombi ak Thiéré',
         desc: 'Sombi, thiéré, céréales traditionnelles',
         SvgIcon: IcoSombiThiere,
+        hidden: true,
       },
       {
         id: 'alimentation',
@@ -752,6 +758,7 @@ const ALL_CATEGORIES: CatConfig[] = [
         emoji: '🔧',
         label: 'Quincaillerie',
         desc: 'Outils, matériaux, bricolage',
+        hidden: true,
       },
     ],
     renderIcon: (color, size = 24) =>
@@ -803,6 +810,7 @@ const ALL_CATEGORIES: CatConfig[] = [
         desc: 'Soupes, potages, bouillons maison',
         imageUri: IMG_SOUPE,
         imageSize: 44,
+        hidden: true,
       },
       {
         id: 'cafe_wass',
@@ -896,7 +904,7 @@ const ALL_CATEGORIES: CatConfig[] = [
         imageSize: 52,
       },
       { id: 'dibiterie', emoji: '🥩', label: 'Dibiterie', desc: 'Viande grillée, thiébou guinar', imageUri: IMG_DIBITERI, imageSize: 56 },
-      { id: 'seras', emoji: '🔥', label: 'Séraas', desc: 'Poisson braisé, fruits de mer', imageUri: IMG_SERAS_IMG, imageSize: 56 },
+      { id: 'seras', emoji: '🔥', label: 'Séraas', desc: 'Poisson braisé, fruits de mer', imageUri: IMG_SERAS_IMG, imageSize: 56, hidden: true },
       {
         id: 'jus',
         emoji: '🧃',
@@ -911,6 +919,7 @@ const ALL_CATEGORIES: CatConfig[] = [
         desc: 'Gâteaux, viennoiseries, snacks',
         imageUri: IMG_SNACK,
         imageSize: 50,
+        hidden: true,
       },
     ],
     renderIcon: (color, size = 24) =>
@@ -938,6 +947,7 @@ const ALL_CATEGORIES: CatConfig[] = [
     subLabel: 'Fruiterie',
     emoji: '🍓',
     shopType: 'products',
+    hidden: true,
     subcatMode: 'multiple',
     subcats: [
       { id: 'fruits', emoji: '🍎', label: 'Fruits frais', desc: 'Fruits frais de saison', SvgIcon: IcoFruits },
@@ -1109,9 +1119,10 @@ const ALL_CATEGORIES: CatConfig[] = [
         label: 'Réservation de terrain basket',
         desc: 'Terrain de basketball en salle ou en plein air',
         hasSlots: true,
+        hidden: true,
       },
-      { id: 'arts_martiaux', emoji: '🥊', label: 'Arts martiaux', desc: 'Boxe, judo, taekwondo…' },
-      { id: 'photo_video', emoji: '📷', label: 'Photographes & Vidéastes', desc: 'Photo, vidéo, clips, événements, mariages' },
+      { id: 'arts_martiaux', emoji: '🥊', label: 'Arts martiaux', desc: 'Boxe, judo, taekwondo…', hidden: true },
+      { id: 'photo_video', emoji: '📷', label: 'Photographes & Vidéastes', desc: 'Photo, vidéo, clips, événements, mariages', hidden: true },
     ],
     renderIcon: (color, size = 24) =>
       React.createElement(
@@ -1138,6 +1149,7 @@ const ALL_CATEGORIES: CatConfig[] = [
     subLabel: 'Photographes & Vidéastes',
     emoji: '📷',
     shopType: 'services',
+    hidden: true,
     subcatMode: 'multiple',
     subcats: [
       {
@@ -1174,11 +1186,21 @@ const ALL_CATEGORIES: CatConfig[] = [
   },
 ];
 
-// Ordre d'affichage : food, tangana, bakery, hair, sport, stores (fruiterie + photo_video masqués en fin)
 const CAT_ORDER: CatId[] = ['food', 'tangana', 'bakery', 'hair', 'sport', 'stores', 'fruiterie', 'photo_video'];
-export const CATEGORIES: CatConfig[] = CAT_ORDER
+const ALL_ORDERED: CatConfig[] = CAT_ORDER
   .map(id => ALL_CATEGORIES.find(c => c.id === id))
   .filter((c): c is CatConfig => !!c);
+
+/** Toutes catégories y compris cachées (pour getCatConfig interne). */
+export const CATEGORIES_ALL: CatConfig[] = ALL_ORDERED;
+
+/** Catégories visibles (inscription, CatNavBar, carte). */
+export const CATEGORIES: CatConfig[] = ALL_ORDERED.filter(c => !c.hidden);
+
+/** Sous-catégories visibles d'une catégorie (inscription, tabs, filtre carte). */
+export function getVisibleSubcats(catId: string): SubcatOption[] {
+  return (ALL_CATEGORIES.find(c => c.id === catId)?.subcats ?? []).filter(s => !s.hidden);
+}
 
 /** Retourne la config d'une catégorie par son id. */
 export function getCatConfig(catId: CatId): CatConfig | undefined {

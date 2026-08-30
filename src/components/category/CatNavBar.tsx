@@ -21,7 +21,7 @@ export default function CatNavBar({ active, onSelect }: Props) {
       style={styles.bar}
       contentContainerStyle={styles.list}
     >
-      {CATEGORIES.filter(cat => cat.id !== 'fruiterie' && cat.id !== 'photo_video').map(cat => {
+      {CATEGORIES.map(cat => {
         const on = cat.id === active;
         return (
           <TouchableOpacity
