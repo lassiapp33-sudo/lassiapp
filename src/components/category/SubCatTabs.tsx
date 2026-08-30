@@ -56,16 +56,16 @@ export default function SubCatTabs({ tabs, active, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  bar: { height: 68 },
+  bar: { height: 60 },
   list: {
-    gap: 9,
-    paddingHorizontal: 20,
-    paddingTop: 4,
-    paddingBottom: 16,
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
   },
   tab: {
-    height: 48,
-    paddingHorizontal: 16,
+    height: 38,
+    paddingHorizontal: 12,
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -79,16 +79,16 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
   ico: {
-    width: 36,
-    height: 36,
-    borderRadius: 6,
+    width: 26,
+    height: 26,
+    borderRadius: 5,
   },
   label: {
     fontFamily: fonts.ui,
-    fontSize: 13,
+    fontSize: 12,
   },
   labelOn: { color: colors.bg },
   labelOff: { color: colors.muted },

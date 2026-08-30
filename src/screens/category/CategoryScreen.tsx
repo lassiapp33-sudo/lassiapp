@@ -353,6 +353,7 @@ export default function CategoryScreen({
     <LassiScreen
       header={<TopBar title={meta.title} onBack={onBack} onSearch={onSearch} />}
       footer={<BottomNav active={navTab} onPress={handleNavPress} />}
+      hideTopFade
     >
       <FlatList
         data={loading ? [] : shopCards}
