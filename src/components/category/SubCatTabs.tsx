@@ -37,9 +37,13 @@ export default function SubCatTabs({ tabs, active, onChange }: Props) {
             {tab.imageUri || tab.SvgIcon ? (
               <View style={styles.row}>
                 {tab.imageUri ? (
-                  <Image source={tab.imageUri} style={[styles.ico, tab.imageSize ? { width: tab.imageSize, height: tab.imageSize } : null]} contentFit="contain" cachePolicy="memory-disk" transition={0} />
+                  <Image source={tab.imageUri} style={styles.ico} contentFit="cover" cachePolicy="memory-disk" transition={0} />
                 ) : tab.SvgIcon ? (
-                  <tab.SvgIcon color={on ? colors.bg : colors.muted} />
+                  <View style={styles.svgWrap}>
+                    <View style={styles.svgScale}>
+                      <tab.SvgIcon color={on ? colors.bg : colors.muted} />
+                    </View>
+                  </View>
                 ) : null}
                 <Text style={[styles.label, on ? styles.labelOn : styles.labelOff]}>
                   {tab.label}
@@ -56,19 +60,20 @@ export default function SubCatTabs({ tabs, active, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  bar: { height: 60 },
+  bar: { height: 54 },
   list: {
     gap: 8,
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 10,
+    paddingTop: 10,
+    paddingBottom: 8,
   },
   tab: {
-    height: 38,
-    paddingHorizontal: 12,
+    height: 36,
+    paddingHorizontal: 10,
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   tabOn: { backgroundColor: colors.accent },
   tabOff: {
@@ -82,9 +87,9 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   ico: {
-    width: 26,
-    height: 26,
-    borderRadius: 5,
+    width: 22,
+    height: 22,
+    borderRadius: 4,
   },
   label: {
     fontFamily: fonts.ui,
@@ -92,4 +97,16 @@ const styles = StyleSheet.create({
   },
   labelOn: { color: colors.bg },
   labelOff: { color: colors.muted },
+  svgWrap: {
+    width: 22,
+    height: 22,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  svgScale: {
+    width: 36,
+    height: 36,
+    transform: [{ scale: 22 / 36 }],
+  },
 });
