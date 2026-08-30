@@ -199,8 +199,10 @@ export default function FicheGuideeScreen({ onClose }: Props) {
         `${valides.length} produit${valides.length > 1 ? 's' : ''} ajouté${valides.length > 1 ? 's' : ''}.`,
         [{ text: 'OK', onPress: onClose }],
       );
-    } catch {
-      Alert.alert('Erreur', 'Publication impossible. Réessayez.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '';
+      const isSessionErr = msg.includes('Session expirée') || msg.includes('reconnecte');
+      Alert.alert('Erreur', isSessionErr ? msg : 'Publication impossible. Réessayez.');
     } finally {
       setEnvoi(false);
     }
