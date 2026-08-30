@@ -8,8 +8,16 @@ import {
   Alert,
   ActionSheetIOS,
   Platform,
+  Image,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path, Rect, Line } from 'react-native-svg';
+
+const WAVE_LOGO = require('../../../assets/wave.jpg');
+const OM_LOGO = require('../../../assets/om.png');
 import { colors, fonts, TOP_INSET } from '../../theme';
 import useAuthStore from '../../store/authStore';
 import { formatPhoneSenegal } from '../../utils/phone';
@@ -281,6 +289,22 @@ const IcoTrash = () => (
   </Svg>
 );
 
+const IcoLock = () => (
+  <Svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Rect x={3} y={11} width={18} height={11} rx={2} stroke={colors.accent} />
+    <Path d="M7 11V7a5 5 0 0 1 10 0v4" stroke={colors.accent} />
+    <Path d="M12 16v-2" stroke={colors.accent} />
+  </Svg>
+);
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -317,6 +341,10 @@ export default function MerchantProfileScreen({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showChangePwd, setShowChangePwd] = useState(false);
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
+  const [pwdLoading, setPwdLoading] = useState(false);
   const [showLangModal, setShowLangModal] = useState(false);
   const [showAPropos, setShowAPropos] = useState(false);
   const [showSignaler, setShowSignaler] = useState(false);
@@ -333,6 +361,8 @@ export default function MerchantProfileScreen({
   const updateLogo = useShopStore(s => s.updateLogo);
   const isVip = useShopStore(s => s.profile.isVip ?? false);
   const shopSubcategories = useShopStore(s => s.context.subcategories);
+  const shopPaymentMethods = useShopStore(s => s.context.paymentMethods);
+  const updatePaymentMethods = useShopStore(s => s.updatePaymentMethods);
 
   useEffect(() => {
     if (!shopId) return;
@@ -420,6 +450,20 @@ export default function MerchantProfileScreen({
     }
   };
 
+  const handleTogglePayMethod = (method: 'wave' | 'om') => {
+    const current = shopPaymentMethods ?? ['wave', 'om'];
+    if (current.includes(method) && current.length === 1) {
+      Alert.alert('Impossible', 'Tu dois garder au moins un mode de paiement actif.');
+      return;
+    }
+    const next = current.includes(method)
+      ? current.filter(m => m !== method)
+      : [...current, method];
+    updatePaymentMethods(next).catch(() =>
+      Alert.alert('Erreur', 'Impossible de mettre à jour les modes de paiement.'),
+    );
+  };
+
   if (showHelp) return <HelpScreen onBack={() => setShowHelp(false)} role="merchant" />;
   if (showAPropos) return <AProposScreen onBack={() => setShowAPropos(false)} />;
   if (showSignaler)
@@ -477,20 +521,10 @@ export default function MerchantProfileScreen({
                 subtitle={t.profile.myVisibilitySub}
                 onPress={onVisibility}
               />
-              <ProfileOptionRow
-                icon={<IcoMega />}
-                title="Ma Campagne"
-                subtitle="Annonces sponsorisées & forfaits actifs"
-                onPress={onMaCampagne}
-              />
+              {/* Ma Campagne — MASQUÉE temporairement */}
             </>
           )}
-          <ProfileOptionRow
-            icon={<IcoDollar />}
-            title={t.profile.myRevenue}
-            subtitle={t.profile.myRevenueSub}
-            onPress={onRevenue}
-          />
+          {/* Mes revenus — MASQUÉ temporairement */}
           <ProfileOptionRow
             icon={<IcoWallet />}
             title={t.profile.myPayments}
@@ -515,16 +549,30 @@ export default function MerchantProfileScreen({
           )}
         </View>
 
-        <Text style={profileRowStyles.secLbl}>{t.profile.preferences}</Text>
+        <Text style={profileRowStyles.secLbl}>Modes de paiement</Text>
         <View style={profileRowStyles.grp}>
           <ProfileOptionRow
-            icon={<IcoBell />}
-            title={t.profile.notifications}
-            subtitle={t.profile.notificationsSub}
+            icon={<Image source={WAVE_LOGO} style={styles.payLogoIcon} />}
+            title="Wave"
+            subtitle="Paiement mobile Wave"
             end="toggle"
-            toggled={notifOn}
-            onToggle={() => setNotifOn(v => !v)}
+            toggled={shopPaymentMethods?.includes('wave') ?? true}
+            onToggle={() => handleTogglePayMethod('wave')}
           />
+          <ProfileOptionRow
+            icon={<Image source={OM_LOGO} style={styles.payLogoIcon} />}
+            title="Orange Money"
+            subtitle="Paiement mobile Orange"
+            end="toggle"
+            toggled={shopPaymentMethods?.includes('om') ?? true}
+            onToggle={() => handleTogglePayMethod('om')}
+            last
+          />
+        </View>
+
+        <Text style={profileRowStyles.secLbl}>{t.profile.preferences}</Text>
+        <View style={profileRowStyles.grp}>
+          {/* Notifications — MASQUÉE temporairement */}
           <ProfileOptionRow
             icon={<IcoGlobe />}
             title={t.profile.language}
@@ -536,16 +584,8 @@ export default function MerchantProfileScreen({
 
         <Text style={profileRowStyles.secLbl}>{t.profile.helpAccount}</Text>
         <View style={profileRowStyles.grp}>
-          <ProfileOptionRow
-            icon={<IcoHelp />}
-            title={t.profile.helpSupport}
-            onPress={() => setShowHelp(true)}
-          />
-          <ProfileOptionRow
-            icon={<IcoFlag />}
-            title="Signaler un problème"
-            onPress={() => setShowSignaler(true)}
-          />
+          {/* Aide & support — MASQUÉE temporairement */}
+          {/* Signaler un problème — MASQUÉ temporairement */}
           <ProfileOptionRow
             icon={<IcoInfo />}
             title="À propos"
@@ -561,6 +601,11 @@ export default function MerchantProfileScreen({
                 "Bonjour Lassi, je suis un prestataire et j'ai besoin d'aide avec mon compte.",
               )
             }
+          />
+          <ProfileOptionRow
+            icon={<IcoLock />}
+            title="Changer le mot de passe"
+            onPress={() => { setNewPwd(''); setConfirmPwd(''); setShowChangePwd(true); }}
           />
           <ProfileOptionRow
             icon={<IcoLogout />}
@@ -581,6 +626,78 @@ export default function MerchantProfileScreen({
 
         <Text style={profileRowStyles.version}>{t.profile.versionPro}</Text>
       </ScrollView>
+
+      {/* ── Modal changement mot de passe ── */}
+      <Modal visible={showChangePwd} transparent animationType="fade" onRequestClose={() => setShowChangePwd(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={pwdStyles.overlay}>
+          <View style={pwdStyles.card}>
+            <Text style={pwdStyles.title}>Changer le mot de passe</Text>
+
+            <Text style={pwdStyles.label}>Nouveau mot de passe</Text>
+            <TextInput
+              style={pwdStyles.input}
+              placeholder="8 caractères minimum"
+              placeholderTextColor="#5a5c80"
+              secureTextEntry
+              value={newPwd}
+              onChangeText={setNewPwd}
+              autoCapitalize="none"
+            />
+
+            <Text style={pwdStyles.label}>Confirmer le mot de passe</Text>
+            <TextInput
+              style={pwdStyles.input}
+              placeholder="Répète le mot de passe"
+              placeholderTextColor="#5a5c80"
+              secureTextEntry
+              value={confirmPwd}
+              onChangeText={setConfirmPwd}
+              autoCapitalize="none"
+            />
+
+            <View style={pwdStyles.row}>
+              <TouchableOpacity
+                style={pwdStyles.btnCancel}
+                onPress={() => setShowChangePwd(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={pwdStyles.btnCancelTxt}>Annuler</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={pwdStyles.btnConfirm}
+                activeOpacity={0.8}
+                onPress={async () => {
+                  if (newPwd.length < 8) {
+                    Alert.alert('Mot de passe trop court', '8 caractères minimum.');
+                    return;
+                  }
+                  if (newPwd !== confirmPwd) {
+                    Alert.alert('Erreur', 'Les mots de passe ne correspondent pas.');
+                    return;
+                  }
+                  setPwdLoading(true);
+                  try {
+                    await authService.updatePassword(newPwd);
+                    setShowChangePwd(false);
+                    Alert.alert('Succès', 'Mot de passe mis à jour.');
+                  } catch (e: unknown) {
+                    const msg = e instanceof Error ? e.message : 'Erreur inconnue';
+                    Alert.alert('Erreur', msg);
+                  } finally {
+                    setPwdLoading(false);
+                  }
+                }}
+              >
+                {pwdLoading
+                  ? <ActivityIndicator color={colors.bg} size="small" />
+                  : <Text style={pwdStyles.btnConfirmTxt}>Confirmer</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       <DeleteAccountModal
         visible={showDeleteModal}
@@ -624,5 +741,84 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: fonts.titleXL,
     fontSize: 22,
+  },
+  payLogoIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+  },
+});
+
+const pwdStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  card: {
+    width: '100%',
+    backgroundColor: '#12193a',
+    borderRadius: 18,
+    padding: 24,
+    gap: 10,
+  },
+  title: {
+    color: colors.white,
+    fontFamily: fonts.title,
+    fontSize: 17,
+    marginBottom: 6,
+  },
+  label: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  input: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: colors.white,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  btnCancel: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  btnCancelTxt: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 14,
+  },
+  btnConfirm: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.accent,
+  },
+  btnConfirmTxt: {
+    color: colors.bg,
+    fontFamily: fonts.title,
+    fontSize: 14,
   },
 });

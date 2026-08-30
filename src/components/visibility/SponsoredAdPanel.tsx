@@ -23,6 +23,7 @@ import {
   AdPack,
   SponsoredAd,
   AD_PACKS,
+  BUDGET_STEPS,
   getAdPacks,
   creerAnnonceSponsorisee,
   getMerchantAds,
@@ -37,6 +38,7 @@ import {
   checkPaymentAvailability,
   createVisibilityPayment,
   verifyVisibilityPayment,
+  verifyWavePayment,
 } from '../../services/visibilityPayment';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
@@ -356,7 +358,9 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
     if (!pendingPay) return;
     setVerifying(true);
     try {
-      const result = await verifyVisibilityPayment(pendingPay.subscriptionId);
+      const result = payMethod === 'wave'
+        ? await verifyWavePayment(pendingPay.subscriptionId)
+        : await verifyVisibilityPayment(pendingPay.subscriptionId);
       if (result.paid) {
         setPendingPay(null);
         await loadAds();
@@ -368,7 +372,7 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
       } else {
         Alert.alert(
           'Paiement non confirmé',
-          'On n\'a pas encore reçu la confirmation Orange Money. Patiente 1-2 min et réessaie.',
+          `On n'a pas encore reçu la confirmation ${payMethod === 'wave' ? 'Wave' : 'Orange Money'}. Patiente 1-2 min et réessaie.`,
         );
       }
     } catch {
@@ -527,14 +531,16 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
       {/* Bandeau paiement Wave/OM en attente */}
       {pendingPay ? (
         <View style={s.pendingBanner}>
-          {/* Bouton rouvrir app OM */}
+          {/* Bouton rouvrir app Wave ou OM */}
           {!!pendingPay.paymentUrl && (
             <TouchableOpacity
-              style={s.omBtn}
+              style={[s.omBtn, { backgroundColor: payMethod === 'wave' ? '#1DC8F2' : '#FF7900' }]}
               onPress={() => Linking.openURL(pendingPay.paymentUrl).catch(() => {})}
               activeOpacity={0.85}
             >
-              <Text style={s.omBtnTxt}>Ouvrir Orange Money</Text>
+              <Text style={s.omBtnTxt}>
+                {payMethod === 'wave' ? 'Ouvrir Wave' : 'Ouvrir Orange Money'}
+              </Text>
             </TouchableOpacity>
           )}
           {/* QR code — affiché toujours si disponible */}
@@ -542,8 +548,8 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
             <>
               <Text style={s.pendingTxt}>
                 {pendingPay.paymentUrl
-                  ? 'Ou scanne ce QR code avec l\'app Orange Money.'
-                  : 'Scanne ce QR code avec l\'app Orange Money pour payer.'}
+                  ? `Ou scanne ce QR code avec l'app ${payMethod === 'wave' ? 'Wave' : 'Orange Money'}.`
+                  : `Scanne ce QR code avec l'app ${payMethod === 'wave' ? 'Wave' : 'Orange Money'} pour payer.`}
               </Text>
               <Image source={{ uri: `data:image/png;base64,${pendingPay.qrCode}` }} style={s.qrImage} resizeMode="contain" />
             </>
@@ -791,7 +797,6 @@ const s = StyleSheet.create({
   omBtn: {
     height: 46,
     borderRadius: radius.md,
-    backgroundColor: '#FF6B00',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,

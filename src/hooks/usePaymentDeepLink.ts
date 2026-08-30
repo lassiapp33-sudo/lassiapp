@@ -33,8 +33,11 @@ export function usePaymentDeepLink() {
         return;
       }
 
-      // ── Paiement ──────────────────────────────────────────────────────────
-      if (url.includes('lassiapp://paiement/succes')) {
+      // ── Paiement (Universal Link HTTPS + custom scheme lassiapp://) ────────
+      const isSucces = url.includes('/paiement/succes') || url.includes('lassiapp://paiement/succes');
+      const isEchec  = url.includes('/paiement/echec')  || url.includes('lassiapp://paiement/echec');
+
+      if (isSucces) {
         const piId = parseParam(url, 'pi');
         if (!piId) return;
         try {
@@ -50,7 +53,7 @@ export function usePaymentDeepLink() {
         return;
       }
 
-      if (url.includes('lassiapp://paiement/echec')) {
+      if (isEchec) {
         setPendingNav({ type: 'payment_failed' });
         return;
       }

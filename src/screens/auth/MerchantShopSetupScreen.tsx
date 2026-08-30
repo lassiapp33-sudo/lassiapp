@@ -1,10 +1,11 @@
 /**
  * screens/auth/MerchantShopSetupScreen.tsx
- * Parcours d'inscription marchand en 4 étapes :
+ * Parcours d'inscription marchand en 5 étapes :
  *   1. Catégorie        — quel type de commerce ?
  *   2. Sous-catégorie   — spécialité (single ou multiple selon config)
  *   3. Identité         — nom, logo, description
  *   4. Horaires         — planning hebdomadaire (optionnel, peut être sauté)
+ *   5. Paiement         — modes de paiement acceptés (Wave / Orange Money)
  */
 import React, { useState } from 'react';
 import { Image as ExpoImage } from 'expo-image';
@@ -42,11 +43,20 @@ interface Props {
   onComplete: (role: 'merchant') => void;
 }
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3 | 4 | 5;
 
 // ─── En-tête commun (défini hors du composant pour éviter le remontage) ───────
 
-const STEP_LABELS = ['Catégorie', 'Spécialité', 'Identité', 'Horaires'];
+const STEP_LABELS = ['Catégorie', 'Spécialité', 'Identité', 'Horaires', 'Paiement'];
+
+const WAVE_LOGO = require('../../../assets/wave.jpg');
+const OM_LOGO = require('../../../assets/om.png');
+
+type PayMethod = 'wave' | 'om';
+const PAYMENT_OPTIONS: { method: PayMethod; label: string; desc: string; logo: ReturnType<typeof require> }[] = [
+  { method: 'wave', label: 'Wave', desc: 'Paiement mobile instantané', logo: WAVE_LOGO },
+  { method: 'om', label: 'Orange Money', desc: 'Paiement mobile Orange', logo: OM_LOGO },
+];
 
 interface HeaderProps {
   step: Step;
@@ -61,7 +71,7 @@ const Header = React.memo(function Header({ step, onBack }: HeaderProps) {
         <LassiLogo width={72} />
       </View>
       <View style={styles.progressRow}>
-        {([1, 2, 3, 4] as Step[]).map(s => (
+        {([1, 2, 3, 4, 5] as Step[]).map(s => (
           <View
             key={s}
             style={[
@@ -72,7 +82,7 @@ const Header = React.memo(function Header({ step, onBack }: HeaderProps) {
         ))}
       </View>
       <Text style={styles.stepLabel}>
-        Étape {step} sur 4 — {STEP_LABELS[step - 1]}
+        Étape {step} sur 5 — {STEP_LABELS[step - 1]}
       </Text>
     </>
   );
@@ -87,6 +97,8 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
   const [shopName, setShopName] = useState('');
   const [logoUri, setLogoUri] = useState<string | null>(null);
   const [hours, setHours] = useState<WeekHours>(DEFAULT_WEEK_HOURS);
+  const [skippedHours, setSkippedHours] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PayMethod[]>(['wave']);
   const [loading, setLoading] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -97,6 +109,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
   const handleBack = () => {
     setErreur(null);
     if (step === 1) onBack();
+    else if (step === 5) { setSkippedHours(false); setStep(4); }
     else setStep((step - 1) as Step);
   };
 
@@ -120,9 +133,19 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
         return;
       }
       setStep(4);
-    } else {
-      handleSubmit(false);
+    } else if (step === 4) {
+      setStep(5);
     }
+  };
+
+  const togglePaymentMethod = (method: PayMethod) => {
+    setPaymentMethods(prev => {
+      if (prev.includes(method)) {
+        if (prev.length === 1) return prev; // au moins un requis
+        return prev.filter(m => m !== method);
+      }
+      return [...prev, method];
+    });
   };
 
   // Ouvre la galerie pour le logo
@@ -183,6 +206,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
         latitude,
         longitude,
         zone,
+        paymentMethods,
       });
       useAuthStore.getState().setUser(user);
       onComplete('merchant');
@@ -395,10 +419,56 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
 
   // ── Étape 4 : Horaires ────────────────────────────────────────────────────
 
+  if (step === 4) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.kav}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingTop: TOP_INSET }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Header step={step} onBack={handleBack} />
+          <Text style={styles.h1}>Tes horaires d'ouverture</Text>
+          <Text style={styles.sub}>
+            Définir tes horaires permet aux clients de savoir si tu es ouvert en temps réel. Tu
+            pourras les modifier à tout moment depuis ta vitrine.
+          </Text>
+          <View style={{ height: 20 }} />
+
+          <OpeningHoursCard
+            hours={hours}
+            isManuallyClose={false}
+            readOnly={false}
+            onChange={setHours}
+          />
+
+          <View style={{ height: 20 }} />
+
+          <AuthButton label="Suivant →" onPress={() => { setSkippedHours(false); setStep(5); }} loading={false} />
+
+          <TouchableOpacity
+            style={styles.skipBtn}
+            onPress={() => { setSkippedHours(true); setStep(5); }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.skipTxt}>Passer cette étape</Text>
+          </TouchableOpacity>
+
+          <View style={{ height: 28 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // ── Étape 5 : Modes de paiement ───────────────────────────────────────────
+
   return (
     <KeyboardAvoidingView
       style={styles.kav}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: TOP_INSET }]}
@@ -406,36 +476,47 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
         showsVerticalScrollIndicator={false}
       >
         <Header step={step} onBack={handleBack} />
-        <Text style={styles.h1}>Tes horaires d'ouverture</Text>
+        <Text style={styles.h1}>Modes de paiement</Text>
         <Text style={styles.sub}>
-          Définir tes horaires permet aux clients de savoir si tu es ouvert en temps réel. Tu
-          pourras les modifier à tout moment depuis ta vitrine.
+          Choisis les moyens de paiement que tu acceptes dans ta boutique. Tes clients ne verront
+          que les options que tu actives.
         </Text>
         <View style={{ height: 20 }} />
 
-        <OpeningHoursCard
-          hours={hours}
-          isManuallyClose={false}
-          readOnly={false}
-          onChange={setHours}
-        />
+        {PAYMENT_OPTIONS.map(opt => {
+          const on = paymentMethods.includes(opt.method);
+          const isLast = opt.method === 'om';
+          return (
+            <TouchableOpacity
+              key={opt.method}
+              style={[styles.payRow, on && styles.payRowOn, isLast && { marginBottom: 0 }]}
+              onPress={() => togglePaymentMethod(opt.method)}
+              activeOpacity={0.8}
+            >
+              <Image source={opt.logo} style={styles.payLogo} resizeMode="cover" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.catLabel, on && styles.catLabelOn]}>{opt.label}</Text>
+                <Text style={styles.catSub}>{opt.desc}</Text>
+              </View>
+              <View style={[styles.checkbox, on && styles.checkboxOn]}>
+                {on && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
 
-        {erreur ? <Text style={[styles.erreur, { marginTop: 12 }]}>{erreur}</Text> : null}
+        <Text style={styles.payHint}>
+          Au moins un mode de paiement est requis. Tu pourras modifier ce choix depuis ton profil.
+        </Text>
+
+        {erreur ? <Text style={styles.erreur}>{erreur}</Text> : null}
         <View style={{ height: 20 }} />
 
         <AuthButton
           label="Terminer et ouvrir ma boutique"
-          onPress={() => handleSubmit(false)}
+          onPress={() => handleSubmit(skippedHours)}
           loading={loading}
         />
-
-        <TouchableOpacity
-          style={styles.skipBtn}
-          onPress={() => handleSubmit(true)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.skipTxt}>Passer cette étape</Text>
-        </TouchableOpacity>
 
         <View style={{ height: 28 }} />
       </ScrollView>
@@ -678,5 +759,37 @@ const styles = StyleSheet.create({
     fontFamily: fonts.ui,
     fontSize: 13,
     textDecorationLine: 'underline',
+  },
+
+  // Étape 5 — modes de paiement
+  payRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: 14,
+    marginBottom: 10,
+  },
+  payRowOn: {
+    backgroundColor: 'rgba(253,207,52,.08)',
+    borderColor: colors.accent,
+  },
+  payLogo: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+    flexShrink: 0,
+  },
+  payHint: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 11.5,
+    lineHeight: 17,
+    marginTop: 12,
+    marginBottom: 4,
+    textAlign: 'center',
   },
 });

@@ -58,7 +58,7 @@ const IcoPin = () => (
   </Svg>
 );
 
-// ─── AddMethodPicker : façons d'ajouter un produit ───────────────────────────
+// ─── AddMethodPicker : façons d'ajouter une prestation au menu ───────────────
 
 function AddMethodPicker({
   label,
@@ -70,26 +70,27 @@ function AddMethodPicker({
   onFicheGuidee: () => void;
 }) {
   return (
-    <View style={styles.addPickerWrap}>
-      {/* Option 1 : Fiche Guidée (recommandée) */}
-      <TouchableOpacity
-        style={[styles.addPickerBtn, styles.addPickerBtnPrimary]}
-        onPress={onFicheGuidee}
-        activeOpacity={0.82}
-      >
-        <Text style={styles.addPickerIcon}>+</Text>
-        <Text style={styles.addPickerTitle}>Fiche Guidée</Text>
-      </TouchableOpacity>
+    <View>
+      <Text style={styles.menuSectionTitle}>Créer votre menu</Text>
+      <View style={styles.addPickerWrap}>
+        <TouchableOpacity
+          style={[styles.addPickerBtn, styles.addPickerBtnPrimary]}
+          onPress={onFicheGuidee}
+          activeOpacity={0.82}
+        >
+          <Text style={styles.addPickerIcon}>+</Text>
+          <Text style={styles.addPickerTitle}>Menu guidé</Text>
+        </TouchableOpacity>
 
-      {/* Option 2 : Manuel */}
-      <TouchableOpacity
-        style={styles.addPickerBtn}
-        onPress={onManuel}
-        activeOpacity={0.82}
-      >
-        <Text style={styles.addPickerIcon}>✎</Text>
-        <Text style={[styles.addPickerTitle, { color: colors.white }]}>Ajouter manuellement</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.addPickerBtn}
+          onPress={onManuel}
+          activeOpacity={0.82}
+        >
+          <Text style={styles.addPickerIcon}>✎</Text>
+          <Text style={[styles.addPickerTitle, { color: colors.white }]}>Menu manuel</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -1278,6 +1279,14 @@ const styles = StyleSheet.create({
   },
 
   // AddMethodPicker
+  menuSectionTitle: {
+    marginHorizontal: 18,
+    marginTop: 14,
+    marginBottom: 6,
+    fontFamily: fonts.title,
+    fontSize: 14,
+    color: colors.white,
+  },
   addPickerWrap: {
     marginHorizontal: 18,
     marginTop: 2,

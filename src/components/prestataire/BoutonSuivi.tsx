@@ -32,7 +32,9 @@ export default function BoutonSuivi({ latitude, longitude, adresse, nomBoutique,
       <IcoNav />
       <View style={{ flex: 1 }}>
         <Text style={styles.label}>M'y rendre</Text>
-        <Text style={styles.sub}>Suivi GPS jusqu'à la boutique</Text>
+        <Text style={styles.sub}>
+          {latitude != null ? 'Suivi GPS jusqu\'à la boutique' : 'Voir sur la carte LASSI'}
+        </Text>
       </View>
     </TouchableOpacity>
   );

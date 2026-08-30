@@ -186,19 +186,7 @@ export default function QuickActions({
   return (
     <View style={styles.grid}>
       <View style={styles.row}>
-        <ActionCard
-          Icon={IcoBook}
-          iconBg="rgba(253,207,52,.13)"
-          iconStroke={colors.accent}
-          title="Cahier de dettes"
-          desc={
-            debtCount > 0
-              ? `${debtCount} client${debtCount > 1 ? 's' : ''} en dette`
-              : 'Aucune dette'
-          }
-          badge={debtCount}
-          onPress={() => onPress?.('debts')}
-        />
+        {/* Cahier de dettes — MASQUÉ temporairement */}
         <ActionCard
           Icon={IcoMsg}
           iconBg="rgba(29,200,242,.13)"
@@ -240,52 +228,7 @@ export default function QuickActions({
           />
         )}
       </View>
-      <View style={styles.row}>
-        <ActionCard
-          Icon={IcoStar}
-          iconBg="rgba(95,211,138,.13)"
-          iconStroke={colors.success}
-          title="Mes avis"
-          desc={
-            avisCount > 0
-              ? `${avisCount} avis client${avisCount > 1 ? 's' : ''}`
-              : 'Voir et répondre aux avis'
-          }
-          badge={undefined}
-          onPress={() => onPress?.('avis')}
-        />
-        {showTerrains && !isSlotShop ? (
-          <ActionCard
-            Icon={IcoGrid}
-            iconBg="rgba(95,211,138,.13)"
-            iconStroke={colors.success}
-            title="Mes terrains"
-            desc="Gérer, réservations, scanner QR"
-            onPress={() => onPress?.('terrains')}
-          />
-        ) : (
-          <ActionCard
-            Icon={IcoTrophy}
-            iconBg="rgba(253,207,52,.13)"
-            iconStroke={colors.accent}
-            title="Classement"
-            desc="Ma position cette semaine"
-            onPress={() => onPress?.('classement')}
-          />
-        )}
-      </View>
-      {showTerrains && !isSlotShop && (
-        <View style={styles.row}>
-          <ActionCard
-            Icon={IcoTrophy}
-            iconBg="rgba(253,207,52,.13)"
-            iconStroke={colors.accent}
-            title="Classement"
-            desc="Ma position cette semaine"
-            onPress={() => onPress?.('classement')}
-          />
-        </View>
-      )}
+      {/* Mes avis + Classement — MASQUÉS temporairement */}
       <View style={styles.row}>
         <ActionCard
           Icon={IcoFlame}

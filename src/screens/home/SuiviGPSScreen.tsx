@@ -85,8 +85,8 @@ const buildNavHTML = (
 const UL=${uLat},UG=${uLng},SL=${sLat},SG=${sLng};
 const map=L.map('map',{zoomControl:false});
 
-L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
-  attribution:'© OpenStreetMap © CARTO',maxZoom:20,detectRetina:true
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© OpenStreetMap',maxZoom:19,detectRetina:true
 }).addTo(map);
 
 const uIco=L.divIcon({html:'<div class="ud"></div>',iconSize:[18,18],iconAnchor:[9,9],className:''});

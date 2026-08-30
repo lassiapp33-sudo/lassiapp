@@ -83,8 +83,8 @@ function handleNotifData(data: Record<string, any> | undefined | null) {
   const setPendingNav = usePendingNavStore.getState().setPendingNav;
   if (data.type === 'message' && data.conversationId) {
     setPendingNav({ type: 'msg', conversationId: data.conversationId });
-  } else if (data.type === 'commande' && data.orderId) {
-    setPendingNav({ type: 'order', orderId: data.orderId });
+  } else if ((data.type === 'commande' || data.type === 'table_reservation_nouvelle') && (data.orderId || data.pi_id)) {
+    setPendingNav({ type: 'order', orderId: (data.orderId ?? data.pi_id) as string });
   } else if (data.type === 'new_shop' && data.shop_id) {
     setPendingNav({ type: 'new_shop', shopId: data.shop_id as string, shopName: (data.shop_name as string) ?? '' });
   } else if (data.type === 'a_la_une_feed') {
@@ -96,6 +96,8 @@ function handleNotifData(data: Record<string, any> | undefined | null) {
     // Prestataire → terrain_reservations (MerchantNavigator gère via terrainId)
     // Client      → terrain_my_reservations (HomeNavigator gère)
     setPendingNav({ type: 'terrain_resa', terrainId: data.terrainId as string | undefined });
+  } else if (data.type === 'payout_done') {
+    setPendingNav({ type: 'notifications' });
   }
 }
 

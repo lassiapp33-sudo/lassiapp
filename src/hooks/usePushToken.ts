@@ -16,8 +16,6 @@ async function logPush(userId: string | undefined, platform: string, status: str
   }).catch(() => {});
 }
 
-// Expo Go SDK 53+ : le simple import de expo-notifications déclenche
-// TokenAutoRegistration → erreur console. require() lazy évite ça.
 const IS_EXPO_GO = Constants.executionEnvironment === 'storeClient';
 
 type N = typeof import('expo-notifications');
@@ -42,78 +40,95 @@ export function usePushToken() {
     if ((!userId && !gerantActive) || !N) return;
 
     const os = Platform.OS === 'ios' ? 'ios' : 'android';
+    const osVersion = `${Platform.OS} ${Platform.Version}`;
+    let alive = true;
+    let tokenSaved = false;
+
     (async () => {
       try {
-        await logPush(userId, os, 'hook_started');
+        await logPush(userId, os, 'hook_started', { error: osVersion });
+
         const { status: existing } = await N.getPermissionsAsync();
         let finalStatus = existing;
         if (existing !== 'granted') {
           const { status } = await N.requestPermissionsAsync();
           finalStatus = status;
         }
-        if (finalStatus !== 'granted') {
-          console.warn('[push] Permission refusée — statut:', finalStatus);
+        if (finalStatus !== 'granted' || !alive) {
           await logPush(userId, os, 'permission_denied', { error: finalStatus });
           return;
         }
-
         await logPush(userId, os, 'permission_granted');
 
-        // Étape 1 : token APNs brut — retry 3× (réseau APNs peut être lent)
-        let deviceToken: string | null = null;
-        const MAX_ATTEMPTS = 3;
-        let lastDtErr = '';
-        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-          try {
-            await logPush(userId, os, 'device_token_attempt', { error: `attempt_${attempt}` });
-            const dt = await Promise.race([
-              N.getDevicePushTokenAsync(),
-              new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`getDevicePushTokenAsync timeout 30s (attempt ${attempt})`)), 30000)),
-            ]) as { data: string };
-            deviceToken = dt?.data ?? null;
-            await logPush(userId, os, 'device_token_ok', { token_prefix: deviceToken?.slice(0, 20) ?? 'null' });
-            break;
-          } catch (dtErr) {
-            lastDtErr = dtErr instanceof Error ? dtErr.message : String(dtErr);
-            await logPush(userId, os, 'device_token_error', { error: lastDtErr });
-            if (attempt < MAX_ATTEMPTS) {
-              await new Promise<void>(r => setTimeout(r, 5000));
-            }
+        let expoToken: string | null = null;
+
+        if (Platform.OS === 'ios') {
+          await logPush(userId, os, 'device_token_attempt');
+
+          // Listener-based approach : capte le token dès qu'il arrive (event vs promise)
+          const apnsToken = await new Promise<string | null>((resolve) => {
+            let done = false;
+            const timeout = setTimeout(() => {
+              if (!done) { done = true; resolve(null); }
+            }, 30000);
+
+            const sub = N.addPushTokenListener((token) => {
+              if (!done) {
+                done = true;
+                clearTimeout(timeout);
+                sub.remove();
+                resolve(token.data ?? null);
+              }
+            });
+
+            // getDevicePushTokenAsync déclenche registerForRemoteNotifications
+            N.getDevicePushTokenAsync()
+              .then(dt => {
+                if (!done && dt?.data) {
+                  done = true;
+                  clearTimeout(timeout);
+                  sub.remove();
+                  resolve(dt.data);
+                }
+              })
+              .catch(() => {});
+          });
+
+          if (!alive) return;
+          if (!apnsToken) {
+            await logPush(userId, os, 'device_token_error', { token_prefix: 'apns_listener_30s' });
+            return;
           }
-        }
-        if (!deviceToken) return;
-
-        // Étape 2 : Expo push token
-        const tokenData = await Promise.race([
-          N.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID }),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getExpoPushTokenAsync timeout 15s')), 15000)),
-        ]).catch(async (e: unknown) => {
-          const msg = e instanceof Error ? e.message : String(e);
-          await logPush(userId, os, 'expo_token_error', { error: msg });
-          return null;
-        }) as { data: string } | null;
-
-        const token = tokenData?.data;
-        if (!token) {
-          console.warn('[push] getExpoPushTokenAsync a retourné null');
-          await logPush(userId, os, 'token_null');
-          return;
+          await logPush(userId, os, 'device_token_ok', { token_prefix: apnsToken.slice(0, 20) });
+          const tokenData = await N.getExpoPushTokenAsync({
+            projectId: EAS_PROJECT_ID,
+            devicePushToken: { type: 'ios', data: apnsToken },
+          });
+          expoToken = tokenData?.data ?? null;
+        } else {
+          await logPush(userId, os, 'device_token_attempt');
+          const dt = await N.getDevicePushTokenAsync();
+          if (!alive || !dt?.data) {
+            await logPush(userId, os, 'device_token_error', { token_prefix: 'dt_null' });
+            return;
+          }
+          await logPush(userId, os, 'device_token_ok', { token_prefix: dt.data.slice(0, 20) });
+          const tokenData = await N.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID });
+          expoToken = tokenData?.data ?? null;
         }
 
-        console.log('[push] Token enregistré:', token.slice(0, 30) + '...');
-        currentDeviceToken = token;
-        await savePushToken(token, os);
-        await logPush(userId, os, 'token_saved', { token_prefix: token.slice(0, 35) });
+        if (!expoToken || !alive || tokenSaved) return;
+        tokenSaved = true;
+        currentDeviceToken = expoToken;
+        await savePushToken(expoToken, os);
+        await logPush(userId, os, 'token_saved', { token_prefix: expoToken.slice(0, 35) });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error('[push] Échec enregistrement token:', msg);
-        await logPush(userId, os, 'error', { error: msg });
+        await logPush(userId, os, 'fatal_error', { error: msg });
       }
-    })().catch((err) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('[push] Erreur inattendue:', msg);
-      logPush(userId, os, 'fatal_error', { error: msg });
-    });
+    })();
+
+    return () => { alive = false; };
   }, [userId, gerantActive]);
 }
 

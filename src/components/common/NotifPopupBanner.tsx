@@ -8,19 +8,21 @@ import {
 } from 'react-native';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { NotifType } from '../../store/notificationsStore';
-import { IcoNotifOrder, IcoNotifMsg, IcoNotifFitness, IcoNotifAnn } from './LassiIcons';
+import { IcoNotifOrder, IcoNotifMsg, IcoNotifFitness, IcoNotifAnn, IcoNotifPay } from './LassiIcons';
 import useNotifPopupStore from '../../store/notifPopupStore';
 
 function BannerIcon({ type }: { type: NotifType }) {
-  if (type === 'msg')     return <IcoNotifMsg     size={24} />;
-  if (type === 'fitness') return <IcoNotifFitness size={24} />;
-  if (type === 'ann')     return <IcoNotifAnn     size={24} />;
+  if (type === 'msg')                                   return <IcoNotifMsg     size={24} />;
+  if (type === 'fitness')                               return <IcoNotifFitness size={24} />;
+  if (type === 'ann')                                   return <IcoNotifAnn     size={24} />;
+  if (type === 'pay' || type === 'payment')             return <IcoNotifPay     size={24} />;
   return <IcoNotifOrder size={24} />;
 }
 
 const COLOR: Record<NotifType, string> = {
   order:               colors.accent,
   pay:                 colors.success,
+  payment:             colors.success,
   fitness:             colors.orange,
   vip:                 colors.orange,
   msg:                 colors.accent,
@@ -32,6 +34,7 @@ const COLOR: Record<NotifType, string> = {
 const BG: Record<NotifType, string> = {
   order:               'rgba(253,207,52,.13)',
   pay:                 'rgba(95,211,138,.13)',
+  payment:             'rgba(95,211,138,.13)',
   fitness:             'rgba(240,168,71,.13)',
   vip:                 'rgba(240,168,71,.13)',
   msg:                 'rgba(253,207,52,.13)',
@@ -120,6 +123,8 @@ export default function NotifPopupBanner({ onView, onVoirAlaUne, onVoirVitrine, 
 
   if (!current || (
     current.type !== 'order' &&
+    current.type !== 'payment' &&
+    current.type !== 'pay' &&
     current.type !== 'msg' &&
     current.type !== 'fitness' &&
     current.type !== 'ann' &&

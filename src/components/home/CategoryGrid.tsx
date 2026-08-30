@@ -6,9 +6,9 @@ import { CatId, CATEGORIES } from '../../config/categories';
 // Overrides d'affichage spécifiques à cette grille (label raccourci, largeur, multiligne)
 const DISPLAY: Partial<Record<CatId, { label?: string; oneLine?: boolean; itemWidth?: number }>> = {
   stores: { label: 'Commerçants\ndu quartier', itemWidth: 82 },
-  hair: { label: 'Coiffeurs' },
-  sport: { label: 'Sport' },
-  bakery: { oneLine: true },
+  hair: { label: 'Beauté &\nSoins' },
+  sport: { label: 'Sport &\nProduction' },
+  bakery: { label: 'Boulangeries &\nPâtisseries' },
 };
 
 const S = colors.accent;
@@ -24,7 +24,7 @@ export default function CategoryGrid({ onSelect }: Props) {
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.list}
     >
-      {CATEGORIES.map(cat => {
+      {CATEGORIES.filter(cat => cat.id !== 'fruiterie' && cat.id !== 'photo_video' && cat.id !== 'tangana').map(cat => {
         const d = DISPLAY[cat.id] ?? {};
         const label = d.label ?? cat.label;
         const oneLine = d.oneLine ?? false;

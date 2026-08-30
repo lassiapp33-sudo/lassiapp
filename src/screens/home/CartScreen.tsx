@@ -34,6 +34,7 @@ import LivraisonModal from '../../components/livraison/LivraisonModal';
 import { devisLivraison } from '../../config/livraison';
 import { getCurrentLocation } from '../../services/location';
 import { SUPABASE_URL, SUPABASE_ANON } from '../../lib/supabase';
+import { getShopById } from '../../services/shops';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -123,7 +124,15 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
   const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [discounts, setDiscounts] = useState<AppliedDiscount[]>([]);
-  const [method, setMethod] = useState<PayMethod>(WAVE_ENABLED ? 'wave' : 'om');
+  const [resolvedPayMethods, setResolvedPayMethods] = useState<('wave' | 'om')[] | null>(
+    shopInfo?.paymentMethods ?? null,
+  );
+  const merchantPayMethods = (resolvedPayMethods ?? ['wave', 'om']).filter(
+    (m): m is PayMethod => m !== 'wave' || WAVE_ENABLED,
+  );
+  const [method, setMethod] = useState<PayMethod>(
+    merchantPayMethods.includes('wave') ? 'wave' : 'om',
+  );
   const [showLivraisonModal, setShowLivraisonModal] = useState(false);
   const [shopCoords, setShopCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [clientCoords, setClientCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -154,6 +163,27 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
   const totalClientFinal = totalClient + livraisonFeeDisplay;
 
   // ── Effets ────────────────────────────────────────────────────────────────
+
+  // Sync si shopInfo.paymentMethods arrive après le premier render
+  useEffect(() => {
+    if (shopInfo?.paymentMethods) setResolvedPayMethods(shopInfo.paymentMethods);
+  }, [shopInfo?.paymentMethods]);
+
+  // Fetch payment methods depuis DB si le cart persisté ne les a pas
+  useEffect(() => {
+    if (resolvedPayMethods !== null) return;
+    const sid = shopId || shopInfo?.id || '';
+    if (!sid) return;
+    getShopById(sid)
+      .then(shop => {
+        if (shop) {
+          setResolvedPayMethods(shop.paymentMethods);
+          // Corriger le method sélectionné si nécessaire
+          setMethod(prev => shop.paymentMethods.includes(prev) ? prev : (shop.paymentMethods.includes('wave') ? 'wave' : 'om'));
+        }
+      })
+      .catch(() => {});
+  }, [resolvedPayMethods, shopId, shopInfo?.id]);
 
   useEffect(() => {
     const sid = shopId || shopInfo?.id || '';
@@ -305,6 +335,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
           undefined,
           voiceNotePath,
           method,
+          freshLivraisonFee,
         );
         realOrderId = res.orderId;
       }
@@ -365,6 +396,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         paymentConfirmed,
         qrCode: preQrCode,
         paymentUrl: prePaymentUrl,
+        merchantPaymentMethods: resolvedPayMethods ?? freshShopInfo?.paymentMethods,
       });
     } catch (err: unknown) {
       const msg =
@@ -590,18 +622,20 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
 
           {/* Moyen de paiement */}
           <Text style={styles.payMethodTitle}>Moyen de paiement</Text>
-          {WAVE_ENABLED && (
+          {merchantPayMethods.includes('wave') && (
             <PayMethodCard
               method="wave"
               selected={method === 'wave'}
               onSelect={() => setMethod('wave')}
             />
           )}
-          <PayMethodCard
-            method="om"
-            selected={method === 'om'}
-            onSelect={() => setMethod('om')}
-          />
+          {merchantPayMethods.includes('om') && (
+            <PayMethodCard
+              method="om"
+              selected={method === 'om'}
+              onSelect={() => setMethod('om')}
+            />
+          )}
 
           {/* Résumé de commande */}
           <View style={styles.summary}>

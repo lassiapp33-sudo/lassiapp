@@ -111,7 +111,7 @@ interface Props {
 }
 
 export default function PromoBanner({ onPress, onView }: Props) {
-  const { items } = usePromoItems();
+  const { items, isConnected } = usePromoItems();
   const N = items.length;
   const totalPages = Math.ceil(N / 2);
 
@@ -202,7 +202,7 @@ export default function PromoBanner({ onPress, onView }: Props) {
     setPage(0);
     const init = setTimeout(() => {
       scrollRef.current?.scrollTo({ x: N * ITEM_STRIDE, animated: false });
-      startTimer();
+      if (isConnected) startTimer();
       // Vues initiales pour les 2 cartes visibles au démarrage
       const vFn = onViewRef.current;
       const ll = loopedRef.current;
@@ -216,7 +216,7 @@ export default function PromoBanner({ onPress, onView }: Props) {
       stopTimer();
       if (jumpRef.current) clearTimeout(jumpRef.current);
     };
-  }, [N, startTimer, stopTimer]);
+  }, [N, isConnected, startTimer, stopTimer]);
 
   // Cas produit unique (N=1) : vue au montage
   useEffect(() => {
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginHorizontal: 16,
     marginBottom: 28,
-    marginTop: 8,
+    marginTop: 72,
   },
   label: {
     color: '#FBBF24',

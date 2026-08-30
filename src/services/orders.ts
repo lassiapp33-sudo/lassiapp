@@ -156,6 +156,7 @@ export async function createOrderSecure(
   idempotencyKey?: string,
   voiceNoteUrl?: string,
   paymentMethod?: 'cash' | 'om' | 'wave',
+  livraisonFee?: number,
 ): Promise<{ orderId: string; total: number }> {
   let token = getCachedToken();
   if (!token) {
@@ -179,6 +180,7 @@ export async function createOrderSecure(
       idempotencyKey,
       voiceNoteUrl: voiceNoteUrl ?? null,
       paymentMethod: paymentMethod ?? null,
+      livraisonFee: livraisonFee ?? 0,
     }),
   });
 

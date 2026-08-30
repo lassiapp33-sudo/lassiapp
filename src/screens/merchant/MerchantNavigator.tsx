@@ -47,7 +47,7 @@ import { getRecompenseBienvenue } from '../../services/classementService';
 import { OrderInfo } from '../../types/payment';
 
 function shouldShowCard(type: string): boolean {
-  return type === 'vip' || type === 'pay' || type === 'order' || type === 'msg' || type === 'reservation_terrain';
+  return type === 'vip' || type === 'pay' || type === 'payment' || type === 'order' || type === 'msg' || type === 'reservation_terrain';
 }
 
 // Navigateur du cockpit prestataire — tous les modules sont câblés ici.

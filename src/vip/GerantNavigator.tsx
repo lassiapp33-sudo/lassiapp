@@ -58,7 +58,7 @@ type GerantScreen =
   | { id: 'apercu'; shopId: string };
 
 function shouldShowCard(type: string): boolean {
-  return type === 'order' || type === 'pay' || type === 'msg' || type === 'fitness' || type === 'reservation_terrain';
+  return type === 'order' || type === 'pay' || type === 'payment' || type === 'msg' || type === 'fitness' || type === 'reservation_terrain';
 }
 
 interface Props {

@@ -332,6 +332,24 @@ export async function verifyVisibilityPayment(subscriptionId: string): Promise<V
   return { paid: false, status: data.status as string };
 }
 
+// ─── Vérifier un paiement Wave (fallback si webhook Wave n'est pas encore arrivé) ──
+// Appelle l'EF qui interroge l'API Wave et active l'abonnement en cas de succès.
+
+export async function verifyWavePayment(subscriptionId: string): Promise<VerifyResult> {
+  const res = await fetch(`${FUNCTIONS_BASE}/verify-visibility-payment`, {
+    method: 'POST',
+    headers: await authHeaders(),
+    body: JSON.stringify({ sub_id: subscriptionId }),
+  });
+  if (!res.ok) {
+    let errMsg = 'Vérification impossible';
+    try { const e = await res.json(); errMsg = e.error ?? errMsg; } catch {}
+    throw new Error(errMsg);
+  }
+  const data = await res.json() as VerifyResult;
+  return data;
+}
+
 // ─── Modifier les produits sélectionnés d'un abonnement Offre du Quartier ────
 
 export async function updateSubProducts(productIds: string[]): Promise<void> {

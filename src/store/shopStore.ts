@@ -52,6 +52,7 @@ interface ShopState {
   updateOpeningHours: (hours: WeekHours | null) => Promise<void>;
   toggleManuallyClose: () => Promise<void>;
   updateGalleryUrls: (urls: string[]) => Promise<void>;
+  updatePaymentMethods: (methods: ('wave' | 'om')[]) => Promise<void>;
 
   addCategory: (label: string) => void;
   removeCategory: (id: string) => Promise<void>;
@@ -74,6 +75,7 @@ const DEFAULT_CONTEXT: ShopContext = {
   galleryUrls: [],
   subcategories: [],
   category: '',
+  paymentMethods: ['wave', 'om'],
 };
 
 const useShopStore = create<ShopState>()((set, get) => ({
@@ -199,6 +201,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
           galleryUrls: shop.galleryUrls,
           subcategories: shop.subcategories ?? [],
           category: shop.category ?? '',
+          paymentMethods: shop.paymentMethods,
         },
         categories,
         products,
@@ -259,6 +262,19 @@ const useShopStore = create<ShopState>()((set, get) => ({
       await shopsService.updateGalleryUrls(shopId, urls);
     } catch (err) {
       set(state => ({ context: { ...state.context, galleryUrls: prev } }));
+      throw err;
+    }
+  },
+
+  updatePaymentMethods: async methods => {
+    const { shopId } = get();
+    if (!shopId) return;
+    const prev = get().context.paymentMethods;
+    set(state => ({ context: { ...state.context, paymentMethods: methods } }));
+    try {
+      await shopsService.updatePaymentMethods(shopId, methods);
+    } catch (err) {
+      set(state => ({ context: { ...state.context, paymentMethods: prev } }));
       throw err;
     }
   },

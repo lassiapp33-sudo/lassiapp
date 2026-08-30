@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Pressable,
   Alert,
+  Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import * as MediaLibrary from 'expo-media-library';
@@ -38,11 +39,16 @@ const IcoDownload = () => (
 // ─── Enregistrement dans la galerie ──────────────────────────────────────────
 
 async function saveToGallery(imageUrl: string): Promise<void> {
-  // 1. Demander la permission
-  const { status } = await MediaLibrary.requestPermissionsAsync();
-  if (status !== 'granted') {
-    Alert.alert('Permission refusée', "Autorise l'accès à la galerie dans les réglages de l'app.");
-    return;
+  // Sur Android 10+ (API 29+), saveToLibraryAsync ne nécessite pas READ_MEDIA_IMAGES.
+  // Sur iOS, la permission de sauvegarde est toujours requise.
+  const needsPermission = Platform.OS === 'ios' ||
+    (Platform.OS === 'android' && (Platform.Version as number) < 29);
+  if (needsPermission) {
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission refusée', "Autorise l'accès à la galerie dans les réglages de l'app.");
+      return;
+    }
   }
 
   // 2. Télécharger l'image dans le cache temporaire

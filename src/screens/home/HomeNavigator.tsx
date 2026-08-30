@@ -835,6 +835,7 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
       onFavorites={() => requireAuth(() => push({ id: 'favorites' }))}
       onRecent={() => push({ id: 'recent' })}
       onMessages={() => requireAuth(() => push({ id: 'messages' }))}
+      onOrders={() => requireAuth(() => push({ id: 'orders' }))}
       onNotifications={() => push({ id: 'notifications' })}
       onProfile={() => requireAuth(() => push({ id: 'profile' }))}
       onMap={() => push({ id: 'map' })}

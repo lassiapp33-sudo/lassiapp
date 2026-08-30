@@ -23,13 +23,15 @@ import useNotifPopupStore from '../../store/notifPopupStore';
 // ─── Constantes par type ──────────────────────────────────────────────────────
 
 const TAG_LABEL: Record<NotifType, string> = {
-  vip:       'RÉCOMPENSE',
-  pay:       'PAIEMENT',
-  fitness:   'ABONNEMENT',
-  ann:       'ANNONCE',
-  order:     'COMMANDE',
-  msg:       'MESSAGE',
-  livraison: 'LIVRAISON',
+  vip:                 'RÉCOMPENSE',
+  pay:                 'PAIEMENT',
+  payment:             'REVERSEMENT',
+  fitness:             'ABONNEMENT',
+  ann:                 'ANNONCE',
+  order:               'COMMANDE',
+  msg:                 'MESSAGE',
+  livraison:           'LIVRAISON',
+  reservation_terrain: 'RÉSERVATION',
 };
 
 function NotifIcon({ type, size }: { type: NotifType | string; size: number }) {
@@ -67,7 +69,7 @@ export default function NotifCardModal({ onView }: Props) {
   const handleCompris = useCallback(() => dismiss(), [dismiss]);
   const handleView    = useCallback(() => { dismiss(); onView(); }, [dismiss, onView]);
 
-  if (!current || current.type === 'order' || current.type === 'msg' || current.type === 'ann' || current.type === 'reservation_terrain') return null;
+  if (!current || current.type === 'order' || current.type === 'payment' || current.type === 'pay' || current.type === 'msg' || current.type === 'ann' || current.type === 'reservation_terrain') return null;
 
   const tag = TAG_LABEL[current.type] ?? 'LASSI';
 

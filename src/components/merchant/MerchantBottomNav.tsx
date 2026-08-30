@@ -107,32 +107,8 @@ export default function MerchantBottomNav({ active, onPress, unreadMsg = 0 }: Pr
         <Text style={[styles.lbl, active === 'orders' && styles.lblOn]}>{t.nav.orders}</Text>
       </TouchableOpacity>
 
-      {/* ── Mascotte Lassi — bouton central élevé ── */}
-      <TouchableOpacity
-        style={styles.mascotteBtn}
-        onPress={() => press('assistant')}
-        activeOpacity={0.82}
-      >
-        <LassiMascotte
-          forme="support"
-          taille={MASCOTTE_TAILLE}
-          animation="beat"
-          glow={active === 'assistant'}
-          boucle
-        />
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.item} onPress={() => press('messages')} activeOpacity={0.7}>
-        <View>
-          <IcoMsg on={active === 'messages'} />
-          {unreadMsg > 0 && (
-            <View style={styles.dot}>
-              <Text style={styles.dotTxt}>{unreadMsg > 9 ? '9+' : unreadMsg}</Text>
-            </View>
-          )}
-        </View>
-        <Text style={[styles.lbl, active === 'messages' && styles.lblOn]}>{t.nav.messages}</Text>
-      </TouchableOpacity>
+      {/* Abeille — MASQUÉE temporairement */}
+      {/* Messages — MASQUÉ temporairement */}
 
       <TouchableOpacity style={styles.item} onPress={() => press('profile')} activeOpacity={0.7}>
         <IcoProfil on={active === 'profile'} />

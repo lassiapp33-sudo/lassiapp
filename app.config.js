@@ -48,7 +48,24 @@ const withR8Release = config =>
   });
 
 
-const withSecurityPlugins = config => withLargeScreenCompat(withR8Release(withNoHttpCleartext(config)));
+// Retire READ_MEDIA_IMAGES et READ_MEDIA_VIDEO ajoutés par expo-media-library.
+// L'app utilise le Photo Picker Android (launchImageLibraryAsync) qui n'a pas
+// besoin de ces permissions larges. saveToLibraryAsync fonctionne sans sur API 29+.
+const withBlockedMediaPermissions = config =>
+  withAndroidManifest(config, androidConfig => {
+    const BLOCKED = [
+      'android.permission.READ_MEDIA_IMAGES',
+      'android.permission.READ_MEDIA_VIDEO',
+    ];
+    const perms = androidConfig.modResults.manifest['uses-permission'] ?? [];
+    androidConfig.modResults.manifest['uses-permission'] = perms.filter(
+      p => !BLOCKED.includes(p.$['android:name'])
+    );
+    return androidConfig;
+  });
+
+const withSecurityPlugins = config =>
+  withBlockedMediaPermissions(withLargeScreenCompat(withR8Release(withNoHttpCleartext(config))));
 
 module.exports = withSecurityPlugins({
   expo: {
@@ -75,9 +92,15 @@ module.exports = withSecurityPlugins({
     ios: {
       supportsTablet: false,
       bundleIdentifier: "com.lassiapp.lassiapp",
+      appleTeamId: "8DH7238995",
       googleServicesFile:
         process.env.GOOGLE_SERVICES_IOS_PLIST ?? "./GoogleService-Info.plist",
+      entitlements: {
+        "aps-environment": "production",
+        "com.apple.developer.associated-domains": ["applinks:lassi.tech"],
+      },
       infoPlist: {
+        UIBackgroundModes: ["remote-notification"],
         NSLocationWhenInUseUsageDescription:
           "LASSİ utilise ta position pour afficher les commerces et prestataires proches de toi (ex. : voir les restaurants à 500 m sur la carte) et pour te guider en navigation GPS jusqu'au prestataire sélectionné.",
         NSMicrophoneUsageDescription:
@@ -89,8 +112,6 @@ module.exports = withSecurityPlugins({
         NSPhotoLibraryAddUsageDescription:
           "LASSİ enregistre dans ta bibliothèque les images reçues dans tes conversations. Exemple : sauvegarder la photo d'un produit envoyée par un prestataire dans le chat.",
         ITSAppUsesNonExemptEncryption: false,
-        // Sans FirebaseMessaging, GULAppDelegateSwizzler avale didRegisterForRemoteNotificationsWithDeviceToken → getDevicePushTokenAsync ne résout jamais.
-        FirebaseAppDelegateProxyEnabled: false,
       },
     },
     android: {
@@ -119,6 +140,9 @@ module.exports = withSecurityPlugins({
     plugins: [
       "@react-native-firebase/app",
       "@react-native-firebase/crashlytics",
+      "@react-native-firebase/messaging",
+      "./plugins/withFirebaseAPNSBridge",
+      "./plugins/withFirebaseMessagingManifest",
       "expo-font",
       [
         "expo-splash-screen",

@@ -113,10 +113,38 @@ export function computeStatus(hours: WeekHours | null, manuallyClose: boolean): 
     };
   }
 
-  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const nowMin  = now.getHours() * 60 + now.getMinutes();
   const openMin = toMinutes(today.open);
-  const closeMin = toMinutes(today.close) || 1440; // "00:00" = minuit de la nuit suivante
+  // "00:00" = minuit fin de journée → 1440. Sinon valeur normale.
+  const closeMin = toMinutes(today.close) === 0 ? 1440 : toMinutes(today.close);
+  // Horaire qui passe minuit : ex 9h→1h du matin (closeMin 60 < openMin 540)
+  const overnight = closeMin < openMin;
 
+  if (overnight) {
+    // Ouvert si on est après l'heure d'ouverture OU avant l'heure de fermeture (matin)
+    const isOpen = nowMin >= openMin || nowMin < closeMin;
+    if (isOpen) {
+      const remaining = nowMin >= openMin ? (1440 - nowMin) + closeMin : closeMin - nowMin;
+      const nextChange =
+        remaining <= 60 ? `Ferme dans ${remaining}min` : `Ferme à ${formatHour(today.close)}`;
+      return { isOpen: true, label: 'Ouvert', nextChange };
+    }
+    // Fermé : entre heure de fermeture et heure d'ouverture
+    if (nowMin < openMin) {
+      return {
+        isOpen: false,
+        label: 'Fermé',
+        nextChange: `Ouverture aujourd'hui à ${formatHour(today.open)}`,
+      };
+    }
+    return {
+      isOpen: false,
+      label: 'Fermé',
+      nextChange: nextOpeningStr(effective, jsDay),
+    };
+  }
+
+  // Horaire normal (même journée)
   if (nowMin >= openMin && nowMin < closeMin) {
     const remaining = closeMin - nowMin;
     const nextChange =

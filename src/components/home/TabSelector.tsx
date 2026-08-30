@@ -48,11 +48,13 @@ export default function TabSelector({ onNearbyPress, onRecentPress, onAlaUnePres
         <Text style={styles.centerLbl}>À la une</Text>
       </TouchableOpacity>
 
-      {/* Vus récemment */}
-      <TouchableOpacity style={styles.sideBtn} onPress={onRecentPress} activeOpacity={0.8}>
-        <IconClock />
-        <Text style={styles.sideLbl}>Vus récemment</Text>
-      </TouchableOpacity>
+      {/* Vus récemment — MASQUÉ temporairement */}
+      {false && (
+        <TouchableOpacity style={styles.sideBtn} onPress={onRecentPress} activeOpacity={0.8}>
+          <IconClock />
+          <Text style={styles.sideLbl}>Vus récemment</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

@@ -40,6 +40,7 @@ export interface Shop {
   createdAt: string; // ISO — utilisé pour le badge "Nouveau" (< 4 mois)
   phone: string | null;
   logoUrl: string | null;
+  paymentMethods: ('wave' | 'om')[];
 }
 
 // ─── Mapping ─────────────────────────────────────────────────────────────────
@@ -82,7 +83,21 @@ export function rowToShop(row: Record<string, any>): Shop {
     createdAt: row.created_at ?? new Date().toISOString(),
     phone: row.phone ?? null,
     logoUrl: row.logo_url ?? null,
+    paymentMethods: Array.isArray(row.payment_methods)
+      ? (row.payment_methods as ('wave' | 'om')[])
+      : ['wave', 'om'],
   };
+}
+
+export async function updatePaymentMethods(
+  shopId: string,
+  methods: ('wave' | 'om')[],
+): Promise<void> {
+  const { error } = await supabase
+    .from('shops')
+    .update({ payment_methods: methods })
+    .eq('id', shopId);
+  if (error) throw new Error(error.message);
 }
 
 // ─── Distance GPS (Haversine) ─────────────────────────────────────────────────
@@ -375,6 +390,34 @@ export async function updateShopZoneManual(shopId: string, zone: string): Promis
   const { error } = await supabase.from('shops').update({ zone }).eq('id', shopId);
   if (error) throw new Error(error.message);
 }
+
+// ─── Realtime : invalide le cache immédiatement quand un shop est supprimé ────
+// Sans ça, un shop supprimé depuis l'admin reste visible jusqu'à expiration du
+// cache en mémoire (5 min), car il n'y a pas de refetch automatique.
+(function startShopDeleteWatcher() {
+  supabase
+    .channel('shops-delete-watcher')
+    .on(
+      'postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'shops' },
+      (payload) => {
+        const deletedId = payload.old?.id as string | undefined;
+        if (allShopsCache && deletedId) {
+          allShopsCache = {
+            ...allShopsCache,
+            data: allShopsCache.data.filter(s => s.id !== deletedId),
+          };
+        }
+        catShopsCache.forEach((entry, cat) => {
+          catShopsCache.set(cat, {
+            ...entry,
+            data: entry.data.filter(s => s.id !== deletedId),
+          });
+        });
+      },
+    )
+    .subscribe();
+})();
 
 /** Charge les commerces dont les coordonnées sont dans la bounding box */
 export async function getShopsInBounds(

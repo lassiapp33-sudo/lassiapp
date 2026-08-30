@@ -51,6 +51,10 @@ function getPlaceholders(
       return { namePH: 'Ex : Tresses vanilles', descPH: 'Ex : Tresses longues, pose ~4h' };
     if (sub === 'esthetique')
       return { namePH: 'Ex : Pose ongles gel', descPH: 'Ex : Pose complète gel, vernis au choix' };
+    if (sub === 'photographe')
+      return { namePH: 'Ex : Couverture mariage journée', descPH: 'Ex : 200 photos retouchées, livraison USB' };
+    if (sub === 'videaste')
+      return { namePH: 'Ex : Film baptême demi-journée', descPH: 'Ex : Tournage + montage, 1 vidéo HD livrée' };
     // hommes (défaut services)
     return { namePH: 'Ex : Coupe + dégradé', descPH: 'Ex : Coupe propre, dégradé bas, finition rasoir' };
   }
@@ -371,10 +375,11 @@ export default function AddProductSheet({
   };
 
   return (
-    <Modal visible={visible} transparent presentationStyle="overFullScreen" animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent presentationStyle="overFullScreen" animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+        keyboardVerticalOffset={Platform.OS === 'android' ? 0 : 0}
       >
         {/* Fond sombre cliquable pour fermer */}
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} />

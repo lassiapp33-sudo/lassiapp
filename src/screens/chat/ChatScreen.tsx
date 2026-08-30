@@ -146,6 +146,7 @@ export default function ChatScreen({
   const [resolvedInitial, setResolvedInitial] = useState(shopInitial);
   const [resolvedIsVip, setResolvedIsVip] = useState<boolean>(isVip ?? false);
   const [otherPhone, setOtherPhone] = useState<string | null>(null);
+  const [shopPaymentMethods, setShopPaymentMethods] = useState<('wave' | 'om')[] | undefined>(undefined);
 
   const scrollRef = useRef<ScrollView>(null);
   const processedPayments = useRef<Set<string>>(new Set());
@@ -196,6 +197,7 @@ export default function ChatScreen({
               setResolvedLogoUrl(shop.logoUrl ?? null);
               setResolvedInitial(shop.name.charAt(0).toUpperCase());
               setResolvedIsVip(shop.isVip);
+              setShopPaymentMethods(shop.paymentMethods);
               let phone = shop.phone ?? null;
               // Fallback : si la boutique n'a pas de tél, tente le profil du marchand
               if (!phone && shop.merchantId) {
@@ -215,6 +217,7 @@ export default function ChatScreen({
                   setResolvedLogoUrl(shop.logoUrl ?? null);
                   setResolvedInitial(shop.name.charAt(0).toUpperCase());
                   setResolvedIsVip(shop.isVip);
+                  setShopPaymentMethods(shop.paymentMethods);
                   let phone = shop.phone ?? null;
                   if (!phone && shop.merchantId) {
                     const mp = await chatService.getClientProfile(shop.merchantId);
@@ -339,6 +342,7 @@ export default function ChatScreen({
         items: ticket.items,
         total: ticket.total,
         orderType: 'emporter',
+        merchantPaymentMethods: shopPaymentMethods,
       });
     } else {
       applyPayment(ticketId);

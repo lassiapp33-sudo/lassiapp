@@ -125,6 +125,7 @@ export async function prepareReorder(
     name: shopName,
     location: shop.zone ?? '',
     logoUrl: shop.logoUrl ?? undefined,
+    paymentMethods: shop.paymentMethods,
   };
 
   return {

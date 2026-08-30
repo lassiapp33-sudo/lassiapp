@@ -126,8 +126,11 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
   const [stage, setStage] = useState<Stage>(
     order.paymentConfirmed ? 'confirm' : order.preInitiatedPiId ? 'waiting' : 'checkout',
   );
+  const availableMethods = (order.merchantPaymentMethods ?? ['wave', 'om']).filter(
+    (m): m is PayMethod => m !== 'wave' || WAVE_ENABLED,
+  );
   const [method, setMethod] = useState<PayMethod>(
-    WAVE_ENABLED ? (order.preMethod ?? 'wave') : 'om',
+    order.preMethod ?? (availableMethods.includes('wave') ? 'wave' : 'om'),
   );
   const [processing, setProcessing] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -263,14 +266,16 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
         <OrderRecap order={order} />
 
         <SectionLabel label="Mode de paiement" />
-        {WAVE_ENABLED && (
+        {availableMethods.includes('wave') && (
           <PayMethodCard
             method="wave"
             selected={method === 'wave'}
             onSelect={() => setMethod('wave')}
           />
         )}
-        <PayMethodCard method="om" selected={method === 'om'} onSelect={() => setMethod('om')} />
+        {availableMethods.includes('om') && (
+          <PayMethodCard method="om" selected={method === 'om'} onSelect={() => setMethod('om')} />
+        )}
 
         <DeepLinkNote method={method} />
         <View style={{ height: 14 }} />

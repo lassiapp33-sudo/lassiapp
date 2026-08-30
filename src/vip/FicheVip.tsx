@@ -370,6 +370,7 @@ export default function FicheVip({ shopId, onBack, onChat, onGoCart, onReserver,
     logoUrl: shop.logoUrl ?? undefined,
     showOrderType: false,
     isVip: true,
+    paymentMethods: shop.paymentMethods,
   };
 
   const onAjouter = (p: VipPrestation) => {

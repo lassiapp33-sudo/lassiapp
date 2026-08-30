@@ -23,7 +23,7 @@ import useAuthStore from '../../store/authStore';
 function buildSubcats(catId: CatId): SubCat[] {
   const cfg = getCatConfig(catId);
   if (!cfg) return [];
-  const HIDDEN_SUBCATS = ['soupe'];
+  const HIDDEN_SUBCATS = ['soupe', 'reservation_terrain_basket', 'arts_martiaux', 'seras', 'snack', 'quincaillerie', 'nexx_sow', 'sombi_ak_thiere'];
   return cfg.subcats.filter(sub => !HIDDEN_SUBCATS.includes(sub.id)).map(sub => ({
     id: sub.id,
     label: sub.imageUri || sub.SvgIcon ? sub.label : `${sub.emoji} ${sub.label}`,

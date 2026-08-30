@@ -14,6 +14,7 @@ import { Blason } from '../composants/Blason';
 import { Fleuron } from '../composants/Fleuron';
 import { VIP_CATEGORIE_LABELS } from '../../types/vip';
 import useGerantStore from '../../store/gerantStore';
+import useNotificationsStore from '../../store/notificationsStore';
 import { TOP_INSET } from '../../theme';
 import { deconnexionVip } from '../authVip';
 
@@ -33,8 +34,8 @@ const TILES: Tile[] = [
 ];
 
 const TILES2: Tile[] = [
-  { id: 'notifications', label: 'Notifications',  desc: 'Réservations, alertes et messages' },
-  { id: 'alaune',        label: 'À la une',        desc: 'Blocs mis en avant pour vos clients' },
+  { id: 'registre',      label: 'Commandes',       desc: 'Voir et traiter vos commandes' },
+  { id: 'alaune',        label: 'À la une',         desc: 'Blocs mis en avant pour vos clients' },
   { id: 'avis',          label: 'Mes avis',         desc: 'Notes et commentaires reçus' },
   { id: 'classement',    label: 'Classement',       desc: 'Votre rang dans votre catégorie' },
   { id: 'livraison',     label: 'Livraison',        desc: 'Demander et suivre une livraison' },
@@ -67,8 +68,9 @@ interface Props {
 }
 
 export default function GerantDashboard({ onNav, onPreview, onLogout }: Props) {
-  const profil      = useGerantStore(s => s.profil);
-  const clearGerant = useGerantStore(s => s.clearGerant);
+  const profil       = useGerantStore(s => s.profil);
+  const clearGerant  = useGerantStore(s => s.clearGerant);
+  const unreadCount  = useNotificationsStore(s => s.notifications.filter(n => n.unread).length);
 
   const handleLogout = async () => {
     try { await deconnexionVip(); } catch {}
@@ -89,10 +91,22 @@ export default function GerantDashboard({ onNav, onPreview, onLogout }: Props) {
               {profil ? VIP_CATEGORIE_LABELS[profil.categorie] : ''}
             </Text>
           </View>
-          {/* Blason cliquable → écran Profil */}
-          <TouchableOpacity onPress={() => onNav('profil')} activeOpacity={0.75}>
-            <Blason initiale={profil?.initiale ?? 'V'} taille={64} />
-          </TouchableOpacity>
+          <View style={s.enteteRight}>
+            <TouchableOpacity style={s.clocheBtn} activeOpacity={0.75} onPress={() => onNav('notifications')}>
+              <Svg width={24} height={24} viewBox="0 0 24 24" fill={r.couleur.or}>
+                <Path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+              </Svg>
+              {unreadCount > 0 && (
+                <View style={s.clocheBadge}>
+                  <Text style={s.clocheBadgeTxt}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {/* Blason cliquable → écran Profil */}
+            <TouchableOpacity onPress={() => onNav('profil')} activeOpacity={0.75}>
+              <Blason initiale={profil?.initiale ?? 'V'} taille={64} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <Fleuron />
@@ -190,6 +204,21 @@ const s = StyleSheet.create({
     gap: r.espace.md,
   },
   enteteInfo: { flex: 1 },
+  enteteRight: { alignItems: 'center', gap: r.espace.xs },
+  clocheBtn: {
+    width: 40, height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  clocheBadge: {
+    position: 'absolute', top: 2, right: 2,
+    minWidth: 16, height: 16, borderRadius: 8,
+    backgroundColor: '#E53935',
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  clocheBadgeTxt: { color: '#fff', fontSize: 9, fontWeight: '700' },
   nom: {
     fontFamily: VIP_FONTS.palais.titre,
     fontSize: 22,

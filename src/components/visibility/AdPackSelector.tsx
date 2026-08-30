@@ -71,9 +71,11 @@ function PackCard({
 function BudgetChips({
   value,
   onChange,
+  steps = BUDGET_STEPS,
 }: {
   value: number;
   onChange: (v: number) => void;
+  steps?: number[];
 }) {
   return (
     <ScrollView
@@ -81,7 +83,7 @@ function BudgetChips({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={s.chipsRow}
     >
-      {BUDGET_STEPS.map(step => (
+      {steps.map(step => (
         <TouchableOpacity
           key={step}
           style={[s.chip, value === step && s.chipActive]}
@@ -135,15 +137,17 @@ export type AdPackSelection =
   | { mode: 'custom'; budgetCredits: number; durationHours: number; estMin: number; estMax: number };
 
 interface Props {
-  selection: AdPackSelection;
-  onChange:  (sel: AdPackSelection) => void;
-  packs?:    AdPack[];
+  selection:    AdPackSelection;
+  onChange:     (sel: AdPackSelection) => void;
+  packs?:       AdPack[];
+  budgetSteps?: number[];
 }
 
 type Tab = 'packs' | 'custom';
 
-export default function AdPackSelector({ selection, onChange, packs: propPacks }: Props) {
+export default function AdPackSelector({ selection, onChange, packs: propPacks, budgetSteps: propBudgetSteps }: Props) {
   const resolvedPacks = propPacks ?? AD_PACKS;
+  const resolvedBudgetSteps = propBudgetSteps ?? BUDGET_STEPS;
   const [tab, setTab] = useState<Tab>(selection.mode === 'custom' ? 'custom' : 'packs');
 
   const customBudget =
@@ -205,7 +209,7 @@ export default function AdPackSelector({ selection, onChange, packs: propPacks }
         <View style={s.customWrap}>
           {/* Budget */}
           <Text style={s.customLabel}>Budget (en crédits LASSI)</Text>
-          <BudgetChips value={customBudget} onChange={handleBudget} />
+          <BudgetChips value={customBudget} onChange={handleBudget} steps={resolvedBudgetSteps} />
 
           {/* Durée */}
           <Text style={[s.customLabel, { marginTop: 16 }]}>Durée de diffusion</Text>

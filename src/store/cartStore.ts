@@ -20,6 +20,7 @@ export interface CartShopInfo {
   logoUrl?: string;
   showOrderType?: boolean;
   isVip?: boolean;
+  paymentMethods?: ('wave' | 'om')[];
 }
 
 export interface SubBasket {

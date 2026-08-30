@@ -61,15 +61,17 @@ export default function SearchBar({ value, onChangeText, onMicPress, onPress }: 
         />
       </TouchableOpacity>
 
-      {/* Bouton micro IA avec ring pulsant */}
-      <View style={styles.micWrap}>
-        <Animated.View
-          style={[styles.ring, { transform: [{ scale: pulseScale }], opacity: pulseOpacity }]}
-        />
-        <TouchableOpacity style={styles.mic} onPress={onMicPress} activeOpacity={0.85}>
-          <Image source={require('../../../assets/trophy.png')} style={styles.trophyImg} />
-        </TouchableOpacity>
-      </View>
+      {/* Bouton trophée (classement) — MASQUÉ temporairement */}
+      {false && (
+        <View style={styles.micWrap}>
+          <Animated.View
+            style={[styles.ring, { transform: [{ scale: pulseScale }], opacity: pulseOpacity }]}
+          />
+          <TouchableOpacity style={styles.mic} onPress={onMicPress} activeOpacity={0.85}>
+            <Image source={require('../../../assets/trophy.png')} style={styles.trophyImg} />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }

@@ -24,6 +24,8 @@ export interface OrderInfo {
   qrCode?: string;
   /** URL de paiement Wave/OM — pour le bouton "Rouvrir" dans WaitingView. */
   paymentUrl?: string;
+  /** Modes de paiement acceptés par ce prestataire : filtre ce que le client voit. */
+  merchantPaymentMethods?: ('wave' | 'om')[];
 }
 
 export type PayMethod = 'wave' | 'om';

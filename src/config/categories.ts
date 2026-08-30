@@ -717,7 +717,7 @@ export interface CatConfig {
   renderIcon: (color: string, size?: number) => React.ReactNode;
 }
 
-export const CATEGORIES: CatConfig[] = [
+const ALL_CATEGORIES: CatConfig[] = [
   {
     id: 'stores',
     label: 'Commerçants',
@@ -978,18 +978,43 @@ export const CATEGORIES: CatConfig[] = [
       {
         id: 'hommes',
         emoji: '💈',
-        label: 'Hommes',
-        desc: 'Coupe, barbe, soins homme',
+        label: 'Barber',
+        desc: 'Barbershop, coupe, barbe, soins homme',
         imageUri: IMG_COIFFEUR_H,
         imageSize: 56,
       },
       {
         id: 'femmes',
         emoji: '💇‍♀️',
-        label: 'Femmes',
+        label: 'Tresses',
         desc: 'Tresses, tissage, soins, brushing',
         imageUri: IMG_COIFFEUR_F,
         imageSize: 44,
+      },
+      {
+        id: 'parfumerie',
+        emoji: '🌸',
+        label: 'Parfumerie',
+        desc: 'Parfums, eaux de toilette, senteurs',
+        SvgIcon: (({ color }: { color: string }) =>
+          React.createElement(
+            Svg,
+            { width: 28, height: 28, viewBox: '0 0 24 24', fill: 'none', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' },
+            // Corps du flacon
+            React.createElement(Rect, { x: 5, y: 10, width: 14, height: 12, rx: 2, stroke: color }),
+            // Épaules du flacon
+            React.createElement(Path, { d: 'M7 10V8h10v2', stroke: color }),
+            // Col étroit
+            React.createElement(Rect, { x: 9, y: 5, width: 6, height: 3, rx: 1, stroke: color }),
+            // Bouchon
+            React.createElement(Rect, { x: 8, y: 3, width: 8, height: 2.5, rx: 1, stroke: color, fill: color + '33' }),
+            // Pompe / spray
+            React.createElement(Path, { d: 'M18 6h2.5', stroke: color }),
+            React.createElement(Path, { d: 'M20.5 4v4', stroke: color }),
+            // Reflet sur le flacon
+            React.createElement(Path, { d: 'M8 13h2', stroke: color, strokeOpacity: '0.45', strokeWidth: 1.2 }),
+          )
+        ) as React.FC<{ color: string }>,
       },
       {
         id: 'esthetique',
@@ -1036,31 +1061,6 @@ export const CATEGORIES: CatConfig[] = [
           )
         ) as React.FC<{ color: string }>,
       },
-      {
-        id: 'parfumerie',
-        emoji: '🌸',
-        label: 'Parfumerie',
-        desc: 'Parfums, eaux de toilette, senteurs',
-        SvgIcon: (({ color }: { color: string }) =>
-          React.createElement(
-            Svg,
-            { width: 28, height: 28, viewBox: '0 0 24 24', fill: 'none', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' },
-            // Corps du flacon
-            React.createElement(Rect, { x: 5, y: 10, width: 14, height: 12, rx: 2, stroke: color }),
-            // Épaules du flacon
-            React.createElement(Path, { d: 'M7 10V8h10v2', stroke: color }),
-            // Col étroit
-            React.createElement(Rect, { x: 9, y: 5, width: 6, height: 3, rx: 1, stroke: color }),
-            // Bouchon
-            React.createElement(Rect, { x: 8, y: 3, width: 8, height: 2.5, rx: 1, stroke: color, fill: color + '33' }),
-            // Pompe / spray
-            React.createElement(Path, { d: 'M18 6h2.5', stroke: color }),
-            React.createElement(Path, { d: 'M20.5 4v4', stroke: color }),
-            // Reflet sur le flacon
-            React.createElement(Path, { d: 'M8 13h2', stroke: color, strokeOpacity: '0.45', strokeWidth: 1.2 }),
-          )
-        ) as React.FC<{ color: string }>,
-      },
     ],
     renderIcon: (color, size = 24) =>
       React.createElement(
@@ -1083,7 +1083,7 @@ export const CATEGORIES: CatConfig[] = [
   },
   {
     id: 'sport',
-    label: 'Sport',
+    label: 'Sport & Production',
     subLabel: 'Sport',
     emoji: '⚽',
     shopType: 'memberships',
@@ -1111,6 +1111,7 @@ export const CATEGORIES: CatConfig[] = [
         hasSlots: true,
       },
       { id: 'arts_martiaux', emoji: '🥊', label: 'Arts martiaux', desc: 'Boxe, judo, taekwondo…' },
+      { id: 'photo_video', emoji: '📷', label: 'Photographes & Vidéastes', desc: 'Photo, vidéo, clips, événements, mariages' },
     ],
     renderIcon: (color, size = 24) =>
       React.createElement(
@@ -1173,9 +1174,15 @@ export const CATEGORIES: CatConfig[] = [
   },
 ];
 
+// Ordre d'affichage : food, tangana, bakery, hair, sport, stores (fruiterie + photo_video masqués en fin)
+const CAT_ORDER: CatId[] = ['food', 'tangana', 'bakery', 'hair', 'sport', 'stores', 'fruiterie', 'photo_video'];
+export const CATEGORIES: CatConfig[] = CAT_ORDER
+  .map(id => ALL_CATEGORIES.find(c => c.id === id))
+  .filter((c): c is CatConfig => !!c);
+
 /** Retourne la config d'une catégorie par son id. */
 export function getCatConfig(catId: CatId): CatConfig | undefined {
-  return CATEGORIES.find(c => c.id === catId);
+  return ALL_CATEGORIES.find(c => c.id === catId);
 }
 
 /** Dérive le shop_type depuis la catégorie (fallback 'products'). */
@@ -1190,7 +1197,7 @@ export function getActiveSubs(catId: CatId): SubcatOption[] {
 
 /** Toutes les sous-catégories d'une catégorie (par id string, sans cast). */
 export function getSubcategories(catId: string): SubcatOption[] {
-  return CATEGORIES.find(c => c.id === catId)?.subcats ?? [];
+  return ALL_CATEGORIES.find(c => c.id === catId)?.subcats ?? [];
 }
 
 /** Une sous-catégorie précise. */

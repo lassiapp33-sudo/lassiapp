@@ -77,9 +77,9 @@ const buildMapHTML = (lat: number, lng: number): string => `
 const IMG_STYLE='width:28px;height:28px;border-radius:9px;object-fit:cover;';
 const map=L.map('map',{center:[${lat},${lng}],zoom:15,zoomControl:false});
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',{
-  attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>',
-  maxZoom:20,subdomains:'abcd',keepBuffer:3,updateWhenZooming:false
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  maxZoom:19,keepBuffer:3,updateWhenZooming:false
 }).addTo(map);
 
 // Marqueur utilisateur — zIndex bas pour ne pas couvrir les pins de prestataires
@@ -794,7 +794,9 @@ export default function MapScreen({
           <Text style={styles.emptyTxt}>
             {allShops.length === 0
               ? `${MASCOTTE_NOM} explore… aucun commerce ici pour l'instant.`
-              : 'Aucun commerce dans cette catégorie pour le moment.'}
+              : filteredShops.length > 0
+                ? 'Ce commerce n\'a pas encore partagé sa localisation GPS.'
+                : 'Aucun commerce dans cette catégorie pour le moment.'}
           </Text>
         </View>
       )}

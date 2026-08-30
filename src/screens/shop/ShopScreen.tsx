@@ -182,12 +182,13 @@ interface Props {
   onBookTerrain?: (params: TerrainBookingParams) => void;
   onBookTerrainDirect?: (params: TerrainDirectBookParams) => void;
   onSuivi?: (params: { shopLat: number; shopLng: number; shopName: string; shopLogoUrl: string | null }) => void;
+  onGoMap?: (shopName: string) => void;
   onFitnessAboPayment?: (offre: FitnessOffre, fitnessName: string, shopId: string) => void;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
-export default function ShopScreen({ shopId = '', shopName, targetProductId, onBack, onChat, onCheckout, onBookTerrain, onBookTerrainDirect, onSuivi, onFitnessAboPayment }: Props) {
+export default function ShopScreen({ shopId = '', shopName, targetProductId, onBack, onChat, onCheckout, onBookTerrain, onBookTerrainDirect, onSuivi, onGoMap, onFitnessAboPayment }: Props) {
   const [shopData, setShopData] = useState<Shop | null>(null);
   const [realProducts, setRealProducts] = useState<StoreProduct[]>([]);
   const [terrains, setTerrains] = useState<Terrain[]>([]);
@@ -605,9 +606,12 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                   longitude={shopLng}
                   adresse={shopAddress}
                   nomBoutique={displayName}
-                  onSuivi={onSuivi && shopHasCoords
-                    ? () => onSuivi({ shopLat: shopLat ?? 0, shopLng: shopLng ?? 0, shopName: displayName, shopLogoUrl: displayLogoUrl ?? null })
-                    : undefined
+                  onSuivi={
+                    onSuivi && shopHasCoords
+                      ? () => onSuivi({ shopLat: shopLat ?? 0, shopLng: shopLng ?? 0, shopName: displayName, shopLogoUrl: displayLogoUrl ?? null })
+                      : onGoMap
+                        ? () => onGoMap(displayName)
+                        : undefined
                   }
                 />
               )}

@@ -4,10 +4,8 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useT } from '../../i18n';
 
@@ -17,7 +15,7 @@ import TabSelector from '../../components/home/TabSelector';
 import CategoryGrid from '../../components/home/CategoryGrid';
 import { CatId } from '../../components/category/CatNavBar';
 import PromoBanner from '../../components/home/PromoBanner';
-import NearbyCard, { NearbyPlace } from '../../components/home/NearbyCard';
+import { NearbyPlace } from '../../components/home/NearbyCard';
 import SponsoredAdModal from '../../components/home/SponsoredAdModal';
 import { SponsoredAd, getActiveSponsoredAds, incrementerContact } from '../../services/sponsoredAds';
 import BottomNav, { NavTab, NAV_HEIGHT } from '../../components/home/BottomNav';
@@ -50,6 +48,7 @@ interface Props {
   onFavorites?: () => void;
   onRecent?: () => void;
   onMessages?: () => void;
+  onOrders?: () => void;
   onNotifications?: () => void;
   onProfile?: () => void;
   onMap?: () => void;
@@ -70,6 +69,7 @@ export default function ClientHomeScreen({
   onFavorites,
   onRecent,
   onMessages,
+  onOrders,
   onNotifications,
   onProfile,
   onMap,
@@ -284,6 +284,7 @@ export default function ClientHomeScreen({
     if (t === 'favorites') onFavorites?.();
     if (t === 'voice') onVoice?.();
     if (t === 'messages') onMessages?.();
+    if (t === 'orders') onOrders?.();
     if (t === 'profile') onProfile?.();
   };
 
@@ -311,10 +312,8 @@ export default function ClientHomeScreen({
               onLocation={refreshLocation}
             />
           </View>
-          <View style={styles.px}>
-            <SearchBar value="" onChangeText={() => {}} onPress={onSearch} onMicPress={onClassement} />
-          </View>
-          <View style={styles.px}>
+          {/* SearchBar — MASQUÉE temporairement */}
+          <View style={[styles.px, { marginTop: 16 }]}>
             <TabSelector
               onNearbyPress={onMap}
               onRecentPress={onRecent}
@@ -330,7 +329,7 @@ export default function ClientHomeScreen({
         contentContainerStyle={{ paddingBottom: NAV_HEIGHT + 16, flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.sectionHead, { marginTop: 16 }]}>
+        <View style={[styles.sectionHead, { marginTop: 28 }]}>
           <Text style={styles.secTitle}>{t.home.explore}</Text>
         </View>
         <View style={styles.px}>
@@ -340,60 +339,10 @@ export default function ClientHomeScreen({
         {/* Produits en vitrine — carrousel auto-défilant avec indicateurs */}
         <PromoBanner onPress={onShopItemPress} onView={onShopItemView} />
 
-        {/* Établissements 5 Étoiles */}
-        {onVipListePress != null && (
-          <TouchableOpacity
-            style={styles.vipBandeau}
-            onPress={onVipListePress}
-            activeOpacity={0.82}
-          >
-            <View style={styles.vipBandeauLeft}>
-              <Text style={styles.vipBandeauBadge}>5 ÉTOILES LASSI</Text>
-              <Text style={styles.vipBandeauDesc}>Restaurants, spas et instituts de prestige sélectionnés par LASSI</Text>
-            </View>
-            <Text style={styles.vipBandeauFleche}>›</Text>
-          </TouchableOpacity>
-        )}
+        {/* Établissements 5 Étoiles — MASQUÉ temporairement */}
 
-        {/* Boutiques à proximité */}
-        <View style={styles.px}>
-          <View style={styles.sectionHead}>
-            <View style={styles.secTitleRow}>
-              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: 6 }}>
-                <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill={colors.accent} />
-                <Circle cx={12} cy={9} r={2.5} fill={colors.bg} />
-              </Svg>
-              <Text style={styles.secTitle}>{t.home.nearby}</Text>
-            </View>
-          </View>
-
-          {loading ? (
-            <View style={styles.loader}>
-              <ActivityIndicator color={colors.accent} />
-            </View>
-          ) : loadError ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyTxt}>
-                Connexion impossible, vérifie ta connexion et réessaie.
-              </Text>
-              <TouchableOpacity style={styles.retryBtn} onPress={loadShops} activeOpacity={0.8}>
-                <Text style={styles.retryTxt}>Réessayer</Text>
-              </TouchableOpacity>
-            </View>
-          ) : nearby.length === 0 ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyTxt}>{t.home.noShops}</Text>
-            </View>
-          ) : (
-            nearby.map(place => (
-              <NearbyCard
-                key={place.id}
-                place={{ ...place, isFav: favorites.includes(place.id) }}
-                onPress={() => onShopPress?.(place.id, place.name)}
-              />
-            ))
-          )}
-        </View>
+        {/* Boutiques à proximité (Tout près de toi) — MASQUÉ temporairement */}
+        {/* Les prestataires sont visibles uniquement dans leur catégorie respective */}
       </ScrollView>
 
       <WelcomeClientModal visible={showWelcome} onClose={dismissWelcome} />

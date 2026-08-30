@@ -139,12 +139,13 @@ export const DURATION_OPTIONS: { label: string; hours: number }[] = [
 
 // ─── Budget personnalisé : paliers disponibles ────────────────────────────────
 
-export const BUDGET_STEPS = [1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000];
+export const BUDGET_STEPS = [10, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000];
 
 // ─── Calcul de l'estimation de vues (mode personnalisé) ──────────────────────
 // Plus conservative que les packs pour inciter à choisir un pack.
 
 export function estimateViews(budgetCredits: number): { min: number; max: number } {
+  if (budgetCredits <= 10) return { min: 1, max: 1 };
   return {
     min: Math.round(budgetCredits * 6),
     max: Math.round(budgetCredits * 18),

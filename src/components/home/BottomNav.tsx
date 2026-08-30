@@ -5,7 +5,7 @@ import { colors, fonts } from '../../theme';
 import { useT } from '../../i18n';
 import { LassiMascotte } from '../LassiMascotte';
 
-export type NavTab = 'home' | 'favorites' | 'voice' | 'messages' | 'profile';
+export type NavTab = 'home' | 'favorites' | 'voice' | 'messages' | 'orders' | 'profile';
 
 interface Props {
   active: NavTab;
@@ -68,6 +68,14 @@ const IcoMsg = ({ on }: { on: boolean }) => (
   </Svg>
 );
 
+const IcoOrders = ({ on }: { on: boolean }) => (
+  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke={on ? colors.accent : colors.muted} />
+    <Path d="M14 2v6h6" stroke={on ? colors.accent : colors.muted} />
+    <Path d="M16 13H8M16 17H8M10 9H8" stroke={on ? colors.accent : colors.muted} />
+  </Svg>
+);
+
 const IcoProfile = ({ on }: { on: boolean }) => (
   <Svg
     width={22}
@@ -94,27 +102,13 @@ export default function BottomNav({ active, onPress }: Props) {
         <Text style={[styles.label, active === 'home' && styles.labelOn]}>{t.nav.home}</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.item} onPress={() => press('favorites')} activeOpacity={0.7}>
-        <IcoStar on={active === 'favorites'} />
-        <Text style={[styles.label, active === 'favorites' && styles.labelOn]}>
-          {t.nav.favorites}
-        </Text>
-      </TouchableOpacity>
+      {/* Favoris — MASQUÉ temporairement */}
+      {/* Abeille — MASQUÉE temporairement */}
+      {/* Messages — MASQUÉ temporairement */}
 
-      <LassiMascotte
-        forme="support"
-        taille={52}
-        animation="beat"
-        glow
-        style={styles.fabSlot}
-        onPress={() => press('voice')}
-      />
-
-      <TouchableOpacity style={styles.item} onPress={() => press('messages')} activeOpacity={0.7}>
-        <IcoMsg on={active === 'messages'} />
-        <Text style={[styles.label, active === 'messages' && styles.labelOn]}>
-          {t.nav.messages}
-        </Text>
+      <TouchableOpacity style={styles.item} onPress={() => press('orders')} activeOpacity={0.7}>
+        <IcoOrders on={active === 'orders'} />
+        <Text style={[styles.label, active === 'orders' && styles.labelOn]}>Commandes</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.item} onPress={() => press('profile')} activeOpacity={0.7}>

@@ -95,6 +95,10 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
   const debtors = useDebtsStore(s => s.debtors);
   const loadDebts = useDebtsStore(s => s.loadDebts);
 
+  // Recette standard (commandes Wave/OM + VIP) — montant NET reversé par LASSI ce mois
+  const [standardRevenue, setStandardRevenue] = useState(0);
+  const [standardCount, setStandardCount] = useState(0);
+
   // Recette fitness (abonnements) — montant réel reversé par LASSI
   const [fitnessRevenue, setFitnessRevenue] = useState(0);
   const [fitnessCount, setFitnessCount] = useState(0);
@@ -115,6 +119,19 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
     loadOrders(shopId);
     loadDebts(shopId);
   }, [shopId, loadOrders, loadDebts]);
+
+  // Recette standard (commandes Wave/OM + VIP) : NET depuis payout_queue ce mois
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      const { data } = await supabase.rpc('get_monthly_standard_earnings', { p_prestataire_id: userId });
+      if (data) {
+        const d = data as { revenue: number; count: number };
+        setStandardRevenue(d.revenue ?? 0);
+        setStandardCount(d.count ?? 0);
+      }
+    })();
+  }, [userId]);
 
   // Recette fitness : charger dès que l'userId est connu
   useEffect(() => {
@@ -150,9 +167,8 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
 
   // ── Calculs réels ──────────────────────────────────────────────────────────
   const activeOrders = orders.filter(o => o.status === 'new' || o.status === 'preparing');
-  const doneOrders = orders.filter(o => o.status === 'done');
-  const normalEarnings = doneOrders.reduce((sum, o) => sum + o.total, 0);
-  const totalEarnings = normalEarnings + fitnessRevenue + terrainRevenue;
+  // totalEarnings = montants NET reversés ce mois (jamais orders.total qui est brut)
+  const totalEarnings = standardRevenue + fitnessRevenue + terrainRevenue;
   const totalDebt = debtors.reduce((sum, d) => sum + d.amount, 0);
   const debtorsWithDebt = debtors.filter(d => d.amount > 0).length;
 
@@ -203,16 +219,16 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
           amount={totalEarnings}
           changeLabel={(() => {
             const parts: string[] = [];
-            if (doneOrders.length > 0)
-              parts.push(`${doneOrders.length} commande${doneOrders.length > 1 ? 's' : ''}`);
+            if (standardCount > 0)
+              parts.push(`${standardCount} commande${standardCount > 1 ? 's' : ''}`);
             if (fitnessCount > 0)
               parts.push(`${fitnessCount} abonnement${fitnessCount > 1 ? 's' : ''}`);
             if (terrainCount > 0)
               parts.push(`${terrainCount} terrain${terrainCount > 1 ? 's' : ''}`);
             return parts.length > 0 ? parts.join(' · ') : 'Aucune recette ce mois';
           })()}
-          orders={orders.length + fitnessCount + terrainCount}
-          viaLassi={orders.length + fitnessCount + terrainCount}
+          orders={standardCount + fitnessCount + terrainCount}
+          viaLassi={standardCount + fitnessCount + terrainCount}
           debts={totalDebt}
         />
 

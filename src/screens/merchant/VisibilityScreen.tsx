@@ -117,16 +117,18 @@ function PendingPaymentBanner({
   loading,
   qrCode,
   paymentUrl,
+  payMethod,
 }: {
   onVerify: () => void;
   loading: boolean;
   qrCode: string;
   paymentUrl: string;
+  payMethod: PayMethod;
 }) {
   return (
     <View style={styles.pendingBanner}>
-      {/* Bouton pour rouvrir l'app OM si le deep link est disponible */}
-      {!!paymentUrl && (
+      {/* Bouton "Ouvrir Orange Money" uniquement pour OM (Wave : URL checkout déjà consommée) */}
+      {payMethod === 'orange_money' && !!paymentUrl && (
         <TouchableOpacity
           style={styles.omBtn}
           onPress={() => Linking.openURL(paymentUrl).catch(() => {})}
@@ -253,7 +255,7 @@ function OfferPickerModal({
 type PayState =
   | { type: 'idle' }
   | { type: 'loading' }
-  | { type: 'pending'; subscriptionId: string; paymentUrl: string; qrCode: string }
+  | { type: 'pending'; subscriptionId: string; paymentUrl: string; qrCode: string; payMethod: PayMethod }
   | { type: 'verifying' }
   | { type: 'error'; message: string };
 
@@ -426,6 +428,7 @@ export default function VisibilityScreen({ onBack }: Props) {
         subscriptionId: result.subscriptionId,
         paymentUrl:     result.paymentUrl,
         qrCode:         result.qrCode,
+        payMethod,
       });
 
       // Ouvrir l'app OM directement — canOpenURL bloque sur Android 11+ pour schemes custom
@@ -444,7 +447,7 @@ export default function VisibilityScreen({ onBack }: Props) {
   // ── Vérifier le paiement après retour de l'app Wave/OM ───────────────────
   const handleVerify = async () => {
     if (payState.type !== 'pending') return;
-    const { subscriptionId, paymentUrl, qrCode } = payState;
+    const { subscriptionId, paymentUrl, qrCode, payMethod: pm } = payState;
 
     setPayState({ type: 'verifying' });
     try {
@@ -467,7 +470,7 @@ export default function VisibilityScreen({ onBack }: Props) {
         Alert.alert('Configuration en cours', 'Les clés API ne sont pas encore configurées.');
       } else {
         // Préserver le QR code et le lien pour que le bandeau reste affiché
-        setPayState({ type: 'pending', subscriptionId, paymentUrl, qrCode });
+        setPayState({ type: 'pending', subscriptionId, paymentUrl, qrCode, payMethod: pm });
         Alert.alert(
           'Paiement non confirmé',
           "Nous n'avons pas encore reçu la confirmation. Réessaie dans quelques secondes.",
@@ -481,7 +484,7 @@ export default function VisibilityScreen({ onBack }: Props) {
         msg.toLowerCase().includes('timeout');
       if (isNetworkError) {
         // Garder l'état pending pour que le bandeau reste affiché
-        setPayState({ type: 'pending', subscriptionId, paymentUrl, qrCode });
+        setPayState({ type: 'pending', subscriptionId, paymentUrl, qrCode, payMethod: pm });
         Alert.alert(
           'Pas de connexion',
           "Vérifie ta connexion internet et réessaie.",
@@ -627,6 +630,7 @@ export default function VisibilityScreen({ onBack }: Props) {
                   loading={isVerifying}
                   qrCode={payState.qrCode}
                   paymentUrl={payState.paymentUrl}
+                  payMethod={payState.payMethod}
                 />
               </View>
             )}

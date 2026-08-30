@@ -60,4 +60,6 @@ export interface ShopContext {
   subcategories: string[];
   /** Catégorie principale du shop (ex: 'resto', 'hair') — fallback pour le classement. */
   category: string;
+  /** Modes de paiement acceptés : 'wave' | 'om'. Défaut : les deux. */
+  paymentMethods: ('wave' | 'om')[];
 }

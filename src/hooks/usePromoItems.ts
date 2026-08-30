@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import { ProductPromoInfo, Promotion } from '../types/promotions';
 import { buildProductPromoMap } from '../services/promotions';
@@ -15,6 +16,8 @@ export interface PromoItem {
   promoInfo?: ProductPromoInfo;
 }
 
+const CACHE_KEY = 'promo_items_cache_v1';
+
 const HEADERS = {
   apikey: SUPABASE_ANON,
   Authorization: `Bearer ${SUPABASE_ANON}`,
@@ -27,10 +30,27 @@ async function pgFetch<T>(path: string, signal: AbortSignal): Promise<T[]> {
   return res.json() as Promise<T[]>;
 }
 
-export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
+export function usePromoItems(): { items: PromoItem[]; loading: boolean; isConnected: boolean } {
   const [raw, setRaw] = useState<PromoItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
 
+  // Phase 1 : charge le cache AsyncStorage immédiatement
+  useEffect(() => {
+    AsyncStorage.getItem(CACHE_KEY)
+      .then(json => {
+        if (json) {
+          const cached: PromoItem[] = JSON.parse(json);
+          if (cached.length > 0) {
+            setRaw(cached);
+            setLoading(false);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Phase 2 : fetch réseau en arrière-plan
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
@@ -46,7 +66,6 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
           featured_all_products: boolean;
         };
 
-        // ① Commerces en vedette — direct fetch, contourne GoTrue lock
         const shopRows = await pgFetch<ShopRow>(
           'shops_effective?select=id,name,category,featured_product_id,featured_product_ids,featured_all_products&is_effectively_featured=eq.true',
           signal,
@@ -64,7 +83,6 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
         }
         const specificIds = Array.from(shopByProductId.keys());
 
-        // ② Produits — requêtes parallèles
         const [specificData, allProductsData] = await Promise.all([
           specificIds.length > 0
             ? pgFetch<Record<string, unknown>>(
@@ -105,7 +123,6 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
             .map(r => toItem(r, shopById.get(r.shop_id as string) as Parameters<typeof toItem>[1])),
         ];
 
-        // ③ Carrousel récompenses classement
         type RewardRow = {
           id: string;
           prestataire_id: string;
@@ -150,7 +167,6 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
             });
         }
 
-        // ④ Promos actives pour tous les produits du carousel
         const allItems = [...paidItems, ...rewardItems];
         const productIds = allItems.map(i => i.id).filter(Boolean);
         let promoMap: Record<string, ProductPromoInfo> = {};
@@ -182,11 +198,19 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
         }
 
         if (!signal.aborted) {
-          setRaw(allItems.map(item => ({ ...item, promoInfo: promoMap[item.id] })));
+          const freshItems = allItems.map(item => ({ ...item, promoInfo: promoMap[item.id] }));
+          setRaw(freshItems);
           setLoading(false);
+          setIsConnected(true);
+          // Sauvegarde en cache pour la prochaine ouverture hors ligne
+          AsyncStorage.setItem(CACHE_KEY, JSON.stringify(freshItems)).catch(() => {});
         }
       } catch {
-        if (!signal.aborted) setLoading(false);
+        if (!signal.aborted) {
+          // Réseau indisponible — on garde le cache déjà chargé, pas de défilement auto
+          setLoading(false);
+          setIsConnected(false);
+        }
       }
     })();
 
@@ -194,5 +218,5 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean } {
   }, []);
 
   const items = useMemo(() => [...raw].sort(() => Math.random() - 0.5), [raw]);
-  return { items, loading };
+  return { items, loading, isConnected };
 }

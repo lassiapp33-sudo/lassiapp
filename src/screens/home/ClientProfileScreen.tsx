@@ -406,12 +406,7 @@ export default function ClientProfileScreen({
             subtitle={t.profile.myOrdersSub}
             onPress={onOrders}
           />
-          <ProfileOptionRow
-            icon={<IcoStar />}
-            title={t.profile.myFavorites}
-            subtitle={favSubtitle}
-            onPress={onFavorites}
-          />
+          {/* Mes favoris — MASQUÉ temporairement */}
           <ProfileOptionRow
             icon={<IcoTerrain />}
             title="Mes terrains réservés"
@@ -434,32 +429,16 @@ export default function ClientProfileScreen({
             icon={<IcoTerrain />}
             title="Mes rendez-vous beauté"
             subtitle="Salons de beauté & coiffure 5 Étoiles"
+            last
             onPress={onRdvBeauty}
           />
-          <ProfileOptionRow
-            icon={<IcoTrophy />}
-            title="Classement"
-            subtitle="Mon quartier & top clients"
-            onPress={onClassement}
-          />
-          <ProfileOptionRow
-            icon={<IcoCard />}
-            title="Mes paiements"
-            subtitle="Historique de vos paiements Wave/OM"
-            last
-            onPress={() => setShowPayments(true)}
-          />
+          {/* Classement — MASQUÉ temporairement */}
+          {/* Mes paiements — MASQUÉ temporairement */}
         </View>
 
         <Text style={profileRowStyles.secLbl}>{t.profile.preferences}</Text>
         <View style={profileRowStyles.grp}>
-          <ProfileOptionRow
-            icon={<IcoBell />}
-            title={t.profile.notifications}
-            end="toggle"
-            toggled={notifOn}
-            onToggle={() => setNotifOn(v => !v)}
-          />
+          {/* Notifications — MASQUÉ temporairement */}
           <ProfileOptionRow
             icon={<IcoGlobe />}
             title={t.profile.language}
@@ -481,16 +460,8 @@ export default function ClientProfileScreen({
 
         <Text style={profileRowStyles.secLbl}>{t.profile.helpAccount}</Text>
         <View style={profileRowStyles.grp}>
-          <ProfileOptionRow
-            icon={<IcoHelp />}
-            title={t.profile.helpSupport}
-            onPress={() => setShowHelp(true)}
-          />
-          <ProfileOptionRow
-            icon={<IcoFlag />}
-            title="Signaler un problème"
-            onPress={() => setShowSignaler(true)}
-          />
+          {/* Aide & support — MASQUÉ temporairement */}
+          {/* Signaler un problème — MASQUÉ temporairement */}
           <ProfileOptionRow
             icon={<IcoInfo />}
             title="À propos"
