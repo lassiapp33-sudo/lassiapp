@@ -222,8 +222,8 @@ Deno.serve(async (req) => {
       const waveBody = JSON.stringify({
         currency:         'XOF',
         amount:           String(MONTANT_TOTAL),
-        success_url:      `${APP_BASE_URL}reservation-success?pi=${piId}&resa=${resaId}`,
-        error_url:        `${APP_BASE_URL}reservation-error?pi=${piId}&resa=${resaId}`,
+        success_url:      `${Deno.env.get('SUPABASE_URL')}/functions/v1/webhook-payment?r=${encodeURIComponent(`lassiapp://reservation-success?pi=${piId}&resa=${resaId}`)}`,
+        error_url:        `${Deno.env.get('SUPABASE_URL')}/functions/v1/webhook-payment?r=${encodeURIComponent(`lassiapp://reservation-error?pi=${piId}&resa=${resaId}`)}`,
         client_reference: piId,
       })
 

@@ -122,59 +122,14 @@ Deno.serve(async (req) => {
       actorRole:   'admin',
     })
 
-    // ── 6. Purger les données liées ───────────────────────────────────────────
-
-    // Favoris
-    await admin.from('favorites').delete().eq('user_id', targetUserId)
-
-    // Commandes client
-    const { data: clientOrders } = await admin
-      .from('orders').select('id').eq('client_id', targetUserId)
-    if (clientOrders?.length) {
-      await admin.from('order_items').delete()
-        .in('order_id', clientOrders.map((o: any) => o.id))
-    }
-    await admin.from('orders').delete().eq('client_id', targetUserId)
-
-    // Boutique du marchand (commandes, dettes, produits)
-    const { data: shop } = await admin
-      .from('shops').select('id').eq('merchant_id', targetUserId).maybeSingle()
-
-    if (shop) {
-      const { data: shopOrders } = await admin
-        .from('orders').select('id').eq('shop_id', shop.id)
-      if (shopOrders?.length) {
-        await admin.from('order_items').delete()
-          .in('order_id', shopOrders.map((o: any) => o.id))
-      }
-      await admin.from('orders').delete().eq('shop_id', shop.id)
-
-      const { data: debts } = await admin
-        .from('debts').select('id').eq('shop_id', shop.id)
-      if (debts?.length) {
-        await admin.from('debt_transactions').delete()
-          .in('debt_id', debts.map((d: any) => d.id))
-      }
-      await admin.from('debts').delete().eq('shop_id', shop.id)
-      await admin.from('products').delete().eq('shop_id', shop.id)
-      await admin.from('shops').delete().eq('id', shop.id)
-    }
-
-    // Litiges impliquant cet utilisateur (reporter_id / against_id sont NOT NULL
-    // et ne peuvent pas être mis à NULL → suppression nécessaire avant le profil)
-    const { data: userDisputes } = await admin
-      .from('disputes').select('id')
-      .or(`reporter_id.eq.${targetUserId},against_id.eq.${targetUserId}`)
-    if (userDisputes?.length) {
-      // dispute_messages cascadent automatiquement via ON DELETE CASCADE
-      await admin.from('disputes').delete()
-        .in('id', userDisputes.map((d: any) => d.id))
-    }
-
-    // Messages de litige envoyés par cet utilisateur dans d'autres litiges
-    await admin.from('dispute_messages').delete().eq('sender_id', targetUserId)
-
-    await admin.from('profiles').delete().eq('id', targetUserId)
+    // ── 6. Purger toutes les données liées via fonction SECURITY DEFINER ────────
+    // La fonction SQL admin_purge_user_data gère l'ordre exact des suppressions
+    // et contourne les échecs de check RI que le client JS service_role ne peut
+    // pas résoudre (ex: payment_logs "gave unexpected result").
+    const { error: purgeErr } = await admin.rpc('admin_purge_user_data', {
+      p_user_id: targetUserId,
+    })
+    if (purgeErr) throw new Error(`Purge données impossible : ${purgeErr.message}`)
 
     // ── 7. Supprimer le compte Supabase Auth ──────────────────────────────────
     const { error: deleteErr } = await admin.auth.admin.deleteUser(targetUserId)

@@ -46,15 +46,35 @@ Deno.serve(async (req) => {
       .or(`client_id.eq.${uid},prestataire_id.eq.${uid}`)
     check('payment_intents(count)', pcErr)
 
+    // ── Suppression de la boutique (dans les deux cas) ───────────────────────
+    // Les payment_intents référencent client_id/prestataire_id (user IDs),
+    // pas le shop → on peut supprimer le shop même avec historique financier.
+    const { data: shopToDel } = await admin.from('shops').select('id').eq('merchant_id', uid).maybeSingle()
+    if (shopToDel) {
+      const { data: shopOrdersToDel } = await admin.from('orders').select('id').eq('shop_id', shopToDel.id)
+      if (shopOrdersToDel?.length) {
+        await admin.from('order_items').delete().in('order_id', shopOrdersToDel.map((o: any) => o.id))
+        await admin.from('orders').delete().eq('shop_id', shopToDel.id)
+      }
+      const { data: debtsToDel } = await admin.from('debts').select('id').eq('shop_id', shopToDel.id)
+      if (debtsToDel?.length) {
+        await admin.from('debt_transactions').delete().in('debt_id', debtsToDel.map((d: any) => d.id))
+      }
+      await admin.from('debts').delete().eq('shop_id', shopToDel.id)
+      await admin.from('terrains').delete().eq('prestataire_id', uid)
+      await admin.from('products').delete().eq('shop_id', shopToDel.id)
+      check('shops(delete)', (await admin.from('shops').delete().eq('id', shopToDel.id)).error)
+    }
+
     if (paymentCount && paymentCount > 0) {
       // ── ANONYMISATION (historique financier conservé) ──────────────────────
-      // On ne met jamais null sur des colonnes potentiellement NOT NULL.
-      // On remplace par des valeurs fantômes non-exploitables.
+      // Boutique déjà supprimée ci-dessus. On anonymise uniquement le profil
+      // pour préserver la traçabilité financière.
       const { error: profErr } = await admin
         .from('profiles')
         .update({
           name: 'Compte supprimé',
-          phone: null,        // NOT NULL supprimé par migration 20260728040000
+          phone: null,
           email: ghost,
           auth_email: ghost,
           avatar_url: null,
@@ -95,32 +115,7 @@ Deno.serve(async (req) => {
       }
       check('orders(client)', (await admin.from('orders').delete().eq('client_id', uid)).error)
 
-      // Boutique (si marchand)
-      const { data: shop, error: shopSelErr } = await admin.from('shops').select('id').eq('merchant_id', uid).maybeSingle()
-      check('shops(select)', shopSelErr)
-
-      if (shop) {
-        const { data: shopOrders, error: soErr } = await admin.from('orders').select('id').eq('shop_id', shop.id)
-        check('orders(shop select)', soErr)
-        if (shopOrders?.length) {
-          check('order_items(shop)',
-            (await admin.from('order_items').delete().in('order_id', shopOrders.map((o: any) => o.id))).error,
-          )
-        }
-        check('orders(shop)',    (await admin.from('orders').delete().eq('shop_id', shop.id)).error)
-
-        const { data: debts, error: dErr } = await admin.from('debts').select('id').eq('shop_id', shop.id)
-        check('debts(select)', dErr)
-        if (debts?.length) {
-          check('debt_transactions',
-            (await admin.from('debt_transactions').delete().in('debt_id', debts.map((d: any) => d.id))).error,
-          )
-        }
-        check('debts',    (await admin.from('debts').delete().eq('shop_id', shop.id)).error)
-        check('terrains', (await admin.from('terrains').delete().eq('prestataire_id', uid)).error)
-        check('products', (await admin.from('products').delete().eq('shop_id', shop.id)).error)
-        check('shops',    (await admin.from('shops').delete().eq('id', shop.id)).error)
-      }
+      // Boutique déjà supprimée avant le if/else
 
       check('profiles(delete)', (await admin.from('profiles').delete().eq('id', uid)).error)
 

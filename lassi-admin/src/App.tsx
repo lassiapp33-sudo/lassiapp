@@ -24,6 +24,7 @@ import SecurityPage        from './pages/SecurityPage'
 import LivreursPage        from './pages/LivreursPage'
 import ResetPasswordPage   from './pages/ResetPasswordPage'
 import FinancePage         from './pages/FinancePage'
+import WaveFinancePage     from './pages/WaveFinancePage'
 import VisibilityPlansPage from './pages/VisibilityPlansPage'
 import Vip5EtoilesPage    from './pages/Vip5EtoilesPage'
 import SuggestionsPage    from './pages/SuggestionsPage'
@@ -71,6 +72,7 @@ function AppRoutes() {
         <Route path="securite"     element={<SecurityPage />} />
         <Route path="livreurs"     element={<LivreursPage />} />
         <Route path="finance"      element={<FinancePage />} />
+        <Route path="finance-wave" element={<WaveFinancePage />} />
         <Route path="visibility"   element={<VisibilityPlansPage />} />
         <Route path="5etoiles"     element={<Vip5EtoilesPage />} />
         <Route path="suggestions"  element={<SuggestionsPage />} />

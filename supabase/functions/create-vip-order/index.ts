@@ -27,11 +27,15 @@ serve(async (req) => {
     const { data: { user }, error: authErr } = await admin.auth.getUser(token)
     if (authErr || !user) return fail('Session invalide', 401)
 
-    const { shopId, items, orderType, note, payMethod } = await req.json()
+    const { shopId, items, orderType, note, payMethod, livraisonFee } = await req.json()
 
     if (!shopId || !Array.isArray(items) || items.length === 0) {
       return fail('Paramètres manquants')
     }
+
+    const safeLivraisonFee = (typeof livraisonFee === 'number' && Number.isFinite(livraisonFee) && livraisonFee >= 0)
+      ? Math.round(livraisonFee)
+      : 0
 
     // Vérifier que le shop est bien un profil VIP actif
     const { data: vipProfil } = await admin
@@ -102,6 +106,7 @@ serve(async (req) => {
       p_idempotency_key: null,
       p_items:           orderItems,
       p_pay_method:      safePayMethod,
+      p_livraison_fee:   safeLivraisonFee,
     })
 
     if (orderErr) throw new Error(orderErr.message)

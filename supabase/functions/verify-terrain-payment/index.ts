@@ -2,11 +2,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isSafeString, isUUID } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { getOmToken, OM_BASE_URL, isOmReady } from '../_shared/omAuth.ts'
-import { buildWaveSignature } from '../_shared/waveSign.ts'
+import { getWaveCheckout } from '../_shared/waveProxy.ts'
 import { triggerTerrainPayout } from '../_shared/terrainPayout.ts'
 import { sendPushToUser } from '../_shared/push.ts'
 
 const WAVE_API_KEY              = Deno.env.get('WAVE_API_KEY')              ?? ''
+const WAVE_PROXY_URL            = Deno.env.get('WAVE_PROXY_URL')            ?? ''
 const OM_RETAILER_MSISDN        = Deno.env.get('OM_RETAILER_MSISDN')        ?? ''
 const OM_RETAILER_PIN_ENCRYPTED = Deno.env.get('OM_RETAILER_PIN_ENCRYPTED') ?? ''
 
@@ -83,11 +84,8 @@ Deno.serve(async (req) => {
     // ── Vérification côté opérateur ───────────────────────────────────────────
     let paid = false
 
-    if (method === 'wave' && WAVE_API_KEY) {
-      const waveGetHeaders: Record<string, string> = { Authorization: `Bearer ${WAVE_API_KEY}` }
-      const waveSig = await buildWaveSignature('')
-      if (waveSig) waveGetHeaders['Wave-Signature'] = waveSig
-      const res  = await fetch(`https://api.wave.com/v1/checkout/sessions/${reference}`, { headers: waveGetHeaders })
+    if (method === 'wave' && (WAVE_API_KEY || WAVE_PROXY_URL)) {
+      const res  = await getWaveCheckout(reference)
       const data = await res.json()
       paid = (data as Record<string, unknown>).payment_status === 'succeeded'
 

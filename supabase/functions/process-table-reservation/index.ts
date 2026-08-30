@@ -8,6 +8,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID, isSafeString } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
+import { sendPushToUser } from '../_shared/push.ts'
 
 const ACTIONS_VALIDES = ['accepter', 'refuser', 'proposer_alternative'] as const
 type Action = typeof ACTIONS_VALIDES[number]
@@ -119,17 +120,25 @@ Deno.serve(async (req) => {
           .eq('statut', 'cancelled');
       }
 
-      // Notification client (best-effort)
+      // Notification client : push bannière + in-app (best-effort)
       try {
-        await admin.functions.invoke('notify-new-message', {
-          body: {
-            userId:  resa.client_id,
-            title:   `${profil.nom_affiche} a accepté votre réservation`,
-            body:    messageGerant ?? 'Votre table est confirmée. Présentez votre ticket à l\'arrivée.',
+        const notifTitle = `${profil.nom_affiche} a accepté votre réservation`
+        const notifBody  = messageGerant ?? 'Votre table est confirmée. Présentez votre ticket à l\'arrivée.'
+        await Promise.allSettled([
+          sendPushToUser(admin, resa.client_id, {
+            title: notifTitle, body: notifBody,
+            data: { type: 'reservation_acceptee', reservationId },
+            channelId: 'commandes',
+          }),
+          admin.from('notifications').insert({
+            user_id: resa.client_id,
+            type:    'vip',
+            title:   notifTitle,
+            body:    notifBody,
             data:    { type: 'reservation_acceptee', reservationId },
-          },
-        })
-      } catch (_) { /* notification non bloquante */ }
+          }),
+        ])
+      } catch { /* best-effort */ }
 
       return json({ success: true, action: 'acceptee', qrCode })
     }
@@ -154,17 +163,25 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Notification client (best-effort)
+      // Notification client : push bannière + in-app (best-effort)
       try {
-        await admin.functions.invoke('notify-new-message', {
-          body: {
-            userId: resa.client_id,
-            title:  `${profil.nom_affiche} ne peut pas vous recevoir`,
-            body:   messageGerant ?? 'Votre réservation a été refusée. L\'acompte sera remboursé.',
-            data:   { type: 'reservation_refusee', reservationId },
-          },
-        })
-      } catch (_) { /* non bloquant */ }
+        const notifTitle = `${profil.nom_affiche} ne peut pas vous recevoir`
+        const notifBody  = messageGerant ?? 'Votre réservation a été refusée. L\'acompte sera remboursé.'
+        await Promise.allSettled([
+          sendPushToUser(admin, resa.client_id, {
+            title: notifTitle, body: notifBody,
+            data: { type: 'reservation_refusee', reservationId },
+            channelId: 'commandes',
+          }),
+          admin.from('notifications').insert({
+            user_id: resa.client_id,
+            type:    'vip',
+            title:   notifTitle,
+            body:    notifBody,
+            data:    { type: 'reservation_refusee', reservationId },
+          }),
+        ])
+      } catch { /* best-effort */ }
 
       return json({ success: true, action: 'refusee' })
     }
@@ -182,22 +199,30 @@ Deno.serve(async (req) => {
         })
         .eq('id', reservationId)
 
-      // Notification client (best-effort)
+      // Notification client : push bannière + in-app (best-effort)
       const altDetails = [
         altDate        ? `Date : ${altDate}` : null,
         altHeureDebut  ? `Heure : ${altHeureDebut}` : null,
       ].filter(Boolean).join(' · ')
 
       try {
-        await admin.functions.invoke('notify-new-message', {
-          body: {
-            userId: resa.client_id,
-            title:  `${profil.nom_affiche} vous propose une alternative`,
-            body:   altDetails || altMessage || 'Le restaurant vous propose un autre créneau.',
-            data:   { type: 'reservation_alternative', reservationId },
-          },
-        })
-      } catch (_) { /* non bloquant */ }
+        const notifTitle = `${profil.nom_affiche} vous propose une alternative`
+        const notifBody  = altDetails || (altMessage as string | undefined) || 'Le restaurant vous propose un autre créneau.'
+        await Promise.allSettled([
+          sendPushToUser(admin, resa.client_id, {
+            title: notifTitle, body: notifBody,
+            data: { type: 'reservation_alternative', reservationId },
+            channelId: 'commandes',
+          }),
+          admin.from('notifications').insert({
+            user_id: resa.client_id,
+            type:    'vip',
+            title:   notifTitle,
+            body:    notifBody,
+            data:    { type: 'reservation_alternative', reservationId },
+          }),
+        ])
+      } catch { /* best-effort */ }
 
       return json({ success: true, action: 'alternative_proposee' })
     }

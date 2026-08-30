@@ -660,16 +660,23 @@ L'autolinking Expo (`expo-autolinking-settings`) inclura ML Kit automatiquement 
 | Authentification | Token Bearer OM (rotation) | `Authorization: Bearer ${WAVE_API_KEY}` (clé statique) |
 | Webhook confirmation | `notifUrl` dans le body | URL configurée dans le portail Wave |
 | Request signing | Non requis | Requis (HMAC signature sur chaque requête) |
-| Reversement | Cash In API OM | B2C Transfer Wave (`/v1/b2c/transfer-money`) |
-| IP whitelist | Non | Oui — bloqué jusqu'à IP statique Supabase Pro |
-| Status actuel | ✅ PROD | ⏳ En attente IP statique |
+| Reversement | Cash In API OM | `POST /v1/payout` (Wave Business Payout API) |
+| IP whitelist | Non | Désactivée ✅ — Wave team a désactivé le filtrage 2026-08-24 |
+| Status actuel | ✅ PROD | ✅ PROD (2026-08-24) |
+
+**IMPORTANT — success_url / error_url Wave :**
+Wave n'accepte QUE `https://` pour ces URLs (pas `lassiapp://`). Mécanisme :
+```
+success_url: `${SUPABASE_URL}/functions/v1/webhook-payment?r=${encodeURIComponent('lassiapp://...')}`
+```
+Le GET handler de webhook-payment redirige vers le deep link. Testé ✅ prod 2026-08-24.
 
 **Pour chaque catégorie (commandes, fitness, terrain, visibilité) — démarche Wave :**
-1. Dupliquer l'EF OM correspondante → remplacer l'appel OM par l'appel Wave checkout
-2. L'app reçoit `wave_launch_url` → `Linking.openURL(wave_launch_url)` (même pattern, pas de QR code)
-3. Wave redirige vers `APP_BASE_URL/payment/success` ou `failure` après paiement
-4. Le webhook Wave (ou redirect callback) confirme côté serveur
-5. Reversement Wave : appel `/v1/b2c/transfer-money` avec signature HMAC
+1. EF `create-[categorie]-payment` : POST /v1/checkout/sessions via `callWaveCheckout` dans `_shared/waveProxy.ts`
+2. L'app reçoit `wave_launch_url` → `Linking.openURL(url).catch(...)` (PAS `canOpenURL` — bloque Android 11+)
+3. Wave GET-redirige vers `webhook-payment?r=lassiapp://...` → deep link app
+4. App appelle `verify-[categorie]-payment` → `getWaveCheckout(reference)` pour confirmer
+5. Reversement Wave : `waveRequestPayout(body, idempotencyKey)` → `POST /v1/payout`
 6. Vérifier `WAVE_ENABLED` dans `features.ts` avant toute UI Wave
 
 **Ce qui ne change pas pour Wave :**
@@ -702,18 +709,19 @@ L'autolinking Expo (`expo-autolinking-settings`) inclura ML Kit automatiquement 
 
 ---
 
-### 19.6 Phrase secrète d'activation Wave
+### 19.6 Activation Wave — DÉJÀ EFFECTUÉE (2026-08-24)
 
-Quand Pauline Mendy dit **"Pauline c'est bon"** → WAVE est prêt côté Wave (IP whitelist OK) :
-1. Ouvrir `Lassi/src/config/features.ts`
-2. `WAVE_ENABLED = true`
-3. `VISIBILITY_PACKS_ENABLED = true`
-4. `eas update --channel production --message "activate Wave + visibility packs"`
+**Activation déjà faite :**
+- `WAVE_ENABLED = true` ✅ dans `features.ts`
+- IP whitelist désactivée par Wave team (email à `prm@wave.com`) ✅
+- Tous les secrets configurés : `WAVE_API_KEY`, `WAVE_WEBHOOK_SECRET` ✅
+- OTA déployé production ✅
 
-**Prérequis avant d'activer :**
-- Supabase Pro souscrit (IP dédiée générée)
-- IP Supabase ajoutée dans le portail Wave Business → Settings → IP Whitelist
-- Tous les secrets Wave présents : `WAVE_API_KEY`, `WAVE_SECRET_KEY`, `WAVE_WEBHOOK_SECRET`
+**Historique phrase secrète :**
+- "Pauline c'est bon" reçu 2026-08-24 → activation immédiate effectuée
+
+**Si Wave se remet à bloquer :**
+→ Vérifier les logs EF pour `ip-not-allowed` → recontacter `prm@wave.com` pour désactiver le filtrage IP
 
 ---
 
@@ -887,27 +895,63 @@ if (data.length === 0) data = await getClassementSousCategorie(classeKey, getPer
 
 ---
 
-#### J. Checklist Wave pour la catégorie Terrain
+#### J. Checklist Wave pour la catégorie Terrain — ✅ COMPLÈTE (2026-08-24)
 
 ```
-[ ] 1. Dupliquer create-terrain-payment → remplacer POST OM QR par POST Wave /v1/checkout/sessions
-        → wave_launch_url_lifetime_secs = 3600
-        → success_url = APP_BASE_URL/payment/success?type=terrain&id={reservationId}
-[ ] 2. Linking.openURL(wave_launch_url) — pas de QR code Wave (Wave ouvre son propre browser)
-        → Toujours afficher le bouton "J'ai payé — Vérifier" comme fallback
-[ ] 3. verify-terrain-payment : ajouter branche Wave (chercher transaction via /v1/transactions)
-        → Status Wave à accepter : 'succeeded'
-        → Garder le même retry 3×3s côté app
-[ ] 4. Webhook Wave → même pattern idempotence (vérifier statut DB avant tout)
-[ ] 5. Reversement Wave : /v1/b2c/transfer-money avec signature HMAC
-        → Même helper terrainPayout.ts, juste changer l'appel API
-[ ] 6. Vérifier WAVE_ENABLED avant d'afficher le bouton Wave dans TerrainPaymentScreen
-[ ] 7. Notification type 'reservation_terrain' : déjà câblé bannière slide-top + push + exclu modal bloquant ✅
-[ ] 8. Scoring : CTEs classement déjà en place avec statut IN ('paye','utilise'), indépendant du moyen de paiement ✅
-[ ] 9. Multi-terrains : sélecteur déjà en place ✅
-[ ] 10. Classements live-first déjà en place ✅
-[ ] 11. Test complet : payer Wave → verify (3 retries) → receipt_code → QR scan prestataire → notif client bannière
+[✅] 1. create-terrain-payment → callWaveCheckout(waveBody, reservationId)
+        → success_url = webhook-payment?r=lassiapp://terrain/paiement/succes?r={reservationId}
+        → error_url   = webhook-payment?r=lassiapp://terrain/paiement/echec?r={reservationId}
+[✅] 2. TerrainPaymentScreen : Linking.openURL(session.paymentUrl) direct (pas canOpenURL)
+        → Bouton "J'ai payé — Vérifier" présent
+[✅] 3. verify-terrain-payment : getWaveCheckout(reference) → payment_status === 'succeeded'
+        → Déclenche triggerTerrainPayout(WAVE_API_KEY) après confirmation
+[✅] 4. Webhook Wave → GET redirect → deep link → app appelle verify-terrain-payment
+[✅] 5. Reversement Wave : waveRequestPayout via _shared/waveProxy.ts → POST /v1/payout
+        → terrainPayout.ts : condition params.moyenPaiement === 'wave' && params.WAVE_API_KEY
+[✅] 6. WAVE_ENABLED vérifié dans TerrainPaymentScreen (ligne 19, 160)
+[✅] 7. Notifications reservation_terrain : bannière + push + in-app
+[✅] 8. Scoring : indépendant du moyen de paiement
+[✅] 9. Multi-terrains : sélecteur déjà en place
+[✅] 10. Classements live-first déjà en place
+[ ] 11. Test complet en production : payer Wave → verify → receipt_code → QR scan prestataire
 ```
+
+---
+
+### 19.8 Wave — INTÉGRATION COMPLÈTE (2026-08-24) ✅
+
+> Tout ce qui a été fait pour activer Wave en production sur toutes les catégories.
+
+**Problèmes résolus :**
+| Problème | Solution |
+|---|---|
+| `ip-not-allowed` IP bloquée | Email prm@wave.com → filtrage IP désactivé par Wave team |
+| `request-validation-error` lassiapp:// refusé | Redirect HTTPS via `webhook-payment?r=encodeURIComponent(lassiapp://...)` |
+| `supabaseUrl is not defined` scope | Remplacé par `Deno.env.get('SUPABASE_URL')` inline |
+| `canOpenURL` bloque Android 11+ | `Linking.openURL(url).catch(...)` direct dans CheckoutPayment.tsx |
+
+**Architecture finale `_shared/waveProxy.ts` :**
+- `callWaveCheckout(body, idempKey)` → POST /v1/checkout/sessions
+- `getWaveCheckout(sessionId)` → GET /v1/checkout/sessions/{id}
+- `waveRequestPayout(body, idempKey)` → POST /v1/payout
+- `waveRequestRefund(sessionId, body, idempKey)` → POST /v1/checkout/sessions/{id}/refund
+- Routage automatique via `WAVE_PROXY_URL` si configuré (optionnel)
+
+**Fonctions déployées 2026-08-24 :**
+create-payment, create-terrain-payment, create-fitness-abonnement-payment,
+create-livraison-payment, create-table-reservation, create-visibility-payment,
+webhook-payment, verify-terrain-payment, verify-fitness-payment,
+verify-livraison-payment, process-payouts, refund, create-vip-order, process-table-reservation
+
+**Statut par catégorie :**
+| Catégorie | EF Create | Verify | Payout | Testé |
+|---|---|---|---|---|
+| Commandes | ✅ | ✅ (via webhook) | ✅ process-payouts | ✅ prod 2026-08-24 |
+| Terrain | ✅ | ✅ verify-terrain | ✅ terrainPayout | ⏳ à tester |
+| Fitness | ✅ | ✅ verify-fitness | ✅ process-payouts | ⏳ à tester |
+| Livraison | ✅ | ✅ verify-livraison | N/A | ⏳ à tester |
+| Résa Table | ✅ | ✅ (via webhook) | ✅ après accept gérant | ⏳ à tester |
+| Visibilité | ✅ | ✅ (via webhook) | N/A | ⏳ à tester |
 
 ---
 
@@ -1053,6 +1097,60 @@ Si de nouvelles clés APNs sont nécessaires dans le futur :
 1. Propriétaire (Aby) va sur developer.apple.com → Keys → crée une clé APNs
 2. Télécharge le `.p8` → donne le fichier + Key ID
 3. On uploade via API EAS GraphQL (mutations ci-dessus)
+
+---
+
+## 21. SUPPRESSION COMPTE ADMIN — ARCHITECTURE ET RÈGLES (2026-08-25)
+
+### 21.1 Architecture finale
+
+**EF** `supabase/functions/admin-delete-user/index.ts` :
+1. Vérifie is_admin du caller
+2. Empêche suppression d'un admin
+3. **Check payouts `queued`/`processing` → 409 si > 0** (protection financière intentionnelle)
+4. Log admin_actions_log + audit
+5. `admin.rpc('admin_purge_user_data', { p_user_id })` ← purge SQL SECURITY DEFINER
+6. `auth.admin.deleteUser(targetUserId)`
+
+**Fonction SQL** `admin_purge_user_data` (migration `20260825240000_fn_admin_purge_user_data_v3.sql`) :
+```sql
+SET LOCAL row_security = off;  -- OBLIGATOIRE sinon SELECTs filtrés par RLS
+-- ordre : payment_logs → payout_queue → livraison_paiements → payment_intents
+-- → payout_queue (prestataire_id) → payments NULL-out → favorites
+-- → order_items/orders client → boutique (orders/debts/products/shops)
+-- → disputes/messages → table_reservations → profiles
+```
+
+### 21.2 Règles NON-RÉGRESSION
+
+**R1** — `SET LOCAL row_security = off` OBLIGATOIRE dans la fonction SQL. Sans ça : "gave unexpected result" sur payment_logs (RLS bloque le SET NULL interne PostgreSQL).
+
+**R2** — `payout_queue.prestataire_id → profiles ON DELETE RESTRICT` = intentionnel. Ne jamais changer en CASCADE.
+
+**R3** — Toute nouvelle table avec FK → `profiles(id)` ou `auth.users(id)` doit avoir `ON DELETE CASCADE` ou `SET NULL`. Sinon ajouter le DELETE dans `admin_purge_user_data` + nouvelle migration.
+
+**R4** — Le modal `DeleteModal` doit garder la prop `error` pour afficher les erreurs DANS le modal (pas derrière).
+
+**R5** — Si une nouvelle erreur FK apparaît : créer migration FK fix + ajouter DELETE dans la fonction SQL v suivante.
+
+### 21.3 FK déjà fixées
+
+| Table | Colonne | Fix |
+|---|---|---|
+| payment_intents | client_id, prestataire_id → profiles | CASCADE (20260624020000) |
+| payment_logs | payment_intent_id → payment_intents | SET NULL (20260625010000) |
+| order_ratings | rater_id, rated_id → auth.users | CASCADE (20260727000000) |
+| livraisons | demandeur_id → auth.users | CASCADE (20260727000000) |
+| livraison_paiements | demandeur_id → auth.users | CASCADE (20260727000000) |
+| admin_actions_log | target_user_id → profiles | SET NULL (20250101031000) |
+| table_reservations | client_id → auth.users | CASCADE (20260825200000) |
+| payments | prestataire_id → auth.users | SET NULL (20260825220000) |
+
+### 21.4 Bug horaires passant minuit (2026-08-25)
+
+`services/hours.ts` — `computeStatus()` gère maintenant les horaires overnight (ex: 9h→1h du matin).
+Règle : si `closeMin < openMin` → horaire nocturne → `isOpen = nowMin >= openMin || nowMin < closeMin`.
+OTA déployé : update group `0f5ba207-8c4e-4a45-8cd1-2840ff139445`.
 
 ---
 

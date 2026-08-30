@@ -5,10 +5,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/cors.ts'
-import { buildWaveSignature } from '../_shared/waveSign.ts'
+import { getWaveCheckout } from '../_shared/waveProxy.ts'
 import { sendPushToUser } from '../_shared/push.ts'
 
 const WAVE_API_KEY = Deno.env.get('WAVE_API_KEY') ?? ''
+const WAVE_PROXY_URL = Deno.env.get('WAVE_PROXY_URL') ?? ''
 
 Deno.serve(async (req) => {
   const CORS = corsHeaders(req)
@@ -83,10 +84,8 @@ Deno.serve(async (req) => {
     }
 
     // ⑦ Vérification Wave en temps réel
-    if (pi.moyen_paiement === 'wave' && pi.external_ref && WAVE_API_KEY) {
-      const waveRes = await fetch(`https://api.wave.com/v1/checkout/sessions/${pi.external_ref}`, {
-        headers: { Authorization: `Bearer ${WAVE_API_KEY}`, ...buildWaveSignature('', WAVE_API_KEY) },
-      })
+    if (pi.moyen_paiement === 'wave' && pi.external_ref && (WAVE_API_KEY || WAVE_PROXY_URL)) {
+      const waveRes = await getWaveCheckout(pi.external_ref)
 
       if (waveRes.ok) {
         const waveData = await waveRes.json()

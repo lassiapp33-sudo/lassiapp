@@ -19,9 +19,10 @@ interface DeleteModalProps {
   onConfirm: (reason: string) => void
   onCancel:  () => void
   loading:   boolean
+  error:     string | null
 }
 
-function DeleteModal({ user, onConfirm, onCancel, loading }: DeleteModalProps) {
+function DeleteModal({ user, onConfirm, onCancel, loading, error }: DeleteModalProps) {
   const [reason, setReason] = useState('')
 
   return (
@@ -46,6 +47,11 @@ function DeleteModal({ user, onConfirm, onCancel, loading }: DeleteModalProps) {
               avec toutes ses données : commandes, boutique, dettes, favoris.
             </p>
           </div>
+          {error && (
+            <div className="bg-red-900/40 border border-red-500/50 rounded-xl px-4 py-3 text-sm text-red-300">
+              {error}
+            </div>
+          )}
           <div>
             <label className="block text-xs text-muted mb-1.5">Raison de la suppression</label>
             <textarea
@@ -461,6 +467,7 @@ export default function UsersPage() {
           onConfirm={handleDeleteConfirm}
           onCancel={() => { setToDelete(null); setDeleteError(null) }}
           loading={deleting}
+          error={deleteError}
         />
       )}
     </div>

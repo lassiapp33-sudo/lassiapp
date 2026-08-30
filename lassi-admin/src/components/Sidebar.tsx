@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react'
 import { NavLink, useNavigate }        from 'react-router-dom'
 import {
   LayoutDashboard, TrendingUp, Trophy, Star, Gift,
-  AlertTriangle, Flag, Users, Store, Map, LogOut, MessageSquare, Megaphone, Shield, Truck, Wallet, Eye, Crown, ListChecks,
+  AlertTriangle, Flag, Users, Store, Map, LogOut, MessageSquare, Megaphone, Shield, Truck, Wallet, Eye, Crown, ListChecks, Waves,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { getOpenDisputesCount }      from '../services/disputes'
@@ -62,7 +62,8 @@ export default function Sidebar() {
     { to: '/annonces',     icon: <Megaphone size={18} />,      label: 'Annonces' },
     { to: '/livreurs',     icon: <Truck size={18} />,          label: 'Livreurs' },
     { to: '/bi',           icon: <Map size={18} />,            label: 'BI par quartier' },
-    { to: '/finance',     icon: <Wallet size={18} />,         label: 'Finance OM' },
+    { to: '/finance',      icon: <Wallet size={18} />,          label: 'Finance OM' },
+    { to: '/finance-wave', icon: <Waves size={18} />,           label: 'Finance Wave' },
     { to: '/visibility',  icon: <Eye size={18} />,            label: 'Packs Visibilité' },
     { to: '/suggestions', icon: <ListChecks size={18} />,    label: 'Fiche Guidée' },
     { to: '/securite',    icon: <Shield size={18} />,         label: 'Sécurité' },

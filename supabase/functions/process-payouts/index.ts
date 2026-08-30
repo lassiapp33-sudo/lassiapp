@@ -21,7 +21,7 @@
 // ============================================================
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { buildWaveSignature } from '../_shared/waveSign.ts';
+import { waveRequestPayout } from '../_shared/waveProxy.ts';
 import { sendPushToUser } from '../_shared/push.ts';
 
 // Payout API Wave : seul WAVE_API_KEY est nécessaire (pas de WAVE_MERCHANT_ID)
@@ -101,13 +101,12 @@ serve(async (req) => {
     results.processed++;
 
     // 1. Invariant comptable :
-    //    - montant_total == prix_base + commission_lassi (garanti par check_montants)
+    //    - montant_total == prix_base + commission_lassi + livraison_fee
     //    - montant > 0 (payout positif)
     //    - montant <= prix_base (LASSI ne reverse jamais plus que le prix du prestataire)
-    //    Note : montant < prix_base est normal — LASSI prend sa commission AVANT
-    //    d'envoyer, les frais fournisseur (OM 0.8% / Wave 1%) réduisent la part prestataire.
+    const livraison_fee = (payout.livraison_fee as number) ?? 0;
     const invariantOk =
-      payout.montant_total === payout.prix_base + payout.commission_lassi &&
+      payout.montant_total === payout.prix_base + payout.commission_lassi + livraison_fee &&
       payout.montant > 0 &&
       payout.montant <= payout.prix_base;
 
@@ -119,6 +118,7 @@ serve(async (req) => {
         montant: payout.montant,
         prix_base: payout.prix_base,
         commission_lassi: payout.commission_lassi,
+        livraison_fee,
         payment_intent_statut: payout.payment_intent_statut,
       }));
       await supabase.rpc('payout_queue_mark_failure', {
@@ -328,20 +328,7 @@ async function sendWavePayout(params: { payoutId: string; montant: number; phone
     client_reference: params.payoutId,
   });
 
-  const payoutHeaders: Record<string, string> = {
-    'Authorization':   `Bearer ${WAVE_API_KEY}`,
-    'Content-Type':    'application/json',
-    // Idempotence : même clé → Wave ne recrée jamais un second virement
-    'Idempotency-Key': `payout_${params.payoutId}`,
-  };
-  const waveSig = await buildWaveSignature(payoutBody);
-  if (waveSig) payoutHeaders['Wave-Signature'] = waveSig;
-
-  const response = await fetch('https://api.wave.com/v1/payout', {
-    method:  'POST',
-    headers: payoutHeaders,
-    body:    payoutBody,
-  });
+  const response = await waveRequestPayout(payoutBody, `payout_${params.payoutId}`);
 
   const data = await response.json();
 

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { isUUID } from '../_shared/validation.ts'
+import { getWaveCheckout } from '../_shared/waveProxy.ts'
 
 const OM_WEBHOOK_SECRET = Deno.env.get('OM_WEBHOOK_SECRET') ?? ''
 
@@ -30,26 +31,231 @@ Deno.serve(async (req) => {
     return new Response(null, { status: 200 })
   }
 
+  // ── POST authentifié (user JWT) : vérification Wave côté serveur ─────────────
+  // Déclenché par l'app quand l'utilisateur tape "J'ai payé — vérifier" après un paiement Wave.
+  // Différent du webhook OM qui arrive sans JWT (avec ?secret=).
+  const url       = new URL(req.url)
+  const authHdr   = req.headers.get('Authorization') ?? ''
+  const isUserReq = req.method === 'POST' && authHdr.startsWith('Bearer ') && !url.searchParams.has('secret')
+
+  if (isUserReq) {
+    try {
+      const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+
+      // Authentifier le JWT utilisateur
+      const userClient = createClient(
+        SUPABASE_URL,
+        Deno.env.get('SUPABASE_ANON_KEY')!,
+        { global: { headers: { Authorization: authHdr } } },
+      )
+      const { data: { user }, error: authErr } = await userClient.auth.getUser()
+      if (authErr || !user) return json({ error: 'Non authentifié' }, 401)
+
+      let body: { sub_id?: string }
+      try { body = await req.json() } catch { return json({ error: 'Body invalide' }, 400) }
+      const subId = body.sub_id ?? ''
+      if (!subId || !isUUID(subId)) return json({ error: 'sub_id invalide' }, 400)
+
+      const admin = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
+      const { data: sub, error: subErr } = await admin
+        .from('visibility_subscriptions')
+        .select('id, shop_id, merchant_id, status, offer_type, amount, plan_id, plan_duration_days, product_ids, product_id, all_products, transaction_id, metadata, pay_method, expires_at')
+        .eq('id', subId)
+        .maybeSingle()
+
+      if (subErr || !sub) return json({ error: 'Abonnement introuvable' }, 404)
+
+      // Sécurité : seul le marchand propriétaire peut vérifier
+      if (sub.merchant_id !== user.id) return json({ error: 'Non autorisé' }, 403)
+
+      // Déjà actif → renvoyer directement
+      if (sub.status === 'active') {
+        return json({ paid: true, status: 'active', expiresAt: sub.expires_at })
+      }
+
+      // Seulement pour Wave
+      if (sub.pay_method !== 'wave') {
+        return json({ paid: false, status: sub.status })
+      }
+
+      // Pas encore de session Wave créée
+      if (!sub.transaction_id) return json({ paid: false, status: 'pending' })
+
+      // Vérifier le statut auprès de l'API Wave
+      const waveRes  = await getWaveCheckout(sub.transaction_id)
+      const waveData = await waveRes.json()
+      console.log('Wave verify:', sub.transaction_id, JSON.stringify({ status: waveData.payment_status }))
+
+      if (waveData.payment_status !== 'succeeded') {
+        return json({ paid: false, status: 'pending' })
+      }
+
+      // ── Activer l'abonnement ──────────────────────────────────────────────────
+      let planLabel           = ''
+      let planDurationFromPlan: number | null = null
+      if (sub.plan_id) {
+        const { data: plan } = await admin
+          .from('visibility_plans')
+          .select('label, duration_days')
+          .eq('id', sub.plan_id)
+          .maybeSingle()
+        planLabel           = plan?.label ?? ''
+        planDurationFromPlan = plan?.duration_days ?? null
+      }
+
+      const durationDays: number = sub.plan_duration_days ?? planDurationFromPlan ?? 30
+      const now        = new Date()
+      const expiresAt  = new Date(now.getTime() + durationDays * 86_400_000)
+
+      const { error: updateErr } = await admin
+        .from('visibility_subscriptions')
+        .update({
+          status:     'active',
+          started_at: now.toISOString(),
+          expires_at: expiresAt.toISOString(),
+          paid_at:    now.toISOString(),
+        })
+        .eq('id', subId)
+        .eq('status', 'pending')
+
+      if (updateErr) throw updateErr
+
+      const offerType: string = sub.offer_type ?? 'quartier'
+
+      if (offerType === 'recherche') {
+        const { error: rpcErr } = await admin.rpc('grant_recherche_boost', { p_shop_id: sub.shop_id, p_days: durationDays })
+        if (rpcErr) throw rpcErr
+      } else if (offerType === 'carte') {
+        const { error: rpcErr } = await admin.rpc('grant_carte_pin', { p_shop_id: sub.shop_id, p_days: durationDays })
+        if (rpcErr) throw rpcErr
+      } else if (offerType === 'annonce') {
+        const meta = sub.metadata as {
+          format: string; titre?: string | null; corps?: string | null
+          imageUrl?: string | null; durationHours: number; estMin: number; estMax: number
+        } | null
+
+        if (!meta?.format || !meta?.durationHours) {
+          // Fallback crédit si metadata absente
+          const { error: creditErr } = await admin.rpc('increment_shop_credit', {
+            p_shop_id: sub.shop_id,
+            p_amount:  Math.round(Number(sub.amount)),
+          })
+          if (creditErr) throw creditErr
+        } else {
+          const adExpiresAt = new Date(Date.now() + meta.durationHours * 3_600_000).toISOString()
+          const { error: adErr } = await admin
+            .from('sponsored_ads')
+            .insert({
+              shop_id:             sub.shop_id,
+              merchant_id:         sub.merchant_id,
+              format:              meta.format,
+              titre:               meta.titre ?? null,
+              corps:               meta.corps ?? null,
+              image_url:           meta.imageUrl ?? null,
+              budget_credits:      Math.round(Number(sub.amount)),
+              duration_hours:      meta.durationHours,
+              estimated_views_min: meta.estMin,
+              estimated_views_max: meta.estMax,
+              expires_at:          adExpiresAt,
+              status:              'active',
+            })
+          if (adErr) throw adErr
+          console.log('Wave verify: annonce créée pour shop', sub.shop_id, 'expire', adExpiresAt)
+        }
+      } else {
+        // quartier
+        await admin.from('shops').update({
+          is_featured:           true,
+          featured_product_id:   sub.all_products ? null : (sub.product_ids?.[0] ?? sub.product_id ?? null),
+          featured_product_ids:  sub.all_products ? [] : (sub.product_ids ?? []),
+          featured_all_products: !!sub.all_products,
+        }).eq('id', sub.shop_id)
+      }
+
+      // Notification in-app
+      const amountFCFA = (sub.amount as number)?.toLocaleString('fr-FR') ?? ''
+      const OFFER_LABELS: Record<string, string> = {
+        quartier: "l'Offre du Quartier", recherche: 'Booster recherche',
+        carte: 'Épingle dorée (carte)', annonce: 'Annonce Sponsorisée',
+      }
+      const offerLabel = OFFER_LABELS[offerType] ?? offerType
+      const expiryFr   = expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+      const notifBody  = offerType === 'annonce'
+        ? `Votre paiement Wave de ${amountFCFA} FCFA a été confirmé et votre annonce sponsorisée est maintenant en ligne.`
+        : `Forfait « ${planLabel} » (${amountFCFA} FCFA) activé via Wave — ${offerLabel} disponible jusqu'au ${expiryFr}.`
+
+      await admin.from('notifications').insert({
+        user_id: sub.merchant_id,
+        type:    'vip',
+        title:   'Paiement Wave confirmé',
+        body:    notifBody,
+        data:    { subscription_id: sub.id, offer_type: offerType },
+      })
+
+      console.log('Wave verify: abonnement activé —', subId)
+      return json({ paid: true, status: 'active', expiresAt: expiresAt.toISOString() })
+
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message
+        : (err != null && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : 'Erreur interne')
+      console.error('Wave verify erreur:', msg)
+      return json({ error: msg }, 500)
+    }
+  }
+
   // ── GET : redirect navigateur après paiement Orange (callbackSuccessUrl/Cancel) ──
   if (req.method === 'GET') {
-    const url    = new URL(req.url)
-    const result = url.searchParams.get('result') ?? 'cancel'
-    const subIdRaw = url.searchParams.get('sub_id') ?? ''
-    // Valider UUID avant injection dans HTML (protection XSS)
-    const subId = isUUID(subIdRaw) ? subIdRaw : ''
-    const deepLink = result === 'success'
+    const url       = new URL(req.url)
+    const result    = url.searchParams.get('result') ?? 'cancel'
+    const subIdRaw  = url.searchParams.get('sub_id') ?? ''
+    const subId     = isUUID(subIdRaw) ? subIdRaw : ''
+    const isSuccess = result === 'success'
+    const deepLink  = isSuccess
       ? `lassiapp://visibility-success?sub=${encodeURIComponent(subId)}`
       : `lassiapp://visibility-error?sub=${encodeURIComponent(subId)}`
-    const deepLinkEncoded = deepLink.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="0;url=${deepLinkEncoded}">
-<title>LASSI — Redirection</title></head><body>
-<p>Redirection vers l'application LASSI...</p>
-<a href="${deepLinkEncoded}">Ouvrir LASSI</a>
-</body></html>`
+    const deepLinkAttr = deepLink.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    const deepLinkJs   = deepLink.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    const statusEmoji  = isSuccess ? '&#x2705;' : '&#x274C;'
+    const statusMsg    = isSuccess ? 'Paiement r&#233;ussi !' : 'Paiement &#233;chou&#233;'
+    const btnColor     = isSuccess ? '#FDCF34' : '#FF6B6B'
+    const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>LASSI</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+         background:#14152A;color:#fff;min-height:100vh;
+         display:flex;flex-direction:column;align-items:center;
+         justify-content:center;padding:32px 20px;text-align:center}
+    .emoji{font-size:56px;margin-bottom:20px}
+    h1{font-size:22px;font-weight:700;margin-bottom:10px}
+    p{font-size:15px;color:#ccc;margin-bottom:32px}
+    .btn{display:inline-block;padding:16px 36px;border-radius:14px;
+         font-size:16px;font-weight:700;text-decoration:none;
+         background:${btnColor};color:#14152A}
+    .hint{margin-top:20px;font-size:12px;color:#888}
+  </style>
+</head>
+<body>
+  <div class="emoji">${statusEmoji}</div>
+  <h1>${statusMsg}</h1>
+  <p>Redirection vers l&rsquo;application LASSI&hellip;</p>
+  <a class="btn" href="${deepLinkAttr}">Retourner dans LASSI</a>
+  <p class="hint">Si le bouton ne fonctionne pas, fermez ce navigateur et r&eacute;ouvrez LASSI.</p>
+  <script>(function(){try{window.location.href='${deepLinkJs}';}catch(e){}})();</script>
+</body>
+</html>`
     return new Response(html, {
       status: 200,
-      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+      },
     })
   }
 

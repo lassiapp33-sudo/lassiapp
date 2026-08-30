@@ -27,6 +27,19 @@ const OM_WEBHOOK_SECRET         = Deno.env.get('OM_WEBHOOK_SECRET')         ?? '
 const WAVE_API_KEY              = Deno.env.get('WAVE_API_KEY')              ?? '';
 const OM_RETAILER_MSISDN        = Deno.env.get('OM_RETAILER_MSISDN')        ?? '';
 const OM_RETAILER_PIN_ENCRYPTED = Deno.env.get('OM_RETAILER_PIN_ENCRYPTED') ?? '';
+const CRON_SECRET               = Deno.env.get('CRON_SECRET')               ?? '';
+const SUPABASE_URL              = Deno.env.get('SUPABASE_URL')              ?? '';
+
+// Déclenche process-payouts sans attendre (fire-and-forget).
+// Le cron toutes les 2 min reste le filet de sécurité.
+function triggerPayoutsNow(): void {
+  if (!CRON_SECRET || !SUPABASE_URL) return;
+  fetch(`${SUPABASE_URL}/functions/v1/process-payouts`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Cron-Secret': CRON_SECRET },
+    body:    '{}',
+  }).catch(e => console.error('[webhook] trigger process-payouts erreur:', e instanceof Error ? e.message : e));
+}
 const PHONE_RE                  = /^7[05678][0-9]{7}$/;
 
 function genReceiptCode(): string {
@@ -47,27 +60,80 @@ serve(async (req) => {
     return new Response(null, { status: 200 })
   }
 
-  // ── Redirects navigateur Orange (callbackSuccessUrl / callbackCancelUrl) ──
-  // Orange redirige le navigateur sur ces URLs après le paiement web.
-  // On renvoie une page HTML qui redirige vers l'app LASSI via deep link.
+  // ── Redirects navigateur Wave/OM (success_url / error_url) ──────────────
+  // Wave/OM redirigent le navigateur ici après paiement.
+  // JavaScript window.location est plus fiable que meta-refresh pour les
+  // custom URL schemes (lassiapp://) sur Brave/Chrome Android.
   if (req.method === 'GET') {
-    const result = url.searchParams.get('result') ?? 'cancel';
-    const piIdRaw = url.searchParams.get('pi_id') ?? '';
-    // Valider UUID avant toute injection dans HTML (protection XSS)
-    const piId = isUUID(piIdRaw) ? piIdRaw : '';
-    const deepLink = result === 'success'
-      ? `lassiapp://paiement/succes?pi=${encodeURIComponent(piId)}`
-      : `lassiapp://paiement/echec?pi=${encodeURIComponent(piId)}`;
-    const deepLinkEncoded = deepLink.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="0;url=${deepLinkEncoded}">
-<title>LASSI — Redirection</title></head><body>
-<p>Redirection vers l'application LASSI...</p>
-<a href="${deepLinkEncoded}">Ouvrir LASSI</a>
-</body></html>`;
+    // Nouveau format : ?r=lassiapp%3A%2F%2F... (deep link encodé, valide pour tous les types)
+    const rRaw = url.searchParams.get('r') ?? '';
+    const rDecoded = decodeURIComponent(rRaw);
+    let deepLink: string;
+    let isSuccess = true;
+    if (rDecoded.startsWith('lassiapp://')) {
+      deepLink = rDecoded;
+      isSuccess = !rDecoded.includes('/echec');
+      // 302 redirect direct → le navigateur suit AVANT de rendre la page.
+      // Fiable sur iOS Safari et Android Chrome, même depuis un WKWebView/CCT.
+      return new Response(null, {
+        status: 302,
+        headers: {
+          'Location': deepLink,
+          'Cache-Control': 'no-store',
+        },
+      });
+    } else {
+      // Ancien format : ?result=success&pi_id=... (OM / fallback)
+      const result = url.searchParams.get('result') ?? 'cancel';
+      const piIdRaw = url.searchParams.get('pi_id') ?? '';
+      const piId = isUUID(piIdRaw) ? piIdRaw : '';
+      isSuccess = result === 'success';
+      deepLink = isSuccess
+        ? `lassiapp://paiement/succes?pi=${encodeURIComponent(piId)}`
+        : `lassiapp://paiement/echec?pi=${encodeURIComponent(piId)}`;
+    }
+    // Ancien format : page HTML de repli
+    const deepLinkAttr = deepLink.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    const statusEmoji  = isSuccess ? '&#x2705;' : '&#x274C;';
+    const statusMsg    = isSuccess ? 'Paiement r&#233;ussi' : 'Paiement &#233;chou&#233;';
+    const btnColor     = isSuccess ? '#FDCF34' : '#FF6B6B';
+
+    const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>LASSI</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+         background:#14152A;color:#fff;min-height:100vh;
+         display:flex;flex-direction:column;align-items:center;
+         justify-content:center;padding:32px 20px;text-align:center}
+    .emoji{font-size:56px;margin-bottom:20px}
+    h1{font-size:22px;font-weight:700;margin-bottom:10px}
+    p{font-size:15px;color:#ccc;margin-bottom:32px}
+    .btn{display:inline-block;padding:18px 36px;border-radius:14px;
+         font-size:17px;font-weight:700;text-decoration:none;
+         background:${btnColor};color:#14152A;letter-spacing:.3px;
+         -webkit-tap-highlight-color:transparent}
+    .hint{margin-top:24px;font-size:13px;color:#888;line-height:1.6}
+  </style>
+</head>
+<body>
+  <div class="emoji">${statusEmoji}</div>
+  <h1>${statusMsg}</h1>
+  <p>Appuyez sur le bouton pour retourner dans LASSI.</p>
+  <a class="btn" href="${deepLinkAttr}">Retourner dans LASSI</a>
+  <p class="hint">Si le bouton ne fonctionne pas,<br>fermez cette page et rouvrez LASSI.</p>
+</body>
+</html>`;
     return new Response(html, {
       status: 200,
-      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+      },
     });
   }
 
@@ -370,14 +436,24 @@ serve(async (req) => {
             .update({ paiement_statut: 'paye' })
             .eq('paiement_ref', piId);
 
-          // Notifier le gérant
+          // Notifier le gérant : push bannière + in-app
           if (piData.prestataire_id) {
-            await sendPushToUser(supabase, piData.prestataire_id, {
-              title:     'Nouvelle réservation de table',
-              body:      'Un client vient de payer son acompte. Acceptez ou refusez la réservation.',
-              data:      { type: 'table_reservation_nouvelle', pi_id: String(piId) },
-              channelId: 'commandes',
-            });
+            const gerantTitle = 'Nouvelle réservation de table'
+            const gerantBody  = 'Un client vient de payer son acompte. Acceptez ou refusez la réservation.'
+            await Promise.allSettled([
+              sendPushToUser(supabase, piData.prestataire_id, {
+                title: gerantTitle, body: gerantBody,
+                data: { type: 'table_reservation_nouvelle', pi_id: String(piId) },
+                channelId: 'commandes',
+              }),
+              supabase.from('notifications').insert({
+                user_id: piData.prestataire_id,
+                type:    'order',
+                title:   gerantTitle,
+                body:    gerantBody,
+                data:    { type: 'table_reservation_nouvelle', pi_id: String(piId) },
+              }),
+            ])
           }
 
           console.log('[webhook-payment] table_reservation confirmée, payout suspendu pi', piId);
@@ -459,7 +535,7 @@ serve(async (req) => {
             .maybeSingle();
 
           if (!existingAbo) {
-            await supabase.from('fitness_abonnements_clients').insert({
+            const { error: aboInsertErr } = await supabase.from('fitness_abonnements_clients').insert({
               offre_id:          offreId,
               client_id:         piData.client_id,
               prestataire_id:    piData.prestataire_id,
@@ -470,6 +546,9 @@ serve(async (req) => {
               statut:            'actif',
               payment_intent_id: piId,
             });
+            if (aboInsertErr) {
+              console.error('[webhook-fitness-om] insert erreur:', aboInsertErr.message);
+            } else {
 
             const clientBody = `Ton abonnement « ${offreNom} » est actif jusqu'au ${dateExp.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`
 
@@ -530,6 +609,7 @@ serve(async (req) => {
             }
 
             console.log('[webhook-payment] fitness abonnement activé pi', piId, 'client', piData.client_id);
+            } // end else (insert OK)
           }
         }
       } catch (fitErr) {
@@ -559,6 +639,11 @@ serve(async (req) => {
       } catch {
         // best-effort
       }
+    }
+
+    // Reversement immédiat — sans attendre le cron 2 min
+    if (result?.ok && !result?.already_processed && !result?.disputed) {
+      triggerPayoutsNow();
     }
 
     // Orange attend toujours 200 (sinon elle retry en boucle)
@@ -684,7 +769,113 @@ serve(async (req) => {
   if (result?.disputed) {
     console.error('[ALERTE PAIEMENT] montant incohérent — payment_intent', piId, JSON.stringify(result));
   } else if (!result?.ok && result?.error === 'payment_intent_not_found') {
-    console.error('[webhook] payment_intent introuvable pour', piId, 'source', source);
+    // Peut être un abonnement visibilité (client_reference = sub.id dans le checkout Wave)
+    if (isSuccess) {
+      try {
+        const { data: visSub } = await supabase
+          .from('visibility_subscriptions')
+          .select('id, shop_id, merchant_id, status, offer_type, amount, plan_id, plan_duration_days, product_ids, product_id, all_products, metadata, transaction_id')
+          .eq('id', String(piId))
+          .eq('status', 'pending')
+          .maybeSingle();
+
+        if (visSub) {
+          const expectedAmount = Math.round(Number(visSub.amount));
+          if (receivedAmount !== null && receivedAmount !== expectedAmount) {
+            console.error('[webhook-visibility] montant incohérent Wave', piId,
+              { received: receivedAmount, expected: expectedAmount });
+          } else {
+            const durationDays: number = visSub.plan_duration_days ?? 30;
+            const now       = new Date();
+            const expiresAt = new Date(now.getTime() + durationDays * 86_400_000);
+
+            await supabase.from('visibility_subscriptions')
+              .update({
+                status:         'active',
+                started_at:     now.toISOString(),
+                expires_at:     expiresAt.toISOString(),
+                paid_at:        now.toISOString(),
+                transaction_id: externalRef ?? visSub.transaction_id,
+              })
+              .eq('id', String(piId))
+              .eq('status', 'pending');
+
+            const offerType = (visSub.offer_type as string) ?? 'quartier';
+
+            if (offerType === 'recherche') {
+              await supabase.rpc('grant_recherche_boost',
+                { p_shop_id: visSub.shop_id, p_days: durationDays }).catch(() => null);
+            } else if (offerType === 'carte') {
+              await supabase.rpc('grant_carte_pin',
+                { p_shop_id: visSub.shop_id, p_days: durationDays }).catch(() => null);
+            } else if (offerType === 'annonce') {
+              type AdMeta = { format: string; titre?: string | null; corps?: string | null; imageUrl?: string | null; durationHours: number; estMin: number; estMax: number };
+              const meta = visSub.metadata as AdMeta | null;
+              if (meta?.format && meta.durationHours) {
+                const adExp = new Date(Date.now() + meta.durationHours * 3_600_000).toISOString();
+                await supabase.from('sponsored_ads').insert({
+                  shop_id: visSub.shop_id, merchant_id: visSub.merchant_id,
+                  format: meta.format, titre: meta.titre ?? null, corps: meta.corps ?? null,
+                  image_url: meta.imageUrl ?? null,
+                  budget_credits: Math.round(Number(visSub.amount)),
+                  duration_hours: meta.durationHours,
+                  estimated_views_min: meta.estMin, estimated_views_max: meta.estMax,
+                  expires_at: adExp, status: 'active',
+                }).catch(() => null);
+              } else {
+                await supabase.rpc('increment_shop_credit',
+                  { p_shop_id: visSub.shop_id, p_amount: Math.round(Number(visSub.amount)) }).catch(() => null);
+              }
+            } else {
+              // quartier
+              await supabase.from('shops').update({
+                is_featured:           true,
+                featured_product_id:   visSub.all_products ? null : ((visSub.product_ids as string[] | null)?.[0] ?? (visSub.product_id as string | null) ?? null),
+                featured_product_ids:  visSub.all_products ? [] : ((visSub.product_ids as string[] | null) ?? []),
+                featured_all_products: !!(visSub.all_products as boolean),
+              }).eq('id', visSub.shop_id).catch(() => null);
+
+              const paidIds: string[] = visSub.all_products ? [] : ((visSub.product_ids as string[] | null) ?? []);
+              if (paidIds.length > 0) {
+                const { data: prodDetails } = await supabase
+                  .from('products').select('id, name, price, emoji, photo_url').in('id', paidIds);
+                if (prodDetails?.length) {
+                  await supabase.from('carrousel_offre_quartier').delete()
+                    .eq('prestataire_id', visSub.merchant_id).eq('is_paid_pack', true);
+                  const rows = paidIds.map((id, idx) => {
+                    const p = (prodDetails as { id: string; name: string; price: number; emoji?: string; photo_url?: string }[]).find(pr => pr.id === id);
+                    if (!p) return null;
+                    return { prestataire_id: visSub.merchant_id, product_id: id, nom: p.name, prix: p.price,
+                      image_url: typeof p.photo_url === 'string' && p.photo_url.startsWith('http') ? p.photo_url : (p.emoji ?? ''),
+                      rang_prestataire: null, ordre: idx, periode: 'paid', est_actif: true, is_paid_pack: true };
+                  }).filter(Boolean);
+                  if (rows.length) await supabase.from('carrousel_offre_quartier').insert(rows).catch(() => null);
+                }
+              }
+            }
+
+            const OFFER_LBL: Record<string, string> = {
+              quartier: "l'Offre du Quartier", recherche: 'Booster recherche',
+              carte: 'Épingle dorée (carte)', annonce: 'Annonce Sponsorisée',
+            };
+            await supabase.from('notifications').insert({
+              user_id: visSub.merchant_id, type: 'vip',
+              title: 'Félicitations pour votre achat',
+              body: `Votre abonnement « ${OFFER_LBL[offerType] ?? offerType} » est maintenant actif jusqu'au ${expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`,
+              data: { subscription_id: String(piId), offer_type: offerType },
+            }).catch(() => null);
+
+            console.log('[webhook-visibility] abonnement activé via Wave —', piId, 'type', offerType);
+          }
+        } else {
+          console.error('[webhook] payment_intent introuvable pour', piId, 'source', source);
+        }
+      } catch (visErr) {
+        console.error('[webhook-visibility] erreur activation:', visErr instanceof Error ? visErr.message : visErr);
+      }
+    } else {
+      console.error('[webhook] payment_intent introuvable pour', piId, 'source', source);
+    }
   } else if (result?.already_processed) {
     console.log('[webhook] événement déjà traité (idempotence) — pi', piId);
   } else if (result?.ignored) {
@@ -885,6 +1076,68 @@ serve(async (req) => {
         // best-effort
       }
     }
+
+    // ── Fitness abonnement Wave ───────────────────────────────────────────────
+    if (!result?.order_id && !result?.reservation_id) {
+      try {
+        const { data: piDataW } = await supabase
+          .from('payment_intents')
+          .select('type, metadata, client_id, prestataire_id, montant_total')
+          .eq('id', piId)
+          .maybeSingle();
+
+        if (!['table_reservation', 'livraison'].includes(piDataW?.type ?? '') && piDataW?.metadata) {
+          const metaW       = piDataW.metadata as Record<string, unknown>;
+          const offreIdW    = metaW.offre_id   as string;
+          const offreNomW   = metaW.offre_nom  as string;
+          const dureeJoursW = Number(metaW.duree_jours ?? 30);
+          const dateAchatW  = new Date();
+          const dateExpW    = new Date(dateAchatW.getTime() + dureeJoursW * 86_400_000);
+
+          if (offreIdW && offreNomW) {
+            const { data: existingAboW } = await supabase
+              .from('fitness_abonnements_clients')
+              .select('id')
+              .eq('payment_intent_id', piId)
+              .maybeSingle();
+
+            if (!existingAboW) {
+              const { error: aboErrW } = await supabase.from('fitness_abonnements_clients').insert({
+                offre_id:          offreIdW,
+                client_id:         piDataW.client_id,
+                prestataire_id:    piDataW.prestataire_id,
+                nom_offre:         offreNomW,
+                prix_paye:         piDataW.montant_total,
+                date_achat:        dateAchatW.toISOString(),
+                date_expiration:   dateExpW.toISOString(),
+                statut:            'actif',
+                payment_intent_id: piId,
+              });
+              if (aboErrW) {
+                console.error('[webhook-fitness-wave] insert erreur:', aboErrW.message);
+              } else {
+                const clientBodyW = `Ton abonnement « ${offreNomW} » est actif jusqu'au ${dateExpW.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`;
+                await supabase.from('notifications').insert({
+                  user_id: piDataW.client_id,
+                  type:    'payment',
+                  title:   'Abonnement activé',
+                  body:    clientBodyW,
+                  data:    { type: 'fitness_abonnement' },
+                });
+                console.log('[webhook-fitness-wave] fitness abonnement activé pi', piId, 'client', piDataW.client_id);
+              }
+            }
+          }
+        }
+      } catch (fitErrW) {
+        console.error('[webhook-fitness-wave]', fitErrW instanceof Error ? fitErrW.message : fitErrW);
+      }
+    }
+  }
+
+  // Reversement immédiat — sans attendre le cron 2 min
+  if (result?.ok && !result?.already_processed && !result?.ignored && !result?.disputed) {
+    triggerPayoutsNow();
   }
 
   // 8. Répondre 200 OK rapidement à Wave/OM dans tous les cas gérés

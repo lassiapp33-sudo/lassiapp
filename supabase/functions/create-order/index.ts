@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { shopId, items, note, orderType, idempotencyKey, voiceNoteUrl, paymentMethod } = await req.json()
+    const { shopId, items, note, orderType, idempotencyKey, voiceNoteUrl, paymentMethod, livraisonFee } = await req.json()
     if (!shopId || !Array.isArray(items) || items.length === 0) {
       return new Response(JSON.stringify({ error: 'shopId et items requis' }), {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
@@ -293,6 +293,10 @@ Deno.serve(async (req) => {
     const { data: profile } = await admin
       .from('profiles').select('name').eq('id', user.id).maybeSingle()
 
+    const safeLivraisonFee = Number.isInteger(livraisonFee) && livraisonFee >= 0 && livraisonFee <= 100000
+      ? livraisonFee
+      : 0
+
     const { data: orderResult, error: orderError } = await admin
       .rpc('create_order_atomic', {
         p_shop_id:         shopId,
@@ -306,6 +310,7 @@ Deno.serve(async (req) => {
         p_idempotency_key: idempotencyKey ?? null,
         p_items:           orderItems,
         p_pay_method:      ['wave', 'om', 'cash'].includes(paymentMethod) ? paymentMethod : 'wave',
+        p_livraison_fee:   safeLivraisonFee,
       })
 
     if (orderError) {

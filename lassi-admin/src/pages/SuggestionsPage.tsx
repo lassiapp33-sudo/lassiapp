@@ -55,7 +55,7 @@ const SOUS_CATEGORIES: { id: string; label: string; categorieId: string }[] = [
   { id: 'tangana',                     label: 'Tangana',                        categorieId: 'tangana'   },
   { id: 'ndeki',                       label: 'Ndéki (Mama)',                   categorieId: 'tangana'   },
   { id: 'soupe',                       label: 'Soupe',                          categorieId: 'tangana'   },
-  { id: 'cafe_wass',                   label: 'Café ak Wass',                   categorieId: 'tangana'   },
+  { id: 'cafe_wass',                   label: 'Café ak Thé',                    categorieId: 'tangana'   },
   { id: 'beignet_fataya',              label: 'Beignet ak Fataya',              categorieId: 'tangana'   },
   // ── Boulangeries (bakery) ─────────────────────────────────────────────────
   { id: 'boulangerie',                 label: 'Boulangerie',                    categorieId: 'bakery'    },

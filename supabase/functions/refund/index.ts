@@ -16,7 +16,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { isUUID, isSafeString } from '../_shared/validation.ts';
 import { corsHeaders as buildCorsHeaders } from '../_shared/cors.ts';
-import { buildWaveSignature } from '../_shared/waveSign.ts';
+import { waveRequestRefund } from '../_shared/waveProxy.ts';
 
 const WAVE_API_KEY  = Deno.env.get('WAVE_API_KEY') ?? '';
 // OM Sonatel n'expose pas d'endpoint de remboursement dans son API v1.
@@ -175,21 +175,11 @@ async function refundWave(params: { paymentIntentId: string; externalRef: string
   // amount en string selon la spec Wave Checkout API
   const refundBody = JSON.stringify({ amount: String(params.montant) });
 
-  const refundHeaders: Record<string, string> = {
-    'Authorization':   `Bearer ${WAVE_API_KEY}`,
-    'Content-Type':    'application/json',
-    // Idempotence côté fournisseur : un retry réseau ne doit jamais
-    // déclencher un second remboursement pour le même payment_intent.
-    'Idempotency-Key': `refund_${params.paymentIntentId}`,
-  };
-  const waveSig = await buildWaveSignature(refundBody);
-  if (waveSig) refundHeaders['Wave-Signature'] = waveSig;
-
-  const response = await fetch(`https://api.wave.com/v1/checkout/sessions/${params.externalRef}/refund`, {
-    method:  'POST',
-    headers: refundHeaders,
-    body:    refundBody,
-  });
+  const response = await waveRequestRefund(
+    params.externalRef,
+    refundBody,
+    `refund_${params.paymentIntentId}`,
+  );
 
   if (!response.ok) {
     const err = await response.json();

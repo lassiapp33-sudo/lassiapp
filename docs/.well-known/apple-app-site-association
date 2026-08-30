@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "8DH7238995.com.lassiapp.lassiapp",
+        "paths": ["/paiement/*"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LASSI — Paiement confirmé</title>
+  <style>
+    body { margin: 0; background: #14152A; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; }
+    .box { text-align: center; color: #FDCF34; padding: 32px; }
+    p { color: #9A9EC4; margin-top: 12px; font-size: 14px; }
+    a { display: inline-block; margin-top: 24px; background: #FDCF34; color: #14152A; padding: 14px 28px; border-radius: 14px; font-weight: bold; text-decoration: none; }
+  </style>
+  <script>
+    window.onload = function() {
+      var params = window.location.search;
+      window.location.replace('lassiapp://paiement/succes' + params);
+    };
+  </script>
+</head>
+<body>
+  <div class="box">
+    <div style="font-size:48px">✅</div>
+    <h2>Paiement confirmé</h2>
+    <p>Retourne dans l'application LASSI.</p>
+    <a href="javascript:void(0)" onclick="window.location.replace('lassiapp://paiement/succes' + window.location.search)">Ouvrir LASSI</a>
+  </div>
+</body>
+</html>

@@ -6,7 +6,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getOmToken, OM_BASE_URL } from './omAuth.ts'
-import { buildWaveSignature } from './waveSign.ts'
+import { waveRequestPayout } from './waveProxy.ts'
 import { sendPushToUser } from './push.ts'
 
 const PHONE_RE = /^7[05678][0-9]{7}$/
@@ -69,14 +69,7 @@ export async function triggerTerrainPayout(
         mobile:           `+221${phone}`,
         client_reference: idempKey,
       })
-      const headers: Record<string, string> = {
-        'Authorization':   `Bearer ${params.WAVE_API_KEY}`,
-        'Content-Type':    'application/json',
-        'Idempotency-Key': idempKey,
-      }
-      const sig = await buildWaveSignature(body)
-      if (sig) headers['Wave-Signature'] = sig
-      const res  = await fetch('https://api.wave.com/v1/payout', { method: 'POST', headers, body })
+      const res  = await waveRequestPayout(body, idempKey)
       const data = await res.json() as Record<string, unknown>
       if (!res.ok) throw new Error(`Wave payout HTTP ${res.status}: ${JSON.stringify(data)}`)
       if (data.status === 'failed' || data.payout_error) {

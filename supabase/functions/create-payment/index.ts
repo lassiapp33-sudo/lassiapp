@@ -244,8 +244,8 @@ async function initiateWavePayment(params: {
   const waveBody = JSON.stringify({
     currency:         'XOF',
     amount:           String(params.montantTotal),
-    error_url:        `lassiapp://paiement/echec?pi=${params.piId}`,
-    success_url:      `lassiapp://paiement/succes?pi=${params.piId}`,
+    success_url:      `https://lassi.tech/paiement/succes?pi=${params.piId}`,
+    error_url:        `https://lassi.tech/paiement/echec?pi=${params.piId}`,
     client_reference: params.piId,
   });
 

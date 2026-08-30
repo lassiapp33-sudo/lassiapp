@@ -4,7 +4,7 @@ import { corsHeaders } from '../_shared/cors.ts'
 import { calculateOffreQuartierPrice } from '../_shared/offreQuartierPricing.ts'
 
 import { getOmToken, OM_BASE_URL } from '../_shared/omAuth.ts'
-import { buildWaveSignature } from '../_shared/waveSign.ts'
+import { callWaveCheckout } from '../_shared/waveProxy.ts'
 
 type OfferType = 'quartier' | 'recherche' | 'carte' | 'annonce'
 
@@ -117,13 +117,24 @@ Deno.serve(async (req) => {
 
       if (!wantsAllProducts) {
         const uniqueIds = Array.from(new Set(productIds as string[]))
-        const { data: ownedProducts } = await admin
-          .from('products')
-          .select('id')
-          .eq('shop_id', shop.id)
-          .in('id', uniqueIds)
 
-        if (!ownedProducts || ownedProducts.length !== uniqueIds.length) {
+        // Valider les IDs dans products, terrains ET fitness_offres
+        // (les prestataires terrain/fitness n'ont pas d'items dans `products`)
+        const [
+          { data: ownedProducts },
+          { data: ownedTerrains },
+          { data: ownedFitness },
+        ] = await Promise.all([
+          admin.from('products').select('id').eq('shop_id', shop.id).in('id', uniqueIds),
+          admin.from('terrains').select('id').eq('merchant_id', user.id).in('id', uniqueIds),
+          admin.from('fitness_offres').select('id').eq('prestataire_id', user.id).in('id', uniqueIds),
+        ])
+        const validSet = new Set([
+          ...(ownedProducts  ?? []).map((p: { id: string }) => p.id),
+          ...(ownedTerrains  ?? []).map((t: { id: string }) => t.id),
+          ...(ownedFitness   ?? []).map((f: { id: string }) => f.id),
+        ])
+        if (uniqueIds.some(id => !validSet.has(id))) {
           return json({ error: 'Produit invalide' }, 400)
         }
         featuredProductIds.push(...uniqueIds)
@@ -212,24 +223,12 @@ Deno.serve(async (req) => {
       const waveBody = JSON.stringify({
         currency:         'XOF',
         amount:           String(finalPrice),
-        success_url:      `${APP_BASE_URL}visibility-success?sub=${sub.id}`,
-        error_url:        `${APP_BASE_URL}visibility-error?sub=${sub.id}`,
+        success_url:      `${Deno.env.get('SUPABASE_URL')}/functions/v1/webhook-payment?r=${encodeURIComponent(`lassiapp://visibility-success?sub=${sub.id}`)}`,
+        error_url:        `${Deno.env.get('SUPABASE_URL')}/functions/v1/webhook-payment?r=${encodeURIComponent(`lassiapp://visibility-error?sub=${sub.id}`)}`,
         client_reference: sub.id,
       })
 
-      const waveHeaders: Record<string, string> = {
-        'Authorization':   `Bearer ${WAVE_API_KEY}`,
-        'Content-Type':    'application/json',
-        'Idempotency-Key': sub.id,
-      }
-      const waveSig = await buildWaveSignature(waveBody)
-      if (waveSig) waveHeaders['Wave-Signature'] = waveSig
-
-      const waveRes = await fetch('https://api.wave.com/v1/checkout/sessions', {
-        method:  'POST',
-        headers: waveHeaders,
-        body:    waveBody,
-      })
+      const waveRes = await callWaveCheckout(waveBody, sub.id)
       const waveData = await waveRes.json()
       if (!waveRes.ok) throw new Error(waveData.message ?? 'Erreur Wave')
       paymentUrl = waveData.wave_launch_url ?? ''
