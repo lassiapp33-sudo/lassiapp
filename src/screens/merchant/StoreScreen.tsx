@@ -183,6 +183,8 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   const [locZone, setLocZone] = useState<string | null>(null);
   const [manualZoneMode, setManualZoneMode] = useState(false);
   const [manualZoneText, setManualZoneText] = useState('');
+  const [zoneSuggestions, setZoneSuggestions] = useState<{ label: string; detail: string }[]>([]);
+  const [zoneSearching, setZoneSearching] = useState(false);
 
   // ── Infos boutique (description / adresse / téléphone) ─────────────────────
   const [desc, setDesc] = useState(profile.description ?? '');
@@ -338,8 +340,8 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     }
   };
 
-  const handleSaveManualZone = async () => {
-    const zone = manualZoneText.trim();
+  const handleSaveManualZone = async (zoneOverride?: string) => {
+    const zone = (zoneOverride ?? manualZoneText).trim();
     if (!zone) return;
     const { shopId } = useShopStore.getState();
     if (!shopId) return;
@@ -349,11 +351,42 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
       setLocZone(zone);
       setManualZoneMode(false);
       setManualZoneText('');
+      setZoneSuggestions([]);
     } catch {
       Alert.alert('Erreur', "Impossible d'enregistrer la zone. Réessaie.");
     } finally {
       setLocLoading(false);
     }
+  };
+
+  const zoneSearchTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleZoneTextChange = (text: string) => {
+    setManualZoneText(text);
+    if (zoneSearchTimer.current) clearTimeout(zoneSearchTimer.current);
+    if (text.trim().length < 2) { setZoneSuggestions([]); return; }
+    zoneSearchTimer.current = setTimeout(async () => {
+      setZoneSearching(true);
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&countrycodes=sn&format=json&addressdetails=1&limit=6&accept-language=fr`,
+          { headers: { 'User-Agent': 'LassiApp/1.0' } },
+        );
+        if (!res.ok) return;
+        const results = await res.json() as Array<{
+          display_name: string;
+          address: Record<string, string>;
+        }>;
+        const suggestions = results.map(r => {
+          const a = r.address;
+          const label = a.suburb ?? a.neighbourhood ?? a.quarter ?? a.village ?? a.town ?? a.city ?? a.county ?? r.display_name.split(',')[0];
+          const detail = r.display_name.split(',').slice(0, 3).join(', ');
+          return { label: label.trim(), detail };
+        }).filter((s, i, arr) => arr.findIndex(x => x.label === s.label) === i);
+        setZoneSuggestions(suggestions);
+      } catch { /* silence */ } finally {
+        setZoneSearching(false);
+      }
+    }, 350);
   };
 
   const handleDeleteProduct = (id: string) => {
@@ -872,24 +905,42 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
               <View style={styles.manualZoneBox}>
                 <TextInput
                   style={styles.manualZoneInput}
-                  placeholder="Ex : Guédiawaye, Parcelles Assainies…"
+                  placeholder="Ex : Grand Mbao, Liberté 5, Thiès…"
                   placeholderTextColor={colors.muted}
                   value={manualZoneText}
-                  onChangeText={setManualZoneText}
+                  onChangeText={handleZoneTextChange}
                   autoFocus
                   returnKeyType="done"
-                  onSubmitEditing={handleSaveManualZone}
+                  onSubmitEditing={() => handleSaveManualZone()}
                 />
+                {zoneSearching && (
+                  <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 4 }} />
+                )}
+                {zoneSuggestions.length > 0 && (
+                  <View style={styles.zoneSuggestList}>
+                    {zoneSuggestions.map((s, i) => (
+                      <TouchableOpacity
+                        key={i}
+                        style={styles.zoneSuggestItem}
+                        onPress={() => handleSaveManualZone(s.label)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.zoneSuggestLabel}>{s.label}</Text>
+                        <Text style={styles.zoneSuggestDetail} numberOfLines={1}>{s.detail}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
                 <View style={styles.manualZoneActions}>
                   <TouchableOpacity
                     style={[styles.manualZoneBtn, styles.manualZoneBtnCancel]}
-                    onPress={() => setManualZoneMode(false)}
+                    onPress={() => { setManualZoneMode(false); setZoneSuggestions([]); }}
                   >
                     <Text style={styles.manualZoneBtnTxtCancel}>Annuler</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.manualZoneBtn, { opacity: manualZoneText.trim() ? 1 : 0.4 }]}
-                    onPress={handleSaveManualZone}
+                    onPress={() => handleSaveManualZone()}
                     disabled={!manualZoneText.trim() || locLoading}
                   >
                     <Text style={styles.manualZoneBtnTxt}>Enregistrer</Text>
@@ -1241,6 +1292,31 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontFamily: fonts.ui,
     fontSize: 13,
+  },
+  zoneSuggestList: {
+    borderRadius: radius.sm,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: 'rgba(253,207,52,.2)',
+    overflow: 'hidden',
+  },
+  zoneSuggestItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,.06)',
+  },
+  zoneSuggestLabel: {
+    color: colors.white,
+    fontFamily: fonts.ui,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  zoneSuggestDetail: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 11,
+    marginTop: 1,
   },
 
   // Section Offres d'abonnement (fitness)
