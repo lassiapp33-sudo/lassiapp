@@ -10,6 +10,8 @@ import {
   TextInput,
   Image,
   KeyboardAvoidingView,
+  Modal,
+  Pressable,
   Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -152,10 +154,13 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   const loadMyShop = useShopStore(s => s.loadMyShop);
   const removeCategory = useShopStore(s => s.removeCategory);
   const purgeCategoryAndProducts = useShopStore(s => s.purgeCategoryAndProducts);
+  const renameCategory = useShopStore(s => s.renameCategory);
   const createMissingShop = useShopStore(s => s.createMissingShop);
 
   // ── Catalogue ─────────────────────────────────────────────────────────────
   const [activeCat, setActiveCat] = useState('petitdej');
+  const [renameTarget, setRenameTarget] = useState<{ id: string; label: string } | null>(null);
+  const [renameText, setRenameText] = useState('');
   const [editTarget, setEditTarget] = useState<StoreProduct | null>(null);
   const [showSheet, setShowSheet] = useState(false);
   const [sheetDefaultCat, setSheetDefaultCat] = useState<string | undefined>(undefined);
@@ -458,6 +463,30 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     } else {
       doDelete();
     }
+  };
+
+  const handleRenameCat = (catId: string) => {
+    const cat = categories.find(c => c.id === catId);
+    if (!cat) return;
+    setRenameText(cat.label);
+    setRenameTarget({ id: catId, label: cat.label });
+  };
+
+  const handleConfirmRename = async () => {
+    if (!renameTarget || !renameText.trim()) return;
+    try {
+      await renameCategory(renameTarget.id, renameText.trim());
+      const newId = renameText.trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '') || renameTarget.id;
+      setActiveCat(newId);
+    } catch {
+      Alert.alert('Erreur', 'Impossible de renommer cet onglet. Réessaie.');
+    }
+    setRenameTarget(null);
   };
 
   const handleSaveDetails = async () => {
@@ -813,6 +842,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
               active={activeCat}
               onSelect={setActiveCat}
               onDeleteCat={handleDeleteCat}
+              onRenameCat={handleRenameCat}
             />
 
             {/* ── Contenu de l'onglet actif (produits — masqué pour onglets abonnement) ── */}
@@ -980,6 +1010,39 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
       />
 
     </LassiScreen>
+
+    {/* ── Modal renommage catalogue ─────────────────────────────────────── */}
+    <Modal
+      visible={!!renameTarget}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setRenameTarget(null)}
+    >
+      <Pressable style={styles.renameOverlay} onPress={() => setRenameTarget(null)}>
+        <Pressable style={styles.renameCard} onPress={e => e.stopPropagation()}>
+          <Text style={styles.renameTitle}>Renommer le catalogue</Text>
+          <TextInput
+            style={styles.renameInput}
+            value={renameText}
+            onChangeText={setRenameText}
+            autoFocus
+            selectTextOnFocus
+            returnKeyType="done"
+            onSubmitEditing={handleConfirmRename}
+            placeholderTextColor={colors.muted}
+          />
+          <View style={styles.renameBtns}>
+            <TouchableOpacity style={styles.renameBtnCancel} onPress={() => setRenameTarget(null)}>
+              <Text style={styles.renameBtnCancelTxt}>Annuler</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.renameBtnOk} onPress={handleConfirmRename}>
+              <Text style={styles.renameBtnOkTxt}>Renommer</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+
     </KeyboardAvoidingView>
   );
 }
@@ -1405,5 +1468,66 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 10,
     marginTop: 1,
+  },
+
+  renameOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  renameCard: {
+    width: '82%',
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    padding: 20,
+    gap: 14,
+  },
+  renameTitle: {
+    color: colors.white,
+    fontFamily: fonts.title,
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  renameInput: {
+    backgroundColor: colors.bg,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    color: colors.white,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  renameBtns: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  renameBtnCancel: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  renameBtnCancelTxt: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 14,
+  },
+  renameBtnOk: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+  },
+  renameBtnOkTxt: {
+    color: colors.bg,
+    fontFamily: fonts.title,
+    fontSize: 14,
   },
 });

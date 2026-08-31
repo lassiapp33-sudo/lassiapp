@@ -55,6 +55,7 @@ interface ShopState {
   updatePaymentMethods: (methods: ('wave' | 'om')[]) => Promise<void>;
 
   addCategory: (label: string) => void;
+  renameCategory: (oldId: string, newLabel: string) => Promise<void>;
   removeCategory: (id: string) => Promise<void>;
   purgeCategoryAndProducts: (id: string) => Promise<void>;
 
@@ -424,6 +425,37 @@ const useShopStore = create<ShopState>()((set, get) => ({
     set(state => ({
       categories: [...state.categories, { id, label, emoji: '📦' }],
     }));
+  },
+
+  renameCategory: async (oldId, newLabel) => {
+    const trimmed = newLabel.trim();
+    if (!trimmed) return;
+    const newId =
+      trimmed
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '') || `cat_${Date.now()}`;
+    const { categories, products } = get();
+    if (newId === oldId) {
+      set({ categories: categories.map(c => c.id === oldId ? { ...c, label: trimmed } : c) });
+      return;
+    }
+    if (categories.find(c => c.id === newId)) return;
+    const toUpdate = products.filter(p => p.category === oldId);
+    const prevCats = categories;
+    const prevProds = products;
+    set({
+      categories: categories.map(c => c.id === oldId ? { ...c, id: newId, label: trimmed } : c),
+      products: products.map(p => p.category === oldId ? { ...p, category: newId } : p),
+    });
+    try {
+      await Promise.all(toUpdate.map(p => productsService.updateProduct(p.id, { ...p, category: newId })));
+    } catch (err) {
+      set({ categories: prevCats, products: prevProds });
+      throw err;
+    }
   },
 
   removeCategory: async catId => {

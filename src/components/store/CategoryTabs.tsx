@@ -8,9 +8,10 @@ interface Props {
   active: string;
   onSelect: (id: string) => void;
   onDeleteCat?: (id: string) => void;
+  onRenameCat?: (id: string) => void;
 }
 
-export default function CategoryTabs({ categories, active, onSelect, onDeleteCat }: Props) {
+export default function CategoryTabs({ categories, active, onSelect, onDeleteCat, onRenameCat }: Props) {
   const canDelete = !!onDeleteCat && categories.length > 1;
 
   return (
@@ -31,6 +32,16 @@ export default function CategoryTabs({ categories, active, onSelect, onDeleteCat
             <Text style={[styles.pillTxt, on ? styles.pillTxtOn : styles.pillTxtOff]}>
               {cat.label}
             </Text>
+            {on && onRenameCat && (
+              <TouchableOpacity
+                style={[styles.delBtn, styles.delBtnOn]}
+                onPress={() => onRenameCat(cat.id)}
+                hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.delTxt, styles.delTxtOn]}>✎</Text>
+              </TouchableOpacity>
+            )}
             {canDelete && (
               <TouchableOpacity
                 style={[styles.delBtn, on && styles.delBtnOn]}
