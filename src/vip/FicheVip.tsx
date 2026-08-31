@@ -35,7 +35,7 @@ import { calculerPrixClientVip } from '../config/payment';
 // ─── CTA par catégorie ────────────────────────────────────────────────────────
 
 const CTA_LABEL: Record<VipCategorie, string> = {
-  restauration:          'Réserver une table',
+  restauration:          'Écrire',
   beaute_tressage:       'Prendre rendez-vous',
   coiffure:              'Prendre rendez-vous',
   musculation_fitness:   'Choisir une formule',
@@ -282,12 +282,11 @@ interface Props {
   onBack: () => void;
   onChat: (shopId: string, shopName: string) => void;
   onGoCart?: (shopId: string, shopName: string, mode: 'normal' | 'livraison') => void;
-  onReserver?: (vipProfilId: string, vipNom: string) => void;
   onPrendreRdv?: (vipProfilId: string, vipNom: string, categorie: VipCategorie) => void;
   onGoMap?: (nomBoutique: string) => void;
 }
 
-export default function FicheVip({ shopId, onBack, onChat, onGoCart, onReserver, onPrendreRdv, onGoMap }: Props) {
+export default function FicheVip({ shopId, onBack, onChat, onGoCart, onPrendreRdv, onGoMap }: Props) {
   const [fiche, setFiche] = useState<VipFiche | null>(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
@@ -350,9 +349,7 @@ export default function FicheVip({ shopId, onBack, onChat, onGoCart, onReserver,
   const onEcrire = () => onChat(shopId, profil.nomAffiche);
 
   const onCtaPrimaire = () => {
-    if (profil.categorie === 'restauration' && onReserver) {
-      onReserver(profil.id, profil.nomAffiche);
-    } else if (
+    if (
       (profil.categorie === 'beaute_tressage' || profil.categorie === 'coiffure') &&
       onPrendreRdv
     ) {

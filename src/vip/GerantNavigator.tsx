@@ -23,10 +23,6 @@ import MaCampagneScreen from '../screens/merchant/MaCampagneScreen';
 import RevenueScreen from '../screens/merchant/RevenueScreen';
 import MerchantPaymentsScreen from '../screens/merchant/MerchantPaymentsScreen';
 import OffreQuartierScreen from '../screens/merchant/OffreQuartierScreen';
-import GerantReservationsTableScreen from './screens/GerantReservationsTableScreen';
-import GerantScanArriveeScreen from './screens/GerantScanArriveeScreen';
-import GerantEspacesScreen from './screens/GerantEspacesScreen';
-import GerantCreneauxScreen from './screens/GerantCreneauxScreen';
 import GerantRdvBeautyScreen from './screens/GerantRdvBeautyScreen';
 import GerantCreneauxBeautyScreen from './screens/GerantCreneauxBeautyScreen';
 import GerantNotificationsScreen from './screens/GerantNotificationsScreen';
@@ -49,10 +45,6 @@ type GerantScreen =
   | 'revenus'
   | 'encaissements'
   | 'offreQuartier'
-  | 'reservations_table'
-  | 'scan_arrivee'
-  | 'espaces_config'
-  | 'creneaux_config'
   | 'rdv_beauty'
   | 'creneaux_beauty'
   | { id: 'apercu'; shopId: string };
@@ -236,31 +228,6 @@ export default function GerantNavigator({ onLogout }: Props) {
   // ── Offre du Quartier ────────────────────────────────────────────────────
   if (screen === 'offreQuartier') {
     return <OffreQuartierScreen onBack={pop} />;
-  }
-
-  // ── Réservations de table ────────────────────────────────────────────────
-  if (screen === 'reservations_table') {
-    return (
-      <GerantReservationsTableScreen
-        onBack={pop}
-        onScanQR={() => push('scan_arrivee')}
-      />
-    );
-  }
-
-  // ── Scanner arrivée ──────────────────────────────────────────────────────
-  if (screen === 'scan_arrivee') {
-    return <GerantScanArriveeScreen onBack={pop} />;
-  }
-
-  // ── Mes espaces (config) ─────────────────────────────────────────────────
-  if (screen === 'espaces_config') {
-    return <GerantEspacesScreen onBack={pop} />;
-  }
-
-  // ── Mes créneaux (config) ────────────────────────────────────────────────
-  if (screen === 'creneaux_config') {
-    return <GerantCreneauxScreen onBack={pop} />;
   }
 
   // ── Mes RDV beauté ───────────────────────────────────────────────────────

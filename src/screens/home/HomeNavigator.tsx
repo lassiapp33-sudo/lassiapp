@@ -30,12 +30,8 @@ import BlocAlaUneScreen from './BlocAlaUneScreen';
 import AlaUneFeedScreen from './AlaUneFeedScreen';
 import FicheVip from '../../vip/FicheVip';
 import VipListeScreen from '../../vip/VipListeScreen';
-import ReservationFlowScreen from '../../vip/screens/ReservationFlowScreen';
-import MesReservationsTableScreen from '../../vip/screens/MesReservationsTableScreen';
-import ReservationTicketScreen from '../../vip/screens/ReservationTicketScreen';
 import BeautyBookingFlowScreen from '../../vip/screens/BeautyBookingFlowScreen';
 import MesRdvBeautyScreen from '../../vip/screens/MesRdvBeautyScreen';
-import { getMyTableReservations } from '../../services/tableReservations';
 import { getVipListe } from '../../services/vip';
 import ClientAbonnementsScreen from '../fitness/ClientAbonnementsScreen';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
@@ -51,23 +47,6 @@ import { recordView, recordCarouselClick, recordCarouselVue } from '../../servic
 
 function shouldShowCard(type: string): boolean {
   return type === 'vip' || type === 'pay' || type === 'order' || type === 'msg' || type === 'ann' || type === 'reservation_terrain';
-}
-
-// ─── Wrappers réservation table ───────────────────────────────────────────────
-
-function ReservationTicketLoader({ reservationId, onBack }: { reservationId: string; onBack: () => void }) {
-  const [resa, setResa] = React.useState<import('../../types/tableReservation').TableReservation | null>(null);
-  React.useEffect(() => {
-    getMyTableReservations()
-      .then(list => { const found = list.find(r => r.id === reservationId); if (found) setResa(found); })
-      .catch(() => {});
-  }, [reservationId]);
-  if (!resa) return null;
-  return <ReservationTicketScreen reservation={resa} vipNom={resa.vip_profils?.nom_affiche ?? ''} onBack={onBack} />;
-}
-
-function MesReservationsTableWithTicket({ onBack, onPushTicket }: { onBack: () => void; onPushTicket: (id: string) => void }) {
-  return <MesReservationsTableScreen onBack={onBack} onViewTicket={(r) => onPushTicket(r.id)} />;
 }
 
 // ─── Stack de navigation client ───────────────────────────────────────────────
@@ -139,9 +118,6 @@ type HomeStack =
   | { id: 'a_la_une_feed' }
   | { id: 'vip_fiche'; shopId: string; shopName: string }
   | { id: 'vip_liste' }
-  | { id: 'reservation_flow'; vipProfilId: string; vipNom: string }
-  | { id: 'reservation_ticket'; reservationId: string }
-  | { id: 'mes_reservations_table' }
   | { id: 'beauty_booking_flow'; vipProfilId: string; vipNom: string; categorie: import('../../types/vip').VipCategorie }
   | { id: 'mes_rdv_beauty' };
 
@@ -587,9 +563,6 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
         onGoCart={(shopId, shopName, mode) =>
           requireAuth(() => push({ id: 'cart', shopId, shopName, isVip: true, vipOrderMode: mode }))
         }
-        onReserver={(vipProfilId, vipNom) =>
-          requireAuth(() => push({ id: 'reservation_flow', vipProfilId, vipNom }))
-        }
         onPrendreRdv={(vipProfilId, vipNom, categorie) =>
           requireAuth(() => push({ id: 'beauty_booking_flow', vipProfilId, vipNom, categorie }))
         }
@@ -601,39 +574,7 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
     );
   }
 
-  // ── Flow réservation table ────────────────────────────────────────────────
-  if (screen.id === 'reservation_flow') {
-    return (
-      <ReservationFlowScreen
-        vipProfilId={screen.vipProfilId}
-        vipNom={screen.vipNom}
-        onBack={pop}
-        onSuccess={() =>
-          push({ id: 'mes_reservations_table' })
-        }
-      />
-    );
-  }
 
-  // ── Ticket réservation ────────────────────────────────────────────────────
-  if (screen.id === 'reservation_ticket') {
-    return (
-      <ReservationTicketLoader
-        reservationId={screen.reservationId}
-        onBack={pop}
-      />
-    );
-  }
-
-  // ── Mes réservations table ────────────────────────────────────────────────
-  if (screen.id === 'mes_reservations_table') {
-    return (
-      <MesReservationsTableWithTicket
-        onBack={pop}
-        onPushTicket={(reservationId) => push({ id: 'reservation_ticket', reservationId })}
-      />
-    );
-  }
 
   // ── Flow RDV beauté/coiffure ──────────────────────────────────────────────
   if (screen.id === 'beauty_booking_flow') {
@@ -811,7 +752,6 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
         onOrders={() => push({ id: 'orders' })}
         onFavorites={() => push({ id: 'favorites' })}
         onTerrainReservations={() => push({ id: 'terrain_my_reservations' })}
-        onTableReservations={() => push({ id: 'mes_reservations_table' })}
         onRdvBeauty={() => push({ id: 'mes_rdv_beauty' })}
         onClassement={() => push({ id: 'classement' })}
         onAbonnements={() => push({ id: 'mes_abonnements' })}

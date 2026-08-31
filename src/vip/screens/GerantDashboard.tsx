@@ -18,7 +18,7 @@ import useNotificationsStore from '../../store/notificationsStore';
 import { TOP_INSET } from '../../theme';
 import { deconnexionVip } from '../authVip';
 
-type TileId = 'profil' | 'registre' | 'horaires' | 'maison' | 'changeMdp' | 'alaune' | 'avis' | 'classement' | 'livraison' | 'autourDeMoi' | 'notifications' | 'reservations_table' | 'scan_arrivee' | 'espaces_config' | 'creneaux_config' | 'rdv_beauty' | 'creneaux_beauty';
+type TileId = 'profil' | 'registre' | 'horaires' | 'maison' | 'changeMdp' | 'alaune' | 'avis' | 'classement' | 'livraison' | 'autourDeMoi' | 'notifications' | 'rdv_beauty' | 'creneaux_beauty';
 
 interface Tile {
   id: TileId;
@@ -42,12 +42,6 @@ const TILES2: Tile[] = [
   { id: 'autourDeMoi',   label: 'Autour de moi',    desc: 'Prestataires et services à proximité' },
 ];
 
-const TILES_RESTAURATION: Tile[] = [
-  { id: 'reservations_table', label: 'Réservations',  desc: 'Gérer les demandes de table clients' },
-  { id: 'scan_arrivee',       label: 'Scan arrivée',  desc: 'Valider le QR code du client à l\'entrée' },
-  { id: 'espaces_config',     label: 'Mes espaces',   desc: 'Étages, terrasses, salles — configurer' },
-  { id: 'creneaux_config',    label: 'Mes créneaux',  desc: 'Déjeuner, dîner, brunch — horaires' },
-];
 
 const TILES_BEAUTY: Tile[] = [
   { id: 'rdv_beauty',      label: 'Mes rendez-vous', desc: 'Gérer les demandes de RDV clients' },
@@ -139,24 +133,6 @@ export default function GerantDashboard({ onNav, onPreview, onLogout }: Props) {
           ))}
         </View>
 
-        {/* Réservations de table (restauration uniquement) */}
-        {profil?.categorie === 'restauration' && (
-          <>
-            <Fleuron />
-            <View style={s.tuiles}>
-              {TILES_RESTAURATION.map(t => (
-                <TouchableOpacity key={t.id} style={[s.tuile, s.tuileRestau]} onPress={() => onNav(t.id)}>
-                  <View style={s.tuileTexte}>
-                    <Text style={s.tuileLabel}>{t.label}</Text>
-                    <Text style={s.tuileDesc}>{t.desc}</Text>
-                  </View>
-                  <IcoArrow />
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
-
         {/* Rendez-vous (beauté / coiffure uniquement) */}
         {(profil?.categorie === 'beaute_tressage' || profil?.categorie === 'coiffure') && (
           <>
@@ -240,8 +216,7 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: r.couleur.filetFin,
   },
-  tuileRestau: { backgroundColor: `${r.couleur.orLassi}0A` },
-  tuileBeauty: { backgroundColor: 'rgba(180,120,200,0.06)' },
+tuileBeauty: { backgroundColor: 'rgba(180,120,200,0.06)' },
   tuileTexte: { flex: 1 },
   tuileLabel: {
     fontFamily: VIP_FONTS.palais.util,
