@@ -46,17 +46,24 @@ interface CartState {
 }
 
 // ── Selectors ──────────────────────────────────────────────────────────────
-export const selectShops = (s: CartState): CartShop[] => s.shops ?? [];
+// ⚠️ Références stables OBLIGATOIRES : zustand v5 utilise useSyncExternalStore,
+// qui exige que getSnapshot retourne la MÊME référence tant que le state ne
+// change pas. Retourner un `[]` fraîchement créé à chaque appel provoque une
+// boucle de rendu infinie (« getSnapshot should be cached ») → écran figé.
+const EMPTY_ITEMS: CartItem[] = [];
+const EMPTY_SHOPS: CartShop[] = [];
+
+export const selectShops = (s: CartState): CartShop[] => s.shops ?? EMPTY_SHOPS;
 
 export const selectItemsForShop = (s: CartState, shopId: string): CartItem[] =>
-  (s.shops ?? []).find(sh => sh.info.id === shopId)?.items ?? [];
+  (s.shops ?? EMPTY_SHOPS).find(sh => sh.info.id === shopId)?.items ?? EMPTY_ITEMS;
 
 /** Articles de la boutique active (rétro-compat : ShopScreen affiche la qty par produit). */
 export const selectActiveItems = (s: CartState): CartItem[] =>
-  (s.shops ?? []).find(sh => sh.info.id === s.activeShopId)?.items ?? [];
+  (s.shops ?? EMPTY_SHOPS).find(sh => sh.info.id === s.activeShopId)?.items ?? EMPTY_ITEMS;
 
 export const selectActiveShopInfo = (s: CartState): CartShopInfo | null =>
-  (s.shops ?? []).find(sh => sh.info.id === s.activeShopId)?.info ?? null;
+  (s.shops ?? EMPTY_SHOPS).find(sh => sh.info.id === s.activeShopId)?.info ?? null;
 
 /** Quantité totale TOUS prestataires (badge flottant). */
 export const selectTotalQty = (s: CartState): number =>

@@ -31,7 +31,7 @@ import PayMethodCard from '../../components/payment/PayMethodCard';
 import { WAVE_ENABLED } from '../../config/features';
 import * as payService from '../../services/payment';
 import LivraisonModal from '../../components/livraison/LivraisonModal';
-import { devisLivraison } from '../../config/livraison';
+import { devisLivraisonMulti, LivraisonShopPoint } from '../../config/livraison';
 import { getCurrentLocation } from '../../services/location';
 import { SUPABASE_URL, SUPABASE_ANON } from '../../lib/supabase';
 
@@ -95,16 +95,18 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
   const [discountsByShop, setDiscountsByShop] = useState<Record<string, AppliedDiscount[]>>({});
   const [method, setMethod] = useState<PayMethod>(merchantPayMethods.includes('wave') ? 'wave' : 'om');
   const [showLivraisonModal, setShowLivraisonModal] = useState(false);
-  const [shopCoords, setShopCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [shopPoints, setShopPoints] = useState<LivraisonShopPoint[]>([]);
   const [clientCoords, setClientCoords] = useState<{ lat: number; lng: number } | null>(null);
   const livraisonFeeRef = useRef(0);
   const isSubmittingRef = useRef(false);
 
-  // Livraison : uniquement en mono-boutique (VIP ou standard). Désactivée en multi.
+  // Livraison mono OU multi-boutiques : devis = ancre (boutique la plus proche)
+  // + legs inter-boutiques (devisLivraisonMulti gère 1..N boutiques).
   const devisBtn =
-    !isMulti && shopCoords && clientCoords
-      ? devisLivraison(shopCoords.lat, shopCoords.lng, clientCoords.lat, clientCoords.lng)
+    clientCoords && shopPoints.length > 0
+      ? devisLivraisonMulti(shopPoints, clientCoords.lat, clientCoords.lng)
       : null;
+  const anchorShopId = devisBtn?.anchorId ?? (activeShops[0]?.info.id ?? '');
 
   // ── Totaux par boutique ─────────────────────────────────────────────────────
   const shopTotals = (sh: CartShop) => {
@@ -151,24 +153,38 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopsKey]);
 
-  // Coordonnées boutique + client (livraison mono-boutique uniquement)
+  // Coordonnées de TOUTES les boutiques du panier + position client (livraison)
+  const shopIdsKey = activeShops.map(s => s.info.id).join(',');
   useEffect(() => {
-    if (isMulti || !singleShopId) return;
+    const entries = activeShops.map(s => ({ id: s.info.id, name: s.info.name }));
+    if (entries.length === 0) { setShopPoints([]); return; }
+    const inList = entries.map(e => encodeURIComponent(e.id)).join(',');
     fetch(
-      `${SUPABASE_URL}/rest/v1/shops?select=latitude,longitude&id=eq.${encodeURIComponent(singleShopId)}&limit=1`,
+      `${SUPABASE_URL}/rest/v1/shops?select=id,latitude,longitude,name&id=in.(${inList})`,
       { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
     )
       .then(r => r.json())
       .then((rows: Record<string, unknown>[]) => {
-        const data = rows[0];
-        if (data?.latitude && data?.longitude)
-          setShopCoords({ lat: data.latitude as number, lng: data.longitude as number });
+        const pts: LivraisonShopPoint[] = [];
+        for (const e of entries) {
+          const row = (rows ?? []).find(r => r.id === e.id);
+          if (row?.latitude && row?.longitude) {
+            pts.push({
+              id: e.id,
+              label: e.name || (row.name as string) || 'Boutique',
+              lat: row.latitude as number,
+              lng: row.longitude as number,
+            });
+          }
+        }
+        setShopPoints(pts);
       })
       .catch(() => {});
     getCurrentLocation().then(pos => {
       if (pos) setClientCoords({ lat: pos.latitude, lng: pos.longitude });
     });
-  }, [singleShopId, isMulti]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopIdsKey]);
 
   // ── Checkout ──────────────────────────────────────────────────────────────
 
@@ -231,9 +247,15 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         if (p) voiceNotePath = p;
       }
 
+      // Frais de livraison TOTAUX (ancre + legs inter-boutiques). Bakés dans la
+      // commande de la boutique ANCRE uniquement (exclus de son payout → gardés
+      // par LASSI pour le livreur). Les autres commandes : livraison_fee = 0.
       const freshLivraisonFee = (isVip && vipOrderMode === 'livraison' && devisBtn && !devisBtn.horsZone)
         ? devisBtn.prix
-        : (!isVip && freshShops.length === 1 ? livraisonFeeRef.current : 0);
+        : (!isVip ? livraisonFeeRef.current : 0);
+      const freshAnchorId = freshShops.some(s => s.info.id === anchorShopId)
+        ? anchorShopId
+        : (freshShops[0]?.info.id ?? '');
 
       // ── VIP : flux inchangé (mono-boutique, prestations) ──────────────────
       if (isVip) {
@@ -255,7 +277,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
       const recapItems: { qty: number; name: string; price: number }[] = [];
       for (const sh of freshShops) {
         const rawItems = sh.items.map(i => ({ productId: i.id, qty: i.qty }));
-        const perShopLivraison = freshShops.length === 1 ? freshLivraisonFee : 0;
+        const perShopLivraison = sh.info.id === freshAnchorId ? freshLivraisonFee : 0;
         const res = await createOrderSecure(
           sh.info.id, rawItems, structuredNote, freshOrderType, undefined, voiceNotePath, method, perShopLivraison,
         );
@@ -545,8 +567,8 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
             </TouchableOpacity>
           )}
 
-          {/* Livraison : mono-boutique uniquement */}
-          {!isMulti && (!isVip || vipOrderMode === 'livraison') && (
+          {/* Livraison mono OU multi-boutiques (retrait chez chaque prestataire) */}
+          {(!isVip || vipOrderMode === 'livraison') && (
             <TouchableOpacity
               style={[
                 styles.livraisonBtn,
@@ -574,8 +596,9 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
 
       <LivraisonModal
         visible={showLivraisonModal}
-        shopId={singleShopId}
+        shopId={anchorShopId || singleShopId}
         shopName={activeShops[0]?.info.name ?? shopName}
+        shops={shopPoints}
         onClose={() => setShowLivraisonModal(false)}
         onConfirmed={() => {
           setShowLivraisonModal(false);

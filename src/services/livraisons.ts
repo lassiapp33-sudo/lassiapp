@@ -1,7 +1,17 @@
 import { supabase } from '../lib/supabase';
-import { devisLivraison } from '../config/livraison';
+import { devisLivraison, devisLivraisonMulti, LivraisonShopPoint } from '../config/livraison';
 
 export { devisLivraison };
+
+/** Point de retrait d'une livraison multi-boutiques. */
+export interface LivraisonPickup {
+  shop_id: string;
+  label: string;
+  lat: number;
+  lng: number;
+  order_id?: string | null;
+  role?: 'base' | 'inter';
+}
 
 export interface Livraison {
   id: string;
@@ -18,24 +28,31 @@ export interface Livraison {
   contact_tel: string | null;
   distance_km: number;
   prix_livraison: number;
+  pickups: LivraisonPickup[] | null;
   statut: 'en_attente' | 'acceptee' | 'terminee' | 'annulee';
   livreur_id: string | null;
   created_at: string;
   terminee_at: string | null;
 }
 
-// Créer une demande de livraison
+// Créer une demande de livraison (mono OU multi-boutiques)
 export const creerLivraison = async (params: {
   demandeurType: 'client' | 'prestataire';
   orderId?: string;
   departLabel: string; departLat: number; departLng: number;
   arriveeLabel: string; arriveeLat: number; arriveeLng: number;
   contactNom?: string; contactTel?: string;
+  // Multi-boutiques : si fourni, le devis est calculé par devisLivraisonMulti
+  // (ancre = boutique la plus proche + legs inter-boutiques) et pickups est stocké.
+  shops?: LivraisonShopPoint[];
+  pickups?: LivraisonPickup[];
 }): Promise<{ success: true; livraison: Livraison; prix: number } | { success: false; error: string }> => {
-  const devis = devisLivraison(
-    params.departLat, params.departLng,
-    params.arriveeLat, params.arriveeLng,
-  );
+  const isMulti = Array.isArray(params.shops) && params.shops.length > 1;
+
+  const devis = isMulti
+    ? devisLivraisonMulti(params.shops!, params.arriveeLat, params.arriveeLng)
+    : devisLivraison(params.departLat, params.departLng, params.arriveeLat, params.arriveeLng);
+
   if (devis.horsZone) return { success: false, error: devis.message ?? 'Zone non couverte.' };
 
   const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
@@ -58,6 +75,7 @@ export const creerLivraison = async (params: {
       contact_tel:    params.contactTel ?? null,
       distance_km:    devis.distanceKm,
       prix_livraison: devis.prix,
+      pickups:        (params.pickups && params.pickups.length > 1) ? params.pickups : null,
     })
     .select()
     .single();

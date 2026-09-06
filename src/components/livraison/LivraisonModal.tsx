@@ -14,9 +14,9 @@ import {
 } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
-import { devisLivraison, LIVRAISON_CONFIG } from '../../config/livraison';
+import { devisLivraison, devisLivraisonMulti, LIVRAISON_CONFIG, LivraisonShopPoint } from '../../config/livraison';
 import { getCurrentLocation, reverseGeocode } from '../../services/location';
-import { creerLivraison } from '../../services/livraisons';
+import { creerLivraison, LivraisonPickup } from '../../services/livraisons';
 import { SUPABASE_URL, SUPABASE_ANON } from '../../lib/supabase';
 import useAuthStore from '../../store/authStore';
 import AddressAutocomplete from './AddressAutocomplete';
@@ -30,6 +30,8 @@ interface Props {
   shopId: string;
   shopName: string;
   orderId?: string;
+  /** Multi-boutiques : si fourni (>1), le devis inclut les legs inter-boutiques. */
+  shops?: LivraisonShopPoint[];
   onClose: () => void;
   onConfirmed: (livraisonId: string) => void;
 }
@@ -39,9 +41,11 @@ export default function LivraisonModal({
   shopId,
   shopName,
   orderId,
+  shops,
   onClose,
   onConfirmed,
 }: Props) {
+  const isMulti = Array.isArray(shops) && shops.length > 1;
   const user = useAuthStore(s => s.user);
 
   const [arriveeLabel, setArriveeLabel] = useState('');
@@ -54,13 +58,36 @@ export default function LivraisonModal({
   const [loadingCoords, setLoadingCoords] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const devis = coordsDepart && coordsArrivee
-    ? devisLivraison(coordsDepart.lat, coordsDepart.lng, coordsArrivee.lat, coordsArrivee.lng)
+  const devis = coordsArrivee
+    ? (isMulti
+        ? devisLivraisonMulti(shops!, coordsArrivee.lat, coordsArrivee.lng)
+        : (coordsDepart
+            ? devisLivraison(coordsDepart.lat, coordsDepart.lng, coordsArrivee.lat, coordsArrivee.lng)
+            : null))
     : null;
 
   useEffect(() => {
     if (!visible) return;
     setLoadingCoords(true);
+
+    // Coords du client (arrivée) : toujours nécessaires.
+    const pClient = getCurrentLocation().then(async pos => {
+      if (pos) {
+        setCoordsArrivee({ lat: pos.latitude, lng: pos.longitude });
+        const label = await reverseGeocode(pos.latitude, pos.longitude);
+        setArriveeLabel(prev => prev || label);
+      } else {
+        setCoordsArrivee({ lat: DAKAR_LAT, lng: DAKAR_LNG });
+      }
+    });
+
+    // Multi-boutiques : les coords viennent de `shops` (pas de fetch boutique unique).
+    if (isMulti) {
+      setDepartLabel(shops!.map((s, i) => `Retrait ${i + 1}: ${s.label}`).join(' · '));
+      pClient.finally(() => setLoadingCoords(false));
+      return;
+    }
+
     Promise.all([
       fetch(
         `${SUPABASE_URL}/rest/v1/shops?select=latitude,longitude,address_text,name&id=eq.${encodeURIComponent(shopId)}&limit=1`,
@@ -77,24 +104,17 @@ export default function LivraisonModal({
           }
         })
         .catch(() => setCoordsDepart({ lat: DAKAR_LAT, lng: DAKAR_LNG })),
-      getCurrentLocation().then(async pos => {
-        if (pos) {
-          setCoordsArrivee({ lat: pos.latitude, lng: pos.longitude });
-          const label = await reverseGeocode(pos.latitude, pos.longitude);
-          setArriveeLabel(prev => prev || label);
-        } else {
-          setCoordsArrivee({ lat: DAKAR_LAT, lng: DAKAR_LNG });
-        }
-      }),
+      pClient,
     ]).finally(() => setLoadingCoords(false));
-  }, [visible, shopId, shopName]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, shopId, shopName, isMulti]);
 
   const handleConfirmer = async () => {
     if (!arriveeLabel.trim()) {
       Alert.alert('Adresse requise', 'Précise l\'adresse de livraison.');
       return;
     }
-    if (!coordsDepart || !coordsArrivee) {
+    if (!coordsArrivee || (!isMulti && !coordsDepart)) {
       Alert.alert('Erreur', 'Position non disponible. Réessaie.');
       return;
     }
@@ -107,18 +127,46 @@ export default function LivraisonModal({
     }
 
     setSubmitting(true);
-    const result = await creerLivraison({
-      demandeurType: 'client',
-      orderId,
-      departLabel,
-      departLat:    coordsDepart.lat,
-      departLng:    coordsDepart.lng,
-      arriveeLabel: arriveeLabel.trim(),
-      arriveeLat:   coordsArrivee.lat,
-      arriveeLng:   coordsArrivee.lng,
-      contactNom:   contactNom.trim() || undefined,
-      contactTel:   contactTel.trim() || undefined,
-    });
+
+    let result;
+    if (isMulti) {
+      // Ordre de tournée : autres boutiques d'abord, ancre (la plus proche du client) en dernier.
+      const anchorId = (devis && 'anchorId' in devis ? devis.anchorId : null) ?? shops![0].id;
+      const anchor   = shops!.find(s => s.id === anchorId) ?? shops![0];
+      const ordered  = [...shops!.filter(s => s.id !== anchor.id), anchor];
+      const pickups: LivraisonPickup[] = ordered.map(s => ({
+        shop_id: s.id, label: s.label, lat: s.lat, lng: s.lng,
+        role: s.id === anchor.id ? 'base' : 'inter',
+      }));
+      const first = ordered[0];
+      result = await creerLivraison({
+        demandeurType: 'client',
+        orderId,
+        departLabel:  ordered.map((s, i) => `Retrait ${i + 1}: ${s.label}`).join(' · '),
+        departLat:    first.lat,
+        departLng:    first.lng,
+        arriveeLabel: arriveeLabel.trim(),
+        arriveeLat:   coordsArrivee.lat,
+        arriveeLng:   coordsArrivee.lng,
+        contactNom:   contactNom.trim() || undefined,
+        contactTel:   contactTel.trim() || undefined,
+        shops,
+        pickups,
+      });
+    } else {
+      result = await creerLivraison({
+        demandeurType: 'client',
+        orderId,
+        departLabel,
+        departLat:    coordsDepart!.lat,
+        departLng:    coordsDepart!.lng,
+        arriveeLabel: arriveeLabel.trim(),
+        arriveeLat:   coordsArrivee.lat,
+        arriveeLng:   coordsArrivee.lng,
+        contactNom:   contactNom.trim() || undefined,
+        contactTel:   contactTel.trim() || undefined,
+      });
+    }
     setSubmitting(false);
 
     if (!result.success) {
@@ -158,10 +206,20 @@ export default function LivraisonModal({
                 </View>
               )}
 
-              <Text style={styles.fieldLabel}>Départ (boutique)</Text>
-              <View style={styles.fieldReadonly}>
-                <Text style={styles.fieldReadonlyTxt}>{departLabel}</Text>
-              </View>
+              <Text style={styles.fieldLabel}>{isMulti ? `Retraits (${shops!.length} boutiques)` : 'Départ (boutique)'}</Text>
+              {isMulti ? (
+                <View style={styles.fieldReadonly}>
+                  {shops!.map((s, i) => (
+                    <Text key={s.id} style={styles.fieldReadonlyTxt}>
+                      {`${i + 1}. ${s.label}`}
+                    </Text>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.fieldReadonly}>
+                  <Text style={styles.fieldReadonlyTxt}>{departLabel}</Text>
+                </View>
+              )}
 
               <AddressAutocomplete
                 label="Adresse de livraison *"
