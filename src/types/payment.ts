@@ -7,6 +7,8 @@ export type OrderItem = OrderLineItem;
 export interface OrderInfo {
   ticketId: string; // ID du message ticket dans le chat (pour le retour)
   orderId: string; // ex : "#A427"
+  /** Paiement groupé multi-prestataire : présent → PaymentScreen vérifie via verify-group-payment. */
+  groupId?: string;
   shopInitial: string;
   shopName: string;
   shopLocation: string; // ex : "📍 Medina"

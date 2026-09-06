@@ -1,4 +1,4 @@
-import { getCachedToken, safeGetSession } from '../lib/supabase';
+import { getValidToken } from '../lib/supabase';
 import { PayMethod } from '../types/payment';
 import { retryWithBackoff } from '../utils/retry';
 import useConnectionStore from '../store/connectionStore';
@@ -12,12 +12,7 @@ const ERREUR_CONNEXION = 'Connexion impossible. Vérifie ton réseau et réessai
 
 async function authHeaders(): Promise<Record<string, string>> {
   // Token caché = accès instantané. Fallback GoTrue si pas encore chargé (démarrage app).
-  let token = getCachedToken();
-  if (!token) {
-    const { data: { session } } = await safeGetSession(15_000);
-    token = session?.access_token ?? null;
-  }
-  if (!token) throw new Error('Session expirée — reconnecte-toi');
+  const token = await getValidToken();
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
@@ -84,6 +79,87 @@ export async function createPayment(params: {
     reference:   (data.paymentIntentId ?? '') as string,
     simulation:  data.mode === 'simulation',
   };
+}
+
+// ─── Paiement GROUPÉ multi-prestataire (panier unique, N boutiques) ──────────
+// N commandes déjà créées → 1 seule collecte Wave/OM sur le total groupe.
+// Le webhook confirme chaque membre → chaque prestataire reçoit SON reversement.
+
+export interface GroupPaymentSession {
+  groupId:      string;
+  montantTotal: number;
+  paymentUrl:   string;
+  qrCode:       string;
+  simulation?:  boolean;
+}
+
+export async function createGroupPayment(params: {
+  orderIds: string[];
+  method:   PayMethod;
+}): Promise<GroupPaymentSession> {
+  const moyenPaiement = params.method === 'om' ? 'orange_money' : 'wave';
+
+  let res: Response;
+  try {
+    res = await retryWithBackoff(async () => {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 12_000);
+      try {
+        return await fetch(`${FUNCTIONS_BASE}/create-group-payment`, {
+          method: 'POST',
+          headers: await authHeaders(),
+          body: JSON.stringify({ orderIds: params.orderIds, moyenPaiement }),
+          signal: ctrl.signal,
+        });
+      } finally {
+        clearTimeout(tid);
+      }
+    });
+  } catch {
+    useConnectionStore.getState().setOffline(true);
+    throw new Error(ERREUR_CONNEXION);
+  }
+  useConnectionStore.getState().setOffline(false);
+
+  if (!res.ok) {
+    let errMsg = 'Erreur de paiement';
+    try { const e = await res.json() as Record<string, unknown>; errMsg = (e.error as string) ?? errMsg; } catch {}
+    throw new Error(errMsg);
+  }
+  const data = await res.json() as Record<string, unknown>;
+
+  return {
+    groupId:      (data.groupId ?? '') as string,
+    montantTotal: (data.montantTotal ?? 0) as number,
+    paymentUrl:   (data.redirectUrl ?? '') as string,
+    qrCode:       (data.qrCode ?? '') as string,
+    simulation:   data.mode === 'simulation',
+  };
+}
+
+export async function verifyGroupPayment(groupId: string): Promise<boolean> {
+  let res: Response;
+  try {
+    res = await retryWithBackoff(async () =>
+      fetch(`${FUNCTIONS_BASE}/verify-group-payment`, {
+        method: 'POST',
+        headers: await authHeaders(),
+        body: JSON.stringify({ groupId }),
+      }),
+    );
+  } catch {
+    useConnectionStore.getState().setOffline(true);
+    throw new Error(ERREUR_CONNEXION);
+  }
+  useConnectionStore.getState().setOffline(false);
+
+  if (!res.ok) {
+    let errMsg = 'Erreur vérification';
+    try { const e = await res.json() as Record<string, unknown>; errMsg = (e.error as string) ?? errMsg; } catch {}
+    throw new Error(errMsg);
+  }
+  const data = await res.json() as Record<string, unknown>;
+  return data.confirmed === true;
 }
 
 // ─── Vérifier si un paiement a été effectué ───────────────────────────────────

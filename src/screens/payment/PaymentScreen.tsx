@@ -124,7 +124,7 @@ interface Props {
 
 export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
   const [stage, setStage] = useState<Stage>(
-    order.paymentConfirmed ? 'confirm' : order.preInitiatedPiId ? 'waiting' : 'checkout',
+    order.paymentConfirmed ? 'confirm' : (order.preInitiatedPiId || order.groupId) ? 'waiting' : 'checkout',
   );
   const availableMethods = (order.merchantPaymentMethods ?? ['wave', 'om']).filter(
     (m): m is PayMethod => m !== 'wave' || WAVE_ENABLED,
@@ -201,14 +201,17 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
   };
 
   const handleVerify = async () => {
-    if (verifying || !referenceRef.current) return;
+    // Paiement groupé : la référence est le groupId, pas un payment_intent unique.
+    if (verifying || (!referenceRef.current && !order.groupId)) return;
     setVerifying(true);
     try {
-      const paid = await payService.verifyPayment({
-        reference: referenceRef.current,
-        ticketId: order.ticketId,
-        method,
-      });
+      const paid = order.groupId
+        ? await payService.verifyGroupPayment(order.groupId)
+        : await payService.verifyPayment({
+            reference: referenceRef.current,
+            ticketId: order.ticketId,
+            method,
+          });
       if (paid) {
         setStage('confirm');
       } else {

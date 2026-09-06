@@ -45,6 +45,9 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import * as fitnessService from '../../services/fitnessAbonnements';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { FITNESS_SUBSCRIPTION_CATS } from '../../config/fitnessConfig';
+import * as beautyService from '../../services/beauty';
+import { BeautyService } from '../../types/beauty';
+import { calculerPrixBeauteAvecMarge } from '../../services/beauty';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -123,6 +126,8 @@ const IcoTag = () => (
 );
 
 const SLOT_SUBCATS = ['reservation_terrain_foot', 'reservation_terrain_basket'];
+const PRODUCT_SUBCATS = ['parfumerie', 'soins_bio'];
+const BEAUTY_SLOT_SUBCATS = ['hommes', 'femmes', 'esthetique'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -184,11 +189,14 @@ interface Props {
   onSuivi?: (params: { shopLat: number; shopLng: number; shopName: string; shopLogoUrl: string | null }) => void;
   onGoMap?: (shopName: string) => void;
   onFitnessAboPayment?: (offre: FitnessOffre, fitnessName: string, shopId: string) => void;
+  onBookBeautyService?: (service: BeautyService, prestataireId: string, prestataireName: string, openingHours: object | null) => void;
+  onBookRestaurant?: (prestataireId: string, prestataireName: string, paymentMethods: ('wave' | 'om')[], openingHours: WeekHours | null) => void;
+  isPreview?: boolean;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
-export default function ShopScreen({ shopId = '', shopName, targetProductId, onBack, onChat, onCheckout, onBookTerrain, onBookTerrainDirect, onSuivi, onGoMap, onFitnessAboPayment }: Props) {
+export default function ShopScreen({ shopId = '', shopName, targetProductId, onBack, onChat, onCheckout, onBookTerrain, onBookTerrainDirect, onSuivi, onGoMap, onFitnessAboPayment, onBookBeautyService, onBookRestaurant, isPreview = false }: Props) {
   const [shopData, setShopData] = useState<Shop | null>(null);
   const [realProducts, setRealProducts] = useState<StoreProduct[]>([]);
   const [terrains, setTerrains] = useState<Terrain[]>([]);
@@ -199,6 +207,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const [resolvedZone, setResolvedZone] = useState<string>('');
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [fitnessOffres, setFitnessOffres] = useState<FitnessOffre[]>([]);
+  const [beautyServices, setBeautyServices] = useState<BeautyService[]>([]);
 
   const scrollRef = useRef<ScrollView>(null);
   const productSectionY = useRef(0);
@@ -245,6 +254,12 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
           .then(setFitnessOffres)
           .catch(() => setFitnessOffres([]));
       }
+      const isBeautySlotCat = (shop?.subcategories ?? []).some(s => BEAUTY_SLOT_SUBCATS.includes(s));
+      if (isBeautySlotCat && shop?.merchantId) {
+        beautyService.getBeautyServices(shop.merchantId)
+          .then(setBeautyServices)
+          .catch(() => setBeautyServices([]));
+      }
       if (shop?.zone) {
         setResolvedZone(shop.zone);
       } else if (shop?.latitude && shop?.longitude) {
@@ -285,9 +300,14 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   }, [targetProductId, realProducts]);
 
   // ── Type de vitrine ───────────────────────────────────────────────────────
-  const shopType = shopData?.shopType ?? 'products';
+  const subcats = shopData?.subcategories ?? [];
+  const shopType: 'products' | 'services' | 'memberships' | 'terrains' =
+    subcats.some(s => PRODUCT_SUBCATS.includes(s))
+      ? 'products'
+      : (shopData?.shopType ?? 'products');
   const isTerrainShop = shopType === 'terrains';
-  const isSlotShop = (shopData?.subcategories ?? []).some(s => SLOT_SUBCATS.includes(s));
+  const isSlotShop = subcats.some(s => SLOT_SUBCATS.includes(s));
+  const isBeautyShop = subcats.some(s => BEAUTY_SLOT_SUBCATS.includes(s));
 
   // ── Données dérivées ──────────────────────────────────────────────────────
   const displayName = shopData?.name ?? shopName ?? 'Boutique';
@@ -428,6 +448,13 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const addItem = useCartStore(s => s.addItem);
   const removeItem = useCartStore(s => s.removeItem);
   const setCartOrder = useCartStore(s => s.setOrderType);
+  const setActiveShop = useCartStore(s => s.setActiveShop);
+
+  // Panier multi-boutiques : rendre CETTE boutique active pour que la qty par
+  // produit (selectActiveItems) et les boutons +/- ciblent le bon sous-panier.
+  useEffect(() => {
+    if (stableId) setActiveShop(stableId);
+  }, [stableId, setActiveShop]);
 
   const cartTotal = isVip ? calculerPrixClientVip(cartTotalRaw) : calculerPrixClient(cartTotalRaw);
 
@@ -618,8 +645,27 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
             </View>
           )}
 
-
           {tabs.length > 1 && <MenuTabs tabs={tabs} active={activeTab} onPress={setActiveTab} />}
+
+          {/* 8b — Réservation de table (restaurants ayant activé l'espace) */}
+          {shopData?.reservationEnabled && !isPreview && !isMerchant && shopData?.merchantId ? (
+            <View style={styles.resaBlock}>
+              <Text style={styles.catTitle}>Services disponibles</Text>
+              <View style={styles.resaCard}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.resaName}>Réservation de table</Text>
+                  <Text style={styles.resaSub}>Réservez votre table en quelques secondes.</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.resaBtn}
+                  activeOpacity={0.85}
+                  onPress={() => onBookRestaurant?.(shopData.merchantId!, displayName, shopData.paymentMethods, effectiveHours)}
+                >
+                  <Text style={styles.resaBtnTxt}>Réserver</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
 
 
           {/* 9 — Catalogue / Terrains / Créneaux foot-basket */}
@@ -721,7 +767,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                         ) : null}
                         <View style={styles.aboMeta}>
                           <Text style={styles.aboDuree}>⏱ {offre.dureeJours} jours</Text>
-                          <Text style={styles.aboPrix}>{formatPrice(calculerPrixClient(offre.prix))}</Text>
+                          <Text style={styles.aboPrix}>{formatPrice(isPreview ? offre.prix : calculerPrixClient(offre.prix))}</Text>
                         </View>
                       </View>
                       <TouchableOpacity
@@ -754,6 +800,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                                 onRemove={() => removeItem(product.id)}
                                 promoInfo={productPromoMap[product.id]}
                                 isVip={isVip}
+                                isPreview={isPreview}
                               />
                             </View>
                           ))}
@@ -769,6 +816,83 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                   <Text style={styles.emptyTxt}>Aucun abonnement disponible pour l'instant.</Text>
                 </View>
               ) : null}
+            </View>
+          ) : isBeautyShop ? (
+            <View>
+              {/* ── Services beauté (créneaux) ── */}
+              {beautyServices.length > 0 ? (
+                <View>
+                  <Text style={styles.catTitle}>Services disponibles</Text>
+                  {beautyServices.map(svc => {
+                    const dureeLabel =
+                      svc.duree_minutes >= 60
+                        ? svc.duree_minutes === 60 ? '1h' : `${svc.duree_minutes / 60 | 0}h${svc.duree_minutes % 60 > 0 ? (svc.duree_minutes % 60) : ''}`
+                        : `${svc.duree_minutes} min`;
+                    return (
+                      <View key={svc.id} style={styles.beautyCard}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.beautyNom}>{svc.nom}</Text>
+                          {svc.description ? (
+                            <Text style={styles.beautyDesc} numberOfLines={2}>{svc.description}</Text>
+                          ) : null}
+                          <Text style={styles.beautyMeta}>⏱ {dureeLabel}</Text>
+                        </View>
+                        <View style={styles.beautyRight}>
+                          <Text style={styles.beautyPrix}>{formatPrice(beautyService.calculerPrixBeauteAvecMarge(svc.prix))}</Text>
+                          {!isPreview && !isMerchant && shopData?.merchantId ? (
+                            <TouchableOpacity
+                              style={styles.beautyBtn}
+                              activeOpacity={0.85}
+                              onPress={() => onBookBeautyService?.(svc, shopData.merchantId!, displayName, shopHours)}
+                            >
+                              <Text style={styles.beautyBtnTxt}>Réserver</Text>
+                            </TouchableOpacity>
+                          ) : null}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : (
+                <View style={styles.emptyProducts}>
+                  <Text style={styles.emptyTxt}>Aucun service disponible pour l'instant.</Text>
+                </View>
+              )}
+              {/* ── Produits physiques (catalogue produit) ── */}
+              {realProducts.length > 0 && (
+                <View onLayout={e => { productSectionY.current = e.nativeEvent.layout.y; }}>
+                  <Text style={[styles.catTitle, { marginTop: 16 }]}>Produits</Text>
+                  {visibleSections.map(section => {
+                    const products = realProducts.filter(p => p.category === section.id);
+                    if (products.length === 0) return null;
+                    return (
+                      <View key={section.id}>
+                        <Text style={styles.catTitle}>{section.label}</Text>
+                        <View style={styles.grid}>
+                          {toPairs(products).map((pair, i) => (
+                            <View key={i} style={styles.gridRow}>
+                              {pair.map(product => (
+                                <View key={product.id} style={styles.tileWrapper}>
+                                  <ProductTile
+                                    product={storeProductToProduct(product)}
+                                    qty={product.stock === 'out' ? 0 : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)}
+                                    onAdd={() => addToCart(product)}
+                                    onRemove={() => removeItem(product.id)}
+                                    promoInfo={productPromoMap[product.id]}
+                                    isVip={isVip}
+                                    isPreview={isPreview}
+                                  />
+                                </View>
+                              ))}
+                              {pair.length === 1 && <View style={styles.tileSpacer} />}
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
             </View>
           ) : realProducts.length === 0 ? (
             <View style={styles.emptyProducts}>
@@ -804,6 +928,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                                 onRemove={() => removeItem(product.id)}
                                 promoInfo={productPromoMap[product.id]}
                                 isVip={isVip}
+                                isPreview={isPreview}
                               />
                             </View>
                           ))}
@@ -871,6 +996,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
         nextChange={status.nextChange}
         onChat={onChat ? () => onChat(shopData?.logoUrl ?? null, isVip) : undefined}
         onCheckout={onCheckout}
+
       />
     </View>
   );
@@ -993,6 +1119,30 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 13,
   },
+
+  beautyCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg, padding: 14, marginBottom: 10, marginHorizontal: 18,
+  },
+  beautyNom:   { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
+  beautyDesc:  { color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 3, lineHeight: 16 },
+  beautyMeta:  { color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginTop: 4 },
+  beautyRight: { alignItems: 'flex-end', gap: 8, minWidth: 90 },
+  beautyPrix:  { color: colors.accent, fontFamily: fonts.title, fontSize: 14 },
+  beautyBtn:   { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.accent },
+  beautyBtnTxt: { color: colors.bg, fontFamily: fonts.titleXL, fontSize: 13 },
+
+  resaBlock: { marginTop: 6 },
+  resaCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg, padding: 14, marginBottom: 10, marginHorizontal: 18,
+  },
+  resaName: { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
+  resaSub:  { color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 3, lineHeight: 16 },
+  resaBtn:  { paddingHorizontal: 16, paddingVertical: 9, borderRadius: radius.pill, backgroundColor: colors.accent },
+  resaBtnTxt: { color: colors.bg, fontFamily: fonts.titleXL, fontSize: 13 },
 
   galleryScroll: {
     paddingHorizontal: 20,
