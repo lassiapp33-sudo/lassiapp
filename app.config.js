@@ -138,6 +138,17 @@ module.exports = withSecurityPlugins({
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.CAMERA",
       ],
+      // App Links : ouvre LASSI direct (sans prompt navigateur) pour le retour
+      // paiement https://lassi.tech/paiement/*. Nécessite assetlinks.json sur lassi.tech
+      // avec l'empreinte SHA-256 de la clé de signature Play.
+      intentFilters: [
+        {
+          action: "VIEW",
+          autoVerify: true,
+          data: [{ scheme: "https", host: "lassi.tech", pathPrefix: "/paiement" }],
+          category: ["BROWSABLE", "DEFAULT"],
+        },
+      ],
     },
     web: {
       favicon: "./assets/favicon.png",
