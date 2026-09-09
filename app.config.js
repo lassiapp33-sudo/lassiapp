@@ -72,7 +72,7 @@ module.exports = withSecurityPlugins({
     name: "LASSI",
     slug: "LassiApp",
     scheme: "lassiapp",
-    version: "1.0.1",
+    version: "1.0.2",
     orientation: "default",
     updates: {
       url: "https://u.expo.dev/e9058ef3-df10-43e4-af04-6830a98025e9",
@@ -101,6 +101,11 @@ module.exports = withSecurityPlugins({
       },
       infoPlist: {
         UIBackgroundModes: ["remote-notification"],
+        // Swizzling Firebase LAISSÉ ACTIF (proxy par défaut). Avec useFrameworks:static,
+        // le subscriber APNs natif d'expo-notifications ne reçoit jamais
+        // didRegisterForRemoteNotificationsWithDeviceToken (ni didRegister ni didFail → hang).
+        // Le SEUL mécanisme qui capte l'APNs token est le swizzling Firebase. iOS passe donc
+        // par la route FCM (Firebase getToken → Expo Push type fcm), comme Android.
         NSLocationWhenInUseUsageDescription:
           "LASSİ utilise ta position pour afficher les commerces et prestataires proches de toi (ex. : voir les restaurants à 500 m sur la carte) et pour te guider en navigation GPS jusqu'au prestataire sélectionné.",
         NSMicrophoneUsageDescription:
@@ -141,7 +146,6 @@ module.exports = withSecurityPlugins({
       "@react-native-firebase/app",
       "@react-native-firebase/crashlytics",
       "@react-native-firebase/messaging",
-      "./plugins/withFirebaseAPNSBridge",
       "./plugins/withFirebaseMessagingManifest",
       "expo-font",
       [
