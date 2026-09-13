@@ -117,6 +117,69 @@
   }, { threshold: [0, 0.5] });
   vMedias.forEach(function (w) { vObserver.observe(w); });
 
+  /* Visionneuse plein écran : chaque image / vidéo s'ouvre seule */
+  var lb = document.getElementById('lightbox');
+  if (lb) {
+    var lbContent = lb.querySelector('.lb-content');
+    var lbClose = lb.querySelector('.lb-close');
+
+    function openLB(node) {
+      lbContent.innerHTML = '';
+      lbContent.appendChild(node);
+      lb.classList.add('open');
+      lb.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      requestAnimationFrame(function () { lb.classList.add('visible'); });
+    }
+    function closeLB() {
+      lb.classList.remove('visible');
+      setTimeout(function () {
+        lb.classList.remove('open');
+        lb.setAttribute('aria-hidden', 'true');
+        var v = lbContent.querySelector('video');
+        if (v) { v.pause(); }
+        lbContent.innerHTML = '';
+        document.body.style.overflow = '';
+      }, 250);
+    }
+    lbClose.addEventListener('click', closeLB);
+    lb.addEventListener('click', function (e) { if (e.target === lb) closeLB(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && lb.classList.contains('open')) closeLB();
+    });
+
+    /* Images (hors miniature PDF qui ouvre le document) */
+    document.querySelectorAll('.media-frame img').forEach(function (img) {
+      if (img.closest('.tile--doc')) return;
+      img.addEventListener('click', function () {
+        var full = new Image();
+        full.src = img.currentSrc || img.src;
+        full.alt = img.alt || '';
+        openLB(full);
+      });
+    });
+
+    /* Vidéos (le clic sur le bouton son ne déclenche pas la visionneuse) */
+    vMedias.forEach(function (wrap) {
+      var srcEl = wrap.querySelector('video source');
+      if (!srcEl) return;
+      wrap.addEventListener('click', function (e) {
+        if (e.target.closest('.v-mute')) return;
+        var bg = wrap.querySelector('video');
+        if (bg) bg.pause();
+        var v = document.createElement('video');
+        v.src = srcEl.src;
+        v.controls = true;
+        v.autoplay = true;
+        v.loop = true;
+        v.playsInline = true;
+        v.muted = false;
+        openLB(v);
+        var pp = v.play(); if (pp && pp.catch) pp.catch(function () {});
+      });
+    });
+  }
+
   /* Année dans le footer */
   var y = document.getElementById('year');
   if (y) y.textContent = new Date().getFullYear();

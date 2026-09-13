@@ -440,6 +440,35 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .footer-bottom{display:flex;justify-content:space-between;align-items:center;padding-top:24px;color:#7c7c86;font-size:14px;flex-wrap:wrap;gap:8px}
 
 /* =========================================================
+   VISIONNEUSE PLEIN ÉCRAN (LIGHTBOX)
+   ========================================================= */
+.media-frame img,.v-media{cursor:zoom-in}
+.tile--doc,.tile--doc img{cursor:pointer}
+.lightbox{
+  position:fixed;inset:0;z-index:120;display:none;
+  align-items:center;justify-content:center;padding:min(6vw,60px);
+  background:rgba(16,15,22,.94);backdrop-filter:blur(8px);
+  opacity:0;transition:opacity .25s ease;
+}
+.lightbox.open{display:flex}
+.lightbox.visible{opacity:1}
+.lb-content{display:flex;align-items:center;justify-content:center;max-width:94vw;max-height:90vh}
+.lb-content img,.lb-content video{
+  max-width:94vw;max-height:90vh;width:auto;height:auto;display:block;
+  border-radius:14px;box-shadow:0 40px 100px rgba(0,0,0,.55);
+  transform:scale(.96);transition:transform .3s cubic-bezier(.16,1,.3,1);
+}
+.lightbox.visible .lb-content img,.lightbox.visible .lb-content video{transform:scale(1)}
+.lb-close{
+  position:fixed;top:22px;right:26px;z-index:121;
+  width:50px;height:50px;border-radius:50%;
+  background:rgba(255,255,255,.14);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s ease,transform .2s ease;
+}
+.lb-close:hover{background:rgba(255,255,255,.28);transform:rotate(90deg)}
+
+/* =========================================================
    ANIMATIONS AU SCROLL
    ========================================================= */
 .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}
