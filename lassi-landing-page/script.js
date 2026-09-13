@@ -61,23 +61,61 @@
   }, { threshold: 0.12 });
   reveals.forEach(function (el) { ro.observe(el); });
 
-  /* Vidéo profil : lecture avec son au clic */
-  var vf = document.getElementById('profilVideo');
-  if (vf) {
-    var vid = vf.querySelector('video');
-    function playVid() {
-      vf.classList.add('is-playing');
-      vid.setAttribute('controls', '');
-      var p = vid.play();
-      if (p && p.catch) p.catch(function () {});
-    }
-    vf.querySelector('.video-play').addEventListener('click', playVid);
-    vid.addEventListener('ended', function () {
-      vf.classList.remove('is-playing');
-      vid.removeAttribute('controls');
-      vid.currentTime = 0;
+  /* Vidéos : lecture automatique quand visibles, pause hors écran, son au clic */
+  var vMedias = Array.prototype.slice.call(document.querySelectorAll('.v-media'));
+  vMedias.forEach(function (wrap) {
+    var video = wrap.querySelector('video');
+    var muteBtn = wrap.querySelector('.v-mute');
+    if (!video) return;
+    video.muted = true; // requis pour l'autoplay
+
+    muteBtn && muteBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      var willUnmute = video.muted;
+      if (willUnmute) {
+        // un seul son à la fois
+        vMedias.forEach(function (o) {
+          if (o !== wrap) {
+            var ov = o.querySelector('video');
+            if (ov) ov.muted = true;
+            o.classList.remove('is-unmuted');
+            var ob = o.querySelector('.v-mute');
+            if (ob) { ob.setAttribute('aria-pressed', 'false'); ob.setAttribute('aria-label', 'Activer le son'); }
+          }
+        });
+        video.muted = false;
+        wrap.classList.add('is-unmuted');
+        muteBtn.setAttribute('aria-pressed', 'true');
+        muteBtn.setAttribute('aria-label', 'Couper le son');
+        var pp = video.play(); if (pp && pp.catch) pp.catch(function () {});
+      } else {
+        video.muted = true;
+        wrap.classList.remove('is-unmuted');
+        muteBtn.setAttribute('aria-pressed', 'false');
+        muteBtn.setAttribute('aria-label', 'Activer le son');
+      }
     });
-  }
+  });
+
+  var vObserver = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      var wrap = e.target;
+      var video = wrap.querySelector('video');
+      if (!video) return;
+      if (e.isIntersecting && e.intersectionRatio >= 0.5) {
+        var p = video.play(); if (p && p.catch) p.catch(function () {});
+      } else {
+        video.pause();
+        if (!video.muted) { // réinitialise le son quand on quitte l'écran
+          video.muted = true;
+          wrap.classList.remove('is-unmuted');
+          var b = wrap.querySelector('.v-mute');
+          if (b) { b.setAttribute('aria-pressed', 'false'); b.setAttribute('aria-label', 'Activer le son'); }
+        }
+      }
+    });
+  }, { threshold: [0, 0.5] });
+  vMedias.forEach(function (w) { vObserver.observe(w); });
 
   /* Année dans le footer */
   var y = document.getElementById('year');

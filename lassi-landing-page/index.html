@@ -123,12 +123,13 @@
   <section class="feature" id="profil">
     <div class="container feature-grid">
       <div class="feature-visual reveal">
-        <div class="media-frame media-square is-filled video-frame" id="profilVideo">
-          <video playsinline preload="none" poster="assets/lassi-profil-poster.webp">
+        <div class="media-frame media-square is-filled v-media">
+          <video muted loop playsinline preload="none" poster="assets/lassi-profil-poster.webp">
             <source src="assets/lassi-profil.mp4" type="video/mp4" />
           </video>
-          <button class="video-play" type="button" aria-label="Lire la vidéo">
-            <svg viewBox="0 0 24 24" width="26" height="26"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+          <button class="v-mute" type="button" aria-label="Activer le son" aria-pressed="false">
+            <svg class="ic-off" viewBox="0 0 24 24" width="18" height="18"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M17 9l4 6M21 9l-4 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg class="ic-on" viewBox="0 0 24 24" width="18" height="18"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8a5 5 0 010 8M18.5 6a8 8 0 010 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           </button>
         </div>
       </div>
@@ -274,25 +275,54 @@
         <p class="section-lead">Design, motion et contenus social media. La galerie sera bientôt enrichie.</p>
       </div>
 
-      <!-- Grille de conteneurs VIDES prêts à recevoir images / vidéos -->
       <div class="gallery reveal">
-        <figure class="tile tile--lg media-frame" data-placeholder="Projet vidéo">
-          <span class="tile-index">01</span><span class="media-hint">Vidéo à intégrer</span>
+        <figure class="tile tile--lg media-frame is-filled v-media">
+          <video muted loop playsinline preload="none" poster="assets/chateau-poster.webp">
+            <source src="assets/chateau.mp4" type="video/mp4" />
+          </video>
+          <button class="v-mute" type="button" aria-label="Activer le son" aria-pressed="false">
+            <svg class="ic-off" viewBox="0 0 24 24" width="18" height="18"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M17 9l4 6M21 9l-4 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg class="ic-on" viewBox="0 0 24 24" width="18" height="18"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8a5 5 0 010 8M18.5 6a8 8 0 010 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+          <span class="tile-index">01</span>
         </figure>
-        <figure class="tile media-frame" data-placeholder="Projet design">
-          <span class="tile-index">02</span><span class="media-hint">Image à intégrer</span>
+
+        <figure class="tile media-frame is-filled">
+          <img src="assets/travail-cfc2.webp" alt="Réalisation — design graphique" loading="lazy" />
+          <span class="tile-index">02</span>
         </figure>
-        <figure class="tile media-frame" data-placeholder="Projet design">
-          <span class="tile-index">03</span><span class="media-hint">Image à intégrer</span>
+
+        <figure class="tile media-frame is-filled">
+          <img src="assets/travail-e.webp" alt="Réalisation — visuel de marque" loading="lazy" />
+          <span class="tile-index">03</span>
         </figure>
-        <figure class="tile media-frame" data-placeholder="Projet motion">
-          <span class="tile-index">04</span><span class="media-hint">Vidéo à intégrer</span>
+
+        <figure class="tile media-frame is-filled v-media">
+          <video muted loop playsinline preload="none" poster="assets/lassi3-poster.webp">
+            <source src="assets/lassi3.mp4" type="video/mp4" />
+          </video>
+          <button class="v-mute" type="button" aria-label="Activer le son" aria-pressed="false">
+            <svg class="ic-off" viewBox="0 0 24 24" width="18" height="18"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M17 9l4 6M21 9l-4 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg class="ic-on" viewBox="0 0 24 24" width="18" height="18"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8a5 5 0 010 8M18.5 6a8 8 0 010 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+          <span class="tile-index">04</span>
         </figure>
-        <figure class="tile media-frame" data-placeholder="Projet social">
-          <span class="tile-index">05</span><span class="media-hint">Image à intégrer</span>
-        </figure>
-        <figure class="tile tile--wide media-frame" data-placeholder="Projet campagne">
-          <span class="tile-index">06</span><span class="media-hint">Image / vidéo à intégrer</span>
+
+        <a class="tile media-frame is-filled tile--doc" href="assets/ankata.pdf" target="_blank" rel="noopener">
+          <img src="assets/ankata-cover.webp" alt="Projet Ankata — dossier PDF" loading="lazy" />
+          <span class="tile-badge">PDF</span>
+          <span class="tile-index">05</span>
+        </a>
+
+        <figure class="tile tile--wide media-frame is-filled v-media">
+          <video muted loop playsinline preload="none" poster="assets/reel15-poster.webp">
+            <source src="assets/reel15.mp4" type="video/mp4" />
+          </video>
+          <button class="v-mute" type="button" aria-label="Activer le son" aria-pressed="false">
+            <svg class="ic-off" viewBox="0 0 24 24" width="18" height="18"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M17 9l4 6M21 9l-4 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg class="ic-on" viewBox="0 0 24 24" width="18" height="18"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8a5 5 0 010 8M18.5 6a8 8 0 010 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+          <span class="tile-index">06</span>
         </figure>
       </div>
 
