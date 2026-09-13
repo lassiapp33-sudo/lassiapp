@@ -63,6 +63,27 @@
 
   /* Vidéos : lecture automatique quand visibles, pause hors écran, son au clic */
   var vMedias = Array.prototype.slice.call(document.querySelectorAll('.v-media'));
+
+  function setMuteUI(wrap, on) {
+    var b = wrap.querySelector('.v-mute');
+    if (on) {
+      wrap.classList.add('is-unmuted');
+      if (b) { b.setAttribute('aria-pressed', 'true'); b.setAttribute('aria-label', 'Couper le son'); }
+    } else {
+      wrap.classList.remove('is-unmuted');
+      if (b) { b.setAttribute('aria-pressed', 'false'); b.setAttribute('aria-label', 'Activer le son'); }
+    }
+  }
+  function muteOthers(except) {
+    vMedias.forEach(function (o) {
+      if (o !== except) {
+        var ov = o.querySelector('video');
+        if (ov) ov.muted = true;
+        setMuteUI(o, false);
+      }
+    });
+  }
+
   vMedias.forEach(function (wrap) {
     var video = wrap.querySelector('video');
     var muteBtn = wrap.querySelector('.v-mute');
@@ -71,51 +92,60 @@
 
     muteBtn && muteBtn.addEventListener('click', function (e) {
       e.preventDefault();
-      var willUnmute = video.muted;
-      if (willUnmute) {
-        // un seul son à la fois
-        vMedias.forEach(function (o) {
-          if (o !== wrap) {
-            var ov = o.querySelector('video');
-            if (ov) ov.muted = true;
-            o.classList.remove('is-unmuted');
-            var ob = o.querySelector('.v-mute');
-            if (ob) { ob.setAttribute('aria-pressed', 'false'); ob.setAttribute('aria-label', 'Activer le son'); }
-          }
-        });
+      e.stopPropagation();
+      if (video.muted) {
+        muteOthers(wrap);
         video.muted = false;
-        wrap.classList.add('is-unmuted');
-        muteBtn.setAttribute('aria-pressed', 'true');
-        muteBtn.setAttribute('aria-label', 'Couper le son');
+        setMuteUI(wrap, true);
         var pp = video.play(); if (pp && pp.catch) pp.catch(function () {});
       } else {
         video.muted = true;
-        wrap.classList.remove('is-unmuted');
-        muteBtn.setAttribute('aria-pressed', 'false');
-        muteBtn.setAttribute('aria-label', 'Activer le son');
+        setMuteUI(wrap, false);
       }
     });
   });
+
+  /* Vidéo "Profil" : son automatique dès qu'elle est visible (si le navigateur l'autorise) */
+  var pendingAutosound = null;
+  function tryAutosound(wrap) {
+    var video = wrap.querySelector('video');
+    muteOthers(wrap);
+    video.muted = false;
+    var p = video.play();
+    if (p && p.then) {
+      p.then(function () { setMuteUI(wrap, true); pendingAutosound = null; })
+       .catch(function () { video.muted = true; setMuteUI(wrap, false); pendingAutosound = wrap; });
+    } else {
+      setMuteUI(wrap, true);
+    }
+  }
 
   var vObserver = new IntersectionObserver(function (entries) {
     entries.forEach(function (e) {
       var wrap = e.target;
       var video = wrap.querySelector('video');
       if (!video) return;
-      if (e.isIntersecting && e.intersectionRatio >= 0.5) {
+      var vis = e.isIntersecting && e.intersectionRatio >= 0.5;
+      wrap._inView = vis;
+      if (vis) {
         var p = video.play(); if (p && p.catch) p.catch(function () {});
+        if (wrap.classList.contains('v-autosound')) tryAutosound(wrap);
       } else {
         video.pause();
-        if (!video.muted) { // réinitialise le son quand on quitte l'écran
-          video.muted = true;
-          wrap.classList.remove('is-unmuted');
-          var b = wrap.querySelector('.v-mute');
-          if (b) { b.setAttribute('aria-pressed', 'false'); b.setAttribute('aria-label', 'Activer le son'); }
-        }
+        if (!video.muted) { video.muted = true; setMuteUI(wrap, false); }
+        if (pendingAutosound === wrap) pendingAutosound = null;
       }
     });
   }, { threshold: [0, 0.5] });
   vMedias.forEach(function (w) { vObserver.observe(w); });
+
+  /* Débloque le son auto après la première interaction (exigence navigateur) */
+  function unlockAutosound() {
+    if (pendingAutosound && pendingAutosound._inView) tryAutosound(pendingAutosound);
+  }
+  ['pointerdown', 'touchstart', 'keydown'].forEach(function (ev) {
+    document.addEventListener(ev, unlockAutosound, { passive: true });
+  });
 
   /* Visionneuse plein écran : chaque image / vidéo s'ouvre seule */
   var lb = document.getElementById('lightbox');
