@@ -123,9 +123,13 @@
   <section class="feature" id="profil">
     <div class="container feature-grid">
       <div class="feature-visual reveal">
-        <!-- Conteneur média VIDE -->
-        <div class="media-frame media-4x3" data-placeholder="Visuel profil / process">
-          <span class="media-hint">Visuel à intégrer</span>
+        <div class="media-frame media-square is-filled video-frame" id="profilVideo">
+          <video playsinline preload="none" poster="assets/lassi-profil-poster.webp">
+            <source src="assets/lassi-profil.mp4" type="video/mp4" />
+          </video>
+          <button class="video-play" type="button" aria-label="Lire la vidéo">
+            <svg viewBox="0 0 24 24" width="26" height="26"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+          </button>
         </div>
       </div>
       <div class="feature-copy reveal">

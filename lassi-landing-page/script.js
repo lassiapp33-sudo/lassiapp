@@ -61,6 +61,24 @@
   }, { threshold: 0.12 });
   reveals.forEach(function (el) { ro.observe(el); });
 
+  /* Vidéo profil : lecture avec son au clic */
+  var vf = document.getElementById('profilVideo');
+  if (vf) {
+    var vid = vf.querySelector('video');
+    function playVid() {
+      vf.classList.add('is-playing');
+      vid.setAttribute('controls', '');
+      var p = vid.play();
+      if (p && p.catch) p.catch(function () {});
+    }
+    vf.querySelector('.video-play').addEventListener('click', playVid);
+    vid.addEventListener('ended', function () {
+      vf.classList.remove('is-playing');
+      vid.removeAttribute('controls');
+      vid.currentTime = 0;
+    });
+  }
+
   /* Année dans le footer */
   var y = document.getElementById('year');
   if (y) y.textContent = new Date().getFullYear();

@@ -234,6 +234,27 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .feature{padding:clamp(70px,9vw,120px) 0}
 .feature-grid{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:var(--gap)}
 .media-4x3{aspect-ratio:4/3;width:100%}
+.media-square{aspect-ratio:1/1;width:100%}
+
+/* Vidéo avec bouton play */
+.video-frame{cursor:pointer}
+.video-play{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:76px;height:76px;border-radius:50%;
+  background:rgba(255,255,255,.92);color:var(--purple);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:var(--shadow);padding-left:5px;
+  transition:transform .25s ease,background .25s ease,opacity .25s ease;
+}
+.video-play:hover{transform:translate(-50%,-50%) scale(1.08);background:#fff}
+.video-frame.is-playing .video-play{opacity:0;pointer-events:none}
+.video-frame::before{
+  content:'';position:absolute;inset:0;z-index:1;
+  background:linear-gradient(180deg,rgba(26,25,25,0) 40%,rgba(26,25,25,.28));
+  transition:opacity .25s ease;
+}
+.video-frame.is-playing::before{opacity:0}
+.video-play{z-index:2}
 .feature-list{display:grid;gap:22px;margin:30px 0 28px}
 .feature-list li{display:flex;gap:16px;align-items:flex-start}
 .feat-ic{
