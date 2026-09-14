@@ -78,6 +78,23 @@ export function usePaymentDeepLink() {
         if (categorieId) setPendingNav({ type: 'a_la_une_categorie', categorieId });
         return;
       }
+
+      // ── Lien de partage prestataire — vitrine directe ─────────────────────
+      // https://lassi.tech/p/{slug}  |  lassiapp://p/{slug}
+      if (url.includes('/p/')) {
+        const slug = url.split('/p/')[1]?.split('?')[0]?.split('/')[0];
+        if (slug) {
+          const { data } = await supabase
+            .from('shops')
+            .select('id, name')
+            .eq('slug', slug)
+            .single();
+          if (data) {
+            setPendingNav({ type: 'new_shop', shopId: data.id, shopName: data.name ?? '' });
+          }
+        }
+        return;
+      }
     };
 
     // Liens reçus quand l'app est déjà ouverte

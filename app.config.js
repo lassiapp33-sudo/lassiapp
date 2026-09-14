@@ -145,7 +145,10 @@ module.exports = withSecurityPlugins({
         {
           action: "VIEW",
           autoVerify: true,
-          data: [{ scheme: "https", host: "lassi.tech", pathPrefix: "/paiement" }],
+          data: [
+            { scheme: "https", host: "lassi.tech", pathPrefix: "/paiement" },
+            { scheme: "https", host: "lassi.tech", pathPrefix: "/p" },
+          ],
           category: ["BROWSABLE", "DEFAULT"],
         },
       ],

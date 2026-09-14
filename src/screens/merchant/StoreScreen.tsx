@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,9 @@ import {
   Modal,
   Pressable,
   Platform,
+  Share,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import Svg, { Path } from 'react-native-svg';
 import { IcoPlus } from '../../components/icons';
 
@@ -22,13 +24,12 @@ import ShopProfileCard from '../../components/store/ShopProfileCard';
 import CategoryTabs from '../../components/store/CategoryTabs';
 import ProductRow from '../../components/store/ProductRow';
 import AddProductSheet from '../../components/store/AddProductSheet';
-import FicheGuideeSheet from '../../components/store/FicheGuideeSheet';
 import OpeningHoursCard from '../../components/store/OpeningHoursCard';
 import AbonnementOffreRow from '../../components/fitness/AbonnementOffreRow';
 import AddAbonnementOffreSheet from '../../components/fitness/AddAbonnementOffreSheet';
 import { colors, fonts, radius } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
-import { StoreProduct } from '../../types/store';
+import { StoreProduct, StoreCategory } from '../../types/store';
 import { ProductPromoInfo } from '../../types/promotions';
 import useShopStore from '../../store/shopStore';
 import useAuthStore from '../../store/authStore';
@@ -39,6 +40,8 @@ import * as storageService from '../../services/storage';
 import * as promoService from '../../services/promotions';
 import * as fitnessService from '../../services/fitnessAbonnements';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
+import * as beautyService from '../../services/beauty';
+import { BeautyService } from '../../types/beauty';
 import { getErrorMessage } from '../../utils/errorUtils';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { FITNESS_SUBSCRIPTION_CATS } from '../../config/fitnessConfig';
@@ -60,37 +63,28 @@ const IcoPin = () => (
   </Svg>
 );
 
-// ─── AddMethodPicker : façons d'ajouter une prestation au menu ───────────────
+// ─── AddMenuSection : ajout manuel simple au menu ────────────────────────────
 
-function AddMethodPicker({
-  label,
-  onManuel,
-  onFicheGuidee,
+function AddMenuSection({
+  sectionTitle,
+  addLabel,
+  onAdd,
 }: {
-  label: string;
-  onManuel: () => void;
-  onFicheGuidee: () => void;
+  sectionTitle: string;
+  addLabel: string;
+  onAdd: () => void;
 }) {
   return (
     <View>
-      <Text style={styles.menuSectionTitle}>Créer votre menu</Text>
+      <Text style={styles.menuSectionTitle}>{sectionTitle}</Text>
       <View style={styles.addPickerWrap}>
         <TouchableOpacity
           style={[styles.addPickerBtn, styles.addPickerBtnPrimary]}
-          onPress={onFicheGuidee}
-          activeOpacity={0.82}
+          onPress={onAdd}
+          activeOpacity={0.85}
         >
           <Text style={styles.addPickerIcon}>+</Text>
-          <Text style={styles.addPickerTitle}>Menu guidé</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.addPickerBtn}
-          onPress={onManuel}
-          activeOpacity={0.82}
-        >
-          <Text style={styles.addPickerIcon}>✎</Text>
-          <Text style={[styles.addPickerTitle, { color: colors.white }]}>Menu manuel</Text>
+          <Text style={styles.addPickerTitle}>{addLabel}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -126,14 +120,16 @@ interface Props {
   onPreview?: () => void;
   onPromos?: () => void;
   onAbonnes?: () => void;
-  onFicheGuidee?: () => void;
+  onManageBeautyServices?: () => void;
+  onBeautyReservations?: () => void;
+  onRestaurantReservations?: () => void;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
 const MAX_GALLERY = 5;
 
-export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, onFicheGuidee }: Props) {
+export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, onManageBeautyServices, onBeautyReservations, onRestaurantReservations }: Props) {
   const profileRaw = useShopStore(s => s.profile);
   const avatarUrl = useAuthStore(s => s.user?.avatarUrl);
   const profile = { ...profileRaw, logoUrl: avatarUrl ?? profileRaw.logoUrl ?? undefined };
@@ -144,6 +140,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   const products = useShopStore(s => s.products);
   const loading = useShopStore(s => s.loading);
   const updateProfile = useShopStore(s => s.updateProfile);
+  const updateLogo = useShopStore(s => s.updateLogo);
   const updateOpeningHours = useShopStore(s => s.updateOpeningHours);
   const toggleManuallyClose = useShopStore(s => s.toggleManuallyClose);
   const saveShopDetails = useShopStore(s => s.saveShopDetails);
@@ -156,6 +153,20 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   const purgeCategoryAndProducts = useShopStore(s => s.purgeCategoryAndProducts);
   const renameCategory = useShopStore(s => s.renameCategory);
   const createMissingShop = useShopStore(s => s.createMissingShop);
+  const updateReservationEnabled = useShopStore(s => s.updateReservationEnabled);
+
+  // ── Réservations beauté : uniquement Barber/Tresses/Esthétique ────────────
+  // Parfumerie & Soins/Bio = vente produits, pas de créneaux/réservations.
+  const BEAUTY_SLOT_SUBCATS = ['hommes', 'femmes', 'esthetique'];
+  const isBeautySlotShop =
+    context.shopType === 'services' &&
+    (context.subcategories ?? []).some(s => BEAUTY_SLOT_SUBCATS.includes(s));
+
+  // Parfumerie & Soins/Bio : shopType services mais vente de produits (pas de prestations).
+  const BEAUTY_PRODUCT_SUBCATS = ['parfumerie', 'soins_bio'];
+  const isBeautyProductShop =
+    context.shopType === 'services' &&
+    (context.subcategories ?? []).some(s => BEAUTY_PRODUCT_SUBCATS.includes(s));
 
   // ── Catalogue ─────────────────────────────────────────────────────────────
   const [activeCat, setActiveCat] = useState('petitdej');
@@ -164,8 +175,6 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   const [editTarget, setEditTarget] = useState<StoreProduct | null>(null);
   const [showSheet, setShowSheet] = useState(false);
   const [sheetDefaultCat, setSheetDefaultCat] = useState<string | undefined>(undefined);
-  const [showFicheGuidee, setShowFicheGuidee] = useState(false);
-  const [ficheDefaultCat, setFicheDefaultCat] = useState<string | undefined>(undefined);
 
   // ── Promos actives (pour badges sur les produits) ─────────────────────────
   const [promoMap, setPromoMap] = useState<Record<string, ProductPromoInfo>>({});
@@ -176,6 +185,9 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   const [editOffre, setEditOffre] = useState<FitnessOffre | null>(null);
   const [showOffreSheet, setShowOffreSheet] = useState(false);
   const userId = useAuthStore(s => s.user?.id);
+
+  // ── Services réservables (beauté) — table beauty_services ──────────────────
+  const [reservServices, setReservServices] = useState<BeautyService[]>([]);
 
   // ── Récupération vitrine manquante ────────────────────────────────────────
   const [recoveryName, setRecoveryName] = useState('');
@@ -191,22 +203,64 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   const [zoneSuggestions, setZoneSuggestions] = useState<{ label: string; detail: string }[]>([]);
   const [zoneSearching, setZoneSearching] = useState(false);
 
-  // ── Infos boutique (description / adresse / téléphone) ─────────────────────
+  // ── Logo boutique ──────────────────────────────────────────────────────────
+  const [logoUploading, setLogoUploading] = useState(false);
+
+  const handleEditLogo = () => {
+    if (!shopId) return;
+    const doUpload = async (source: 'gallery' | 'camera') => {
+      const uri = source === 'gallery'
+        ? await storageService.pickImageFromGallery()
+        : await storageService.pickImageFromCamera();
+      if (!uri) return;
+      setLogoUploading(true);
+      try {
+        const path = storageService.logoPath(shopId);
+        const url = await storageService.uploadImage('logos', uri, path);
+        await updateLogo(url);
+      } catch {
+        Alert.alert('Erreur', 'Impossible de mettre à jour le logo. Réessaie.');
+      } finally {
+        setLogoUploading(false);
+      }
+    };
+    if (Platform.OS === 'ios') {
+      const { ActionSheetIOS } = require('react-native');
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: ['Annuler', 'Galerie', 'Caméra'], cancelButtonIndex: 0 },
+        (idx: number) => {
+          if (idx === 1) doUpload('gallery');
+          if (idx === 2) doUpload('camera');
+        },
+      );
+    } else {
+      Alert.alert('Logo boutique', '', [
+        { text: 'Galerie', onPress: () => doUpload('gallery') },
+        { text: 'Caméra', onPress: () => doUpload('camera') },
+        { text: 'Annuler', style: 'cancel' },
+      ]);
+    }
+  };
+
+  // ── Infos boutique (nom / description / adresse / téléphone) ───────────────
+  const [name, setName] = useState(profile.name ?? '');
   const [desc, setDesc] = useState(profile.description ?? '');
   const [addr, setAddr] = useState(profile.addressText ?? '');
   const [phone, setPhone] = useState(profile.phone ?? '');
   const [detailsLoading, setDetailsLoading] = useState(false);
   const detailsDirty =
+    name.trim() !== (profile.name ?? '') ||
     desc !== (profile.description ?? '') ||
     addr !== (profile.addressText ?? '') ||
     phone !== (profile.phone ?? '');
 
   // Synchronise les champs locaux quand le store se met à jour (après loadMyShop)
   useEffect(() => {
+    setName(profile.name ?? '');
     setDesc(profile.description ?? '');
     setAddr(profile.addressText ?? '');
     setPhone(profile.phone ?? '');
-  }, [profile.description, profile.addressText, profile.phone]);
+  }, [profile.name, profile.description, profile.addressText, profile.phone]);
 
   // ── Galerie ───────────────────────────────────────────────────────────────
   const galleryUrls = context.galleryUrls;
@@ -230,6 +284,15 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
       setActiveCat(categories[0].id);
     }
   }, [categories, activeCat]);
+
+  // Charge les services réservables (beauté) au montage / retour sur la vitrine
+  useEffect(() => {
+    if (!isBeautySlotShop || !userId) return;
+    beautyService
+      .getBeautyServicesByMerchant(userId)
+      .then(list => setReservServices(list.filter(s => s.actif)))
+      .catch(() => {});
+  }, [isBeautySlotShop, userId]);
 
   const loadOffres = useCallback(async () => {
     if (!userId || context.shopType !== 'memberships') return;
@@ -265,6 +328,31 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
   const activeCatData = categories.find(c => c.id === activeCat);
   const filtered = products.filter(p => normCat(p.category ?? '') === activeCat);
+
+  // ── Boutiques beauté : Services (réservables, table beauty_services) + Produits (shop_items) ──
+  // Le sheet manuel ne gère que les produits ; les services passent par l'écran réservations.
+  const BEAUTY_PRODUCT_CATS: StoreCategory[] = [
+    { id: 'produits', label: 'Produits', emoji: '🛍️' },
+  ];
+  const beautyProducts = products.filter(p => normCat(p.category ?? '') === 'produits');
+
+  // Libellés presets + regroupement des services réservables par catégorie
+  const BEAUTY_CAT_LABELS: Record<string, string> = {
+    barber: 'Barber', tresse: 'Tresse', ongle: 'Ongles', general: 'Général',
+  };
+  const beautyCatLabel = (c: string) =>
+    BEAUTY_CAT_LABELS[c] ?? (c ? c.charAt(0).toUpperCase() + c.slice(1) : 'Général');
+  const reservByCat = React.useMemo(() => {
+    const groups: { key: string; label: string; items: BeautyService[] }[] = [];
+    for (const svc of reservServices) {
+      const key = svc.categorie || 'general';
+      let g = groups.find(x => x.key === key);
+      if (!g) { g = { key, label: beautyCatLabel(key), items: [] }; groups.push(g); }
+      g.items.push(svc);
+    }
+    return groups;
+  }, [reservServices]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const openEdit = (p: StoreProduct) => {
     setSheetDefaultCat(undefined);
     setEditTarget(p);
@@ -275,25 +363,15 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     setSheetDefaultCat(defaultCat);
     setShowSheet(true);
   };
-  const openFicheGuidee = (defaultCat?: string) => {
-    if (onFicheGuidee) { onFicheGuidee(); return; }
-    setFicheDefaultCat(defaultCat);
-    setShowFicheGuidee(true);
-  };
-
   // Labels adaptatifs selon le shop_type
   const itemLabel =
-    context.shopType === 'services'
-      ? 'prestation'
-      : context.shopType === 'memberships'
-        ? 'formule'
-        : 'produit';
-  const addItemLabel =
-    context.shopType === 'services'
-      ? 'Ajouter une prestation'
-      : context.shopType === 'memberships'
-        ? 'Ajouter une formule'
-        : 'Ajouter un produit';
+    isBeautyProductShop
+      ? 'produit'
+      : context.shopType === 'services'
+        ? 'prestation'
+        : context.shopType === 'memberships'
+          ? 'formule'
+          : 'produit';
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -490,9 +568,13 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   };
 
   const handleSaveDetails = async () => {
+    if (!name.trim()) {
+      Alert.alert('Nom requis', 'Le nom de la boutique ne peut pas être vide.');
+      return;
+    }
     setDetailsLoading(true);
     try {
-      await saveShopDetails(desc.trim(), addr.trim(), phone.trim());
+      await saveShopDetails(name.trim(), desc.trim(), addr.trim(), phone.trim());
     } catch {
       Alert.alert('Erreur', "Impossible d'enregistrer les informations. Réessaie.");
     } finally {
@@ -699,6 +781,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
             {/* Profil + toggle ouvert/fermé */}
             <ShopProfileCard
               profile={profile}
+              onEditLogo={logoUploading ? undefined : handleEditLogo}
               onToggle={async () => {
                 try {
                   await updateProfile({ isOpen: !profile.isOpen });
@@ -708,11 +791,58 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
               }}
             />
 
+            {/* ── Mon lien de partage ─────────────────────────────────────── */}
+            {profile.slug ? (
+              <View style={styles.sectionWrap}>
+                <Text style={styles.sectionTitle}>Mon lien de partage</Text>
+                <View style={styles.card}>
+                  <Text style={styles.shareLink} numberOfLines={1}>
+                    {`lassi.tech/p/${profile.slug}`}
+                  </Text>
+                  <Text style={styles.shareHint}>
+                    Partagez-le à vos contacts, sur WhatsApp et vos bios réseaux sociaux : vos clients arrivent direct dans votre vitrine pour commander.
+                  </Text>
+                  <View style={styles.shareRow}>
+                    <TouchableOpacity
+                      style={[styles.shareBtn, styles.shareBtnGhost]}
+                      onPress={async () => {
+                        await Clipboard.setStringAsync(`https://lassi.tech/p/${profile.slug}`);
+                        Alert.alert('Copié', 'Lien copié dans le presse-papier.');
+                      }}
+                    >
+                      <Text style={styles.shareBtnGhostText}>Copier</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.shareBtn, styles.shareBtnSolid]}
+                      onPress={() =>
+                        Share.share({
+                          message: `${profile.name} est maintenant sur LASSİ ! 🎉\nCommandez directement ici : https://lassi.tech/p/${profile.slug}`,
+                        }).catch(() => {})
+                      }
+                    >
+                      <Text style={styles.shareBtnSolidText}>Partager</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            ) : null}
+
             {/* ── Infos boutique ──────────────────────────────────────────── */}
             <View style={styles.sectionWrap}>
               <Text style={styles.sectionTitle}>Infos boutique</Text>
               <View style={styles.card}>
-                <Text style={styles.fieldLabel}>Description</Text>
+                <Text style={styles.fieldLabel}>Nom de la boutique</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Nom affiché aux clients"
+                  placeholderTextColor={colors.muted}
+                  maxLength={60}
+                  returnKeyType="next"
+                />
+
+                <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Description</Text>
                 <TextInput
                   style={[styles.fieldInput, styles.fieldMulti]}
                   value={desc}
@@ -760,6 +890,169 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                 )}
               </View>
             </View>
+
+            {isBeautySlotShop ? (
+              /* ── Beauté (barber/tresse/esthétique/ongle) : format Services / Produits ── */
+              <>
+                <Text style={styles.menuSectionTitle}>Ajouter au catalogue</Text>
+                <View style={styles.addPickerWrap}>
+                  <TouchableOpacity
+                    style={[styles.addPickerBtn, styles.addPickerBtnPrimary]}
+                    onPress={() => onManageBeautyServices?.()}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.addPickerIcon}>+</Text>
+                    <Text style={styles.addPickerTitle}>Service</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.addPickerBtn}
+                    onPress={() => openAdd('produits')}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.addPickerIcon}>+</Text>
+                    <Text style={[styles.addPickerTitle, { color: colors.white }]}>Produit</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* ── Services réservables (créneaux + paiement) groupés par catégorie ── */}
+                {reservByCat.map(group => (
+                  <React.Fragment key={group.key}>
+                    <SectionHead title={group.label} count={group.items.length} itemLabel="service" />
+                    {group.items.map(svc => (
+                      <TouchableOpacity
+                        key={svc.id}
+                        style={styles.reservRow}
+                        onPress={() => onManageBeautyServices?.()}
+                        activeOpacity={0.85}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.reservNom}>{svc.nom}</Text>
+                          <Text style={styles.reservMeta}>⏱ {svc.duree_minutes} min · réservable</Text>
+                        </View>
+                        <Text style={styles.reservPrix}>
+                          {beautyService.calculerPrixBeauteAvecMarge(svc.prix)} F
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </React.Fragment>
+                ))}
+
+                {/* ── Produits (vente directe / panier) — masqué si vide ── */}
+                {beautyProducts.length > 0 && (
+                  <SectionHead title="Produits" count={beautyProducts.length} itemLabel="produit" />
+                )}
+                {beautyProducts.map(product => (
+                  <ProductRow
+                    key={product.id}
+                    product={product}
+                    promoInfo={promoMap[product.id]}
+                    onEdit={() => openEdit(product)}
+                    onToggleStock={async () => {
+                      try {
+                        await toggleStock(product.id);
+                      } catch {
+                        Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
+                      }
+                    }}
+                  />
+                ))}
+              </>
+            ) : (
+              <>
+                {/* ── Ajouter un produit (masqué pour les onglets abonnement fitness) ── */}
+                {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
+                  <AddMenuSection
+                    sectionTitle="Mon menu"
+                    addLabel={
+                      itemLabel === 'prestation'
+                        ? 'Ajouter une prestation'
+                        : itemLabel === 'formule'
+                          ? 'Ajouter une formule'
+                          : 'Ajouter un produit'
+                    }
+                    onAdd={() => openAdd(activeCat)}
+                  />
+                )}
+
+                {/* ── Onglets unifiés (un seul système pour tous les shop types) ── */}
+                <CategoryTabs
+                  categories={categories}
+                  active={activeCat}
+                  onSelect={setActiveCat}
+                  onDeleteCat={handleDeleteCat}
+                  onRenameCat={handleRenameCat}
+                />
+
+                {/* ── Contenu de l'onglet actif (produits — masqué pour onglets abonnement) ── */}
+                {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
+                  <>
+                    <SectionHead
+                      title={activeCatData?.label ?? ''}
+                      count={filtered.length}
+                      itemLabel={itemLabel}
+                    />
+                    {filtered.map(product => (
+                      <ProductRow
+                        key={product.id}
+                        product={product}
+                        promoInfo={promoMap[product.id]}
+                        onEdit={() => openEdit(product)}
+                        onToggleStock={async () => {
+                          try {
+                            await toggleStock(product.id);
+                          } catch {
+                            Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
+                          }
+                        }}
+                      />
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+
+            {/* ── Offres d'abonnement (uniquement pour les onglets abonnement) ── */}
+            {context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat) && (
+              <View style={styles.fitnessSection}>
+                <View style={styles.fitnessSectionHeader}>
+                  <Text style={styles.fitnessSectionTitle}>Offres d'abonnement</Text>
+                  <Text style={styles.fitnessSectionCount}>
+                    {offres.length} offre{offres.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+                {offresLoading ? (
+                  <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
+                ) : offres.length === 0 ? (
+                  <Text style={styles.fitnessEmpty}>Aucune offre d'abonnement créée</Text>
+                ) : (
+                  offres.map(offre => (
+                    <AbonnementOffreRow
+                      key={offre.id}
+                      offre={offre}
+                      onEdit={() => { setEditOffre(offre); setShowOffreSheet(true); }}
+                      onToggleActif={() => handleToggleOffreActif(offre)}
+                    />
+                  ))
+                )}
+                <TouchableOpacity
+                  style={[styles.addProd, { marginTop: 10 }]}
+                  onPress={() => { setEditOffre(null); setShowOffreSheet(true); }}
+                  activeOpacity={0.8}
+                >
+                  <IcoPlus />
+                  <Text style={styles.addProdTxt}>Ajouter une offre d'abonnement</Text>
+                </TouchableOpacity>
+                {onAbonnes && (
+                  <TouchableOpacity
+                    style={[styles.addProd, { marginTop: 8, backgroundColor: 'rgba(253,207,52,.08)', borderColor: 'rgba(253,207,52,.3)' }]}
+                    onPress={onAbonnes}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.addProdTxt, { color: colors.accent }]}>Voir mes abonnés →</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
 
             {/* ── Galerie photos ───────────────────────────────────────────── */}
             <View style={styles.sectionWrap}>
@@ -827,91 +1120,49 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
               />
             </View>
 
-            {/* ── Ajouter un produit (masqué pour les onglets abonnement fitness) ── */}
-            {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
-              <AddMethodPicker
-                label={addItemLabel}
-                onManuel={() => openAdd(activeCat)}
-                onFicheGuidee={() => openFicheGuidee(activeCat)}
-              />
-            )}
-
-            {/* ── Onglets unifiés (un seul système pour tous les shop types) ── */}
-            <CategoryTabs
-              categories={categories}
-              active={activeCat}
-              onSelect={setActiveCat}
-              onDeleteCat={handleDeleteCat}
-              onRenameCat={handleRenameCat}
-            />
-
-            {/* ── Contenu de l'onglet actif (produits — masqué pour onglets abonnement) ── */}
-            {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
+            {/* ── Restaurant : espace de réservation de table ──────────────── */}
+            {context.category === 'food' && (
               <>
-                <SectionHead
-                  title={activeCatData?.label ?? ''}
-                  count={filtered.length}
-                  itemLabel={itemLabel}
-                />
-                {filtered.map(product => (
-                  <ProductRow
-                    key={product.id}
-                    product={product}
-                    promoInfo={promoMap[product.id]}
-                    onEdit={() => openEdit(product)}
-                    onToggleStock={async () => {
-                      try {
-                        await toggleStock(product.id);
-                      } catch {
-                        Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
-                      }
-                    }}
-                  />
-                ))}
+                <TouchableOpacity
+                  style={[styles.addProd, { marginTop: 12 }]}
+                  onPress={() => updateReservationEnabled(!context.reservationEnabled).catch(() => {})}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.addProdTxt}>
+                    Réservation de table : {context.reservationEnabled ? 'activée' : 'désactivée'}
+                  </Text>
+                  <Text style={[styles.addProdTxt, { color: colors.accent, marginLeft: 'auto' }]}>
+                    {context.reservationEnabled ? 'Désactiver' : 'Activer'}
+                  </Text>
+                </TouchableOpacity>
+
+                {context.reservationEnabled && (
+                  <Text style={styles.resaHint}>
+                    Les créneaux de réservation suivent automatiquement vos horaires d'ouverture.
+                  </Text>
+                )}
+
+                {context.reservationEnabled && onRestaurantReservations && (
+                  <TouchableOpacity
+                    style={[styles.addProd, { marginTop: 8, backgroundColor: 'rgba(253,207,52,.08)', borderColor: 'rgba(253,207,52,.3)' }]}
+                    onPress={onRestaurantReservations}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.addProdTxt, { color: colors.accent }]}>Mes réservations de table →</Text>
+                  </TouchableOpacity>
+                )}
               </>
             )}
 
-            {/* ── Offres d'abonnement (uniquement pour les onglets abonnement) ── */}
-            {context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat) && (
-              <View style={styles.fitnessSection}>
-                <View style={styles.fitnessSectionHeader}>
-                  <Text style={styles.fitnessSectionTitle}>Offres d'abonnement</Text>
-                  <Text style={styles.fitnessSectionCount}>
-                    {offres.length} offre{offres.length !== 1 ? 's' : ''}
-                  </Text>
-                </View>
-                {offresLoading ? (
-                  <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
-                ) : offres.length === 0 ? (
-                  <Text style={styles.fitnessEmpty}>Aucune offre d'abonnement créée</Text>
-                ) : (
-                  offres.map(offre => (
-                    <AbonnementOffreRow
-                      key={offre.id}
-                      offre={offre}
-                      onEdit={() => { setEditOffre(offre); setShowOffreSheet(true); }}
-                      onToggleActif={() => handleToggleOffreActif(offre)}
-                    />
-                  ))
-                )}
-                <TouchableOpacity
-                  style={[styles.addProd, { marginTop: 10 }]}
-                  onPress={() => { setEditOffre(null); setShowOffreSheet(true); }}
-                  activeOpacity={0.8}
-                >
-                  <IcoPlus />
-                  <Text style={styles.addProdTxt}>Ajouter une offre d'abonnement</Text>
-                </TouchableOpacity>
-                {onAbonnes && (
-                  <TouchableOpacity
-                    style={[styles.addProd, { marginTop: 8, backgroundColor: 'rgba(253,207,52,.08)', borderColor: 'rgba(253,207,52,.3)' }]}
-                    onPress={onAbonnes}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.addProdTxt, { color: colors.accent }]}>Voir mes abonnés →</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+            {/* ── Beauté : mes réservations (juste avant l'emplacement) ── */}
+            {isBeautySlotShop && onBeautyReservations && (
+              <TouchableOpacity
+                style={[styles.addProd, { marginTop: 8, backgroundColor: 'rgba(253,207,52,.08)', borderColor: 'rgba(253,207,52,.3)' }]}
+                onPress={onBeautyReservations}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.addProdTxt, { color: colors.accent }]}>Mes réservations →</Text>
+              </TouchableOpacity>
             )}
 
             {/* ── Géolocalisation ──────────────────────────────────────────── */}
@@ -944,7 +1195,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                   onSubmitEditing={() => handleSaveManualZone()}
                 />
                 {zoneSearching && (
-                  <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 4 }} />
+                  <ActivityIndicator size="small" color={colors.accent} style={{ marginVertical: 4 }} />
                 )}
                 {zoneSuggestions.length > 0 && (
                   <View style={styles.zoneSuggestList}>
@@ -986,19 +1237,11 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
       <AddProductSheet
         visible={showSheet}
         product={editTarget}
-        categories={categories}
+        categories={isBeautySlotShop ? BEAUTY_PRODUCT_CATS : categories}
         defaultCatId={sheetDefaultCat}
         onSave={handleSaveProduct}
         onDelete={editTarget ? () => handleDeleteProduct(editTarget.id) : undefined}
         onClose={() => setShowSheet(false)}
-      />
-
-      <FicheGuideeSheet
-        visible={showFicheGuidee}
-        categories={categories}
-        defaultCatId={ficheDefaultCat}
-        onSave={handleSaveProduct}
-        onClose={() => setShowFicheGuidee(false)}
       />
 
       <AddAbonnementOffreSheet
@@ -1020,7 +1263,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     >
       <Pressable style={styles.renameOverlay} onPress={() => setRenameTarget(null)}>
         <Pressable style={styles.renameCard} onPress={e => e.stopPropagation()}>
-          <Text style={styles.renameTitle}>Renommer le catalogue</Text>
+          <Text style={styles.renameTitle}>Renommer mon menu</Text>
           <TextInput
             style={styles.renameInput}
             value={renameText}
@@ -1186,6 +1429,50 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: 14,
   },
+  shareLink: {
+    color: colors.accent,
+    fontFamily: fonts.ui,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  shareHint: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 8,
+  },
+  shareRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+  },
+  shareBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shareBtnGhost: {
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  shareBtnGhostText: {
+    color: colors.white,
+    fontFamily: fonts.ui,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  shareBtnSolid: {
+    backgroundColor: colors.accent,
+  },
+  shareBtnSolidText: {
+    color: colors.bg,
+    fontFamily: fonts.ui,
+    fontSize: 14,
+    fontWeight: '700',
+  },
   fieldLabel: {
     color: colors.muted,
     fontFamily: fonts.ui,
@@ -1287,6 +1574,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addProdTxt: { color: colors.accent, fontFamily: fonts.title, fontSize: 14 },
+  resaHint: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, lineHeight: 17, marginTop: 8, marginHorizontal: 4 },
+
+  reservRow: {
+    marginHorizontal: 18,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(253,207,52,.28)',
+    backgroundColor: 'rgba(253,207,52,.06)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  reservNom: { color: colors.white, fontFamily: fonts.title, fontSize: 14 },
+  reservMeta: { color: colors.muted, fontFamily: fonts.body, fontSize: 11.5, marginTop: 2 },
+  reservPrix: { color: colors.accent, fontFamily: fonts.title, fontSize: 14 },
 
   locBtn: {
     marginHorizontal: 18,
@@ -1479,7 +1784,7 @@ const styles = StyleSheet.create({
   renameCard: {
     width: '82%',
     backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    borderRadius: radius.xl,
     padding: 20,
     gap: 14,
   },

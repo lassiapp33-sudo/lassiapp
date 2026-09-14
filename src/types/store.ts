@@ -49,6 +49,8 @@ export interface StoreProfile {
   isVip?: boolean;
   /** Solde de crédit LASSI dépensable (dons admin + futurs achats). */
   creditBalance?: number;
+  /** Slug pour le lien de partage public https://lassi.tech/p/{slug}. */
+  slug?: string | null;
 }
 
 /** Contexte vitrine enrichi stocké dans shopStore. */
@@ -62,4 +64,6 @@ export interface ShopContext {
   category: string;
   /** Modes de paiement acceptés : 'wave' | 'om'. Défaut : les deux. */
   paymentMethods: ('wave' | 'om')[];
+  /** Réservation de table activée (restaurants). */
+  reservationEnabled: boolean;
 }

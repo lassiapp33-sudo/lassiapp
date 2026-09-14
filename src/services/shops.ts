@@ -1,4 +1,4 @@
-import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON, getValidToken } from '../lib/supabase';
 import useAuthStore from '../store/authStore';
 import * as Location from 'expo-location';
 import { reverseGeocode } from './location';
@@ -41,6 +41,10 @@ export interface Shop {
   phone: string | null;
   logoUrl: string | null;
   paymentMethods: ('wave' | 'om')[];
+  /** Le prestataire propose la réservation de table (restaurants). */
+  reservationEnabled: boolean;
+  /** Slug unique pour le lien de partage public https://lassi.tech/p/{slug}. */
+  slug: string | null;
 }
 
 // ─── Mapping ─────────────────────────────────────────────────────────────────
@@ -86,7 +90,20 @@ export function rowToShop(row: Record<string, any>): Shop {
     paymentMethods: Array.isArray(row.payment_methods)
       ? (row.payment_methods as ('wave' | 'om')[])
       : ['wave', 'om'],
+    reservationEnabled: Boolean(row.reservation_enabled),
+    slug: row.slug ?? null,
   };
+}
+
+export async function updateReservationEnabled(
+  shopId: string,
+  enabled: boolean,
+): Promise<void> {
+  const { error } = await supabase
+    .from('shops')
+    .update({ reservation_enabled: enabled })
+    .eq('id', shopId);
+  if (error) throw new Error(error.message);
 }
 
 export async function updatePaymentMethods(
@@ -229,6 +246,33 @@ export async function getShopsByIds(ids: string[]): Promise<Shop[]> {
   }
 }
 
+/**
+ * INSERT shops via REST direct avec le token utilisateur FRAIS (getValidToken).
+ * `supabase.from('shops').insert()` s'appuie sur la session GoTrue interne, qui
+ * n'est pas encore établie juste après signUp/login (setSession fire-and-forget)
+ * → auth.uid() NULL → "new row violates row-level security policy for shops".
+ * Le REST brut avec un JWT garanti valide fait matcher auth.uid() = merchant_id.
+ */
+export async function insertShopRow(row: Record<string, unknown>): Promise<Record<string, any>> {
+  const token = await getValidToken();
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/shops`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON,
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify(row),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Création boutique impossible (${res.status}) ${body}`.trim());
+  }
+  const data = await res.json();
+  return Array.isArray(data) ? data[0] : data;
+}
+
 // ─── Marchand : ma boutique ───────────────────────────────────────────────────
 
 export async function getMyShop(): Promise<Shop | null> {
@@ -290,26 +334,21 @@ export async function upsertMyShop(params: UpsertShopParams): Promise<Shop> {
     if (error) throw new Error(error.message);
     return rowToShop(data);
   } else {
-    const { data, error } = await supabase
-      .from('shops')
-      .insert({
-        merchant_id: userId,
-        name: params.name,
-        subtitle: params.subtitle,
-        category: params.category,
-        subcategories: params.subcategories ?? [],
-        shop_type: params.shopType ?? 'products',
-        description: params.description ?? null,
-        address_text: params.addressText ?? null,
-        zone: params.zone,
-        is_open: params.isOpen,
-        phone: params.phone ?? null,
-        opening_hours: params.openingHours ?? null,
-        is_manually_closed: params.isManuallyClose ?? false,
-      })
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
+    const data = await insertShopRow({
+      merchant_id: userId,
+      name: params.name,
+      subtitle: params.subtitle,
+      category: params.category,
+      subcategories: params.subcategories ?? [],
+      shop_type: params.shopType ?? 'products',
+      description: params.description ?? null,
+      address_text: params.addressText ?? null,
+      zone: params.zone,
+      is_open: params.isOpen,
+      phone: params.phone ?? null,
+      opening_hours: params.openingHours ?? null,
+      is_manually_closed: params.isManuallyClose ?? false,
+    });
     return rowToShop(data);
   }
 }
@@ -324,6 +363,45 @@ export async function updateOpeningHours(shopId: string, hours: WeekHours | null
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Horaires + statut exceptionnel actuels d'un prestataire (par merchant_id).
+ * Source de vérité unique des créneaux : lit toujours l'état LIVE en base,
+ * indépendamment de tout snapshot passé en navigation.
+ */
+export async function getOpeningHoursByMerchant(
+  merchantId: string,
+): Promise<{ openingHours: WeekHours | null; isManuallyClose: boolean }> {
+  const { data, error } = await supabase
+    .from('shops')
+    .select('opening_hours,is_manually_closed')
+    .eq('merchant_id', merchantId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return {
+    openingHours: (data?.opening_hours as WeekHours | null) ?? null,
+    isManuallyClose: Boolean(data?.is_manually_closed),
+  };
+}
+
+/**
+ * Moyens de paiement acceptés par un prestataire (par merchant_id).
+ * Les réservations (beauté, terrain…) doivent respecter ce choix comme
+ * les commandes normales. Fallback ['wave','om'] si non défini.
+ */
+export async function getPaymentMethodsByMerchant(
+  merchantId: string,
+): Promise<('wave' | 'om')[]> {
+  const { data, error } = await supabase
+    .from('shops')
+    .select('payment_methods')
+    .eq('merchant_id', merchantId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return Array.isArray(data?.payment_methods)
+    ? (data!.payment_methods as ('wave' | 'om')[])
+    : ['wave', 'om'];
+}
+
 export async function updateManuallyClose(shopId: string, closed: boolean): Promise<void> {
   const { error } = await supabase
     .from('shops')
@@ -334,14 +412,17 @@ export async function updateManuallyClose(shopId: string, closed: boolean): Prom
 
 export async function updateShopDetails(
   shopId: string,
-  updates: { description?: string; addressText?: string; phone?: string },
+  updates: { name?: string; description?: string; addressText?: string; phone?: string },
 ): Promise<void> {
   const patch: Record<string, any> = {};
+  if (updates.name !== undefined) patch.name = updates.name;
   if (updates.description !== undefined) patch.description = updates.description;
   if (updates.addressText !== undefined) patch.address_text = updates.addressText;
   if (updates.phone !== undefined) patch.phone = updates.phone;
   const { error } = await supabase.from('shops').update(patch).eq('id', shopId);
   if (error) throw new Error(error.message);
+  // Le nom est affiché côté client : invalider le cache pour refléter le changement.
+  if (updates.name !== undefined) clearShopsCache();
 }
 
 export async function updateGalleryUrls(shopId: string, urls: string[]): Promise<void> {
@@ -362,7 +443,7 @@ export async function createShopForMerchant(
 ): Promise<void> {
   const userId = useAuthStore.getState().user?.id;
   if (!userId) throw new Error('Non connecté');
-  const { error } = await supabase.from('shops').insert({
+  await insertShopRow({
     merchant_id: userId,
     name,
     subtitle: '',
@@ -372,7 +453,6 @@ export async function createShopForMerchant(
     zone: '',
     is_open: true,
   });
-  if (error) throw new Error(error.message);
 }
 
 /** Enregistre la position GPS d'un commerce dans Supabase */

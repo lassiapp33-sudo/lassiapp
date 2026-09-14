@@ -12,10 +12,19 @@ const DEFAULT_CATS: StoreCategory[] = [
   { id: 'plats', label: 'Plats', emoji: '🍽' },
 ];
 
+// Parfumerie & Soins/Bio : shopType services mais vendent des produits, pas des prestations.
+function beautySellsProducts(subcategories: string[]): boolean {
+  return subcategories.some(s => s === 'parfumerie' || s === 'soins_bio');
+}
+
 function getDefaultCats(
   shopType: 'products' | 'services' | 'memberships' | 'terrains',
+  subcategories: string[] = [],
 ): StoreCategory[] {
-  if (shopType === 'services') return [{ id: 'prestations', label: 'Prestations', emoji: '✂️' }];
+  if (shopType === 'services')
+    return beautySellsProducts(subcategories)
+      ? [{ id: 'produits', label: 'Produit', emoji: '' }]
+      : [{ id: 'prestations', label: 'Prestations', emoji: '✂️' }];
   if (shopType === 'memberships') return [
     { id: 'formules', label: 'Formules', emoji: '🏋️' },
     { id: 'produits', label: 'Produits', emoji: '🛍️' },
@@ -44,7 +53,12 @@ interface ShopState {
 
   updateProfile: (updates: Partial<StoreProfile>) => Promise<void>;
   updateLogo: (logoUrl: string) => Promise<void>;
-  saveShopDetails: (description: string, addressText: string, phone: string) => Promise<void>;
+  saveShopDetails: (
+    name: string,
+    description: string,
+    addressText: string,
+    phone: string,
+  ) => Promise<void>;
   saveProduct: (product: StoreProduct) => Promise<void>;
   toggleStock: (id: string) => Promise<void>;
   removeProduct: (id: string) => Promise<void>;
@@ -53,6 +67,7 @@ interface ShopState {
   toggleManuallyClose: () => Promise<void>;
   updateGalleryUrls: (urls: string[]) => Promise<void>;
   updatePaymentMethods: (methods: ('wave' | 'om')[]) => Promise<void>;
+  updateReservationEnabled: (enabled: boolean) => Promise<void>;
 
   addCategory: (label: string) => void;
   renameCategory: (oldId: string, newLabel: string) => Promise<void>;
@@ -77,6 +92,7 @@ const DEFAULT_CONTEXT: ShopContext = {
   subcategories: [],
   category: '',
   paymentMethods: ['wave', 'om'],
+  reservationEnabled: false,
 };
 
 const useShopStore = create<ShopState>()((set, get) => ({
@@ -153,13 +169,23 @@ const useShopStore = create<ShopState>()((set, get) => ({
         { id: 'produits',    label: 'Produits',    emoji: '🛍️' },
       ];
 
+      // Parfumerie & Soins/Bio : catégorie "Produit" sans emoji (pas "Prestations").
+      const isBeautyProductShop =
+        shop.shopType === 'services' && beautySellsProducts(shop.subcategories ?? []);
+
       let categories: StoreCategory[];
       if (catIds.length > 0) {
         // Dériver uniquement depuis les produits existants (tous types)
-        categories = catIds.map(id => ({ id, label: toLabel(id), emoji: catMeta[id]?.emoji ?? '📦' }));
+        categories = catIds.map(id =>
+          isBeautyProductShop && (id === 'produits' || id === 'prestations')
+            ? { id, label: 'Produit', emoji: '' }
+            : { id, label: toLabel(id), emoji: catMeta[id]?.emoji ?? '📦' },
+        );
       } else {
         // Boutique vide : onglets par défaut selon le type
-        categories = shop.shopType === 'memberships' ? BASE_FITNESS : getDefaultCats(shop.shopType);
+        categories = shop.shopType === 'memberships'
+          ? BASE_FITNESS
+          : getDefaultCats(shop.shopType, shop.subcategories ?? []);
       }
 
       // Si la boutique n'a pas de logo, utiliser la photo de profil du marchand
@@ -194,6 +220,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
           logoUrl,
           isVip: shop.isVip,
           creditBalance: shop.creditBalance,
+          slug: shop.slug,
         },
         context: {
           shopType: shop.shopType,
@@ -203,6 +230,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
           subcategories: shop.subcategories ?? [],
           category: shop.category ?? '',
           paymentMethods: shop.paymentMethods,
+          reservationEnabled: shop.reservationEnabled,
         },
         categories,
         products,
@@ -241,13 +269,28 @@ const useShopStore = create<ShopState>()((set, get) => ({
     }
   },
 
-  saveShopDetails: async (description, addressText, phone) => {
+  saveShopDetails: async (name, description, addressText, phone) => {
     const { shopId } = get();
     if (!shopId) return;
     const prev = get().profile;
-    set(state => ({ profile: { ...state.profile, description, addressText, phone } }));
+    const cleanName = name.trim() || prev.name;
+    set(state => ({
+      profile: {
+        ...state.profile,
+        name: cleanName,
+        initial: cleanName.charAt(0).toUpperCase(),
+        description,
+        addressText,
+        phone,
+      },
+    }));
     try {
-      await shopsService.updateShopDetails(shopId, { description, addressText, phone });
+      await shopsService.updateShopDetails(shopId, {
+        name: cleanName,
+        description,
+        addressText,
+        phone,
+      });
     } catch (err) {
       set({ profile: prev });
       throw err;
@@ -276,6 +319,19 @@ const useShopStore = create<ShopState>()((set, get) => ({
       await shopsService.updatePaymentMethods(shopId, methods);
     } catch (err) {
       set(state => ({ context: { ...state.context, paymentMethods: prev } }));
+      throw err;
+    }
+  },
+
+  updateReservationEnabled: async enabled => {
+    const { shopId } = get();
+    if (!shopId) return;
+    const prev = get().context.reservationEnabled;
+    set(state => ({ context: { ...state.context, reservationEnabled: enabled } }));
+    try {
+      await shopsService.updateReservationEnabled(shopId, enabled);
+    } catch (err) {
+      set(state => ({ context: { ...state.context, reservationEnabled: prev } }));
       throw err;
     }
   },
