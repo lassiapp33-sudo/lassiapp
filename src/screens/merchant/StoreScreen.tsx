@@ -43,6 +43,7 @@ import { FitnessOffre } from '../../services/fitnessAbonnements';
 import * as beautyService from '../../services/beauty';
 import { BeautyService } from '../../types/beauty';
 import { getErrorMessage } from '../../utils/errorUtils';
+import { getStatsClics } from '../../services/statsPartageService';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { FITNESS_SUBSCRIPTION_CATS } from '../../config/fitnessConfig';
 
@@ -205,6 +206,17 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
 
   // ── Logo boutique ──────────────────────────────────────────────────────────
   const [logoUploading, setLogoUploading] = useState(false);
+
+  // ── Stats clics lien de partage ─────────────────────────────────────────────
+  const [clicsTotal, setClicsTotal] = useState<number | null>(null);
+  useEffect(() => {
+    if (!profile.slug) return;
+    let alive = true;
+    getStatsClics()
+      .then(s => { if (alive) setClicsTotal(s.total); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [profile.slug]);
 
   const handleEditLogo = () => {
     if (!shopId) return;
@@ -802,6 +814,11 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                   <Text style={styles.shareHint}>
                     Partagez-le à vos contacts, sur WhatsApp et vos bios réseaux sociaux : vos clients arrivent direct dans votre vitrine pour commander.
                   </Text>
+                  {clicsTotal !== null ? (
+                    <Text style={styles.shareStat}>
+                      👀 {clicsTotal} clic{clicsTotal > 1 ? 's' : ''} sur votre lien
+                    </Text>
+                  ) : null}
                   <View style={styles.shareRow}>
                     <TouchableOpacity
                       style={[styles.shareBtn, styles.shareBtnGhost]}
@@ -1441,6 +1458,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     marginTop: 8,
+  },
+  shareStat: {
+    color: colors.white,
+    fontFamily: fonts.ui,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 10,
   },
   shareRow: {
     flexDirection: 'row',
