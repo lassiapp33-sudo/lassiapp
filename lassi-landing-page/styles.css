@@ -519,7 +519,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 
   .hero-grid,.feature-grid,.contact-grid{grid-template-columns:1fr}
   .hero-visual{order:-1;max-width:440px;margin:0 auto}
-  .float-card--tl{left:0}
+  .float-card--tl{left:0;top:26%}
   .float-card--br{right:0}
   .feature-visual{order:-1}
   .footer-grid{grid-template-columns:1fr 1fr}
