@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
+import { ALAUNE_ENABLED } from '../../config/features';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -186,7 +187,7 @@ export default function QuickActions({
   return (
     <View style={styles.grid}>
       <View style={styles.row}>
-        {/* Cahier de dettes — MASQUÉ temporairement */}
+        {/* Cahier de dettes + Autour de moi — MASQUÉS temporairement */}
         <ActionCard
           Icon={IcoMsg}
           iconBg="rgba(29,200,242,.13)"
@@ -197,16 +198,6 @@ export default function QuickActions({
           }
           badge={msgCount}
           onPress={() => onPress?.('messages')}
-        />
-      </View>
-      <View style={styles.row}>
-        <ActionCard
-          Icon={IcoMapPin}
-          iconBg="rgba(253,207,52,.13)"
-          iconStroke={colors.accent}
-          title="Autour de moi"
-          desc="Découvre et commande chez d'autres"
-          onPress={() => onPress?.('aroundme')}
         />
         {isSlotShop ? (
           <ActionCard
@@ -230,14 +221,17 @@ export default function QuickActions({
       </View>
       {/* Mes avis + Classement — MASQUÉS temporairement */}
       <View style={styles.row}>
-        <ActionCard
-          Icon={IcoFlame}
-          iconBg="rgba(253,207,52,.13)"
-          iconStroke={colors.accent}
-          title="À la une"
-          desc="Blocs 24h · partage & ventes"
-          onPress={() => onPress?.('a_la_une')}
-        />
+        {/* À la une — MASQUÉ (ALAUNE_ENABLED) */}
+        {ALAUNE_ENABLED && (
+          <ActionCard
+            Icon={IcoFlame}
+            iconBg="rgba(253,207,52,.13)"
+            iconStroke={colors.accent}
+            title="À la une"
+            desc="Blocs 24h · partage & ventes"
+            onPress={() => onPress?.('a_la_une')}
+          />
+        )}
         <ActionCard
           Icon={IcoTruck}
           iconBg="rgba(95,211,138,.13)"

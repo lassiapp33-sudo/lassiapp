@@ -9,3 +9,7 @@
 
 export const WAVE_ENABLED = true;
 export const VISIBILITY_PACKS_ENABLED = true;
+
+// « À la une » masqué partout (client + marchand + gérant).
+// Remettre true + eas update pour réactiver l'affichage sans rebuild.
+export const ALAUNE_ENABLED = false;

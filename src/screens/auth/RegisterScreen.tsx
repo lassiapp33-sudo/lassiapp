@@ -12,7 +12,6 @@ import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import BackButton from '../../components/auth/BackButton';
 import InputField from '../../components/auth/InputField';
 import AuthButton from '../../components/auth/AuthButton';
-import NoteBox from '../../components/auth/NoteBox';
 import LassiLogo from '../../components/LassiLogo';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import { formatPhoneSenegal, cleanPhone, isValidPhone, PHONE_ERROR } from '../../utils/phone';
@@ -43,13 +42,6 @@ const IconUser = () => (
   <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.7}>
     <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke={colors.muted} />
     <Circle cx={12} cy={7} r={4} stroke={colors.muted} />
-  </Svg>
-);
-
-const IconMail = () => (
-  <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.7}>
-    <Rect x={2} y={4} width={20} height={16} rx={2} stroke={colors.muted} />
-    <Path d="m22 7-10 5L2 7" stroke={colors.muted} />
   </Svg>
 );
 
@@ -128,11 +120,10 @@ export default function RegisterScreen({
 
   const [nom, setNom] = useState('');
   const [tel, setTel] = useState('');
-  const [email, setEmail] = useState('');
   const [mdp, setMdp] = useState('');
   const [showMdp, setShowMdp] = useState(false);
-  const [mdpConfirm, setMdpConfirm] = useState('');
-  const [showMdpConfirm, setShowMdpConfirm] = useState(false);
+  const [mdp2, setMdp2] = useState('');
+  const [showMdp2, setShowMdp2] = useState(false);
   const [cguAccepted, setCguAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -148,11 +139,11 @@ export default function RegisterScreen({
       setErreur(PHONE_ERROR);
       return;
     }
-    if (mdp.length < 8) {
-      setErreur('Le mot de passe doit contenir au moins 8 caractères.');
+    if (mdp.length < 6) {
+      setErreur('Le mot de passe doit contenir au moins 6 caractères.');
       return;
     }
-    if (mdp !== mdpConfirm) {
+    if (mdp !== mdp2) {
       setErreur('Les mots de passe ne correspondent pas.');
       return;
     }
@@ -166,7 +157,7 @@ export default function RegisterScreen({
       await onSuccess({
         name: nom.trim(),
         phone: cleanPhone(tel), // stocké sans espaces : "781376161"
-        email: email.trim(),
+        email: '', // email supprimé de l'inscription → email technique généré côté service
         password: mdp,
       });
     } catch (e: unknown) {
@@ -225,21 +216,8 @@ export default function RegisterScreen({
           returnKeyType="next"
         />
         <InputField
-          label="Email"
-          optional
-          placeholder={t.auth.emailPlaceholder}
-          value={email}
-          onChangeText={setEmail}
-          leftIcon={<IconMail />}
-          keyboardType="email-address"
-          autoComplete="email"
-          textContentType="emailAddress"
-          scrollRef={scrollRef}
-          returnKeyType="next"
-        />
-        <InputField
           label={t.auth.passwordLabel}
-          placeholder="Min. 8 caractères"
+          placeholder="Min. 6 caractères"
           value={mdp}
           onChangeText={setMdp}
           leftIcon={<IconLock />}
@@ -253,13 +231,13 @@ export default function RegisterScreen({
         />
         <InputField
           label="Confirmer le mot de passe"
-          placeholder="Répète ton mot de passe"
-          value={mdpConfirm}
-          onChangeText={setMdpConfirm}
+          placeholder="Retape le mot de passe"
+          value={mdp2}
+          onChangeText={setMdp2}
           leftIcon={<IconLock />}
-          rightIcon={<IconEye off={showMdpConfirm} />}
-          onRightPress={() => setShowMdpConfirm(v => !v)}
-          secureTextEntry={!showMdpConfirm}
+          rightIcon={<IconEye off={showMdp2} />}
+          onRightPress={() => setShowMdp2(v => !v)}
+          secureTextEntry={!showMdp2}
           autoComplete="new-password"
           textContentType="newPassword"
           scrollRef={scrollRef}
@@ -267,10 +245,7 @@ export default function RegisterScreen({
           onSubmitEditing={handleSubmit}
         />
 
-        <NoteBox
-          text="Ton email sert uniquement à récupérer ton compte si tu oublies ton mot de passe. Pas de spam, promis."
-          style={{ marginBottom: 16 }}
-        />
+        <View style={{ height: 16 }} />
 
         {/* Acceptation CGU */}
         <View style={styles.cguRow}>

@@ -1,11 +1,11 @@
 /**
  * screens/auth/MerchantShopSetupScreen.tsx
- * Parcours d'inscription marchand en 5 étapes :
+ * Parcours d'inscription marchand en 4 étapes :
  *   1. Catégorie        — quel type de commerce ?
  *   2. Sous-catégorie   — spécialité (single ou multiple selon config)
  *   3. Identité         — nom, logo, description
- *   4. Horaires         — planning hebdomadaire (optionnel, peut être sauté)
- *   5. Paiement         — modes de paiement acceptés (Wave / Orange Money)
+ *   4. Paiement         — modes de paiement acceptés (Wave / Orange Money)
+ * Les horaires se configurent uniquement depuis la vitrine, pas à l'inscription.
  */
 import React, { useState } from 'react';
 import { Image as ExpoImage } from 'expo-image';
@@ -24,11 +24,9 @@ import BackButton from '../../components/auth/BackButton';
 import AuthButton from '../../components/auth/AuthButton';
 import LassiLogo from '../../components/LassiLogo';
 import Avatar from '../../components/Avatar';
-import OpeningHoursCard from '../../components/store/OpeningHoursCard';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import { RegisterData } from './RegisterScreen';
 import { CatId, CATEGORIES, CatConfig, getCatConfig } from '../../config/categories';
-import { DEFAULT_WEEK_HOURS, WeekHours } from '../../services/hours';
 import * as storageService from '../../services/storage';
 import * as authService from '../../services/auth';
 import useAuthStore from '../../store/authStore';
@@ -42,11 +40,11 @@ interface Props {
   onComplete: (role: 'merchant') => void;
 }
 
-type Step = 1 | 2 | 3 | 4 | 5;
+type Step = 1 | 2 | 3 | 4;
 
 // ─── En-tête commun (défini hors du composant pour éviter le remontage) ───────
 
-const STEP_LABELS = ['Catégorie', 'Spécialité', 'Identité', 'Horaires', 'Paiement'];
+const STEP_LABELS = ['Catégorie', 'Spécialité', 'Identité', 'Paiement'];
 
 const WAVE_LOGO = require('../../../assets/wave.jpg');
 const OM_LOGO = require('../../../assets/om.png');
@@ -70,7 +68,7 @@ const Header = React.memo(function Header({ step, onBack }: HeaderProps) {
         <LassiLogo width={72} />
       </View>
       <View style={styles.progressRow}>
-        {([1, 2, 3, 4, 5] as Step[]).map(s => (
+        {([1, 2, 3, 4] as Step[]).map(s => (
           <View
             key={s}
             style={[
@@ -81,7 +79,7 @@ const Header = React.memo(function Header({ step, onBack }: HeaderProps) {
         ))}
       </View>
       <Text style={styles.stepLabel}>
-        Étape {step} sur 5 — {STEP_LABELS[step - 1]}
+        Étape {step} sur 4 — {STEP_LABELS[step - 1]}
       </Text>
     </>
   );
@@ -95,9 +93,8 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
   const [subcats, setSubcats] = useState<string[]>([]);
   const [shopName, setShopName] = useState('');
   const [logoUri, setLogoUri] = useState<string | null>(null);
-  const [hours, setHours] = useState<WeekHours>(DEFAULT_WEEK_HOURS);
-  const [skippedHours, setSkippedHours] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PayMethod[]>(['wave']);
+  const [reservationEnabled, setReservationEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -108,7 +105,6 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
   const handleBack = () => {
     setErreur(null);
     if (step === 1) onBack();
-    else if (step === 5) { setSkippedHours(false); setStep(4); }
     else setStep((step - 1) as Step);
   };
 
@@ -132,8 +128,6 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
         return;
       }
       setStep(4);
-    } else if (step === 4) {
-      setStep(5);
     }
   };
 
@@ -170,7 +164,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
 
   // ── Soumission finale ─────────────────────────────────────────────────────
 
-  const handleSubmit = async (skipHours: boolean) => {
+  const handleSubmit = async () => {
     setLoading(true);
     try {
       // Tagline auto-générée depuis les sous-catégories choisies
@@ -194,12 +188,13 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
         shopCategory: catId ?? '',
         shopSubcategories: subcats,
         shopType: catConfig?.shopType ?? 'products',
-        openingHours: skipHours ? null : hours,
+        openingHours: null, // configurés depuis la vitrine
         logoLocalUri: logoUri,
         latitude,
         longitude,
         zone,
         paymentMethods,
+        reservationEnabled: catId === 'food' ? reservationEnabled : false,
       });
       useAuthStore.getState().setUser(user);
       onComplete('merchant');
@@ -410,53 +405,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
     );
   }
 
-  // ── Étape 4 : Horaires ────────────────────────────────────────────────────
-
-  if (step === 4) {
-    return (
-      <KeyboardAvoidingView
-        style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingTop: TOP_INSET }]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Header step={step} onBack={handleBack} />
-          <Text style={styles.h1}>Tes horaires d'ouverture</Text>
-          <Text style={styles.sub}>
-            Définir tes horaires permet aux clients de savoir si tu es ouvert en temps réel. Tu
-            pourras les modifier à tout moment depuis ta vitrine.
-          </Text>
-          <View style={{ height: 20 }} />
-
-          <OpeningHoursCard
-            hours={hours}
-            isManuallyClose={false}
-            readOnly={false}
-            onChange={setHours}
-          />
-
-          <View style={{ height: 20 }} />
-
-          <AuthButton label="Suivant →" onPress={() => { setSkippedHours(false); setStep(5); }} loading={false} />
-
-          <TouchableOpacity
-            style={styles.skipBtn}
-            onPress={() => { setSkippedHours(true); setStep(5); }}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.skipTxt}>Passer cette étape</Text>
-          </TouchableOpacity>
-
-          <View style={{ height: 28 }} />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    );
-  }
-
-  // ── Étape 5 : Modes de paiement ───────────────────────────────────────────
+  // ── Étape 4 : Modes de paiement ───────────────────────────────────────────
 
   return (
     <KeyboardAvoidingView
@@ -502,12 +451,37 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
           Au moins un mode de paiement est requis. Tu pourras modifier ce choix depuis ton profil.
         </Text>
 
+        {catId === 'food' && (
+          <View style={styles.resaBlock}>
+            <TouchableOpacity
+              style={styles.resaHead}
+              onPress={() => setReservationEnabled(v => !v)}
+              activeOpacity={0.8}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.resaTitle}>Activer l'espace de réservation de table</Text>
+              </View>
+              <View style={[styles.switch, reservationEnabled && styles.switchOn]}>
+                <View style={[styles.switchKnob, reservationEnabled && styles.switchKnobOn]} />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.resaDesc}>
+              Proposez à vos clients de réserver une table à l'avance. Pour confirmer sa venue, le
+              client verse un acompte de 2 000 FCFA au moment de la réservation. Ce montant est
+              entièrement déduit de son addition une fois sur place. Le client reçoit un ticket
+              numérique valable pour son créneau. S'il ne se présente pas dans l'heure qui suit
+              l'horaire réservé, le ticket expire et la table est libérée. Vous pouvez activer ou
+              désactiver ce service à tout moment depuis votre profil.
+            </Text>
+          </View>
+        )}
+
         {erreur ? <Text style={styles.erreur}>{erreur}</Text> : null}
         <View style={{ height: 20 }} />
 
         <AuthButton
           label="Terminer et ouvrir ma boutique"
-          onPress={() => handleSubmit(skippedHours)}
+          onPress={handleSubmit}
           loading={loading}
         />
 
@@ -742,19 +716,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Étape 4 — bouton passer
-  skipBtn: {
-    alignItems: 'center',
-    paddingVertical: 14,
-  },
-  skipTxt: {
-    color: colors.muted,
-    fontFamily: fonts.ui,
-    fontSize: 13,
-    textDecorationLine: 'underline',
-  },
-
-  // Étape 5 — modes de paiement
+  // Étape 4 — modes de paiement
   payRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -784,5 +746,52 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 4,
     textAlign: 'center',
+  },
+  resaBlock: {
+    marginTop: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: 16,
+  },
+  resaHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  resaTitle: {
+    color: colors.white,
+    fontFamily: fonts.title,
+    fontSize: 14.5,
+    lineHeight: 20,
+  },
+  resaDesc: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 12.5,
+    lineHeight: 19,
+    marginTop: 12,
+  },
+  switch: {
+    width: 46,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.border,
+    padding: 3,
+    justifyContent: 'center',
+  },
+  switchOn: {
+    backgroundColor: colors.accent,
+  },
+  switchKnob: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.white,
+    alignSelf: 'flex-start',
+  },
+  switchKnobOn: {
+    alignSelf: 'flex-end',
   },
 });
