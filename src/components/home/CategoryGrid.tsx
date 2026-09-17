@@ -38,8 +38,7 @@ export default function CategoryGrid({ onSelect }: Props) {
             <Text
               style={styles.label}
               numberOfLines={2}
-              adjustsFontSizeToFit
-              minimumFontScale={0.75}
+              allowFontScaling={false}
             >
               {label}
             </Text>
@@ -78,10 +77,12 @@ const styles = StyleSheet.create({
   label: {
     color: colors.white,
     fontFamily: fonts.ui,
-    // Police réduite (9) sur les deux plateformes pour que "Commerçants" tienne
-    // sur une ligne et "Boulangerie / Pâtisserie" sur deux lignes propres.
-    // iOS était en 10 → cassait "Commerça/nts" et "Boulangeri/es".
-    fontSize: 9,
+    // Taille FIXE identique iOS/Android (plus de adjustsFontSizeToFit qui
+    // rétrécissait chaque label indépendamment → "Pâtisserie" minuscule).
+    // 8.5 + letterSpacing serré → "Commerçants" tient en entier sur 1 ligne
+    // sur tous les écrans ; les labels 2 lignes gardent la même taille.
+    fontSize: 8.5,
+    letterSpacing: -0.3,
     textAlign: 'center',
     lineHeight: 11,
   },
