@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase, getCachedToken, safeGetSession } from '../lib/supabase';
+import { supabase, getValidToken } from '../lib/supabase';
 import { formatPrice } from '../utils/format';
 import { calculateOffreQuartierPrice } from '../utils/offreQuartierPricing';
 
@@ -8,12 +8,7 @@ const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;
 const ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 async function authHeaders(): Promise<Record<string, string>> {
-  let token = getCachedToken();
-  if (!token) {
-    const { data: { session } } = await safeGetSession(15_000);
-    token = session?.access_token ?? null;
-  }
-  if (!token) throw new Error('Session expirée — reconnecte-toi');
+  const token = await getValidToken();
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
@@ -43,7 +38,22 @@ interface VisibilitySubRow {
   product_ids: string[] | null;
   all_products: boolean;
   plan: { label: string } | null;
-  product: { name: string; emoji: string | null; photo_url: string | null } | null;
+}
+
+// visibility_subscriptions.product_id est POLYMORPHE (produit/terrain/fitness/beauté) :
+// aucune FK vers products → l'embed PostgREST `product:product_id(...)` échoue (PGRST200)
+// et fait planter TOUTE la requête. On résout donc le nom du produit à part, best-effort.
+async function fetchProductNames(
+  productIds: (string | null)[],
+): Promise<Map<string, { name: string; emoji: string | null }>> {
+  const ids = [...new Set(productIds.filter((id): id is string => !!id))];
+  const map = new Map<string, { name: string; emoji: string | null }>();
+  if (ids.length === 0) return map;
+  const { data } = await supabase.from('products').select('id, name, emoji').in('id', ids);
+  (data as { id: string; name: string; emoji: string | null }[] | null ?? []).forEach(p =>
+    map.set(p.id, { name: p.name, emoji: p.emoji }),
+  );
+  return map;
 }
 
 export interface VisibilityPlan {
@@ -152,11 +162,14 @@ export async function getActiveSub(
     .select(
       'id, plan_id, amount, status, started_at, expires_at, paid_at, pay_method, offer_type, ' +
         'product_id, product_ids, all_products, ' +
-        'plan:plan_id(label), product:product_id(name, emoji, photo_url)',
+        'plan:plan_id(label)',
     )
     .eq('shop_id', shopId)
     .eq('status', 'active')
-    .gt('expires_at', now);
+    .gt('expires_at', now)
+    // annonce/carte ne sont PAS des forfaits : l'annonce sponsorisée est suivie
+    // via sponsored_ads (AnnonceCard). On ne garde que les vrais forfaits.
+    .or('offer_type.is.null,offer_type.in.(quartier,recherche)');
 
   if (offerType) {
     query = query.eq('offer_type', offerType);
@@ -170,6 +183,8 @@ export async function getActiveSub(
   if (!data) return null;
 
   const row = data as unknown as VisibilitySubRow;
+  const prodMap = row.all_products ? new Map() : await fetchProductNames([row.product_id]);
+  const prod = row.product_id ? prodMap.get(row.product_id) : null;
   return {
     id: row.id,
     planId: row.plan_id,
@@ -182,8 +197,8 @@ export async function getActiveSub(
     payMethod: row.pay_method as PayMethod,
     productId: row.product_id,
     productIds: row.product_ids,
-    productName: row.all_products ? null : (row.product?.name ?? null),
-    productEmoji: row.all_products ? null : (row.product?.emoji ?? null),
+    productName: row.all_products ? null : (prod?.name ?? null),
+    productEmoji: row.all_products ? null : (prod?.emoji ?? null),
     productCount: row.product_ids?.length ?? (row.product_id ? 1 : 0),
     allProducts: row.all_products,
     offerType: row.offer_type ?? 'quartier',
@@ -332,10 +347,12 @@ export async function verifyVisibilityPayment(subscriptionId: string): Promise<V
   return { paid: false, status: data.status as string };
 }
 
-// ─── Vérifier un paiement Wave (fallback si webhook Wave n'est pas encore arrivé) ──
-// Appelle l'EF qui interroge l'API Wave et active l'abonnement en cas de succès.
-
-export async function verifyWavePayment(subscriptionId: string): Promise<VerifyResult> {
+// ─── Vérification serveur active (Wave ET Orange Money) ──────────────────────
+// Appelle l'EF qui interroge DIRECTEMENT l'API du fournisseur (Wave: getWaveCheckout,
+// OM: GET /qrcode/{orderId}) puis active l'abonnement + crée l'annonce en cas de
+// succès. C'est le chemin FIABLE : l'offre s'active même si le webhook n'arrive
+// jamais. À utiliser pour wave ET orange_money (ne pas se contenter de lire la DB).
+export async function verifyVisibilityServer(subscriptionId: string): Promise<VerifyResult> {
   const res = await fetch(`${FUNCTIONS_BASE}/verify-visibility-payment`, {
     method: 'POST',
     headers: await authHeaders(),
@@ -349,6 +366,9 @@ export async function verifyWavePayment(subscriptionId: string): Promise<VerifyR
   const data = await res.json() as VerifyResult;
   return data;
 }
+
+/** @deprecated Utiliser verifyVisibilityServer (gère Wave ET OM). Alias conservé. */
+export const verifyWavePayment = verifyVisibilityServer;
 
 // ─── Modifier les produits sélectionnés d'un abonnement Offre du Quartier ────
 
@@ -374,16 +394,24 @@ export async function getActiveSubs(shopId: string): Promise<ActiveSub[]> {
     .select(
       'id, plan_id, amount, status, started_at, expires_at, paid_at, pay_method, offer_type, ' +
         'product_id, product_ids, all_products, ' +
-        'plan:plan_id(label), product:product_id(name, emoji, photo_url)',
+        'plan:plan_id(label)',
     )
     .eq('shop_id', shopId)
     .eq('status', 'active')
     .gt('expires_at', now)
+    // Exclut annonce/carte : ce sont des paiements-ledger, pas des forfaits.
+    // L'annonce sponsorisée apparaît dans Ma Campagne via sponsored_ads (AnnonceCard).
+    .or('offer_type.is.null,offer_type.in.(quartier,recherche)')
     .order('expires_at', { ascending: false });
 
   if (!data?.length) return [];
 
-  return (data as unknown as VisibilitySubRow[]).map(row => ({
+  const rows = data as unknown as VisibilitySubRow[];
+  const prodMap = await fetchProductNames(rows.map(r => (r.all_products ? null : r.product_id)));
+
+  return rows.map(row => {
+    const prod = row.product_id ? prodMap.get(row.product_id) : null;
+    return {
     id:           row.id,
     planId:       row.plan_id,
     planLabel:    row.plan?.label ?? row.plan_id,
@@ -395,12 +423,13 @@ export async function getActiveSubs(shopId: string): Promise<ActiveSub[]> {
     payMethod:    row.pay_method as PayMethod,
     productId:    row.product_id,
     productIds:   row.product_ids,
-    productName:  row.all_products ? null : (row.product?.name ?? null),
-    productEmoji: row.all_products ? null : (row.product?.emoji ?? null),
+    productName:  row.all_products ? null : (prod?.name ?? null),
+    productEmoji: row.all_products ? null : (prod?.emoji ?? null),
     productCount: row.product_ids?.length ?? (row.product_id ? 1 : 0),
     allProducts:  row.all_products,
     offerType:    row.offer_type ?? 'quartier',
-  }));
+    };
+  });
 }
 
 // ─── Statistiques de visibilité réelles ──────────────────────────────────────
