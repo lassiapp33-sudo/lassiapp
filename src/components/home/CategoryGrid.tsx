@@ -1,17 +1,21 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 import { CatId, CATEGORIES } from '../../config/categories';
 
-// Overrides d'affichage spécifiques à cette grille (label raccourci, largeur, multiligne)
-const DISPLAY: Partial<Record<CatId, { label?: string; oneLine?: boolean; itemWidth?: number }>> = {
-  stores: { label: 'Commerçants\ndu quartier', itemWidth: 82 },
+// Overrides d'affichage spécifiques à cette grille (label raccourci, multiligne)
+const DISPLAY: Partial<Record<CatId, { label?: string }>> = {
+  stores: { label: 'Commerçants' },
   hair: { label: 'Beauté &\nSoins' },
-  sport: { label: 'Sport &\nProduction' },
-  bakery: { label: 'Boulangeries &\nPâtisseries' },
+  sport: { label: 'Sport' },
+  bakery: { label: 'Boulangerie\nPâtisserie' },
+  tangana: { label: 'Tangana\n& Ndéki' },
 };
 
 const S = colors.accent;
+
+// Glyphe SVG fixe : le conteneur d'icône (aspectRatio 1) le contient sur tout écran.
+const GLYPH = 22;
 
 interface Props {
   onSelect?: (id: string, label: string) => void;
@@ -19,48 +23,51 @@ interface Props {
 
 export default function CategoryGrid({ onSelect }: Props) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.list}
-    >
-      {CATEGORIES.filter(cat => cat.id !== 'tangana').map(cat => {
+    <View style={styles.list}>
+      {CATEGORIES.map(cat => {
         const d = DISPLAY[cat.id] ?? {};
         const label = d.label ?? cat.label;
-        const oneLine = d.oneLine ?? false;
-        const itemWidth = d.itemWidth;
         return (
           <TouchableOpacity
             key={cat.id}
-            style={[styles.item, itemWidth ? { width: itemWidth } : undefined]}
+            style={styles.item}
             onPress={() => onSelect?.(cat.id, label)}
             activeOpacity={0.75}
           >
-            <View style={styles.ico}>{cat.renderIcon(S, 30)}</View>
+            <View style={styles.ico}>{cat.renderIcon(S, GLYPH)}</View>
             <Text
               style={styles.label}
-              numberOfLines={oneLine ? 1 : undefined}
-              adjustsFontSizeToFit={oneLine}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
             >
               {label}
             </Text>
           </TouchableOpacity>
         );
       })}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { gap: 12, paddingBottom: 6 },
+  // flex:1 par item → les 6 catégories se partagent la ligne à parts égales,
+  // toujours visibles, sans dépendre de Dimensions (aucun clip du 6ᵉ).
+  list: {
+    flexDirection: 'row',
+    columnGap: 8,
+    paddingBottom: 4,
+  },
   item: {
-    width: 76,
+    flex: 1,
+    minWidth: 0,
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   ico: {
-    width: 68,
-    height: 68,
+    width: '100%',
+    maxWidth: 56,
+    aspectRatio: 1,
     borderRadius: radius.xl,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -71,8 +78,11 @@ const styles = StyleSheet.create({
   label: {
     color: colors.white,
     fontFamily: fonts.ui,
-    fontSize: 11,
+    // Police réduite (9) sur les deux plateformes pour que "Commerçants" tienne
+    // sur une ligne et "Boulangerie / Pâtisserie" sur deux lignes propres.
+    // iOS était en 10 → cassait "Commerça/nts" et "Boulangeri/es".
+    fontSize: 9,
     textAlign: 'center',
-    lineHeight: 15,
+    lineHeight: 11,
   },
 });

@@ -233,7 +233,6 @@ type FilterItem = {
 
 const SUBCAT_FILTERS: FilterItem[] = [
   { id: 'all',  label: 'Tout',      emoji: null, imageUri: null, SvgIcon: null },
-  { id: 'vip',  label: '5 Étoiles', emoji: null, imageUri: null, SvgIcon: null },
   ...CATEGORIES.flatMap(cat =>
     cat.subcats.filter(sub => !sub.hidden).map(sub => ({
       id: sub.id,
@@ -483,7 +482,14 @@ export default function MapScreen({
         ? allShops
         : activeFilter === 'vip'
         ? allShops.filter(s => s.isEtoiles)
-        : allShops.filter(s => s.subcategories.includes(activeFilter));
+        // activeFilter peut être un id de CATÉGORIE (ex. 'stores', passé quand la
+        // catégorie n'a qu'une sous-cat visible) OU un id de SOUS-CATÉGORIE
+        // (chip carte). Les shops portent leur catégorie dans `category` et leurs
+        // sous-cats dans `subcategories` → on matche l'un OU l'autre, sinon les
+        // catégories mono-sous-cat (Commerçants…) renvoyaient toujours vide.
+        : allShops.filter(
+            s => s.category === activeFilter || s.subcategories.includes(activeFilter),
+          );
     if (excludeShopId) result = result.filter(s => s.id !== excludeShopId);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
