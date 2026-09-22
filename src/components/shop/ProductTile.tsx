@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { colors, fonts, radius } from '../../theme';
@@ -7,6 +7,7 @@ import { IcoCartAdd } from '../icons';
 import { formatPrice } from '../../utils/format';
 import { calculerPrixClient, calculerPrixClientVip } from '../../config/payment';
 import { calcPromoClientPrice } from '../../services/promotions';
+import ImageZoomModal from '../common/ImageZoomModal';
 
 export interface Product {
   id: string;
@@ -27,17 +28,21 @@ interface Props {
   onPress?: () => void;
   promoInfo?: ProductPromoInfo;
   isVip?: boolean;
+  isPreview?: boolean;
 }
 
-export default function ProductTile({ product, qty, onAdd, onRemove, onPress, promoInfo, isVip = false }: Props) {
+export default function ProductTile({ product, qty, onAdd, onRemove, onPress, promoInfo, isVip = false, isPreview = false }: Props) {
   const isOut = product.stock === 'out';
-  const calcPrix = isVip ? calculerPrixClientVip : calculerPrixClient;
-  const prixPromo = calcPromoClientPrice(product.price, promoInfo, isVip);
+  const calcPrix = isPreview ? (p: number) => p : (isVip ? calculerPrixClientVip : calculerPrixClient);
+  const prixPromo = isPreview ? null : calcPromoClientPrice(product.price, promoInfo, isVip);
+  const [zoom, setZoom] = useState(false);
 
   return (
     <TouchableOpacity
       style={[styles.tile, isOut && styles.tileOut]}
       onPress={isOut ? undefined : onPress}
+      onLongPress={product.photoUrl ? () => setZoom(true) : undefined}
+      delayLongPress={250}
       activeOpacity={isOut ? 1 : 0.88}
       disabled={isOut}
     >
@@ -126,6 +131,10 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
           <Text style={[styles.price, isOut && styles.priceOut]}>{formatPrice(calcPrix(product.price))}</Text>
         )}
       </View>
+
+      {product.photoUrl ? (
+        <ImageZoomModal uri={zoom ? product.photoUrl : null} onClose={() => setZoom(false)} />
+      ) : null}
     </TouchableOpacity>
   );
 }

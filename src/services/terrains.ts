@@ -1,6 +1,7 @@
-import { supabase, getCachedToken, safeGetSession } from '../lib/supabase';
+import { supabase, getValidToken } from '../lib/supabase';
 import { Terrain, TerrainHoraire, CreneauPris, ReservationTerrain } from '../types/terrain';
 import { PAYMENT_CONFIG } from '../config/payment';
+import { filtrerCreneauxPasses } from '../utils/slotTime';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -84,6 +85,7 @@ export const genererCreneaux = (
   heureOuverture: string,
   heureFermeture: string,
   dureeMinutes = 60,
+  date?: string, // YYYY-MM-DD : masque les créneaux passés si === aujourd'hui
 ): { debut: string; fin: string }[] => {
   const creneaux: { debut: string; fin: string }[] = [];
   const [hO, mO] = heureOuverture.split(':').map(Number);
@@ -97,7 +99,7 @@ export const genererCreneaux = (
     creneaux.push({ debut: fmt(cur), fin: fmt(cur + dureeMinutes) });
     cur += dureeMinutes;
   }
-  return creneaux;
+  return filtrerCreneauxPasses(creneaux, c => c.debut, date);
 };
 
 export const isCreneauDisponible = (
@@ -263,12 +265,7 @@ export const verifyTerrainReceipt = async (
 // ─── Vérification paiement via Edge Function ──────────────────────────────────
 
 async function authHeaders(): Promise<Record<string, string>> {
-  let token = getCachedToken();
-  if (!token) {
-    const { data: { session } } = await safeGetSession(15_000);
-    token = session?.access_token ?? null;
-  }
-  if (!token) throw new Error('Session expirée — reconnecte-toi');
+  const token = await getValidToken();
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,

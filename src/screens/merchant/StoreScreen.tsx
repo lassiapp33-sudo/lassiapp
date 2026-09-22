@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,10 @@ import {
   Pressable,
   Platform,
   Share,
+  Animated,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path } from 'react-native-svg';
 import { IcoPlus } from '../../components/icons';
 
@@ -70,23 +72,27 @@ function AddMenuSection({
   sectionTitle,
   addLabel,
   onAdd,
+  blink,
 }: {
   sectionTitle: string;
   addLabel: string;
   onAdd: () => void;
+  blink?: Animated.Value;
 }) {
   return (
     <View>
       <Text style={styles.menuSectionTitle}>{sectionTitle}</Text>
       <View style={styles.addPickerWrap}>
-        <TouchableOpacity
-          style={[styles.addPickerBtn, styles.addPickerBtnPrimary]}
-          onPress={onAdd}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.addPickerIcon}>+</Text>
-          <Text style={styles.addPickerTitle}>{addLabel}</Text>
-        </TouchableOpacity>
+        <Animated.View style={{ flex: 1, opacity: blink ?? 1 }}>
+          <TouchableOpacity
+            style={[styles.addPickerBtn, styles.addPickerBtnPrimary]}
+            onPress={onAdd}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.addPickerIcon}>+</Text>
+            <Text style={styles.addPickerTitle}>{addLabel}</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </View>
   );
@@ -128,7 +134,7 @@ interface Props {
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
-const MAX_GALLERY = 5;
+const MAX_GALLERY = 10;
 
 export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, onManageBeautyServices, onBeautyReservations, onRestaurantReservations }: Props) {
   const profileRaw = useShopStore(s => s.profile);
@@ -207,6 +213,49 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   // ── Logo boutique ──────────────────────────────────────────────────────────
   const [logoUploading, setLogoUploading] = useState(false);
 
+  // ── Horaires : masqués derrière un bouton clignotant au 1er lancement, révélés définitivement au 1er tap ──
+  const hoursRevealKey = shopId ? `hoursRevealed:${shopId}` : null;
+  const [showHours, setShowHours] = useState(false);
+  const hoursBlink = useRef(new Animated.Value(1)).current;
+  // Hydrate : déjà révélé (flag persistant) OU horaires déjà définis → ne plus jamais masquer
+  useEffect(() => {
+    if (context.openingHours != null) { setShowHours(true); return; }
+    if (!hoursRevealKey) return;
+    let alive = true;
+    AsyncStorage.getItem(hoursRevealKey)
+      .then(v => { if (alive && v === '1') setShowHours(true); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [hoursRevealKey, context.openingHours]);
+  const revealHours = useCallback(() => {
+    setShowHours(true);
+    if (hoursRevealKey) AsyncStorage.setItem(hoursRevealKey, '1').catch(() => {});
+  }, [hoursRevealKey]);
+  useEffect(() => {
+    if (showHours) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(hoursBlink, { toValue: 0.35, duration: 550, useNativeDriver: true }),
+        Animated.timing(hoursBlink, { toValue: 1, duration: 550, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [showHours, hoursBlink]);
+
+  // ── Blink continu pour tous les boutons "Ajouter produit/service" ────────────
+  const addBlink = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(addBlink, { toValue: 0.4, duration: 600, useNativeDriver: true }),
+        Animated.timing(addBlink, { toValue: 1, duration: 600, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [addBlink]);
+
   // ── Stats clics lien de partage ─────────────────────────────────────────────
   const [clicsTotal, setClicsTotal] = useState<number | null>(null);
   useEffect(() => {
@@ -236,19 +285,22 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
         setLogoUploading(false);
       }
     };
+    // Picker différé : iOS refuse en silence de le présenter tant que
+    // l'ActionSheet/Alert n'est pas totalement fermé (« galerie sans réponse »).
+    const defer = (s: 'gallery' | 'camera') => setTimeout(() => doUpload(s), 350);
     if (Platform.OS === 'ios') {
       const { ActionSheetIOS } = require('react-native');
       ActionSheetIOS.showActionSheetWithOptions(
         { options: ['Annuler', 'Galerie', 'Caméra'], cancelButtonIndex: 0 },
         (idx: number) => {
-          if (idx === 1) doUpload('gallery');
-          if (idx === 2) doUpload('camera');
+          if (idx === 1) defer('gallery');
+          if (idx === 2) defer('camera');
         },
       );
     } else {
       Alert.alert('Logo boutique', '', [
-        { text: 'Galerie', onPress: () => doUpload('gallery') },
-        { text: 'Caméra', onPress: () => doUpload('camera') },
+        { text: 'Galerie', onPress: () => defer('gallery') },
+        { text: 'Caméra', onPress: () => defer('camera') },
         { text: 'Annuler', style: 'cancel' },
       ]);
     }
@@ -809,7 +861,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                 <Text style={styles.sectionTitle}>Mon lien de partage</Text>
                 <View style={styles.card}>
                   <Text style={styles.shareLink} numberOfLines={1}>
-                    {`lassi.tech/p/${profile.slug}`}
+                    {`s.lassi.tech/${profile.slug}`}
                   </Text>
                   <Text style={styles.shareHint}>
                     Partagez-le à vos contacts, sur WhatsApp et vos bios réseaux sociaux : vos clients arrivent direct dans votre vitrine pour commander.
@@ -823,7 +875,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     <TouchableOpacity
                       style={[styles.shareBtn, styles.shareBtnGhost]}
                       onPress={async () => {
-                        await Clipboard.setStringAsync(`https://lassi.tech/p/${profile.slug}`);
+                        await Clipboard.setStringAsync(`https://s.lassi.tech/${profile.slug}`);
                         Alert.alert('Copié', 'Lien copié dans le presse-papier.');
                       }}
                     >
@@ -833,7 +885,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                       style={[styles.shareBtn, styles.shareBtnSolid]}
                       onPress={() =>
                         Share.share({
-                          message: `${profile.name} est maintenant sur LASSİ ! 🎉\nCommandez directement ici : https://lassi.tech/p/${profile.slug}`,
+                          message: `${profile.name} est maintenant sur LASSİ ! 🎉\nCommandez directement ici : https://s.lassi.tech/${profile.slug}`,
                         }).catch(() => {})
                       }
                     >
@@ -843,6 +895,176 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                 </View>
               </View>
             ) : null}
+
+            {isBeautySlotShop ? (
+              /* ── Beauté (barber/tresse/esthétique/ongle) : format Services / Produits ── */
+              <>
+                <Text style={styles.menuSectionTitle}>Ajouter au catalogue</Text>
+                <View style={styles.addPickerWrap}>
+                  <Animated.View style={{ flex: 1, opacity: addBlink }}>
+                    <TouchableOpacity
+                      style={[styles.addPickerBtn, styles.addPickerBtnPrimary]}
+                      onPress={() => onManageBeautyServices?.()}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.addPickerIcon}>+</Text>
+                      <Text style={styles.addPickerTitle}>Service</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                  <Animated.View style={{ flex: 1, opacity: addBlink }}>
+                    <TouchableOpacity
+                      style={styles.addPickerBtn}
+                      onPress={() => openAdd('produits')}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.addPickerIcon}>+</Text>
+                      <Text style={[styles.addPickerTitle, { color: colors.white }]}>Produit</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                </View>
+
+                {/* ── Services réservables (créneaux + paiement) groupés par catégorie ── */}
+                {reservByCat.map(group => (
+                  <React.Fragment key={group.key}>
+                    <SectionHead title={group.label} count={group.items.length} itemLabel="service" />
+                    {group.items.map(svc => (
+                      <TouchableOpacity
+                        key={svc.id}
+                        style={styles.reservRow}
+                        onPress={() => onManageBeautyServices?.()}
+                        activeOpacity={0.85}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.reservNom}>{svc.nom}</Text>
+                          <Text style={styles.reservMeta}>⏱ {svc.duree_minutes} min · réservable</Text>
+                        </View>
+                        <Text style={styles.reservPrix}>
+                          {beautyService.calculerPrixBeauteAvecMarge(svc.prix)} F
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </React.Fragment>
+                ))}
+
+                {/* ── Produits (vente directe / panier) — masqué si vide ── */}
+                {beautyProducts.length > 0 && (
+                  <SectionHead title="Produits" count={beautyProducts.length} itemLabel="produit" />
+                )}
+                {beautyProducts.map(product => (
+                  <ProductRow
+                    key={product.id}
+                    product={product}
+                    promoInfo={promoMap[product.id]}
+                    onEdit={() => openEdit(product)}
+                    onToggleStock={async () => {
+                      try {
+                        await toggleStock(product.id);
+                      } catch {
+                        Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
+                      }
+                    }}
+                  />
+                ))}
+              </>
+            ) : (
+              <>
+                {/* ── Ajouter un produit (masqué pour les onglets abonnement fitness) ── */}
+                {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
+                  <AddMenuSection
+                    sectionTitle="Mon menu"
+                    addLabel={
+                      itemLabel === 'prestation'
+                        ? 'Ajouter une prestation'
+                        : itemLabel === 'formule'
+                          ? 'Ajouter une formule'
+                          : 'Ajouter un produit'
+                    }
+                    onAdd={() => openAdd(activeCat)}
+                    blink={addBlink}
+                  />
+                )}
+
+                {/* ── Onglets unifiés (un seul système pour tous les shop types) ── */}
+                <CategoryTabs
+                  categories={categories}
+                  active={activeCat}
+                  onSelect={setActiveCat}
+                  onDeleteCat={handleDeleteCat}
+                  onRenameCat={handleRenameCat}
+                />
+
+                {/* ── Contenu de l'onglet actif (produits — masqué pour onglets abonnement) ── */}
+                {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
+                  <>
+                    <SectionHead
+                      title={activeCatData?.label ?? ''}
+                      count={filtered.length}
+                      itemLabel={itemLabel}
+                    />
+                    {filtered.map(product => (
+                      <ProductRow
+                        key={product.id}
+                        product={product}
+                        promoInfo={promoMap[product.id]}
+                        onEdit={() => openEdit(product)}
+                        onToggleStock={async () => {
+                          try {
+                            await toggleStock(product.id);
+                          } catch {
+                            Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
+                          }
+                        }}
+                      />
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+
+            {/* ── Offres d'abonnement (uniquement pour les onglets abonnement) ── */}
+            {context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat) && (
+              <View style={styles.fitnessSection}>
+                <View style={styles.fitnessSectionHeader}>
+                  <Text style={styles.fitnessSectionTitle}>Offres d'abonnement</Text>
+                  <Text style={styles.fitnessSectionCount}>
+                    {offres.length} offre{offres.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+                {offresLoading ? (
+                  <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
+                ) : offres.length === 0 ? (
+                  <Text style={styles.fitnessEmpty}>Aucune offre d'abonnement créée</Text>
+                ) : (
+                  offres.map(offre => (
+                    <AbonnementOffreRow
+                      key={offre.id}
+                      offre={offre}
+                      onEdit={() => { setEditOffre(offre); setShowOffreSheet(true); }}
+                      onToggleActif={() => handleToggleOffreActif(offre)}
+                    />
+                  ))
+                )}
+                <Animated.View style={{ opacity: addBlink }}>
+                  <TouchableOpacity
+                    style={[styles.addProd, { marginTop: 10 }]}
+                    onPress={() => { setEditOffre(null); setShowOffreSheet(true); }}
+                    activeOpacity={0.8}
+                  >
+                    <IcoPlus />
+                    <Text style={styles.addProdTxt}>Ajouter une offre d'abonnement</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+                {onAbonnes && (
+                  <TouchableOpacity
+                    style={[styles.addProd, { marginTop: 8, backgroundColor: 'rgba(253,207,52,.08)', borderColor: 'rgba(253,207,52,.3)' }]}
+                    onPress={onAbonnes}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.addProdTxt, { color: colors.accent }]}>Voir mes abonnés →</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
 
             {/* ── Infos boutique ──────────────────────────────────────────── */}
             <View style={styles.sectionWrap}>
@@ -908,169 +1130,6 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
               </View>
             </View>
 
-            {isBeautySlotShop ? (
-              /* ── Beauté (barber/tresse/esthétique/ongle) : format Services / Produits ── */
-              <>
-                <Text style={styles.menuSectionTitle}>Ajouter au catalogue</Text>
-                <View style={styles.addPickerWrap}>
-                  <TouchableOpacity
-                    style={[styles.addPickerBtn, styles.addPickerBtnPrimary]}
-                    onPress={() => onManageBeautyServices?.()}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.addPickerIcon}>+</Text>
-                    <Text style={styles.addPickerTitle}>Service</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.addPickerBtn}
-                    onPress={() => openAdd('produits')}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.addPickerIcon}>+</Text>
-                    <Text style={[styles.addPickerTitle, { color: colors.white }]}>Produit</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* ── Services réservables (créneaux + paiement) groupés par catégorie ── */}
-                {reservByCat.map(group => (
-                  <React.Fragment key={group.key}>
-                    <SectionHead title={group.label} count={group.items.length} itemLabel="service" />
-                    {group.items.map(svc => (
-                      <TouchableOpacity
-                        key={svc.id}
-                        style={styles.reservRow}
-                        onPress={() => onManageBeautyServices?.()}
-                        activeOpacity={0.85}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.reservNom}>{svc.nom}</Text>
-                          <Text style={styles.reservMeta}>⏱ {svc.duree_minutes} min · réservable</Text>
-                        </View>
-                        <Text style={styles.reservPrix}>
-                          {beautyService.calculerPrixBeauteAvecMarge(svc.prix)} F
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </React.Fragment>
-                ))}
-
-                {/* ── Produits (vente directe / panier) — masqué si vide ── */}
-                {beautyProducts.length > 0 && (
-                  <SectionHead title="Produits" count={beautyProducts.length} itemLabel="produit" />
-                )}
-                {beautyProducts.map(product => (
-                  <ProductRow
-                    key={product.id}
-                    product={product}
-                    promoInfo={promoMap[product.id]}
-                    onEdit={() => openEdit(product)}
-                    onToggleStock={async () => {
-                      try {
-                        await toggleStock(product.id);
-                      } catch {
-                        Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
-                      }
-                    }}
-                  />
-                ))}
-              </>
-            ) : (
-              <>
-                {/* ── Ajouter un produit (masqué pour les onglets abonnement fitness) ── */}
-                {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
-                  <AddMenuSection
-                    sectionTitle="Mon menu"
-                    addLabel={
-                      itemLabel === 'prestation'
-                        ? 'Ajouter une prestation'
-                        : itemLabel === 'formule'
-                          ? 'Ajouter une formule'
-                          : 'Ajouter un produit'
-                    }
-                    onAdd={() => openAdd(activeCat)}
-                  />
-                )}
-
-                {/* ── Onglets unifiés (un seul système pour tous les shop types) ── */}
-                <CategoryTabs
-                  categories={categories}
-                  active={activeCat}
-                  onSelect={setActiveCat}
-                  onDeleteCat={handleDeleteCat}
-                  onRenameCat={handleRenameCat}
-                />
-
-                {/* ── Contenu de l'onglet actif (produits — masqué pour onglets abonnement) ── */}
-                {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
-                  <>
-                    <SectionHead
-                      title={activeCatData?.label ?? ''}
-                      count={filtered.length}
-                      itemLabel={itemLabel}
-                    />
-                    {filtered.map(product => (
-                      <ProductRow
-                        key={product.id}
-                        product={product}
-                        promoInfo={promoMap[product.id]}
-                        onEdit={() => openEdit(product)}
-                        onToggleStock={async () => {
-                          try {
-                            await toggleStock(product.id);
-                          } catch {
-                            Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
-                          }
-                        }}
-                      />
-                    ))}
-                  </>
-                )}
-              </>
-            )}
-
-            {/* ── Offres d'abonnement (uniquement pour les onglets abonnement) ── */}
-            {context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat) && (
-              <View style={styles.fitnessSection}>
-                <View style={styles.fitnessSectionHeader}>
-                  <Text style={styles.fitnessSectionTitle}>Offres d'abonnement</Text>
-                  <Text style={styles.fitnessSectionCount}>
-                    {offres.length} offre{offres.length !== 1 ? 's' : ''}
-                  </Text>
-                </View>
-                {offresLoading ? (
-                  <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
-                ) : offres.length === 0 ? (
-                  <Text style={styles.fitnessEmpty}>Aucune offre d'abonnement créée</Text>
-                ) : (
-                  offres.map(offre => (
-                    <AbonnementOffreRow
-                      key={offre.id}
-                      offre={offre}
-                      onEdit={() => { setEditOffre(offre); setShowOffreSheet(true); }}
-                      onToggleActif={() => handleToggleOffreActif(offre)}
-                    />
-                  ))
-                )}
-                <TouchableOpacity
-                  style={[styles.addProd, { marginTop: 10 }]}
-                  onPress={() => { setEditOffre(null); setShowOffreSheet(true); }}
-                  activeOpacity={0.8}
-                >
-                  <IcoPlus />
-                  <Text style={styles.addProdTxt}>Ajouter une offre d'abonnement</Text>
-                </TouchableOpacity>
-                {onAbonnes && (
-                  <TouchableOpacity
-                    style={[styles.addProd, { marginTop: 8, backgroundColor: 'rgba(253,207,52,.08)', borderColor: 'rgba(253,207,52,.3)' }]}
-                    onPress={onAbonnes}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.addProdTxt, { color: colors.accent }]}>Voir mes abonnés →</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
             {/* ── Galerie photos ───────────────────────────────────────────── */}
             <View style={styles.sectionWrap}>
               <Text style={styles.sectionTitle}>
@@ -1080,11 +1139,16 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                   ({galleryUrls.length}/{MAX_GALLERY})
                 </Text>
               </Text>
-              <View style={styles.galleryRow}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.galleryRow}
+              >
                 {galleryUrls.map(url => (
                   <TouchableOpacity
                     key={url}
                     onLongPress={() => handleRemoveGalleryPhoto(url)}
+                    delayLongPress={250}
                     activeOpacity={0.85}
                     style={styles.galleryThumbWrap}
                   >
@@ -1106,39 +1170,51 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     )}
                   </TouchableOpacity>
                 )}
-              </View>
+              </ScrollView>
               <Text style={styles.galleryHint}>Appui long sur une photo pour la supprimer.</Text>
             </View>
 
             {/* ── Horaires d'ouverture ─────────────────────────────────────── */}
             <View style={styles.sectionWrap}>
               <Text style={styles.sectionTitle}>Horaires</Text>
-              <OpeningHoursCard
-                hours={context.openingHours}
-                isManuallyClose={context.isManuallyClose}
-                readOnly={false}
-                onChange={async h => {
-                  try {
-                    await updateOpeningHours(h);
-                  } catch {
-                    Alert.alert('Erreur', 'Impossible de sauvegarder les horaires. Réessaie.');
-                  }
-                }}
-                onToggleManuallyClose={async () => {
-                  try {
-                    await toggleManuallyClose();
-                  } catch {
-                    Alert.alert(
-                      'Erreur',
-                      'Impossible de mettre à jour le statut exceptionnel. Réessaie.',
-                    );
-                  }
-                }}
-              />
+              {!showHours ? (
+                <Animated.View style={{ opacity: hoursBlink }}>
+                  <TouchableOpacity
+                    style={styles.defineHoursBtn}
+                    onPress={revealHours}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.defineHoursTxt}>Définissez vos horaires</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              ) : (
+                <OpeningHoursCard
+                  hours={context.openingHours}
+                  isManuallyClose={context.isManuallyClose}
+                  readOnly={false}
+                  onChange={async h => {
+                    try {
+                      await updateOpeningHours(h);
+                    } catch {
+                      Alert.alert('Erreur', 'Impossible de sauvegarder les horaires. Réessaie.');
+                    }
+                  }}
+                  onToggleManuallyClose={async () => {
+                    try {
+                      await toggleManuallyClose();
+                    } catch {
+                      Alert.alert(
+                        'Erreur',
+                        'Impossible de mettre à jour le statut exceptionnel. Réessaie.',
+                      );
+                    }
+                  }}
+                />
+              )}
             </View>
 
             {/* ── Restaurant : espace de réservation de table ──────────────── */}
-            {context.category === 'food' && (
+            {(context.subcategories ?? []).some(s => s === 'restaurant' || s === 'fastfood') && (
               <>
                 <TouchableOpacity
                   style={[styles.addProd, { marginTop: 12 }]}
@@ -1537,8 +1613,8 @@ const styles = StyleSheet.create({
   // Galerie
   galleryRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
+    paddingVertical: 2,
   },
   galleryThumbWrap: {
     width: 78,
@@ -1598,6 +1674,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addProdTxt: { color: colors.accent, fontFamily: fonts.title, fontSize: 14 },
+  defineHoursBtn: {
+    height: 54,
+    borderRadius: 15,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(253,207,52,.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  defineHoursTxt: { color: colors.accent, fontFamily: fonts.title, fontSize: 15 },
   resaHint: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, lineHeight: 17, marginTop: 8, marginHorizontal: 4 },
 
   reservRow: {

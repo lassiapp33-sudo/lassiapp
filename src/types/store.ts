@@ -49,7 +49,7 @@ export interface StoreProfile {
   isVip?: boolean;
   /** Solde de crédit LASSI dépensable (dons admin + futurs achats). */
   creditBalance?: number;
-  /** Slug pour le lien de partage public https://lassi.tech/p/{slug}. */
+  /** Slug pour le lien de partage public https://s.lassi.tech/{slug}. */
   slug?: string | null;
 }
 

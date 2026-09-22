@@ -18,6 +18,7 @@ import useDebtsStore from '../../store/debtsStore';
 import useNotificationsStore from '../../store/notificationsStore';
 import useLocationStore from '../../store/locationStore';
 import { supabase } from '../../lib/supabase';
+import { useForegroundRefresh } from '../../hooks/useForegroundRefresh';
 
 // ─── Sous-composant section header ────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ type NavDest =
   | 'classement'
   | 'offre_quartier'
   | 'a_la_une'
+  | 'ca_bouge'
   | 'livraison';
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
@@ -107,6 +109,14 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
   const [terrainRevenue, setTerrainRevenue] = useState(0);
   const [terrainCount, setTerrainCount] = useState(0);
 
+  // Recette beauté — réservations créneaux avec payout réussi ce mois
+  const [beautyRevenue, setBeautyRevenue] = useState(0);
+  const [beautyCount, setBeautyCount] = useState(0);
+
+  // Compteur incrémenté au retour au premier plan → re-déclenche les effets de
+  // recette (basés sur userId) sans dupliquer leur logique.
+  const [refreshTick, setRefreshTick] = useState(0);
+
   // Montage seul — initialisation unique au démarrage du dashboard
   useEffect(() => {
     loadMyShop();
@@ -120,6 +130,19 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
     loadDebts(shopId);
   }, [shopId, loadOrders, loadDebts]);
 
+  // Retour au premier plan (déverrouillage, retour depuis background) → recharge
+  // tout le dashboard. Sans ça, après une mise en veille l'écran restait figé
+  // (recette 0 F, « aucune commande ») jusqu'à une déconnexion/reconnexion.
+  useForegroundRefresh(() => {
+    loadMyShop();
+    loadNotifications();
+    if (shopId) {
+      loadOrders(shopId);
+      loadDebts(shopId);
+    }
+    setRefreshTick(t => t + 1);
+  });
+
   // Recette standard (commandes Wave/OM + VIP) : NET depuis payout_queue ce mois
   useEffect(() => {
     if (!userId) return;
@@ -131,7 +154,7 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
         setStandardCount(d.count ?? 0);
       }
     })();
-  }, [userId]);
+  }, [userId, refreshTick]);
 
   // Recette fitness : charger dès que l'userId est connu
   useEffect(() => {
@@ -144,7 +167,7 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
         setFitnessCount(d.count ?? 0);
       }
     })();
-  }, [userId]);
+  }, [userId, refreshTick]);
 
   // Recette terrain : réservations payées ce mois-ci
   useEffect(() => {
@@ -163,12 +186,31 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
       setTerrainRevenue(rows.reduce((s, r) => s + r.montant_prestataire, 0));
       setTerrainCount(rows.length);
     })();
-  }, [userId]);
+  }, [userId, refreshTick]);
+
+  // Recette beauté : réservations créneaux payées (payout ok) ce mois-ci
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const { data } = await supabase
+        .from('beauty_reservations')
+        .select('montant_prestataire')
+        .eq('prestataire_id', userId)
+        .eq('payout_statut', 'ok')
+        .gte('date_reservation', monthStart.toISOString().slice(0, 10));
+      const rows = (data ?? []) as Array<{ montant_prestataire: number }>;
+      setBeautyRevenue(rows.reduce((s, r) => s + r.montant_prestataire, 0));
+      setBeautyCount(rows.length);
+    })();
+  }, [userId, refreshTick]);
 
   // ── Calculs réels ──────────────────────────────────────────────────────────
   const activeOrders = orders.filter(o => o.status === 'new' || o.status === 'preparing');
   // totalEarnings = montants NET reversés ce mois (jamais orders.total qui est brut)
-  const totalEarnings = standardRevenue + fitnessRevenue + terrainRevenue;
+  const totalEarnings = standardRevenue + fitnessRevenue + terrainRevenue + beautyRevenue;
   const totalDebt = debtors.reduce((sum, d) => sum + d.amount, 0);
   const debtorsWithDebt = debtors.filter(d => d.amount > 0).length;
 
@@ -225,10 +267,12 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
               parts.push(`${fitnessCount} abonnement${fitnessCount > 1 ? 's' : ''}`);
             if (terrainCount > 0)
               parts.push(`${terrainCount} terrain${terrainCount > 1 ? 's' : ''}`);
+            if (beautyCount > 0)
+              parts.push(`${beautyCount} réservation${beautyCount > 1 ? 's' : ''}`);
             return parts.length > 0 ? parts.join(' · ') : 'Aucune recette ce mois';
           })()}
-          orders={standardCount + fitnessCount + terrainCount}
-          viaLassi={standardCount + fitnessCount + terrainCount}
+          orders={standardCount + fitnessCount + terrainCount + beautyCount}
+          viaLassi={standardCount + fitnessCount + terrainCount + beautyCount}
           debts={totalDebt}
         />
 

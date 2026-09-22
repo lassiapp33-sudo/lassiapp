@@ -77,7 +77,7 @@ export default function AProposScreen({ onBack }: Props) {
             resizeMode="contain"
           />
           <LassiLogo width={160} style={s.logo} />
-          <Text style={s.slogan}>Ton quartier dans ta poche</Text>
+          <Text style={s.slogan}>Tout ton quotidien, au même endroit</Text>
         </View>
 
         {/* ── Version ───────────────────────────────────────────────────── */}

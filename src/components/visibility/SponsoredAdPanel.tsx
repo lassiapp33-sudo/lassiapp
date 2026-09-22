@@ -12,6 +12,7 @@ import {
   Linking,
   Image,
   findNodeHandle,
+  AppState,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
@@ -33,12 +34,13 @@ import {
 } from '../../services/sponsoredAds';
 import { formatPrice, formatDateLong } from '../../utils/format';
 import useShopStore from '../../store/shopStore';
+import useNotifPopupStore from '../../store/notifPopupStore';
+import usePendingNavStore from '../../store/pendingNavStore';
 import {
   PayMethod,
   checkPaymentAvailability,
   createVisibilityPayment,
-  verifyVisibilityPayment,
-  verifyWavePayment,
+  verifyVisibilityServer,
 } from '../../services/visibilityPayment';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
@@ -179,10 +181,12 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
   const shopId        = useShopStore(s => s.shopId);
   const creditBalance = useShopStore(s => s.profile?.creditBalance ?? 0);
   const loadMyShop    = useShopStore(s => s.loadMyShop);
+  const enqueueBanner = useNotifPopupStore(s => s.enqueue);
+  const setPendingNav = usePendingNavStore(s => s.setPendingNav);
 
   const [adPacks, setAdPacks] = useState<AdPack[]>(AD_PACKS);
 
-  const [format, setFormat]       = useState<AdFormat>('classique');
+  const [format, setFormat]       = useState<AdFormat>('affiche');
   const [content, setContent]     = useState<AdContent>({
     titre: '', corps: '', imageUri: null, imageUrl: null,
   });
@@ -246,6 +250,9 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
   type PendingPay = { subscriptionId: string; paymentUrl: string; qrCode: string } | null;
   const [pendingPay, setPendingPay]   = useState<PendingPay>(null);
   const [verifying, setVerifying]     = useState(false);
+  // Empêche les vérifications concurrentes (poll + AppState + bouton) et le double-succès
+  const verifyBusyRef = useRef(false);
+  const finalizedRef  = useRef(false);
 
   useEffect(() => {
     checkPaymentAvailability().then(setKeysAvailable).catch(() => {});
@@ -284,10 +291,19 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
       await loadAds();
       setContent({ titre: '', corps: '', imageUri: null, imageUrl: null });
       onCreated?.(result.newBalance);
-      Alert.alert(
-        'Campagne lancée',
-        `Ton annonce est en ligne.\nNouveau solde : ${result.newBalance} crédits.`,
-      );
+      // Notif in-app + redirection Ma Campagne (cohérent avec le flux Wave/OM)
+      enqueueBanner({
+        id:        `ad-credit-${result.id}`,
+        type:      'pay',
+        title:     'Annonce sponsorisée activée',
+        body:      `Ton annonce est en ligne. Nouveau solde : ${result.newBalance} crédits.`,
+        time:      "à l'instant",
+        unread:    true,
+        group:     'today',
+        createdAt: new Date().toISOString(),
+        data:      { offer_type: 'annonce' },
+      });
+      setPendingNav({ type: 'visibility_campaign' });
     } catch (e) {
       Alert.alert('Erreur', e instanceof Error ? e.message : 'Erreur inattendue');
     } finally {
@@ -344,9 +360,7 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
     }
   };
 
-  const handleLaunch = () => {
-    const err = validate();
-    if (err) { Alert.alert('Annonce incomplète', err); return; }
+  const proceedLaunch = () => {
     if (payMethod === 'credit') {
       void launchWithCredit();
     } else {
@@ -354,33 +368,118 @@ export default function SponsoredAdPanel({ onCreated }: Props) {
     }
   };
 
+  const handleLaunch = () => {
+    const err = validate();
+    if (err) { Alert.alert('Annonce incomplète', err); return; }
+    // Avertissement si une annonce est déjà en cours (elles tournent en parallèle).
+    const hasActive = myAds.some(a => a.status === 'active');
+    if (hasActive) {
+      Alert.alert(
+        'Annonce déjà active',
+        'Tu as déjà une annonce sponsorisée en cours. En lancer une nouvelle ? Les deux seront diffusées en parallèle.',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Continuer', onPress: proceedLaunch },
+        ],
+      );
+      return;
+    }
+    proceedLaunch();
+  };
+
+  // Finalisation côté client (une seule fois) : bannière + refresh + navigation.
+  const finalizePaid = useCallback(async (subId: string) => {
+    if (finalizedRef.current) return;
+    finalizedRef.current = true;
+    setPendingPay(null);
+    setContent({ titre: '', corps: '', imageUri: null, imageUrl: null });
+    await loadMyShop();
+    await loadAds();
+    // Bannière garantie côté client : ne PAS dépendre uniquement de la notif
+    // temps-réel serveur (souvent non délivrée) — la confirmation doit toujours
+    // apparaître dès que le paiement est confirmé (bouton OU détection auto).
+    enqueueBanner({
+      id:        `visibility-paid-${subId}`,
+      type:      'pay',
+      title:     'Annonce sponsorisée activée',
+      body:      'Ton paiement est confirmé — ton annonce est maintenant en ligne.',
+      time:      "à l'instant",
+      unread:    true,
+      group:     'today',
+      createdAt: new Date().toISOString(),
+      data:      { subscription_id: subId, offer_type: 'annonce' },
+    });
+    // Diriger vers « Ma Campagne » (les navigateurs prestataire/gérant écoutent ce flag)
+    setPendingNav({ type: 'visibility_campaign' });
+  }, [loadMyShop, loadAds, enqueueBanner, setPendingNav]);
+
+  // Vérification unitaire (partagée bouton + poll + AppState).
+  // Retourne true si le paiement est confirmé.
+  const verifyPaidOnce = useCallback(async (subId: string): Promise<boolean> => {
+    if (verifyBusyRef.current || finalizedRef.current) return false;
+    verifyBusyRef.current = true;
+    try {
+      // Vérif serveur active pour Wave ET OM (interroge l'API fournisseur + active).
+      const result = await verifyVisibilityServer(subId);
+      if (result.paid) { await finalizePaid(subId); return true; }
+      return false;
+    } finally {
+      verifyBusyRef.current = false;
+    }
+  }, [finalizePaid]);
+
+  // Bouton « J'ai payé — vérifier » : 3 tentatives + feedback si non confirmé.
   const handleVerifyPay = async () => {
     if (!pendingPay) return;
+    const subId = pendingPay.subscriptionId;
     setVerifying(true);
     try {
-      const result = payMethod === 'wave'
-        ? await verifyWavePayment(pendingPay.subscriptionId)
-        : await verifyVisibilityPayment(pendingPay.subscriptionId);
-      if (result.paid) {
-        setPendingPay(null);
-        await loadAds();
-        setContent({ titre: '', corps: '', imageUri: null, imageUrl: null });
-        Alert.alert(
-          'Campagne lancée',
-          'Ton paiement a été confirmé et ton annonce est maintenant en ligne.',
-        );
-      } else {
+      let paid = await verifyPaidOnce(subId);
+      for (let i = 1; i < 3 && !paid; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        paid = await verifyPaidOnce(subId);
+      }
+      if (!paid && !finalizedRef.current) {
         Alert.alert(
           'Paiement non confirmé',
           `On n'a pas encore reçu la confirmation ${payMethod === 'wave' ? 'Wave' : 'Orange Money'}. Patiente 1-2 min et réessaie.`,
         );
       }
     } catch {
-      Alert.alert('Erreur', 'Impossible de vérifier le paiement.');
+      if (!finalizedRef.current) Alert.alert('Erreur', 'Impossible de vérifier le paiement.');
     } finally {
       setVerifying(false);
     }
   };
+
+  // ── Détection automatique du paiement (sans bouton) ───────────────────────────
+  // Tant qu'un paiement est en attente : poll périodique + revérif au retour dans
+  // l'app (retour depuis Wave/OM). Dès confirmation serveur → bannière + Ma Campagne.
+  useEffect(() => {
+    if (!pendingPay) return;
+    const subId = pendingPay.subscriptionId;
+    finalizedRef.current = false;
+    let stopped = false;
+    let attempts = 0;
+    const MAX = 60; // ~4 min à 4s
+
+    const tick = async () => {
+      if (stopped || finalizedRef.current) return;
+      attempts += 1;
+      if (attempts > MAX) { clearInterval(id); return; }
+      try { await verifyPaidOnce(subId); } catch { /* réseau : on retentera */ }
+    };
+
+    const id = setInterval(tick, 4000);
+    // Première vérif rapide (le paiement peut déjà être confirmé au montage)
+    void tick();
+
+    const sub = AppState.addEventListener('change', s => {
+      if (s === 'active') void tick();
+    });
+
+    return () => { stopped = true; clearInterval(id); sub.remove(); };
+  }, [pendingPay, verifyPaidOnce]);
 
   return (
     <ScrollView

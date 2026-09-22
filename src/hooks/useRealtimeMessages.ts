@@ -51,12 +51,14 @@ export function useRealtimeMessages(
 
     let channel = subscribe();
 
-    // Reconnexion quand l'app repasse au premier plan
-    const sub = AppState.addEventListener('change', state => {
-      if (state === 'active') {
-        supabase.removeChannel(channel);
-        channel = subscribe();
-      }
+    // Reconnexion quand l'app repasse au premier plan.
+    // getSession() garantit un JWT frais AVANT de re-souscrire : sinon le socket
+    // rejoint avec un token expiré → join rejeté → aucun message ne remonte.
+    const sub = AppState.addEventListener('change', async state => {
+      if (state !== 'active') return;
+      await supabase.auth.getSession();
+      supabase.removeChannel(channel);
+      channel = subscribe();
     });
 
     return () => {

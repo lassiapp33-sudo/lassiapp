@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import Avatar from '../Avatar';
@@ -17,14 +17,18 @@ interface Props {
   isVip: boolean;
   isOpen: boolean;
   badge?: string | null;
+  /** Appui long 3 s sur le logo → aperçu plein écran. */
+  onZoomLogo?: () => void;
 }
 
-export default function ShopIdentity({ initial, logoUrl, isVip, isOpen, badge }: Props) {
+export default function ShopIdentity({ initial, logoUrl, isVip, isOpen, badge, onZoomLogo }: Props) {
   return (
     // -42 : la moitié du logo (84px) chevauche la bannière du dessus
     <View style={styles.row}>
       {/* Logo boutique avec bordure bg pour l'effet flottant sur la bannière */}
-      <Avatar imageUrl={logoUrl} name={initial} size={84} variant="shop" showBorder />
+      <Pressable onLongPress={onZoomLogo} delayLongPress={250} disabled={!onZoomLogo}>
+        <Avatar imageUrl={logoUrl} name={initial} size={84} variant="shop" showBorder />
+      </Pressable>
 
       <View style={styles.meta}>
         <View style={styles.badges}>

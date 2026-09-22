@@ -15,7 +15,16 @@ export type PendingNav =
   | { type: 'a_la_une_categorie'; categorieId: string }
   | { type: 'new_shop'; shopId: string; shopName: string }
   | { type: 'a_la_une_feed' }
-  | { type: 'terrain_resa'; terrainId?: string };
+  | { type: 'terrain_resa'; terrainId?: string }
+  | { type: 'beauty_resa'; date?: string }
+  | { type: 'table_resa_prestataire' }
+  | { type: 'table_resa_client' }
+  | { type: 'visibility_campaign' }
+  // Offre du Quartier : après paiement/activation → écran où le prestataire
+  // choisit/confirme les produits mis en avant (distinct de « Ma Campagne » annonce).
+  | { type: 'offre_quartier' }
+  // « Voir vitrine » depuis le modal partage → ouvre la boutique du prestataire (StoreScreen).
+  | { type: 'ma_vitrine' };
 
 interface PendingNavState {
   pendingNav: PendingNav | null;

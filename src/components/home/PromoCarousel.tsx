@@ -140,24 +140,34 @@ export default function PromoCarousel({ onPress }: Props) {
     };
   }, [N, looped]);
 
-  if (N < 3) return null;
+  // 1 ou 2 offres : pas d'assez de volume pour la boucle infinie → affichage
+  // statique (sinon l'offre payée resterait invisible tant qu'il n'y a pas 3
+  // annonceurs dans le quartier). Enregistre les vues au montage.
+  useEffect(() => {
+    if (N === 0 || N >= 3) return;
+    items.forEach(it => recordCarouselVue(it.shopId, it.id).catch(() => {}));
+  }, [N, items]);
+
+  if (N === 0) return null;
+
+  const staticMode = N < 3;
 
   return (
     <View style={styles.promoWrapper}>
       {/* En-tête */}
       <View style={styles.promoHeader}>
         <Text style={styles.promoLabel}>Offres du quartier</Text>
-        <DotsIndicator total={totalPages} active={page} />
+        {!staticMode && <DotsIndicator total={totalPages} active={page} />}
       </View>
 
-      {/* Carrousel 3 cartes */}
+      {/* Carrousel : boucle animée (≥3) ou liste statique (1-2) */}
       <ScrollView
         ref={scrollRef}
         horizontal
-        scrollEnabled={false}
+        scrollEnabled={staticMode}
         showsHorizontalScrollIndicator={false}
       >
-        {looped.map((item, i) => (
+        {(staticMode ? items : looped).map((item, i) => (
           <PromoCard
             key={`${item.id}-${i}`}
             item={item}

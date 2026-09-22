@@ -5,7 +5,8 @@ export type TableReservationStatut =
   | 'refusee'
   | 'arrivee'
   | 'terminee'
-  | 'annulee';
+  | 'annulee'
+  | 'expiree';
 
 export type TableReservationMotif =
   | 'anniversaire'
@@ -59,6 +60,7 @@ export const OPTION_EMOJI: Record<TableSpecialOption, string> = {
 export interface RestaurantSpace {
   id: string;
   vip_profil_id: string;
+  prestataire_id?: string;
   nom: string;
   description?: string;
   photo_url?: string;
@@ -72,6 +74,7 @@ export interface RestaurantSpace {
 export interface RestaurantTimeSlot {
   id: string;
   vip_profil_id: string;
+  prestataire_id?: string;
   label: string;
   heure_debut: string; // "12:00"
   heure_fin: string;   // "14:00"
@@ -85,6 +88,7 @@ export interface TableReservation {
   id: string;
   client_id: string;
   vip_profil_id: string;
+  prestataire_id?: string;
   space_id?: string;
   time_slot_id?: string;
   date_reservation: string;
@@ -115,9 +119,23 @@ export interface TableReservation {
   vip_profils?: { nom_affiche: string };
 }
 
-// Paramètres envoyés à create-table-reservation
+// Paramètres envoyés à create-table-reservation (VIP)
 export interface CreateReservationParams {
   vipProfilId: string;
+  spaceId?: string;
+  timeSlotId?: string;
+  dateReservation: string;  // YYYY-MM-DD
+  heureDebut: string;       // HH:MM
+  nbPersonnes: number;
+  motif?: TableReservationMotif;
+  detailsMotif?: string;
+  optionsSpeciales?: TableSpecialOption[];
+  moyenPaiement: 'wave' | 'orange_money';
+}
+
+// Paramètres envoyés à create-std-table-reservation (restaurants standard)
+export interface CreateStdReservationParams {
+  prestataireId: string;
   spaceId?: string;
   timeSlotId?: string;
   dateReservation: string;  // YYYY-MM-DD
@@ -132,7 +150,8 @@ export interface CreateReservationParams {
 export interface CreateReservationResult {
   success: boolean;
   mode: 'simulation' | 'production';
-  reservationId: string;
+  /** Présent seulement en simulation ou flux VIP (hold pré-créé). En prod std, la réservation n'existe qu'après paiement. */
+  reservationId?: string;
   piId: string;
   redirectUrl: string | null;
   qrCode: string | null;

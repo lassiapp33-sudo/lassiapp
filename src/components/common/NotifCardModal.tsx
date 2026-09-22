@@ -1,4 +1,4 @@
-﻿import React, { useCallback } from 'react';
+﻿import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,9 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
+  Linking,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { colors, fonts, radius } from '../../theme';
 import { NotifType } from '../../store/notificationsStore';
 import {
@@ -19,6 +21,7 @@ import {
   IcoNotifLivraison,
 } from './LassiIcons';
 import useNotifPopupStore from '../../store/notifPopupStore';
+import usePendingNavStore from '../../store/pendingNavStore';
 
 // ─── Constantes par type ──────────────────────────────────────────────────────
 
@@ -32,6 +35,8 @@ const TAG_LABEL: Record<NotifType, string> = {
   msg:                 'MESSAGE',
   livraison:           'LIVRAISON',
   reservation_terrain: 'RÉSERVATION',
+  setup_shop:          'CONFIGURATION',
+  share_vitrine:       'PARTAGE',
 };
 
 function NotifIcon({ type, size }: { type: NotifType | string; size: number }) {
@@ -43,6 +48,8 @@ function NotifIcon({ type, size }: { type: NotifType | string; size: number }) {
     case 'order':     return <IcoNotifOrder size={size} />;
     case 'msg':       return <IcoNotifMsg size={size} />;
     case 'livraison': return <IcoNotifLivraison size={size} />;
+    case 'setup_shop': return <IcoNotifAnn size={size} />;
+    case 'share_vitrine': return <IcoNotifAnn size={size} />;
     default:          return <IcoNotifGift size={size} />;
   }
 }
@@ -69,14 +76,55 @@ export default function NotifCardModal({ onView }: Props) {
   const handleCompris = useCallback(() => dismiss(), [dismiss]);
   const handleView    = useCallback(() => { dismiss(); onView(); }, [dismiss, onView]);
 
+  const handleWhatsApp = useCallback(() => {
+    const d = (current?.data ?? {}) as Record<string, unknown>;
+    const num  = (typeof d.wa_number === 'string' && d.wa_number) || '221761890003';
+    const shop = (typeof d.shop_name === 'string' && d.shop_name) || 'ma boutique';
+    const text = `Bonjour, je suis ${shop} sur LASSI, j'ai besoin d'aide pour configurer ma boutique.`;
+    const url  = `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
+    Linking.openURL(url).catch(() => {});
+    // Pas de dismiss : le modal reste affiché, se ferme uniquement via le X.
+  }, [current]);
+
+  const [copied, setCopied] = useState(false);
+
+  const shareUrl = useCallback((): string => {
+    const d = (current?.data ?? {}) as Record<string, unknown>;
+    if (typeof d.url === 'string' && d.url) return d.url;
+    if (typeof d.slug === 'string' && d.slug) return `https://s.lassi.tech/${d.slug}`;
+    return 'https://lassi.tech';
+  }, [current]);
+
+  const handleVoirVitrine = useCallback(() => {
+    dismiss();
+    usePendingNavStore.getState().setPendingNav({ type: 'ma_vitrine' });
+  }, [dismiss]);
+
+  const handleCopyLink = useCallback(async () => {
+    try { await Clipboard.setStringAsync(shareUrl()); } catch { /* ignore */ }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [shareUrl]);
+
   if (!current || current.type === 'order' || current.type === 'payment' || current.type === 'pay' || current.type === 'msg' || current.type === 'ann' || current.type === 'reservation_terrain') return null;
+
+  const isSetup = current.type === 'setup_shop';
+  const isShare = current.type === 'share_vitrine';
+  const isStatic = isSetup || isShare; // fermeture manuelle uniquement (bouton X)
 
   const tag = TAG_LABEL[current.type] ?? 'LASSI';
 
   return (
-    <Modal visible animationType="fade" transparent presentationStyle="overFullScreen" onRequestClose={handleCompris}>
+    <Modal visible animationType="fade" transparent presentationStyle="overFullScreen" onRequestClose={isStatic ? () => {} : handleCompris}>
       <View style={s.overlay}>
         <View style={s.card}>
+
+          {/* Bouton X — ferme le modal (seul moyen de fermer pour les modals statiques) */}
+          {isStatic && (
+            <TouchableOpacity style={s.closeBtn} onPress={handleCompris} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={s.closeTxt}>✕</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Tag pill */}
           <View style={s.tagPill}>
@@ -98,16 +146,39 @@ export default function NotifCardModal({ onView }: Props) {
             <Text style={s.body}>{current.body}</Text>
           </ScrollView>
 
-          {/* Bouton principal */}
-          <TouchableOpacity style={s.cta} onPress={handleCompris} activeOpacity={0.85}>
-            <Text style={s.ctaTxt}>
-              {nbRestants > 0 ? `Suivant (${nbRestants})` : "C'est compris"}
-            </Text>
-          </TouchableOpacity>
+          {isSetup ? (
+            <>
+              {/* Bouton service client WhatsApp — ne ferme pas le modal */}
+              <TouchableOpacity style={s.ctaWhatsApp} onPress={handleWhatsApp} activeOpacity={0.85}>
+                <Text style={s.ctaWhatsAppTxt}>Joindre le service client</Text>
+              </TouchableOpacity>
+            </>
+          ) : isShare ? (
+            <>
+              {/* Modal statique partage — 2 actions, fermeture via X */}
+              <View style={s.shareRow}>
+                <TouchableOpacity style={s.shareBtnLeft} onPress={handleVoirVitrine} activeOpacity={0.85}>
+                  <Text style={s.shareBtnLeftTxt}>Voir vitrine</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.shareBtnRight} onPress={handleCopyLink} activeOpacity={0.85}>
+                  <Text style={s.shareBtnRightTxt}>{copied ? 'Lien copié ✓' : 'Copier lien'}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <>
+              {/* Bouton principal */}
+              <TouchableOpacity style={s.cta} onPress={handleCompris} activeOpacity={0.85}>
+                <Text style={s.ctaTxt}>
+                  {nbRestants > 0 ? `Suivant (${nbRestants})` : "C'est compris"}
+                </Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity style={s.viewBtn} onPress={handleView} activeOpacity={0.7}>
-            <Text style={s.viewTxt}>Voir mes notifications</Text>
-          </TouchableOpacity>
+              <TouchableOpacity style={s.viewBtn} onPress={handleView} activeOpacity={0.7}>
+                <Text style={s.viewTxt}>Voir mes notifications</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
     </Modal>
@@ -127,7 +198,7 @@ const s = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 360,
-    maxHeight: '80%',
+    maxHeight: '90%',
     backgroundColor: colors.surface,
     borderWidth: 1.5,
     borderColor: colors.accent,
@@ -157,7 +228,7 @@ const s = StyleSheet.create({
     lineHeight: 24,
   },
   bodyWrap: {
-    maxHeight: 180,
+    flexShrink: 1,
     width: '100%',
     marginTop: 6,
     marginBottom: 14,
@@ -181,6 +252,67 @@ const s = StyleSheet.create({
     color: colors.bg,
     fontFamily: fonts.titleXL,
     fontSize: 15,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  closeTxt: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 16,
+  },
+  ctaWhatsApp: {
+    width: '100%',
+    height: 50,
+    borderRadius: radius.md,
+    backgroundColor: '#25D366',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaWhatsAppTxt: {
+    color: '#FFFFFF',
+    fontFamily: fonts.titleXL,
+    fontSize: 15,
+  },
+  shareRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 10,
+  },
+  shareBtnLeft: {
+    flex: 1,
+    height: 50,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shareBtnLeftTxt: {
+    color: colors.accent,
+    fontFamily: fonts.titleXL,
+    fontSize: 14,
+  },
+  shareBtnRight: {
+    flex: 1,
+    height: 50,
+    borderRadius: radius.md,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shareBtnRightTxt: {
+    color: colors.bg,
+    fontFamily: fonts.titleXL,
+    fontSize: 14,
   },
   ctaSecondary: {
     width: '100%',

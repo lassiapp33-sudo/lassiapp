@@ -19,6 +19,8 @@ import useShopStore from '../../store/shopStore';
 import { getProducts } from '../../services/products';
 import { getTerrainsByMerchant } from '../../services/terrains';
 import { getMesOffres, FitnessOffre } from '../../services/fitnessAbonnements';
+import { getBeautyServices } from '../../services/beauty';
+import { BeautyService } from '../../types/beauty';
 import { StoreProduct } from '../../types/store';
 import { Terrain, SPORT_EMOJI } from '../../types/terrain';
 import {
@@ -27,15 +29,16 @@ import {
   setCarrouselSelection,
   RecompenseAttribuee,
 } from '../../services/classementService';
-import { getActiveSub, updateSubProducts, ActiveSub } from '../../services/visibilityPayment';
+import { getActiveSubs, updateSubProducts, ActiveSub } from '../../services/visibilityPayment';
 import { getErrorMessage, notifyError } from '../../utils/errorUtils';
 import { getActivePromos, buildProductPromoMap, calcPromoClientPrice } from '../../services/promotions';
 import { Promotion, ProductPromoInfo } from '../../types/promotions';
+import OffreQuartierPreviewModal, { PreviewItem } from '../../components/merchant/OffreQuartierPreviewModal';
 
 const TERRAIN_SPORTS_ELIGIBLES = ['football', 'basketball'] as const;
 
 interface EligibleItem {
-  kind: 'product' | 'terrain' | 'abonnement';
+  kind: 'product' | 'terrain' | 'abonnement' | 'beaute';
   id: string;
   nom: string;
   prix: number;
@@ -47,6 +50,13 @@ interface EligibleItem {
 const IcoCheck = () => (
   <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" strokeWidth={3}>
     <Path d="M20 6 9 17l-5-5" stroke={colors.bg} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const IcoEye = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke={colors.accent} />
+    <Path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke={colors.accent} />
   </Svg>
 );
 
@@ -133,34 +143,46 @@ export default function OffreQuartierScreen({ onBack }: Props) {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [savingPaid, setSavingPaid] = useState(false);
+  const [savingSubId, setSavingSubId] = useState<string | null>(null);
   const [quota, setQuota] = useState<RecompenseAttribuee | null>(null);
-  const [activeSub, setActiveSub] = useState<ActiveSub | null>(null);
+  // Forfaits quartier CUMULABLES : tous les forfaits actifs, chacun éditable.
+  const [paidSubs, setPaidSubs] = useState<ActiveSub[]>([]);
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [terrains, setTerrains] = useState<Terrain[]>([]);
   const [abonnements, setAbonnements] = useState<FitnessOffre[]>([]);
+  const [beautyServices, setBeautyServices] = useState<BeautyService[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [paidSelectedIds, setPaidSelectedIds] = useState<string[]>([]);
+  // Sélection de produits par forfait (clé = subscription id).
+  const [paidSelBySub, setPaidSelBySub] = useState<Record<string, string[]>>({});
   const [promoMap, setPromoMap] = useState<Record<string, ProductPromoInfo>>({});
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId || !shopId) { setLoading(false); return; }
     setLoading(true);
     try {
-      const [reward, mine, allProducts, myTerrains, myAbonnements, sub, activePromos] = await Promise.all([
+      const [reward, mine, allProducts, myTerrains, myAbonnements, myBeauty, subs, activePromos] = await Promise.all([
         getMonCarrouselQuota(userId),
         getMesProduitsCarrousel(userId),
         getProducts(shopId),
         getTerrainsByMerchant(userId),
         getMesOffres(userId),
-        getActiveSub(shopId, 'quartier'),
+        getBeautyServices(userId).catch(() => []),
+        getActiveSubs(shopId),
         getActivePromos(shopId),
       ]);
       setQuota(reward);
-      setActiveSub(sub);
+      const quartierSubs = subs.filter(s => s.offerType === 'quartier');
+      setPaidSubs(quartierSubs);
+      const initSel: Record<string, string[]> = {};
+      quartierSubs.forEach(s => {
+        initSel[s.id] = s.allProducts ? [] : (s.productIds ?? (s.productId ? [s.productId] : []));
+      });
+      setPaidSelBySub(initSel);
       setProducts(allProducts);
       setPromoMap(buildProductPromoMap(activePromos));
       setAbonnements(myAbonnements.filter(a => a.actif));
+      setBeautyServices(myBeauty);
       setTerrains(
         myTerrains.filter(
           t => t.actif && (TERRAIN_SPORTS_ELIGIBLES as readonly string[]).includes(t.sport_type),
@@ -169,13 +191,10 @@ export default function OffreQuartierScreen({ onBack }: Props) {
       const maxProduits = reward?.carrousel_produits ?? 0;
       setSelectedIds(
         mine
-          .map(item => item.product_id ?? item.terrain_id)
+          .map(item => item.product_id ?? item.terrain_id ?? item.beauty_service_id)
           .filter((id): id is string => !!id)
           .slice(0, maxProduits),
       );
-      if (sub && !sub.allProducts) {
-        setPaidSelectedIds(sub.productIds ?? (sub.productId ? [sub.productId] : []));
-      }
     } catch (e) {
       notifyError(getErrorMessage(e, 'Impossible de charger ton "Offre du Quartier"'));
     } finally {
@@ -186,7 +205,9 @@ export default function OffreQuartierScreen({ onBack }: Props) {
   useEffect(() => { load(); }, [load]);
 
   const quotaN = quota?.carrousel_produits ?? 0;
-  const paidQuotaN = activeSub && !activeSub.allProducts ? activeSub.productCount : 0;
+  // Nombre de produits autorisés pour un forfait donné.
+  const paidQuotaFor = (sub: ActiveSub) =>
+    sub.allProducts ? paidEligibleItems.length : sub.productCount;
 
   // Produits + terrains éligibles (section admin)
   const eligibleItems: EligibleItem[] = [
@@ -212,9 +233,16 @@ export default function OffreQuartierScreen({ onBack }: Props) {
       prix: calculerPrixClient(t.prix_horaire),
       image: SPORT_EMOJI[t.sport_type],
     })),
+    ...beautyServices.map(s => ({
+      kind: 'beaute' as const,
+      id: s.id,
+      nom: s.nom,
+      prix: calculerPrixClient(s.prix),
+      image: '💈',
+    })),
   ];
 
-  // Produits, abonnements fitness et terrains (section payante)
+  // Produits, abonnements fitness, terrains et services beauté (section payante)
   const paidEligibleItems: EligibleItem[] = [
     ...products
       .filter(p => p.stock === 'in')
@@ -245,7 +273,40 @@ export default function OffreQuartierScreen({ onBack }: Props) {
       prix: calculerPrixClient(t.prix_horaire),
       image: SPORT_EMOJI[t.sport_type],
     })),
+    ...beautyServices.map(s => ({
+      kind: 'beaute' as const,
+      id: s.id,
+      nom: s.nom,
+      prix: calculerPrixClient(s.prix),
+      image: '💈',
+    })),
   ];
+
+  // Aperçu : sélection live (admin + payant), fusion sans doublon, mappée au format carrousel client
+  const previewRang = quota && quota.type_classement !== 'bienvenue' ? quota.rang : null;
+  const previewItems: PreviewItem[] = (() => {
+    const map = new Map<string, PreviewItem>();
+    const toPreview = (it: EligibleItem, rang: number | null): PreviewItem => ({
+      id: it.id,
+      nom: it.nom,
+      prix: it.prix,
+      image: it.image,
+      prixPromo: it.prixPromo,
+      promoBadge: it.promoBadge,
+      rang,
+    });
+    selectedIds.forEach(id => {
+      const it = eligibleItems.find(e => e.id === id);
+      if (it) map.set(id, toPreview(it, previewRang));
+    });
+    // Union des produits sélectionnés sur TOUS les forfaits actifs.
+    Object.values(paidSelBySub).flat().forEach(id => {
+      if (map.has(id)) return;
+      const it = paidEligibleItems.find(e => e.id === id);
+      if (it) map.set(id, toPreview(it, null));
+    });
+    return Array.from(map.values());
+  })();
 
   const toggleAdmin = (id: string) => {
     setSelectedIds(prev => {
@@ -261,19 +322,19 @@ export default function OffreQuartierScreen({ onBack }: Props) {
     });
   };
 
-  const togglePaid = (id: string) => {
-    // allProducts=true : le prestataire peut choisir parmi tous ses produits
-    const effectiveQuota = activeSub?.allProducts ? paidEligibleItems.length : paidQuotaN;
-    setPaidSelectedIds(prev => {
-      if (prev.includes(id)) return prev.filter(p => p !== id);
-      if (effectiveQuota > 0 && prev.length >= effectiveQuota) {
+  const togglePaid = (sub: ActiveSub, id: string) => {
+    const effectiveQuota = paidQuotaFor(sub);
+    setPaidSelBySub(prev => {
+      const cur = prev[sub.id] ?? [];
+      if (cur.includes(id)) return { ...prev, [sub.id]: cur.filter(p => p !== id) };
+      if (effectiveQuota > 0 && cur.length >= effectiveQuota) {
         Alert.alert(
           'Quota atteint',
-          `Tu peux sélectionner ${effectiveQuota} produit${effectiveQuota > 1 ? 's' : ''} maximum.`,
+          `Tu peux sélectionner ${effectiveQuota} produit${effectiveQuota > 1 ? 's' : ''} maximum pour ce forfait.`,
         );
         return prev;
       }
-      return [...prev, id];
+      return { ...prev, [sub.id]: [...cur, id] };
     });
   };
 
@@ -286,6 +347,7 @@ export default function OffreQuartierScreen({ onBack }: Props) {
         return {
           productId: item.kind === 'product' ? item.id : null,
           terrainId: item.kind === 'terrain' ? item.id : null,
+          beautyServiceId: item.kind === 'beaute' ? item.id : null,
           nom: item.nom,
           prix: item.prix,
           imageUrl: item.image,
@@ -302,22 +364,23 @@ export default function OffreQuartierScreen({ onBack }: Props) {
     }
   };
 
-  const handleSavePaid = async () => {
-    if (!activeSub || paidSelectedIds.length === 0) return;
-    setSavingPaid(true);
+  const handleSavePaid = async (sub: ActiveSub) => {
+    const sel = paidSelBySub[sub.id] ?? [];
+    if (sel.length === 0) return;
+    setSavingSubId(sub.id);
     try {
-      await updateSubProducts(paidSelectedIds);
+      await updateSubProducts(sub.id, sel);
       Alert.alert('Enregistré', 'Ta sélection "Pack Visibilité" a été mise à jour.', [
         { text: 'OK', onPress: onBack },
       ]);
     } catch (e) {
       notifyError(getErrorMessage(e, "Impossible d'enregistrer ta sélection"));
     } finally {
-      setSavingPaid(false);
+      setSavingSubId(null);
     }
   };
 
-  const hasContent = !!quota || !!activeSub;
+  const hasContent = !!quota || paidSubs.length > 0;
 
   return (
     <View style={styles.root}>
@@ -394,67 +457,91 @@ export default function OffreQuartierScreen({ onBack }: Props) {
           )}
 
           {/* ── SÉPARATEUR ───────────────────────────────────────────────── */}
-          {quota && activeSub && <View style={styles.divider} />}
+          {quota && paidSubs.length > 0 && <View style={styles.divider} />}
 
-          {/* ── SECTION PAYANTE (Pack Wave / OM / Crédit) ────────────────── */}
-          {activeSub && (
-            <>
-              <View style={styles.paidBanner}>
-                <View style={styles.paidBannerBadge}>
-                  <Text style={styles.paidBannerBadgeTxt}>
-                    FORFAIT ACTIF · {activeSub.planLabel.toUpperCase()}
+          {/* ── SECTION PAYANTE : un forfait CUMULABLE par carte ──────────── */}
+          {paidSubs.map((sub, idx) => {
+            const sel = paidSelBySub[sub.id] ?? [];
+            const quotaP = paidQuotaFor(sub);
+            const savingThis = savingSubId === sub.id;
+            return (
+              <View key={sub.id}>
+                {idx > 0 && <View style={styles.divider} />}
+                <View style={styles.paidBanner}>
+                  <View style={styles.paidBannerBadge}>
+                    <Text style={styles.paidBannerBadgeTxt}>
+                      FORFAIT ACTIF · {sub.planLabel.toUpperCase()}
+                    </Text>
+                  </View>
+                  <Text style={styles.paidBannerTitle}>Pack Visibilité payant</Text>
+                  <View style={styles.bannerRow}>
+                    <Text style={styles.bannerMeta}>
+                      {sub.allProducts
+                        ? 'Toute ta vitrine mise en avant'
+                        : `${sub.productCount} produit${sub.productCount > 1 ? 's' : ''} à choisir`}
+                    </Text>
+                  </View>
+                  <Text style={styles.paidBannerExpiry}>
+                    Expire le {formatDateLong(sub.expiresAt)}
                   </Text>
-                </View>
-                <Text style={styles.paidBannerTitle}>Pack Visibilité payant</Text>
-                <View style={styles.bannerRow}>
-                  <Text style={styles.bannerMeta}>
-                    {activeSub.allProducts
-                      ? 'Toute ta vitrine mise en avant'
-                      : `${paidQuotaN} produit${paidQuotaN > 1 ? 's' : ''} à choisir`}
-                  </Text>
-                </View>
-                <Text style={styles.paidBannerExpiry}>
-                  Expire le {formatDateLong(activeSub.expiresAt)}
-                </Text>
-                {!activeSub.allProducts && (
-                  <Text style={styles.counter}>
-                    {paidSelectedIds.length}/{paidQuotaN} sélectionné{paidSelectedIds.length > 1 ? 's' : ''}
-                  </Text>
-                )}
-              </View>
-
-              {/* Toujours afficher la liste — même si allProducts=true, le prestataire peut changer sa sélection */}
-              {paidEligibleItems.length > 0 && (
-                <>
-                  {activeSub.allProducts && (
-                    <Text style={styles.paidPickerHint}>
-                      Actuellement toute ta vitrine est mise en avant. Tu peux choisir des produits précis ci-dessous.
+                  {!sub.allProducts && (
+                    <Text style={styles.counter}>
+                      {sel.length}/{sub.productCount} sélectionné{sel.length > 1 ? 's' : ''}
                     </Text>
                   )}
-                  <ProductList
-                    items={paidEligibleItems}
-                    selectedIds={paidSelectedIds}
-                    onToggle={togglePaid}
-                    quotaN={activeSub.allProducts ? paidEligibleItems.length : (paidQuotaN || paidEligibleItems.length)}
-                  />
+                </View>
 
-                  <TouchableOpacity
-                    style={[styles.saveBtn, styles.saveBtnPaid, savingPaid && styles.saveBtnDisabled]}
-                    onPress={handleSavePaid}
-                    disabled={savingPaid || paidSelectedIds.length === 0}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.saveBtnTxt}>
-                      {savingPaid ? 'Enregistrement…' : 'Enregistrer la sélection'}
-                    </Text>
-                  </TouchableOpacity>
-                </>
-              )}
-            </>
+                {/* Liste toujours affichée — même allProducts=true (choix précis possible) */}
+                {paidEligibleItems.length > 0 && (
+                  <>
+                    {sub.allProducts && (
+                      <Text style={styles.paidPickerHint}>
+                        Actuellement toute ta vitrine est mise en avant. Tu peux choisir des produits précis ci-dessous.
+                      </Text>
+                    )}
+                    <ProductList
+                      items={paidEligibleItems}
+                      selectedIds={sel}
+                      onToggle={(id) => togglePaid(sub, id)}
+                      quotaN={quotaP || paidEligibleItems.length}
+                    />
+
+                    <TouchableOpacity
+                      style={[styles.saveBtn, styles.saveBtnPaid, savingThis && styles.saveBtnDisabled]}
+                      onPress={() => handleSavePaid(sub)}
+                      disabled={savingThis || sel.length === 0}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.saveBtnTxt}>
+                        {savingThis ? 'Enregistrement…' : 'Enregistrer la sélection'}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            );
+          })}
+
+          {/* ── Bouton aperçu (bas d'écran) ──────────────────────────────── */}
+          {previewItems.length > 0 && (
+            <TouchableOpacity
+              style={styles.previewBtn}
+              onPress={() => setPreviewOpen(true)}
+              activeOpacity={0.85}
+            >
+              <IcoEye />
+              <Text style={styles.previewBtnTxt}>Aperçu de mon offre du quartier</Text>
+            </TouchableOpacity>
           )}
 
         </ScrollView>
       )}
+
+      <OffreQuartierPreviewModal
+        visible={previewOpen}
+        items={previewItems}
+        onClose={() => setPreviewOpen(false)}
+      />
     </View>
   );
 }
@@ -639,4 +726,20 @@ const styles = StyleSheet.create({
   saveBtnPaid: { backgroundColor: colors.success },
   saveBtnDisabled: { opacity: 0.6 },
   saveBtnTxt: { color: colors.bg, fontFamily: fonts.titleXL, fontSize: 15 },
+
+  // ── Bouton aperçu ─────────────────────────────────────────────────────────────
+  previewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginHorizontal: 18,
+    marginTop: 16,
+    height: 50,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    backgroundColor: 'transparent',
+  },
+  previewBtnTxt: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 15 },
 });

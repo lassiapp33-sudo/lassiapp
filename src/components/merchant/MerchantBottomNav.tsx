@@ -78,7 +78,7 @@ const IcoProfil = ({ on }: { on: boolean }) => (
 
 export type MerchantTab = 'dashboard' | 'debts' | 'assistant' | 'messages' | 'orders' | 'profile';
 
-const BOTTOM_EXTRA = Platform.OS === 'ios' ? 20 : 0;
+const BOTTOM_EXTRA = Platform.OS === 'ios' ? 20 : 34;
 export const MERCHANT_NAV_HEIGHT = 72 + BOTTOM_EXTRA;
 
 const MASCOTTE_TAILLE = 62;

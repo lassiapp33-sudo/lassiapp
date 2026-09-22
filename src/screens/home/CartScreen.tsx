@@ -97,6 +97,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
   const [showLivraisonModal, setShowLivraisonModal] = useState(false);
   const [shopPoints, setShopPoints] = useState<LivraisonShopPoint[]>([]);
   const [clientCoords, setClientCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoFailed, setGeoFailed] = useState(false);
   const livraisonFeeRef = useRef(0);
   const isSubmittingRef = useRef(false);
 
@@ -181,10 +182,19 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
       })
       .catch(() => {});
     getCurrentLocation().then(pos => {
-      if (pos) setClientCoords({ lat: pos.latitude, lng: pos.longitude });
+      if (pos) { setClientCoords({ lat: pos.latitude, lng: pos.longitude }); setGeoFailed(false); }
+      else setGeoFailed(true);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopIdsKey]);
+
+  const retryGeoloc = () => {
+    setGeoFailed(false);
+    getCurrentLocation().then(pos => {
+      if (pos) setClientCoords({ lat: pos.latitude, lng: pos.longitude });
+      else setGeoFailed(true);
+    });
+  };
 
   // ── Checkout ──────────────────────────────────────────────────────────────
 
@@ -574,19 +584,28 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
                 styles.livraisonBtn,
                 (!hasItems || isSubmitting || devisBtn?.horsZone === true) && styles.payBtnDisabled,
               ]}
-              onPress={() => setShowLivraisonModal(true)}
+              onPress={() => {
+                if (!isVip && devisBtn == null && geoFailed) { retryGeoloc(); return; }
+                setShowLivraisonModal(true);
+              }}
               activeOpacity={0.85}
               disabled={!hasItems || isSubmitting || devisBtn?.horsZone === true}
             >
               {!isVip && devisBtn && !devisBtn.horsZone ? (
                 <>
-                  <Text style={styles.livraisonBtnTxt}>{`Commander + Livrer · ${formatPrice(grandClient + devisBtn.prix)}`}</Text>
-                  <Text style={styles.livraisonBtnSub}>{`Livraison +${formatPrice(devisBtn.prix)}`}</Text>
+                  <Text style={styles.livraisonBtnTxt} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{`Commander + Livrer · ${formatPrice(grandClient + devisBtn.prix)}`}</Text>
+                  <Text style={styles.livraisonBtnSub} numberOfLines={1}>{`Livraison +${formatPrice(devisBtn.prix)}`}</Text>
                 </>
               ) : (
                 <>
-                  <Text style={styles.livraisonBtnTxt}>Commander + Livrer</Text>
-                  {!isVip && <Text style={styles.livraisonBtnSub}>{devisBtn == null ? '…' : 'Hors zone'}</Text>}
+                  <Text style={styles.livraisonBtnTxt} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                    {!isVip && devisBtn == null && geoFailed ? 'Activer la position' : 'Commander + Livrer'}
+                  </Text>
+                  {!isVip && (
+                    <Text style={styles.livraisonBtnSub} numberOfLines={1}>
+                      {devisBtn != null ? 'Hors zone' : geoFailed ? 'Toucher pour réessayer' : '…'}
+                    </Text>
+                  )}
                 </>
               )}
             </TouchableOpacity>
@@ -698,7 +717,9 @@ const styles = StyleSheet.create({
 
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    padding: 14, paddingBottom: 20, backgroundColor: 'rgba(20,21,42,.97)',
+    // paddingBottom élevé sur Android : dégage la barre de navigation système
+    // (edge-to-edge) pour ne plus masquer les boutons.
+    padding: 14, paddingBottom: Platform.OS === 'android' ? 34 : 20, backgroundColor: 'rgba(20,21,42,.97)',
   },
   footerRow: { flexDirection: 'row', gap: 10 },
   payBtn: {
@@ -711,6 +732,6 @@ const styles = StyleSheet.create({
     flex: 1.3, height: 55, borderRadius: radius.lg, backgroundColor: colors.accent,
     alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6,
   },
-  livraisonBtnTxt: { color: colors.bg, fontFamily: fonts.ui, fontSize: 13 },
-  livraisonBtnSub: { color: colors.bg, fontFamily: fonts.label, fontSize: 11, opacity: 0.8, marginTop: 2 },
+  livraisonBtnTxt: { color: colors.bg, fontFamily: fonts.ui, fontSize: 12, textAlign: 'center' },
+  livraisonBtnSub: { color: colors.bg, fontFamily: fonts.label, fontSize: 10, opacity: 0.8, marginTop: 1 },
 });

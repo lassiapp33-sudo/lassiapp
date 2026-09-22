@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useCallback } from 'react';
+﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { PayMethod } from '../../types/payment';
 import { WAVE_ENABLED } from '../../config/features';
 import useAuthStore from '../../store/authStore';
 import * as terrainsService from '../../services/terrains';
+import { getPaymentMethodsByMerchant } from '../../services/shops';
 import logger from '../../utils/logger';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -157,6 +158,9 @@ export default function TerrainPaymentScreen({
 }: Props) {
   const clientId = useAuthStore(s => s.user?.id ?? '');
   const [stage, setStage] = useState<Stage>('checkout');
+  // Moyens de paiement acceptés par le prestataire (respecte son choix, comme les commandes)
+  const [allowedMethods, setAllowedMethods] = useState<('wave' | 'om')[]>(['wave', 'om']);
+  const merchantMethods = allowedMethods.filter((m): m is PayMethod => m !== 'wave' || WAVE_ENABLED);
   const [method, setMethod] = useState<PayMethod>(WAVE_ENABLED ? 'wave' : 'om');
   const [processing, setProcessing] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -166,6 +170,20 @@ export default function TerrainPaymentScreen({
   const processingRef = useRef(false);
 
   const moyenPaiement = method === 'wave' ? 'wave' : 'orange_money' as const;
+
+  // Charge les moyens de paiement du prestataire + corrige la sélection
+  useEffect(() => {
+    let alive = true;
+    getPaymentMethodsByMerchant(prestataireId)
+      .then(methods => {
+        if (!alive) return;
+        setAllowedMethods(methods);
+        const usable = methods.filter(m => m !== 'wave' || WAVE_ENABLED);
+        setMethod(prev => (usable.includes(prev) ? prev : (usable[0] ?? 'om')));
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [prestataireId]);
 
   const handlePay = async () => {
     if (processingRef.current || !clientId) return;
@@ -323,8 +341,12 @@ export default function TerrainPaymentScreen({
 
         {/* Méthode de paiement */}
         <Text style={styles.secLabel}>Mode de paiement</Text>
-        {WAVE_ENABLED && <MethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />}
-        <MethodCard method="om" selected={method === 'om'} onSelect={() => setMethod('om')} />
+        {merchantMethods.includes('wave') && (
+          <MethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />
+        )}
+        {merchantMethods.includes('om') && (
+          <MethodCard method="om" selected={method === 'om'} onSelect={() => setMethod('om')} />
+        )}
 
         <View style={{ height: 20 }} />
       </ScrollView>

@@ -14,12 +14,14 @@ import {
 import StarRating from './StarRating';
 import VoiceRatingRecorder from './VoiceRatingRecorder';
 import { colors, fonts, radius } from '../../theme';
-import { soumettreNote, uploadVocalRating, RatingDirection } from '../../services/orderRating';
+import { soumettreNote, soumettreNoteGroupe, uploadVocalRating, RatingDirection } from '../../services/orderRating';
 import { notifyError } from '../../utils/errorUtils';
 
 interface Props {
   visible: boolean;
   orderId: string;
+  /** Paiement groupé : note appliquée à toutes les commandes du groupe (tous les vendeurs). */
+  groupId?: string;
   direction: RatingDirection;
   targetName: string;
   onDismiss: () => void;
@@ -28,6 +30,7 @@ interface Props {
 export default function RatingPromptModal({
   visible,
   orderId,
+  groupId,
   direction,
   targetName,
   onDismiss,
@@ -47,9 +50,13 @@ export default function RatingPromptModal({
     try {
       let vocalUrl: string | undefined;
       if (vocalUri) {
-        vocalUrl = await uploadVocalRating(orderId, direction, vocalUri);
+        vocalUrl = await uploadVocalRating(groupId ?? orderId, direction, vocalUri);
       }
-      await soumettreNote(orderId, direction, note, commentaire.trim() || undefined, vocalUrl);
+      if (groupId) {
+        await soumettreNoteGroupe(groupId, note, commentaire.trim() || undefined, vocalUrl);
+      } else {
+        await soumettreNote(orderId, direction, note, commentaire.trim() || undefined, vocalUrl);
+      }
       // Succès → fermer seulement ici
       reset();
       onDismiss();

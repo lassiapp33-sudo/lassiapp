@@ -160,6 +160,7 @@ export default function ConfirmView({ order, method, onBackToChat }: Props) {
     <RatingPromptModal
       visible={showRating}
       orderId={order.ticketId}
+      groupId={order.groupId}
       direction="client_to_merchant"
       targetName={order.shopName}
       onDismiss={() => setShowRating(false)}

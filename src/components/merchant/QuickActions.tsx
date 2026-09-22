@@ -101,6 +101,20 @@ const IcoTruck = ({ stroke }: { stroke: string }) => (
   </Svg>
 );
 
+const IcoBolt = ({ stroke }: { stroke: string }) => (
+  <Svg
+    width={21}
+    height={21}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Path d="M13 2 4 14h7l-1 8 9-12h-7z" stroke={stroke} />
+  </Svg>
+);
+
 const IcoFlame = ({ stroke }: { stroke: string }) => (
   <Svg
     width={21}
@@ -213,7 +227,7 @@ export default function QuickActions({
             Icon={IcoGrid}
             iconBg="rgba(240,168,71,.13)"
             iconStroke={colors.orange}
-            title="Ma vitrine"
+            title="Sama boutique"
             desc="Gérer mes produits"
             onPress={() => onPress?.('store')}
           />
@@ -239,6 +253,14 @@ export default function QuickActions({
           title="Livraison"
           desc="Envoyer un colis"
           onPress={() => onPress?.('livraison')}
+        />
+        <ActionCard
+          Icon={IcoBolt}
+          iconBg="rgba(253,207,52,.13)"
+          iconStroke={colors.accent}
+          title="Ça bouge"
+          desc="Ta story du jour · 24h"
+          onPress={() => onPress?.('ca_bouge')}
         />
       </View>
     </View>

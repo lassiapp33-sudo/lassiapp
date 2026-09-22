@@ -40,6 +40,7 @@ const STATUT_LABEL: Record<TableReservationStatut, string> = {
   arrivee:              'Arrivée validée',
   terminee:             'Terminée',
   annulee:              'Annulée',
+  expiree:              'Expirée',
 };
 
 const STATUT_COLOR: Record<TableReservationStatut, string> = {
@@ -50,6 +51,7 @@ const STATUT_COLOR: Record<TableReservationStatut, string> = {
   arrivee:              '#7FCF9C',
   terminee:             '#8E93AB',
   annulee:              '#8E93AB',
+  expiree:              '#8E93AB',
 };
 
 // ─── Props ────────────────────────────────────────────────────────────────────

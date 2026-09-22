@@ -22,6 +22,8 @@ import { IncomingOrder, MerchantTab, OrderStatus } from '../../types/orders';
 import useOrdersStore from '../../store/ordersStore';
 import useShopStore from '../../store/shopStore';
 import { useRealtimeOrders } from '../../hooks/useRealtimeOrders';
+import { useForegroundRefresh } from '../../hooks/useForegroundRefresh';
+import { getOrCreateConversationForClient } from '../../services/chat';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { notifyError } from '../../utils/errorUtils';
 
@@ -107,9 +109,10 @@ function filterByTab(orders: IncomingOrder[], tab: MerchantTab): IncomingOrder[]
 interface Props {
   onBack: () => void;
   initialTab?: 'new' | 'preparing';
+  onOpenChat?: (conversationId: string) => void;
 }
 
-export default function OrdersScreen({ onBack, initialTab }: Props) {
+export default function OrdersScreen({ onBack, initialTab, onOpenChat }: Props) {
   const shopId = useShopStore(s => s.shopId);
   const orders = useOrdersStore(s => s.orders);
   const loading = useOrdersStore(s => s.loading);
@@ -132,6 +135,29 @@ export default function OrdersScreen({ onBack, initialTab }: Props) {
   useEffect(() => {
     if (shopId) loadOrders(shopId);
   }, [shopId, loadOrders]);
+
+  // Retour au premier plan → recharge les commandes (évite la liste figée/vide
+  // après une mise en veille) avec un JWT rafraîchi au préalable.
+  useForegroundRefresh(() => {
+    if (shopId) loadOrders(shopId).catch(() => {});
+  });
+
+  // Ouvre la conversation avec le client d'une commande (bouton 💬).
+  const handleOpenChat = useCallback(
+    async (order: IncomingOrder) => {
+      if (!shopId || !order.clientId) {
+        notifyError('Conversation indisponible pour cette commande.');
+        return;
+      }
+      try {
+        const conv = await getOrCreateConversationForClient(shopId, order.clientId);
+        onOpenChat?.(conv.id);
+      } catch {
+        notifyError("Impossible d'ouvrir la conversation. Réessaie.");
+      }
+    },
+    [shopId, onOpenChat],
+  );
 
   useEffect(() => {
     return () => {
@@ -266,9 +292,7 @@ export default function OrdersScreen({ onBack, initialTab }: Props) {
                 order={order}
                 onAccept={() => openPrepSheet(order)}
                 onRefuse={() => setRefuseTarget(order)}
-                onChat={() => {
-                  /* Chat marchand→client — à câbler quand le flux est prêt */
-                }}
+                onChat={() => handleOpenChat(order)}
                 onReady={() => {
                   advance(order.id, 'ready');
                   setActiveTab('preparing');

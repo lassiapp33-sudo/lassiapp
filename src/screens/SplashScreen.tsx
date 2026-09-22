@@ -77,7 +77,7 @@ export default function SplashScreen({ onFinish }: Props) {
       <Animated.Text
         style={[styles.tagline, { opacity: tagOpacity, transform: [{ translateY: tagY }] }]}
       >
-        Ton quartier dans ta poche
+        Tout ton quotidien, au même endroit
       </Animated.Text>
     </View>
   );

@@ -39,13 +39,14 @@ export function useRealtimeNotifications(
 
     let channel = subscribe();
 
-    const sub = AppState.addEventListener('change', state => {
-      if (state === 'active') {
-        supabase.removeChannel(channel);
-        channel = subscribe();
-        // Recharge les notifs manquées pendant l'absence (offline/background)
-        useNotificationsStore.getState().loadNotifications();
-      }
+    const sub = AppState.addEventListener('change', async state => {
+      if (state !== 'active') return;
+      // JWT frais avant re-souscription (token expiré = join realtime rejeté)
+      await supabase.auth.getSession();
+      supabase.removeChannel(channel);
+      channel = subscribe();
+      // Recharge les notifs manquées pendant l'absence (offline/background)
+      useNotificationsStore.getState().loadNotifications();
     });
 
     return () => {

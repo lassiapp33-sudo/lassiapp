@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginHorizontal: 16,
     marginBottom: 28,
-    marginTop: 72,
+    marginTop: 32,
   },
   label: {
     color: '#FBBF24',

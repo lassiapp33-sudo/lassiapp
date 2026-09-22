@@ -9,9 +9,43 @@ import VoiceNotePlayer from '../VoiceNotePlayer';
 import { IcoClose, IcoPlay, IcoStop } from '../icons';
 import { formatPrice } from '../../utils/format';
 import { buildOrderAnnouncement } from '../../utils/orderSpeech';
+import { openDirectPhoneCall } from '../../utils/whatsapp';
 import useSpeechStore from '../../store/speechStore';
 import ClientScoreBadge from './ClientScoreBadge';
 import { parseMultiBasketNote } from '../../utils/basketNote';
+
+// Numéro sénégalais (7XXXXXXXX) éventuellement précédé de +221 / 221.
+const PHONE_RE = /(?:\+?221)?\s?(7\d{8})/;
+
+// Rend la note du client en rendant tout numéro de téléphone cliquable (→ appel).
+// Les commandes web « invité » stockent le tél dans la note (📞 7XXXXXXXX).
+function NoteBlock({ note }: { note: string }) {
+  return (
+    <>
+      {note.split('\n').map((line, i) => {
+        const m = line.match(PHONE_RE);
+        if (!m) {
+          return (
+            <Text key={i} style={styles.noteTxt}>
+              {line}
+            </Text>
+          );
+        }
+        const phone = m[1];
+        const idx = line.indexOf(phone);
+        return (
+          <Text key={i} style={styles.noteTxt}>
+            {line.slice(0, idx)}
+            <Text style={styles.notePhone} onPress={() => openDirectPhoneCall(phone)}>
+              {phone}
+            </Text>
+            {line.slice(idx + phone.length)}
+          </Text>
+        );
+      })}
+    </>
+  );
+}
 
 // Couleurs spécifiques aux boutons d'action
 const WAVE_COLOR = '#1DC8F2';
@@ -178,7 +212,7 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
             ))}
             {parsedBaskets.userNote ? (
               <View style={styles.noteRow}>
-                <Text style={styles.noteTxt}>{parsedBaskets.userNote}</Text>
+                <NoteBlock note={parsedBaskets.userNote} />
               </View>
             ) : null}
           </>
@@ -196,7 +230,7 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
             ))}
             {order.note ? (
               <View style={styles.noteRow}>
-                <Text style={styles.noteTxt}>{order.note}</Text>
+                <NoteBlock note={order.note} />
               </View>
             ) : null}
           </>
@@ -466,6 +500,12 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     lineHeight: 17,
     fontStyle: 'italic',
+  },
+  notePhone: {
+    color: colors.accent,
+    fontFamily: fonts.title,
+    fontStyle: 'normal',
+    textDecorationLine: 'underline',
   },
 
   // Séparateur + ligne paiement

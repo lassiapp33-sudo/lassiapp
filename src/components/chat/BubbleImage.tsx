@@ -123,7 +123,7 @@ export default function BubbleImage({ sender, imageUrl, time, read }: Props) {
         style={[styles.bubble, { backgroundColor: bgColor }, border]}
         onPress={() => setFullscreen(true)}
         onLongPress={handleLongPress}
-        delayLongPress={400}
+        delayLongPress={250}
         activeOpacity={0.9}
       >
         {!loaded && (

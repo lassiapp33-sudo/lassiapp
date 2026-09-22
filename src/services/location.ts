@@ -1,8 +1,18 @@
 import * as Location from 'expo-location';
+// build: geoloc bornee 2026-09-15
 
 export interface Coords {
   latitude: number;
   longitude: number;
+}
+
+// Borne un appel natif : rejette après `ms` pour qu'aucune promesse Android ne
+// puisse rester pendante indéfiniment (getLastKnownPositionAsync peut hang).
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+  ]);
 }
 
 // ─── Permission + GPS ─────────────────────────────────────────────────────────
@@ -10,21 +20,35 @@ export interface Coords {
 /**
  * Demande la permission GPS et retourne les coordonnées de l'appareil.
  * Retourne null si la permission est refusée ou en cas d'erreur.
+ * Garantie : résout TOUJOURS (jamais de promesse pendante) → l'UI ne reste pas
+ * bloquée sur un état "chargement". Android : getCurrentPositionAsync peut ne
+ * jamais renvoyer de fix (pas de GPS actif) → fallback lastKnown BORNÉ.
  */
 export async function getCurrentLocation(): Promise<Coords | null> {
   try {
-    const permResult = await Promise.race([
-      Location.requestForegroundPermissionsAsync(),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('perm_timeout')), 5000),
-      ),
-    ]);
+    let permResult;
+    try {
+      permResult = await withTimeout(Location.requestForegroundPermissionsAsync(), 6000);
+    } catch {
+      return null;
+    }
     if (permResult.status !== 'granted') return null;
-    const pos = await Promise.race([
-      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('gps_timeout')), 8000)),
-    ]);
-    return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+
+    // 1) Position fraîche (précise) — bornée
+    try {
+      const pos = await withTimeout(
+        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+        8000,
+      );
+      return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+    } catch {
+      // 2) Fallback : dernière position connue (Android WiFi-only / pas de fix actif) — BORNÉ
+      try {
+        const last = await withTimeout(Location.getLastKnownPositionAsync(), 3000);
+        if (last) return { latitude: last.coords.latitude, longitude: last.coords.longitude };
+      } catch { /* ignore */ }
+      return null;
+    }
   } catch {
     return null;
   }

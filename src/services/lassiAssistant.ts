@@ -5,7 +5,7 @@ import { computeStatus, type WeekHours } from './hours';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type CatId = 'stores' | 'tangana' | 'food' | 'hair' | 'sport' | 'bakery' | 'fruiterie' | 'photo_video';
+export type CatId = 'stores' | 'tangana' | 'food' | 'hair' | 'sport' | 'bakery' | 'fruiterie';
 
 export interface CatMatch {
   id: CatId;
@@ -383,24 +383,6 @@ const CATEGORY_MAP: { keywords: string[]; cat: CatMatch }[] = [
       'fruits frais',
     ],
     cat: { id: 'fruiterie', label: 'Fruiterie' },
-  },
-  {
-    keywords: [
-      'photographe',
-      'photo',
-      'shooting',
-      'portrait',
-      'vidéaste',
-      'videaste',
-      'video',
-      'vidéo',
-      'clip',
-      'tournage',
-      'montage',
-      'mariage photo',
-      'event photo',
-    ],
-    cat: { id: 'photo_video', label: 'Photographes & Vidéastes' },
   },
 ];
 

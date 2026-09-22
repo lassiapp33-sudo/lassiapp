@@ -17,6 +17,7 @@ import useGerantStore from '../../store/gerantStore';
 import useNotificationsStore from '../../store/notificationsStore';
 import { TOP_INSET } from '../../theme';
 import { deconnexionVip } from '../authVip';
+import { ALAUNE_ENABLED } from '../../config/features';
 
 type TileId = 'profil' | 'registre' | 'horaires' | 'maison' | 'changeMdp' | 'alaune' | 'avis' | 'classement' | 'livraison' | 'autourDeMoi' | 'notifications' | 'rdv_beauty' | 'creneaux_beauty';
 
@@ -122,7 +123,7 @@ export default function GerantDashboard({ onNav, onPreview, onLogout }: Props) {
 
         {/* Tuiles services */}
         <View style={s.tuiles}>
-          {TILES2.map(t => (
+          {TILES2.filter(t => ALAUNE_ENABLED || t.id !== 'alaune').map(t => (
             <TouchableOpacity key={t.id} style={s.tuile} onPress={() => onNav(t.id)}>
               <View style={s.tuileTexte}>
                 <Text style={s.tuileLabel}>{t.label}</Text>

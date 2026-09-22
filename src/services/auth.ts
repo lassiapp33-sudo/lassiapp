@@ -18,6 +18,7 @@ import { SESSION_ACTIVE_KEY } from '../lib/secureStorage';
 import { AuthUser, UserRole } from '../store/authStore';
 import { getInitials } from '../utils/getInitials';
 import { uploadImage, logoPath } from './storage';
+import { insertShopRow } from './shops';
 import { saveConsent } from './consents';
 import type { WeekHours } from './hours';
 import logger from '../utils/logger';
@@ -42,6 +43,16 @@ function traduireErreur(message: string): string {
     message.includes('already registered')
   )
     return 'Ce numéro est déjà associé à un compte. Connecte-toi.';
+  // Trigger handle_new_auth_user : la contrainte UNIQUE profiles_phone_key
+  // renvoie un 23505 brut (numéro déjà présent dans profiles sous un autre
+  // email auth) — sinon "Database error saving new user".
+  if (
+    message.includes('profiles_phone_key') ||
+    message.includes('23505') ||
+    message.includes('duplicate key value') ||
+    message.includes('Database error saving new user')
+  )
+    return 'Ce numéro est déjà associé à un compte. Connecte-toi ou utilise un autre numéro.';
   if (message.includes('Invalid login credentials')) return 'Numéro ou mot de passe incorrect.';
   if (message.includes('Email not confirmed')) return 'Compte non confirmé. Vérifie tes emails.';
   if (message.includes('Password should be at least'))
@@ -82,6 +93,33 @@ export async function register(params: RegisterParams): Promise<AuthUser> {
   const { error: rlError } = await supabase.rpc('check_signup_rate_limit');
   if (rlError?.code === 'PT429') {
     throw new Error(rlError.message);
+  }
+
+  // Pré-check : numéro déjà utilisé ? profiles.phone est UNIQUE — sans ce
+  // garde-fou, signUp crée un user auth puis le trigger plante sur
+  // profiles_phone_key (23505) → user auth orphelin + erreur masquée.
+  // Best-effort : en cas d'échec réseau/RPC on continue (la contrainte reste
+  // le filet de sécurité côté base).
+  try {
+    const cleanPhone = params.phone.replace(/\s+/g, '');
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_auth_email_by_phone`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON,
+        Authorization: `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_phone: cleanPhone }),
+    });
+    if (res.ok) {
+      const existingEmail: string | null = await res.json();
+      if (existingEmail) {
+        throw new Error('Ce numéro est déjà associé à un compte. Connecte-toi ou utilise un autre numéro.');
+      }
+    }
+  } catch (e) {
+    // Ne masque que les erreurs réseau/RPC ; on relance le message métier.
+    if (e instanceof Error && e.message.includes('déjà associé')) throw e;
   }
 
   // L'email Supabase : réel si fourni (utile pour reset mdp), sinon technique
@@ -162,6 +200,7 @@ export interface RegisterMerchantParams {
   longitude?: number | null;
   zone?: string;
   paymentMethods?: ('wave' | 'om')[];
+  reservationEnabled?: boolean;
 }
 
 export async function registerMerchant(params: RegisterMerchantParams): Promise<AuthUser> {
@@ -174,10 +213,14 @@ export async function registerMerchant(params: RegisterMerchantParams): Promise<
     role: 'merchant',
   });
 
-  // 2. Créer la ligne shops liée au nouveau marchand
-  const { data: shopRow, error: shopError } = await supabase
-    .from('shops')
-    .insert({
+  // 2. Créer la ligne shops liée au nouveau marchand.
+  //    INSERT via REST brut (token frais) : la session GoTrue post-signUp est
+  //    établie en arrière-plan (setSession fire-and-forget) et n'est pas encore
+  //    disponible pour supabase.from(), ce qui donnait auth.uid()=NULL → RLS KO.
+  let shopRow: { id: string } | null = null;
+  let shopError: Error | null = null;
+  try {
+    shopRow = (await insertShopRow({
       merchant_id: user.id,
       name: params.shopName,
       subtitle: params.shopSubtitle ?? '',
@@ -192,9 +235,11 @@ export async function registerMerchant(params: RegisterMerchantParams): Promise<
       is_open: true,
       opening_hours: params.openingHours ?? null,
       payment_methods: params.paymentMethods ?? ['wave', 'om'],
-    })
-    .select('id')
-    .single();
+      reservation_enabled: params.reservationEnabled ?? false,
+    })) as { id: string };
+  } catch (e) {
+    shopError = e instanceof Error ? e : new Error(String(e));
+  }
 
   if (shopError) {
     // Nettoyage définitif : supprimer le compte auth+profil pour libérer

@@ -194,7 +194,10 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
         longitude,
         zone,
         paymentMethods,
-        reservationEnabled: catId === 'food' ? reservationEnabled : false,
+        reservationEnabled:
+          subcats.includes('restaurant') || subcats.includes('fastfood')
+            ? reservationEnabled
+            : false,
       });
       useAuthStore.getState().setUser(user);
       onComplete('merchant');
@@ -451,7 +454,7 @@ export default function MerchantShopSetupScreen({ userData, onBack, onComplete }
           Au moins un mode de paiement est requis. Tu pourras modifier ce choix depuis ton profil.
         </Text>
 
-        {catId === 'food' && (
+        {(subcats.includes('restaurant') || subcats.includes('fastfood')) && (
           <View style={styles.resaBlock}>
             <TouchableOpacity
               style={styles.resaHead}

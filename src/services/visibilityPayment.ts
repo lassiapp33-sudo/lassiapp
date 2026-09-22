@@ -372,11 +372,11 @@ export const verifyWavePayment = verifyVisibilityServer;
 
 // ─── Modifier les produits sélectionnés d'un abonnement Offre du Quartier ────
 
-export async function updateSubProducts(productIds: string[]): Promise<void> {
+export async function updateSubProducts(subscriptionId: string, productIds: string[]): Promise<void> {
   const res = await fetch(`${FUNCTIONS_BASE}/update-visibility-products`, {
     method: 'POST',
     headers: await authHeaders(),
-    body: JSON.stringify({ productIds }),
+    body: JSON.stringify({ subscriptionId, productIds }),
   });
   if (!res.ok) {
     let errMsg = 'Erreur de mise à jour';

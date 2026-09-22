@@ -4,8 +4,10 @@
  * Flux : sélection → compression (max 1080px, 75%) → upload → URL publique.
  * Crucial pour Dakar : images compressées = chargement rapide même sur réseau lent.
  */
+import * as FileSystem from 'expo-file-system/legacy';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { Alert, Linking } from 'react-native';
 import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 
 // ─── Compression ──────────────────────────────────────────────────────────────
@@ -28,12 +30,39 @@ async function compressImage(localUri: string): Promise<string> {
 // ─── Picker ───────────────────────────────────────────────────────────────────
 
 /**
+ * Vérifie/demande une permission. Si refusée définitivement (canAskAgain=false,
+ * ex. l'utilisateur a déjà dit non), affiche une alerte avec accès aux Réglages
+ * au lieu d'échouer silencieusement (bug « la galerie ne répond pas » iOS/Android).
+ * Retourne true si accès accordé.
+ */
+async function ensurePermission(kind: 'library' | 'camera'): Promise<boolean> {
+  const req =
+    kind === 'library'
+      ? ImagePicker.requestMediaLibraryPermissionsAsync()
+      : ImagePicker.requestCameraPermissionsAsync();
+  const { status, canAskAgain } = await req;
+  if (status === 'granted') return true;
+
+  const quoi = kind === 'library' ? 'aux photos' : 'à la caméra';
+  if (!canAskAgain) {
+    Alert.alert(
+      'Autorisation requise',
+      `L'accès ${quoi} est bloqué. Ouvre les Réglages pour l'autoriser.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Ouvrir Réglages', onPress: () => Linking.openSettings() },
+      ],
+    );
+  }
+  return false;
+}
+
+/**
  * Ouvre la galerie photo.
  * Retourne l'URI locale de l'image choisie, ou null si annulé/refus.
  */
 export async function pickImageFromGallery(): Promise<string | null> {
-  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (status !== 'granted') return null;
+  if (!(await ensurePermission('library'))) return null;
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
@@ -51,8 +80,7 @@ export async function pickImageFromGallery(): Promise<string | null> {
  * Retourne l'URI locale de la photo prise, ou null si annulé/refus.
  */
 export async function pickImageFromCamera(): Promise<string | null> {
-  const { status } = await ImagePicker.requestCameraPermissionsAsync();
-  if (status !== 'granted') return null;
+  if (!(await ensurePermission('camera'))) return null;
 
   const result = await ImagePicker.launchCameraAsync({
     allowsEditing: true,
@@ -83,16 +111,23 @@ export async function uploadImage(
     | 'gallery'
     | 'signalements'
     | 'avis'
-    | 'disputes',
+    | 'disputes'
+    | 'stories',
   localUri: string,
   path: string,
 ): Promise<string> {
   // 1. Compression avant envoi
   const compressedUri = await compressImage(localUri);
 
-  // 2. Lecture en ArrayBuffer via fetch (compatible file:// iOS+Android)
-  const fileResponse = await fetch(compressedUri);
-  const arrayBuffer = await fileResponse.arrayBuffer();
+  // 2. Lecture base64 → Uint8Array (fetch(file://).arrayBuffer() renvoie vide sur Android)
+  const base64 = await FileSystem.readAsStringAsync(compressedUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
 
   // 3. JWT utilisateur
   const { data: sessData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
@@ -110,7 +145,7 @@ export async function uploadImage(
       'x-bucket': bucket,
       'x-path': path,
     },
-    body: arrayBuffer,
+    body: bytes,
   });
 
   const result = await uploadRes.json() as { url?: string; error?: string };
@@ -169,11 +204,18 @@ export function galleryImagePath(shopId: string): string {
 }
 
 /**
+ * Génère un chemin unique pour un média de story « Ça bouge ».
+ * Stocké dans le bucket 'stories'.
+ */
+export function storyImagePath(shopId: string): string {
+  return `${shopId}/story_${Date.now()}.jpg`;
+}
+
+/**
  * Ouvre la galerie sans forcer le recadrage carré (pour les photos de boutique).
  */
 export async function pickGalleryImage(): Promise<string | null> {
-  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (status !== 'granted') return null;
+  if (!(await ensurePermission('library'))) return null;
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],

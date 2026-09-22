@@ -93,35 +93,44 @@ export async function getAdPacks(): Promise<AdPack[]> {
   }));
 }
 
+// ─── Plafonds réalistes (base clients réelle) ─────────────────────────────────
+// Plafond DUR de vues d'une annonce (l'annonce se clôt à estMax vues).
+export const MAX_TOTAL_VIEWS = 1000;
+// Budget minimum d'une annonce (1 crédit = 1 FCFA).
+export const MIN_AD_BUDGET = 500;
+// Rendement vues/crédit (fourchette basse/haute) — max toujours borné à MAX_TOTAL_VIEWS.
+const VIEWS_PER_CREDIT_MIN = 0.3;
+const VIEWS_PER_CREDIT_MAX = 0.6;
+
 export const AD_PACKS: AdPack[] = [
   {
     id: 'decouverte',
     label: 'Découverte',
     tagline: 'Idéal pour tester',
-    budgetCredits: 2000,
+    budgetCredits: 500,
     durationHours: 12,
-    estMin: 1500,
-    estMax: 5000,
+    estMin: 100,
+    estMax: 250,
     popular: false,
   },
   {
     id: 'populaire',
     label: 'Populaire',
     tagline: 'Meilleur rapport portée/prix',
-    budgetCredits: 5000,
+    budgetCredits: 1000,
     durationHours: 24,
-    estMin: 5000,
-    estMax: 18000,
+    estMin: 250,
+    estMax: 600,
     popular: true,
   },
   {
     id: 'boost_max',
     label: 'Boost Max',
     tagline: 'Couverture maximale',
-    budgetCredits: 12000,
+    budgetCredits: 2000,
     durationHours: 48,
-    estMin: 9000,
-    estMax: 30000,
+    estMin: 500,
+    estMax: 1000,
     popular: false,
   },
 ];
@@ -139,16 +148,15 @@ export const DURATION_OPTIONS: { label: string; hours: number }[] = [
 
 // ─── Budget personnalisé : paliers disponibles ────────────────────────────────
 
-export const BUDGET_STEPS = [10, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000];
+export const BUDGET_STEPS = [500, 750, 1000, 1500, 2000];
 
 // ─── Calcul de l'estimation de vues (mode personnalisé) ──────────────────────
-// Plus conservative que les packs pour inciter à choisir un pack.
+// Rendement réaliste, max borné au plafond dur MAX_TOTAL_VIEWS.
 
 export function estimateViews(budgetCredits: number): { min: number; max: number } {
-  if (budgetCredits <= 10) return { min: 1, max: 1 };
   return {
-    min: Math.round(budgetCredits * 6),
-    max: Math.round(budgetCredits * 18),
+    min: Math.min(MAX_TOTAL_VIEWS, Math.round(budgetCredits * VIEWS_PER_CREDIT_MIN)),
+    max: Math.min(MAX_TOTAL_VIEWS, Math.round(budgetCredits * VIEWS_PER_CREDIT_MAX)),
   };
 }
 

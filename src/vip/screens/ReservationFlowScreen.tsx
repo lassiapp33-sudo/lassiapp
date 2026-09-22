@@ -29,6 +29,7 @@ import {
   OPTION_LABEL,
 } from '../../types/tableReservation';
 import { getErrorMessage } from '../../utils/errorUtils';
+import { filtrerCreneauxPasses } from '../../utils/slotTime';
 import logger from '../../utils/logger';
 import { WAVE_ENABLED } from '../../config/features';
 
@@ -241,7 +242,7 @@ export default function ReservationFlowScreen({ vipProfilId, vipNom, onBack, onS
   useEffect(() => {
     setLoadingSlots(true);
     getAvailableSlots(vipProfilId, toDateStr(selectedDate))
-      .then(setSlots)
+      .then(all => setSlots(filtrerCreneauxPasses(all, sl => sl.heure_debut, toDateStr(selectedDate))))
       .catch(err => logger.warn('[ReservationFlow] slots:', err))
       .finally(() => setLoadingSlots(false));
   }, [vipProfilId, selectedDate]);
@@ -273,19 +274,19 @@ export default function ReservationFlowScreen({ vipProfilId, vipNom, onBack, onS
       });
 
       if (result.mode === 'simulation') {
-        onSuccess(result.reservationId);
+        onSuccess(result.reservationId ?? '');
         return;
       }
 
       // Production : ouvrir l'URL de paiement (Wave ou OM deeplink)
       if (result.redirectUrl) {
         await Linking.openURL(result.redirectUrl);
-        onSuccess(result.reservationId);
+        onSuccess(result.reservationId ?? '');
         return;
       }
 
       // OM sans deeplink (QR code affiché côté serveur) ou cas inconnu
-      onSuccess(result.reservationId);
+      onSuccess(result.reservationId ?? '');
 
     } catch (err) {
       Alert.alert('Erreur', getErrorMessage(err));

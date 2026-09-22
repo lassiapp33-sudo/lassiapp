@@ -28,10 +28,20 @@ import ClassementScreen from '../classement/ClassementScreen';
 import FitnessAbonnementPaymentScreen from '../fitness/FitnessAbonnementPaymentScreen';
 import BlocAlaUneScreen from './BlocAlaUneScreen';
 import AlaUneFeedScreen from './AlaUneFeedScreen';
+import CaBougeFeedScreen from '../stories/CaBougeFeedScreen';
 import FicheVip from '../../vip/FicheVip';
 import VipListeScreen from '../../vip/VipListeScreen';
 import BeautyBookingFlowScreen from '../../vip/screens/BeautyBookingFlowScreen';
 import MesRdvBeautyScreen from '../../vip/screens/MesRdvBeautyScreen';
+import BeautyBookingScreen from '../beauty/BeautyBookingScreen';
+import BeautyPaymentScreen from '../beauty/BeautyPaymentScreen';
+import BeautyReceiptScreen from '../beauty/BeautyReceiptScreen';
+import StdReservationFlowScreen from '../restaurant/StdReservationFlowScreen';
+import StdReservationTicketScreen from '../restaurant/StdReservationTicketScreen';
+import MesReservationsStdScreen from '../restaurant/MesReservationsStdScreen';
+import { TableReservation } from '../../types/tableReservation';
+import { BeautyService } from '../../types/beauty';
+import { WeekHours } from '../../services/hours';
 import { getVipListe } from '../../services/vip';
 import ClientAbonnementsScreen from '../fitness/ClientAbonnementsScreen';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
@@ -116,10 +126,48 @@ type HomeStack =
   | { id: 'a_la_une_bloc'; blocCode: string; elementIndex?: number }
   | { id: 'a_la_une_categorie'; categorieId: string }
   | { id: 'a_la_une_feed' }
+  | { id: 'ca_bouge' }
   | { id: 'vip_fiche'; shopId: string; shopName: string }
   | { id: 'vip_liste' }
   | { id: 'beauty_booking_flow'; vipProfilId: string; vipNom: string; categorie: import('../../types/vip').VipCategorie }
-  | { id: 'mes_rdv_beauty' };
+  | { id: 'mes_rdv_beauty' }
+  | {
+      id: 'beauty_shop_booking';
+      service: BeautyService;
+      prestataireId: string;
+      prestataireName: string;
+      openingHours: WeekHours | null;
+    }
+  | {
+      id: 'beauty_shop_payment';
+      serviceId: string;
+      serviceNom: string;
+      prestataireId: string;
+      prestataireName: string;
+      dateReservation: string;
+      heureDebut: string;
+      heureFin: string;
+      prixTotal: number;
+    }
+  | {
+      id: 'beauty_shop_receipt';
+      receiptCode: string;
+      serviceNom: string;
+      prestataireName: string;
+      dateReservation: string;
+      heureDebut: string;
+      heureFin: string;
+      prixTotal: number;
+    }
+  | {
+      id: 'restaurant_reservation';
+      prestataireId: string;
+      prestataireName: string;
+      paymentMethods: ('wave' | 'om')[];
+      openingHours: WeekHours | null;
+    }
+  | { id: 'mes_reservations_std' }
+  | { id: 'restaurant_ticket'; reservation: TableReservation; restaurantNom: string };
 
 interface Props {
   onLogout: () => void;
@@ -248,6 +296,10 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
       push({ id: 'a_la_une_feed' });
     } else if (pendingNav.type === 'terrain_resa') {
       setHistory([{ id: 'main' }, { id: 'terrain_my_reservations' }]);
+    } else if (pendingNav.type === 'table_resa_client') {
+      setHistory([{ id: 'main' }, { id: 'mes_reservations_std' }]);
+    } else if (pendingNav.type === 'beauty_resa') {
+      setHistory([{ id: 'main' }, { id: 'mes_rdv_beauty' }]);
     }
   }, [pendingNav, clearPending]);
 
@@ -257,6 +309,28 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
       <VipListeScreen
         onBack={pop}
         onShopPress={pushShop}
+      />
+    );
+  }
+
+  // ── Ça bouge (stories quotidiennes) ──────────────────────────────────────
+  if (screen.id === 'ca_bouge') {
+    return (
+      <CaBougeFeedScreen
+        onBack={pop}
+        onOpenShop={pushShop}
+        onContactShop={(shopId, shopName, shopLogoUrl) =>
+          requireAuth(() =>
+            push({
+              id: 'chat',
+              shopId,
+              shopInitial: shopName.charAt(0).toUpperCase(),
+              shopName,
+              shopLogoUrl,
+              isVip: false,
+            })
+          )
+        }
       />
     );
   }
@@ -539,6 +613,140 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
         onFitnessAboPayment={(offre, fitnessName) =>
           requireAuth(() => push({ id: 'fitness_abo_payment', offre, fitnessName, shopId: screen.shopId }))
         }
+        onBookBeautyService={(svc, prestataireId, prestataireName, openingHours) =>
+          requireAuth(() =>
+            push({
+              id: 'beauty_shop_booking',
+              service: svc,
+              prestataireId,
+              prestataireName,
+              openingHours: openingHours as WeekHours | null,
+            })
+          )
+        }
+        onBookRestaurant={(prestataireId, prestataireName, paymentMethods, openingHours) =>
+          requireAuth(() =>
+            push({
+              id: 'restaurant_reservation',
+              prestataireId,
+              prestataireName,
+              paymentMethods,
+              openingHours,
+            })
+          )
+        }
+      />
+    );
+  }
+
+  // ── Réservation de table (restaurant standard) ──────────────────────────
+  if (screen.id === 'restaurant_reservation') {
+    return (
+      <StdReservationFlowScreen
+        prestataireId={screen.prestataireId}
+        restaurantNom={screen.prestataireName}
+        allowedMethods={screen.paymentMethods}
+        openingHours={screen.openingHours}
+        onBack={pop}
+        onSuccess={() => setHistory(h => [...h.slice(0, -1), { id: 'mes_reservations_std' }])}
+      />
+    );
+  }
+
+  // ── Mes réservations de table ───────────────────────────────────────────
+  if (screen.id === 'mes_reservations_std') {
+    return (
+      <MesReservationsStdScreen
+        onBack={pop}
+        onViewTicket={reservation =>
+          push({
+            id: 'restaurant_ticket',
+            reservation,
+            restaurantNom: (reservation as { vip_profils?: { nom_affiche?: string } }).vip_profils?.nom_affiche ?? 'Restaurant',
+          })
+        }
+      />
+    );
+  }
+
+  // ── Ticket de réservation de table ──────────────────────────────────────
+  if (screen.id === 'restaurant_ticket') {
+    return (
+      <StdReservationTicketScreen
+        reservation={screen.reservation}
+        restaurantNom={screen.restaurantNom}
+        onBack={pop}
+      />
+    );
+  }
+
+  // ── Booking beauté (shop standard) ──────────────────────────────────────
+  if (screen.id === 'beauty_shop_booking') {
+    return (
+      <BeautyBookingScreen
+        service={screen.service}
+        prestataireId={screen.prestataireId}
+        prestataireName={screen.prestataireName}
+        openingHours={screen.openingHours}
+        onBack={pop}
+        onBook={params =>
+          push({
+            id: 'beauty_shop_payment',
+            serviceId: params.serviceId,
+            serviceNom: params.serviceNom,
+            prestataireId: params.prestataireId,
+            prestataireName: params.prestataireName,
+            dateReservation: params.dateReservation,
+            heureDebut: params.heureDebut,
+            heureFin: params.heureFin,
+            prixTotal: params.prixTotal,
+          })
+        }
+      />
+    );
+  }
+
+  // ── Paiement beauté (shop standard) ──────────────────────────────────────
+  if (screen.id === 'beauty_shop_payment') {
+    return (
+      <BeautyPaymentScreen
+        serviceId={screen.serviceId}
+        serviceNom={screen.serviceNom}
+        prestataireId={screen.prestataireId}
+        prestataireName={screen.prestataireName}
+        dateReservation={screen.dateReservation}
+        heureDebut={screen.heureDebut}
+        heureFin={screen.heureFin}
+        prixTotal={screen.prixTotal}
+        onBack={pop}
+        onSuccess={receiptCode =>
+          push({
+            id: 'beauty_shop_receipt',
+            receiptCode,
+            serviceNom: screen.serviceNom,
+            prestataireName: screen.prestataireName,
+            dateReservation: screen.dateReservation,
+            heureDebut: screen.heureDebut,
+            heureFin: screen.heureFin,
+            prixTotal: screen.prixTotal,
+          })
+        }
+      />
+    );
+  }
+
+  // ── Reçu beauté (shop standard) ──────────────────────────────────────────
+  if (screen.id === 'beauty_shop_receipt') {
+    return (
+      <BeautyReceiptScreen
+        receiptCode={screen.receiptCode}
+        serviceNom={screen.serviceNom}
+        prestataireName={screen.prestataireName}
+        dateReservation={screen.dateReservation}
+        heureDebut={screen.heureDebut}
+        heureFin={screen.heureFin}
+        prixTotal={screen.prixTotal}
+        onClose={() => setHistory([{ id: 'main' }])}
       />
     );
   }
@@ -681,7 +889,27 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
     return (
       <NotificationsScreen
         onBack={pop}
-        onNavigate={(type, targetId) => {
+        onNavigate={(type, targetId, data) => {
+          const d = data ?? {};
+          // Ça bouge (réaction / commentaire sur story) → écran Ça bouge
+          if (d.type === 'ca_bouge') {
+            setHistory(h => [...h.slice(0, -1), { id: 'ca_bouge' }]);
+            return;
+          }
+          // Réservation beauté (payée / confirmée) → Mes rendez-vous, PAS Mes commandes
+          if (d.type === 'beauty_reservation' || d.type === 'beauty_acces_valide') {
+            setHistory(h => [...h.slice(0, -1), { id: 'mes_rdv_beauty' }]);
+            return;
+          }
+          // Réservation de table (acceptée / refusée / alternative) → Mes réservations, PAS Mes commandes
+          if (
+            d.type === 'reservation_acceptee' ||
+            d.type === 'reservation_refusee' ||
+            d.type === 'reservation_alternative'
+          ) {
+            setHistory(h => [...h.slice(0, -1), { id: 'mes_reservations_std' }]);
+            return;
+          }
           if (type === 'order' || type === 'pay') {
             setHistory(h => [...h.slice(0, -1), { id: 'orders' }]);
           } else if (type === 'fitness') {
@@ -753,6 +981,7 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
         onFavorites={() => push({ id: 'favorites' })}
         onTerrainReservations={() => push({ id: 'terrain_my_reservations' })}
         onRdvBeauty={() => push({ id: 'mes_rdv_beauty' })}
+        onRestaurantReservations={() => push({ id: 'mes_reservations_std' })}
         onClassement={() => push({ id: 'classement' })}
         onAbonnements={() => push({ id: 'mes_abonnements' })}
         onLogout={onLogout}
@@ -771,6 +1000,7 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
       onVoice={() => push({ id: 'voice' })}
       onClassement={() => push({ id: 'classement' })}
       onAlaUneFeed={() => push({ id: 'a_la_une_feed' })}
+      onCaBouge={() => push({ id: 'ca_bouge' })}
       onVipListePress={() => push({ id: 'vip_liste' })}
       onFavorites={() => requireAuth(() => push({ id: 'favorites' }))}
       onRecent={() => push({ id: 'recent' })}

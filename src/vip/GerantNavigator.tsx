@@ -50,7 +50,7 @@ type GerantScreen =
   | { id: 'apercu'; shopId: string };
 
 function shouldShowCard(type: string): boolean {
-  return type === 'order' || type === 'pay' || type === 'payment' || type === 'msg' || type === 'fitness' || type === 'reservation_terrain';
+  return type === 'order' || type === 'pay' || type === 'payment' || type === 'msg' || type === 'fitness' || type === 'reservation_terrain' || type === 'setup_shop' || type === 'share_vitrine';
 }
 
 interface Props {
@@ -99,6 +99,10 @@ export default function GerantNavigator({ onLogout }: Props) {
     clearPending();
     if (pendingNav.type === 'notifications') {
       setHistory(h => [...h, 'notifications']);
+    } else if (pendingNav.type === 'visibility_campaign') {
+      setHistory(h => [...h, 'campagne']);
+    } else if (pendingNav.type === 'offre_quartier') {
+      setHistory(h => [...h, 'offreQuartier']);
     } else if (pendingNav.type === 'order' || pendingNav.type === 'payment_success') {
       setHistory(h => [...h, 'registre']);
     }
@@ -167,8 +171,12 @@ export default function GerantNavigator({ onLogout }: Props) {
     return (
       <GerantNotificationsScreen
         onBack={pop}
-        onNavigate={type => {
+        onNavigate={(type, data) => {
           pop();
+          const d = data ?? {};
+          // Pack de visibilité activé → PAS le registre (commandes).
+          // Quartier → écran « Offre du Quartier » (produits) ; annonce/autre → « Ma Campagne ».
+          if (d.subscription_id) { push(d.offer_type === 'quartier' ? 'offreQuartier' : 'campagne'); return; }
           if (type === 'order' || type === 'pay') push('registre');
         }}
       />

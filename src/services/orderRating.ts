@@ -1,12 +1,10 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import { supabase, getCachedToken, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
+import { supabase, getValidToken, getCachedToken, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 
 export type RatingDirection = 'client_to_merchant' | 'merchant_to_client';
 
 async function uploadAudioViaEF(path: string, localUri: string): Promise<string> {
-  const { data: sessData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
-  const token = sessData?.session?.access_token;
-  if (!token) throw new Error('session expirée');
+  const token = await getValidToken();
 
   // Lecture base64 — plus fiable que fetch() sur file:// Android
   const base64 = await FileSystem.readAsStringAsync(localUri, {
@@ -69,6 +67,24 @@ export async function soumettreNote(
   const { error } = await supabase.rpc('soumettre_note_commande', {
     p_order_id: orderId,
     p_direction: direction,
+    p_note: note,
+    p_commentaire: commentaire ?? null,
+    p_vocal_url: vocalUrl ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+// Paiement groupé : une seule note du client → appliquée à toutes les commandes
+// (donc à tous les vendeurs) du groupe. Sens client_to_merchant uniquement.
+export async function soumettreNoteGroupe(
+  groupId: string,
+  note: number,
+  commentaire?: string,
+  vocalUrl?: string,
+): Promise<void> {
+  await supabase.auth.getSession();
+  const { error } = await supabase.rpc('soumettre_note_groupe', {
+    p_group_id: groupId,
     p_note: note,
     p_commentaire: commentaire ?? null,
     p_vocal_url: vocalUrl ?? null,

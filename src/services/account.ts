@@ -6,7 +6,7 @@
  * future réinscription.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../lib/supabase';
+import { supabase, getValidToken } from '../lib/supabase';
 import { markExplicitSignOut } from './auth';
 import useAuthStore from '../store/authStore';
 import useShopStore from '../store/shopStore';
@@ -24,17 +24,14 @@ const ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
  */
 export async function deleteAccount(): Promise<void> {
   // Récupérer le token de session pour l'Edge Function
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) throw new Error('Session expirée — reconnecte-toi.');
+  const token = await getValidToken();
 
   // Appeler l'Edge Function (service_role côté serveur, jamais exposé à l'app)
   const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-account`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${token}`,
       apikey: ANON_KEY,
     },
   });
@@ -55,7 +52,7 @@ export async function deleteAccount(): Promise<void> {
   useShopStore.setState({
     shopId: null,
     profile: { initial: 'M', name: 'Ma Boutique', subtitle: '', isOpen: true },
-    context: { shopType: 'products', openingHours: null, isManuallyClose: false, galleryUrls: [], subcategories: [], category: '' },
+    context: { shopType: 'products', openingHours: null, isManuallyClose: false, galleryUrls: [], subcategories: [], category: '', paymentMethods: ['wave', 'om'], reservationEnabled: false },
     categories: [],
     products: [],
     loading: false,

@@ -10,6 +10,7 @@ const DISPLAY: Partial<Record<CatId, { label?: string }>> = {
   sport: { label: 'Sport' },
   bakery: { label: 'Boulangerie\nPâtisserie' },
   tangana: { label: 'Tangana\n& Ndéki' },
+  food: { label: 'Restos &\nBoissons' },
 };
 
 const S = colors.accent;
@@ -27,6 +28,10 @@ export default function CategoryGrid({ onSelect }: Props) {
       {CATEGORIES.map(cat => {
         const d = DISPLAY[cat.id] ?? {};
         const label = d.label ?? cat.label;
+        // Labels mono-mot (Commerçants, Sport) : 1 seule ligne + auto-shrink pour
+        // toujours tenir en entier (plus de "Commerçan/ts" coupé sur écran étroit).
+        // Labels à saut de ligne explicite : 2 lignes, taille fixe uniforme.
+        const multiline = label.includes('\n');
         return (
           <TouchableOpacity
             key={cat.id}
@@ -37,7 +42,9 @@ export default function CategoryGrid({ onSelect }: Props) {
             <View style={styles.ico}>{cat.renderIcon(S, GLYPH)}</View>
             <Text
               style={styles.label}
-              numberOfLines={2}
+              numberOfLines={multiline ? 2 : 1}
+              adjustsFontSizeToFit={!multiline}
+              minimumFontScale={0.8}
               allowFontScaling={false}
             >
               {label}
@@ -79,11 +86,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.ui,
     // Taille FIXE identique iOS/Android (plus de adjustsFontSizeToFit qui
     // rétrécissait chaque label indépendamment → "Pâtisserie" minuscule).
-    // 8.5 + letterSpacing serré → "Commerçants" tient en entier sur 1 ligne
-    // sur tous les écrans ; les labels 2 lignes gardent la même taille.
-    fontSize: 8.5,
-    letterSpacing: -0.3,
+    // 9.5 + letterSpacing resserré → "Commerçants" (label mono-mot le plus long)
+    // tient en entier sur 1 ligne ; tous les labels partagent la même taille.
+    fontSize: 9.5,
+    letterSpacing: -0.5,
     textAlign: 'center',
-    lineHeight: 11,
+    lineHeight: 12,
   },
 });

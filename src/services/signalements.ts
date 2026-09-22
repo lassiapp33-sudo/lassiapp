@@ -1,4 +1,4 @@
-import { getCachedToken, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
+import { getValidToken, getCachedToken, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import * as ImageManipulator from 'expo-image-manipulator';
 import logger from '../utils/logger';
 
@@ -70,8 +70,7 @@ async function checkRateLimit(userId: string, token: string): Promise<void> {
 // Utilise raw fetch + token caché pour bypasser le mutex GoTrue bloqué.
 
 export async function envoyerSignalement(params: EnvoyerParams): Promise<void> {
-  const token = getCachedToken();
-  if (!token) throw new Error('Tu dois être connecté pour signaler un problème.');
+  const token = await getValidToken();
 
   const userId = getUserIdFromToken(token);
   if (!userId) throw new Error('Tu dois être connecté pour signaler un problème.');

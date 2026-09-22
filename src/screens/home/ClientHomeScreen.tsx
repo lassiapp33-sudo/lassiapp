@@ -54,6 +54,7 @@ interface Props {
   onMap?: () => void;
   onTerrains?: () => void;
   onAlaUneFeed?: () => void;
+  onCaBouge?: () => void;
   onVipListePress?: () => void;
   onShopItemPress?: (shopId: string, shopName: string, productId: string) => void;
   onShopItemView?: (shopId: string, productId: string) => void;
@@ -75,6 +76,7 @@ export default function ClientHomeScreen({
   onMap,
   onTerrains,
   onAlaUneFeed,
+  onCaBouge,
   onVipListePress,
   onShopItemPress,
   onShopItemView,
@@ -318,6 +320,7 @@ export default function ClientHomeScreen({
               onNearbyPress={onMap}
               onRecentPress={onRecent}
               onAlaUnePress={onAlaUneFeed}
+              onCaBougePress={onCaBouge}
             />
           </View>
         </View>
@@ -329,7 +332,7 @@ export default function ClientHomeScreen({
         contentContainerStyle={{ paddingBottom: NAV_HEIGHT + 16, flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.sectionHead, { marginTop: 28 }]}>
+        <View style={[styles.sectionHead, { marginTop: 16 }]}>
           <Text style={styles.secTitle}>{t.home.explore}</Text>
         </View>
         <View style={styles.px}>

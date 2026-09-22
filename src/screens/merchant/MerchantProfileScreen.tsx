@@ -433,18 +433,21 @@ export default function MerchantProfileScreen({
   };
 
   const handleEditAvatar = () => {
+    // Picker différé : iOS refuse en silence de le présenter tant que
+    // l'ActionSheet/Alert n'est pas totalement fermé (« galerie sans réponse »).
+    const defer = (s: 'gallery' | 'camera') => setTimeout(() => pickAndUploadAvatar(s), 350);
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         { options: [t.common.cancel, t.common.gallery, t.common.camera], cancelButtonIndex: 0 },
         idx => {
-          if (idx === 1) pickAndUploadAvatar('gallery');
-          if (idx === 2) pickAndUploadAvatar('camera');
+          if (idx === 1) defer('gallery');
+          if (idx === 2) defer('camera');
         },
       );
     } else {
       Alert.alert(t.common.photoProfile, '', [
-        { text: t.common.gallery, onPress: () => pickAndUploadAvatar('gallery') },
-        { text: t.common.camera, onPress: () => pickAndUploadAvatar('camera') },
+        { text: t.common.gallery, onPress: () => defer('gallery') },
+        { text: t.common.camera, onPress: () => defer('camera') },
         { text: t.common.cancel, style: 'cancel' },
       ]);
     }

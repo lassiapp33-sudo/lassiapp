@@ -53,6 +53,7 @@ export interface CarrouselItem {
   prestataire_id: string;
   product_id: string | null;
   terrain_id: string | null;
+  beauty_service_id: string | null;
   nom: string;
   prix: number;
   image_url: string;
@@ -274,6 +275,7 @@ export const getMesProduitsCarrousel = async (prestataireId: string): Promise<Ca
 export interface CarrouselSelectionItem {
   productId?: string | null;
   terrainId?: string | null;
+  beautyServiceId?: string | null;
   nom: string;
   prix: number;
   imageUrl: string;
@@ -299,6 +301,7 @@ export const setCarrouselSelection = async (
     prestataire_id: prestataireId,
     product_id: item.productId ?? null,
     terrain_id: item.terrainId ?? null,
+    beauty_service_id: item.beautyServiceId ?? null,
     nom: item.nom,
     prix: item.prix,
     image_url: item.imageUrl,

@@ -1,4 +1,4 @@
-import { supabase, getCachedToken, safeGetSession, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
+import { supabase, getValidToken, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import { ClientOrder, ClientOrderStatus, CommerceType } from '../types/clientOrders';
 
 interface OrderItemRow {
@@ -83,12 +83,7 @@ export async function getClientOrders(clientId: string): Promise<ClientOrder[]> 
 
 // Annule la commande — fetch direct avec token caché (bypass GoTrue mutex, réponse instantanée)
 export async function cancelOrder(orderId: string): Promise<void> {
-  let token = getCachedToken();
-  if (!token) {
-    const { data: { session } } = await safeGetSession(15_000);
-    token = session?.access_token ?? null;
-  }
-  if (!token) throw new Error('Session expirée — reconnecte-toi.');
+  const token = await getValidToken();
 
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/annuler_commande_client`, {
     method: 'POST',

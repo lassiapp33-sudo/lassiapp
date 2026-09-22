@@ -130,7 +130,11 @@ export async function creerProduitsEnMasse(
   const { data: sessionData } = await supabase.auth.getSession();
   if (!sessionData.session) {
     const { error: refreshError } = await supabase.auth.refreshSession();
-    if (refreshError) throw new Error('Session expirée. Reconnecte-toi.');
+    if (refreshError) {
+      // Refresh token expiré → déconnexion propre, l'app redirige vers login
+      supabase.auth.signOut().catch(() => {});
+      throw new Error('SESSION_EXPIRED');
+    }
   }
 
   const rows = produits.map(p => ({

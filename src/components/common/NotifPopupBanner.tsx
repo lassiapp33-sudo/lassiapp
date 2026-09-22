@@ -14,7 +14,7 @@ import useNotifPopupStore from '../../store/notifPopupStore';
 function BannerIcon({ type }: { type: NotifType }) {
   if (type === 'msg')                                   return <IcoNotifMsg     size={24} />;
   if (type === 'fitness')                               return <IcoNotifFitness size={24} />;
-  if (type === 'ann')                                   return <IcoNotifAnn     size={24} />;
+  if (type === 'ann' || type === 'vip')                 return <IcoNotifAnn     size={24} />;
   if (type === 'pay' || type === 'payment')             return <IcoNotifPay     size={24} />;
   return <IcoNotifOrder size={24} />;
 }
@@ -29,6 +29,8 @@ const COLOR: Record<NotifType, string> = {
   ann:                 colors.accent,
   livraison:           colors.success,
   reservation_terrain: colors.accent,
+  setup_shop:          colors.accent,
+  share_vitrine:       colors.accent,
 };
 
 const BG: Record<NotifType, string> = {
@@ -41,7 +43,16 @@ const BG: Record<NotifType, string> = {
   ann:                 'rgba(253,207,52,.13)',
   livraison:           'rgba(95,211,138,.13)',
   reservation_terrain: 'rgba(253,207,52,.13)',
+  setup_shop:          'rgba(253,207,52,.13)',
+  share_vitrine:       'rgba(253,207,52,.13)',
 };
+
+// Types gérés par la BANNIÈRE (auto-dismiss). Les autres (vip modal, setup_shop…)
+// sont pris en charge par NotifCardModal → la bannière doit les IGNORER totalement
+// (ni rendu, ni timer d'auto-dismiss qui fermerait le modal).
+const BANNER_TYPES = new Set<string>([
+  'order', 'payment', 'pay', 'msg', 'fitness', 'ann', 'vip', 'reservation_terrain',
+]);
 
 interface Props {
   onView: () => void;
@@ -86,7 +97,9 @@ export default function NotifPopupBanner({ onView, onVoirAlaUne, onVoirVitrine, 
   );
 
   useEffect(() => {
-    if (!current) return;
+    // Ne rien armer pour les types non gérés par la bannière (ex: setup_shop),
+    // sinon le timer d'auto-dismiss fermerait le modal NotifCardModal.
+    if (!current || !BANNER_TYPES.has(current.type)) return;
 
     exitingRef.current = false;
     progress.setValue(1);
@@ -121,15 +134,7 @@ export default function NotifPopupBanner({ onView, onVoirAlaUne, onVoirVitrine, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id]);
 
-  if (!current || (
-    current.type !== 'order' &&
-    current.type !== 'payment' &&
-    current.type !== 'pay' &&
-    current.type !== 'msg' &&
-    current.type !== 'fitness' &&
-    current.type !== 'ann' &&
-    current.type !== 'reservation_terrain'
-  )) return null;
+  if (!current || !BANNER_TYPES.has(current.type)) return null;
 
   const color = COLOR[current.type];
   const bg    = BG[current.type];

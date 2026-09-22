@@ -688,7 +688,7 @@ const IcoFruitsMarines: React.FC<{ color: string }> = () =>
   );
 
 
-export type CatId = 'stores' | 'tangana' | 'food' | 'hair' | 'sport' | 'bakery' | 'fruiterie' | 'photo_video';
+export type CatId = 'stores' | 'tangana' | 'food' | 'hair' | 'sport' | 'bakery' | 'fruiterie';
 
 export type ShopType = 'products' | 'services' | 'memberships' | 'terrains';
 
@@ -754,6 +754,13 @@ const ALL_CATEGORIES: CatConfig[] = [
         desc: 'Épicerie, mini-marché',
       },
       {
+        id: 'cafe_wass',
+        emoji: '☕',
+        label: 'Café ak Thé',
+        desc: 'Café, thé, jus, boissons chaudes et fraîches',
+        SvgIcon: IcoCafeWass,
+      },
+      {
         id: 'quincaillerie',
         emoji: '🔧',
         label: 'Quincaillerie',
@@ -785,6 +792,7 @@ const ALL_CATEGORIES: CatConfig[] = [
     subLabel: 'Tangana',
     emoji: '☕',
     shopType: 'products',
+    hidden: true,
     subcatMode: 'single',
     subcats: [
       {
@@ -794,6 +802,7 @@ const ALL_CATEGORIES: CatConfig[] = [
         desc: 'Petit-déjeuner, café Touba, thé, pain',
         imageUri: IMG_TANGANA,
         imageSize: 50,
+        hidden: true,
       },
       {
         id: 'ndeki',
@@ -802,6 +811,7 @@ const ALL_CATEGORIES: CatConfig[] = [
         desc: 'Repas du midi, plats cuisinés',
         imageUri: IMG_NDEIKI,
         imageSize: 68,
+        hidden: true,
       },
       {
         id: 'soupe',
@@ -811,20 +821,6 @@ const ALL_CATEGORIES: CatConfig[] = [
         imageUri: IMG_SOUPE,
         imageSize: 44,
         hidden: true,
-      },
-      {
-        id: 'cafe_wass',
-        emoji: '☕',
-        label: 'Café ak Thé',
-        desc: 'Café, thé, jus, boissons chaudes et fraîches',
-        SvgIcon: IcoCafeWass,
-      },
-      {
-        id: 'beignet_fataya',
-        emoji: '🥐',
-        label: 'Beignet ak Fataya',
-        desc: 'Beignets, fataya, snacks frits',
-        SvgIcon: IcoBeignetFataya,
       },
     ],
     renderIcon: (color, size = 24) =>
@@ -858,6 +854,13 @@ const ALL_CATEGORIES: CatConfig[] = [
         emoji: '🍰',
         label: 'Pâtisserie',
         desc: 'Gâteaux, tartes, viennoiseries',
+      },
+      {
+        id: 'beignet_fataya',
+        emoji: '🥐',
+        label: 'Beignet ak Fataya',
+        desc: 'Beignets, fataya, snacks frits',
+        SvgIcon: IcoBeignetFataya,
       },
     ],
     renderIcon: (color, size = 24) =>
@@ -1093,7 +1096,7 @@ const ALL_CATEGORIES: CatConfig[] = [
   },
   {
     id: 'sport',
-    label: 'Sport & Production',
+    label: 'Sport',
     subLabel: 'Sport',
     emoji: '⚽',
     shopType: 'memberships',
@@ -1119,10 +1122,8 @@ const ALL_CATEGORIES: CatConfig[] = [
         label: 'Réservation de terrain basket',
         desc: 'Terrain de basketball en salle ou en plein air',
         hasSlots: true,
-        hidden: true,
       },
       { id: 'arts_martiaux', emoji: '🥊', label: 'Arts martiaux', desc: 'Boxe, judo, taekwondo…', hidden: true },
-      { id: 'photo_video', emoji: '📷', label: 'Photographes & Vidéastes', desc: 'Photo, vidéo, clips, événements, mariages', hidden: true },
     ],
     renderIcon: (color, size = 24) =>
       React.createElement(
@@ -1143,50 +1144,9 @@ const ALL_CATEGORIES: CatConfig[] = [
         React.createElement(Rect, { x: 19, y: 8, width: 4, height: 8, rx: 1, stroke: color }),
       ),
   },
-  {
-    id: 'photo_video',
-    label: 'Photographes & Vidéastes',
-    subLabel: 'Photographes & Vidéastes',
-    emoji: '📷',
-    shopType: 'services',
-    hidden: true,
-    subcatMode: 'multiple',
-    subcats: [
-      {
-        id: 'photographe',
-        emoji: '📷',
-        label: 'Photographe',
-        desc: 'Portraits, événements, mariage, studio',
-      },
-      {
-        id: 'videaste',
-        emoji: '🎥',
-        label: 'Vidéaste',
-        desc: 'Tournage, montage, clips, événements',
-      },
-    ],
-    renderIcon: (color, size = 24) =>
-      React.createElement(
-        Svg,
-        {
-          width: size,
-          height: size,
-          viewBox: '0 0 24 24',
-          fill: 'none',
-          strokeWidth: 1.7,
-          strokeLinecap: 'round',
-          strokeLinejoin: 'round',
-        },
-        React.createElement(Path, {
-          d: 'M23 7l-7 5 7 5V7z',
-          stroke: color,
-        }),
-        React.createElement(Rect, { x: 1, y: 5, width: 15, height: 14, rx: 2, stroke: color }),
-      ),
-  },
 ];
 
-const CAT_ORDER: CatId[] = ['food', 'tangana', 'bakery', 'hair', 'sport', 'stores', 'fruiterie', 'photo_video'];
+const CAT_ORDER: CatId[] = ['food', 'tangana', 'bakery', 'hair', 'sport', 'stores', 'fruiterie'];
 const ALL_ORDERED: CatConfig[] = CAT_ORDER
   .map(id => ALL_CATEGORIES.find(c => c.id === id))
   .filter((c): c is CatConfig => !!c);

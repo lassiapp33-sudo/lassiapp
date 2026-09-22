@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
-  TextInput, Alert, ActivityIndicator, Platform, KeyboardAvoidingView, Switch,
+  TextInput, Alert, ActivityIndicator, Platform, KeyboardAvoidingView,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { Terrain, SportType, SPORT_EMOJI, SPORT_LABEL } from '../../types/terrain';
 import * as terrainsService from '../../services/terrains';
 import { pickImageFromGallery, pickImageFromCamera, uploadImage } from '../../services/storage';
+import { getCurrentLocation, reverseGeocode } from '../../services/location';
 import useAuthStore from '../../store/authStore';
-import logger from '../../utils/logger';
+import useShopStore from '../../store/shopStore';
 import { getErrorMessage } from '../../utils/errorUtils';
 
 const IcoImage = ({ stroke }: { stroke: string }) => (
@@ -27,10 +28,16 @@ const IcoCamera = ({ stroke }: { stroke: string }) => (
   </Svg>
 );
 
+const IcoPin = ({ stroke }: { stroke: string }) => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke={stroke} />
+    <Circle cx={12} cy={10} r={3} stroke={stroke} />
+  </Svg>
+);
+
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const SPORT_TYPES: SportType[] = ['football', 'basketball', 'tennis', 'volleyball', 'autre'];
-const DAYS_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
 
 // ─── Types locaux ─────────────────────────────────────────────────────────────
 
@@ -43,40 +50,10 @@ interface FormState {
   adresse: string;
 }
 
-interface HoraireForm {
-  jour_semaine: number;
-  heure_ouverture: string;
-  heure_fermeture: string;
-  ferme: boolean;
-}
-
 const DEFAULT_FORM: FormState = {
   nom: '', description: '', prixHoraire: '', sportType: 'football',
   capacite: '10', adresse: '',
 };
-
-const DEFAULT_HORAIRES: HoraireForm[] = Array.from({ length: 7 }, (_, i) => ({
-  jour_semaine: i, heure_ouverture: '08:00', heure_fermeture: '22:00', ferme: false,
-}));
-
-// Formate automatiquement les chiffres saisis en HH:MM
-// "2356" → "23:56" | "8" → "8" | "85" → "08:5" clampé ensuite sur blur
-function formatTimeInput(text: string): string {
-  const digits = text.replace(/\D/g, '').slice(0, 4);
-  if (digits.length <= 2) return digits;
-  const hh = digits.slice(0, 2);
-  const mm = digits.slice(2);
-  return `${hh}:${mm}`;
-}
-
-// Normalise l'heure finale (clamp heures 0-23, minutes 0-59, padStart)
-function normalizeTime(text: string): string {
-  const digits = text.replace(/\D/g, '');
-  if (digits.length < 3) return text;
-  const hh = Math.min(parseInt(digits.slice(0, 2), 10), 23);
-  const mm = Math.min(parseInt(digits.slice(2, 4).padEnd(2, '0'), 10), 59);
-  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -104,30 +81,36 @@ export default function TerrainEditScreen({ terrain, onBack, onSaved }: Props) {
       : DEFAULT_FORM,
   );
 
-  const [horaires, setHoraires] = useState<HoraireForm[]>(DEFAULT_HORAIRES);
-  const [loadingHoraires, setLoadingHoraires] = useState(!!terrain);
   const [images, setImages] = useState<string[]>(terrain?.images ?? []);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (!terrain) return;
-    terrainsService.getTerrainHoraires(terrain.id)
-      .then(data => {
-        if (data.length > 0) {
-          setHoraires(DEFAULT_HORAIRES.map(dh => {
-            const found = data.find(h => h.jour_semaine === dh.jour_semaine);
-            return found
-              ? { jour_semaine: found.jour_semaine, heure_ouverture: found.heure_ouverture, heure_fermeture: found.heure_fermeture, ferme: found.ferme }
-              : dh;
-          }));
-        }
-      })
-      .catch(err => logger.warn('[TerrainEditScreen] horaires:', err))
-      .finally(() => setLoadingHoraires(false));
-  }, [terrain]);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(
+    terrain?.latitude != null && terrain?.longitude != null
+      ? { latitude: terrain.latitude, longitude: terrain.longitude }
+      : null,
+  );
+  const [locZone, setLocZone] = useState('');
+  const [locLoading, setLocLoading] = useState(false);
 
-  const updateHoraire = (jour: number, field: keyof HoraireForm, value: string | boolean) => {
-    setHoraires(prev => prev.map(h => h.jour_semaine === jour ? { ...h, [field]: value } : h));
+  const handleCaptureLocation = async () => {
+    setLocLoading(true);
+    try {
+      const coords = await getCurrentLocation();
+      if (!coords) {
+        Alert.alert('GPS indisponible', "Active la localisation pour définir l'emplacement du terrain.");
+        return;
+      }
+      setLocation(coords);
+      // Rend le terrain visible sur la carte client (la carte lit la position de la boutique)
+      await useShopStore.getState().updateLocation(coords.latitude, coords.longitude);
+      const zone = await reverseGeocode(coords.latitude, coords.longitude);
+      setLocZone(zone);
+      Alert.alert('Position enregistrée ✓', `Ton terrain est localisé à : ${zone}`);
+    } catch {
+      Alert.alert('Erreur', "Impossible d'enregistrer la position. Réessaie.");
+    } finally {
+      setLocLoading(false);
+    }
   };
 
   const pickFromGallery = async () => {
@@ -174,10 +157,11 @@ export default function TerrainEditScreen({ terrain, onBack, onSaved }: Props) {
         sport_type: form.sportType,
         capacite: parseInt(form.capacite, 10) || 10,
         adresse: form.adresse.trim() || undefined,
+        latitude: location?.latitude,
+        longitude: location?.longitude,
         images: uploadedImages,
         actif: true,
       });
-      await terrainsService.saveTerrainHoraires(saved.id, horaires);
       onSaved(saved);
     } catch (err) {
       Alert.alert('Erreur', getErrorMessage(err));
@@ -308,58 +292,32 @@ export default function TerrainEditScreen({ terrain, onBack, onSaved }: Props) {
           </ScrollView>
         )}
 
-        {/* ── Horaires d'ouverture ───────────────────────────────────────── */}
-        <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Horaires d'ouverture</Text>
+        {/* ── Emplacement du terrain ─────────────────────────────────────── */}
+        <Text style={[styles.sectionLabel, { marginTop: 28 }]}>Emplacement</Text>
         <Text style={styles.sectionSub}>
-          Configurez les créneaux disponibles pour chaque jour.
+          Définis la position GPS pour que ton terrain apparaisse sur la carte.
         </Text>
 
-        {loadingHoraires ? (
-          <ActivityIndicator color={colors.accent} style={{ marginVertical: 20 }} />
-        ) : (
-          <View style={styles.horairesList}>
-            {horaires.map(h => (
-              <View key={h.jour_semaine} style={styles.dayRow}>
-                <Text style={styles.dayName}>{DAYS_FR[h.jour_semaine]}</Text>
-
-                <Switch
-                  value={!h.ferme}
-                  onValueChange={v => updateHoraire(h.jour_semaine, 'ferme', !v)}
-                  trackColor={{ false: colors.border, true: `${colors.accent}60` }}
-                  thumbColor={h.ferme ? colors.surface : colors.accent}
-                />
-
-                {h.ferme ? (
-                  <Text style={styles.fermeLabel}>Fermé</Text>
-                ) : (
-                  <View style={styles.timeRow}>
-                    <TextInput
-                      style={styles.timeInput}
-                      value={h.heure_ouverture}
-                      onChangeText={v => updateHoraire(h.jour_semaine, 'heure_ouverture', formatTimeInput(v))}
-                      onBlur={() => updateHoraire(h.jour_semaine, 'heure_ouverture', normalizeTime(h.heure_ouverture))}
-                      placeholder="08:00"
-                      placeholderTextColor={colors.muted}
-                      keyboardType="numeric"
-                      maxLength={5}
-                    />
-                    <Text style={styles.timeSep}>—</Text>
-                    <TextInput
-                      style={styles.timeInput}
-                      value={h.heure_fermeture}
-                      onChangeText={v => updateHoraire(h.jour_semaine, 'heure_fermeture', formatTimeInput(v))}
-                      onBlur={() => updateHoraire(h.jour_semaine, 'heure_fermeture', normalizeTime(h.heure_fermeture))}
-                      placeholder="22:00"
-                      placeholderTextColor={colors.muted}
-                      keyboardType="numeric"
-                      maxLength={5}
-                    />
-                  </View>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
+        <TouchableOpacity
+          style={styles.locBtn}
+          onPress={handleCaptureLocation}
+          disabled={locLoading}
+          activeOpacity={0.85}
+        >
+          {locLoading
+            ? <ActivityIndicator color={colors.accent} />
+            : <IcoPin stroke={colors.accent} />
+          }
+          <Text style={styles.locBtnTxt}>
+            {locLoading
+              ? 'Localisation…'
+              : locZone
+                ? `${locZone} — Mettre à jour`
+                : location
+                  ? 'Position définie — Mettre à jour'
+                  : "Définir l'emplacement de mon terrain"}
+          </Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.saveBtn, saving && { opacity: 0.7 }]}
@@ -425,27 +383,12 @@ const styles = StyleSheet.create({
   chipTxt: { color: colors.muted, fontFamily: fonts.ui, fontSize: 12 },
   chipTxtOn: { color: colors.bg },
 
-  horairesList: {
+  locBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.lg, overflow: 'hidden',
+    borderRadius: radius.md, paddingHorizontal: 14, minHeight: 54,
   },
-  dayRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  dayName: {
-    color: colors.white, fontFamily: fonts.ui, fontSize: 13, width: 72,
-  },
-  fermeLabel: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, flex: 1 },
-  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
-  timeInput: {
-    flex: 1, height: 36, backgroundColor: colors.bg, borderWidth: 1,
-    borderColor: colors.border, borderRadius: radius.sm,
-    color: colors.white, fontFamily: fonts.ui, fontSize: 13,
-    textAlign: 'center', paddingHorizontal: 8,
-  },
-  timeSep: { color: colors.muted, fontFamily: fonts.body, fontSize: 12 },
+  locBtnTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 13, flexShrink: 1 },
 
   saveBtn: {
     backgroundColor: colors.accent, borderRadius: radius.lg,

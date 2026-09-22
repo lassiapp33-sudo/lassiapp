@@ -51,10 +51,10 @@ function getPlaceholders(
       return { namePH: 'Ex : Tresses vanilles', descPH: 'Ex : Tresses longues, pose ~4h' };
     if (sub === 'esthetique')
       return { namePH: 'Ex : Pose ongles gel', descPH: 'Ex : Pose complète gel, vernis au choix' };
-    if (sub === 'photographe')
-      return { namePH: 'Ex : Couverture mariage journée', descPH: 'Ex : 200 photos retouchées, livraison USB' };
-    if (sub === 'videaste')
-      return { namePH: 'Ex : Film baptême demi-journée', descPH: 'Ex : Tournage + montage, 1 vidéo HD livrée' };
+    if (sub === 'parfumerie')
+      return { namePH: 'Ex : Eau de parfum 100ml', descPH: 'Ex : Senteur boisée, tenue longue durée' };
+    if (sub === 'soins_bio')
+      return { namePH: 'Ex : Huile de karité 200ml', descPH: 'Ex : 100% naturelle, hydratation intense' };
     // hommes (défaut services)
     return { namePH: 'Ex : Coupe + dégradé', descPH: 'Ex : Coupe propre, dégradé bas, finition rasoir' };
   }
@@ -102,6 +102,56 @@ function getPlaceholders(
   // Fallback générique
   return { namePH: 'Ex : Nom du produit', descPH: 'Ex : Description courte du produit' };
 }
+
+// ─── Suggestions de catégories adaptées à l'activité ──────────────────────────
+
+function getCategorySuggestions(
+  category: string,
+  subcategories: string[],
+  shopType: string,
+): string[] {
+  const sub = subcategories[0] ?? '';
+
+  if (shopType === 'memberships') {
+    if (sub === 'reservation_terrain_foot' || sub === 'reservation_terrain_basket')
+      return ['Terrains', 'Créneaux', 'Abonnements'];
+    if (sub === 'arts_martiaux')
+      return ['Cours', 'Stages', 'Abonnements'];
+    return ['Abonnements', 'Cours collectifs', 'Coaching', 'Musculation'];
+  }
+
+  if (shopType === 'services') {
+    if (sub === 'femmes')
+      return ['Tresses', 'Tissages', 'Coloration', 'Soins', 'Produits'];
+    if (sub === 'esthetique')
+      return ['Ongles', 'Maquillage', 'Soins visage', 'Épilation', 'Produits'];
+    if (sub === 'parfumerie')
+      return ['Parfums', 'Eaux de toilette', 'Coffrets', 'Déodorants', 'Soins parfumés'];
+    if (sub === 'soins_bio')
+      return ['Soins visage', 'Soins corps', 'Cheveux', 'Huiles & beurres', 'Savons', 'Bien-être'];
+    // hommes (barber) par défaut
+    return ['Coupe', 'Barbe', 'Soins', 'Coloration', 'Produits'];
+  }
+
+  // shopType === 'products'
+  if (category === 'tangana')
+    return ['Petit-déjeuner', 'Sandwichs', 'Boissons', 'Soupes'];
+  if (category === 'bakery')
+    return ['Pains', 'Viennoiseries', 'Pâtisseries', 'Gâteaux'];
+  if (category === 'food')
+    return ['Entrées', 'Plats', 'Desserts', 'Boissons', 'Accompagnements'];
+  if (category === 'fruiterie')
+    return ['Fruits', 'Légumes', 'Jus', 'Paniers'];
+  if (category === 'stores')
+    return ['Épicerie', 'Boissons', 'Entretien', 'Quincaillerie'];
+
+  return ['Nouveautés', 'Populaires', 'Promotions'];
+}
+
+// Slug identique à shopStore.addCategory (id dérivé du label)
+const slugCat = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -211,15 +261,9 @@ export default function AddProductSheet({
   const shopType = useShopStore(s => s.context.shopType);
   const shopCategory = useShopStore(s => s.context.category);
   const shopSubcategories = useShopStore(s => s.context.subcategories);
+  const addCategory = useShopStore(s => s.addCategory);
   const { namePH, descPH } = getPlaceholders(shopCategory, shopSubcategories, shopType);
-
-  // Dériver l'itemType depuis le shopType
-  const itemType =
-    shopType === 'services'
-      ? ('service' as const)
-      : shopType === 'memberships'
-        ? ('membership' as const)
-        : ('product' as const);
+  const catSuggestions = getCategorySuggestions(shopCategory, shopSubcategories, shopType);
 
   const [emoji, setEmoji] = useState('');
   const [photoUrl, setPhotoUrl] = useState<string | undefined>();
@@ -228,6 +272,38 @@ export default function AddProductSheet({
   const [desc, setDesc] = useState('');
   const [price, setPrice] = useState('');
   const [catId, setCatId] = useState(categories[0]?.id ?? '');
+  const [addingCat, setAddingCat] = useState(false);
+  const [newCatText, setNewCatText] = useState('');
+
+  // Ajoute (ou réutilise) une catégorie et la sélectionne.
+  const handleAddCat = (label?: string) => {
+    const raw = (label ?? newCatText).trim();
+    if (!raw) { setAddingCat(false); setNewCatText(''); return; }
+    const existing = categories.find(c => c.label.toLowerCase() === raw.toLowerCase());
+    if (existing) {
+      setCatId(existing.id);
+    } else {
+      addCategory(raw);
+      setCatId(slugCat(raw) || `cat_${Date.now()}`);
+    }
+    setNewCatText('');
+    setAddingCat(false);
+  };
+
+  // Dériver l'itemType depuis le shopType.
+  // Parfumerie & Soins/Bio (shopType services mais vente produits) → toujours produit.
+  // Beauté (autres services) : la catégorie "produits" force un vrai produit (pas de durée).
+  const isProductServiceShop =
+    shopType === 'services' &&
+    shopSubcategories.some(s => s === 'parfumerie' || s === 'soins_bio');
+  const itemType =
+    shopType === 'services'
+      ? isProductServiceShop || catId === 'produits'
+        ? ('product' as const)
+        : ('service' as const)
+      : shopType === 'memberships'
+        ? ('membership' as const)
+        : ('product' as const);
   const [duration, setDuration] = useState('');
   const [formulaPeriod, setFormulaPeriod] = useState<FormulaPeriod>('mois');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -294,14 +370,20 @@ export default function AddProductSheet({
     }
   };
 
-  // Affiche le choix galerie/caméra selon la plateforme
+  // Affiche le choix galerie/caméra selon la plateforme.
+  // Le picker natif ne peut PAS être présenté tant que l'ActionSheet/Alert n'est
+  // pas totalement fermé (par-dessus le <Modal> de la fiche) : iOS refuse en
+  // silence → « la galerie ne répond pas ». On diffère donc son lancement.
+  const deferPick = (source: 'gallery' | 'camera') =>
+    setTimeout(() => handlePickPhoto(source), 350);
+
   const openPhotoPicker = () => {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         { options: ['Annuler', 'Galerie', 'Caméra', 'Emoji à la place'], cancelButtonIndex: 0 },
         idx => {
-          if (idx === 1) handlePickPhoto('gallery');
-          if (idx === 2) handlePickPhoto('camera');
+          if (idx === 1) deferPick('gallery');
+          if (idx === 2) deferPick('camera');
           if (idx === 3) {
             setPhotoUrl(undefined);
             setShowEmojiPicker(true);
@@ -310,8 +392,8 @@ export default function AddProductSheet({
       );
     } else {
       Alert.alert('Ajouter une photo', '', [
-        { text: 'Galerie', onPress: () => handlePickPhoto('gallery') },
-        { text: 'Caméra', onPress: () => handlePickPhoto('camera') },
+        { text: 'Galerie', onPress: () => deferPick('gallery') },
+        { text: 'Caméra', onPress: () => deferPick('camera') },
         {
           text: 'Emoji à la place',
           onPress: () => {
@@ -324,17 +406,9 @@ export default function AddProductSheet({
     }
   };
 
-  // Catégorie actuelle
-  const currentCat = categories.find(c => c.id === catId) ?? categories[0];
-  // Pour les boutiques fitness, Formules et Produits ont des comportements différents
-  const isFormuleMode = itemType !== 'membership' || catId === 'formules';
-
-  // Cycle vers la catégorie suivante (picker simple)
-  const cycleCat = () => {
-    const idx = categories.findIndex(c => c.id === catId);
-    const next = categories[(idx + 1) % categories.length];
-    setCatId(next.id);
-  };
+  // Mode formule = uniquement les abonnements fitness sur l'onglet Formules.
+  // Un vrai produit (products, parfumerie, soins/bio, beauté) ne doit jamais être une "formule".
+  const isFormuleMode = itemType === 'membership' && catId === 'formules';
 
   const [saving, setSaving] = useState(false);
 
@@ -495,33 +569,21 @@ export default function AddProductSheet({
               />
             </View>
 
-            {/* Prix + Catégorie (2 colonnes) ──────────────────────────────── */}
-            <View style={styles.row2} onLayout={e => setPriceY(e.nativeEvent.layout.y)}>
-              <View style={styles.flex}>
-                <FieldLabel>Prix</FieldLabel>
-                <View style={styles.inputRow}>
-                  <TextInput
-                    style={[styles.input, styles.flex, { marginBottom: 0 }]}
-                    value={price}
-                    onChangeText={t => setPrice(t.replace(/\D/g, ''))}
-                    keyboardType="numeric"
-                    placeholder="500"
-                    placeholderTextColor="#5a5c80"
-                    returnKeyType="done"
-                    onFocus={() => scrollToField(priceY)}
-                  />
-                  <Text style={styles.fcfaSuffix}>FCFA</Text>
-                </View>
-              </View>
-
-              <View style={styles.flex}>
-                <FieldLabel>Catégorie</FieldLabel>
-                <TouchableOpacity style={styles.catPicker} onPress={cycleCat} activeOpacity={0.8}>
-                  <Text style={styles.catPickerTxt} numberOfLines={1}>
-                    {currentCat?.label ?? '—'}
-                  </Text>
-                  <Text style={styles.catChevron}>⌄</Text>
-                </TouchableOpacity>
+            {/* Prix ───────────────────────────────────────────────────────── */}
+            <View onLayout={e => setPriceY(e.nativeEvent.layout.y)}>
+              <FieldLabel>Prix</FieldLabel>
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={[styles.input, styles.flex, { marginBottom: 0 }]}
+                  value={price}
+                  onChangeText={t => setPrice(t.replace(/\D/g, ''))}
+                  keyboardType="numeric"
+                  placeholder="500"
+                  placeholderTextColor="#5a5c80"
+                  returnKeyType="done"
+                  onFocus={() => scrollToField(priceY)}
+                />
+                <Text style={styles.fcfaSuffix}>FCFA</Text>
               </View>
             </View>
 
@@ -564,6 +626,78 @@ export default function AddProductSheet({
                 </View>
               </View>
             )}
+
+            {/* Catégorie (chips + création) ───────────────────────────────── */}
+            <View style={{ marginTop: 14 }}>
+              <FieldLabel>Catégorie</FieldLabel>
+              <View style={styles.catChipRow}>
+                {categories.map(c => {
+                  const on = catId === c.id;
+                  return (
+                    <TouchableOpacity
+                      key={c.id}
+                      style={[styles.catChip, on && styles.catChipOn]}
+                      onPress={() => setCatId(c.id)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.catChipTxt, on && styles.catChipTxtOn]} numberOfLines={1}>
+                        {c.emoji ? `${c.emoji} ` : ''}{c.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                <TouchableOpacity
+                  style={[styles.catChip, styles.catChipAdd]}
+                  onPress={() => setAddingCat(v => !v)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.catChipTxt, styles.catChipAddTxt]}>+ Nouvelle</Text>
+                </TouchableOpacity>
+              </View>
+
+              {addingCat && (
+                <View style={{ marginTop: 10 }}>
+                  <View style={styles.inputRow}>
+                    <TextInput
+                      style={[styles.input, styles.flex, { marginBottom: 0 }]}
+                      value={newCatText}
+                      onChangeText={setNewCatText}
+                      placeholder="Nom de la catégorie"
+                      placeholderTextColor="#5a5c80"
+                      maxLength={24}
+                      autoFocus
+                      returnKeyType="done"
+                      onSubmitEditing={() => handleAddCat()}
+                    />
+                    <TouchableOpacity style={styles.catAddOk} onPress={() => handleAddCat()} activeOpacity={0.85}>
+                      <Text style={styles.catAddOkTxt}>OK</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Suggestions adaptées à l'activité */}
+                  {(() => {
+                    const suggs = catSuggestions.filter(
+                      s => !categories.some(c => c.label.toLowerCase() === s.toLowerCase()),
+                    );
+                    if (suggs.length === 0) return null;
+                    return (
+                      <View style={[styles.catChipRow, { marginTop: 10 }]}>
+                        {suggs.map(s => (
+                          <TouchableOpacity
+                            key={s}
+                            style={[styles.catChip, styles.catChipSuggest]}
+                            onPress={() => handleAddCat(s)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={[styles.catChipTxt, styles.catChipSuggestTxt]}>{s}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    );
+                  })()}
+                </View>
+              )}
+            </View>
 
             <View style={{ height: 18 }} />
 
@@ -735,25 +869,61 @@ const styles = StyleSheet.create({
     fontFamily: fonts.title,
     fontSize: 12,
   },
-  catPicker: {
-    height: 50,
+  // Sélecteur de catégorie (chips + création)
+  catChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  catChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: radius.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
   },
-  catPickerTxt: {
-    flex: 1,
-    color: colors.white,
-    fontFamily: fonts.body,
-    fontSize: 14,
+  catChipOn: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
-  catChevron: {
+  catChipTxt: {
     color: colors.muted,
-    fontSize: 16,
+    fontFamily: fonts.ui,
+    fontSize: 13,
+  },
+  catChipTxtOn: {
+    color: colors.bg,
+  },
+  catChipAdd: {
+    borderStyle: 'dashed',
+    borderColor: colors.accent,
+    backgroundColor: 'transparent',
+  },
+  catChipAddTxt: {
+    color: colors.accent,
+    fontFamily: fonts.title,
+  },
+  catChipSuggest: {
+    backgroundColor: 'rgba(253,207,52,.08)',
+    borderColor: 'rgba(253,207,52,.3)',
+  },
+  catChipSuggestTxt: {
+    color: colors.accent,
+  },
+  catAddOk: {
+    marginLeft: 8,
+    paddingHorizontal: 18,
+    height: 50,
+    borderRadius: radius.md,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  catAddOkTxt: {
+    color: colors.bg,
+    fontFamily: fonts.title,
+    fontSize: 14,
   },
 
   // Sélecteur de période (memberships)

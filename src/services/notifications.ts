@@ -42,6 +42,8 @@ function mapType(dbType: string, data: Record<string, any>): NotifType {
     livraison:           'livraison',
     ann:                 'ann',
     reservation_terrain: 'reservation_terrain',
+    setup_shop:          'setup_shop',
+    share_vitrine:       'share_vitrine',
   };
   return (MAP[dbType] as NotifType) ?? 'msg';
 }

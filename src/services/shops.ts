@@ -43,7 +43,7 @@ export interface Shop {
   paymentMethods: ('wave' | 'om')[];
   /** Le prestataire propose la réservation de table (restaurants). */
   reservationEnabled: boolean;
-  /** Slug unique pour le lien de partage public https://lassi.tech/p/{slug}. */
+  /** Slug unique pour le lien de partage public https://s.lassi.tech/{slug}. */
   slug: string | null;
 }
 

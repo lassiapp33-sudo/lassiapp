@@ -1,5 +1,5 @@
 // Polyfill URL requis par Supabase dans React Native (inutile sur web)
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 if (Platform.OS !== 'web') {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('react-native-url-polyfill/auto');
@@ -49,7 +49,28 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
 let _cachedToken: string | null = null;
 supabase.auth.onAuthStateChange((_event, session) => {
   _cachedToken = session?.access_token ?? null;
+  // Propage le token frais au websocket Realtime. Sans ça, après un refresh
+  // (ou expiration à 1h) le socket garde l'ancien JWT → le serveur ferme la
+  // connexion, les abonnements meurent et "rien ne vient" jusqu'au relogin.
+  if (Platform.OS !== 'web') {
+    try { supabase.realtime.setAuth(session?.access_token ?? null); } catch { /* noop */ }
+  }
 });
+
+// ── Session qui n'expire JAMAIS (Android + iOS) ──────────────────────────────
+// EXIGENCE officielle Supabase RN : autoRefreshToken ne tourne de façon fiable
+// que si on le pilote via AppState. Sans ce wiring, l'app en arrière-plan
+// (doze Android) ne rafraîchit pas le JWT → expiration à 1h → obligation de se
+// déconnecter/reconnecter. On (re)démarre le refresh dès que l'app est active
+// et on l'arrête en arrière-plan.
+if (Platform.OS !== 'web') {
+  // Démarre tout de suite (l'app est active au lancement), puis AppState pilote.
+  supabase.auth.startAutoRefresh();
+  AppState.addEventListener('change', state => {
+    if (state === 'active') supabase.auth.startAutoRefresh();
+    else supabase.auth.stopAutoRefresh();
+  });
+}
 export function getCachedToken(): string | null {
   return _cachedToken;
 }
@@ -66,4 +87,40 @@ export function safeGetSession(ms = 15_000): ReturnType<typeof supabase.auth.get
     setTimeout(() => resolve({ data: { session: null }, error: null }), ms),
   );
   return Promise.race([supabase.auth.getSession(), timeout]);
+}
+
+// Vérifie que le JWT n'est pas expiré (marge de 60 s) en décodant le claim `exp`.
+// Sans ça, un token en cache expiré était renvoyé tel quel → 401 "Non autorisé"
+// côté Edge Function et violation RLS sur les INSERT (auth.uid() = NULL).
+function isJwtFresh(token: string, skewSec = 60): boolean {
+  try {
+    const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const { exp } = JSON.parse(atob(b64)) as { exp?: number };
+    if (!exp) return false;
+    return exp * 1000 > Date.now() + skewSec * 1000;
+  } catch {
+    return false;
+  }
+}
+
+// Token valide garanti : cache (non expiré) → getSession → refreshSession.
+// Couvre le cas app en background >1h : token expiré, autoRefreshToken n'a pas pu tourner.
+export async function getValidToken(): Promise<string> {
+  const cached = getCachedToken();
+  if (cached && isJwtFresh(cached)) return cached;
+
+  const { data: { session } } = await safeGetSession(15_000);
+  if (session?.access_token && isJwtFresh(session.access_token)) {
+    setCachedToken(session.access_token);
+    return session.access_token;
+  }
+
+  // Dernier recours : forcer le refresh avec le refresh_token stocké
+  const { data: refreshData } = await supabase.auth.refreshSession();
+  if (refreshData.session?.access_token) {
+    setCachedToken(refreshData.session.access_token);
+    return refreshData.session.access_token;
+  }
+
+  throw new Error('Session expirée — reconnecte-toi.');
 }

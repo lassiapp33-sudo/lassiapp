@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Linking,
   Modal,
   Image,
+  AppState,
 } from 'react-native';
 import Svg, { Path, Polyline } from 'react-native-svg';
 
@@ -22,11 +23,14 @@ import SponsoredAdPanel from '../../components/visibility/SponsoredAdPanel';
 import { colors, fonts, radius } from '../../theme';
 import { IcoChevron } from '../../components/icons';
 import useShopStore from '../../store/shopStore';
+import useNotifPopupStore from '../../store/notifPopupStore';
+import usePendingNavStore from '../../store/pendingNavStore';
 import useGerantStore from '../../store/gerantStore';
 import { getProducts } from '../../services/products';
 import { getMonPrestations } from '../../services/vip';
 import { getMesOffres } from '../../services/fitnessAbonnements';
 import { getTerrainsByMerchant } from '../../services/terrains';
+import { getBeautyServices } from '../../services/beauty';
 import { SPORT_EMOJI } from '../../types/terrain';
 import { StoreProduct } from '../../types/store';
 import useAuthStore from '../../store/authStore';
@@ -46,7 +50,7 @@ import {
   getActiveSub,
   createVisibilityPayment,
   createCreditPurchase,
-  verifyVisibilityPayment,
+  verifyVisibilityServer,
   checkPaymentAvailability,
   getPlanPriceFor,
 } from '../../services/visibilityPayment';
@@ -70,7 +74,8 @@ function prestationToProduct(p: VipPrestation): StoreProduct {
 
 type OfferType = 'annonce' | 'quartier' | 'recherche';
 
-const OFFER_ORDER: OfferType[] = ['annonce', 'quartier', 'recherche'];
+// 'recherche' (Booster ma position) masqué du sélecteur d'offres.
+const OFFER_ORDER: OfferType[] = ['annonce', 'quartier'];
 
 const OFFER_LABELS: Record<OfferType, string> = {
   annonce:   'Annonce sponsorisée — Toucher toute la base clients',
@@ -269,6 +274,8 @@ export default function VisibilityScreen({ onBack }: Props) {
   const shopId = useShopStore(s => s.shopId);
   const creditBalance = useShopStore(s => s.profile?.creditBalance ?? 0);
   const loadMyShop = useShopStore(s => s.loadMyShop);
+  const enqueueBanner = useNotifPopupStore(s => s.enqueue);
+  const setPendingNav = usePendingNavStore(s => s.setPendingNav);
   const gerantProfil = useGerantStore(s => s.profil);
   const isVipGerant = gerantProfil != null;
   const userId = useAuthStore(s => s.user?.id);
@@ -284,6 +291,9 @@ export default function VisibilityScreen({ onBack }: Props) {
   const [featuredAllProducts, setFeaturedAllProducts] = useState(false);
   const [payMethod, setPayMethod] = useState<PayMethod>('orange_money');
   const [payState, setPayState] = useState<PayState>({ type: 'idle' });
+  // Empêche les vérifications concurrentes (poll + AppState + bouton) et le double-succès
+  const verifyBusyRef = useRef(false);
+  const finalizedRef  = useRef(false);
   const [creditPayLoading, setCreditPayLoading] = useState(false);
   const [boostExpiry, setBoostExpiry] = useState<{ offer: OfferType; expiresAt: string } | null>(
     null,
@@ -340,12 +350,14 @@ export default function VisibilityScreen({ onBack }: Props) {
         setPayMethod('credit');
       }
 
-      // Enrichir la liste avec les abonnements fitness et terrains (non-VIP uniquement)
+      // Enrichir la liste avec abonnements fitness, terrains ET services beauté
+      // (barber/coiffure : prestations dans beauty_services, pas dans products) — non-VIP uniquement
       let allItems: StoreProduct[] = loadedProducts;
       if (!isVipGerant && userId) {
-        const [abonnements, terrains] = await Promise.all([
+        const [abonnements, terrains, beautyServices] = await Promise.all([
           getMesOffres(userId).catch(() => []),
           getTerrainsByMerchant(userId).catch(() => []),
+          getBeautyServices(userId).catch(() => []),
         ]);
         const aboItems: StoreProduct[] = abonnements
           .filter(a => a.actif)
@@ -353,7 +365,9 @@ export default function VisibilityScreen({ onBack }: Props) {
         const terrainItems: StoreProduct[] = terrains
           .filter(t => t.actif && ['football', 'basketball'].includes(t.sport_type))
           .map(t => ({ id: t.id, name: t.nom, price: t.prix_horaire, desc: '', emoji: SPORT_EMOJI[t.sport_type], category: 'terrain', stock: 'in' as const, itemType: 'service' as const }));
-        allItems = [...loadedProducts, ...aboItems, ...terrainItems];
+        const beautyItems: StoreProduct[] = beautyServices
+          .map(s => ({ id: s.id, name: s.nom, price: s.prix, desc: s.description ?? '', emoji: '💈', category: 'beaute', stock: 'in' as const, itemType: 'service' as const }));
+        allItems = [...loadedProducts, ...aboItems, ...terrainItems, ...beautyItems];
       }
 
       setProducts(allItems);
@@ -395,6 +409,9 @@ export default function VisibilityScreen({ onBack }: Props) {
       );
       return;
     }
+
+    // Forfaits quartier CUMULABLES : chaque achat coexiste et expire à sa propre
+    // date. Plus d'avertissement de remplacement — rien n'écrase l'existant.
 
     // ── Crédit LASSI — activation immédiate ───────────────────────────────────
     if (payMethod === 'credit') {
@@ -444,32 +461,71 @@ export default function VisibilityScreen({ onBack }: Props) {
     }
   };
 
-  // ── Vérifier le paiement après retour de l'app Wave/OM ───────────────────
+  // ── Finalisation côté client (une seule fois) : bannière + refresh + navigation ──
+  const finalizePaid = useCallback(async (subscriptionId: string, offer: OfferType) => {
+    if (finalizedRef.current) return;
+    finalizedRef.current = true;
+    const sub = shopId ? await getActiveSub(shopId) : null;
+    setActiveSub(sub);
+    await loadMyShop(); // rafraîchit hasGoldenPin / hasRechercheBoost / crédit
+    setPayState({ type: 'idle' });
+    // Bannière garantie côté client : ne PAS dépendre uniquement de la notif
+    // temps-réel serveur (souvent non délivrée) — confirmation immédiate à l'activation.
+    enqueueBanner({
+      id:        `visibility-paid-${subscriptionId}`,
+      type:      'pay',
+      title:     'Pack Visibilité activé',
+      body:      `Ton paiement est confirmé — ${OFFER_LABELS[offer]} est maintenant actif.`,
+      time:      "à l'instant",
+      unread:    true,
+      group:     'today',
+      createdAt: new Date().toISOString(),
+      data:      { subscription_id: subscriptionId, offer_type: offer },
+    });
+    // Quartier → écran « Offre du Quartier » (choix/confirmation des produits mis
+    // en avant) ; annonce/recherche/carte → « Ma Campagne ».
+    setPendingNav(offer === 'quartier'
+      ? { type: 'offre_quartier' }
+      : { type: 'visibility_campaign' });
+  }, [shopId, loadMyShop, enqueueBanner, setPendingNav]);
+
+  // Vérification unitaire (partagée bouton + poll + AppState). true si confirmé.
+  const verifyPaidOnce = useCallback(async (
+    subscriptionId: string,
+    pm: PayMethod,
+    offer: OfferType,
+  ): Promise<'paid' | 'pending' | 'awaiting_keys'> => {
+    if (verifyBusyRef.current || finalizedRef.current) return 'pending';
+    verifyBusyRef.current = true;
+    try {
+      // Vérif serveur active pour Wave ET OM (interroge l'API fournisseur + active).
+      void pm;
+      const result = await verifyVisibilityServer(subscriptionId);
+      if (result.paid) { await finalizePaid(subscriptionId, offer); return 'paid'; }
+      return result.status === 'awaiting_keys' ? 'awaiting_keys' : 'pending';
+    } finally {
+      verifyBusyRef.current = false;
+    }
+  }, [finalizePaid]);
+
+  // ── Bouton « J'ai payé — vérifier » ────────────────────────────────────────
   const handleVerify = async () => {
     if (payState.type !== 'pending') return;
     const { subscriptionId, paymentUrl, qrCode, payMethod: pm } = payState;
+    const offer = offerType;
 
     setPayState({ type: 'verifying' });
     try {
-      const result = await verifyVisibilityPayment(subscriptionId);
-
-      if (result.paid) {
-        // Recharger l'abonnement depuis la DB pour avoir les vraies données
-        const sub = shopId ? await getActiveSub(shopId) : null;
-        setActiveSub(sub);
-        setPayState({ type: 'idle' });
-        const expiryFr = result.expiresAt
-          ? new Date(result.expiresAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-          : '';
-        Alert.alert(
-          'Félicitations pour votre achat',
-          `Votre paiement a été confirmé. Votre forfait est maintenant actif${expiryFr ? ` jusqu'au ${expiryFr}` : ''}. Profitez-en pour attirer encore plus de clients.`,
-        );
-      } else if (result.status === 'awaiting_keys') {
+      let status = await verifyPaidOnce(subscriptionId, pm, offer);
+      for (let attempt = 1; attempt < 3 && status === 'pending'; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        status = await verifyPaidOnce(subscriptionId, pm, offer);
+      }
+      if (status === 'paid' || finalizedRef.current) return; // finalizePaid a déjà tout géré
+      if (status === 'awaiting_keys') {
         setPayState({ type: 'idle' });
         Alert.alert('Configuration en cours', 'Les clés API ne sont pas encore configurées.');
       } else {
-        // Préserver le QR code et le lien pour que le bandeau reste affiché
         setPayState({ type: 'pending', subscriptionId, paymentUrl, qrCode, payMethod: pm });
         Alert.alert(
           'Paiement non confirmé',
@@ -477,24 +533,45 @@ export default function VisibilityScreen({ onBack }: Props) {
         );
       }
     } catch (err) {
+      if (finalizedRef.current) return;
       const msg = err instanceof Error ? err.message : 'Erreur de vérification';
       const isNetworkError = msg.toLowerCase().includes('network') ||
         msg.toLowerCase().includes('fetch') ||
         msg.toLowerCase().includes('connexion') ||
         msg.toLowerCase().includes('timeout');
-      if (isNetworkError) {
-        // Garder l'état pending pour que le bandeau reste affiché
-        setPayState({ type: 'pending', subscriptionId, paymentUrl, qrCode, payMethod: pm });
-        Alert.alert(
-          'Pas de connexion',
-          "Vérifie ta connexion internet et réessaie.",
-        );
-      } else {
-        setPayState({ type: 'idle' });
-        Alert.alert('Erreur', msg);
-      }
+      setPayState({ type: 'pending', subscriptionId, paymentUrl, qrCode, payMethod: pm });
+      Alert.alert(
+        isNetworkError ? 'Pas de connexion' : 'Erreur',
+        isNetworkError ? 'Vérifie ta connexion internet et réessaie.' : msg,
+      );
     }
   };
+
+  // ── Détection automatique du paiement (sans bouton) ───────────────────────────
+  // Tant qu'un paiement Wave/OM est en attente : poll + revérif au retour dans l'app.
+  useEffect(() => {
+    if (payState.type !== 'pending') return;
+    const { subscriptionId, payMethod: pm } = payState;
+    const offer = offerType;
+    finalizedRef.current = false;
+    let stopped = false;
+    let attempts = 0;
+    const MAX = 60; // ~4 min à 4s
+
+    const tick = async () => {
+      if (stopped || finalizedRef.current) return;
+      attempts += 1;
+      if (attempts > MAX) { clearInterval(id); return; }
+      try { await verifyPaidOnce(subscriptionId, pm, offer); } catch { /* réseau : retry */ }
+    };
+
+    const id = setInterval(tick, 4000);
+    void tick();
+    const sub = AppState.addEventListener('change', s => { if (s === 'active') void tick(); });
+
+    return () => { stopped = true; clearInterval(id); sub.remove(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payState.type, payState.type === 'pending' ? payState.subscriptionId : null, verifyPaidOnce]);
 
   // ── Payer avec le crédit LASSI — activation immédiate (3 offres) ──────────
   const handlePayWithCredit = async () => {
@@ -523,14 +600,13 @@ export default function VisibilityScreen({ onBack }: Props) {
       if (offerType === 'quartier') {
         const sub = shopId ? await getActiveSub(shopId) : null;
         setActiveSub(sub);
+        // Rediriger vers l'écran Offre du Quartier (choix/confirmation des produits).
+        setPendingNav({ type: 'offre_quartier' });
       } else {
         setBoostExpiry({ offer: offerType, expiresAt: result.expiresAt });
       }
 
-      Alert.alert(
-        'Forfait activé',
-        `Ton crédit LASSI a été utilisé pour activer ce forfait. Il te reste ${formatPrice(result.newBalance)} de crédit.`,
-      );
+      // Pas de modal : notification banner « forfait activé » via realtime (notif 'vip').
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erreur inattendue';
       Alert.alert('Erreur', msg);

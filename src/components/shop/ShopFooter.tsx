@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 9,
   },
-  btnPayDim: { opacity: 0.55 },
+  btnPayDim:    { opacity: 0.55 },
   btnPayClosed: {
     backgroundColor: colors.surface,
     borderWidth: 1,

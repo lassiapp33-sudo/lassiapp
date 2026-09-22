@@ -353,7 +353,7 @@ export default function GerantProfilScreen({ onBack, onNav, onPreview, onLogout 
               <Ligne
                 icone={<IcoTrend />}
                 titre="Visibilité"
-                sousTitre="3 façons d'être plus visible"
+                sousTitre="2 façons d'être plus visible"
                 onPress={() => onNav('visibilite')}
               />
               <Ligne

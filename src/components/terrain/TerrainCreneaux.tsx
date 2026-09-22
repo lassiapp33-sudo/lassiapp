@@ -24,7 +24,7 @@ export default function TerrainCreneaux({
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
 
-  const tous = genererCreneaux(horaire.heure_ouverture, horaire.heure_fermeture, dureeMinutes);
+  const tous = genererCreneaux(horaire.heure_ouverture, horaire.heure_fermeture, dureeMinutes, date);
 
   const load = useCallback(async () => {
     try {

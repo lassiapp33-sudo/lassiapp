@@ -5,7 +5,7 @@
  * Format stocké   : 9 chiffres bruts  (ex : 781376161)
  * Format backend  : +221XXXXXXXXX  (ex : +221781376161)
  *
- * Préfixes valides en 2025 : 70 (Expresso), 75 (Free), 76 (Orange),
+ * Préfixes valides en 2025 : 70 (Expresso), 71 (Expresso), 75 (Free), 76 (Orange),
  *                             77 (Tigo/Free), 78 (Orange/Wave)
  */
 
@@ -41,11 +41,11 @@ export function getFullPhone(formatted: string): string {
 }
 
 /**
- * Valide : 9 chiffres commençant par 70/75/76/77/78.
+ * Valide : 9 chiffres commençant par 70/71/75/76/77/78.
  */
 export function isValidPhone(formatted: string): boolean {
   const digits = cleanPhone(formatted);
-  return digits.length === 9 && /^7[05678]/.test(digits);
+  return digits.length === 9 && /^7[015678]/.test(digits);
 }
 
 /** Message d'erreur standard. */

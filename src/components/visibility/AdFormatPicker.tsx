@@ -33,11 +33,6 @@ interface Props {
 
 const OPTIONS: { format: AdFormat; label: string; desc: string }[] = [
   {
-    format: 'classique',
-    label: 'Annonce Classique',
-    desc: 'Texte descriptif + image optionnelle',
-  },
-  {
     format: 'affiche',
     label: 'Affiche',
     desc: 'Image plein écran (flyer publicitaire)',

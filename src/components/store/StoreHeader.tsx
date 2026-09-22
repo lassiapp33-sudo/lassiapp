@@ -42,7 +42,7 @@ export default function StoreHeader({ onBack, onPreview, onPromos }: Props) {
         <IcoBack />
       </TouchableOpacity>
 
-      <Text style={styles.title}>Ma vitrine</Text>
+      <Text style={styles.title}>SAMA BOUTIQUE</Text>
 
       {/* Promotions */}
       {onPromos && (

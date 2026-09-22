@@ -1,0 +1,17 @@
+diff --git a/node_modules/expo-image/ios/ImageModule.swift b/node_modules/expo-image/ios/ImageModule.swift
+index b44f431..d5a095b 100644
+--- a/node_modules/expo-image/ios/ImageModule.swift
++++ b/node_modules/expo-image/ios/ImageModule.swift
+@@ -252,7 +252,11 @@ public final class ImageModule: Module {
+   static func registerCoders() {
+     SDImageCodersManager.shared.addCoder(WebPCoder.shared)
+     SDImageCodersManager.shared.addCoder(SDImageAVIFCoder.shared)
+-    SDImageCodersManager.shared.addCoder(SDImageSVGCoder.shared)
++    // LASSI patch: SDImageSVGCoder retiré. Son +initialize dlopen CoreSVG au lancement
++    // (main thread) et entre en contention loader-lock avec le hook dyld de Firebase
++    // Crashlytics sous useFrameworks:static -> crash de démarrage iOS. L'app n'affiche
++    // aucun SVG distant via expo-image (SVG = react-native-svg), coder inutile.
++    // SDImageCodersManager.shared.addCoder(SDImageSVGCoder.shared)
+     SDImageCodersManager.shared.addCoder(SDImageHEICCoder.shared)
+   }
+ 

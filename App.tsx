@@ -83,8 +83,21 @@ function handleNotifData(data: Record<string, any> | undefined | null) {
   const setPendingNav = usePendingNavStore.getState().setPendingNav;
   if (data.type === 'message' && data.conversationId) {
     setPendingNav({ type: 'msg', conversationId: data.conversationId });
-  } else if ((data.type === 'commande' || data.type === 'table_reservation_nouvelle') && (data.orderId || data.pi_id)) {
+  } else if (data.type === 'commande' && (data.orderId || data.pi_id)) {
     setPendingNav({ type: 'order', orderId: (data.orderId ?? data.pi_id) as string });
+  } else if (data.type === 'table_reservation_nouvelle') {
+    // Prestataire : nouvelle réservation de table → écran Réservations de table (pas Commandes)
+    setPendingNav({ type: 'table_resa_prestataire' });
+  } else if (
+    data.type === 'reservation_acceptee' ||
+    data.type === 'reservation_refusee' ||
+    data.type === 'reservation_alternative'
+  ) {
+    // Client : réservation acceptée / refusée / alternative → Mes réservations de table
+    setPendingNav({ type: 'table_resa_client' });
+  } else if (data.type === 'visibility' && data.subscription_id) {
+    // Prestataire : pack de visibilité activé → Ma Campagne (pas Commandes)
+    setPendingNav({ type: 'visibility_campaign' });
   } else if (data.type === 'new_shop' && data.shop_id) {
     setPendingNav({ type: 'new_shop', shopId: data.shop_id as string, shopName: (data.shop_name as string) ?? '' });
   } else if (data.type === 'a_la_une_feed') {
@@ -96,6 +109,9 @@ function handleNotifData(data: Record<string, any> | undefined | null) {
     // Prestataire → terrain_reservations (MerchantNavigator gère via terrainId)
     // Client      → terrain_my_reservations (HomeNavigator gère)
     setPendingNav({ type: 'terrain_resa', terrainId: data.terrainId as string | undefined });
+  } else if (data.type === 'beauty_reservation' || data.type === 'beauty_acces_valide') {
+    // Prestataire → beauty_reservations (à la bonne date) ; Client → Mes rendez-vous
+    setPendingNav({ type: 'beauty_resa', date: data.dateResa as string | undefined });
   } else if (data.type === 'payout_done') {
     setPendingNav({ type: 'notifications' });
   }
@@ -204,7 +220,7 @@ export default function App() {
     useShopStore.setState({
       shopId: null,
       profile:  { initial: 'M', name: 'Ma Boutique', subtitle: '', isOpen: true },
-      context:  { shopType: 'products', openingHours: null, isManuallyClose: false, galleryUrls: [], subcategories: [], category: '' },
+      context:  { shopType: 'products', openingHours: null, isManuallyClose: false, galleryUrls: [], subcategories: [], category: '', paymentMethods: ['wave', 'om'], reservationEnabled: false },
       categories: [],
       products:   [],
       loading:    false,
@@ -239,18 +255,24 @@ export default function App() {
       } catch (_) {}
 
       // Canaux Android — .catch() obligatoire : rejet non géré = crash prod
+      // IMPORTANT : Android verrouille le son d'un canal à sa 1ère création.
+      // Les anciens canaux 'commandes'/'messages' ont pu être créés muets sur
+      // certains appareils → impossible de les réactiver. On crée des canaux
+      // NEUFS (-v2) avec son garanti ; les Edge Functions ciblent ces ids.
       if (Platform.OS === 'android') {
-        N.setNotificationChannelAsync('commandes', {
-          name:             'Commandes',
-          importance:       N.AndroidImportance.HIGH,
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor:       '#FDCF34',
-          sound:            'default',
+        N.setNotificationChannelAsync('commandes-v2', {
+          name:              'Commandes & paiements',
+          importance:        N.AndroidImportance.MAX,
+          vibrationPattern:  [0, 250, 250, 250],
+          lightColor:        '#FDCF34',
+          sound:             'default',
+          enableVibrate:     true,
         }).catch(() => {});
-        N.setNotificationChannelAsync('messages', {
-          name:       'Messages',
-          importance: N.AndroidImportance.DEFAULT,
-          sound:      'default',
+        N.setNotificationChannelAsync('messages-v2', {
+          name:          'Messages',
+          importance:    N.AndroidImportance.HIGH,
+          sound:         'default',
+          enableVibrate: true,
         }).catch(() => {});
       }
     } catch (_) {}

@@ -53,18 +53,50 @@ serve(async (req) => {
 
     const isMerchant = profile?.role === 'merchant';
 
-    // ── 3. Commerçant : supprimer la boutique en premier ───────────────────
-    // La suppression CASCADE couvre : produits, commandes, order_items,
-    // dettes, debt_transactions, conversations, messages.
+    // ── 3. Commerçant : purge manuelle avant suppression boutique ─────────
     if (isMerchant) {
-      const { error: shopErr } = await sb
+      // Récupérer l'id de la boutique
+      const { data: shop } = await sb
         .from('shops')
-        .delete()
-        .eq('merchant_id', userId);
+        .select('id')
+        .eq('merchant_id', userId)
+        .single();
 
-      if (shopErr) {
-        console.error('[delete-account] shops delete:', shopErr);
-        // Non bloquant : on continue même si la boutique n'existait pas
+      if (shop?.id) {
+        const shopId = shop.id;
+
+        // Récupérer les order_ids de cette boutique
+        const { data: orders } = await sb
+          .from('orders')
+          .select('id')
+          .eq('shop_id', shopId);
+
+        const orderIds = (orders ?? []).map((o: { id: string }) => o.id);
+
+        if (orderIds.length > 0) {
+          // Supprimer payment_intents liés à ces commandes (bloque le CASCADE sinon)
+          await sb.from('payment_intents').delete().in('order_id', orderIds);
+          // Supprimer order_ratings liés
+          await sb.from('order_ratings').delete().in('order_id', orderIds);
+        }
+
+        // Supprimer abonnements fitness liés à la boutique
+        await sb.from('abonnements').delete().eq('shop_id', shopId);
+
+        // Supprimer réservations terrain liées à la boutique
+        await sb.from('reservations_terrain').delete().eq('shop_id', shopId);
+
+        // Supprimer la boutique (CASCADE couvre produits, orders, order_items,
+        // dettes, debt_transactions, conversations, messages)
+        const { error: shopErr } = await sb
+          .from('shops')
+          .delete()
+          .eq('id', shopId);
+
+        if (shopErr) {
+          console.error('[delete-account] shops delete:', shopErr);
+          return fail(`Impossible de supprimer la boutique : ${shopErr.message}`, 500);
+        }
       }
     }
 

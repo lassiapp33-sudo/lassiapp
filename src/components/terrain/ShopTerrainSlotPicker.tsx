@@ -106,7 +106,7 @@ export default function ShopTerrainSlotPicker({ terrain, prestataireName, openin
 
   // Slots de 30 min sur la journée entière
   const allSlots = !dayHours.closed
-    ? genererCreneaux(dayHours.open, dayHours.close, SLOT_MIN)
+    ? genererCreneaux(dayHours.open, dayHours.close, SLOT_MIN, selDate)
     : [];
 
   const isAvail = (debut: string): boolean => {

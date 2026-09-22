@@ -59,16 +59,21 @@ function nouvelleLigne(): LigneProduit {
 
 interface Props {
   onClose: () => void;
+  /** 'product' → fiche guidée orientée produits vendus (beauté). Défaut : dérivé du shopType. */
+  mode?: 'service' | 'product';
 }
 
-export default function FicheGuideeScreen({ onClose }: Props) {
+export default function FicheGuideeScreen({ onClose, mode }: Props) {
   const shopId        = useShopStore(s => s.shopId);
   const shopType      = useShopStore(s => s.context.shopType);
   const subcategories = useShopStore(s => s.context.subcategories);
   const categories    = useShopStore(s => s.categories);
   const loadMyShop    = useShopStore(s => s.loadMyShop);
   const userId        = useAuthStore(s => s.user?.id);
+  const isProduit     = mode === 'product';
   const sousCatId     = subcategories[0] ?? '';
+  // En mode produit, on charge des suggestions dédiées aux produits vendus
+  const sugCatId      = isProduit ? `${sousCatId}_produits` : sousCatId;
 
   const [loading, setLoading] = useState(true);
   const [suggestions, setSuggestions] = useState<{
@@ -94,11 +99,11 @@ export default function FicheGuideeScreen({ onClose }: Props) {
 
   useEffect(() => {
     if (!sousCatId) { setLoading(false); return; }
-    getToutesSuggestions(sousCatId)
+    getToutesSuggestions(sugCatId)
       .then(setSuggestions)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [sousCatId]);
+  }, [sousCatId, sugCatId]);
 
   const toId = (label: string) =>
     label.trim().toLowerCase().normalize('NFD')
@@ -153,6 +158,7 @@ export default function FicheGuideeScreen({ onClose }: Props) {
 
     const { catId, sousCategorie } = getDestValues();
     const itemType =
+      isProduit                  ? ('product'    as const) :
       shopType === 'services'    ? ('service'    as const) :
       shopType === 'memberships' ? ('membership' as const) :
                                    ('product'    as const);
@@ -201,8 +207,15 @@ export default function FicheGuideeScreen({ onClose }: Props) {
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '';
-      const isSessionErr = msg.includes('Session expirée') || msg.includes('reconnecte');
-      Alert.alert('Erreur', isSessionErr ? msg : 'Publication impossible. Réessayez.');
+      if (msg === 'SESSION_EXPIRED') {
+        Alert.alert(
+          'Session expirée',
+          'Ta session a expiré. Tu vas être déconnecté — reconnecte-toi pour continuer.',
+          [{ text: 'OK', onPress: onClose }],
+        );
+      } else {
+        Alert.alert('Erreur', 'Publication impossible. Réessayez.');
+      }
     } finally {
       setEnvoi(false);
     }
@@ -224,8 +237,10 @@ export default function FicheGuideeScreen({ onClose }: Props) {
           <IcoBack />
         </TouchableOpacity>
         <View>
-          <Text style={s.title}>Fiche Guidée</Text>
-          <Text style={s.subtitle}>Choisissez ou écrivez librement</Text>
+          <Text style={s.title}>{isProduit ? 'Ajouter un produit' : 'Fiche Guidée'}</Text>
+          <Text style={s.subtitle}>
+            {isProduit ? 'Vos produits à vendre' : 'Choisissez ou écrivez librement'}
+          </Text>
         </View>
       </View>
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
+import { ALAUNE_ENABLED } from '../../config/features';
 
 export type HomeTab = 'nearby' | 'recent';
 
@@ -11,6 +12,7 @@ interface Props {
   onNearbyPress?: () => void;
   onRecentPress?: () => void;
   onAlaUnePress?: () => void;
+  onCaBougePress?: () => void;
 }
 
 const IconCompass = () => (
@@ -33,7 +35,13 @@ const IconFlame = () => (
   </Svg>
 );
 
-export default function TabSelector({ onNearbyPress, onRecentPress, onAlaUnePress }: Props) {
+const IconBolt = () => (
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M13 2 4 14h7l-1 8 9-12h-7z" stroke={colors.bg} fill={colors.bg + '30'} />
+  </Svg>
+);
+
+export default function TabSelector({ onNearbyPress, onRecentPress, onAlaUnePress, onCaBougePress }: Props) {
   return (
     <View style={styles.row}>
       {/* Autour de moi */}
@@ -42,11 +50,19 @@ export default function TabSelector({ onNearbyPress, onRecentPress, onAlaUnePres
         <Text style={styles.sideLbl}>Autour de moi</Text>
       </TouchableOpacity>
 
-      {/* À la une — central, accent */}
-      <TouchableOpacity style={styles.centerBtn} onPress={onAlaUnePress} activeOpacity={0.85}>
-        <IconFlame />
-        <Text style={styles.centerLbl}>À la une</Text>
+      {/* Ça bouge — stories quotidiennes */}
+      <TouchableOpacity style={styles.caBougeBtn} onPress={onCaBougePress} activeOpacity={0.85}>
+        <IconBolt />
+        <Text style={styles.caBougeLbl}>Ça bouge</Text>
       </TouchableOpacity>
+
+      {/* À la une — central, accent — MASQUÉ (ALAUNE_ENABLED) */}
+      {ALAUNE_ENABLED && (
+        <TouchableOpacity style={styles.centerBtn} onPress={onAlaUnePress} activeOpacity={0.85}>
+          <IconFlame />
+          <Text style={styles.centerLbl}>À la une</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Vus récemment — MASQUÉ temporairement */}
       {false && (
@@ -86,6 +102,28 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     color: colors.muted,
     textAlign: 'center',
+  },
+
+  // Bouton Ça bouge — accent, pousse le contenu quotidien
+  caBougeBtn: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: radius.md,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    backgroundColor: colors.accent,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  caBougeLbl: {
+    fontFamily: fonts.title,
+    fontSize: 10.5,
+    color: colors.bg,
   },
 
   // Bouton central — À la une en accent

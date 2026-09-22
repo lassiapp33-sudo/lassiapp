@@ -4,6 +4,7 @@ import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { ClientOrder, ClientOrderStatus, CommerceType } from '../../types/clientOrders';
 import { formatPrice } from '../../utils/format';
+import { calculerPrixClient } from '../../config/payment';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -212,7 +213,8 @@ export function ClientOrderCard({
 
       {/* Pied : montant + paiement + date */}
       <View style={s.footer}>
-        <Text style={s.amount}>{formatPrice(order.totalAmount)}</Text>
+        {/* Côté client : prix payé = base vendeur + 1% LASSI */}
+        <Text style={s.amount}>{formatPrice(calculerPrixClient(order.totalAmount) || order.totalAmount)}</Text>
         <View style={s.payRow}>
           {order.paymentMethod === 'wave' ? <IcoWave /> : <IcoOM />}
           <Text style={s.payLabel}>{order.paymentMethod === 'wave' ? 'Wave' : 'Orange Money'}</Text>

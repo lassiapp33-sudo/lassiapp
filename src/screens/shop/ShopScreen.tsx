@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert, Modal, Pressable } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Svg, { Path, Rect, Circle as SvgCircle } from 'react-native-svg';
 
@@ -42,6 +42,7 @@ import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { calculerPrixClient, calculerPrixClientVip } from '../../config/payment';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import ImageZoomModal from '../../components/common/ImageZoomModal';
 import * as fitnessService from '../../services/fitnessAbonnements';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { FITNESS_SUBSCRIPTION_CATS } from '../../config/fitnessConfig';
@@ -201,6 +202,8 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const [realProducts, setRealProducts] = useState<StoreProduct[]>([]);
   const [terrains, setTerrains] = useState<Terrain[]>([]);
   const [selectedTerrainIdx, setSelectedTerrainIdx] = useState(0);
+  // Image affichée en plein écran (appui long 3 s sur produit / photo / logo)
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [activeTab, setActiveTab] = useState<MenuTabId>('all');
@@ -309,6 +312,23 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const isSlotShop = subcats.some(s => SLOT_SUBCATS.includes(s));
   const isBeautyShop = subcats.some(s => BEAUTY_SLOT_SUBCATS.includes(s));
 
+  // ── Services beauté regroupés par catégorie (comme la vitrine prestataire) ──
+  const BEAUTY_CAT_LABELS: Record<string, string> = {
+    barber: 'Barber', tresse: 'Tresse', ongle: 'Ongles', general: 'Général',
+  };
+  const beautyCatLabel = (c: string) =>
+    BEAUTY_CAT_LABELS[c] ?? (c ? c.charAt(0).toUpperCase() + c.slice(1) : 'Général');
+  const beautyByCat = useMemo(() => {
+    const groups: { key: string; label: string; items: BeautyService[] }[] = [];
+    for (const svc of beautyServices) {
+      const key = svc.categorie || 'general';
+      let g = groups.find(x => x.key === key);
+      if (!g) { g = { key, label: beautyCatLabel(key), items: [] }; groups.push(g); }
+      g.items.push(svc);
+    }
+    return groups;
+  }, [beautyServices]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Données dérivées ──────────────────────────────────────────────────────
   const displayName = shopData?.name ?? shopName ?? 'Boutique';
   const displayInitial = displayName.charAt(0).toUpperCase();
@@ -359,12 +379,12 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
 
   const selectedOrder = useCartStore(s => s.orderType);
 
-  // ── Options "Sur place / À emporter" — masquées pour bakery, stores, fruiterie et certaines sous-cats ────
+  // ── Options "Sur place / À emporter" — masquées pour bakery, stores, fruiterie, beauté (parfumerie/soins bio) et certaines sous-cats ────
   const shopCategory = shopData?.category ?? '';
   const shopSubcats  = shopData?.subcategories ?? [];
   const noOrderOptions =
     ['bakery', 'stores', 'fruiterie'].includes(shopCategory) ||
-    shopSubcats.some(s => ['cafe_wass', 'beignet_fataya', 'jus', 'snack'].includes(s));
+    shopSubcats.some(s => ['cafe_wass', 'beignet_fataya', 'jus', 'snack', 'parfumerie', 'soins_bio'].includes(s));
   const showOrderOptions = shopType === 'products' && !noOrderOptions;
   const orderOptions = [
     { id: 'place', label: 'Sur place' },
@@ -417,6 +437,18 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const shopAddress = shopData?.addressText ?? null;
   const galleryUrls = shopData?.galleryUrls ?? [];
   const hasGallery = galleryUrls.length > 0;
+
+  // Carrousel galerie : défilement auto (largeur photo 200 + gap 10)
+  const galleryRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    if (galleryUrls.length <= 1) return;
+    let idx = 0;
+    const id = setInterval(() => {
+      idx = (idx + 1) % galleryUrls.length;
+      galleryRef.current?.scrollTo({ x: idx * 210, animated: true });
+    }, 3000);
+    return () => clearInterval(id);
+  }, [galleryUrls.length]);
   const hasInfoSection = !!(shopPhone || shopAddress || shopHours || shopHasCoords);
 
   // ── Promos ────────────────────────────────────────────────────────────────
@@ -516,6 +548,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
             isVip={isVip}
             isOpen={isOpen}
             badge={badges[0]?.badge ?? null}
+            onZoomLogo={displayLogoUrl ? () => setZoomUrl(displayLogoUrl) : undefined}
           />
 
           {/* 2 — Nom + tagline */}
@@ -543,12 +576,19 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
           {/* 4 — Galerie photos (si disponible) */}
           {hasGallery && (
             <ScrollView
+              ref={galleryRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.galleryScroll}
             >
               {galleryUrls.map((url, i) => (
-                <ExpoImage key={i} source={{ uri: url }} style={styles.galleryPhoto} contentFit="cover" />
+                <Pressable
+                  key={i}
+                  onLongPress={() => setZoomUrl(url)}
+                  delayLongPress={250}
+                >
+                  <ExpoImage source={{ uri: url }} style={styles.galleryPhoto} contentFit="cover" />
+                </Pressable>
               ))}
             </ScrollView>
           )}
@@ -823,35 +863,45 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
               {beautyServices.length > 0 ? (
                 <View>
                   <Text style={styles.catTitle}>Services disponibles</Text>
-                  {beautyServices.map(svc => {
-                    const dureeLabel =
-                      svc.duree_minutes >= 60
-                        ? svc.duree_minutes === 60 ? '1h' : `${svc.duree_minutes / 60 | 0}h${svc.duree_minutes % 60 > 0 ? (svc.duree_minutes % 60) : ''}`
-                        : `${svc.duree_minutes} min`;
-                    return (
-                      <View key={svc.id} style={styles.beautyCard}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.beautyNom}>{svc.nom}</Text>
-                          {svc.description ? (
-                            <Text style={styles.beautyDesc} numberOfLines={2}>{svc.description}</Text>
-                          ) : null}
-                          <Text style={styles.beautyMeta}>⏱ {dureeLabel}</Text>
-                        </View>
-                        <View style={styles.beautyRight}>
-                          <Text style={styles.beautyPrix}>{formatPrice(beautyService.calculerPrixBeauteAvecMarge(svc.prix))}</Text>
-                          {!isPreview && !isMerchant && shopData?.merchantId ? (
-                            <TouchableOpacity
-                              style={styles.beautyBtn}
-                              activeOpacity={0.85}
-                              onPress={() => onBookBeautyService?.(svc, shopData.merchantId!, displayName, shopHours)}
-                            >
-                              <Text style={styles.beautyBtnTxt}>Réserver</Text>
-                            </TouchableOpacity>
-                          ) : null}
-                        </View>
+                  {beautyByCat.map(group => (
+                    <View key={group.key}>
+                      <View style={styles.beautyCatHead}>
+                        <Text style={styles.beautyCatLabel}>{group.label}</Text>
+                        <Text style={styles.beautyCatCount}>
+                          {group.items.length} service{group.items.length > 1 ? 's' : ''}
+                        </Text>
                       </View>
-                    );
-                  })}
+                      {group.items.map(svc => {
+                        const dureeLabel =
+                          svc.duree_minutes >= 60
+                            ? svc.duree_minutes === 60 ? '1h' : `${svc.duree_minutes / 60 | 0}h${svc.duree_minutes % 60 > 0 ? (svc.duree_minutes % 60) : ''}`
+                            : `${svc.duree_minutes} min`;
+                        return (
+                          <View key={svc.id} style={styles.beautyCard}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.beautyNom}>{svc.nom}</Text>
+                              {svc.description ? (
+                                <Text style={styles.beautyDesc} numberOfLines={2}>{svc.description}</Text>
+                              ) : null}
+                              <Text style={styles.beautyMeta}>⏱ {dureeLabel}</Text>
+                            </View>
+                            <View style={styles.beautyRight}>
+                              <Text style={styles.beautyPrix}>{formatPrice(beautyService.calculerPrixBeauteAvecMarge(svc.prix))}</Text>
+                              {!isPreview && !isMerchant && shopData?.merchantId ? (
+                                <TouchableOpacity
+                                  style={styles.beautyBtn}
+                                  activeOpacity={0.85}
+                                  onPress={() => onBookBeautyService?.(svc, shopData.merchantId!, displayName, shopHours)}
+                                >
+                                  <Text style={styles.beautyBtnTxt}>Réserver</Text>
+                                </TouchableOpacity>
+                              ) : null}
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ))}
                 </View>
               ) : (
                 <View style={styles.emptyProducts}>
@@ -998,6 +1048,9 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
         onCheckout={onCheckout}
 
       />
+
+      {/* Aperçu plein écran (logo + photos galerie) — appui long 3 s */}
+      <ImageZoomModal uri={zoomUrl} onClose={() => setZoomUrl(null)} />
     </View>
   );
 }
@@ -1120,6 +1173,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
+  beautyCatHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 8,
+  },
+  beautyCatLabel: { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
+  beautyCatCount: { color: colors.muted, fontFamily: fonts.body, fontSize: 12 },
   beautyCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
@@ -1153,7 +1216,6 @@ const styles = StyleSheet.create({
     width: 200,
     height: 130,
     borderRadius: 12,
-    marginRight: 10,
   },
 
   infoSection: {

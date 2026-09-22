@@ -1,4 +1,4 @@
-import { supabase, getCachedToken, safeGetSession } from '../lib/supabase';
+import { supabase, getValidToken } from '../lib/supabase';
 import { IncomingOrder, OrderStatus } from '../types/orders';
 import { getClientsScores } from './orderRating';
 import { Platform } from 'react-native';
@@ -158,12 +158,7 @@ export async function createOrderSecure(
   paymentMethod?: 'cash' | 'om' | 'wave',
   livraisonFee?: number,
 ): Promise<{ orderId: string; total: number }> {
-  let token = getCachedToken();
-  if (!token) {
-    const { data: { session } } = await safeGetSession(15_000);
-    token = session?.access_token ?? null;
-  }
-  if (!token) throw new Error('Session expirée — reconnecte-toi.');
+  const token = await getValidToken();
 
   const res = await fetch(`${SUPABASE_URL}/functions/v1/create-order`, {
     method: 'POST',
@@ -199,12 +194,7 @@ export async function createVipOrder(
   payMethod?: 'wave' | 'om' | 'cash',
   livraisonFee?: number,
 ): Promise<{ orderId: string; total: number }> {
-  let token = getCachedToken();
-  if (!token) {
-    const { data: { session } } = await safeGetSession(15_000);
-    token = session?.access_token ?? null;
-  }
-  if (!token) throw new Error('Session expirée — reconnecte-toi.');
+  const token = await getValidToken();
 
   const res = await fetch(`${SUPABASE_URL}/functions/v1/create-vip-order`, {
     method: 'POST',

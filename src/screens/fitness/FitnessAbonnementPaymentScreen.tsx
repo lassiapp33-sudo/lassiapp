@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,8 @@ import { calculerPrixClient } from '../../config/payment';
 import { PayMethod } from '../../types/payment';
 import { WAVE_ENABLED } from '../../config/features';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
-import { getCachedToken, safeGetSession } from '../../lib/supabase';
+import { getPaymentMethodsByMerchant } from '../../services/shops';
+import { getValidToken } from '../../lib/supabase';
 
 // ─── Logos partenaires ────────────────────────────────────────────────────────
 const WAVE_LOGO = require('../../../assets/wave.jpg');
@@ -29,12 +30,7 @@ const ANON_KEY       = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;
 
 async function authHeaders(): Promise<Record<string, string>> {
-  let token = getCachedToken();
-  if (!token) {
-    const { data: { session } } = await safeGetSession(15_000);
-    token = session?.access_token ?? null;
-  }
-  if (!token) throw new Error('Session expirée — reconnecte-toi');
+  const token = await getValidToken();
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
@@ -140,11 +136,28 @@ export default function FitnessAbonnementPaymentScreen({
   onSuccess,
 }: Props) {
   const [stage,      setStage]      = useState<Stage>('checkout');
+  // Moyens de paiement acceptés par le prestataire (respecte son choix, comme les commandes)
+  const [allowedMethods, setAllowedMethods] = useState<('wave' | 'om')[]>(['wave', 'om']);
+  const merchantMethods = allowedMethods.filter((m): m is PayMethod => m !== 'wave' || WAVE_ENABLED);
   const [method,     setMethod]     = useState<PayMethod>(WAVE_ENABLED ? 'wave' : 'om');
   const [processing, setProcessing] = useState(false);
   const [verifying,  setVerifying]  = useState(false);
   const piIdRef = useRef('');
   const processingRef = useRef(false);
+
+  // Charge les moyens de paiement du prestataire + corrige la sélection
+  useEffect(() => {
+    let alive = true;
+    getPaymentMethodsByMerchant(offre.prestataireId)
+      .then(methods => {
+        if (!alive) return;
+        setAllowedMethods(methods);
+        const usable = methods.filter(m => m !== 'wave' || WAVE_ENABLED);
+        setMethod(prev => (usable.includes(prev) ? prev : (usable[0] ?? 'om')));
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [offre.prestataireId]);
 
   const prixClient = calculerPrixClient(offre.prix);
 
@@ -272,8 +285,12 @@ export default function FitnessAbonnementPaymentScreen({
 
         {/* Choix méthode */}
         <Text style={styles.sectionTitle}>Moyen de paiement</Text>
-        {WAVE_ENABLED && <MethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />}
-        <MethodCard method="om"   selected={method === 'om'}   onSelect={() => setMethod('om')} />
+        {merchantMethods.includes('wave') && (
+          <MethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />
+        )}
+        {merchantMethods.includes('om') && (
+          <MethodCard method="om"   selected={method === 'om'}   onSelect={() => setMethod('om')} />
+        )}
 
         {/* Bouton payer */}
         <TouchableOpacity

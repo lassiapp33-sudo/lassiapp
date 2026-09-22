@@ -1,4 +1,4 @@
-import { supabase, getCachedToken, safeGetSession } from '../lib/supabase';
+import { supabase, getValidToken } from '../lib/supabase';
 import {
   BeautyTimeSlot,
   BeautyAppointment,
@@ -40,12 +40,7 @@ const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL  ?? '';
 const ANON_KEY     = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  let token = getCachedToken();
-  if (!token) {
-    const { data: { session } } = await safeGetSession(15_000);
-    token = session?.access_token ?? null;
-  }
-  if (!token) throw new Error('Session expirée — reconnecte-toi');
+  const token = await getValidToken();
   return {
     'Content-Type':  'application/json',
     'Authorization': `Bearer ${token}`,

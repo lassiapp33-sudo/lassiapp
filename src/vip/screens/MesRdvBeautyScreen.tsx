@@ -8,6 +8,24 @@ import { royal as r } from '../theme';
 import { TOP_INSET } from '../../theme';
 import { BeautyAppointment, STATUT_LABEL_BEAUTY, STATUT_COLOR_BEAUTY } from '../../types/beautyAppointment';
 import { getMyBeautyAppointments, cancelMyBeautyAppointment } from '../../services/beautyAppointments';
+import { BeautyReservation } from '../../types/beauty';
+import { getMyBeautyReservations } from '../../services/beauty';
+
+// Réservations boutique beauté (créneaux payés) — libellés côté client
+const STATUT_RESA_LABEL: Record<string, string> = {
+  en_attente: 'En attente de paiement',
+  paye:       'Payé — à valider',
+  utilise:    'Confirmé ✓',
+  expire:     'Expiré',
+  annule:     'Annulé',
+};
+const STATUT_RESA_COLOR: Record<string, string> = {
+  en_attente: r.couleur.gris,
+  paye:       r.couleur.or,
+  utilise:    '#5FD38A',
+  expire:     r.couleur.gris,
+  annule:     r.couleur.gris,
+};
 
 const MONTHS_FR = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc'];
 const DAYS_FR   = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
@@ -39,16 +57,21 @@ interface Props {
 
 export default function MesRdvBeautyScreen({ onBack }: Props) {
   const [rdvs, setRdvs]         = useState<BeautyAppointment[]>([]);
+  const [resas, setResas]       = useState<BeautyReservation[]>([]);
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [annulant, setAnnulant] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    try {
-      const data = await getMyBeautyAppointments();
-      setRdvs(data);
-    } catch {}
-    finally { setLoading(false); setRefreshing(false); }
+    const [rdvRes, resaRes] = await Promise.allSettled([
+      getMyBeautyAppointments(),
+      getMyBeautyReservations(),
+    ]);
+    if (rdvRes.status === 'fulfilled')  setRdvs(rdvRes.value);
+    if (resaRes.status === 'fulfilled')
+      setResas(resaRes.value.filter(x => x.statut === 'paye' || x.statut === 'utilise' || x.statut === 'expire'));
+    setLoading(false);
+    setRefreshing(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -90,11 +113,11 @@ export default function MesRdvBeautyScreen({ onBack }: Props) {
 
       {loading ? (
         <View style={s.centreBox}><ActivityIndicator color={r.couleur.or} size="large" /></View>
-      ) : rdvs.length === 0 ? (
+      ) : rdvs.length === 0 && resas.length === 0 ? (
         <View style={s.centreBox}>
           <IcoCalendar />
           <Text style={s.emptyTxt}>Aucun rendez-vous</Text>
-          <Text style={s.emptyDesc}>Vos prises de rendez-vous{'\n'}dans les salons 5 Étoiles apparaîtront ici.</Text>
+          <Text style={s.emptyDesc}>Vos réservations beauté{'\n'}apparaîtront ici.</Text>
         </View>
       ) : (
         <ScrollView
@@ -103,6 +126,36 @@ export default function MesRdvBeautyScreen({ onBack }: Props) {
             <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={r.couleur.or} />
           }
         >
+          {resas.map(resa => {
+            const couleur = STATUT_RESA_COLOR[resa.statut] ?? r.couleur.gris;
+            return (
+              <View key={resa.id} style={s.card}>
+                <View style={s.cardTop}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.cardDate}>
+                      {formatDateRdv(resa.date_reservation)} · {resa.heure_debut.slice(0, 5)}
+                      {resa.heure_fin ? ` – ${resa.heure_fin.slice(0, 5)}` : ''}
+                    </Text>
+                    {resa.beauty_services?.nom && (
+                      <Text style={s.cardPrestation}>{resa.beauty_services.nom}</Text>
+                    )}
+                  </View>
+                  <View style={[s.statutBadge, { borderColor: couleur }]}>
+                    <Text style={[s.statutTxt, { color: couleur }]}>
+                      {STATUT_RESA_LABEL[resa.statut] ?? resa.statut}
+                    </Text>
+                  </View>
+                </View>
+                {resa.statut === 'paye' && resa.receipt_code && (
+                  <View style={s.messageGerantBox}>
+                    <Text style={s.messageGerantLabel}>Code à présenter à l'arrivée</Text>
+                    <Text style={s.codeTxt}>{resa.receipt_code}</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+
           {rdvs.map(rdv => {
             const couleur = STATUT_COLOR_BEAUTY[rdv.statut] ?? r.couleur.gris;
             const peutAnnuler = rdv.statut === 'en_attente';
@@ -198,6 +251,7 @@ const s = StyleSheet.create({
   },
   messageGerantLabel: { color: r.couleur.orClair, fontFamily: r.police.util, fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 },
   messageGerantTxt:   { color: r.couleur.ivoire,  fontFamily: r.police.util, fontSize: 12, lineHeight: 18 },
+  codeTxt:            { color: r.couleur.ivoire,  fontFamily: r.police.titre, fontSize: 18, letterSpacing: 4, marginTop: 2 },
 
   btnAnnuler: {
     marginTop: 8, paddingVertical: 8,

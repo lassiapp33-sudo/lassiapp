@@ -1,37 +1,29 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 
 interface Props {
   visible: boolean;
-  carrouselProduits: number;
   onClose: () => void;
-  onDiscover: () => void;
+  onConfigure: () => void;
 }
 
-// Modal de bienvenue affiché une seule fois, à la création du compte
-// prestataire — annonce le cadeau "Offre du Quartier" (recompense
-// type_classement='bienvenue', voir 20260612160000_recompense_bienvenue.sql).
-export default function WelcomeRewardModal({
-  visible,
-  carrouselProduits,
-  onClose,
-  onDiscover,
-}: Props) {
+// Modal de bienvenue affichée une seule fois au prestataire — invite
+// chaleureusement à configurer sa vitrine et amène directement dessus.
+export default function WelcomeVitrineModal({ visible, onClose, onConfigure }: Props) {
   return (
     <Modal visible={visible} animationType="fade" transparent presentationStyle="overFullScreen" onRequestClose={onClose}>
       <View style={s.overlay}>
         <View style={s.card}>
           <Text style={s.title}>Bienvenue sur LASSI</Text>
           <Text style={s.txt}>
-            Pour démarrer, tu reçois {carrouselProduits} emplacement
-            {carrouselProduits > 1 ? 's' : ''} offert{carrouselProduits > 1 ? 's' : ''} dans le
-            carrousel "Offre du Quartier" — mets en avant tes meilleurs produits auprès de tous
-            les clients dès aujourd'hui.
+            Ravis de t'accueillir ! Ta boutique n'attend plus que toi. Prends quelques minutes pour
+            configurer ta vitrine : ajoute tes produits, tes photos et tes horaires pour séduire tes
+            premiers clients.
           </Text>
 
-          <TouchableOpacity style={s.cta} onPress={onDiscover} activeOpacity={0.85}>
-            <Text style={s.ctaTxt}>Choisir mes produits</Text>
+          <TouchableOpacity style={s.cta} onPress={onConfigure} activeOpacity={0.85}>
+            <Text style={s.ctaTxt}>Configurer ma vitrine</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={s.skipBtn}>
             <Text style={s.skip}>Plus tard</Text>
@@ -96,4 +88,3 @@ const s = StyleSheet.create({
     fontSize: 13,
   },
 });
-

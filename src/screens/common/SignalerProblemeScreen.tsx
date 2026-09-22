@@ -139,18 +139,21 @@ export default function SignalerProblemeScreen({
       if (uri) setScreenshotUri(uri);
     };
 
+    // Picker différé : iOS refuse en silence de le présenter tant que
+    // l'ActionSheet/Alert n'est pas totalement fermé (« galerie sans réponse »).
+    const defer = (s: 'gallery' | 'camera') => setTimeout(() => pick(s), 350);
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         { options: ['Annuler', 'Galerie', 'Appareil photo'], cancelButtonIndex: 0 },
         idx => {
-          if (idx === 1) pick('gallery');
-          if (idx === 2) pick('camera');
+          if (idx === 1) defer('gallery');
+          if (idx === 2) defer('camera');
         },
       );
     } else {
       Alert.alert('Ajouter une capture', '', [
-        { text: 'Galerie', onPress: () => pick('gallery') },
-        { text: 'Appareil photo', onPress: () => pick('camera') },
+        { text: 'Galerie', onPress: () => defer('gallery') },
+        { text: 'Appareil photo', onPress: () => defer('camera') },
         { text: 'Annuler', style: 'cancel' },
       ]);
     }

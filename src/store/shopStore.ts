@@ -30,7 +30,7 @@ function getDefaultCats(
     { id: 'produits', label: 'Produits', emoji: '🛍️' },
   ];
   if (shopType === 'terrains') return [];
-  return [{ id: 'catalogue', label: 'Catalogue', emoji: '📦' }];
+  return [{ id: 'catalogue', label: 'Catalogue', emoji: '' }];
 }
 
 const DEFAULT_PROFILE: StoreProfile = {
@@ -143,8 +143,8 @@ const useShopStore = create<ShopState>()((set, get) => ({
         petitdej:              { label: 'Petit-déj',                emoji: '🍳' },
         boissons:              { label: 'Boissons',                  emoji: '☕' },
         plats:                 { label: 'Plats',                     emoji: '🍽' },
-        autres:                { label: 'Autres',                    emoji: '📦' },
-        catalogue:             { label: 'Catalogue',                 emoji: '📦' },
+        autres:                { label: 'Autres',                    emoji: '' },
+        catalogue:             { label: 'Catalogue',                 emoji: '' },
         prestations:           { label: 'Prestations',               emoji: '✂️' },
         formules:              { label: 'Formules',                  emoji: '📋' },
         produits:              { label: 'Produits',                  emoji: '🛍️' },
@@ -179,7 +179,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
         categories = catIds.map(id =>
           isBeautyProductShop && (id === 'produits' || id === 'prestations')
             ? { id, label: 'Produit', emoji: '' }
-            : { id, label: toLabel(id), emoji: catMeta[id]?.emoji ?? '📦' },
+            : { id, label: toLabel(id), emoji: catMeta[id]?.emoji ?? '' },
         );
       } else {
         // Boutique vide : onglets par défaut selon le type
@@ -199,7 +199,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
           const offerTabIds = await fitnessService.getOffreTabs(merchantId);
           for (const tabId of offerTabIds) {
             if (!categories.find(c => c.id === tabId)) {
-              categories.push({ id: tabId, label: toLabel(tabId), emoji: catMeta[tabId]?.emoji ?? '📋' });
+              categories.push({ id: tabId, label: toLabel(tabId), emoji: catMeta[tabId]?.emoji ?? '' });
             }
           }
         }
@@ -413,7 +413,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
     }
     if (normCatIds.length > 0) {
       const fromProducts = normCatIds.map(
-        id => existing.find(c => c.id === id) ?? { id, label: id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), emoji: '📦' },
+        id => existing.find(c => c.id === id) ?? { id, label: id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), emoji: '' },
       );
       const extras = existing.filter(c => !normCatIds.includes(c.id));
       set({ categories: [...fromProducts, ...extras] });
@@ -479,7 +479,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
     const { categories } = get();
     if (categories.find(c => c.id === id || c.label.toLowerCase() === label.toLowerCase())) return;
     set(state => ({
-      categories: [...state.categories, { id, label, emoji: '📦' }],
+      categories: [...state.categories, { id, label, emoji: '' }],
     }));
   },
 

@@ -12,7 +12,7 @@ interface Props {
   onPress?: (tab: NavTab) => void;
 }
 
-const BOTTOM_EXTRA = Platform.OS === 'ios' ? 20 : 0;
+const BOTTOM_EXTRA = Platform.OS === 'ios' ? 20 : 34;
 export const NAV_HEIGHT = 72 + BOTTOM_EXTRA;
 
 // Icônes nav

@@ -85,6 +85,23 @@ export async function getOrCreateConversation(shopId: string): Promise<Conversat
   return rowToConversation(data);
 }
 
+// Ouvre (ou récupère) la conversation MARCHAND → CLIENT depuis une commande.
+// Passe par la RPC SECURITY DEFINER car la policy conv_insert bloque la création
+// côté marchand (seul le client peut insérer une conversation).
+export async function getOrCreateConversationForClient(
+  shopId: string,
+  clientId: string,
+): Promise<Conversation> {
+  const { data, error } = await supabase.rpc('get_or_create_conversation', {
+    p_shop_id: shopId,
+    p_client_id: clientId,
+  });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error('Conversation indisponible');
+  return rowToConversation(row as Record<string, any>);
+}
+
 export async function getMyConversations(): Promise<Conversation[]> {
   const token = getCachedToken() ?? SUPABASE_ANON;
   const res = await fetch(

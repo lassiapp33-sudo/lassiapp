@@ -22,6 +22,7 @@ interface Notif {
   body: string;
   is_read: boolean;
   created_at: string;
+  data?: Record<string, unknown> | null;
 }
 
 function timeLabel(iso: string): string {
@@ -42,7 +43,7 @@ const IcoBack = () => (
 
 interface Props {
   onBack: () => void;
-  onNavigate?: (type: string) => void;
+  onNavigate?: (type: string, data?: Record<string, unknown> | null) => void;
 }
 
 export default function GerantNotificationsScreen({ onBack, onNavigate }: Props) {
@@ -57,7 +58,7 @@ export default function GerantNotificationsScreen({ onBack, onNavigate }: Props)
       const since48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('notifications')
-        .select('id, type, title, body, is_read, created_at')
+        .select('id, type, title, body, is_read, created_at, data')
         .eq('user_id', user.id)
         .gte('created_at', since48h)
         .order('created_at', { ascending: false })
@@ -109,7 +110,7 @@ export default function GerantNotificationsScreen({ onBack, onNavigate }: Props)
             <TouchableOpacity
               key={n.id}
               style={[s.card, !n.is_read && s.cardUnread]}
-              onPress={() => onNavigate?.(n.type)}
+              onPress={() => onNavigate?.(n.type, n.data)}
               activeOpacity={onNavigate ? 0.75 : 1}
             >
               <View style={s.cardHeader}>

@@ -22,6 +22,7 @@ import {
   createBeautyAppointment,
 } from '../../services/beautyAppointments';
 import { getErrorMessage } from '../../utils/errorUtils';
+import { filtrerCreneauxPasses } from '../../utils/slotTime';
 
 // ─── Helpers date ─────────────────────────────────────────────────────────────
 
@@ -99,7 +100,7 @@ export default function BeautyBookingFlowScreen({
     setSlot(null);
     try {
       const data = await getBeautySlots(vipProfilId, toDateStr(date));
-      setSlots(data);
+      setSlots(filtrerCreneauxPasses(data, s => s.heure_debut, toDateStr(date)));
     } catch {
       setSlots([]);
     } finally {

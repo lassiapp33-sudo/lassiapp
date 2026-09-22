@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Alert } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Alert, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MerchantDashboard from './MerchantDashboard';
 import MerchantProfileScreen from './MerchantProfileScreen';
@@ -8,7 +8,6 @@ import MerchantPaymentsScreen from './MerchantPaymentsScreen';
 import MerchantAvisScreen from './MerchantAvisScreen';
 import DebtsScreen from './DebtsScreen';
 import StoreScreen from './StoreScreen';
-import FicheGuideeScreen from './FicheGuideeScreen';
 import OrdersScreen from './OrdersScreen';
 import VisibilityScreen from './VisibilityScreen';
 import OffreQuartierScreen from './OffreQuartierScreen';
@@ -24,6 +23,10 @@ import AlaUneScreen from './AlaUneScreen';
 import BlocAlaUneScreen from '../home/BlocAlaUneScreen';
 import MerchantLivraisonScreen from './MerchantLivraisonScreen';
 import MaCampagneScreen from './MaCampagneScreen';
+import StoryComposerScreen from './StoryComposerScreen';
+import BeautyServiceCatalogScreen from './BeautyServiceCatalogScreen';
+import BeautyReservationsScreen from './BeautyReservationsScreen';
+import MerchantRestaurantReservationsScreen from '../restaurant/MerchantRestaurantReservationsScreen';
 import { Terrain } from '../../types/terrain';
 import { getTerrainById } from '../../services/terrains';
 import NotificationsScreen from '../home/NotificationsScreen';
@@ -36,7 +39,10 @@ import PaymentScreen from '../payment/PaymentScreen';
 import ClientOrdersScreen from '../home/ClientOrdersScreen';
 import LassiAssistantScreen from '../home/LassiAssistantScreen';
 import ClassementScreen from '../classement/ClassementScreen';
-import WelcomeRewardModal from '../../components/merchant/WelcomeRewardModal';
+import WelcomeVitrineModal from '../../components/merchant/WelcomeVitrineModal';
+import WelcomeRewardBanner from '../../components/merchant/WelcomeRewardBanner';
+import ShareVitrineModal from '../../components/merchant/ShareVitrineModal';
+import { supabase } from '../../lib/supabase';
 import useShopStore from '../../store/shopStore';
 import useAuthStore from '../../store/authStore';
 import useNotificationsStore from '../../store/notificationsStore';
@@ -47,7 +53,7 @@ import { getRecompenseBienvenue } from '../../services/classementService';
 import { OrderInfo } from '../../types/payment';
 
 function shouldShowCard(type: string): boolean {
-  return type === 'vip' || type === 'pay' || type === 'payment' || type === 'order' || type === 'msg' || type === 'reservation_terrain';
+  return type === 'vip' || type === 'pay' || type === 'payment' || type === 'order' || type === 'msg' || type === 'fitness' || type === 'reservation_terrain' || type === 'setup_shop' || type === 'share_vitrine';
 }
 
 // Navigateur du cockpit prestataire — tous les modules sont câblés ici.
@@ -95,11 +101,15 @@ type MerchantScreen =
   | 'terrain_scan'
   | { id: 'suivi_gps'; shopLat: number; shopLng: number; shopName: string; shopLogoUrl: string | null }
   | 'fitness_abonnements'
+  | 'beauty_services'
+  | 'beauty_reservations'
+  | { id: 'beauty_reservations'; date?: string }
+  | 'restaurant_reservations'
   | 'a_la_une'
   | { id: 'a_la_une_bloc'; blocCode: string; elementIndex?: number }
   | 'livraison'
   | 'ma_campagne'
-  | 'fiche_guidee'
+  | 'ca_bouge'
   | { id: 'orders'; initialTab: 'new' | 'preparing' }
 ;
 
@@ -109,7 +119,9 @@ interface Props {
 
 export default function MerchantNavigator({ onLogout }: Props) {
   const [screen, setScreen] = useState<MerchantScreen>('dashboard');
-  const shopId = useShopStore(s => s.shopId);
+  const shopId    = useShopStore(s => s.shopId);
+  const shopSlug  = useShopStore(s => s.profile?.slug ?? null);
+  const shopName  = useShopStore(s => s.profile?.name ?? 'Ma boutique');
 
   // Persiste le filtre/recherche de la carte entre navigations
   const [mapFilter, setMapFilter] = useState('all');
@@ -127,30 +139,52 @@ export default function MerchantNavigator({ onLogout }: Props) {
   const pendingNav   = usePendingNavStore(s => s.pendingNav);
   const clearPending = usePendingNavStore(s => s.clearPendingNav);
 
-  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  // Modal de bienvenue → configurer sa vitrine (affichée une seule fois)
+  const [showVitrineModal, setShowVitrineModal] = useState(false);
+  // Banner cadeau "Offre du Quartier" (affiché une seule fois)
+  const [showRewardBanner, setShowRewardBanner] = useState(false);
   const [welcomeCarrousel, setWelcomeCarrousel] = useState(4);
+  // Rappel "Partagez votre vitrine" (lundi/jeudi, in-app only)
+  const [shareReminderId, setShareReminderId] = useState<string | null>(null);
+  // IDs déjà affichés dans cette session : évite la réapparition après "Plus tard"
+  // (le mark serveur est fire-and-forget, un refetch peut le devancer).
+  const shownShareRemindersRef = useRef<Set<string>>(new Set());
 
-  // Affiche la modal de bienvenue une seule fois (cadeau Offre du Quartier)
   useEffect(() => {
     if (!userId) return;
-    const key = `lassi_welcome_shown_${userId}`;
-    AsyncStorage.getItem(key).then(val => {
+    // Modal vitrine
+    AsyncStorage.getItem(`lassi_welcome_vitrine_shown_${userId}`).then(val => {
+      if (!val) setShowVitrineModal(true);
+    }).catch(() => {});
+    // Banner cadeau (seulement si récompense active)
+    AsyncStorage.getItem(`lassi_welcome_shown_${userId}`).then(val => {
       if (val) return;
       getRecompenseBienvenue(userId).then(r => {
         if (!r || !r.est_actif) return;
         setWelcomeCarrousel(r.carrousel_produits > 0 ? r.carrousel_produits : 4);
-        setShowWelcomeModal(true);
+        setShowRewardBanner(true);
       }).catch(() => {});
     }).catch(() => {});
   }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleWelcomeClose = () => {
-    setShowWelcomeModal(false);
+  const dismissVitrineModal = () => {
+    setShowVitrineModal(false);
+    if (userId) AsyncStorage.setItem(`lassi_welcome_vitrine_shown_${userId}`, '1').catch(() => {});
+  };
+
+  const handleVitrineConfigure = () => {
+    dismissVitrineModal();
+    setStoreFrom('dashboard');
+    setScreen('store');
+  };
+
+  const dismissRewardBanner = () => {
+    setShowRewardBanner(false);
     if (userId) AsyncStorage.setItem(`lassi_welcome_shown_${userId}`, '1').catch(() => {});
   };
 
-  const handleWelcomeDiscover = () => {
-    handleWelcomeClose();
+  const handleRewardDiscover = () => {
+    dismissRewardBanner();
     setScreen('offre_quartier');
   };
 
@@ -170,6 +204,34 @@ export default function MerchantNavigator({ onLogout }: Props) {
       });
     }).catch(() => {});
   }, [userId, cardReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Rappel "Partagez votre vitrine" (lundi/jeudi, in-app only) ──────────────
+  // Le cron serveur crée un rappel "pending" chaque lundi/jeudi. Dès que le
+  // prestataire ouvre l'app ce jour-là → modal. Marqué "shown" à l'affichage
+  // (pas de re-nag). S'il n'ouvre pas de la journée, le cron le bascule dans sa
+  // messagerie (aucun push, tout reste in-app).
+  const checkShareReminder = useCallback(async () => {
+    if (!userId || !shopSlug || shareReminderId) return;
+    try {
+      const { data } = await supabase.rpc('get_pending_share_reminder');
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row?.id && !shownShareRemindersRef.current.has(row.id as string)) {
+        shownShareRemindersRef.current.add(row.id as string);
+        setShareReminderId(row.id as string);
+        // Fire-and-forget : marque vu dès l'affichage
+        supabase.rpc('mark_share_reminder_shown', { p_id: row.id });
+      }
+    } catch { /* réseau : réessai au prochain foreground */ }
+  }, [userId, shopSlug, shareReminderId]);
+
+  useEffect(() => { void checkShareReminder(); }, [checkShareReminder]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', st => {
+      if (st === 'active') void checkShareReminder();
+    });
+    return () => sub.remove();
+  }, [checkShareReminder]);
 
   // Deep link depuis notification push ou retour paiement
   useEffect(() => {
@@ -205,6 +267,17 @@ export default function MerchantNavigator({ onLogout }: Props) {
       } else {
         setScreen('terrains');
       }
+    } else if (pendingNav.type === 'beauty_resa') {
+      setScreen({ id: 'beauty_reservations', date: pendingNav.date });
+    } else if (pendingNav.type === 'table_resa_prestataire') {
+      setScreen('restaurant_reservations');
+    } else if (pendingNav.type === 'visibility_campaign') {
+      setScreen('ma_campagne');
+    } else if (pendingNav.type === 'offre_quartier') {
+      setScreen('offre_quartier');
+    } else if (pendingNav.type === 'ma_vitrine') {
+      setStoreFrom('dashboard');
+      setScreen('store');
     }
   }, [pendingNav, clearPending]);
 
@@ -384,6 +457,22 @@ export default function MerchantNavigator({ onLogout }: Props) {
       <NotificationsScreen
         onBack={() => setScreen('dashboard')}
         onNavigate={(type, targetId, data) => {
+          const d = data ?? {};
+          // Ça bouge (réaction / commentaire sur ma story) → mes stories (répondre)
+          if (d.type === 'ca_bouge') {
+            setScreen('ca_bouge');
+            return;
+          }
+          // Réservation beauté → écran dédié (à la bonne date), PAS l'écran Commandes
+          if (d.type === 'beauty_reservation' || d.type === 'beauty_acces_valide') {
+            setScreen({ id: 'beauty_reservations', date: d.dateResa as string | undefined });
+            return;
+          }
+          // Nouvelle réservation de table → écran Réservations de table, PAS l'écran Commandes
+          if (d.type === 'table_reservation_nouvelle') {
+            setScreen('restaurant_reservations');
+            return;
+          }
           if (type === 'msg' && targetId) {
             // 1 tap → directement dans la bonne conversation
             setScreen({ id: 'chat', conversationId: targetId });
@@ -405,17 +494,18 @@ export default function MerchantNavigator({ onLogout }: Props) {
             setScreen('fitness_abonnements');
             return;
           }
+          // Pack de visibilité activé (Wave·OM·crédit) → PAS l'écran Commandes.
+          // Quartier → écran « Offre du Quartier » (choix des produits mis en avant) ;
+          // annonce / recherche / carte → « Ma Campagne ».
+          if (d.subscription_id) {
+            setScreen(d.offer_type === 'quartier' ? 'offre_quartier' : 'ma_campagne');
+            return;
+          }
           if (type === 'order' || type === 'pay') {
             setScreen('orders');
             return;
           }
           if (type === 'vip') {
-            const d = data ?? {};
-            // Achat "Offre du quartier" → écran de gestion de l'abonnement
-            if (d.subscription_id) {
-              setScreen('visibility');
-              return;
-            }
             // Mise à jour de classement (hebdo ou mérite sous-catégorie) → écran Classement
             if (d.sous_categorie || d.type_classement === 'sous_categorie') {
               setScreen('classement');
@@ -427,6 +517,18 @@ export default function MerchantNavigator({ onLogout }: Props) {
         }}
       />
     );
+  if (screen === 'beauty_services')
+    return <BeautyServiceCatalogScreen onBack={() => setScreen('store')} />;
+
+  if (screen === 'beauty_reservations')
+    return <BeautyReservationsScreen onBack={() => setScreen('store')} />;
+
+  if (typeof screen === 'object' && screen.id === 'beauty_reservations')
+    return <BeautyReservationsScreen initialDate={screen.date} onBack={() => setScreen('dashboard')} />;
+
+  if (screen === 'restaurant_reservations')
+    return <MerchantRestaurantReservationsScreen onBack={() => setScreen('store')} />;
+
   if (screen === 'terrain_scan') return <TerrainScanScreen onBack={() => setScreen('terrains')} />;
 
   if (typeof screen === 'object' && screen.id === 'terrain_edit')
@@ -454,11 +556,13 @@ export default function MerchantNavigator({ onLogout }: Props) {
     );
 
   if (screen === 'preview')
-    return <ShopScreen shopId={shopId ?? ''} onBack={() => setScreen('store')} />;
+    return <ShopScreen shopId={shopId ?? ''} onBack={() => setScreen('store')} isPreview={true} />;
   if (screen === 'avis') return <MerchantAvisScreen onBack={() => setScreen('dashboard')} />;
   if (screen === 'classement')
     return <ClassementScreen variant="prestataire" onBack={() => setScreen('dashboard')} />;
   if (screen === 'debts') return <DebtsScreen onBack={() => setScreen('dashboard')} />;
+  if (screen === 'ca_bouge') return <StoryComposerScreen onBack={() => setScreen('dashboard')} />;
+
   if (screen === 'promotions') return <PromotionsScreen onBack={() => setScreen('store')} />;
   if (screen === 'fitness_abonnements')
     return <MerchantAbonnementsScreen onBack={() => setScreen('store')} />;
@@ -477,9 +581,6 @@ export default function MerchantNavigator({ onLogout }: Props) {
       />
     );
 
-  if (screen === 'fiche_guidee')
-    return <FicheGuideeScreen onClose={() => setScreen('store')} />;
-
   if (screen === 'store')
     return (
       <StoreScreen
@@ -487,12 +588,26 @@ export default function MerchantNavigator({ onLogout }: Props) {
         onPreview={() => setScreen('preview')}
         onPromos={() => setScreen('promotions')}
         onAbonnes={() => setScreen('fitness_abonnements')}
-        onFicheGuidee={() => setScreen('fiche_guidee')}
+        onManageBeautyServices={() => setScreen('beauty_services')}
+        onBeautyReservations={() => setScreen('beauty_reservations')}
+        onRestaurantReservations={() => setScreen('restaurant_reservations')}
       />
     );
-  if (screen === 'orders') return <OrdersScreen onBack={() => setScreen('dashboard')} />;
+  if (screen === 'orders')
+    return (
+      <OrdersScreen
+        onBack={() => setScreen('dashboard')}
+        onOpenChat={cid => setScreen({ id: 'chat', conversationId: cid })}
+      />
+    );
   if (typeof screen === 'object' && screen.id === 'orders')
-    return <OrdersScreen initialTab={screen.initialTab} onBack={() => setScreen('dashboard')} />;
+    return (
+      <OrdersScreen
+        initialTab={screen.initialTab}
+        onBack={() => setScreen('dashboard')}
+        onOpenChat={cid => setScreen({ id: 'chat', conversationId: cid })}
+      />
+    );
   if (screen === 'messages')
     return <MerchantMessagesScreen onBack={() => setScreen('dashboard')} />;
   if (screen === 'visibility') return <VisibilityScreen onBack={() => setScreen(visibilityFrom)} />;
@@ -543,17 +658,32 @@ export default function MerchantNavigator({ onLogout }: Props) {
           if (dest === 'classement') setScreen('classement');
           if (dest === 'offre_quartier') setScreen('offre_quartier');
           if (dest === 'a_la_une') setScreen('a_la_une');
+          if (dest === 'ca_bouge') setScreen('ca_bouge');
           if (dest === 'livraison') setScreen('livraison');
         }}
         onOrderPress={(_, tab) => setScreen({ id: 'orders', initialTab: tab })}
         onNotifPress={() => setScreen('notifications')}
       />
-      <WelcomeRewardModal
-        visible={showWelcomeModal}
-        carrouselProduits={welcomeCarrousel}
-        onClose={handleWelcomeClose}
-        onDiscover={handleWelcomeDiscover}
+      <WelcomeVitrineModal
+        visible={showVitrineModal}
+        onClose={dismissVitrineModal}
+        onConfigure={handleVitrineConfigure}
       />
+      {showRewardBanner && (
+        <WelcomeRewardBanner
+          carrouselProduits={welcomeCarrousel}
+          onDiscover={handleRewardDiscover}
+          onDismiss={dismissRewardBanner}
+        />
+      )}
+      {!!shareReminderId && !!shopSlug && !showVitrineModal && (
+        <ShareVitrineModal
+          visible
+          slug={shopSlug}
+          shopName={shopName}
+          onClose={() => setShareReminderId(null)}
+        />
+      )}
     </>
   );
 }

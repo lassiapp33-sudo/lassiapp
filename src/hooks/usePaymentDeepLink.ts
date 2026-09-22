@@ -80,7 +80,7 @@ export function usePaymentDeepLink() {
       }
 
       // ── Lien de partage prestataire — vitrine directe ─────────────────────
-      // https://lassi.tech/p/{slug}  |  lassiapp://p/{slug}
+      // https://s.lassi.tech/{slug} (aperçu OG) | lassiapp://p/{slug} (bouton "Ouvrir dans LASSİ")
       if (url.includes('/p/')) {
         const slug = url.split('/p/')[1]?.split('?')[0]?.split('/')[0];
         if (slug) {

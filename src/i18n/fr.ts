@@ -45,7 +45,7 @@ const fr: Translations = {
     myStore: 'Ma vitrine',
     myStoreSub: 'Produits, photos, horaires',
     myVisibility: 'Visibilité',
-    myVisibilitySub: "3 façons d'être plus visible",
+    myVisibilitySub: "2 façons d'être plus visible",
     myRevenue: 'Mes revenus',
     myRevenueSub: 'Rapports & statistiques',
     notifications: 'Notifications',

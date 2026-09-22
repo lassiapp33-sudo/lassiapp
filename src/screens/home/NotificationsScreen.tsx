@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, SectionList, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, SectionList, StyleSheet, ActivityIndicator, Linking } from 'react-native';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import useNotificationsStore, { NotifType, Notif } from '../../store/notificationsStore';
 import { IcoBack } from '../../components/icons';
@@ -31,12 +31,15 @@ const TYPE_CONFIG: Record<
 > = {
   order:               { Icon: IcoOrder,   color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
   pay:                 { Icon: IcoPay,     color: colors.success, bg: 'rgba(95,211,138,.13)' },
+  payment:             { Icon: IcoPay,     color: colors.success, bg: 'rgba(95,211,138,.13)' },
   fitness:             { Icon: IcoFitness, color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
   vip:                 { Icon: IcoStar,    color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
   msg:                 { Icon: IcoMsg,     color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
   ann:                 { Icon: IcoAnn,     color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
   livraison:           { Icon: IcoTruck,   color: colors.success, bg: 'rgba(95,211,138,.13)' },
   reservation_terrain: { Icon: IcoFitness, color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
+  setup_shop:          { Icon: IcoAnn,     color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+  share_vitrine:       { Icon: IcoAnn,     color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
 };
 
 const NotifCard = React.memo(function NotifCard({
@@ -46,8 +49,18 @@ const NotifCard = React.memo(function NotifCard({
   notif: Notif;
   onPress: (n: Notif) => void;
 }) {
-  const cfg = TYPE_CONFIG[notif.type];
+  const cfg = TYPE_CONFIG[notif.type] ?? TYPE_CONFIG.ann; // garde : type inconnu → carte générique
   const { Icon } = cfg;
+  const isSetup = notif.type === 'setup_shop';
+
+  const openWhatsApp = () => {
+    const d = (notif.data ?? {}) as Record<string, unknown>;
+    const num  = (typeof d.wa_number === 'string' && d.wa_number) || '221761890003';
+    const shop = (typeof d.shop_name === 'string' && d.shop_name) || 'ma boutique';
+    const text = `Bonjour, je suis ${shop} sur LASSI, j'ai besoin d'aide pour configurer ma boutique.`;
+    Linking.openURL(`https://wa.me/${num}?text=${encodeURIComponent(text)}`).catch(() => {});
+  };
+
   return (
     <TouchableOpacity
       style={[styles.card, notif.unread && styles.cardUnread]}
@@ -62,6 +75,11 @@ const NotifCard = React.memo(function NotifCard({
         <Text style={styles.title}>{notif.title}</Text>
         <Text style={styles.body}>{notif.body}</Text>
         <Text style={styles.time}>{notif.time}</Text>
+        {isSetup && (
+          <TouchableOpacity style={styles.waBtn} onPress={openWhatsApp} activeOpacity={0.85}>
+            <Text style={styles.waBtnTxt}>Joindre le service client</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -215,6 +233,16 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   time: { color: '#5a5c80', fontFamily: fonts.body, fontSize: 10, marginTop: 5 },
+
+  waBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    backgroundColor: '#25D366',
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  waBtnTxt: { color: '#FFFFFF', fontFamily: fonts.ui, fontSize: 12 },
 
   empty: { paddingVertical: 60, alignItems: 'center' },
   emptyTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 13 },

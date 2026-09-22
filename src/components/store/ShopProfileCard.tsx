@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { StoreProfile } from '../../types/store';
 import Avatar from '../Avatar';
@@ -37,15 +38,29 @@ function ToggleSwitch({ isOn, onToggle }: { isOn: boolean; onToggle: () => void 
 interface Props {
   profile: StoreProfile;
   onToggle: () => void;
+  onEditLogo?: () => void;
 }
 
-export default function ShopProfileCard({ profile, onToggle }: Props) {
+export default function ShopProfileCard({ profile, onToggle, onEditLogo }: Props) {
   return (
     <View style={styles.card}>
       {/* Logo + infos */}
       <View style={styles.row}>
-        {/* Logo boutique — Avatar unique, source de vérité shopStore.profile.logoUrl */}
-        <Avatar imageUrl={profile.logoUrl} name={profile.name} size={60} variant="shop" />
+        {/* Logo boutique — cliquable pour modification */}
+        <TouchableOpacity onPress={onEditLogo} activeOpacity={0.75} style={styles.logoWrap}>
+          <Avatar imageUrl={profile.logoUrl} name={profile.name} size={60} variant="shop" />
+          <View style={styles.logoBadge}>
+            <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M15.232 5.232l3.536 3.536M9 13l6.5-6.5a2 2 0 0 1 2.828 2.828L11.828 15.828 8 17l1.172-3.828Z"
+                stroke="#14152A"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          </View>
+        </TouchableOpacity>
 
         {/* Nom et catégorie */}
         <View style={styles.info}>
@@ -91,6 +106,22 @@ const styles = StyleSheet.create({
     gap: 13,
   },
 
+  logoWrap: {
+    position: 'relative',
+  },
+  logoBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.surface,
+  },
   info: { flex: 1 },
   name: {
     color: colors.white,
