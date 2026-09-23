@@ -30,10 +30,20 @@ module.exports = function withFirebaseMessagingManifest(config) {
     // fcm_fallback_notification_channel (importance LOW → MUET, confirmé via
     // `adb dumpsys notification`: naturalImportance=2, sound=null). On force le
     // canal 'commandes-v2' (créé au boot dans App.tsx, importance MAX + son).
+    // @react-native-firebase/messaging DÉCLARE DÉJÀ ce meta-data avec le
+    // placeholder ${firebaseJsonNotificationChannelId} (android/src/main/AndroidManifest.xml).
+    // Sans tools:replace, le manifest merger voit 2 déclarations → gradle échoue.
+    // tools:replace='android:value' → notre valeur 'commandes-v2' gagne.
     const CH_KEY = 'com.google.firebase.messaging.default_notification_channel_id';
     const chMeta = app['meta-data'].find((m) => m.$?.['android:name'] === CH_KEY);
-    if (chMeta) chMeta.$['android:value'] = 'commandes-v2';
-    else app['meta-data'].push({ $: { 'android:name': CH_KEY, 'android:value': 'commandes-v2' } });
+    if (chMeta) {
+      chMeta.$['android:value'] = 'commandes-v2';
+      chMeta.$['tools:replace'] = 'android:value';
+    } else {
+      app['meta-data'].push({
+        $: { 'android:name': CH_KEY, 'android:value': 'commandes-v2', 'tools:replace': 'android:value' },
+      });
+    }
 
     return config;
   });
