@@ -25,6 +25,16 @@ module.exports = function withFirebaseMessagingManifest(config) {
       colorMeta.$['tools:replace'] = 'android:resource';
     }
 
+    // Canal de notification par défaut Firebase Messaging.
+    // Sans ça, les notifs FCM affichées par Firebase en arrière-plan tombent sur
+    // fcm_fallback_notification_channel (importance LOW → MUET, confirmé via
+    // `adb dumpsys notification`: naturalImportance=2, sound=null). On force le
+    // canal 'commandes-v2' (créé au boot dans App.tsx, importance MAX + son).
+    const CH_KEY = 'com.google.firebase.messaging.default_notification_channel_id';
+    const chMeta = app['meta-data'].find((m) => m.$?.['android:name'] === CH_KEY);
+    if (chMeta) chMeta.$['android:value'] = 'commandes-v2';
+    else app['meta-data'].push({ $: { 'android:name': CH_KEY, 'android:value': 'commandes-v2' } });
+
     return config;
   });
 };

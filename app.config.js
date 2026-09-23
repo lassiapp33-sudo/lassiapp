@@ -64,31 +64,12 @@ const withBlockedMediaPermissions = config =>
     return androidConfig;
   });
 
-// Plugin 5 : canal de notification par défaut Firebase Messaging.
-// Avec @react-native-firebase/messaging présent, les notifs FCM affichées en
-// arrière-plan sont postées par Firebase (PAS expo-notifications) → elles
-// n'utilisent pas 'commandes-v2' et tombent sur fcm_fallback (importance LOW →
-// MUET, confirmé via `adb dumpsys notification` : naturalImportance=2, sound=null).
-// Cette meta-data force Firebase à poster sur 'commandes-v2' (créé au boot,
-// importance MAX + son). NATIF → nécessite un rebuild EAS (pas un OTA).
-const withDefaultNotificationChannel = config =>
-  withAndroidManifest(config, androidConfig => {
-    const app = androidConfig.modResults.manifest.application?.[0];
-    if (app) {
-      const KEY = 'com.google.firebase.messaging.default_notification_channel_id';
-      const meta = app['meta-data'] ?? [];
-      const existing = meta.find(m => m.$?.['android:name'] === KEY);
-      if (existing) existing.$['android:value'] = 'commandes-v2';
-      else meta.push({ $: { 'android:name': KEY, 'android:value': 'commandes-v2' } });
-      app['meta-data'] = meta;
-    }
-    return androidConfig;
-  });
-
+// NOTE: le canal Firebase par défaut (commandes-v2) est injecté via
+// ./plugins/withFirebaseMessagingManifest (tableau `plugins`), PAS ici : les mods
+// de withSecurityPlugins ne s'appliquent pas (l'export enveloppe {expo:{...}} →
+// Expo lit .expo et perd les mods attachés au niveau wrapper).
 const withSecurityPlugins = config =>
-  withDefaultNotificationChannel(
-    withBlockedMediaPermissions(withLargeScreenCompat(withR8Release(withNoHttpCleartext(config)))),
-  );
+  withBlockedMediaPermissions(withLargeScreenCompat(withR8Release(withNoHttpCleartext(config))));
 
 module.exports = withSecurityPlugins({
   expo: {
