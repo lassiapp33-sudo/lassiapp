@@ -1,4 +1,4 @@
-import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON, getValidToken } from '../lib/supabase';
 import { StoreProduct } from '../types/store';
 
 // ─── Mapping ─────────────────────────────────────────────────────────────────
@@ -126,16 +126,9 @@ export async function creerProduitsEnMasse(
 ): Promise<{ success: boolean; count: number }> {
   if (produits.length === 0) return { success: true, count: 0 };
 
-  // Refresh the session so auth.uid() is valid for RLS
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) {
-    const { error: refreshError } = await supabase.auth.refreshSession();
-    if (refreshError) {
-      // Refresh token expiré → déconnexion propre, l'app redirige vers login
-      supabase.auth.signOut().catch(() => {});
-      throw new Error('SESSION_EXPIRED');
-    }
-  }
+  // SESSION GUARDIAN : getValidToken() gère les 3 niveaux de fallback.
+  // NE PAS remplacer par getSession/refreshSession/signOut — voir SESSION_GUARDIAN.md
+  await getValidToken();
 
   const rows = produits.map(p => ({
     shop_id:     shopId,
