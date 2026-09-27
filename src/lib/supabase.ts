@@ -16,18 +16,35 @@ if (!SUPABASE_URL || !SUPABASE_ANON) {
   logger.warn("[Supabase] Variables d'env manquantes — vérifie ton fichier .env");
 }
 
-// Chaque requête Supabase (auth token refresh + REST) passe par ce fetch.
-// AbortController ne coupe pas fiablement le fetch natif Android — on utilise
-// Promise.race (pur JS) pour garantir le timeout même sur Android.
-// Quand ce timeout se déclenche, GoTrue reçoit l'erreur, libère son mutex interne
-// et toutes les requêtes en attente peuvent continuer (avec session null si refresh échoué).
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔴 SESSION GUARDIAN — ZONE ROUGE — NE PAS MODIFIER SANS AUTORISATION EXPLICITE
+//    Ce bloc gère l'immortalité des sessions utilisateur.
+//    Toute modification ici peut provoquer des déconnexions massives en production.
+//    Auteur : Lassana Coulibaly — blindé le 2026-09-27
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Les appels d'auth (refresh token) reçoivent un timeout PLUS LONG que les appels
+// API normaux. Sur réseau 3G/4G lent (Sénégal), un refresh peut prendre 15-20s.
+// Un timeout trop court tue le refresh → token considéré expiré → déconnexion.
+// API_TIMEOUT_MS  : requêtes REST normales
+// AUTH_TIMEOUT_MS : uniquement les appels /auth/v1/ (refresh, login, logout)
+const API_TIMEOUT_MS  = 15_000;
+const AUTH_TIMEOUT_MS = 35_000;
+
 function fetchWithTimeout(
   input: Parameters<typeof fetch>[0],
   init?: Parameters<typeof fetch>[1],
 ): ReturnType<typeof fetch> {
+  const url =
+    typeof input === 'string' ? input
+    : input instanceof URL    ? input.href
+    : (input as Request).url;
+  const isAuthCall = url.includes('/auth/v1/');
+  const ms = isAuthCall ? AUTH_TIMEOUT_MS : API_TIMEOUT_MS;
+
   const fetchPromise = fetch(input, init);
   const timeoutPromise = new Promise<Response>((_, reject) =>
-    setTimeout(() => reject(new Error('Network timeout')), 12_000),
+    setTimeout(() => reject(new Error('Network timeout')), ms),
   );
   return Promise.race([fetchPromise, timeoutPromise]);
 }
@@ -35,63 +52,31 @@ function fetchWithTimeout(
 // Client Supabase partagé dans toute l'app
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
-    // Session JWT chiffrée (AES-256, clé dans le Keychain/Keystore via expo-secure-store)
     storage: secureStorage,
-    autoRefreshToken: true, // renouvelle le token silencieusement avant expiration
-    persistSession: true, // sauvegarde la session sur le téléphone
+    autoRefreshToken: true,
+    persistSession: true,
     detectSessionInUrl: Platform.OS === 'web',
   },
   global: { fetch: fetchWithTimeout },
 });
 
 // Token caché : mis à jour à chaque changement d'état auth (login, refresh, logout).
-// Accès synchrone instantané — évite toute attente du mutex GoTrue pour les appels API.
 let _cachedToken: string | null = null;
 supabase.auth.onAuthStateChange((_event, session) => {
   _cachedToken = session?.access_token ?? null;
-  // Propage le token frais au websocket Realtime. Sans ça, après un refresh
-  // (ou expiration à 1h) le socket garde l'ancien JWT → le serveur ferme la
-  // connexion, les abonnements meurent et "rien ne vient" jusqu'au relogin.
   if (Platform.OS !== 'web') {
     try { supabase.realtime.setAuth(session?.access_token ?? null); } catch { /* noop */ }
   }
 });
 
-// ── Session qui n'expire JAMAIS (Android + iOS) ──────────────────────────────
-// EXIGENCE officielle Supabase RN : autoRefreshToken ne tourne de façon fiable
-// que si on le pilote via AppState. Sans ce wiring, l'app en arrière-plan
-// (doze Android) ne rafraîchit pas le JWT → expiration à 1h → obligation de se
-// déconnecter/reconnecter. On (re)démarre le refresh dès que l'app est active
-// et on l'arrête en arrière-plan.
-if (Platform.OS !== 'web') {
-  // Démarre tout de suite (l'app est active au lancement), puis AppState pilote.
-  supabase.auth.startAutoRefresh();
-  AppState.addEventListener('change', state => {
-    if (state === 'active') supabase.auth.startAutoRefresh();
-    else supabase.auth.stopAutoRefresh();
-  });
-}
 export function getCachedToken(): string | null {
   return _cachedToken;
 }
-// Permet à auth.ts de mettre à jour le cache immédiatement après un login raw
 export function setCachedToken(token: string | null): void {
   _cachedToken = token;
 }
 
-// Fallback : attend que GoTrue finisse son refresh (max 15 s).
-// fetchWithTimeout garantit que le refresh HTTP se termine en ≤12 s,
-// donc 15 s laisse 3 s de marge pour que le mutex soit libéré.
-export function safeGetSession(ms = 15_000): ReturnType<typeof supabase.auth.getSession> {
-  const timeout = new Promise<{ data: { session: null }; error: null }>(resolve =>
-    setTimeout(() => resolve({ data: { session: null }, error: null }), ms),
-  );
-  return Promise.race([supabase.auth.getSession(), timeout]);
-}
-
-// Vérifie que le JWT n'est pas expiré (marge de 60 s) en décodant le claim `exp`.
-// Sans ça, un token en cache expiré était renvoyé tel quel → 401 "Non autorisé"
-// côté Edge Function et violation RLS sur les INSERT (auth.uid() = NULL).
+// Vérifie que le JWT n'est pas expiré (marge skewSec) en décodant le claim `exp`.
 function isJwtFresh(token: string, skewSec = 60): boolean {
   try {
     const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -103,24 +88,77 @@ function isJwtFresh(token: string, skewSec = 60): boolean {
   }
 }
 
-// Token valide garanti : cache (non expiré) → getSession → refreshSession.
-// Couvre le cas app en background >1h : token expiré, autoRefreshToken n'a pas pu tourner.
+// Refresh silencieux avec 3 tentatives + backoff exponentiel.
+// Retourne le nouveau token ou null si toutes les tentatives échouent.
+async function _silentRefresh(): Promise<string | null> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 1_500 * attempt));
+    try {
+      const { data } = await supabase.auth.refreshSession();
+      if (data.session?.access_token) {
+        setCachedToken(data.session.access_token);
+        return data.session.access_token;
+      }
+    } catch { /* réseau indisponible — on réessaie */ }
+  }
+  return null;
+}
+
+// ── SESSION GUARDIAN : AppState pilote startAutoRefresh + refresh proactif ───
+// Au retour foreground après >1h de background, startAutoRefresh() seul ne
+// rafraîchit PAS immédiatement le token déjà expiré — il repart juste le timer.
+// La 1ère requête API partirait alors avec un JWT mort → 401 / RLS → "vue vide".
+// Fix : on force un _silentRefresh() dès que le token a moins de 5 min de vie.
+let _lastProactiveRefresh = 0;
+
+if (Platform.OS !== 'web') {
+  supabase.auth.startAutoRefresh();
+  AppState.addEventListener('change', async state => {
+    if (state === 'active') {
+      supabase.auth.startAutoRefresh();
+      const cached = getCachedToken();
+      const now = Date.now();
+      // Refresh proactif si token expiré ou dans les 5 prochaines minutes
+      if ((!cached || !isJwtFresh(cached, 300)) && now - _lastProactiveRefresh > 30_000) {
+        _lastProactiveRefresh = now;
+        _silentRefresh().catch(() => {});
+      }
+    } else {
+      supabase.auth.stopAutoRefresh();
+    }
+  });
+}
+
+// Attend que GoTrue finisse son refresh (max 20 s — supérieur au 15s précédent
+// pour absorber les réseaux lents sans tomber dans le timeout trop tôt).
+export function safeGetSession(ms = 20_000): ReturnType<typeof supabase.auth.getSession> {
+  const timeout = new Promise<{ data: { session: null }; error: null }>(resolve =>
+    setTimeout(() => resolve({ data: { session: null }, error: null }), ms),
+  );
+  return Promise.race([supabase.auth.getSession(), timeout]);
+}
+
+// Token valide garanti : cache frais → getSession → refresh 3 tentatives.
+// Ne JAMAIS supprimer ou contourner ces 3 niveaux de fallback.
 export async function getValidToken(): Promise<string> {
+  // Niveau 1 : cache en mémoire (accès instantané, 0 réseau)
   const cached = getCachedToken();
   if (cached && isJwtFresh(cached)) return cached;
 
-  const { data: { session } } = await safeGetSession(15_000);
+  // Niveau 2 : session stockée sur le device (peut être plus fraîche que le cache)
+  const { data: { session } } = await safeGetSession(20_000);
   if (session?.access_token && isJwtFresh(session.access_token)) {
     setCachedToken(session.access_token);
     return session.access_token;
   }
 
-  // Dernier recours : forcer le refresh avec le refresh_token stocké
-  const { data: refreshData } = await supabase.auth.refreshSession();
-  if (refreshData.session?.access_token) {
-    setCachedToken(refreshData.session.access_token);
-    return refreshData.session.access_token;
-  }
+  // Niveau 3 : refresh forcé avec 3 tentatives (réseau lent / background >1h)
+  const refreshed = await _silentRefresh();
+  if (refreshed) return refreshed;
 
   throw new Error('Session expirée — reconnecte-toi.');
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔴 FIN SESSION GUARDIAN
+// ═══════════════════════════════════════════════════════════════════════════════
