@@ -13,7 +13,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase, SUPABASE_URL, SUPABASE_ANON, getCachedToken, setCachedToken, safeGetSession } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON, getCachedToken, setCachedToken, safeGetSession, getValidToken } from '../lib/supabase';
 import { SESSION_ACTIVE_KEY } from '../lib/secureStorage';
 import { AuthUser, UserRole } from '../store/authStore';
 import { getInitials } from '../utils/getInitials';
@@ -482,7 +482,21 @@ export async function getSessionUser(): Promise<AuthUser | null> {
       return null;
     }
 
-    if (!session?.user) return null;
+    if (!session?.user) {
+      // SESSION GUARDIAN : tenter un refresh silencieux avant d'abandonner.
+      // Couvre : JWT expiré en background (>24h), refresh token encore valide.
+      // Si le refresh token est révoqué (rare), getValidToken() throw et on retourne null.
+      try {
+        await getValidToken();
+        const { data: { session: s2 } } = await safeGetSession(8_000);
+        if (s2?.user) {
+          if (s2.access_token) setCachedToken(s2.access_token);
+          const p2 = await getProfileById(s2.user.id, s2.access_token);
+          if (p2) return p2;
+        }
+      } catch { /* refresh impossible — session vraiment perdue */ }
+      return null;
+    }
 
     // token frais disponible : mise à jour du cache immédiate
     if (session.access_token) setCachedToken(session.access_token);

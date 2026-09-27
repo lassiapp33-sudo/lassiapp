@@ -18,7 +18,8 @@ import { useT } from '../../i18n';
 import { getErrorMessage } from '../../utils/errorUtils';
 
 interface Props {
-  onBack: () => void;
+  onBack?: () => void;
+  defaultPhone?: string; // pré-rempli si session expirée (reconnexion rapide)
   // Async : peut rejeter avec une Error (message d'erreur en français)
   onSuccess: (phone: string, password: string) => Promise<void>;
   onForgotPassword: () => void;
@@ -62,10 +63,10 @@ const IconEye = ({ off }: { off?: boolean }) => (
   </Svg>
 );
 
-export default function LoginScreen({ onBack, onSuccess, onForgotPassword, onRegister }: Props) {
+export default function LoginScreen({ onBack, defaultPhone, onSuccess, onForgotPassword, onRegister }: Props) {
   const t = useT();
 
-  const [tel, setTel] = useState('');
+  const [tel, setTel] = useState(defaultPhone ? formatPhoneSenegal(defaultPhone) : '');
   const [mdp, setMdp] = useState('');
   const [showMdp, setShowMdp] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -104,7 +105,7 @@ export default function LoginScreen({ onBack, onSuccess, onForgotPassword, onReg
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <BackButton onPress={onBack} />
+        {onBack && <BackButton onPress={onBack} />}
         <View style={{ height: 24 }} />
 
         <Text style={styles.h1}>{t.auth.welcomeBack}</Text>

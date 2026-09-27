@@ -19,7 +19,7 @@ type StackItem =
   | { id: 'role' }
   | { id: 'register'; role: Role }
   | { id: 'shopSetup'; userData: RegisterData }
-  | { id: 'login' }
+  | { id: 'login'; prefillPhone?: string }
   | { id: 'emailVerify'; email: string }
   | { id: 'forgotPassword' };
 
@@ -29,7 +29,13 @@ interface Props {
 }
 
 export default function AuthNavigator({ onComplete, onGuest }: Props) {
-  const [stack, setStack] = useState<StackItem[]>([{ id: 'role' }]);
+  // Si un utilisateur était connecté avant (session expirée / OTA), démarrer
+  // directement sur l'écran login avec son numéro pré-rempli. Le Zustand authStore
+  // persiste le profil même après un signOut Supabase côté serveur.
+  const cachedPhone = useAuthStore(s => s.user?.phone ?? null);
+  const [stack, setStack] = useState<StackItem[]>(
+    cachedPhone ? [{ id: 'login', prefillPhone: cachedPhone }] : [{ id: 'role' }],
+  );
   // CGU et Confidentialité s'ouvrent en modal pour ne pas démonter l'écran
   // d'inscription (ce qui remettrait tous les champs à zéro).
   const [legalModal, setLegalModal] = useState<null | 'cgu' | 'confidentialite'>(null);
@@ -117,7 +123,8 @@ export default function AuthNavigator({ onComplete, onGuest }: Props) {
     case 'login':
       screen = (
         <LoginScreen
-          onBack={pop}
+          defaultPhone={current.prefillPhone}
+          onBack={cachedPhone ? undefined : pop}
           onSuccess={async (phone, password) => {
             let user;
             try {
