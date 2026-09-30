@@ -6,8 +6,9 @@ if (Platform.OS !== 'web') {
 }
 
 import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import logger from '../utils/logger';
-import { secureStorage } from './secureStorage';
+import { secureStorage, SESSION_ACTIVE_KEY } from './secureStorage';
 
 export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 export const SUPABASE_ANON = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -65,6 +66,11 @@ let _cachedToken: string | null = null;
 supabase.auth.onAuthStateChange((_event, session) => {
   _cachedToken = session?.access_token ?? null;
   if (Platform.OS !== 'web') {
+    if (session?.access_token) {
+      AsyncStorage.setItem(SESSION_ACTIVE_KEY, '1').catch(() => {});
+    } else if (_event === 'SIGNED_OUT') {
+      AsyncStorage.removeItem(SESSION_ACTIVE_KEY).catch(() => {});
+    }
     try { supabase.realtime.setAuth(session?.access_token ?? null); } catch { /* noop */ }
   }
 });
@@ -89,19 +95,42 @@ function isJwtFresh(token: string, skewSec = 60): boolean {
 }
 
 // Refresh silencieux avec 3 tentatives + backoff exponentiel.
-// Retourne le nouveau token ou null si toutes les tentatives échouent.
+// Stop immédiatement sur erreur serveur (4xx) pour éviter la détection de reuse
+// du refresh_token : si le serveur a déjà roté le token mais qu'on n'a pas reçu
+// la réponse (coupure réseau Android), relancer déclenche SIGNED_OUT côté Supabase.
 async function _silentRefresh(): Promise<string | null> {
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt > 0) await new Promise(r => setTimeout(r, 1_500 * attempt));
     try {
-      const { data } = await supabase.auth.refreshSession();
+      const { data, error } = await supabase.auth.refreshSession();
       if (data.session?.access_token) {
         setCachedToken(data.session.access_token);
         return data.session.access_token;
       }
+      // Erreur serveur (token révoqué, reuse détecté, session inconnue) → pas la peine de réessayer
+      if (error?.status && error.status >= 400 && error.status < 500) break;
     } catch { /* réseau indisponible — on réessaie */ }
   }
   return null;
+}
+
+// ── SESSION WATCHDOG — NE JAMAIS SUPPRIMER ────────────────────────────────────
+// Filet de sécurité ultime : toutes les 4 min en foreground, vérifie que le token
+// est frais. Si GoTrue rate son auto-refresh ou si un bug futur casse AppState,
+// la session sera récupérée avant la prochaine requête API.
+// 4 min << 24h (durée JWT) : 0 réseau inutile tant que token ok.
+let _watchdogHandle: ReturnType<typeof setInterval> | null = null;
+function _startWatchdog(): void {
+  if (_watchdogHandle !== null) return;
+  _watchdogHandle = setInterval(() => {
+    const t = getCachedToken();
+    if (!t || !isJwtFresh(t, 300)) _silentRefresh().catch(() => {});
+  }, 4 * 60_000);
+}
+function _stopWatchdog(): void {
+  if (_watchdogHandle === null) return;
+  clearInterval(_watchdogHandle);
+  _watchdogHandle = null;
 }
 
 // ── SESSION GUARDIAN : AppState pilote startAutoRefresh + refresh proactif ───
@@ -113,9 +142,11 @@ let _lastProactiveRefresh = 0;
 
 if (Platform.OS !== 'web') {
   supabase.auth.startAutoRefresh();
+  _startWatchdog(); // watchdog actif dès le chargement du module
   AppState.addEventListener('change', async state => {
     if (state === 'active') {
       supabase.auth.startAutoRefresh();
+      _startWatchdog();
       const cached = getCachedToken();
       const now = Date.now();
       // Refresh proactif si token expiré ou dans les 5 prochaines minutes
@@ -125,6 +156,7 @@ if (Platform.OS !== 'web') {
       }
     } else {
       supabase.auth.stopAutoRefresh();
+      _stopWatchdog();
     }
   });
 }
@@ -156,6 +188,8 @@ export async function getValidToken(): Promise<string> {
   const refreshed = await _silentRefresh();
   if (refreshed) return refreshed;
 
+  // eslint-disable-next-line no-console
+  console.error('[LASSI] getValidToken ECHEC — cached=', !!getCachedToken(), 'session=', !!session, 'time=', new Date().toISOString());
   throw new Error('Session expirée — reconnecte-toi.');
 }
 
