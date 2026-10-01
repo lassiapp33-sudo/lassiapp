@@ -1,7 +1,7 @@
-const { withAndroidManifest, withGradleProperties } = require('@expo/config-plugins');
+﻿const { withAndroidManifest, withGradleProperties } = require('@expo/config-plugins');
 
 // Plugin 1 : usesCleartextTraffic="false" au manifest release.
-// Le debug manifest override via tools:replace — le dev n'est pas affecté.
+// Le debug manifest override via tools:replace â€” le dev n'est pas affectÃ©.
 const withNoHttpCleartext = config =>
   withAndroidManifest(config, async androidConfig => {
     const app = androidConfig.modResults.manifest.application?.[0];
@@ -9,10 +9,10 @@ const withNoHttpCleartext = config =>
     return androidConfig;
   });
 
-// Plugin 3 : Compatibilité grands écrans Android 15.
+// Plugin 3 : CompatibilitÃ© grands Ã©crans Android 15.
 // Google Play exige l'absence de screenOrientation dans le manifest.
 // On verrouille le portrait au runtime via expo-screen-orientation (index.ts).
-// tools:remove retire l'attribut ajouté par la lib ML Kit lors du merge Gradle.
+// tools:remove retire l'attribut ajoutÃ© par la lib ML Kit lors du merge Gradle.
 const withLargeScreenCompat = config =>
   withAndroidManifest(config, async androidConfig => {
     const manifest = androidConfig.modResults.manifest;
@@ -32,9 +32,9 @@ const withLargeScreenCompat = config =>
     return androidConfig;
   });
 
-// Plugin 2 : R8 minification + resource shrinking activés pour le build release.
-// Réduit la taille de l'APK/AAB et obfusque les noms de classes Java/Kotlin.
-// Testé avec les règles ProGuard incluses par les modules natifs (AAR).
+// Plugin 2 : R8 minification + resource shrinking activÃ©s pour le build release.
+// RÃ©duit la taille de l'APK/AAB et obfusque les noms de classes Java/Kotlin.
+// TestÃ© avec les rÃ¨gles ProGuard incluses par les modules natifs (AAR).
 const withR8Release = config =>
   withGradleProperties(config, props => {
     const set = (key, value) => {
@@ -48,7 +48,7 @@ const withR8Release = config =>
   });
 
 
-// Retire READ_MEDIA_IMAGES et READ_MEDIA_VIDEO ajoutés par expo-media-library.
+// Retire READ_MEDIA_IMAGES et READ_MEDIA_VIDEO ajoutÃ©s par expo-media-library.
 // L'app utilise le Photo Picker Android (launchImageLibraryAsync) qui n'a pas
 // besoin de ces permissions larges. saveToLibraryAsync fonctionne sans sur API 29+.
 const withBlockedMediaPermissions = config =>
@@ -64,10 +64,10 @@ const withBlockedMediaPermissions = config =>
     return androidConfig;
   });
 
-// NOTE: le canal Firebase par défaut (commandes-v2) est injecté via
+// NOTE: le canal Firebase par dÃ©faut (commandes-v2) est injectÃ© via
 // ./plugins/withFirebaseMessagingManifest (tableau `plugins`), PAS ici : les mods
-// de withSecurityPlugins ne s'appliquent pas (l'export enveloppe {expo:{...}} →
-// Expo lit .expo et perd les mods attachés au niveau wrapper).
+// de withSecurityPlugins ne s'appliquent pas (l'export enveloppe {expo:{...}} â†’
+// Expo lit .expo et perd les mods attachÃ©s au niveau wrapper).
 const withSecurityPlugins = config =>
   withBlockedMediaPermissions(withLargeScreenCompat(withR8Release(withNoHttpCleartext(config))));
 
@@ -105,21 +105,21 @@ module.exports = withSecurityPlugins({
       },
       infoPlist: {
         UIBackgroundModes: ["remote-notification"],
-        // Swizzling Firebase LAISSÉ ACTIF (proxy par défaut). Avec useFrameworks:static,
-        // le subscriber APNs natif d'expo-notifications ne reçoit jamais
-        // didRegisterForRemoteNotificationsWithDeviceToken (ni didRegister ni didFail → hang).
-        // Le SEUL mécanisme qui capte l'APNs token est le swizzling Firebase. iOS passe donc
-        // par la route FCM (Firebase getToken → Expo Push type fcm), comme Android.
+        // Swizzling Firebase LAISSÃ‰ ACTIF (proxy par dÃ©faut). Avec useFrameworks:static,
+        // le subscriber APNs natif d'expo-notifications ne reÃ§oit jamais
+        // didRegisterForRemoteNotificationsWithDeviceToken (ni didRegister ni didFail â†’ hang).
+        // Le SEUL mÃ©canisme qui capte l'APNs token est le swizzling Firebase. iOS passe donc
+        // par la route FCM (Firebase getToken â†’ Expo Push type fcm), comme Android.
         NSLocationWhenInUseUsageDescription:
-          "LASSİ utilise ta position pour afficher les commerces et prestataires proches de toi (ex. : voir les restaurants à 500 m sur la carte) et pour te guider en navigation GPS jusqu'au prestataire sélectionné.",
+          "LASSÄ° utilise ta position pour afficher les commerces et prestataires proches de toi (ex. : voir les restaurants Ã  500 m sur la carte) et pour te guider en navigation GPS jusqu'au prestataire sÃ©lectionnÃ©.",
         NSMicrophoneUsageDescription:
-          "LASSİ utilise le microphone pour enregistrer des messages vocaux dans le chat (ex. : dicter les détails d'une commande à un prestataire) et pour enregistrer un commentaire vocal lors d'un avis client.",
+          "LASSÄ° utilise le microphone pour enregistrer des messages vocaux dans le chat (ex. : dicter les dÃ©tails d'une commande Ã  un prestataire) et pour enregistrer un commentaire vocal lors d'un avis client.",
         NSCameraUsageDescription:
-          "LASSİ utilise ta caméra pour photographier tes produits (ex. : prendre la photo d'un plat pour l'ajouter à ta vitrine), scanner les QR codes de réservation présentés par les clients, numériser ton menu papier et prendre des photos à partager dans le chat.",
+          "LASSÄ° utilise ta camÃ©ra pour photographier tes produits (ex. : prendre la photo d'un plat pour l'ajouter Ã  ta vitrine), scanner les QR codes de rÃ©servation prÃ©sentÃ©s par les clients, numÃ©riser ton menu papier et prendre des photos Ã  partager dans le chat.",
         NSPhotoLibraryUsageDescription:
-          "LASSİ accède à ta bibliothèque de photos pour sélectionner des images de produits (ex. : choisir la photo d'un article pour ta vitrine marchande ou ton profil) et partager des images dans la messagerie avec tes clients ou prestataires.",
+          "LASSÄ° accÃ¨de Ã  ta bibliothÃ¨que de photos pour sÃ©lectionner des images de produits (ex. : choisir la photo d'un article pour ta vitrine marchande ou ton profil) et partager des images dans la messagerie avec tes clients ou prestataires.",
         NSPhotoLibraryAddUsageDescription:
-          "LASSİ enregistre dans ta bibliothèque les images reçues dans tes conversations. Exemple : sauvegarder la photo d'un produit envoyée par un prestataire dans le chat.",
+          "LASSÄ° enregistre dans ta bibliothÃ¨que les images reÃ§ues dans tes conversations. Exemple : sauvegarder la photo d'un produit envoyÃ©e par un prestataire dans le chat.",
         ITSAppUsesNonExemptEncryption: false,
       },
     },
@@ -143,8 +143,8 @@ module.exports = withSecurityPlugins({
         "android.permission.CAMERA",
       ],
       // App Links : ouvre LASSI direct (sans prompt navigateur) pour le retour
-      // paiement https://lassi.tech/paiement/*. Nécessite assetlinks.json sur lassi.tech
-      // avec l'empreinte SHA-256 de la clé de signature Play.
+      // paiement https://lassi.tech/paiement/*. NÃ©cessite assetlinks.json sur lassi.tech
+      // avec l'empreinte SHA-256 de la clÃ© de signature Play.
       intentFilters: [
         {
           action: "VIEW",
@@ -177,32 +177,32 @@ module.exports = withSecurityPlugins({
         "expo-camera",
         {
           cameraPermission:
-            "LASSİ utilise ta caméra pour photographier tes produits (ex. : prendre la photo d'un plat pour l'ajouter à ta vitrine), scanner les QR codes de réservation présentés par les clients, numériser ton menu papier et prendre des photos à partager dans le chat.",
+            "LASSÄ° utilise ta camÃ©ra pour photographier tes produits (ex. : prendre la photo d'un plat pour l'ajouter Ã  ta vitrine), scanner les QR codes de rÃ©servation prÃ©sentÃ©s par les clients, numÃ©riser ton menu papier et prendre des photos Ã  partager dans le chat.",
         },
       ],
       [
         "expo-location",
         {
           locationWhenInUsePermission:
-            "LASSİ utilise ta position pour afficher les commerces et prestataires proches de toi (ex. : voir les restaurants à 500 m sur la carte) et pour te guider en navigation GPS jusqu'au prestataire sélectionné.",
+            "LASSÄ° utilise ta position pour afficher les commerces et prestataires proches de toi (ex. : voir les restaurants Ã  500 m sur la carte) et pour te guider en navigation GPS jusqu'au prestataire sÃ©lectionnÃ©.",
         },
       ],
       [
         "expo-image-picker",
         {
           photosPermission:
-            "LASSİ accède à ta bibliothèque de photos pour sélectionner des images de produits (ex. : choisir la photo d'un article pour ta vitrine marchande ou ton profil) et partager des images dans la messagerie avec tes clients ou prestataires.",
+            "LASSÄ° accÃ¨de Ã  ta bibliothÃ¨que de photos pour sÃ©lectionner des images de produits (ex. : choisir la photo d'un article pour ta vitrine marchande ou ton profil) et partager des images dans la messagerie avec tes clients ou prestataires.",
           cameraPermission:
-            "LASSİ utilise ta caméra pour photographier tes produits (ex. : prendre la photo d'un plat pour l'ajouter à ta vitrine), scanner les QR codes de réservation présentés par les clients, numériser ton menu papier et prendre des photos à partager dans le chat.",
+            "LASSÄ° utilise ta camÃ©ra pour photographier tes produits (ex. : prendre la photo d'un plat pour l'ajouter Ã  ta vitrine), scanner les QR codes de rÃ©servation prÃ©sentÃ©s par les clients, numÃ©riser ton menu papier et prendre des photos Ã  partager dans le chat.",
         },
       ],
       [
         "expo-media-library",
         {
           photosPermission:
-            "LASSİ accède à ta bibliothèque de photos pour sélectionner des images de produits (ex. : choisir la photo d'un article pour ta vitrine marchande ou ton profil) et partager des images dans la messagerie avec tes clients ou prestataires.",
+            "LASSÄ° accÃ¨de Ã  ta bibliothÃ¨que de photos pour sÃ©lectionner des images de produits (ex. : choisir la photo d'un article pour ta vitrine marchande ou ton profil) et partager des images dans la messagerie avec tes clients ou prestataires.",
           savePhotosPermission:
-            "LASSİ enregistre dans ta bibliothèque les images reçues dans tes conversations. Exemple : sauvegarder la photo d'un produit envoyée par un prestataire dans le chat.",
+            "LASSÄ° enregistre dans ta bibliothÃ¨que les images reÃ§ues dans tes conversations. Exemple : sauvegarder la photo d'un produit envoyÃ©e par un prestataire dans le chat.",
           isAccessMediaLocationEnabled: false,
         },
       ],

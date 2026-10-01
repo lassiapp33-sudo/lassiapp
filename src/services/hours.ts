@@ -9,6 +9,8 @@ export interface DayHours {
   open: string; // "HH:MM"
   close: string; // "HH:MM"
   closed: boolean; // vrai si ce jour est fermé toute la journée
+  pauseStart?: string; // "HH:MM" — début de pause journalière
+  pauseEnd?: string; // "HH:MM" — fin de pause journalière
 }
 
 export type WeekHours = Record<DayKey, DayHours>;
@@ -50,8 +52,9 @@ export const DEFAULT_WEEK_HOURS: WeekHours = {
 
 export interface ShopStatus {
   isOpen: boolean;
-  label: string; // "Ouvert", "Fermé", "Exceptionnellement fermé"
-  nextChange: string; // "Ferme à 22h", "Ouvre à 7h", ""
+  label: string; // "Ouvert", "Fermé", "Exceptionnellement fermé", "En pause"
+  nextChange: string; // "Ferme à 22h", "Ouvre à 7h", "Reprend à 15h", ""
+  isPause?: boolean;
 }
 
 /** Convertit "HH:MM" en minutes depuis minuit. */
@@ -146,6 +149,14 @@ export function computeStatus(hours: WeekHours | null, manuallyClose: boolean): 
 
   // Horaire normal (même journée)
   if (nowMin >= openMin && nowMin < closeMin) {
+    // Vérifier pause
+    if (today.pauseStart && today.pauseEnd) {
+      const ps = toMinutes(today.pauseStart);
+      const pe = toMinutes(today.pauseEnd);
+      if (ps < pe && nowMin >= ps && nowMin < pe) {
+        return { isOpen: false, isPause: true, label: 'En pause', nextChange: `Reprend à ${formatHour(today.pauseEnd)}` };
+      }
+    }
     const remaining = closeMin - nowMin;
     const nextChange =
       remaining <= 60 ? `Ferme dans ${remaining}min` : `Ferme à ${formatHour(today.close)}`;

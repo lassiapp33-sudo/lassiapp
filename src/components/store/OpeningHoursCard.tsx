@@ -17,6 +17,7 @@ import {
   DEFAULT_WEEK_HOURS,
   computeStatus,
   formatDayHours,
+  formatHour,
 } from '../../services/hours';
 
 const formatHeure = (raw: string): string => {
@@ -50,20 +51,22 @@ export default function OpeningHoursCard({
 
   // ── Mode lecture seule (client) ─────────────────────────────────────────────
   if (readOnly) {
+    const dotColor = status.isPause ? colors.accent : status.isOpen ? colors.success : colors.danger;
+    const txtColor = status.isPause ? colors.accent : status.isOpen ? colors.success : colors.danger;
+
+    // Collecte les pauses configurées pour tous les jours (affichage en bas)
+    const todayKey = (['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const)[new Date().getDay()];
+    const todayPause = eff[todayKey];
+    const pauseStr =
+      todayPause && !todayPause.closed && todayPause.pauseStart && todayPause.pauseEnd
+        ? `Pause : ${formatHour(todayPause.pauseStart)} – ${formatHour(todayPause.pauseEnd)}`
+        : null;
+
     return (
       <View style={styles.card}>
         <View style={styles.statusRow}>
-          <View
-            style={[
-              styles.dot,
-              { backgroundColor: status.isOpen ? colors.success : colors.danger },
-            ]}
-          />
-          <Text
-            style={[styles.statusTxt, { color: status.isOpen ? colors.success : colors.danger }]}
-          >
-            {status.label}
-          </Text>
+          <View style={[styles.dot, { backgroundColor: dotColor }]} />
+          <Text style={[styles.statusTxt, { color: txtColor }]}>{status.label}</Text>
           {!!status.nextChange && <Text style={styles.nextChangeTxt}> · {status.nextChange}</Text>}
         </View>
 
@@ -75,6 +78,10 @@ export default function OpeningHoursCard({
             </Text>
           </View>
         ))}
+
+        {pauseStr && (
+          <Text style={styles.pauseInfo}>{pauseStr}</Text>
+        )}
       </View>
     );
   }
@@ -87,45 +94,74 @@ export default function OpeningHoursCard({
         return (
           <View
             key={day}
-            style={[styles.editRow, idx < DAY_KEYS.length - 1 && styles.editRowBorder]}
+            style={[styles.dayBlock, idx < DAY_KEYS.length - 1 && styles.dayBlockBorder]}
           >
-            <Text style={styles.editDayName}>{DAY_LABELS[day].slice(0, 3)}</Text>
+            {/* Ligne principale : jour + horaires + toggle */}
+            <View style={styles.editRow}>
+              <Text style={styles.editDayName}>{DAY_LABELS[day].slice(0, 3)}</Text>
 
-            {dh.closed ? (
-              <Text style={styles.closedTxt}>Fermé</Text>
-            ) : (
-              <View style={styles.timeRange}>
+              {dh.closed ? (
+                <Text style={styles.closedTxt}>Fermé</Text>
+              ) : (
+                <View style={styles.timeRange}>
+                  <TextInput
+                    style={styles.timeInput}
+                    value={dh.open}
+                    onChangeText={v => updateDay(day, { open: formatHeure(v) })}
+                    keyboardType="number-pad"
+                    maxLength={5}
+                    placeholder="07:00"
+                    placeholderTextColor={colors.muted}
+                  />
+                  <Text style={styles.timeDash}>–</Text>
+                  <TextInput
+                    style={styles.timeInput}
+                    value={dh.close}
+                    onChangeText={v => updateDay(day, { close: formatHeure(v) })}
+                    keyboardType="number-pad"
+                    maxLength={5}
+                    placeholder="22:00"
+                    placeholderTextColor={colors.muted}
+                  />
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[styles.toggleBtn, !dh.closed && styles.toggleBtnOpen]}
+                onPress={() => updateDay(day, { closed: !dh.closed })}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.toggleTxt, !dh.closed && styles.toggleTxtOpen]}>
+                  {dh.closed ? 'Fermé' : 'Ouvert'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Ligne pause — uniquement si le jour est ouvert */}
+            {!dh.closed && (
+              <View style={styles.pauseRow}>
+                <Text style={styles.pauseLabel}>Pause</Text>
                 <TextInput
-                  style={styles.timeInput}
-                  value={dh.open}
-                  onChangeText={v => updateDay(day, { open: formatHeure(v) })}
+                  style={styles.pauseInput}
+                  value={dh.pauseStart ?? ''}
+                  onChangeText={v => updateDay(day, { pauseStart: formatHeure(v) || undefined })}
                   keyboardType="number-pad"
                   maxLength={5}
-                  placeholder="07:00"
+                  placeholder="--:--"
                   placeholderTextColor={colors.muted}
                 />
                 <Text style={styles.timeDash}>–</Text>
                 <TextInput
-                  style={styles.timeInput}
-                  value={dh.close}
-                  onChangeText={v => updateDay(day, { close: formatHeure(v) })}
+                  style={styles.pauseInput}
+                  value={dh.pauseEnd ?? ''}
+                  onChangeText={v => updateDay(day, { pauseEnd: formatHeure(v) || undefined })}
                   keyboardType="number-pad"
                   maxLength={5}
-                  placeholder="22:00"
+                  placeholder="--:--"
                   placeholderTextColor={colors.muted}
                 />
               </View>
             )}
-
-            <TouchableOpacity
-              style={[styles.toggleBtn, !dh.closed && styles.toggleBtnOpen]}
-              onPress={() => updateDay(day, { closed: !dh.closed })}
-              activeOpacity={0.75}
-            >
-              <Text style={[styles.toggleTxt, !dh.closed && styles.toggleTxtOpen]}>
-                {dh.closed ? 'Fermé' : 'Ouvert'}
-              </Text>
-            </TouchableOpacity>
           </View>
         );
       })}
@@ -205,15 +241,18 @@ const styles = StyleSheet.create({
   },
 
   // Édition
+  dayBlock: {
+    paddingVertical: 6,
+  },
+  dayBlockBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,.04)',
+  },
   editRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
     gap: 8,
-  },
-  editRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,.04)',
+    paddingVertical: 2,
   },
   editDayName: {
     color: colors.muted,
@@ -253,6 +292,44 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 13,
     fontStyle: 'italic',
+  },
+  pauseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingLeft: 40,
+    paddingBottom: 4,
+  },
+  pauseLabel: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    width: 36,
+  },
+  pauseInput: {
+    width: 54,
+    height: 30,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 7,
+    paddingHorizontal: 6,
+    paddingVertical: 0,
+    color: colors.white,
+    fontFamily: fonts.body,
+    fontSize: 11,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+  },
+  pauseInfo: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 11.5,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   toggleBtn: {
     paddingHorizontal: 10,

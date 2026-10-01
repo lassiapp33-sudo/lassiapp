@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, Platform, Text } from 'react-native';
+import { View, StyleSheet, Platform, Text, AppState } from 'react-native';
+
 
 // Désactive la sélection sur tous les Text de l'app → supprime les soulignements
 // bleus du correcteur Android et empêche la sélection accidentelle de texte.
@@ -55,6 +56,7 @@ import useCartStore             from './src/store/cartStore';
 import AsyncStorage             from '@react-native-async-storage/async-storage';
 import * as authService         from './src/services/auth';
 import { SESSION_ACTIVE_KEY }   from './src/services/auth';
+import { onSessionExpired }     from './src/lib/supabase';
 import { usePushToken, removeCurrentDeviceToken } from './src/hooks/usePushToken';
 import { usePaymentDeepLink } from './src/hooks/usePaymentDeepLink';
 import usePendingNavStore from './src/store/pendingNavStore';
@@ -150,9 +152,28 @@ export default function App() {
         if (isAvailable) {
           await Updates.fetchUpdateAsync();
           await Updates.reloadAsync();
+          return;
         }
       } catch (_) {}
     })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Check OTA au retour en foreground (app jamais fermée).
+  useEffect(() => {
+    if (__DEV__ || IS_EXPO_GO || Platform.OS === 'web') return;
+    const sub = AppState.addEventListener('change', state => {
+      if (state !== 'active') return;
+      (async () => {
+        try {
+          const { isAvailable } = await Updates.checkForUpdateAsync();
+          if (isAvailable) {
+            await Updates.fetchUpdateAsync();
+            await Updates.reloadAsync();
+          }
+        } catch (_) {}
+      })();
+    });
+    return () => sub.remove();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Charge les IDs de cartes déjà affichées (AsyncStorage) au démarrage
@@ -233,6 +254,16 @@ export default function App() {
     useCartStore.getState().clearCart();
     setScreen('auth');
   }, [clearGerant]);
+
+  // Quand getValidToken() échoue (session SIGNED_OUT / reuse detection) →
+  // logout propre + retour écran auth, sans Alert bloquant.
+  useEffect(() => {
+    return onSessionExpired(() => {
+      // Evite de déclencher si l'utilisateur est déjà sur l'écran auth
+      if (screen === 'auth' || screen === 'onboarding' || screen === 'splash') return;
+      handleLogout().catch(() => {});
+    });
+  }, [handleLogout, screen]);
 
   // Handler de premier plan + canaux Android
   // Le require() ici est lazy : expo-notifications ne charge QUE si !IS_EXPO_GO
@@ -321,6 +352,7 @@ export default function App() {
   useEffect(() => {
     return authService.onPasswordRecovery(() => setScreen('resetPassword'));
   }, []);
+
 
 
 

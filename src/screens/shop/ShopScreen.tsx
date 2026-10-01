@@ -1043,10 +1043,10 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
         hasItems={cartCount > 0}
         shopType={shopType}
         isOpen={isOpen}
+        isPause={status.isPause}
         nextChange={status.nextChange}
         onChat={onChat ? () => onChat(shopData?.logoUrl ?? null, isVip) : undefined}
         onCheckout={onCheckout}
-
       />
 
       {/* Aperçu plein écran (logo + photos galerie) — appui long 3 s */}

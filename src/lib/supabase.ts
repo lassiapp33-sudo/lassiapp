@@ -190,9 +190,23 @@ export async function getValidToken(): Promise<string> {
 
   // eslint-disable-next-line no-console
   console.error('[LASSI] getValidToken ECHEC — cached=', !!getCachedToken(), 'session=', !!session, 'time=', new Date().toISOString());
+  // Notifie l'app → navigation vers login (enregistré via onSessionExpired)
+  _sessionExpiredCallbacks.forEach(cb => { try { cb(); } catch {} });
   throw new Error('Session expirée — reconnecte-toi.');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🔴 FIN SESSION GUARDIAN
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Session expirée — callback global ────────────────────────────────────────
+// Quand getValidToken() échoue après les 3 niveaux (session vraiment morte),
+// tous les callbacks enregistrés ici sont appelés → App.tsx redirige vers login.
+const _sessionExpiredCallbacks: Array<() => void> = [];
+export function onSessionExpired(cb: () => void): () => void {
+  _sessionExpiredCallbacks.push(cb);
+  return () => {
+    const i = _sessionExpiredCallbacks.indexOf(cb);
+    if (i >= 0) _sessionExpiredCallbacks.splice(i, 1);
+  };
+}

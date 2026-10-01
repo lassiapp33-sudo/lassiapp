@@ -50,6 +50,7 @@ interface Props {
   hasItems: boolean;
   shopType?: 'products' | 'services' | 'memberships' | 'terrains';
   isOpen?: boolean;
+  isPause?: boolean;
   nextChange?: string;
   onChat?: () => void;
   onCheckout?: () => void;
@@ -60,6 +61,7 @@ export default function ShopFooter({
   hasItems,
   shopType = 'products',
   isOpen = true,
+  isPause = false,
   nextChange = '',
   onChat,
   onCheckout,
@@ -67,13 +69,15 @@ export default function ShopFooter({
   const { main, sub } = LABELS[shopType] ?? LABELS.products;
 
   const mainLabel = shopType === 'products' && hasItems ? `${main} · ${formatPrice(total)}` : main;
+  const closedMain = isPause ? 'En pause' : 'Boutique fermée';
+  const closedSub = nextChange || (isPause ? '' : 'Indisponible');
 
   const handleCheckout = () => {
     if (!isOpen) {
-      const message = nextChange
-        ? `Cette boutique est actuellement fermée.\n${nextChange}`
-        : 'Cette boutique est actuellement fermée. Revenez plus tard.';
-      Alert.alert('Boutique fermée', message, [{ text: 'OK' }]);
+      const message = isPause
+        ? (nextChange ? `En pause · ${nextChange}` : 'Cette boutique est en pause.')
+        : (nextChange ? `Cette boutique est actuellement fermée.\n${nextChange}` : 'Cette boutique est actuellement fermée. Revenez plus tard.');
+      Alert.alert(isPause ? 'En pause' : 'Boutique fermée', message, [{ text: 'OK' }]);
       return;
     }
     onCheckout?.();
@@ -100,8 +104,8 @@ export default function ShopFooter({
       >
         <IcoCard />
         <View>
-          <Text style={[styles.payTxt, !isOpen && styles.payTxtClosed]}>{!isOpen ? 'Boutique fermée' : mainLabel}</Text>
-          <Text style={[styles.paySubTxt, !isOpen && styles.paySubTxtClosed]}>{!isOpen ? (nextChange || 'Indisponible') : sub}</Text>
+          <Text style={[styles.payTxt, !isOpen && styles.payTxtClosed]}>{!isOpen ? closedMain : mainLabel}</Text>
+          <Text style={[styles.paySubTxt, !isOpen && styles.paySubTxtClosed]}>{!isOpen ? closedSub : sub}</Text>
         </View>
       </TouchableOpacity>
     </View>
