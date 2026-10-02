@@ -134,7 +134,7 @@ interface Props {
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
-const MAX_GALLERY = 10;
+const MAX_GALLERY = 5;
 
 export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, onManageBeautyServices, onBeautyReservations, onRestaurantReservations }: Props) {
   const profileRaw = useShopStore(s => s.profile);
@@ -269,8 +269,10 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     return products.length === 0;
   }, [isBeautySlotShop, reservServices.length, products, context.shopType, offres.length]);
 
-  // ── Infos boutique collapsible ────────────────────────────────────────────────
-  const [showInfosBoutique, setShowInfosBoutique] = useState(false);
+  // ── Infos boutique collapsible (révèle automatiquement si déjà renseigné) ────
+  const [showInfosBoutique, setShowInfosBoutique] = useState(
+    !!(profile.description || profile.addressText || profile.phone),
+  );
 
   // ── Stats clics lien de partage ─────────────────────────────────────────────
   const [clicsTotal, setClicsTotal] = useState<number | null>(null);
@@ -1109,11 +1111,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                   ({galleryUrls.length}/{MAX_GALLERY})
                 </Text>
               </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.galleryRow}
-              >
+              <View style={styles.galleryRow}>
                 {galleryUrls.map(url => (
                   <TouchableOpacity
                     key={url}
@@ -1140,63 +1138,22 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     )}
                   </TouchableOpacity>
                 )}
-              </ScrollView>
+              </View>
               <Text style={styles.galleryHint}>Appui long sur une photo pour la supprimer.</Text>
             </View>
 
-            {/* ── Horaires d'ouverture ─────────────────────────────────────── */}
+            {/* ── Infos boutique (bouton style horaires, avant horaires) ──── */}
             <View style={styles.sectionWrap}>
-              <Text style={styles.sectionTitle}>Horaires</Text>
-              {!showHours ? (
-                <Animated.View style={{ opacity: hoursBlink }}>
-                  <TouchableOpacity
-                    style={styles.defineHoursBtn}
-                    onPress={revealHours}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.defineHoursTxt}>Définissez vos horaires</Text>
-                  </TouchableOpacity>
-                </Animated.View>
+              {!showInfosBoutique ? (
+                <TouchableOpacity
+                  style={styles.defineHoursBtn}
+                  onPress={() => setShowInfosBoutique(true)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.defineHoursTxt}>Mettre les infos de ma boutique</Text>
+                </TouchableOpacity>
               ) : (
-                <OpeningHoursCard
-                  hours={context.openingHours}
-                  isManuallyClose={context.isManuallyClose}
-                  readOnly={false}
-                  onChange={async h => {
-                    try {
-                      await updateOpeningHours(h);
-                    } catch {
-                      Alert.alert('Erreur', 'Impossible de sauvegarder les horaires. Réessaie.');
-                    }
-                  }}
-                  onToggleManuallyClose={async () => {
-                    try {
-                      await toggleManuallyClose();
-                    } catch {
-                      Alert.alert(
-                        'Erreur',
-                        'Impossible de mettre à jour le statut exceptionnel. Réessaie.',
-                      );
-                    }
-                  }}
-                />
-              )}
-            </View>
-
-            {/* ── Infos boutique (collapsible, après horaires) ─────────────── */}
-            <View style={styles.sectionWrap}>
-              <TouchableOpacity
-                style={styles.infosToggleBtn}
-                onPress={() => setShowInfosBoutique(v => !v)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.sectionTitle}>Infos boutique</Text>
-                <Text style={styles.infosToggleChevron}>
-                  {showInfosBoutique ? '▲' : '▼'}
-                </Text>
-              </TouchableOpacity>
-              {showInfosBoutique && (
-                <View style={[styles.card, { marginTop: 8 }]}>
+                <View style={styles.card}>
                   <Text style={styles.fieldLabel}>Nom de la boutique</Text>
                   <TextInput
                     style={styles.fieldInput}
@@ -1255,6 +1212,45 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     </TouchableOpacity>
                   )}
                 </View>
+              )}
+            </View>
+
+            {/* ── Horaires d'ouverture ─────────────────────────────────────── */}
+            <View style={styles.sectionWrap}>
+              <Text style={styles.sectionTitle}>Horaires</Text>
+              {!showHours ? (
+                <Animated.View style={{ opacity: hoursBlink }}>
+                  <TouchableOpacity
+                    style={styles.defineHoursBtn}
+                    onPress={revealHours}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.defineHoursTxt}>Définissez vos horaires</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              ) : (
+                <OpeningHoursCard
+                  hours={context.openingHours}
+                  isManuallyClose={context.isManuallyClose}
+                  readOnly={false}
+                  onChange={async h => {
+                    try {
+                      await updateOpeningHours(h);
+                    } catch {
+                      Alert.alert('Erreur', 'Impossible de sauvegarder les horaires. Réessaie.');
+                    }
+                  }}
+                  onToggleManuallyClose={async () => {
+                    try {
+                      await toggleManuallyClose();
+                    } catch {
+                      Alert.alert(
+                        'Erreur',
+                        'Impossible de mettre à jour le statut exceptionnel. Réessaie.',
+                      );
+                    }
+                  }}
+                />
               )}
             </View>
 
@@ -1662,6 +1658,7 @@ const styles = StyleSheet.create({
   // Galerie
   galleryRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     paddingVertical: 2,
   },

@@ -34,6 +34,10 @@ export interface StoreProduct {
   duration?: number;
   /** Période de la formule (uniquement pour 'membership'). */
   formulaPeriod?: FormulaPeriod;
+  /** Tailles disponibles (habillement). */
+  sizes?: string[];
+  /** Couleurs disponibles (habillement). */
+  colors?: string[];
 }
 
 export interface StoreProfile {

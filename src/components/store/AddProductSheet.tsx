@@ -94,6 +94,8 @@ function getPlaceholders(
     return { namePH: 'Ex : Mangues fraîches', descPH: 'Ex : Mangues, bananes, papayes de saison' };
   }
   if (category === 'stores') {
+    if (sub === 'habillement')
+      return { namePH: 'Ex : T-shirt noir taille M', descPH: 'Ex : Coton 100%, disponible en S/M/L/XL' };
     if (sub === 'quincaillerie')
       return { namePH: 'Ex : Marteau 500g', descPH: 'Ex : Marteau acier forgé, manche bois' };
     return { namePH: 'Ex : Riz parfumé 5kg', descPH: 'Ex : Riz long grain importé, sac 5kg' };
@@ -142,8 +144,11 @@ function getCategorySuggestions(
     return ['Entrées', 'Plats', 'Desserts', 'Boissons', 'Accompagnements'];
   if (category === 'fruiterie')
     return ['Fruits', 'Légumes', 'Jus', 'Paniers'];
-  if (category === 'stores')
+  if (category === 'stores') {
+    if (sub === 'habillement')
+      return ['Nouveautés', 'Promos', 'Homme', 'Femme', 'Enfant', 'Chaussures', 'Accessoires'];
     return ['Épicerie', 'Boissons', 'Entretien', 'Quincaillerie'];
+  }
 
   return ['Nouveautés', 'Populaires', 'Promotions'];
 }
@@ -308,6 +313,12 @@ export default function AddProductSheet({
   const [formulaPeriod, setFormulaPeriod] = useState<FormulaPeriod>('mois');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
+  const isHabillement = shopSubcategories.includes('habillement');
+  const TAILLES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+  const COULEURS = ['Blanc', 'Noir', 'Gris', 'Beige', 'Bleu', 'Rouge', 'Vert', 'Jaune', 'Orange', 'Violet', 'Rose', 'Marron'];
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+
   const scrollRef = useRef<ScrollView>(null);
   const [nameY, setNameY] = useState(0);
   const [descY, setDescY] = useState(0);
@@ -330,6 +341,8 @@ export default function AddProductSheet({
       setCatId(product.category);
       setDuration(product.duration?.toString() ?? '');
       setFormulaPeriod(product.formulaPeriod ?? 'mois');
+      setSelectedSizes(product.sizes ?? []);
+      setSelectedColors(product.colors ?? []);
     } else {
       setEmoji('');
       setPhotoUrl(undefined);
@@ -339,6 +352,8 @@ export default function AddProductSheet({
       setCatId(defaultCatId ?? categories[0]?.id ?? '');
       setDuration('');
       setFormulaPeriod('seance');
+      setSelectedSizes([]);
+      setSelectedColors([]);
     }
     setShowEmojiPicker(false);
     setUploading(false);
@@ -433,6 +448,8 @@ export default function AddProductSheet({
       itemType,
       duration: itemType === 'service' && duration ? parseInt(duration, 10) : undefined,
       formulaPeriod: isFormuleMode && itemType === 'membership' ? formulaPeriod : undefined,
+      sizes: isHabillement && selectedSizes.length > 0 ? selectedSizes : undefined,
+      colors: isHabillement && selectedColors.length > 0 ? selectedColors : undefined,
     };
     setSaving(true);
     try {
@@ -699,6 +716,57 @@ export default function AddProductSheet({
               )}
             </View>
 
+            {/* Tailles & Couleurs — uniquement habillement ───────────────── */}
+            {isHabillement && (
+              <>
+                <View style={{ marginTop: 14 }}>
+                  <FieldLabel>Tailles disponibles (optionnel)</FieldLabel>
+                  <View style={styles.catChipRow}>
+                    {TAILLES.map(t => {
+                      const on = selectedSizes.includes(t);
+                      return (
+                        <TouchableOpacity
+                          key={t}
+                          style={[styles.sizeChip, on && styles.sizeChipOn]}
+                          onPress={() =>
+                            setSelectedSizes(prev =>
+                              on ? prev.filter(x => x !== t) : [...prev, t],
+                            )
+                          }
+                          activeOpacity={0.8}
+                        >
+                          <Text style={[styles.sizeChipTxt, on && styles.sizeChipTxtOn]}>{t}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={{ marginTop: 14 }}>
+                  <FieldLabel>Couleurs disponibles (optionnel)</FieldLabel>
+                  <View style={styles.catChipRow}>
+                    {COULEURS.map(c => {
+                      const on = selectedColors.includes(c);
+                      return (
+                        <TouchableOpacity
+                          key={c}
+                          style={[styles.sizeChip, on && styles.sizeChipOn]}
+                          onPress={() =>
+                            setSelectedColors(prev =>
+                              on ? prev.filter(x => x !== c) : [...prev, c],
+                            )
+                          }
+                          activeOpacity={0.8}
+                        >
+                          <Text style={[styles.sizeChipTxt, on && styles.sizeChipTxtOn]}>{c}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              </>
+            )}
+
             <View style={{ height: 18 }} />
 
             {/* Bouton sauvegarder ─────────────────────────────────────────── */}
@@ -924,6 +992,28 @@ const styles = StyleSheet.create({
     color: colors.bg,
     fontFamily: fonts.title,
     fontSize: 14,
+  },
+
+  sizeChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  sizeChipOn: {
+    backgroundColor: 'rgba(253,207,52,.15)',
+    borderColor: colors.accent,
+  },
+  sizeChipTxt: {
+    color: colors.muted,
+    fontFamily: fonts.ui,
+    fontSize: 13,
+  },
+  sizeChipTxtOn: {
+    color: colors.accent,
+    fontFamily: fonts.title,
   },
 
   // Sélecteur de période (memberships)

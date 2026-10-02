@@ -1,0 +1,22 @@
+# Dossiers dist OTA locaux — non nécessaires pour le build EAS
+dist*/
+out/
+
+# Clés et certificats locaux
+KEY/
+
+# Contenus marketing et médias lourds
+contenu-reseaux-sociaux/
+*.wav
+*.mp4
+tmp_wapp.jpeg
+
+# Dossiers de preview / aperçu
+vercel-apercu/
+
+# Submodules non nécessaires au build iOS/Android
+lassi-admin/
+Lassi/
+
+# Fichiers de build node_modules (déjà ignorés par EAS mais explicite)
+node_modules/

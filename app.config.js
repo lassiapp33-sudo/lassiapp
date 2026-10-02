@@ -165,6 +165,7 @@ module.exports = withSecurityPlugins({
       "@react-native-firebase/crashlytics",
       "@react-native-firebase/messaging",
       "./plugins/withFirebaseMessagingManifest",
+      "./plugins/withCustomFirebaseMessaging",
       "expo-font",
       [
         "expo-splash-screen",
