@@ -1,0 +1,606 @@
+import React, { useEffect, useRef, useState } from 'react'
+import { Crown, Search, Plus, Trash2, Power, RefreshCw, X, Eye, EyeOff, MapPin } from 'lucide-react'
+import EmptyState from '../components/EmptyState'
+import { SkeletonRow } from '../components/Skeleton'
+import {
+  getVip5EtoilesProfils,
+  toggleActif,
+  supprimerProfil,
+  creerProfilComplet,
+  setShopLocation,
+  VIP_CAT_LABELS,
+  type Vip5EtoilesProfil,
+  type VipCategorie,
+} from '../services/vip5etoiles'
+
+const DAKAR_DEFAULT = { lat: 14.7167, lng: -17.4677 }
+
+// ─── Mini-carte Leaflet GPS (iframe srcdoc) ───────────────────────────────────
+
+function buildGpsMapHTML(initLat: number, initLng: number): string {
+  return `<!DOCTYPE html><html><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>*{margin:0;padding:0;box-sizing:border-box;}html,body,#map{width:100%;height:100%;}</style>
+</head><body>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+var map=L.map('map',{zoomControl:true}).setView([${initLat},${initLng}],13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© OpenStreetMap',maxZoom:19
+}).addTo(map);
+var marker=null;
+map.on('click',function(e){
+  if(marker)map.removeLayer(marker);
+  marker=L.marker([e.latlng.lat,e.latlng.lng]).addTo(map);
+  if(window.parent)window.parent.postMessage(JSON.stringify({lat:e.latlng.lat,lng:e.latlng.lng}),'*');
+});
+</script></body></html>`
+}
+
+interface GPSModalProps {
+  shopId:   string
+  shopName: string
+  initLat:  number | null
+  initLng:  number | null
+  onClose:  () => void
+  onSaved:  (lat: number, lng: number) => void
+}
+
+function GPSModal({ shopId, shopName, initLat, initLng, onClose, onSaved }: GPSModalProps) {
+  const [picked, setPicked]   = useState<{ lat: number; lng: number } | null>(
+    initLat != null && initLng != null ? { lat: initLat, lng: initLng } : null
+  )
+  const [saving, setSaving]   = useState(false)
+  const [err, setErr]         = useState('')
+  const iframeRef             = useRef<HTMLIFrameElement>(null)
+
+  useEffect(() => {
+    function onMsg(e: MessageEvent) {
+      try {
+        const d = JSON.parse(e.data)
+        if (typeof d.lat === 'number' && typeof d.lng === 'number') {
+          setPicked({ lat: d.lat, lng: d.lng })
+        }
+      } catch { /* ignore */ }
+    }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
+  }, [])
+
+  async function handleSave() {
+    if (!picked) { setErr('Cliquez sur la carte pour placer le pin.'); return }
+    setSaving(true)
+    setErr('')
+    try {
+      await setShopLocation(shopId, picked.lat, picked.lng)
+      onSaved(picked.lat, picked.lng)
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Erreur inconnue')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const mapHTML = buildGpsMapHTML(initLat ?? DAKAR_DEFAULT.lat, initLng ?? DAKAR_DEFAULT.lng)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-surface border border-border rounded-xl w-full max-w-lg flex flex-col overflow-hidden" style={{ maxHeight: '90vh' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
+          <div>
+            <h2 className="text-white font-semibold">Définir la position GPS</h2>
+            <p className="text-muted text-xs mt-0.5">{shopName} — cliquez sur la carte pour placer le pin</p>
+          </div>
+          <button onClick={onClose} className="text-muted hover:text-white"><X size={18} /></button>
+        </div>
+
+        <div className="relative flex-1" style={{ minHeight: 320 }}>
+          <iframe
+            ref={iframeRef}
+            srcDoc={mapHTML}
+            sandbox="allow-scripts allow-same-origin"
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block', minHeight: 320 }}
+            title="Carte GPS"
+          />
+          {picked && (
+            <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg px-3 py-1.5 text-xs text-gray-800 font-mono shadow">
+              {picked.lat.toFixed(6)}, {picked.lng.toFixed(6)}
+            </div>
+          )}
+        </div>
+
+        {err && <p className="text-danger text-sm px-5 pt-3">{err}</p>}
+
+        <div className="flex gap-3 px-5 py-4 border-t border-border flex-shrink-0">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-border text-muted text-sm hover:text-white transition-colors">
+            Annuler
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !picked}
+            className="flex-1 py-2.5 rounded-lg bg-accent text-bg font-semibold text-sm hover:bg-accent/90 disabled:opacity-50 transition-colors"
+          >
+            {saving ? 'Enregistrement…' : 'Confirmer la position'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Formulaire création ──────────────────────────────────────────────────────
+
+interface CreerModalProps {
+  onClose: () => void
+  onCreated: () => void
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="text-xs text-muted mb-1 block">{label}</label>
+      {children}
+    </div>
+  )
+}
+
+function CreerModal({ onClose, onCreated }: CreerModalProps) {
+  const [telephone,  setTelephone]  = useState('')
+  const [motDePasse, setMotDePasse] = useState('')
+  const [showMdp,    setShowMdp]    = useState(false)
+  const [categorie,  setCategorie]  = useState<VipCategorie>('restauration')
+  const [gabarit,    setGabarit]    = useState<'palais' | 'maison'>('palais')
+  const [nomAffiche, setNom]        = useState('')
+  const [initiale,   setInitiale]   = useState('')
+  const [baseline,   setBaseline]   = useState('')
+  const [saving,     setSaving]     = useState(false)
+  const [err,        setErr]        = useState('')
+
+  async function handleSubmit() {
+    if (!telephone.trim() || !motDePasse || !nomAffiche.trim() || !initiale.trim()) {
+      setErr('Téléphone, mot de passe, nom affiché et initiale sont obligatoires.')
+      return
+    }
+    if (motDePasse.length < 8) {
+      setErr('Le mot de passe doit contenir au moins 8 caractères.')
+      return
+    }
+    setSaving(true)
+    setErr('')
+    try {
+      await creerProfilComplet({
+        telephone:  telephone.trim(),
+        motDePasse,
+        nomAffiche: nomAffiche.trim(),
+        categorie,
+        gabarit,
+        initiale:   initiale.trim().toUpperCase(),
+        baseline:   baseline.trim() || undefined,
+      })
+      onCreated()
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Erreur lors de la création')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 overflow-y-auto py-8">
+      <div className="bg-surface border border-border rounded-xl w-full max-w-md mx-4 p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-white font-semibold text-lg">Nouveau profil 5 Étoiles</h2>
+            <p className="text-muted text-xs mt-0.5">Crée la boutique + le compte gérant</p>
+          </div>
+          <button onClick={onClose} className="text-muted hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+
+          {/* Section compte gérant */}
+          <div className="border border-border/60 rounded-lg p-4 space-y-3">
+            <p className="text-xs text-muted uppercase tracking-widest">Compte gérant</p>
+
+            <Field label="Numéro de téléphone *">
+              <input
+                value={telephone}
+                onChange={e => setTelephone(e.target.value)}
+                placeholder="7XXXXXXXX"
+                inputMode="tel"
+                className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
+              />
+            </Field>
+
+            <Field label="Mot de passe *">
+              <div className="relative">
+                <input
+                  type={showMdp ? 'text' : 'password'}
+                  value={motDePasse}
+                  onChange={e => setMotDePasse(e.target.value)}
+                  placeholder="8 caractères minimum"
+                  className="w-full bg-bg border border-border rounded-lg px-3 py-2 pr-10 text-white text-sm focus:outline-none focus:border-accent"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowMdp(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white"
+                >
+                  {showMdp ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </Field>
+          </div>
+
+          {/* Section établissement */}
+          <div className="border border-border/60 rounded-lg p-4 space-y-3">
+            <p className="text-xs text-muted uppercase tracking-widest">Établissement</p>
+
+            {/* Nom affiché + Initiale */}
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <Field label="Nom affiché *">
+                  <input
+                    value={nomAffiche}
+                    onChange={e => setNom(e.target.value)}
+                    placeholder="Ex : Le Baobab d'Or"
+                    className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
+                  />
+                </Field>
+              </div>
+              <div className="w-20">
+                <Field label="Initiale *">
+                  <input
+                    value={initiale}
+                    onChange={e => setInitiale(e.target.value.slice(0, 1).toUpperCase())}
+                    maxLength={1}
+                    placeholder="B"
+                    className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm text-center uppercase focus:outline-none focus:border-accent"
+                  />
+                </Field>
+              </div>
+            </div>
+
+            <Field label="Catégorie *">
+              <select
+                value={categorie}
+                onChange={e => setCategorie(e.target.value as VipCategorie)}
+                className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
+              >
+                {(Object.keys(VIP_CAT_LABELS) as VipCategorie[]).map(k => (
+                  <option key={k} value={k}>{VIP_CAT_LABELS[k]}</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Gabarit">
+              <div className="flex gap-3">
+                {(['palais', 'maison'] as const).map(g => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setGabarit(g)}
+                    className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      gabarit === g
+                        ? 'border-accent text-accent bg-accent/10'
+                        : 'border-border text-muted hover:border-white/30'
+                    }`}
+                  >
+                    {g === 'palais' ? 'Palais' : 'Maison'}
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="Baseline (optionnel)">
+              <input
+                value={baseline}
+                onChange={e => setBaseline(e.target.value)}
+                placeholder="Ex : Cuisine sénégalaise d'exception"
+                className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
+              />
+            </Field>
+          </div>
+
+          {err && <p className="text-danger text-sm">{err}</p>}
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-lg border border-border text-muted text-sm hover:text-white transition-colors"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving}
+            className="flex-1 py-2.5 rounded-lg bg-accent text-bg font-semibold text-sm hover:bg-accent/90 disabled:opacity-50 transition-colors"
+          >
+            {saving ? 'Création…' : 'Créer le profil'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Page principale ──────────────────────────────────────────────────────────
+
+export default function Vip5EtoilesPage() {
+  const [profils, setProfils]   = useState<Vip5EtoilesProfil[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [search, setSearch]     = useState('')
+  const [showModal, setModal]   = useState(false)
+  const [toDelete, setToDelete] = useState<Vip5EtoilesProfil | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [toggling, setToggling] = useState<string | null>(null)
+  const [gpsTarget, setGpsTarget] = useState<Vip5EtoilesProfil | null>(null)
+  const [err, setErr]           = useState('')
+
+  function load() {
+    setLoading(true)
+    setErr('')
+    getVip5EtoilesProfils()
+      .then(setProfils)
+      .catch(e => setErr(e.message))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
+
+  const filtered = profils.filter(p =>
+    p.nomAffiche.toLowerCase().includes(search.toLowerCase()) ||
+    p.shopName.toLowerCase().includes(search.toLowerCase())
+  )
+
+  async function handleToggle(p: Vip5EtoilesProfil) {
+    setToggling(p.id)
+    try {
+      await toggleActif(p.id, !p.actif)
+      setProfils(prev => prev.map(x => x.id === p.id ? { ...x, actif: !x.actif } : x))
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Erreur inconnue')
+    } finally {
+      setToggling(null)
+    }
+  }
+
+  async function handleDelete() {
+    if (!toDelete) return
+    setDeleting(true)
+    try {
+      await supprimerProfil(toDelete.id, toDelete.shopId)
+      setProfils(prev => prev.filter(x => x.id !== toDelete.id))
+      setToDelete(null)
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Erreur inconnue')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* En-tête */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Crown className="text-accent" size={22} />
+          <div>
+            <h1 className="text-white font-title font-bold text-xl">5 Étoiles LASSI</h1>
+            <p className="text-muted text-sm">{profils.length} profil{profils.length !== 1 ? 's' : ''} · commission 2 %</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={load}
+            className="p-2 rounded-lg border border-border text-muted hover:text-white transition-colors"
+            title="Actualiser"
+          >
+            <RefreshCw size={16} />
+          </button>
+          <button
+            onClick={() => setModal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent text-bg font-semibold text-sm hover:bg-accent/90 transition-colors"
+          >
+            <Plus size={16} />
+            Nouveau profil
+          </button>
+        </div>
+      </div>
+
+      {err && (
+        <div className="bg-danger/10 border border-danger/30 rounded-lg px-4 py-3 text-danger text-sm flex items-center justify-between">
+          {err}
+          <button onClick={() => setErr('')}><X size={14} /></button>
+        </div>
+      )}
+
+      {/* Recherche */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Rechercher par nom ou boutique…"
+          className="w-full pl-9 pr-4 py-2.5 bg-surface border border-border rounded-lg text-white text-sm placeholder:text-muted focus:outline-none focus:border-accent"
+        />
+      </div>
+
+      {/* Table */}
+      <div className="bg-surface border border-border rounded-xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="text-left px-4 py-3 text-muted font-medium">Établissement</th>
+              <th className="text-left px-4 py-3 text-muted font-medium">Catégorie</th>
+              <th className="text-left px-4 py-3 text-muted font-medium">Gabarit</th>
+              <th className="text-left px-4 py-3 text-muted font-medium">Téléphone</th>
+              <th className="text-center px-4 py-3 text-muted font-medium">GPS</th>
+              <th className="text-center px-4 py-3 text-muted font-medium">Statut</th>
+              <th className="text-right px-4 py-3 text-muted font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} cols={6} />)
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7}>
+                  <EmptyState
+                    icon={<Crown size={32} className="text-muted" />}
+                    title="Aucun profil 5 Étoiles"
+                    subtitle={search ? 'Aucun résultat pour cette recherche.' : 'Créez le premier établissement 5 Étoiles LASSI.'}
+                  />
+                </td>
+              </tr>
+            ) : filtered.map(p => (
+              <tr key={p.id} className="border-b border-border/50 hover:bg-white/2 transition-colors">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-full border border-accent/50 flex items-center justify-center text-accent text-xs font-bold flex-shrink-0">
+                      {p.nomAffiche.charAt(0).toUpperCase()}
+                    </span>
+                    <div>
+                      <p className="text-white font-medium">{p.nomAffiche}</p>
+                      <p className="text-muted text-xs">{p.shopName}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-muted">{VIP_CAT_LABELS[p.categorie]}</td>
+                <td className="px-4 py-3">
+                  <span className="text-xs text-muted border border-border rounded px-2 py-0.5 capitalize">
+                    {p.gabarit}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  {p.telephoneGerant ? (
+                    <span className="text-white text-xs font-mono">
+                      +221 {p.telephoneGerant}
+                    </span>
+                  ) : (
+                    <span className="text-muted text-xs">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-center">
+                  {p.latitude != null && p.longitude != null ? (
+                    <button
+                      onClick={() => setGpsTarget(p)}
+                      title="Modifier la position GPS"
+                      className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors"
+                    >
+                      <MapPin size={12} />
+                      <span>Défini</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setGpsTarget(p)}
+                      title="Définir la position GPS"
+                      className="inline-flex items-center gap-1 text-xs text-orange-400 hover:text-orange-300 transition-colors font-medium"
+                    >
+                      <MapPin size={12} />
+                      <span>Manquant</span>
+                    </button>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                    p.actif
+                      ? 'bg-success/15 text-success border border-success/30'
+                      : 'bg-border/60 text-muted'
+                  }`}>
+                    {p.actif ? 'Actif' : 'Inactif'}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => handleToggle(p)}
+                      disabled={toggling === p.id}
+                      title={p.actif ? 'Désactiver' : 'Activer'}
+                      className={`p-1.5 rounded-lg border transition-colors ${
+                        p.actif
+                          ? 'border-orange/40 text-orange hover:bg-orange/10'
+                          : 'border-success/40 text-success hover:bg-success/10'
+                      } disabled:opacity-40`}
+                    >
+                      <Power size={14} />
+                    </button>
+                    <button
+                      onClick={() => setToDelete(p)}
+                      title="Supprimer"
+                      className="p-1.5 rounded-lg border border-danger/40 text-danger hover:bg-danger/10 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Modal création */}
+      {showModal && (
+        <CreerModal
+          onClose={() => setModal(false)}
+          onCreated={() => { setModal(false); load() }}
+        />
+      )}
+
+      {/* Modal GPS */}
+      {gpsTarget && (
+        <GPSModal
+          shopId={gpsTarget.shopId}
+          shopName={gpsTarget.nomAffiche}
+          initLat={gpsTarget.latitude}
+          initLng={gpsTarget.longitude}
+          onClose={() => setGpsTarget(null)}
+          onSaved={(lat, lng) => {
+            setProfils(prev => prev.map(p =>
+              p.id === gpsTarget.id ? { ...p, latitude: lat, longitude: lng } : p
+            ))
+            setGpsTarget(null)
+          }}
+        />
+      )}
+
+      {/* Confirmation suppression */}
+      {toDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-surface border border-border rounded-xl w-full max-w-sm mx-4 p-6">
+            <h2 className="text-white font-semibold text-lg mb-2">Supprimer ce profil ?</h2>
+            <p className="text-muted text-sm mb-1">
+              <span className="text-white font-medium">{toDelete.nomAffiche}</span> — {toDelete.shopName}
+            </p>
+            <p className="text-muted text-sm mb-5">
+              Le profil, ses prestations et ses horaires seront supprimés.
+              La boutique perdra le badge 5 Étoiles.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setToDelete(null)}
+                className="flex-1 py-2.5 rounded-lg border border-border text-muted text-sm hover:text-white transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 py-2.5 rounded-lg bg-danger text-white font-semibold text-sm hover:bg-danger/80 disabled:opacity-50 transition-colors"
+              >
+                {deleting ? 'Suppression…' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

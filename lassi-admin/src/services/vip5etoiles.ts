@@ -1,0 +1,116 @@
+import { supabase } from '../lib/supabase'
+
+export type VipCategorie =
+  | 'restauration'
+  | 'musculation_fitness'
+  | 'boulangerie_patisserie'
+  | 'beaute_tressage'
+  | 'coiffure'
+
+export const VIP_CAT_LABELS: Record<VipCategorie, string> = {
+  restauration:          'Restauration',
+  musculation_fitness:   'Fitness',
+  boulangerie_patisserie:'Boulangerie / Pâtisserie',
+  beaute_tressage:       'Salon de beauté',
+  coiffure:              'Salon de coiffure',
+}
+
+export interface Vip5EtoilesProfil {
+  id:              string
+  shopId:          string
+  shopName:        string
+  categorie:       VipCategorie
+  gabarit:         'palais' | 'maison'
+  nomAffiche:      string
+  baseline:        string | null
+  actif:           boolean
+  gerantUserId:    string | null
+  telephoneGerant: string | null
+  updatedAt:       string
+  latitude:        number | null
+  longitude:       number | null
+}
+
+export async function getVip5EtoilesProfils(): Promise<Vip5EtoilesProfil[]> {
+  const { data, error } = await supabase
+    .from('vip_profils')
+    .select(`
+      id, shop_id, categorie, gabarit, nom_affiche, baseline, actif,
+      gerant_user_id, telephone_gerant, updated_at,
+      shops!inner ( name, latitude, longitude )
+    `)
+    .order('updated_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? []).map((r: any) => ({
+    id:              r.id,
+    shopId:          r.shop_id,
+    shopName:        r.shops?.name ?? '—',
+    categorie:       r.categorie,
+    gabarit:         r.gabarit ?? 'palais',
+    nomAffiche:      r.nom_affiche,
+    baseline:        r.baseline ?? null,
+    actif:           Boolean(r.actif),
+    gerantUserId:    r.gerant_user_id ?? null,
+    telephoneGerant: r.telephone_gerant ?? null,
+    updatedAt:       r.updated_at,
+    latitude:        r.shops?.latitude ?? null,
+    longitude:       r.shops?.longitude ?? null,
+  }))
+}
+
+export async function toggleActif(profilId: string, actif: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('vip_profils')
+    .update({ actif })
+    .eq('id', profilId)
+  if (error) throw new Error(error.message)
+}
+
+export async function supprimerProfil(profilId: string, shopId: string): Promise<void> {
+  const { error } = await supabase
+    .from('vip_profils')
+    .delete()
+    .eq('id', profilId)
+  if (error) throw new Error(error.message)
+  // La migration trg_vip_reset_shop_flag remet shops.is_vip = false automatiquement
+  // Mais on le force aussi ici pour la cohérence immédiate en cas de trigger manquant
+  await supabase.from('shops').update({ is_vip: false }).eq('id', shopId).throwOnError()
+}
+
+export async function setShopLocation(shopId: string, lat: number, lng: number): Promise<void> {
+  const { error } = await supabase
+    .from('shops')
+    .update({ latitude: lat, longitude: lng })
+    .eq('id', shopId)
+  if (error) throw new Error(error.message)
+}
+
+export async function creerProfilComplet(params: {
+  telephone:  string
+  motDePasse: string
+  nomAffiche: string
+  categorie:  VipCategorie
+  gabarit:    'palais' | 'maison'
+  initiale:   string
+  baseline?:  string
+}): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('create-vip-gerant', {
+    body: {
+      telephone:  params.telephone,
+      motDePasse: params.motDePasse,
+      nomAffiche: params.nomAffiche,
+      categorie:  params.categorie,
+      gabarit:    params.gabarit,
+      initiale:   params.initiale,
+      baseline:   params.baseline,
+    },
+  })
+  if (error) {
+    // FunctionsHttpError : extraire le vrai message du body JSON
+    const body = await (error as any).context?.json?.().catch(() => null)
+    throw new Error(body?.error ?? error.message ?? 'Erreur serveur')
+  }
+  if (data?.error) throw new Error(data.error)
+}

@@ -1,0 +1,2 @@
+# SPA : toute route inconnue retombe sur index.html (react-router gère le routage côté client)
+/*  /index.html  200
