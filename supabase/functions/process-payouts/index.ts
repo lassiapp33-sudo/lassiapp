@@ -1,0 +1,412 @@
+// ============================================================
+// EDGE FUNCTION : process-payouts (reversement automatique)
+// Section 3.3 — à appeler par un cron toutes les 1-2 minutes
+// (pg_cron + pg_net, ou planificateur externe avec en-tête
+// X-Cron-Secret = CRON_SECRET).
+//
+// Pour chaque payout 'queued' (verrouillé par payout_queue_claim_batch
+// avec FOR UPDATE SKIP LOCKED — deux exécutions concurrentes ne traitent
+// jamais la même ligne) :
+//   1. Recharger les montants depuis payment_intents (jamais depuis une
+//      valeur potentiellement modifiée) + vérifier l'invariant comptable
+//      gross_amount == commission_amount + merchant_amount.
+//   2. Vérifier que le payment_intent est bien 'split_done' (sinon doute
+//      → STOP, pas de reversement).
+//   3. Vérifier le numéro Wave/OM du prestataire (format sénégalais valide).
+//   4. Appel API payout avec idempotency_key = payout_{payout_id} (Wave/OM
+//      refusent eux-mêmes un double envoi avec la même clé).
+//   5. Succès → payout_queue_mark_paid (statut 'paid' + external_payout_ref).
+//      Échec  → payout_queue_mark_failure (backoff exponentiel, max 5
+//      tentatives puis 'failed' + alerte admin).
+// ============================================================
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { waveRequestPayout } from '../_shared/waveProxy.ts';
+import { sendPushToUser } from '../_shared/push.ts';
+
+// Payout API Wave : seul WAVE_API_KEY est nécessaire (pas de WAVE_MERCHANT_ID)
+const WAVE_API_KEY = Deno.env.get('WAVE_API_KEY') ?? '';
+// OM Sonatel : Cash In vers le prestataire (POST /api/eWallet/v1/cashins)
+// Requiert OM_RETAILER_MSISDN + OM_RETAILER_PIN_ENCRYPTED (PIN de LASSI chiffré RSA)
+const OM_RETAILER_MSISDN        = Deno.env.get('OM_RETAILER_MSISDN')        ?? '';
+const OM_RETAILER_PIN_ENCRYPTED = Deno.env.get('OM_RETAILER_PIN_ENCRYPTED') ?? '';
+const IS_PRODUCTION             = WAVE_API_KEY !== '' ||
+                                  (OM_RETAILER_MSISDN !== '' && OM_RETAILER_PIN_ENCRYPTED !== '');
+
+// Erreurs Wave qui ne bénéficient pas d'un retry — terminal = true
+const TERMINAL_WAVE_ERRORS = new Set([
+  'country-mismatch', 'currency-mismatch', 'idempotency-mismatch',
+  'insufficient-funds', 'invalid-aggregated-merchant-id', 'aggregated-merchant-required',
+  'recipient-minor', 'recipient-account-blocked', 'recipient-account-inactive',
+  'recipient-limit-exceeded', 'request-not-json', 'request-parsing-error',
+  'request-validation-error',
+]);
+
+class WavePayoutError extends Error {
+  isTerminal: boolean;
+  constructor(message: string, isTerminal: boolean) {
+    super(message);
+    this.isTerminal = isTerminal;
+  }
+}
+
+// Secret partagé avec le planificateur (cron). OBLIGATOIRE en production.
+// Si absent, l'endpoint répond 503 et refuse toute exécution.
+const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
+
+const BATCH_LIMIT = 20;
+
+// Numéro sénégalais : 9 chiffres commençant par 70/75/76/77/78
+const PHONE_RE = /^7[05678][0-9]{7}$/;
+
+serve(async (req) => {
+  // Endpoint financier critique : accès interdit si CRON_SECRET absent ou incorrect.
+  // Ne jamais laisser passer une requête non authentifiée sur un endpoint de virement.
+  if (!CRON_SECRET) {
+    console.error('[process-payouts] CRON_SECRET non configuré — endpoint désactivé par sécurité');
+    return new Response('Service non disponible (configuration manquante)', { status: 503 });
+  }
+  if (req.headers.get('X-Cron-Secret') !== CRON_SECRET) {
+    return new Response('Non autorisé', { status: 401 });
+  }
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  );
+
+  // Auto-guérison : répare les split_done sans payout_queue avant de traiter le batch
+  // (protège contre les régressions de migration qui oublient l'INSERT payout_queue)
+  const { data: reconciled } = await supabase.rpc('reconcile_missing_payouts');
+  if ((reconciled as { reconciled?: number })?.reconciled > 0) {
+    console.log(`[process-payouts] reconcile: ${(reconciled as { reconciled: number }).reconciled} payout(s) manquant(s) réparé(s)`);
+  }
+
+  // Débloquer les disputed avec écart <= 1 FCFA (arrondi Wave/OM)
+  const { data: reconciledDisputed } = await supabase.rpc('reconcile_disputed_payments');
+  if ((reconciledDisputed as { reconciled?: number })?.reconciled > 0) {
+    console.log(`[process-payouts] disputed réconciliés: ${(reconciledDisputed as { reconciled: number }).reconciled}`);
+  }
+
+  const { data: batch, error: claimError } = await supabase.rpc('payout_queue_claim_batch', {
+    p_limit: BATCH_LIMIT,
+  });
+
+  if (claimError) {
+    console.error('[process-payouts] payout_queue_claim_batch erreur DB:', claimError.message);
+    return new Response('Erreur serveur', { status: 500 });
+  }
+
+  const results = { processed: 0, paid: 0, retried: 0, failed: 0 };
+
+  // Délai anti-doublon OM : OM rejette deux Cash Ins identiques (même montant + même numéro)
+  // envoyés dans une fenêtre de ~2 min. On espace d'au moins 5 s entre Cash Ins au même numéro.
+  const omLastSentAt = new Map<string, number>();
+
+  for (const payout of batch ?? []) {
+    results.processed++;
+
+    // 1. Invariant comptable :
+    //    - montant_total == prix_base + commission_lassi + livraison_fee
+    //    - montant > 0 (payout positif)
+    //    - montant <= prix_base (LASSI ne reverse jamais plus que le prix du prestataire)
+    const livraison_fee = (payout.livraison_fee as number) ?? 0;
+    const invariantOk =
+      payout.montant_total === payout.prix_base + payout.commission_lassi + livraison_fee &&
+      payout.montant > 0 &&
+      payout.montant <= payout.prix_base;
+
+    if (!invariantOk) {
+      // Section 9 : ne jamais logger la ligne complète (contient
+      // prestataire_phone) — uniquement les montants utiles au diagnostic.
+      console.error('[ALERTE PAIEMENT] payout', payout.id, 'incohérence de montant — STOP', JSON.stringify({
+        montant_total: payout.montant_total,
+        montant: payout.montant,
+        prix_base: payout.prix_base,
+        commission_lassi: payout.commission_lassi,
+        livraison_fee,
+        payment_intent_statut: payout.payment_intent_statut,
+      }));
+      await supabase.rpc('payout_queue_mark_failure', {
+        p_payout_id: payout.id,
+        p_error:     'amount_invariant_violation',
+        p_terminal:  true,
+      });
+      results.failed++;
+      continue;
+    }
+
+    // 2. Le payment_intent doit être au stade 'split_done' (paiement encaissé
+    //    et split effectué). Sinon → doute, on ne reverse jamais.
+    if (payout.payment_intent_statut !== 'split_done') {
+      console.error('[ALERTE PAIEMENT] payout', payout.id, 'payment_intent statut=', payout.payment_intent_statut, '— STOP');
+      await supabase.rpc('payout_queue_mark_failure', {
+        p_payout_id: payout.id,
+        p_error:     `payment_intent_not_split_done:${payout.payment_intent_statut}`,
+        p_terminal:  true,
+      });
+      results.failed++;
+      continue;
+    }
+
+    // 3. Numéro Wave/OM du prestataire : présent et au format valide
+    const phone = (payout.prestataire_phone ?? '').trim();
+    if (!PHONE_RE.test(phone)) {
+      // Section 9 : ne jamais logger le numéro de téléphone (donnée
+      // financière sensible) — seule la longueur aide au diagnostic.
+      console.error('[ALERTE PAIEMENT] payout', payout.id, `numéro prestataire invalide (longueur=${phone.length}) — STOP`);
+      await supabase.rpc('payout_queue_mark_failure', {
+        p_payout_id: payout.id,
+        p_error:     'invalid_prestataire_phone',
+        p_terminal:  true,
+      });
+      results.failed++;
+      continue;
+    }
+
+    // 4. Appel API payout (idempotency_key = payout_{id})
+    // Pour OM : attendre 5 s si on vient d'envoyer un Cash In au même numéro (anti "transaction identique")
+    if (IS_PRODUCTION && payout.moyen_paiement === 'orange_money') {
+      const last = omLastSentAt.get(phone) ?? 0;
+      const wait = 5000 - (Date.now() - last);
+      if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    }
+
+    let payoutRef: string;
+    try {
+      if (!IS_PRODUCTION) {
+        payoutRef = await simulatePayout(payout.id, payout.montant);
+      } else if (payout.moyen_paiement === 'wave') {
+        payoutRef = await sendWavePayout({ payoutId: payout.id, montant: payout.montant, phone });
+      } else {
+        payoutRef = await sendOrangeMoneyPayout({ payoutId: payout.id, montant: payout.montant, phone });
+      }
+    } catch (err: unknown) {
+      const msg        = err instanceof Error ? err.message : 'Erreur fournisseur de paiement';
+      const isTerminal = err instanceof WavePayoutError ? err.isTerminal : false;
+      console.error('[process-payouts] échec appel fournisseur, payout', payout.id, msg);
+      await supabase.rpc('payout_queue_mark_failure', {
+        p_payout_id: payout.id,
+        p_error:     msg,
+        p_terminal:  isTerminal,
+      });
+      if (isTerminal) results.failed++;
+      else            results.retried++;
+      continue;
+    }
+
+    // 5. Succès → marquer payé
+    const { data: markResult, error: markError } = await supabase.rpc('payout_queue_mark_paid', {
+      p_payout_id:    payout.id,
+      p_external_ref: payoutRef,
+    });
+
+    if (markError) {
+      console.error('[process-payouts] payout_queue_mark_paid erreur DB pour', payout.id, markError.message);
+      results.failed++;
+      continue;
+    }
+
+    // Race condition : payout annulé par process_refund APRÈS l'envoi des fonds.
+    // L'événement 'payout_sent_after_cancel' est déjà créé dans payment_logs par
+    // payout_queue_mark_paid. On logue ici pour visibilité dans les logs Edge Function.
+    if (markResult?.error === 'payout_sent_after_cancel') {
+      console.error('[ALERTE PAIEMENT] payout', payout.id, 'envoyé (ref', payoutRef, ') mais annulé entre-temps — récupération manuelle requise');
+      results.failed++;
+      continue;
+    }
+
+    if (!markResult?.ok) {
+      console.error('[process-payouts] payout_queue_mark_paid état inattendu pour', payout.id, JSON.stringify(markResult));
+      results.failed++;
+      continue;
+    }
+
+    results.paid++;
+
+    // Enregistrer le timestamp du Cash In OM réussi (anti-doublon pour la prochaine itération)
+    if (payout.moyen_paiement === 'orange_money') {
+      omLastSentAt.set(phone, Date.now());
+    }
+
+    // ── Notification prestataire après reversement confirmé (OM ET Wave) ──────
+    // Règle : la notif ne part QUE quand l'argent est réellement reversé (ici).
+    {
+      const montantStr = `${payout.montant} FCFA`;
+      const moyenStr   = payout.moyen_paiement === 'orange_money' ? 'Orange Money' : 'Wave';
+
+      let title     = 'Reversement reçu';
+      let body      = `${montantStr} reversés sur votre ${moyenStr}.`;
+      let notifType = 'payout_done';
+
+      try {
+        // Abonnement fitness : metadata contient offre_nom
+        const { data: piData, error: piErr } = await supabase
+          .from('payment_intents')
+          .select('metadata, client_id')
+          .eq('id', payout.payment_intent_id)
+          .maybeSingle();
+
+        if (piErr) {
+          console.error('[notif] payment_intents query error:', piErr.message);
+        } else {
+          const meta     = piData?.metadata as Record<string, unknown> | null;
+          const offreNom = meta?.offre_nom as string | undefined;
+
+          if (offreNom) {
+            let clientName = 'Un client';
+            if (piData?.client_id) {
+              const { data: cp } = await supabase
+                .from('profiles')
+                .select('name')
+                .eq('id', piData.client_id)
+                .maybeSingle();
+              if (cp?.name) clientName = cp.name as string;
+            }
+            title     = 'Nouvel abonné payé';
+            body      = `${clientName} a souscrit à "${offreNom}". ${montantStr} reversés sur votre ${moyenStr}.`;
+            notifType = 'fitness_abonnement_paye';
+          }
+        }
+      } catch (e) {
+        console.error('[notif] erreur lecture metadata:', e instanceof Error ? e.message : e);
+      }
+
+      // Push notification (bannière)
+      try {
+        await sendPushToUser(supabase, payout.prestataire_id, {
+          title,
+          body,
+          data:      { type: notifType, montant: payout.montant, payment_intent_id: payout.payment_intent_id },
+          channelId: 'commandes-v2',
+        });
+        console.log('[notif] push envoyé prestataire', payout.prestataire_id);
+      } catch (e) {
+        console.error('[notif] push erreur:', e instanceof Error ? e.message : e);
+      }
+
+      // Notification in-app (onglet Notifications)
+      try {
+        const { error: notifErr } = await supabase.from('notifications').insert({
+          user_id: payout.prestataire_id,
+          type:    'payment',
+          title,
+          body,
+          data:    { type: notifType, montant: payout.montant, payment_intent_id: payout.payment_intent_id },
+        });
+        if (notifErr) {
+          console.error('[notif] insert notifications erreur:', notifErr.message, notifErr.details, notifErr.hint);
+        } else {
+          console.log('[notif] notification in-app insérée prestataire', payout.prestataire_id);
+        }
+      } catch (e) {
+        console.error('[notif] insert notifications exception:', e instanceof Error ? e.message : e);
+      }
+    }
+  }
+
+  return new Response(JSON.stringify({ ok: true, ...results }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+});
+
+// ============================================================
+// SIMULATION (mode démo sans clés API)
+// ============================================================
+async function simulatePayout(payoutId: string, _montant: number): Promise<string> {
+  await new Promise(r => setTimeout(r, 200));
+  return `SIM-PAYOUT-${Date.now()}-${payoutId.slice(0, 8).toUpperCase()}`;
+}
+
+// ============================================================
+// WAVE PAYOUT — POST /v1/payout (Payout API)
+// Champs doc : receive_amount (string), mobile (E.164), client_reference
+// Pas de merchant_id dans la Payout API.
+// Deux types d'erreurs à gérer (doc Wave) :
+//   1. HTTP non-200 → body { code, message }
+//   2. HTTP 200 + payout_error → payout exécuté mais échoué
+// ============================================================
+async function sendWavePayout(params: { payoutId: string; montant: number; phone: string }): Promise<string> {
+  const payoutBody = JSON.stringify({
+    currency:         'XOF',
+    receive_amount:   String(params.montant),       // string selon spec Wave
+    mobile:           `+221${params.phone}`,        // E.164
+    client_reference: params.payoutId,
+  });
+
+  const response = await waveRequestPayout(payoutBody, `payout_${params.payoutId}`);
+
+  const data = await response.json();
+
+  // Erreur HTTP (4xx/5xx) — body contient { code, message }
+  if (!response.ok) {
+    const code       = (data.code ?? data.error ?? 'unknown') as string;
+    const isTerminal = TERMINAL_WAVE_ERRORS.has(code);
+    throw new WavePayoutError(
+      `Wave payout error ${code}: ${data.message ?? JSON.stringify(data)}`,
+      isTerminal,
+    );
+  }
+
+  // HTTP 200 mais payout échoué (status: 'failed' + payout_error)
+  // La doc impose de vérifier ce cas séparément des erreurs HTTP
+  if (data.status === 'failed' || data.payout_error) {
+    const code       = (data.payout_error?.error_code ?? 'unknown') as string;
+    const isTerminal = TERMINAL_WAVE_ERRORS.has(code);
+    throw new WavePayoutError(
+      `Wave payout failed: ${code} — ${data.payout_error?.error_message ?? ''}`,
+      isTerminal,
+    );
+  }
+
+  // id commence par "pt-" selon la doc (ex: "pt-185b5e4b8100c")
+  return data.id;
+}
+
+// ============================================================
+// ORANGE MONEY SONATEL — Cash In (POST /api/eWallet/v1/cashins)
+// LASSI (retailer/partner) envoie de l'argent vers le prestataire (customer).
+//
+// Prérequis :
+//   OM_RETAILER_MSISDN        = numéro OM de LASSI (9 chiffres, ex: 781234567)
+//   OM_RETAILER_PIN_ENCRYPTED = PIN de LASSI chiffré RSA avec la clé publique
+//                               Orange (GET /api/account/v1/publicKeys)
+//                               Longueur attendue : 344 caractères base64
+// ============================================================
+async function sendOrangeMoneyPayout(params: { payoutId: string; montant: number; phone: string }): Promise<string> {
+  const { getOmToken, OM_BASE_URL } = await import('../_shared/omAuth.ts');
+  const omToken = await getOmToken();
+
+  const response = await fetch(`${OM_BASE_URL}/api/eWallet/v1/cashins`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${omToken}`,
+      'Content-Type':  'application/json',
+    },
+    body: JSON.stringify({
+      partner: {
+        idType:           'MSISDN',
+        id:               OM_RETAILER_MSISDN,
+        encryptedPinCode: OM_RETAILER_PIN_ENCRYPTED,
+      },
+      customer: {
+        idType: 'MSISDN',
+        id:     params.phone,  // numéro du prestataire (9 chiffres)
+      },
+      amount: {
+        value: params.montant,
+        unit:  'XOF',
+      },
+      reference:           params.payoutId,
+      receiveNotification: false,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(`OM payout error (${response.status}): ${err.detail ?? JSON.stringify(err)}`);
+  }
+
+  const data = await response.json();
+  return data.transactionId ?? data.requestId ?? params.payoutId;
+}
