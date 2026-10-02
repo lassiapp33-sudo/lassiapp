@@ -577,39 +577,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
             </TouchableOpacity>
           )}
 
-          {/* Livraison mono OU multi-boutiques (retrait chez chaque prestataire) */}
-          {(!isVip || vipOrderMode === 'livraison') && (
-            <TouchableOpacity
-              style={[
-                styles.livraisonBtn,
-                (!hasItems || isSubmitting || devisBtn?.horsZone === true) && styles.payBtnDisabled,
-              ]}
-              onPress={() => {
-                if (!isVip && devisBtn == null && geoFailed) { retryGeoloc(); return; }
-                setShowLivraisonModal(true);
-              }}
-              activeOpacity={0.85}
-              disabled={!hasItems || isSubmitting || devisBtn?.horsZone === true}
-            >
-              {!isVip && devisBtn && !devisBtn.horsZone ? (
-                <>
-                  <Text style={styles.livraisonBtnTxt} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{`Commander + Livrer · ${formatPrice(grandClient + devisBtn.prix)}`}</Text>
-                  <Text style={styles.livraisonBtnSub} numberOfLines={1}>{`Livraison +${formatPrice(devisBtn.prix)}`}</Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.livraisonBtnTxt} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                    {!isVip && devisBtn == null && geoFailed ? 'Activer la position' : 'Commander + Livrer'}
-                  </Text>
-                  {!isVip && (
-                    <Text style={styles.livraisonBtnSub} numberOfLines={1}>
-                      {devisBtn != null ? 'Hors zone' : geoFailed ? 'Toucher pour réessayer' : '…'}
-                    </Text>
-                  )}
-                </>
-              )}
-            </TouchableOpacity>
-          )}
+          {/* Livraison masquée temporairement */}
         </View>
       </View>
 

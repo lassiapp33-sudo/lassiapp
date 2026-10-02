@@ -256,6 +256,22 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     return () => loop.stop();
   }, [addBlink]);
 
+  // ── État vide (nouveau prestataire) ──────────────────────────────────────────
+  const isEmptyShop = React.useMemo(() => {
+    if (isBeautySlotShop) {
+      const bProds = products.filter(p => {
+        const n = (s: string) => s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        return n(p.category ?? '') === 'produits';
+      });
+      return reservServices.length === 0 && bProds.length === 0;
+    }
+    if (context.shopType === 'memberships') return offres.length === 0;
+    return products.length === 0;
+  }, [isBeautySlotShop, reservServices.length, products, context.shopType, offres.length]);
+
+  // ── Infos boutique collapsible ────────────────────────────────────────────────
+  const [showInfosBoutique, setShowInfosBoutique] = useState(false);
+
   // ── Stats clics lien de partage ─────────────────────────────────────────────
   const [clicsTotal, setClicsTotal] = useState<number | null>(null);
   useEffect(() => {
@@ -899,6 +915,11 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
             {isBeautySlotShop ? (
               /* ── Beauté (barber/tresse/esthétique/ongle) : format Services / Produits ── */
               <>
+                {isEmptyShop && (
+                  <Text style={styles.emptyShopHint}>
+                    Ajoute ton premier service ou produit pour compléter ta vitrine.
+                  </Text>
+                )}
                 <Text style={styles.menuSectionTitle}>Ajouter au catalogue</Text>
                 <View style={styles.addPickerWrap}>
                   <Animated.View style={{ flex: 1, opacity: addBlink }}>
@@ -968,6 +989,13 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
               </>
             ) : (
               <>
+                {isEmptyShop && (
+                  <Text style={styles.emptyShopHint}>
+                    Ajoute ton premier{' '}
+                    {itemLabel === 'prestation' ? 'service' : itemLabel === 'formule' ? 'abonnement' : 'produit'}{' '}
+                    pour compléter ta vitrine.
+                  </Text>
+                )}
                 {/* ── Ajouter un produit (masqué pour les onglets abonnement fitness) ── */}
                 {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
                   <AddMenuSection
@@ -984,45 +1012,48 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                   />
                 )}
 
-                {/* ── Onglets unifiés (un seul système pour tous les shop types) ── */}
-                <CategoryTabs
-                  categories={categories}
-                  active={activeCat}
-                  onSelect={setActiveCat}
-                  onDeleteCat={handleDeleteCat}
-                  onRenameCat={handleRenameCat}
-                />
-
-                {/* ── Contenu de l'onglet actif (produits — masqué pour onglets abonnement) ── */}
-                {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
+                {/* ── Onglets + produits masqués si boutique vide ── */}
+                {!isEmptyShop && (
                   <>
-                    <SectionHead
-                      title={activeCatData?.label ?? ''}
-                      count={filtered.length}
-                      itemLabel={itemLabel}
+                    <CategoryTabs
+                      categories={categories}
+                      active={activeCat}
+                      onSelect={setActiveCat}
+                      onDeleteCat={handleDeleteCat}
+                      onRenameCat={handleRenameCat}
                     />
-                    {filtered.map(product => (
-                      <ProductRow
-                        key={product.id}
-                        product={product}
-                        promoInfo={promoMap[product.id]}
-                        onEdit={() => openEdit(product)}
-                        onToggleStock={async () => {
-                          try {
-                            await toggleStock(product.id);
-                          } catch {
-                            Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
-                          }
-                        }}
-                      />
-                    ))}
+
+                    {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
+                      <>
+                        <SectionHead
+                          title={activeCatData?.label ?? ''}
+                          count={filtered.length}
+                          itemLabel={itemLabel}
+                        />
+                        {filtered.map(product => (
+                          <ProductRow
+                            key={product.id}
+                            product={product}
+                            promoInfo={promoMap[product.id]}
+                            onEdit={() => openEdit(product)}
+                            onToggleStock={async () => {
+                              try {
+                                await toggleStock(product.id);
+                              } catch {
+                                Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
+                              }
+                            }}
+                          />
+                        ))}
+                      </>
+                    )}
                   </>
                 )}
               </>
             )}
 
             {/* ── Offres d'abonnement (uniquement pour les onglets abonnement) ── */}
-            {context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat) && (
+            {!isEmptyShop && context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat) && (
               <View style={styles.fitnessSection}>
                 <View style={styles.fitnessSectionHeader}>
                   <Text style={styles.fitnessSectionTitle}>Offres d'abonnement</Text>
@@ -1066,70 +1097,9 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
               </View>
             )}
 
-            {/* ── Infos boutique ──────────────────────────────────────────── */}
-            <View style={styles.sectionWrap}>
-              <Text style={styles.sectionTitle}>Infos boutique</Text>
-              <View style={styles.card}>
-                <Text style={styles.fieldLabel}>Nom de la boutique</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Nom affiché aux clients"
-                  placeholderTextColor={colors.muted}
-                  maxLength={60}
-                  returnKeyType="next"
-                />
-
-                <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Description</Text>
-                <TextInput
-                  style={[styles.fieldInput, styles.fieldMulti]}
-                  value={desc}
-                  onChangeText={setDesc}
-                  placeholder="Spécialité, ambiance, services proposés…"
-                  placeholderTextColor={colors.muted}
-                  multiline
-                  numberOfLines={3}
-                />
-
-                <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Adresse</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={addr}
-                  onChangeText={setAddr}
-                  placeholder="Ex : Rue 10 x 17, Dakar Plateau"
-                  placeholderTextColor={colors.muted}
-                  returnKeyType="next"
-                />
-
-                <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Téléphone de contact</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="77 XXX XX XX"
-                  placeholderTextColor={colors.muted}
-                  keyboardType="phone-pad"
-                  returnKeyType="done"
-                />
-
-                {detailsDirty && (
-                  <TouchableOpacity
-                    style={styles.saveDetailsBtn}
-                    onPress={handleSaveDetails}
-                    disabled={detailsLoading}
-                    activeOpacity={0.85}
-                  >
-                    {detailsLoading ? (
-                      <ActivityIndicator color={colors.bg} size="small" />
-                    ) : (
-                      <Text style={styles.saveDetailsTxt}>Enregistrer les modifications</Text>
-                    )}
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-
+            {/* ── Galerie, Horaires, Infos boutique, Géoloc masqués si boutique vide ── */}
+            {!isEmptyShop && (
+            <>
             {/* ── Galerie photos ───────────────────────────────────────────── */}
             <View style={styles.sectionWrap}>
               <Text style={styles.sectionTitle}>
@@ -1210,6 +1180,81 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     }
                   }}
                 />
+              )}
+            </View>
+
+            {/* ── Infos boutique (collapsible, après horaires) ─────────────── */}
+            <View style={styles.sectionWrap}>
+              <TouchableOpacity
+                style={styles.infosToggleBtn}
+                onPress={() => setShowInfosBoutique(v => !v)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.sectionTitle}>Infos boutique</Text>
+                <Text style={styles.infosToggleChevron}>
+                  {showInfosBoutique ? '▲' : '▼'}
+                </Text>
+              </TouchableOpacity>
+              {showInfosBoutique && (
+                <View style={[styles.card, { marginTop: 8 }]}>
+                  <Text style={styles.fieldLabel}>Nom de la boutique</Text>
+                  <TextInput
+                    style={styles.fieldInput}
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Nom affiché aux clients"
+                    placeholderTextColor={colors.muted}
+                    maxLength={60}
+                    returnKeyType="next"
+                  />
+
+                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Description</Text>
+                  <TextInput
+                    style={[styles.fieldInput, styles.fieldMulti]}
+                    value={desc}
+                    onChangeText={setDesc}
+                    placeholder="Spécialité, ambiance, services proposés…"
+                    placeholderTextColor={colors.muted}
+                    multiline
+                    numberOfLines={3}
+                  />
+
+                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Adresse</Text>
+                  <TextInput
+                    style={styles.fieldInput}
+                    value={addr}
+                    onChangeText={setAddr}
+                    placeholder="Ex : Rue 10 x 17, Dakar Plateau"
+                    placeholderTextColor={colors.muted}
+                    returnKeyType="next"
+                  />
+
+                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Téléphone de contact</Text>
+                  <TextInput
+                    style={styles.fieldInput}
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder="77 XXX XX XX"
+                    placeholderTextColor={colors.muted}
+                    keyboardType="phone-pad"
+                    returnKeyType="done"
+                  />
+
+                  {detailsDirty && (
+                    <TouchableOpacity
+                      style={styles.saveDetailsBtn}
+                      onPress={handleSaveDetails}
+                      disabled={detailsLoading}
+                      activeOpacity={0.85}
+                    >
+                      {detailsLoading ? (
+                        <ActivityIndicator color={colors.bg} size="small" />
+                      ) : (
+                        <Text style={styles.saveDetailsTxt}>Enregistrer les modifications</Text>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                </View>
               )}
             </View>
 
@@ -1321,6 +1366,10 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                   </TouchableOpacity>
                 </View>
               </View>
+            )}
+
+            {/* ── Fin bloc sections masquées boutique vide ── */}
+            </>
             )}
 
             <View style={{ height: 32 }} />
@@ -1884,6 +1933,30 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 10,
     marginTop: 1,
+  },
+
+  // Boutique vide
+  emptyShopHint: {
+    marginHorizontal: 18,
+    marginTop: 8,
+    marginBottom: 4,
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center' as const,
+  },
+
+  // Infos boutique collapsible
+  infosToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  infosToggleChevron: {
+    color: colors.muted,
+    fontSize: 12,
+    marginBottom: 10,
   },
 
   renameOverlay: {

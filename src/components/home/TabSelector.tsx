@@ -50,12 +50,6 @@ export default function TabSelector({ onNearbyPress, onRecentPress, onAlaUnePres
         <Text style={styles.sideLbl}>Autour de moi</Text>
       </TouchableOpacity>
 
-      {/* Ça bouge — stories quotidiennes */}
-      <TouchableOpacity style={styles.caBougeBtn} onPress={onCaBougePress} activeOpacity={0.85}>
-        <IconBolt />
-        <Text style={styles.caBougeLbl}>Ça bouge</Text>
-      </TouchableOpacity>
-
       {/* À la une — central, accent — MASQUÉ (ALAUNE_ENABLED) */}
       {ALAUNE_ENABLED && (
         <TouchableOpacity style={styles.centerBtn} onPress={onAlaUnePress} activeOpacity={0.85}>

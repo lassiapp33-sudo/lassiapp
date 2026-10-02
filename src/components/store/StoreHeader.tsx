@@ -42,7 +42,7 @@ export default function StoreHeader({ onBack, onPreview, onPromos }: Props) {
         <IcoBack />
       </TouchableOpacity>
 
-      <Text style={styles.title}>SAMA BOUTIQUE</Text>
+      <Text style={styles.title} allowFontScaling={false} numberOfLines={2}>SAMA BOUTIQUE</Text>
 
       {/* Promotions */}
       {onPromos && (
@@ -84,8 +84,8 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     color: colors.white,
-    fontFamily: fonts.titleXL,
-    fontSize: 18,
+    fontFamily: fonts.title,
+    fontSize: 14,
   },
   promos: {
     height: 34,

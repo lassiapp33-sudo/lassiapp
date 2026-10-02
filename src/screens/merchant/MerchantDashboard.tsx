@@ -10,6 +10,7 @@ import MerchantBottomNav, {
   MerchantTab,
   MERCHANT_NAV_HEIGHT,
 } from '../../components/merchant/MerchantBottomNav';
+import AudioFloatingButton from '../../components/merchant/AudioFloatingButton';
 import { colors, fonts, TOP_INSET } from '../../theme';
 import useAuthStore from '../../store/authStore';
 import useShopStore from '../../store/shopStore';
@@ -87,6 +88,7 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
   const creditBalance = useShopStore(s => s.profile?.creditBalance ?? 0);
   const shopType = useShopStore(s => s.context.shopType);
   const shopSubcategories = useShopStore(s => s.context.subcategories);
+
   const loadMyShop = useShopStore(s => s.loadMyShop);
 
   // Commandes
@@ -279,7 +281,7 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
         {/* ③ Récompenses actives */}
         {!!userId && <MesRecompensesCard userId={userId} shopId={shopId} />}
 
-        {/* ④ 4 actions rapides — compteurs réels */}
+        {/* ④ Actions rapides — compteurs réels */}
         <QuickActions
           onPress={key => onNavigate?.(key as NavDest)}
           debtCount={debtorsWithDebt}
@@ -311,6 +313,13 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
       </ScrollView>
 
       <MerchantBottomNav active={activeTab} onPress={handleNavPress} />
+
+      {/* Bouton audio flottant — message de partage */}
+      <AudioFloatingButton
+        audioSource={require('../../../assets/audio/partage_wolof.mp3')}
+        bottomOffset={MERCHANT_NAV_HEIGHT + 16}
+      />
+
     </View>
   );
 }

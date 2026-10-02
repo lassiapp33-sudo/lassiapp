@@ -516,31 +516,21 @@ export default function MerchantProfileScreen({
               onPress={onStore}
             />
           )}
-          {VISIBILITY_PACKS_ENABLED && (
-            <>
-              <ProfileOptionRow
-                icon={<IcoTrend />}
-                title={t.profile.myVisibility}
-                subtitle={t.profile.myVisibilitySub}
-                onPress={onVisibility}
-              />
-              <ProfileOptionRow
-                icon={<IcoMega />}
-                title="Ma Campagne"
-                subtitle="Annonces sponsorisées & forfaits actifs"
-                onPress={onMaCampagne}
-              />
-            </>
-          )}
           {/* Mes revenus — MASQUÉ temporairement */}
           <ProfileOptionRow
             icon={<IcoWallet />}
             title={t.profile.myPayments}
             subtitle={t.profile.myPaymentsSub}
             onPress={onPayments}
+            last={!carrouselEligible && !hasActiveSub && !onMyOrders}
+          />
+          <ProfileOptionRow
+            icon={<IcoGrid />}
+            title="Mes achats"
+            subtitle="Commandes passées en tant qu'acheteur"
+            onPress={onMyOrders}
             last={!carrouselEligible && !hasActiveSub}
           />
-          {/* Mes achats — MASQUÉ chez le prestataire */}
           {(carrouselEligible || hasActiveSub) && (
             <ProfileOptionRow
               icon={<IcoCrown />}

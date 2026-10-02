@@ -201,7 +201,14 @@ export default function QuickActions({
   return (
     <View style={styles.grid}>
       <View style={styles.row}>
-        {/* Cahier de dettes + Autour de moi — MASQUÉS temporairement */}
+        <ActionCard
+          Icon={IcoMapPin}
+          iconBg="rgba(253,207,52,.13)"
+          iconStroke={colors.accent}
+          title="Autour de moi"
+          desc="Boutiques du quartier"
+          onPress={() => onPress?.('aroundme')}
+        />
         <ActionCard
           Icon={IcoMsg}
           iconBg="rgba(29,200,242,.13)"
@@ -233,36 +240,7 @@ export default function QuickActions({
           />
         )}
       </View>
-      {/* Mes avis + Classement — MASQUÉS temporairement */}
-      <View style={styles.row}>
-        {/* À la une — MASQUÉ (ALAUNE_ENABLED) */}
-        {ALAUNE_ENABLED && (
-          <ActionCard
-            Icon={IcoFlame}
-            iconBg="rgba(253,207,52,.13)"
-            iconStroke={colors.accent}
-            title="À la une"
-            desc="Blocs 24h · partage & ventes"
-            onPress={() => onPress?.('a_la_une')}
-          />
-        )}
-        <ActionCard
-          Icon={IcoTruck}
-          iconBg="rgba(95,211,138,.13)"
-          iconStroke={colors.success}
-          title="Livraison"
-          desc="Envoyer un colis"
-          onPress={() => onPress?.('livraison')}
-        />
-        <ActionCard
-          Icon={IcoBolt}
-          iconBg="rgba(253,207,52,.13)"
-          iconStroke={colors.accent}
-          title="Ça bouge"
-          desc="Ta story du jour · 24h"
-          onPress={() => onPress?.('ca_bouge')}
-        />
-      </View>
+      {/* Livraison masquée temporairement */}
     </View>
   );
 }

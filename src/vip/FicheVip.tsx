@@ -502,14 +502,7 @@ export default function FicheVip({ shopId, onBack, onChat, onGoCart, onPrendreRd
             >
               <Text style={s.modalOptionTitre}>Commander</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.modalOption, s.modalOptionDernier]}
-              onPress={() => onCommander('livraison')}
-              activeOpacity={0.7}
-            >
-              <Text style={s.modalOptionTitre}>Commander + Livrer</Text>
-              <Text style={s.modalOptionSous}>Livraison à domicile</Text>
-            </TouchableOpacity>
+            {/* Commander + Livrer masqué temporairement */}
           </Pressable>
         </Pressable>
       </Modal>

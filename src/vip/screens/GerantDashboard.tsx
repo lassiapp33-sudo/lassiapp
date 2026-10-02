@@ -39,7 +39,7 @@ const TILES2: Tile[] = [
   { id: 'alaune',        label: 'À la une',         desc: 'Blocs mis en avant pour vos clients' },
   { id: 'avis',          label: 'Mes avis',         desc: 'Notes et commentaires reçus' },
   { id: 'classement',    label: 'Classement',       desc: 'Votre rang dans votre catégorie' },
-  { id: 'livraison',     label: 'Livraison',        desc: 'Demander et suivre une livraison' },
+  // { id: 'livraison',     label: 'Livraison',        desc: 'Demander et suivre une livraison' },
   { id: 'autourDeMoi',   label: 'Autour de moi',    desc: 'Prestataires et services à proximité' },
 ];
 

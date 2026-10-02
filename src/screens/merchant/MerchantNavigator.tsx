@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Alert, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MerchantDashboard from './MerchantDashboard';
@@ -41,7 +41,6 @@ import LassiAssistantScreen from '../home/LassiAssistantScreen';
 import ClassementScreen from '../classement/ClassementScreen';
 import WelcomeVitrineModal from '../../components/merchant/WelcomeVitrineModal';
 import WelcomeRewardBanner from '../../components/merchant/WelcomeRewardBanner';
-import ShareVitrineModal from '../../components/merchant/ShareVitrineModal';
 import { supabase } from '../../lib/supabase';
 import useShopStore from '../../store/shopStore';
 import useAuthStore from '../../store/authStore';
@@ -144,11 +143,6 @@ export default function MerchantNavigator({ onLogout }: Props) {
   // Banner cadeau "Offre du Quartier" (affiché une seule fois)
   const [showRewardBanner, setShowRewardBanner] = useState(false);
   const [welcomeCarrousel, setWelcomeCarrousel] = useState(4);
-  // Rappel "Partagez votre vitrine" (lundi/jeudi, in-app only)
-  const [shareReminderId, setShareReminderId] = useState<string | null>(null);
-  // IDs déjà affichés dans cette session : évite la réapparition après "Plus tard"
-  // (le mark serveur est fire-and-forget, un refetch peut le devancer).
-  const shownShareRemindersRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!userId) return;
@@ -205,33 +199,6 @@ export default function MerchantNavigator({ onLogout }: Props) {
     }).catch(() => {});
   }, [userId, cardReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Rappel "Partagez votre vitrine" (lundi/jeudi, in-app only) ──────────────
-  // Le cron serveur crée un rappel "pending" chaque lundi/jeudi. Dès que le
-  // prestataire ouvre l'app ce jour-là → modal. Marqué "shown" à l'affichage
-  // (pas de re-nag). S'il n'ouvre pas de la journée, le cron le bascule dans sa
-  // messagerie (aucun push, tout reste in-app).
-  const checkShareReminder = useCallback(async () => {
-    if (!userId || !shopSlug || shareReminderId) return;
-    try {
-      const { data } = await supabase.rpc('get_pending_share_reminder');
-      const row = Array.isArray(data) ? data[0] : data;
-      if (row?.id && !shownShareRemindersRef.current.has(row.id as string)) {
-        shownShareRemindersRef.current.add(row.id as string);
-        setShareReminderId(row.id as string);
-        // Fire-and-forget : marque vu dès l'affichage
-        supabase.rpc('mark_share_reminder_shown', { p_id: row.id });
-      }
-    } catch { /* réseau : réessai au prochain foreground */ }
-  }, [userId, shopSlug, shareReminderId]);
-
-  useEffect(() => { void checkShareReminder(); }, [checkShareReminder]);
-
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', st => {
-      if (st === 'active') void checkShareReminder();
-    });
-    return () => sub.remove();
-  }, [checkShareReminder]);
 
   // Deep link depuis notification push ou retour paiement
   useEffect(() => {
@@ -676,14 +643,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
           onDismiss={dismissRewardBanner}
         />
       )}
-      {!!shareReminderId && !!shopSlug && !showVitrineModal && (
-        <ShareVitrineModal
-          visible
-          slug={shopSlug}
-          shopName={shopName}
-          onClose={() => setShareReminderId(null)}
-        />
-      )}
+
     </>
   );
 }

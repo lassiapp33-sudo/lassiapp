@@ -179,7 +179,7 @@ export async function getShops(): Promise<Shop[]> {
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/shops?select=*&is_admin_account=neq.true&order=rating.desc`,
+      `${SUPABASE_URL}/rest/v1/shops?select=*&is_admin_account=neq.true&has_content=eq.true&order=rating.desc`,
       {
         headers: {
           apikey: SUPABASE_ANON,
@@ -204,7 +204,7 @@ export async function getShopsByCategory(category: string): Promise<Shop[]> {
   if (hit && Date.now() - hit.ts < SHOPS_CACHE_TTL) return hit.data;
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/shops?select=*&category=eq.${encodeURIComponent(category)}&is_admin_account=neq.true&order=rating.desc`,
+      `${SUPABASE_URL}/rest/v1/shops?select=*&category=eq.${encodeURIComponent(category)}&is_admin_account=neq.true&has_content=eq.true&order=rating.desc`,
       { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
     );
     if (!res.ok) return [];
@@ -471,28 +471,43 @@ export async function updateShopZoneManual(shopId: string, zone: string): Promis
   if (error) throw new Error(error.message);
 }
 
-// ─── Realtime : invalide le cache immédiatement quand un shop est supprimé ────
-// Sans ça, un shop supprimé depuis l'admin reste visible jusqu'à expiration du
-// cache en mémoire (5 min), car il n'y a pas de refetch automatique.
-(function startShopDeleteWatcher() {
+// ─── Realtime : invalide le cache quand un shop est supprimé ou change de contenu ────
+(function startShopChangeWatcher() {
   supabase
-    .channel('shops-delete-watcher')
+    .channel('shops-change-watcher')
     .on(
       'postgres_changes',
       { event: 'DELETE', schema: 'public', table: 'shops' },
       (payload) => {
         const deletedId = payload.old?.id as string | undefined;
         if (allShopsCache && deletedId) {
-          allShopsCache = {
-            ...allShopsCache,
-            data: allShopsCache.data.filter(s => s.id !== deletedId),
-          };
+          allShopsCache = { ...allShopsCache, data: allShopsCache.data.filter(s => s.id !== deletedId) };
         }
         catShopsCache.forEach((entry, cat) => {
-          catShopsCache.set(cat, {
-            ...entry,
-            data: entry.data.filter(s => s.id !== deletedId),
-          });
+          catShopsCache.set(cat, { ...entry, data: entry.data.filter(s => s.id !== deletedId) });
+        });
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'shops', filter: 'has_content=eq.true' },
+      () => {
+        // Un shop vient d'obtenir son premier contenu → purge le cache pour l'inclure au prochain fetch
+        allShopsCache = null;
+        catShopsCache.clear();
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'shops', filter: 'has_content=eq.false' },
+      (payload) => {
+        // Un shop a perdu tout son contenu → le retirer du cache immédiatement
+        const shopId = payload.new?.id as string | undefined;
+        if (allShopsCache && shopId) {
+          allShopsCache = { ...allShopsCache, data: allShopsCache.data.filter(s => s.id !== shopId) };
+        }
+        catShopsCache.forEach((entry, cat) => {
+          catShopsCache.set(cat, { ...entry, data: entry.data.filter(s => s.id !== shopId) });
         });
       },
     )
@@ -510,6 +525,7 @@ export async function getShopsInBounds(
     .from('shops')
     .select('*')
     .eq('is_admin_account', false)
+    .eq('has_content', true)
     .not('latitude', 'is', null)
     .not('longitude', 'is', null)
     .gte('latitude', minLat)
