@@ -164,7 +164,10 @@ Deno.serve(async (req) => {
         if (tokens.length > 0) {
           await sendExpoPush(tokens.map(to => ({
             to,
-            sound: 'default',
+            sound:            'default',
+            channelId:        'commandes-v2',
+            priority:         'high' as const,
+            _contentAvailable: false,
             title: TITLE,
             body:  'Ta boutique a maintenant son site web. Ouvre l\'app pour récupérer ton lien.',
             data:  { type: 'share_vitrine', slug: t.slug },

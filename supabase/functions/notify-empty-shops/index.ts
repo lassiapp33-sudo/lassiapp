@@ -163,7 +163,10 @@ Deno.serve(async (req) => {
         if (tokens.length > 0) {
           await sendExpoPush(tokens.map(to => ({
             to,
-            sound: 'default',
+            sound:             'default',
+            channelId:         'commandes-v2',
+            priority:          'high' as const,
+            _contentAvailable: false,
             title,
             body:  'Ajoute tes produits ou services pour que tes clients puissent commander.',
             data:  { type: 'setup_shop', shop_id: t.shopId || null },

@@ -141,37 +141,34 @@ export default function App() {
   // Résultat disponible dès onFinish, sans délai supplémentaire.
   const sessionFetch = React.useRef<Promise<AuthUser | null> | null>(null);
 
-  // Vérifie + télécharge + applique les OTA en foreground au démarrage.
-  // Fonctionne sur tous les appareils (Android/iOS) sans dépendre des process background
-  // qui peuvent être tués par les surcouches constructeurs (EMUI, MagicUI, MIUI…).
-  useEffect(() => {
-    if (__DEV__ || IS_EXPO_GO || Platform.OS === 'web') return;
-    (async () => {
-      try {
-        const { isAvailable } = await Updates.checkForUpdateAsync();
-        if (isAvailable) {
-          await Updates.fetchUpdateAsync();
-          await Updates.reloadAsync();
-          return;
-        }
-      } catch (_) {}
-    })();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // OTA SDK 54 — useUpdates() réagit aux événements de la state machine native.
+  // checkAutomatically: ON_LOAD fait check+download en arrière-plan ; quand
+  // isUpdatePending passe à true (download terminé), on reload immédiatement.
+  // Évite la race condition : checkForUpdateAsync() retournait false si le natif
+  // avait déjà démarré son check, empêchant tout rechargement.
+  const { isUpdateAvailable, isUpdatePending } =
+    !__DEV__ && !IS_EXPO_GO && Platform.OS !== 'web'
+      ? Updates.useUpdates()
+      : { isUpdateAvailable: false, isUpdatePending: false };
 
-  // Check OTA au retour en foreground (app jamais fermée).
+  // Téléchargement automatique dès qu'un update est disponible
+  useEffect(() => {
+    if (!isUpdateAvailable) return;
+    Updates.fetchUpdateAsync().catch(() => {});
+  }, [isUpdateAvailable]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Rechargement dès que le téléchargement est terminé
+  useEffect(() => {
+    if (!isUpdatePending) return;
+    Updates.reloadAsync().catch(() => {});
+  }, [isUpdatePending]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Check manuel au retour en foreground (si app jamais fermée)
   useEffect(() => {
     if (__DEV__ || IS_EXPO_GO || Platform.OS === 'web') return;
     const sub = AppState.addEventListener('change', state => {
       if (state !== 'active') return;
-      (async () => {
-        try {
-          const { isAvailable } = await Updates.checkForUpdateAsync();
-          if (isAvailable) {
-            await Updates.fetchUpdateAsync();
-            await Updates.reloadAsync();
-          }
-        } catch (_) {}
-      })();
+      Updates.checkForUpdateAsync().catch(() => {});
     });
     return () => sub.remove();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

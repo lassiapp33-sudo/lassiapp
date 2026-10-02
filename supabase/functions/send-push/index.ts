@@ -35,12 +35,13 @@ serve(async (req) => {
     const sb = createClient(SUPABASE_URL, SUPABASE_SRK);
 
     // 2. Paramètres
-    const { targetUserId, type, title, body, data } = await req.json() as {
+    const { targetUserId, type, title, body, data, channelId } = await req.json() as {
       targetUserId: string;
       type:         NotifType;
       title:        string;
       body:         string;
       data?:        Record<string, unknown>;
+      channelId?:   string;
     };
 
     if (!targetUserId || !type || !title || !body) {
@@ -91,8 +92,11 @@ serve(async (req) => {
         to,
         title,
         body,
-        data:  data ?? {},
-        sound: 'default',
+        data:              data ?? {},
+        sound:             'default',
+        channelId:         channelId ?? 'commandes-v2',
+        priority:          'high',
+        _contentAvailable: false,
       }))),
     });
 
