@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, Modal,
+  TextInput, Alert, ActivityIndicator, Modal, KeyboardAvoidingView, Platform,
+  Image, ActionSheetIOS,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -9,6 +10,7 @@ import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { BeautyService, BeautyCategorie } from '../../types/beauty';
 import * as beautyService from '../../services/beauty';
+import * as storageService from '../../services/storage';
 import useAuthStore from '../../store/authStore';
 import logger from '../../utils/logger';
 
@@ -23,6 +25,13 @@ const IcoPlus = () => (
 const IcoTrash = () => (
   <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round">
     <Path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke={colors.danger} />
+  </Svg>
+);
+
+const IcoCamera = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round">
+    <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke={colors.white} />
+    <Path d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke={colors.white} />
   </Svg>
 );
 
@@ -48,26 +57,24 @@ const CATEGORIES: { value: BeautyCategorie; label: string }[] = [
 interface EditModalProps {
   service: Partial<BeautyService> | null;
   prestataireId: string;
+  customCats: string[];
+  onAddCustomCat: (cat: string) => void;
   onClose: () => void;
   onSaved: (s: BeautyService) => void;
 }
 
-function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps) {
+function EditModal({ service, prestataireId, customCats, onAddCustomCat, onClose, onSaved }: EditModalProps) {
   const [nom, setNom]           = useState(service?.nom ?? '');
   const [desc, setDesc]         = useState(service?.description ?? '');
   const [prix, setPrix]         = useState(service?.prix ? String(service.prix) : '');
   const [duree, setDuree]       = useState(service?.duree_minutes ?? 60);
   const [cat, setCat]           = useState<BeautyCategorie>(service?.categorie ?? 'general');
+  const [imageUrl, setImageUrl] = useState<string | null>(service?.image_url ?? null);
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving]     = useState(false);
-
-  // Catégories personnalisées ajoutées par le prestataire (préremplies si le service
-  // édité porte une catégorie hors presets).
-  const [customCats, setCustomCats] = useState<string[]>(() => {
-    const c = service?.categorie;
-    return c && !CATEGORIES.some(x => x.value === c) ? [c] : [];
-  });
   const [addingCat, setAddingCat] = useState(false);
   const [newCatText, setNewCatText] = useState('');
+  const scrollRef = useRef<ScrollView>(null);
 
   const handleAddCat = () => {
     const label = newCatText.trim();
@@ -77,12 +84,58 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
       setCat(preset.value);
     } else {
       if (!customCats.some(c => c.toLowerCase() === label.toLowerCase())) {
-        setCustomCats(prev => [...prev, label]);
+        onAddCustomCat(label);
       }
       setCat(label);
     }
     setNewCatText('');
     setAddingCat(false);
+  };
+
+  const handleOpenAddCat = () => {
+    setAddingCat(true);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+  };
+
+  const doPickImage = async (source: 'gallery' | 'camera') => {
+    try {
+      const uri = source === 'gallery'
+        ? await storageService.pickImageFromGallery()
+        : await storageService.pickImageFromCamera();
+      if (!uri) return;
+      setUploading(true);
+      const path = `${prestataireId}/${service?.id ?? `new_${Date.now()}`}.jpg`;
+      const url = await storageService.uploadImage('beauty', uri, path);
+      setImageUrl(url);
+    } catch (e) {
+      logger.error('[BeautyServiceCatalog] upload image:', e);
+      Alert.alert('Erreur', "Impossible d'uploader la photo. Réessaie.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const deferPick = (source: 'gallery' | 'camera') =>
+    setTimeout(() => doPickImage(source), 350);
+
+  const openPhotoPicker = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: ['Annuler', 'Galerie', 'Caméra', ...(imageUrl ? ['Supprimer la photo'] : [])], cancelButtonIndex: 0 },
+        idx => {
+          if (idx === 1) deferPick('gallery');
+          if (idx === 2) deferPick('camera');
+          if (idx === 3 && imageUrl) setImageUrl(null);
+        },
+      );
+    } else {
+      const buttons: { text: string; onPress: () => void }[] = [
+        { text: 'Galerie',  onPress: () => deferPick('gallery') },
+        { text: 'Caméra',   onPress: () => deferPick('camera') },
+      ];
+      if (imageUrl) buttons.push({ text: 'Supprimer la photo', onPress: () => setImageUrl(null) });
+      Alert.alert('Photo du service', '', buttons);
+    }
   };
 
   const handleSave = async () => {
@@ -99,6 +152,7 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
         prix:          prixNum,
         duree_minutes: duree,
         categorie:     cat,
+        image_url:     imageUrl,
         actif:         true,
       });
       onSaved(saved);
@@ -114,7 +168,7 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
 
   return (
     <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={modal.root}>
+      <KeyboardAvoidingView style={modal.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
         <View style={modal.header}>
           <Text style={modal.title}>{service?.id ? 'Modifier' : 'Ajouter'} un service</Text>
           <TouchableOpacity onPress={onClose} style={modal.closeBtn} activeOpacity={0.7}>
@@ -122,7 +176,28 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={modal.scroll} contentContainerStyle={modal.content} showsVerticalScrollIndicator={false}>
+        <ScrollView ref={scrollRef} style={modal.scroll} contentContainerStyle={modal.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+          {/* ── Photo ── */}
+          <Text style={modal.label}>Photo (optionnel)</Text>
+          <TouchableOpacity style={modal.photoBtn} onPress={openPhotoPicker} activeOpacity={0.8} disabled={uploading}>
+            {uploading ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : imageUrl ? (
+              <Image source={{ uri: imageUrl }} style={modal.photoPreview} />
+            ) : (
+              <View style={modal.photoPlaceholder}>
+                <IcoCamera />
+                <Text style={modal.photoPlaceholderTxt}>Galerie / Caméra</Text>
+              </View>
+            )}
+            {imageUrl && !uploading && (
+              <View style={modal.photoEditBadge}>
+                <Text style={modal.photoEditBadgeTxt}>Changer</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
           <Text style={modal.label}>Nom du service *</Text>
           <TextInput
             style={modal.input}
@@ -193,7 +268,7 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
             ))}
             <TouchableOpacity
               style={[modal.chip, modal.chipAdd]}
-              onPress={() => setAddingCat(true)}
+              onPress={handleOpenAddCat}
               activeOpacity={0.8}
             >
               <Text style={[modal.chipTxt, modal.chipAddTxt]}>+ Nouvelle</Text>
@@ -219,20 +294,20 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
             </View>
           )}
 
-          <View style={{ height: 40 }} />
+          <View style={{ height: 60 }} />
         </ScrollView>
 
         <View style={modal.footer}>
           <TouchableOpacity
-            style={[modal.saveBtn, saving && { opacity: 0.7 }]}
+            style={[modal.saveBtn, (saving || uploading) && { opacity: 0.7 }]}
             onPress={handleSave}
-            disabled={saving}
+            disabled={saving || uploading}
             activeOpacity={0.85}
           >
             {saving ? <ActivityIndicator color={colors.bg} /> : <Text style={modal.saveTxt}>Enregistrer</Text>}
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -248,12 +323,25 @@ export default function BeautyServiceCatalogScreen({ onBack }: Props) {
   const [services, setServices]       = useState<BeautyService[]>([]);
   const [loading, setLoading]         = useState(true);
   const [editTarget, setEditTarget]   = useState<Partial<BeautyService> | null | 'new'>(null);
+  const [customCats, setCustomCats]   = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await beautyService.getBeautyServicesByMerchant(prestataireId);
       setServices(data);
+      const existingCustom = data
+        .map(s => s.categorie)
+        .filter(c => c && !CATEGORIES.some(x => x.value === c)) as string[];
+      if (existingCustom.length > 0) {
+        setCustomCats(prev => {
+          const merged = [...prev];
+          existingCustom.forEach(c => {
+            if (!merged.some(x => x.toLowerCase() === c.toLowerCase())) merged.push(c);
+          });
+          return merged;
+        });
+      }
     } catch (e) {
       logger.error('[BeautyServiceCatalog] load:', e);
     } finally {
@@ -346,6 +434,10 @@ export default function BeautyServiceCatalogScreen({ onBack }: Props) {
         <EditModal
           service={editTarget === 'new' ? {} : editTarget}
           prestataireId={prestataireId}
+          customCats={customCats}
+          onAddCustomCat={cat => setCustomCats(prev =>
+            prev.some(c => c.toLowerCase() === cat.toLowerCase()) ? prev : [...prev, cat]
+          )}
           onClose={() => setEditTarget(null)}
           onSaved={handleSaved}
         />
@@ -363,6 +455,34 @@ function ServiceCard({ service, onEdit, onDelete, inactive = false }: {
   inactive?: boolean;
 }) {
   const dureeLabel = DUREES.find(d => d.value === service.duree_minutes)?.label ?? `${service.duree_minutes} min`;
+
+  if (service.image_url) {
+    return (
+      <TouchableOpacity
+        style={[styles.visualCard, inactive && styles.cardInactive]}
+        onPress={onEdit}
+        activeOpacity={0.88}
+      >
+        <Image source={{ uri: service.image_url }} style={styles.visualImg} />
+        <View style={styles.visualDeleteBtn}>
+          <TouchableOpacity onPress={onDelete} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+            <IcoTrash />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.visualInfo}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.visualNom} numberOfLines={1}>{service.nom}</Text>
+            <Text style={styles.visualDuree}>{dureeLabel} · réservable</Text>
+          </View>
+          <Text style={styles.visualPrix}>{formatPrice(service.prix)}</Text>
+        </View>
+        <TouchableOpacity style={styles.visualReserveBtn} onPress={onEdit} activeOpacity={0.85}>
+          <Text style={styles.visualReserveTxt}>Réserver</Text>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <TouchableOpacity style={[styles.card, inactive && styles.cardInactive]} onPress={onEdit} activeOpacity={0.85}>
       <View style={styles.cardTop}>
@@ -400,6 +520,7 @@ const styles = StyleSheet.create({
 
   secLabel: { color: colors.muted, fontFamily: fonts.ui, fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 },
 
+  // ── carte texte (sans image) ──
   card:         { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: 14, marginBottom: 10 },
   cardInactive: { opacity: 0.5 },
   cardTop:      { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
@@ -408,6 +529,17 @@ const styles = StyleSheet.create({
   cardDuree:    { color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginTop: 4 },
   cardRight:    { alignItems: 'flex-end', gap: 10 },
   cardPrix:     { color: colors.accent, fontFamily: fonts.title, fontSize: 14 },
+
+  // ── carte visuelle (avec image) ──
+  visualCard:       { backgroundColor: colors.surface, borderRadius: radius.lg, overflow: 'hidden', marginBottom: 14, borderWidth: 1, borderColor: colors.border },
+  visualImg:        { width: '100%', height: 160, backgroundColor: colors.border },
+  visualDeleteBtn:  { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 20, padding: 8 },
+  visualInfo:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingTop: 10, gap: 8 },
+  visualNom:        { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
+  visualDuree:      { color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginTop: 2 },
+  visualPrix:       { color: colors.accent, fontFamily: fonts.title, fontSize: 16 },
+  visualReserveBtn: { margin: 12, marginTop: 10, height: 44, borderRadius: radius.md, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+  visualReserveTxt: { color: colors.bg, fontFamily: fonts.titleXL, fontSize: 14 },
 
   empty:       { alignItems: 'center', paddingVertical: 48, gap: 10 },
   emptyTitle:  { color: colors.white, fontFamily: fonts.title, fontSize: 16 },
@@ -432,6 +564,18 @@ const modal = StyleSheet.create({
     borderRadius: radius.md, color: colors.white, fontFamily: fonts.body,
     fontSize: 15, paddingHorizontal: 14, paddingVertical: 12,
   },
+
+  // ── photo picker ──
+  photoBtn: {
+    width: '100%', height: 140, borderRadius: radius.lg,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
+  },
+  photoPreview:        { width: '100%', height: '100%' },
+  photoPlaceholder:    { alignItems: 'center', gap: 8 },
+  photoPlaceholderTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 13 },
+  photoEditBadge:      { position: 'absolute', bottom: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  photoEditBadgeTxt:   { color: colors.white, fontFamily: fonts.ui, fontSize: 11 },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip:    { paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },

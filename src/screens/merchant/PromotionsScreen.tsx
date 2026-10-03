@@ -43,6 +43,9 @@ const CIBLE_TYPES: { value: PromoCibleType; label: string }[] = [
   { value: 'produit', label: 'Un produit précis' },
 ];
 
+// 0=Dim 1=Lun 2=Mar 3=Mer 4=Jeu 5=Ven 6=Sam
+const JOURS_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
 type FormState = {
   titre: string;
   type: PromoType;
@@ -51,6 +54,7 @@ type FormState = {
   cibleId: string;
   montantMin: string;
   dateFin: string;
+  joursActifs: number[]; // [] = tous les jours
   actif: boolean;
 };
 
@@ -62,6 +66,7 @@ const EMPTY_FORM: FormState = {
   cibleId: '',
   montantMin: '',
   dateFin: '',
+  joursActifs: [],
   actif: true,
 };
 
@@ -166,6 +171,7 @@ export default function PromotionsScreen({ onBack }: Props) {
       cibleId: promo.cibleId ?? '',
       montantMin: promo.montantMin > 0 ? String(promo.montantMin) : '',
       dateFin: formatDateDMY(promo.dateFin),
+      joursActifs: promo.joursActifs ?? [],
       actif: promo.actif,
     });
     setShowForm(true);
@@ -190,6 +196,7 @@ export default function PromotionsScreen({ onBack }: Props) {
         cibleId: form.cibleId || undefined,
         montantMin: Number(form.montantMin) || 0,
         dateFin: parseDate(form.dateFin),
+        joursActifs: form.joursActifs.length > 0 ? form.joursActifs : undefined,
         actif: form.actif,
       };
 
@@ -468,6 +475,28 @@ export default function PromotionsScreen({ onBack }: Props) {
                 maxLength={10}
               />
 
+              {/* Jours actifs */}
+              <Text style={styles.label}>Jours actifs (vide = tous les jours)</Text>
+              <View style={styles.joursRow}>
+                {JOURS_LABELS.map((j, idx) => {
+                  const on = form.joursActifs.includes(idx);
+                  return (
+                    <TouchableOpacity
+                      key={idx}
+                      style={[styles.jourPill, on && styles.jourPillOn]}
+                      onPress={() =>
+                        set('joursActifs', on
+                          ? form.joursActifs.filter(d => d !== idx)
+                          : [...form.joursActifs, idx].sort())
+                      }
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.jourPillTxt, on && styles.jourPillTxtOn]}>{j}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
               {/* Actif */}
               <View style={styles.activeRow}>
                 <View>
@@ -645,6 +674,16 @@ const styles = StyleSheet.create({
   prodPillEmoji: { fontSize: 15 },
   prodPillTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 12 },
   prodPillTxtOn: { color: colors.accent },
+
+  joursRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 16 },
+  jourPill: {
+    width: 42, height: 34, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  jourPillOn: { backgroundColor: `${colors.accent}22`, borderColor: colors.accent },
+  jourPillTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 11 },
+  jourPillTxtOn: { color: colors.accent, fontFamily: fonts.title },
 
   activeRow: {
     flexDirection: 'row',

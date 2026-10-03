@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   Animated,
   TouchableOpacity,
@@ -8,12 +8,11 @@ import {
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { colors } from '../../theme';
+import useAudioMessageStore from '../../store/audioMessageStore';
 
 interface Props {
-  // Passe require('../../assets/audio/partage_wolof.mp3') ou { uri: '...' }
-  // Si null → bouton visible mais lecture silencieuse
   audioSource?: Parameters<typeof Audio.Sound.createAsync>[0] | null;
-  bottomOffset?: number; // espace au-dessus de la nav bar
+  bottomOffset?: number;
 }
 
 export default function AudioFloatingButton({
@@ -23,137 +22,59 @@ export default function AudioFloatingButton({
   const bounceAnim = useRef(new Animated.Value(0)).current;
   const pulseScale = useRef(new Animated.Value(1)).current;
   const pulseOpacity = useRef(new Animated.Value(0.6)).current;
-  const [playing, setPlaying] = useState(false);
-  const soundRef = useRef<Audio.Sound | null>(null);
 
-  // Saut rebondissant + délai naturel
+  // État global — survit à la navigation
+  const playing = useAudioMessageStore(s => s.playing);
+  const toggle = useAudioMessageStore(s => s.toggle);
+
+  // Saut rebondissant
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
         Animated.delay(1800),
-        Animated.timing(bounceAnim, {
-          toValue: -12,
-          duration: 350,
-          useNativeDriver: true,
-        }),
-        Animated.timing(bounceAnim, {
-          toValue: 0,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-        Animated.timing(bounceAnim, {
-          toValue: -6,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-        Animated.timing(bounceAnim, {
-          toValue: 0,
-          duration: 130,
-          useNativeDriver: true,
-        }),
+        Animated.timing(bounceAnim, { toValue: -12, duration: 350, useNativeDriver: true }),
+        Animated.timing(bounceAnim, { toValue: 0,   duration: 180, useNativeDriver: true }),
+        Animated.timing(bounceAnim, { toValue: -6,  duration: 180, useNativeDriver: true }),
+        Animated.timing(bounceAnim, { toValue: 0,   duration: 130, useNativeDriver: true }),
       ]),
     ).start();
   }, [bounceAnim]);
 
-  // Halo pulse en continu
+  // Halo pulse
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
         Animated.parallel([
-          Animated.timing(pulseScale, {
-            toValue: 1.85,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseOpacity, {
-            toValue: 0,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
+          Animated.timing(pulseScale,   { toValue: 1.85, duration: 1000, useNativeDriver: true }),
+          Animated.timing(pulseOpacity, { toValue: 0,    duration: 1000, useNativeDriver: true }),
         ]),
         Animated.parallel([
-          Animated.timing(pulseScale, {
-            toValue: 1,
-            duration: 0,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseOpacity, {
-            toValue: 0.5,
-            duration: 0,
-            useNativeDriver: true,
-          }),
+          Animated.timing(pulseScale,   { toValue: 1,   duration: 0, useNativeDriver: true }),
+          Animated.timing(pulseOpacity, { toValue: 0.5, duration: 0, useNativeDriver: true }),
         ]),
         Animated.delay(200),
       ]),
     ).start();
   }, [pulseScale, pulseOpacity]);
 
-  // Nettoyage son
-  useEffect(() => {
-    return () => {
-      soundRef.current?.unloadAsync();
-    };
-  }, []);
-
-  const handlePress = async () => {
-    if (!audioSource) return;
-
-    if (playing) {
-      await soundRef.current?.stopAsync();
-      await soundRef.current?.unloadAsync();
-      soundRef.current = null;
-      setPlaying(false);
-      return;
-    }
-
-    try {
-      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-      const { sound } = await Audio.Sound.createAsync(audioSource, {
-        shouldPlay: true,
-      });
-      soundRef.current = sound;
-      setPlaying(true);
-      sound.setOnPlaybackStatusUpdate(status => {
-        if (status.isLoaded && status.didJustFinish) {
-          setPlaying(false);
-          sound.unloadAsync();
-          soundRef.current = null;
-        }
-      });
-    } catch {
-      // audio pas encore disponible
-    }
-  };
+  // PAS de cleanup unmount — le son vit dans le store global
 
   return (
-    <View
-      pointerEvents="box-none"
-      style={[styles.wrapper, { bottom: bottomOffset }]}
-    >
-      {/* Label au-dessus */}
+    <View pointerEvents="box-none" style={[styles.wrapper, { bottom: bottomOffset }]}>
       <View style={styles.labelBubble}>
         <Text style={styles.labelText}>
-          {playing ? '⏸ En lecture...' : '🎙 Écoute le message !'}
+          {playing ? 'En lecture...' : 'Écoute le message'}
         </Text>
-        {/* Petite flèche pointant vers le bas */}
         <View style={styles.labelArrow} />
       </View>
 
-      {/* Bouton + halo */}
-      <Animated.View
-        style={[styles.animContainer, { transform: [{ translateY: bounceAnim }] }]}
-      >
-        {/* Halo pulse */}
+      <Animated.View style={[styles.animContainer, { transform: [{ translateY: bounceAnim }] }]}>
         <Animated.View
-          style={[
-            styles.halo,
-            { transform: [{ scale: pulseScale }], opacity: pulseOpacity },
-          ]}
+          style={[styles.halo, { transform: [{ scale: pulseScale }], opacity: pulseOpacity }]}
         />
-
         <TouchableOpacity
           style={styles.fab}
-          onPress={handlePress}
+          onPress={() => toggle(audioSource)}
           activeOpacity={0.82}
         >
           {playing ? (

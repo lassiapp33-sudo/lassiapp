@@ -12,6 +12,8 @@ export interface Promotion {
   montantMin: number;
   dateDebut?: string; // ISO string
   dateFin?: string; // ISO string
+  // 0=Dim 1=Lun 2=Mar 3=Mer 4=Jeu 5=Ven 6=Sam — null = tous les jours
+  joursActifs?: number[];
   actif: boolean;
   createdAt: string;
 }

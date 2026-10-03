@@ -112,7 +112,8 @@ export async function uploadImage(
     | 'signalements'
     | 'avis'
     | 'disputes'
-    | 'stories',
+    | 'stories'
+    | 'beauty',
   localUri: string,
   path: string,
 ): Promise<string> {

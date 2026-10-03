@@ -56,7 +56,7 @@ import useCartStore             from './src/store/cartStore';
 import AsyncStorage             from '@react-native-async-storage/async-storage';
 import * as authService         from './src/services/auth';
 import { SESSION_ACTIVE_KEY }   from './src/services/auth';
-import { onSessionExpired }     from './src/lib/supabase';
+import { onSessionExpired, SUPABASE_MISCONFIGURED } from './src/lib/supabase';
 import { usePushToken, removeCurrentDeviceToken } from './src/hooks/usePushToken';
 import { usePaymentDeepLink } from './src/hooks/usePaymentDeepLink';
 import usePendingNavStore from './src/store/pendingNavStore';
@@ -119,7 +119,23 @@ function handleNotifData(data: Record<string, any> | undefined | null) {
   }
 }
 
-export default function App() {
+// Guard: OTA bundle without env vars → placeholder Supabase URL → all requests fail
+// but no native crash. Show a user-facing error screen instead.
+function MisconfiguredScreen() {
+  return (
+    <View style={{ flex: 1, backgroundColor: '#14152A', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <Text style={{ color: '#FDCF34', fontSize: 20, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>
+        Mise à jour corrompue
+      </Text>
+      <Text style={{ color: '#fff', fontSize: 15, textAlign: 'center', lineHeight: 22 }}>
+        Une mise à jour incomplète a été téléchargée.{'\n'}
+        Désinstalle et réinstalle LASSI depuis le Store pour retrouver l'accès.
+      </Text>
+    </View>
+  );
+}
+
+function AppContent() {
   const [screen, setScreen] = useState<Screen>('splash');
   const userId       = useAuthStore(s => s.user?.id ?? null);
   const gerantActive = useGerantStore(s => s.isActive);
@@ -455,6 +471,11 @@ export default function App() {
       </ErrorBoundary>
     </View>
   );
+}
+
+export default function App() {
+  if (SUPABASE_MISCONFIGURED) return <MisconfiguredScreen />;
+  return <AppContent />;
 }
 
 const styles = StyleSheet.create({

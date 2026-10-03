@@ -1086,7 +1086,7 @@ const CART_JS = `
               : 'Valide le paiement dans Orange Money, puis reviens sur cette page.';
             a.textContent=isW?'Rouvrir Wave':'Rouvrir Orange Money';
             a.href=d.redirectUrl; a.style.display='inline-block';
-            window.location.href=d.redirectUrl;
+            window.location.replace(d.redirectUrl);
           } else {
             a.style.display='none';
           }
@@ -1265,7 +1265,7 @@ const BOOKING_JS = `
             : 'Valide le paiement dans Orange Money, puis reviens sur cette page.';
           a.textContent=isW?'Rouvrir Wave':'Rouvrir Orange Money';
           a.href=d.redirectUrl; a.style.display='inline-block';
-          window.location.href=d.redirectUrl;
+          window.location.replace(d.redirectUrl);
         } else { a.style.display='none'; }
         if(d.qrCode){
           document.getElementById('bWaitSub').textContent='Scanne ce QR code avec Orange Money.';
@@ -1325,7 +1325,7 @@ const CONFIRM_JS = `
   }
   function fail(){ mark.innerHTML=KO_SVG; t.textContent='Paiement non abouti'; d.textContent=isBeauty?'Ta réservation n\\'a pas été payée. Tu peux réessayer depuis la boutique.':'Ta commande n\\'a pas été payée. Tu peux réessayer depuis la boutique.'; home.style.display='inline-block'; }
   if(CFG.s==='ko'){ fail(); return; }
-  if(!CFG.id){ ok(); return; }
+  if(CFG.s==='ok' || !CFG.id){ ok(); return; }
   var tries=0, dbFails=0;
   var iv=setInterval(function(){
     tries++;

@@ -38,6 +38,8 @@ export interface StoreProduct {
   sizes?: string[];
   /** Couleurs disponibles (habillement). */
   colors?: string[];
+  /** Quantité en stock (habillement). null = non géré, 0 = épuisé. */
+  stockQuantity?: number;
 }
 
 export interface StoreProfile {

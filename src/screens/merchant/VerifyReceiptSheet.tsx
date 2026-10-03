@@ -1,210 +1,256 @@
-﻿import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
+  ScrollView,
   ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import { IcoClose } from '../../components/icons';
 import ClientScoreBadge from '../../components/orders/ClientScoreBadge';
-import { verifyReceiptMerchant, VerifyResult } from '../../services/receipts';
+import {
+  getMerchantOrdersForVerify,
+  verifyReceiptMerchant,
+  MerchantOrderReceipt,
+  VerifyResult,
+} from '../../services/receipts';
 import { getErrorMessage } from '../../utils/errorUtils';
 import { formatPrice } from '../../utils/format';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
-const IcoCloseBtn = () => <IcoClose color={colors.muted} />;
-
 const IcoCheck = () => (
-  <Svg
-    width={28}
-    height={28}
-    viewBox="0 0 24 24"
-    fill="none"
-    strokeWidth={2.5}
-    strokeLinecap="round"
-  >
+  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" strokeWidth={2.5} strokeLinecap="round">
     <Path d="M20 6 9 17l-5-5" stroke={colors.success} />
   </Svg>
 );
 
-const IcoX = () => <IcoClose size={28} color={colors.danger} />;
+const IcoX = () => <IcoClose size={22} color={colors.danger} />;
 
-// ─── Messages d'erreur lisibles ───────────────────────────────────────────────
+const IcoReceipt = () => (
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" strokeWidth={2} strokeLinecap="round">
+    <Path d="M9 11l3 3L22 4" stroke={colors.accent} />
+    <Path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke={colors.accent} />
+  </Svg>
+);
 
-const REASON_LABELS: Record<string, string> = {
-  introuvable: 'Code introuvable. Vérifie le code et réessaie.',
-  expire: 'Ce reçu a expiré (délai de 40 min dépassé).',
-  deja_utilise: 'Ce reçu a déjà été utilisé.',
-  aucun: 'Aucun reçu associé à ce code.',
+// ─── Badge statut ─────────────────────────────────────────────────────────────
+
+const STATUS_BADGE: Record<string, { label: string; color: string }> = {
+  valide:  { label: 'Valide',   color: colors.success },
+  utilise: { label: 'Utilisé',  color: colors.muted },
+  expire:  { label: 'Expiré',   color: colors.danger },
+  aucun:   { label: 'En cours', color: colors.accent },
 };
 
-function reasonLabel(reason?: string): string {
-  if (!reason) return 'Une erreur est survenue. Réessaie.';
-  return REASON_LABELS[reason] ?? `Erreur : ${reason}`;
+function StatusBadge({ status }: { status: string }) {
+  const cfg = STATUS_BADGE[status] ?? STATUS_BADGE.aucun;
+  return (
+    <View style={[s.statusBadge, { borderColor: cfg.color + '44', backgroundColor: cfg.color + '18' }]}>
+      <Text style={[s.statusTxt, { color: cfg.color }]}>{cfg.label}</Text>
+    </View>
+  );
 }
 
-// ─── Formatage du code en XXXX XXXX ──────────────────────────────────────────
+// ─── Formatage code reçu ──────────────────────────────────────────────────────
 
-function formatCode(raw: string): string {
-  const clean = raw
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, '')
-    .slice(0, 8);
-  if (clean.length <= 4) return clean;
-  return `${clean.slice(0, 4)} ${clean.slice(4)}`;
+function fmtCode(code: string): string {
+  const c = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return c.length >= 4 ? `${c.slice(0, 4)} ${c.slice(4)}` : c;
 }
 
 // ─── Composant principal ─────────────────────────────────────────────────────
 
 interface Props {
   visible: boolean;
+  shopId: string | null;
   onClose: () => void;
   onVerified?: (result: VerifyResult) => void;
 }
 
-export default function VerifyReceiptSheet({ visible, onClose, onVerified }: Props) {
-  const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<VerifyResult | null>(null);
-  const inputRef = useRef<TextInput>(null);
+export default function VerifyReceiptSheet({ visible, shopId, onClose, onVerified }: Props) {
+  const [orders, setOrders]       = useState<MerchantOrderReceipt[]>([]);
+  const [fetching, setFetching]   = useState(false);
+  const [verifying, setVerifying] = useState<string | null>(null); // orderId en cours
+  const [results, setResults]     = useState<Record<string, VerifyResult>>({});
 
-  const rawCode = code.replace(/\s/g, '');
-
-  const handleClose = () => {
-    setCode('');
-    setResult(null);
-    onClose();
-  };
-
-  const handleVerify = async () => {
-    if (rawCode.length < 8) return;
-    setLoading(true);
-    setResult(null);
+  const load = useCallback(async () => {
+    if (!shopId) return;
+    setFetching(true);
     try {
-      const res = await verifyReceiptMerchant(rawCode);
-      setResult(res);
-      if (res.success) onVerified?.(res);
-    } catch (e: unknown) {
-      setResult({ success: false, reason: getErrorMessage(e, 'erreur_reseau') });
+      const list = await getMerchantOrdersForVerify(shopId);
+      setOrders(list);
+    } catch {
+      setOrders([]);
     } finally {
-      setLoading(false);
+      setFetching(false);
+    }
+  }, [shopId]);
+
+  useEffect(() => {
+    if (visible) {
+      setResults({});
+      load();
+    }
+  }, [visible, load]);
+
+  const handleVerify = async (order: MerchantOrderReceipt) => {
+    if (verifying || results[order.orderId]) return;
+    setVerifying(order.orderId);
+    try {
+      const res = await verifyReceiptMerchant(order.receiptCode);
+      setResults(prev => ({ ...prev, [order.orderId]: res }));
+      if (res.success) {
+        onVerified?.(res);
+        // Met à jour le statut localement
+        setOrders(prev =>
+          prev.map(o =>
+            o.orderId === order.orderId ? { ...o, receiptStatus: 'utilise' } : o,
+          ),
+        );
+      }
+    } catch (e: unknown) {
+      setResults(prev => ({
+        ...prev,
+        [order.orderId]: { success: false, reason: getErrorMessage(e, 'erreur_reseau') },
+      }));
+    } finally {
+      setVerifying(null);
     }
   };
 
-  const handleReset = () => {
-    setCode('');
-    setResult(null);
-    setTimeout(() => inputRef.current?.focus(), 100);
+  const handleClose = () => {
+    setResults({});
+    onClose();
   };
 
   return (
-    <Modal visible={visible} transparent presentationStyle="overFullScreen" animationType="slide" onRequestClose={handleClose}>
+    <Modal
+      visible={visible}
+      transparent
+      presentationStyle="overFullScreen"
+      animationType="slide"
+      onRequestClose={handleClose}
+    >
       <View style={s.overlay}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={s.kavWrapper}
-        >
-          <TouchableOpacity style={s.backdrop} onPress={handleClose} activeOpacity={1} />
+        <TouchableOpacity style={s.backdrop} onPress={handleClose} activeOpacity={1} />
 
-          <View style={s.sheet}>
-            {/* En-tête */}
-            <View style={s.sheetHeader}>
-              <View style={s.grab} />
-              <View style={s.titleRow}>
-                <Text style={s.title}>Vérifier un reçu</Text>
-                <TouchableOpacity style={s.closeBtn} onPress={handleClose} activeOpacity={0.7}>
-                  <IcoCloseBtn />
-                </TouchableOpacity>
-              </View>
-              <Text style={s.subtitle}>
-                Saisis le code à 8 caractères affiché sur le reçu du client.
-              </Text>
-            </View>
+        <View style={s.sheet}>
+          {/* Poignée */}
+          <View style={s.grab} />
 
-            {/* Résultat : succès */}
-            {result?.success && (
-              <View style={s.resultSuccess}>
-                <IcoCheck />
-                <View style={{ flex: 1 }}>
-                  <Text style={s.resultSuccessTitle}>Reçu validé ✓</Text>
-                  {result.clientName && (
-                    <Text style={s.resultSuccessSub}>Client : {result.clientName}</Text>
-                  )}
-                  {result.total !== undefined && (
-                    <Text style={s.resultSuccessSub}>Total : {formatPrice(result.total)}</Text>
-                  )}
-                  {result.clientScore !== undefined && result.clientNbNotes !== undefined && result.clientNbNotes > 0 && (
-                    <View style={{ marginTop: 4 }}>
-                      <ClientScoreBadge score={result.clientScore} nbNotes={result.clientNbNotes} />
-                    </View>
-                  )}
-                </View>
-              </View>
-            )}
-
-            {/* Résultat : échec */}
-            {result && !result.success && (
-              <View style={s.resultError}>
-                <IcoX />
-                <Text style={s.resultErrorTxt}>{reasonLabel(result.reason)}</Text>
-              </View>
-            )}
-
-            {/* Champ de saisie (masqué si succès) */}
-            {!result?.success && (
-              <>
-                <View style={s.inputWrap}>
-                  <TextInput
-                    ref={inputRef}
-                    style={s.input}
-                    value={code}
-                    onChangeText={v => setCode(formatCode(v))}
-                    placeholder="XXXX XXXX"
-                    placeholderTextColor={colors.border}
-                    autoCapitalize="characters"
-                    autoCorrect={false}
-                    maxLength={9}
-                    returnKeyType="done"
-                    onSubmitEditing={handleVerify}
-                    editable={!loading}
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={[s.btn, (rawCode.length < 8 || loading) && s.btnDisabled]}
-                  onPress={handleVerify}
-                  activeOpacity={0.85}
-                  disabled={rawCode.length < 8 || loading}
-                >
-                  {loading ? (
-                    <ActivityIndicator color={colors.bg} size="small" />
-                  ) : (
-                    <Text style={s.btnTxt}>Vérifier le reçu</Text>
-                  )}
-                </TouchableOpacity>
-              </>
-            )}
-
-            {/* Bouton "Nouveau code" après succès ou échec */}
-            {result && (
-              <TouchableOpacity style={s.resetBtn} onPress={handleReset} activeOpacity={0.8}>
-                <Text style={s.resetTxt}>
-                  {result.success ? 'Vérifier un autre reçu' : 'Réessayer avec un autre code'}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            <View style={{ height: 20 }} />
+          {/* En-tête */}
+          <View style={s.header}>
+            <Text style={s.title}>Vérifier un reçu client</Text>
+            <TouchableOpacity style={s.closeBtn} onPress={handleClose} activeOpacity={0.7}>
+              <IcoClose color={colors.muted} />
+            </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+          <Text style={s.subtitle}>
+            Sélectionne la commande du client pour valider son reçu automatiquement.
+          </Text>
+
+          {/* Corps */}
+          {fetching ? (
+            <ActivityIndicator color={colors.accent} style={{ marginVertical: 28 }} />
+          ) : orders.length === 0 ? (
+            <View style={s.empty}>
+              <Text style={s.emptyTxt}>Aucune commande avec reçu dans les dernières 72h.</Text>
+            </View>
+          ) : (
+            <ScrollView
+              style={s.list}
+              contentContainerStyle={{ paddingBottom: 24 }}
+              showsVerticalScrollIndicator={false}
+            >
+              {orders.map(order => {
+                const res = results[order.orderId];
+                const isVerifying = verifying === order.orderId;
+                const alreadyUsed = order.receiptStatus === 'utilise';
+                const alreadyExpired = order.receiptStatus === 'expire';
+                const disabled = alreadyUsed || alreadyExpired || !!res || isVerifying;
+
+                return (
+                  <View key={order.orderId} style={s.row}>
+                    {/* Infos commande */}
+                    <View style={s.rowTop}>
+                      <View style={s.rowLeft}>
+                        <Text style={s.clientName}>{order.clientName}</Text>
+                        <View style={s.rowMeta}>
+                          <Text style={s.displayId}>{order.displayId}</Text>
+                          <Text style={s.metaSep}>·</Text>
+                          <Text style={s.total}>{formatPrice(order.total)}</Text>
+                        </View>
+                      </View>
+                      <StatusBadge status={res?.success ? 'utilise' : order.receiptStatus} />
+                    </View>
+
+                    {/* Code reçu — même format que le client */}
+                    <View style={s.codeWrap}>
+                      <IcoReceipt />
+                      <Text style={s.codeText}>{fmtCode(order.receiptCode)}</Text>
+                    </View>
+
+                    {/* Résultat inline */}
+                    {res && (
+                      <View style={[s.result, res.success ? s.resultOk : s.resultErr]}>
+                        {res.success ? <IcoCheck /> : <IcoX />}
+                        <View style={{ flex: 1 }}>
+                          {res.success ? (
+                            <>
+                              <Text style={s.resultOkTxt}>Reçu validé ✓</Text>
+                              {res.clientName && (
+                                <Text style={s.resultSub}>Client : {res.clientName}</Text>
+                              )}
+                              {res.total !== undefined && (
+                                <Text style={s.resultSub}>Total : {formatPrice(res.total)}</Text>
+                              )}
+                              {res.clientScore !== undefined && !!res.clientNbNotes && (
+                                <View style={{ marginTop: 4 }}>
+                                  <ClientScoreBadge score={res.clientScore} nbNotes={res.clientNbNotes} />
+                                </View>
+                              )}
+                            </>
+                          ) : (
+                            <Text style={s.resultErrTxt}>
+                              {res.reason === 'expire'
+                                ? 'Reçu expiré.'
+                                : res.reason === 'deja_utilise'
+                                ? 'Déjà utilisé.'
+                                : 'Erreur de vérification.'}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Bouton vérifier */}
+                    {!res && (
+                      <TouchableOpacity
+                        style={[s.verifyBtn, disabled && s.verifyBtnDisabled]}
+                        onPress={() => handleVerify(order)}
+                        disabled={disabled}
+                        activeOpacity={0.85}
+                      >
+                        {isVerifying ? (
+                          <ActivityIndicator color={colors.bg} size="small" />
+                        ) : (
+                          <Text style={s.verifyBtnTxt}>
+                            {alreadyUsed ? 'Déjà utilisé' : alreadyExpired ? 'Expiré' : 'Valider ce reçu'}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
       </View>
     </Modal>
   );
@@ -216,150 +262,107 @@ const s = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-  },
-  kavWrapper: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
-
+  backdrop: { ...StyleSheet.absoluteFillObject },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingHorizontal: 22,
+    paddingHorizontal: 20,
     borderTopWidth: 1,
     borderColor: colors.border,
+    maxHeight: '85%',
   },
-
   grab: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: 40, height: 4, borderRadius: 2,
     backgroundColor: colors.border,
     alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 14,
+    marginTop: 10, marginBottom: 14,
   },
-  sheetHeader: { marginBottom: 20 },
-  titleRow: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  title: {
-    color: colors.white,
-    fontFamily: fonts.titleXL,
-    fontSize: 18,
-  },
+  title: { color: colors.white, fontFamily: fonts.titleXL, fontSize: 17 },
   closeBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 34, height: 34, borderRadius: 10,
     backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
   },
   subtitle: {
-    color: colors.muted,
-    fontFamily: fonts.body,
-    fontSize: 13,
-    lineHeight: 20,
+    color: colors.muted, fontFamily: fonts.body,
+    fontSize: 13, lineHeight: 19, marginBottom: 18,
   },
+  empty: { paddingVertical: 32, alignItems: 'center' },
+  emptyTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 14 },
+  list: { flex: 1 },
 
-  // Résultats
-  resultSuccess: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: 'rgba(95,211,138,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(95,211,138,0.3)',
-    borderRadius: radius.md,
-    padding: 16,
-    marginBottom: 16,
-  },
-  resultSuccessTitle: {
-    color: colors.success,
-    fontFamily: fonts.titleXL,
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  resultSuccessSub: {
-    color: colors.white,
-    fontFamily: fonts.body,
-    fontSize: 13,
-  },
-
-  resultError: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(224,122,122,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(224,122,122,0.3)',
-    borderRadius: radius.md,
-    padding: 16,
-    marginBottom: 16,
-  },
-  resultErrorTxt: {
-    flex: 1,
-    color: colors.danger,
-    fontFamily: fonts.body,
-    fontSize: 13,
-    lineHeight: 20,
-  },
-
-  // Input
-  inputWrap: {
+  // Ligne commande
+  row: {
     backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.md,
-    height: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  input: {
-    color: colors.white,
-    fontFamily: fonts.titleXL,
-    fontSize: 30,
-    letterSpacing: 8,
-    textAlign: 'center',
-    width: '100%',
-  },
-
-  btn: {
-    height: 52,
-    borderRadius: radius.md,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 14,
     marginBottom: 10,
   },
-  btnDisabled: { opacity: 0.45 },
-  btnTxt: {
-    color: colors.bg,
-    fontFamily: fonts.titleXL,
-    fontSize: 15,
+  rowTop: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    justifyContent: 'space-between', marginBottom: 10,
+  },
+  rowLeft: { flex: 1, marginRight: 10 },
+  clientName: { color: colors.white, fontFamily: fonts.title, fontSize: 14, marginBottom: 4 },
+  rowMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  displayId: { color: colors.muted, fontFamily: fonts.body, fontSize: 12 },
+  metaSep: { color: colors.border, fontSize: 12 },
+  total: { color: colors.accent, fontFamily: fonts.title, fontSize: 12 },
+
+  statusBadge: {
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 8, borderWidth: 1,
+  },
+  statusTxt: { fontFamily: fonts.ui, fontSize: 11 },
+
+  // Code reçu
+  codeWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12, paddingVertical: 8,
+    marginBottom: 12,
+  },
+  codeText: {
+    color: colors.white, fontFamily: fonts.titleXL,
+    fontSize: 20, letterSpacing: 6,
   },
 
-  resetBtn: {
-    alignItems: 'center',
-    paddingVertical: 12,
+  // Résultat
+  result: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    borderRadius: radius.sm, padding: 12, marginBottom: 10,
   },
-  resetTxt: {
-    color: colors.accent,
-    fontFamily: fonts.ui,
-    fontSize: 13,
-    textDecorationLine: 'underline',
+  resultOk: {
+    backgroundColor: 'rgba(95,211,138,0.10)',
+    borderWidth: 1, borderColor: 'rgba(95,211,138,0.3)',
   },
+  resultErr: {
+    backgroundColor: 'rgba(224,122,122,0.10)',
+    borderWidth: 1, borderColor: 'rgba(224,122,122,0.3)',
+  },
+  resultOkTxt: { color: colors.success, fontFamily: fonts.title, fontSize: 14, marginBottom: 2 },
+  resultSub: { color: colors.white, fontFamily: fonts.body, fontSize: 12 },
+  resultErrTxt: { color: colors.danger, fontFamily: fonts.body, fontSize: 13 },
+
+  // Bouton vérifier
+  verifyBtn: {
+    height: 44, borderRadius: radius.sm,
+    backgroundColor: colors.accent,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  verifyBtnDisabled: { opacity: 0.35 },
+  verifyBtnTxt: { color: colors.bg, fontFamily: fonts.title, fontSize: 14 },
 });
-

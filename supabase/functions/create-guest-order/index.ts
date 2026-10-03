@@ -195,14 +195,24 @@ Deno.serve(async (req) => {
     }
 
     if (confirmed) {
-      await admin.from('payment_intents').update({
-        statut:          'confirmed',
-        external_status: 'SUCCESS_PULL_WEB',
-        confirmed_at:    new Date().toISOString(),
-        updated_at:      new Date().toISOString(),
-      }).eq('id', pi.id).eq('statut', 'initiated');
-
-      await admin.rpc('confirm_order_from_payment', { p_payment_intent_id: pi.id });
+      // Utilise la même RPC atomique que webhook-payment pour garantir split_done
+      // + payout_queue 'queued'. confirm_order_from_payment (SQL Editor) repassait
+      // statut→'confirmed', ce qui bloquait process-payouts (guard split_done).
+      const { data: wResult, error: wErr } = await admin.rpc('process_payment_webhook', {
+        p_external_event_id: `${pi.id}:SUCCESS_PULL_WEB`,
+        p_payment_intent_id: pi.id as string,
+        p_source:            pi.moyen_paiement === 'wave' ? 'wave' : 'orange_money',
+        p_external_status:   'SUCCESS_PULL_WEB',
+        p_external_ref:      (pi.external_ref as string) ?? null,
+        p_received_amount:   null,
+        p_is_success:        true,
+        p_raw_payload:       { source: 'verify_order_pull', order_id: vord },
+      });
+      if (wErr) {
+        console.error('[create-guest-order] verify_order process_payment_webhook:', wErr.message);
+      } else {
+        console.log('[create-guest-order] verify_order process_payment_webhook:', JSON.stringify(wResult));
+      }
     }
 
     return json({ success: true, paid: confirmed });
@@ -266,15 +276,15 @@ Deno.serve(async (req) => {
     const specialItems  = (items as ItemInput[]).filter(i => i.dailySpecialId);
     const productIds    = regularItems.map(i => i.productId!);
 
-    let products: { id: string; price: number; name: string; stock: string }[] = [];
+    let products: { id: string; price: number; name: string; stock: string; stock_quantity: number | null }[] = [];
     if (productIds.length > 0) {
       const { data } = await admin
-        .from('products').select('id, price, name, stock').in('id', productIds).eq('shop_id', shopId);
+        .from('products').select('id, price, name, stock, stock_quantity').in('id', productIds).eq('shop_id', shopId);
       if (!data?.length) return err('Produits introuvables', 400);
       products = data as typeof products;
     }
 
-    const pMap: Record<string, { id: string; price: number; name: string; stock: string }> =
+    const pMap: Record<string, { id: string; price: number; name: string; stock: string; stock_quantity: number | null }> =
       Object.fromEntries(products.map(p => [p.id, p]));
 
     // Plats du jour
@@ -342,6 +352,22 @@ Deno.serve(async (req) => {
       if (!orderId) { console.error('[create-guest-order] order', orderErr.message); return err('Commande impossible', 500); }
     }
     if (!orderId) return err('Commande impossible', 500);
+
+    // ── Décrémenter stock_quantity (habillement) ─────────────────────────────────
+    if (regularItems.length > 0) {
+      await Promise.all(
+        regularItems
+          .filter(item => (pMap[item.productId!]?.stock_quantity ?? null) !== null)
+          .map(item => {
+            const p = pMap[item.productId!];
+            const newQty = Math.max(0, (p.stock_quantity ?? 0) - item.qty);
+            return admin.from('products').update({
+              stock_quantity: newQty,
+              ...(newQty === 0 ? { stock: 'out' } : {}),
+            }).eq('id', item.productId!);
+          }),
+      );
+    }
 
     // ── Message vocal invité (optionnel) — uploadé en service_role, best-effort ─
     // Le marchand le lit via orders.voice_note_url (même bucket que l'app).

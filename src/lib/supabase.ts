@@ -10,11 +10,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import logger from '../utils/logger';
 import { secureStorage, SESSION_ACTIVE_KEY } from './secureStorage';
 
-export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-export const SUPABASE_ANON = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+// Si les vars sont absentes (OTA publiée sans env), on fournit des placeholders valides
+// pour que createClient() ne throw pas. L'app affiche un écran d'erreur via SUPABASE_MISCONFIGURED.
+// Root cause : expo export doit être lancé AVEC $env:EXPO_PUBLIC_* dans le même appel PS.
+export const SUPABASE_MISCONFIGURED =
+  !process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_ANON) {
-  logger.warn("[Supabase] Variables d'env manquantes — vérifie ton fichier .env");
+export const SUPABASE_URL =
+  process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+export const SUPABASE_ANON =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+
+if (SUPABASE_MISCONFIGURED) {
+  logger.warn("[Supabase] Variables d'env manquantes — OTA publiée sans env vars ?");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -40,9 +40,10 @@ interface Props {
   visible: boolean;
   items: PreviewItem[];
   onClose: () => void;
+  teaser?: boolean;
 }
 
-export default function OffreQuartierPreviewModal({ visible, items, onClose }: Props) {
+export default function OffreQuartierPreviewModal({ visible, items, onClose, teaser }: Props) {
   const listRef = useRef<FlatList<PreviewItem>>(null);
   const indexRef = useRef(0);
 
@@ -66,17 +67,23 @@ export default function OffreQuartierPreviewModal({ visible, items, onClose }: P
               <View style={styles.grab} />
 
               <View style={styles.headerRow}>
-                <Text style={styles.headerTitle}>Aperçu de ton offre</Text>
+                <Text style={styles.headerTitle}>
+                  {teaser ? 'Comment tu apparaîtrais' : 'Aperçu de ton offre'}
+                </Text>
                 <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                   <IcoClose />
                 </TouchableOpacity>
               </View>
               <Text style={styles.sub}>
-                Voici exactement comment tes produits apparaissent aux clients sur l'accueil.
+                {teaser
+                  ? "Voici comment tes produits seraient mis en avant dans le carrousel de tes clients. Abonne-toi pour activer cette visibilité."
+                  : "Voici exactement comment tes produits apparaissent aux clients sur l'accueil."}
               </Text>
 
-              <View style={styles.demoBadge}>
-                <Text style={styles.demoBadgeTxt}>● APERÇU DÉMONSTRATIF</Text>
+              <View style={[styles.demoBadge, teaser && styles.demoBadgeTeaser]}>
+                <Text style={[styles.demoBadgeTxt, teaser && styles.demoBadgeTxtTeaser]}>
+                  {teaser ? '● NON ACTIF · APERÇU SEULEMENT' : '● APERÇU DÉMONSTRATIF'}
+                </Text>
               </View>
 
               {items.length === 0 ? (
@@ -172,6 +179,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   demoBadgeTxt: { color: colors.success, fontFamily: fonts.ui, fontSize: 10.5, letterSpacing: 0.3 },
+  demoBadgeTeaser: {
+    backgroundColor: 'rgba(253,207,52,0.10)',
+    borderColor: 'rgba(253,207,52,0.35)',
+  },
+  demoBadgeTxtTeaser: { color: colors.accent },
 
   empty: { color: colors.muted, fontFamily: fonts.body, fontSize: 13, textAlign: 'center', paddingHorizontal: 24, paddingVertical: 30, lineHeight: 19 },
 

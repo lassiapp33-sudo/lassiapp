@@ -34,3 +34,13 @@ export async function getPushTokens(
     .map(r => r.token)
     .filter((t: string) => t.startsWith('ExponentPushToken[') || t.startsWith('ExpoPushToken['));
 }
+
+export async function sendPushToUser(
+  sb: { from: (t: string) => any },
+  userId: string,
+  message: Omit<ExpoPushMessage, 'to'>,
+): Promise<void> {
+  const tokens = await getPushTokens(sb, userId);
+  if (tokens.length === 0) return;
+  await sendExpoPush(tokens.map(to => ({ ...message, to })));
+}

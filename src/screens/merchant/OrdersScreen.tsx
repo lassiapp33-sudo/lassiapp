@@ -326,9 +326,9 @@ export default function OrdersScreen({ onBack, initialTab, onOpenChat }: Props) 
 
       <VerifyReceiptSheet
         visible={showVerify}
+        shopId={shopId ?? null}
         onClose={() => setShowVerify(false)}
         onVerified={() => {
-          // Recharge les commandes pour refléter le statut 'done'
           if (shopId) loadOrders(shopId).catch(() => {});
         }}
       />

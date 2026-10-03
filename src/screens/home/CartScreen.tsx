@@ -30,6 +30,7 @@ import { PayMethod } from '../../types/payment';
 import PayMethodCard from '../../components/payment/PayMethodCard';
 import { WAVE_ENABLED } from '../../config/features';
 import * as payService from '../../services/payment';
+import { initierPaiement } from '../../services/paymentService';
 import LivraisonModal from '../../components/livraison/LivraisonModal';
 import { devisLivraisonMulti, LivraisonShopPoint } from '../../config/livraison';
 import { getCurrentLocation } from '../../services/location';
@@ -198,7 +199,9 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
 
   // ── Checkout ──────────────────────────────────────────────────────────────
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (payMethod?: PayMethod) => {
+    const usedMethod: PayMethod = payMethod ?? method;
+    setMethod(usedMethod);
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
     setIsSubmitting(true);
@@ -272,7 +275,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         const sh = freshShops[0];
         const t = shopTotals(sh);
         const vipItems = sh.items.map(i => ({ prestationId: i.id, qty: i.qty }));
-        const res = await createVipOrder(sh.info.id, vipItems, 'emporter', structuredNote, method, freshLivraisonFee);
+        const res = await createVipOrder(sh.info.id, vipItems, 'emporter', structuredNote, usedMethod, freshLivraisonFee);
         const amount = t.client + freshLivraisonFee;
         await finalizeSingle(res.orderId, sh.info.name, sh.info.initial, sh.info.location, sh.items, amount, t.commission);
         return;
@@ -289,7 +292,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         const rawItems = sh.items.map(i => ({ productId: i.id, qty: i.qty }));
         const perShopLivraison = sh.info.id === freshAnchorId ? freshLivraisonFee : 0;
         const res = await createOrderSecure(
-          sh.info.id, rawItems, structuredNote, freshOrderType, undefined, voiceNotePath, method, perShopLivraison,
+          sh.info.id, rawItems, structuredNote, freshOrderType, undefined, voiceNotePath, usedMethod, perShopLivraison,
         );
         orderIds.push(res.orderId);
         sh.items.forEach(i => recapItems.push({ qty: i.qty, name: i.name, price: i.price * i.qty }));
@@ -300,14 +303,14 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         const sh = freshShops[0];
         const t = shopTotals(sh);
         const amount = t.client + freshLivraisonFee;
-        await finalizeSingle(orderIds[0], sh.info.name, sh.info.initial, sh.info.location, sh.items, amount, t.commission);
+        await finalizeSingle(orderIds[0], sh.info.name, sh.info.initial, sh.info.location, sh.items, amount, t.commission, sh.info.merchantId);
         return;
       }
 
       // ── Paiement groupé multi-prestataire ─────────────────────────────────
       let groupSession;
       try {
-        groupSession = await payService.createGroupPayment({ orderIds, method });
+        groupSession = await payService.createGroupPayment({ orderIds, method: usedMethod });
       } catch (payErr: unknown) {
         notifyError(payErr instanceof Error ? payErr.message : "Impossible d'initier le paiement. Réessaie.");
         return;
@@ -332,7 +335,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         items:                  recapItems,
         total:                  groupSession.montantTotal,
         commission:             grandCommission,
-        preMethod:              method,
+        preMethod:              usedMethod,
         paymentConfirmed,
         qrCode:                 groupSession.qrCode || undefined,
         paymentUrl:             groupSession.paymentUrl || undefined,
@@ -347,7 +350,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
       }
     }
 
-    // ── Flux paiement mono-commande (single / VIP) — inchangé ──────────────
+    // ── Flux paiement mono-commande (single / VIP) ────────────────────────
     async function finalizeSingle(
       realOrderId: string,
       sName: string,
@@ -356,6 +359,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
       items: { id: string; name: string; price: number; qty: number }[],
       amount: number,
       commission: number,
+      merchantId?: string,
     ) {
       let preInitiatedPiId: string | undefined;
       let preQrCode: string | undefined;
@@ -363,17 +367,30 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
       let paymentConfirmed = false;
 
       try {
-        const session = await payService.createPayment({
-          ticketId: realOrderId, amount, method, merchantName: sName,
-        });
-        preInitiatedPiId = session.reference;
-        preQrCode = session.qrCode || undefined;
-        prePaymentUrl = session.paymentUrl || undefined;
-
-        if (session.simulation) {
-          const paid = await payService.verifyPayment({ reference: session.reference, ticketId: realOrderId, method });
-          if (!paid) { notifyError('Paiement simulé non confirmé. Réessaie.'); return; }
-          paymentConfirmed = true;
+        if (merchantId) {
+          // Proper flow: crée payment_intent → déclenche payout → notifications
+          const res = await initierPaiement({ orderId: realOrderId, prestataireId: merchantId, prixBase: amount, moyenPaiement: usedMethod });
+          if (!res.success) throw new Error(res.error ?? "Impossible d'initier le paiement");
+          preInitiatedPiId = res.paymentIntentId;
+          preQrCode = res.qrCode || undefined;
+          prePaymentUrl = res.redirectUrl || undefined;
+          if (res.mode === 'simulation') {
+            const paid = await payService.verifyPayment({ reference: res.paymentIntentId!, ticketId: realOrderId, method: usedMethod });
+            if (!paid) { notifyError('Paiement simulé non confirmé. Réessaie.'); return; }
+            paymentConfirmed = true;
+          }
+        } else {
+          const session = await payService.createPayment({
+            ticketId: realOrderId, amount, method: usedMethod, merchantName: sName,
+          });
+          preInitiatedPiId = session.reference;
+          preQrCode = session.qrCode || undefined;
+          prePaymentUrl = session.paymentUrl || undefined;
+          if (session.simulation) {
+            const paid = await payService.verifyPayment({ reference: session.reference, ticketId: realOrderId, method: usedMethod });
+            if (!paid) { notifyError('Paiement simulé non confirmé. Réessaie.'); return; }
+            paymentConfirmed = true;
+          }
         }
       } catch (payErr: unknown) {
         notifyError(payErr instanceof Error ? payErr.message : "Impossible d'initier le paiement. Réessaie ou change de moyen.");
@@ -392,7 +409,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         total:                  amount,
         commission,
         orderType:              (activeShops[0]?.info.showOrderType) ? orderType : undefined,
-        preMethod:              method,
+        preMethod:              usedMethod,
         preInitiatedPiId,
         paymentConfirmed,
         qrCode:                 preQrCode,
@@ -516,13 +533,27 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
             <VoiceNoteRecorder onRecordingComplete={setVoiceNoteUri} />
           </View>
 
-          {/* Moyen de paiement */}
-          <Text style={styles.payMethodTitle}>Moyen de paiement</Text>
+          {/* Moyen de paiement — cliquer déclenche directement le paiement */}
+          <Text style={styles.payMethodTitle}>
+            {isVip ? 'Moyen de paiement' : 'Payer avec'}
+          </Text>
           {merchantPayMethods.includes('wave') && (
-            <PayMethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />
+            <PayMethodCard
+              method="wave"
+              selected={method === 'wave'}
+              loading={isSubmitting}
+              disabled={isSubmitting && method !== 'wave'}
+              onSelect={() => { if (!isVip) { handleCheckout('wave'); } else { setMethod('wave'); } }}
+            />
           )}
           {merchantPayMethods.includes('om') && (
-            <PayMethodCard method="om" selected={method === 'om'} onSelect={() => setMethod('om')} />
+            <PayMethodCard
+              method="om"
+              selected={method === 'om'}
+              loading={isSubmitting}
+              disabled={isSubmitting && method !== 'om'}
+              onSelect={() => { if (!isVip) { handleCheckout('om'); } else { setMethod('om'); } }}
+            />
           )}
 
           {/* Résumé */}
@@ -549,13 +580,13 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Footer fixe */}
-      <View style={styles.footer}>
-        <View style={styles.footerRow}>
-          {(!isVip || vipOrderMode === 'normal') && (
+      {/* Footer fixe — VIP uniquement (non-VIP = paiement direct via les cartes) */}
+      {isVip && vipOrderMode === 'normal' && (
+        <View style={styles.footer}>
+          <View style={styles.footerRow}>
             <TouchableOpacity
               style={[styles.payBtn, (!hasItems || isSubmitting) && styles.payBtnDisabled]}
-              onPress={handleCheckout}
+              onPress={() => handleCheckout()}
               activeOpacity={0.85}
               disabled={!hasItems || isSubmitting}
             >
@@ -567,19 +598,13 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
               ) : (
                 <>
                   <IcoPay />
-                  <Text style={styles.payBtnTxt}>
-                    {isVip
-                      ? 'Commander'
-                      : `${method === 'wave' ? 'Wave' : 'OM'} · ${formatPrice(grandClient)}`}
-                  </Text>
+                  <Text style={styles.payBtnTxt}>Commander</Text>
                 </>
               )}
             </TouchableOpacity>
-          )}
-
-          {/* Livraison masquée temporairement */}
+          </View>
         </View>
-      </View>
+      )}
 
       <LivraisonModal
         visible={showLivraisonModal}
@@ -590,7 +615,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         onConfirmed={() => {
           setShowLivraisonModal(false);
           livraisonFeeRef.current = (devisBtn && !devisBtn.horsZone) ? devisBtn.prix : 0;
-          handleCheckout();
+          handleCheckout(method);
         }}
       />
     </LassiScreen>

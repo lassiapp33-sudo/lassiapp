@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert, Modal, Pressable } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert, Modal, Pressable, ActivityIndicator } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Svg, { Path, Rect, Circle as SvgCircle } from 'react-native-svg';
 
@@ -49,6 +49,7 @@ import { FITNESS_SUBSCRIPTION_CATS } from '../../config/fitnessConfig';
 import * as beautyService from '../../services/beauty';
 import { BeautyService } from '../../types/beauty';
 import { calculerPrixBeauteAvecMarge } from '../../services/beauty';
+import { getTodaySpecials, DailySpecial } from '../../services/dailySpecials';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -153,6 +154,7 @@ function storeProductToProduct(p: StoreProduct): Product {
     price: p.price,
     category: p.category,
     stock: p.stock,
+    stockQuantity: p.stockQuantity,
   };
 }
 
@@ -211,6 +213,8 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [fitnessOffres, setFitnessOffres] = useState<FitnessOffre[]>([]);
   const [beautyServices, setBeautyServices] = useState<BeautyService[]>([]);
+  const [dailySpecials, setDailySpecials] = useState<DailySpecial[]>([]);
+  const [dailySpecialsLoading, setDailySpecialsLoading] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const productSectionY = useRef(0);
@@ -302,6 +306,15 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     };
   }, [targetProductId, realProducts]);
 
+  useEffect(() => {
+    if (!isRestaurantShop || !shopId) return;
+    setDailySpecialsLoading(true);
+    getTodaySpecials(shopId)
+      .then(setDailySpecials)
+      .catch(() => {})
+      .finally(() => setDailySpecialsLoading(false));
+  }, [shopId, isRestaurantShop]);
+
   // ── Type de vitrine ───────────────────────────────────────────────────────
   const subcats = shopData?.subcategories ?? [];
   const shopType: 'products' | 'services' | 'memberships' | 'terrains' =
@@ -311,6 +324,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const isTerrainShop = shopType === 'terrains';
   const isSlotShop = subcats.some(s => SLOT_SUBCATS.includes(s));
   const isBeautyShop = subcats.some(s => BEAUTY_SLOT_SUBCATS.includes(s));
+  const isRestaurantShop = subcats.some(s => s === 'restaurant' || s === 'fastfood');
 
   // ── Services beauté regroupés par catégorie (comme la vitrine prestataire) ──
   const BEAUTY_CAT_LABELS: Record<string, string> = {
@@ -415,8 +429,10 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const membershipAboTab = shopType === 'memberships' && fitnessOffres.length > 0
     ? [{ id: 'abonnements', label: 'Abonnements' }]
     : [];
+  const platDuJourTab = isRestaurantShop ? [{ id: 'plat_du_jour', label: 'Plat du jour' }] : [];
   const tabs = [
     { id: 'all', label: 'Tout' },
+    ...platDuJourTab,
     ...membershipAboTab,
     ...catIds.map(id => ({ id, label: capitalize(id) })),
     ...(hasAvisTab ? [{ id: 'avis', label: 'Avis' }] : []),
@@ -498,6 +514,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     logoUrl: displayLogoUrl,
     showOrderType: showOrderOptions,
     paymentMethods: shopData?.paymentMethods ?? (['wave', 'om'] as ('wave' | 'om')[]),
+    merchantId: shopData?.merchantId,
   };
 
   const addToCart = (p: StoreProduct) => {
@@ -708,8 +725,76 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
           ) : null}
 
 
+          {/* 8c — Plat du jour dans "Tout" */}
+          {isRestaurantShop && activeTab === 'all' && dailySpecials.length > 0 && (
+            <View style={{ paddingHorizontal: 18, paddingTop: 8 }}>
+              <Text style={styles.catTitle}>Plat du jour</Text>
+              <View style={styles.grid}>
+                {toPairs(dailySpecials.map(sp => ({
+                  id: 'daily_' + sp.id, emoji: '', photoUrl: sp.photoUrl ?? undefined,
+                  name: sp.name, desc: '', price: sp.price, category: 'plat_du_jour', stock: 'in' as const,
+                }))).map((pair, i) => (
+                  <View key={i} style={styles.gridRow}>
+                    {pair.map(product => (
+                      <View key={product.id} style={styles.tileWrapper}>
+                        <ProductTile
+                          product={product}
+                          qty={cartItems.find(ci => ci.id === product.id)?.qty ?? 0}
+                          onAdd={() => addItem(shopInfo, { id: product.id, name: product.name, emoji: '', price: isPreview ? product.price : calculerPrixClient(product.price) })}
+                          onRemove={() => removeItem(product.id)}
+                          isVip={isVip} isPreview={isPreview}
+                        />
+                      </View>
+                    ))}
+                    {pair.length === 1 && <View style={styles.tileSpacer} />}
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
           {/* 9 — Catalogue / Terrains / Créneaux foot-basket */}
-          {isSlotShop ? (
+          {isRestaurantShop && activeTab === 'plat_du_jour' ? (
+            <View style={{ paddingHorizontal: 18, paddingTop: 8 }}>
+              <Text style={styles.catTitle}>Plat du jour</Text>
+              {dailySpecialsLoading ? (
+                <ActivityIndicator color={colors.accent} style={{ marginVertical: 20 }} />
+              ) : dailySpecials.length === 0 ? (
+                <View style={styles.emptyProducts}>
+                  <Text style={styles.emptyTxt}>Aucun plat du jour aujourd'hui.</Text>
+                </View>
+              ) : (
+                <View style={styles.grid}>
+                  {toPairs(dailySpecials.map(sp => ({
+                    id: 'daily_' + sp.id,
+                    emoji: '',
+                    photoUrl: sp.photoUrl ?? undefined,
+                    name: sp.name,
+                    desc: '',
+                    price: sp.price,
+                    category: 'plat_du_jour',
+                    stock: 'in' as const,
+                  }))).map((pair, i) => (
+                    <View key={i} style={styles.gridRow}>
+                      {pair.map(product => (
+                        <View key={product.id} style={styles.tileWrapper}>
+                          <ProductTile
+                            product={product}
+                            qty={cartItems.find(ci => ci.id === product.id)?.qty ?? 0}
+                            onAdd={() => addItem(shopInfo, { id: product.id, name: product.name, emoji: '', price: isPreview ? product.price : calculerPrixClient(product.price) })}
+                            onRemove={() => removeItem(product.id)}
+                            isVip={isVip}
+                            isPreview={isPreview}
+                          />
+                        </View>
+                      ))}
+                      {pair.length === 1 && <View style={styles.tileSpacer} />}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          ) : isSlotShop ? (
             terrains.length > 0 ? (
               <>
                 {terrains.length > 1 && (

@@ -18,6 +18,7 @@ export interface Product {
   price: number;
   category: string;
   stock?: 'in' | 'out';
+  stockQuantity?: number;
 }
 
 interface Props {
@@ -129,6 +130,12 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
           </View>
         ) : (
           <Text style={[styles.price, isOut && styles.priceOut]}>{formatPrice(calcPrix(product.price))}</Text>
+        )}
+        {/* Stock restant habillement */}
+        {!isOut && product.stockQuantity != null && (
+          <Text style={[styles.stockTxt, product.stockQuantity <= 5 && styles.stockLow]}>
+            {product.stockQuantity} restant{product.stockQuantity > 1 ? 's' : ''}
+          </Text>
         )}
       </View>
 
@@ -278,5 +285,14 @@ const styles = StyleSheet.create({
   },
   priceOut: {
     color: colors.muted,
+  },
+  stockTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 9.5,
+    marginTop: 3,
+  },
+  stockLow: {
+    color: '#F97316',
   },
 });

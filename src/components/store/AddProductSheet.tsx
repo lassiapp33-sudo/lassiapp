@@ -318,6 +318,7 @@ export default function AddProductSheet({
   const COULEURS = ['Blanc', 'Noir', 'Gris', 'Beige', 'Bleu', 'Rouge', 'Vert', 'Jaune', 'Orange', 'Violet', 'Rose', 'Marron'];
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [stockQty, setStockQty] = useState('');
 
   const scrollRef = useRef<ScrollView>(null);
   const [nameY, setNameY] = useState(0);
@@ -343,6 +344,7 @@ export default function AddProductSheet({
       setFormulaPeriod(product.formulaPeriod ?? 'mois');
       setSelectedSizes(product.sizes ?? []);
       setSelectedColors(product.colors ?? []);
+      setStockQty(product.stockQuantity != null ? String(product.stockQuantity) : '');
     } else {
       setEmoji('');
       setPhotoUrl(undefined);
@@ -354,6 +356,7 @@ export default function AddProductSheet({
       setFormulaPeriod('seance');
       setSelectedSizes([]);
       setSelectedColors([]);
+      setStockQty('');
     }
     setShowEmojiPicker(false);
     setUploading(false);
@@ -450,6 +453,7 @@ export default function AddProductSheet({
       formulaPeriod: isFormuleMode && itemType === 'membership' ? formulaPeriod : undefined,
       sizes: isHabillement && selectedSizes.length > 0 ? selectedSizes : undefined,
       colors: isHabillement && selectedColors.length > 0 ? selectedColors : undefined,
+      stockQuantity: isHabillement && stockQty !== '' ? parseInt(stockQty, 10) : undefined,
     };
     setSaving(true);
     try {
@@ -762,6 +766,22 @@ export default function AddProductSheet({
                         </TouchableOpacity>
                       );
                     })}
+                  </View>
+                </View>
+
+                <View style={{ marginTop: 14 }}>
+                  <FieldLabel>Quantité en stock</FieldLabel>
+                  <View style={styles.inputRow}>
+                    <TextInput
+                      style={[styles.input, styles.flex, { marginBottom: 0 }]}
+                      value={stockQty}
+                      onChangeText={t => setStockQty(t.replace(/\D/g, ''))}
+                      keyboardType="numeric"
+                      placeholder="Ex : 20"
+                      placeholderTextColor="#5a5c80"
+                      returnKeyType="done"
+                    />
+                    <Text style={styles.fcfaSuffix}>pcs</Text>
                   </View>
                 </View>
               </>

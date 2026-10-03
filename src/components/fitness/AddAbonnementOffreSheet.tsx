@@ -20,6 +20,7 @@ import { calculerPrixClient } from '../../config/payment';
 interface Props {
   visible: boolean;
   offre: FitnessOffre | null;   // null = création, objet = édition
+  mode: 'formule' | 'abonnement';
   onSave: (data: { nom: string; description: string; prix: number; dureeJours: number }) => Promise<void>;
   onDelete?: () => void;
   onClose: () => void;
@@ -38,7 +39,7 @@ function labelDuree(j: number): string {
   return `${j} jours`;
 }
 
-export default function AddAbonnementOffreSheet({ visible, offre, onSave, onDelete, onClose }: Props) {
+export default function AddAbonnementOffreSheet({ visible, offre, mode, onSave, onDelete, onClose }: Props) {
   const [nom,           setNom]           = useState('');
   const [description,   setDescription]   = useState('');
   const [prixStr,       setPrixStr]       = useState('');
@@ -112,16 +113,24 @@ export default function AddAbonnementOffreSheet({ visible, offre, onSave, onDele
               showsVerticalScrollIndicator={false}
             >
               <Text style={styles.title}>
-                {offre ? "Modifier l'abonnement" : 'Nouvel abonnement'}
+                {offre
+                  ? (mode === 'formule' ? 'Modifier la formule' : "Modifier l'abonnement")
+                  : (mode === 'formule' ? 'Nouvelle formule' : 'Nouvel abonnement')
+                }
               </Text>
 
               {/* Nom */}
-              <Text style={styles.label}>Nom de l'abonnement *</Text>
+              <Text style={styles.label}>
+                {mode === 'formule' ? 'Nom de la formule *' : "Nom de l'abonnement *"}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={nom}
                 onChangeText={setNom}
-                placeholder="Ex : Abonnement mensuel, Abonnement premium…"
+                placeholder={mode === 'formule'
+                  ? 'Ex : Pass journée, Forfait 10 séances…'
+                  : 'Ex : Abonnement mensuel, Pack premium…'
+                }
                 placeholderTextColor={colors.muted}
                 maxLength={100}
                 returnKeyType="next"
@@ -207,7 +216,10 @@ export default function AddAbonnementOffreSheet({ visible, offre, onSave, onDele
                 {saving
                   ? <ActivityIndicator color={colors.bg} size="small" />
                   : <Text style={styles.saveTxt}>
-                      {offre ? 'Enregistrer les modifications' : "Créer l'abonnement"}
+                      {offre
+                        ? 'Enregistrer les modifications'
+                        : (mode === 'formule' ? 'Créer la formule' : "Créer l'abonnement")
+                      }
                     </Text>
                 }
               </TouchableOpacity>

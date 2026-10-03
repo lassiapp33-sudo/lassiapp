@@ -48,38 +48,85 @@ serve(async (req) => {
     });
     if (!rateOk) return fail('Trop de commandes. Attends quelques minutes.', 429);
 
-    // 4. Récupérer les vrais prix depuis la base
-    const productIds = items.map(i => i.productId);
-    const { data: products, error: prodErr } = await sb
-      .from('products')
-      .select('id, name, price, stock')
-      .in('id', productIds)
-      .eq('shop_id', shopId);
+    // 4. Séparer items normaux (products) et plats du jour (daily_specials)
+    const regularItems = items.filter(i => !i.productId.startsWith('daily_'));
+    const dailyItems   = items.filter(i =>  i.productId.startsWith('daily_'));
 
-    if (prodErr) throw new Error(prodErr.message);
-    if (!products || products.length !== productIds.length) {
-      return fail('Certains produits sont introuvables.', 400);
-    }
-
-    // 5. Vérifier le stock de chaque produit
-    const outOfStock = products.filter(p => p.stock === 'out').map(p => p.name);
-    if (outOfStock.length > 0) {
-      return fail(`Produits épuisés : ${outOfStock.join(', ')}`, 400);
-    }
-
-    // 6. Recalculer le total côté serveur
-    const priceMap = Object.fromEntries(products.map(p => [p.id, p.price]));
+    // 5a. Récupérer les vrais prix des produits normaux
     let total = 0;
-    for (const item of items) {
-      const price = priceMap[item.productId];
-      if (price === undefined) return fail('Produit invalide.', 400);
-      if (!Number.isInteger(item.qty) || item.qty < 1 || item.qty > 99) {
-        return fail('Quantité invalide (1–99).', 400);
+    const orderItemRows: Record<string, unknown>[] = [];
+
+    if (regularItems.length > 0) {
+      const productIds = regularItems.map(i => i.productId);
+      const { data: products, error: prodErr } = await sb
+        .from('products')
+        .select('id, name, price, stock, stock_quantity')
+        .in('id', productIds)
+        .eq('shop_id', shopId);
+
+      if (prodErr) throw new Error(prodErr.message);
+      if (!products || products.length !== productIds.length) {
+        return fail('Certains produits sont introuvables.', 400);
       }
-      total += price * item.qty;
+
+      const outOfStock = products.filter((p: any) => p.stock === 'out').map((p: any) => p.name);
+      if (outOfStock.length > 0) {
+        return fail(`Produits épuisés : ${outOfStock.join(', ')}`, 400);
+      }
+
+      const priceMap = Object.fromEntries(products.map((p: any) => [p.id, { price: p.price, name: p.name }]));
+      for (const item of regularItems) {
+        const info = priceMap[item.productId];
+        if (!info) return fail('Produit invalide.', 400);
+        if (!Number.isInteger(item.qty) || item.qty < 1 || item.qty > 99) {
+          return fail('Quantité invalide (1–99).', 400);
+        }
+        total += info.price * item.qty;
+        orderItemRows.push({
+          product_id:   item.productId,
+          product_name: info.name,
+          qty:          item.qty,
+          unit_price:   info.price,
+        });
+      }
     }
 
-    // 7. Créer la commande
+    // 5b. Récupérer les prix des plats du jour
+    if (dailyItems.length > 0) {
+      const today = new Date().toISOString().slice(0, 10);
+      const dailyIds = dailyItems.map(i => i.productId.replace(/^daily_/, ''));
+
+      const { data: specials, error: spErr } = await sb
+        .from('daily_specials')
+        .select('id, name, price, date, shop_id')
+        .in('id', dailyIds);
+
+      if (spErr) throw new Error(spErr.message);
+      if (!specials || specials.length !== dailyIds.length) {
+        return fail('Certains plats du jour sont introuvables.', 400);
+      }
+
+      const spMap = Object.fromEntries(specials.map((s: any) => [s.id, s]));
+      for (const item of dailyItems) {
+        const realId = item.productId.replace(/^daily_/, '');
+        const sp = spMap[realId];
+        if (!sp) return fail('Plat du jour invalide.', 400);
+        if (sp.shop_id !== shopId) return fail('Plat du jour invalide.', 400);
+        if (sp.date !== today) return fail(`Le plat "${sp.name}" n'est plus disponible aujourd'hui.`, 400);
+        if (!Number.isInteger(item.qty) || item.qty < 1 || item.qty > 99) {
+          return fail('Quantité invalide (1–99).', 400);
+        }
+        total += sp.price * item.qty;
+        orderItemRows.push({
+          product_id:   null,
+          product_name: sp.name,
+          qty:          item.qty,
+          unit_price:   sp.price,
+        });
+      }
+    }
+
+    // 6. Créer la commande
     const { data: order, error: orderErr } = await sb
       .from('orders')
       .insert({
@@ -94,18 +141,32 @@ serve(async (req) => {
 
     if (orderErr) throw new Error(orderErr.message);
 
-    // 8. Insérer les lignes de commande avec les vrais prix
-    const orderItems = items.map(item => ({
-      order_id:   order.id,
-      product_id: item.productId,
-      qty:        item.qty,
-      unit_price: priceMap[item.productId],
-    }));
-
-    const { error: itemsErr } = await sb.from('order_items').insert(orderItems);
+    // 7. Insérer les lignes de commande
+    const insertRows = orderItemRows.map(row => ({ ...row, order_id: order.id }));
+    const { error: itemsErr } = await sb.from('order_items').insert(insertRows);
     if (itemsErr) throw new Error(itemsErr.message);
 
-    // 9. Notifier le marchand (insérer une notif en base)
+    // 7.5. Décrémenter stock_quantity pour les produits habillement
+    if (regularItems.length > 0) {
+      const productMap = Object.fromEntries((products as any[]).map((p: any) => [p.id, p]));
+      await Promise.all(
+        regularItems
+          .filter(item => (productMap[item.productId]?.stock_quantity ?? null) !== null)
+          .map(item => {
+            const p = productMap[item.productId];
+            const newQty = Math.max(0, p.stock_quantity - item.qty);
+            return sb
+              .from('products')
+              .update({
+                stock_quantity: newQty,
+                ...(newQty === 0 ? { stock: 'out' } : {}),
+              })
+              .eq('id', item.productId);
+          }),
+      );
+    }
+
+    // 8. Notifier le marchand
     const { data: shop } = await sb
       .from('shops')
       .select('merchant_id')

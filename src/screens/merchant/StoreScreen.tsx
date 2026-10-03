@@ -29,6 +29,8 @@ import AddProductSheet from '../../components/store/AddProductSheet';
 import OpeningHoursCard from '../../components/store/OpeningHoursCard';
 import AbonnementOffreRow from '../../components/fitness/AbonnementOffreRow';
 import AddAbonnementOffreSheet from '../../components/fitness/AddAbonnementOffreSheet';
+import DailySpecialModal from '../../components/store/DailySpecialModal';
+import { getTodaySpecials, deleteTodaySpecialById, DailySpecial } from '../../services/dailySpecials';
 import { colors, fonts, radius } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import { StoreProduct, StoreCategory } from '../../types/store';
@@ -191,10 +193,18 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   const [offresLoading, setOffresLoading] = useState(false);
   const [editOffre, setEditOffre] = useState<FitnessOffre | null>(null);
   const [showOffreSheet, setShowOffreSheet] = useState(false);
+  const [fitnessMode, setFitnessMode] = useState<'formule' | 'abonnement'>('formule');
   const userId = useAuthStore(s => s.user?.id);
 
   // ── Services réservables (beauté) — table beauty_services ──────────────────
   const [reservServices, setReservServices] = useState<BeautyService[]>([]);
+
+  // ── Plat du jour (restaurant/fastfood) ────────────────────────────────────
+  const [showDailySpecial, setShowDailySpecial] = useState(false);
+  const [dailySpecials, setDailySpecials] = useState<DailySpecial[]>([]);
+  const [dailySpecialsLoading, setDailySpecialsLoading] = useState(false);
+  const [deletingSpecialId, setDeletingSpecialId] = useState<string | null>(null);
+  const isRestaurantShop = (context.subcategories ?? []).some(s => s === 'restaurant' || s === 'fastfood');
 
   // ── Récupération vitrine manquante ────────────────────────────────────────
   const [recoveryName, setRecoveryName] = useState('');
@@ -362,7 +372,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   }, [shopId]);
 
   useEffect(() => {
-    if (categories.length > 0 && !categories.find(c => c.id === activeCat)) {
+    if (categories.length > 0 && !categories.find(c => c.id === activeCat) && activeCat !== 'plat_du_jour') {
       setActiveCat(categories[0].id);
     }
   }, [categories, activeCat]);
@@ -380,18 +390,27 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     if (!userId || context.shopType !== 'memberships') return;
     setOffresLoading(true);
     try {
-      const list = await fitnessService.getMesOffres(userId, activeCat);
+      const list = await fitnessService.getMesOffres(userId);
       setOffres(list);
     } catch {
       // Silencieux : les offres restent vides
     } finally {
       setOffresLoading(false);
     }
-  }, [userId, context.shopType, activeCat]);
+  }, [userId, context.shopType]);
 
   useEffect(() => {
     if (context.shopType === 'memberships') loadOffres();
-  }, [context.shopType, activeCat, loadOffres]);
+  }, [context.shopType, loadOffres]);
+
+  useEffect(() => {
+    if (activeCat !== 'plat_du_jour' || !shopId) return;
+    setDailySpecialsLoading(true);
+    getTodaySpecials(shopId)
+      .then(setDailySpecials)
+      .catch(() => {})
+      .finally(() => setDailySpecialsLoading(false));
+  }, [activeCat, shopId]);
 
   // Auto-suppression des produits shop_items orphelins dans les catégories abonnement fitness
   const cleanupDone = React.useRef(false);
@@ -746,8 +765,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     if (editOffre) {
       await fitnessService.updateOffre(editOffre.id, data);
     } else {
-      // Lier la nouvelle offre à l'onglet actif
-      await fitnessService.createOffre(userId, data, activeCat);
+      await fitnessService.createOffre(userId, data, fitnessMode === 'abonnement' ? 'abonnements' : 'formules');
     }
     await loadOffres();
   };
@@ -989,32 +1007,122 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                   />
                 ))}
               </>
+            ) : context.shopType === 'memberships' ? (
+              /* ── Fitness / Musculation ── */
+              <>
+                {isEmptyShop && (
+                  <Text style={styles.emptyShopHint}>
+                    Ajoute ta première formule ou ton premier abonnement pour compléter ta vitrine.
+                  </Text>
+                )}
+                <Text style={styles.menuSectionTitle}>Ajouter au catalogue</Text>
+                <View style={styles.addPickerWrap}>
+                  <Animated.View style={{ flex: 1, opacity: addBlink }}>
+                    <TouchableOpacity
+                      style={[styles.addPickerBtn, styles.addPickerBtnPrimary]}
+                      onPress={() => { setFitnessMode('formule'); setEditOffre(null); setShowOffreSheet(true); }}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.addPickerIcon}>+</Text>
+                      <Text style={styles.addPickerTitle}>Formule</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                  <Animated.View style={{ flex: 1, opacity: addBlink }}>
+                    <TouchableOpacity
+                      style={styles.addPickerBtn}
+                      onPress={() => { setFitnessMode('abonnement'); setEditOffre(null); setShowOffreSheet(true); }}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.addPickerIcon}>+</Text>
+                      <Text style={[styles.addPickerTitle, { color: colors.white }]}>Abonnement</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                  <Animated.View style={{ flex: 1, opacity: addBlink }}>
+                    <TouchableOpacity
+                      style={styles.addPickerBtn}
+                      onPress={() => openAdd('produits')}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.addPickerIcon}>+</Text>
+                      <Text style={[styles.addPickerTitle, { color: colors.white }]}>Produit</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                </View>
+
+                {/* Liste des offres */}
+                <View style={styles.fitnessSection}>
+                  {offres.length > 0 && (
+                    <View style={styles.fitnessSectionHeader}>
+                      <Text style={styles.fitnessSectionTitle}>Formules & Abonnements</Text>
+                      <Text style={styles.fitnessSectionCount}>
+                        {offres.length} offre{offres.length !== 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                  )}
+                  {offresLoading ? (
+                    <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
+                  ) : (
+                    offres.map(offre => (
+                      <AbonnementOffreRow
+                        key={offre.id}
+                        offre={offre}
+                        onEdit={() => { setFitnessMode('formule'); setEditOffre(offre); setShowOffreSheet(true); }}
+                        onToggleActif={() => handleToggleOffreActif(offre)}
+                      />
+                    ))
+                  )}
+                  {onAbonnes && (
+                    <TouchableOpacity
+                      style={[styles.addProd, { marginTop: 8, backgroundColor: 'rgba(253,207,52,.08)', borderColor: 'rgba(253,207,52,.3)' }]}
+                      onPress={onAbonnes}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.addProdTxt, { color: colors.accent }]}>Voir mes abonnés →</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Produits (shop_items) */}
+                {products.length > 0 && (
+                  <>
+                    <SectionHead title="Produits" count={products.length} itemLabel="produit" />
+                    {products.map(product => (
+                      <ProductRow
+                        key={product.id}
+                        product={product}
+                        promoInfo={promoMap[product.id]}
+                        onEdit={() => openEdit(product)}
+                        onToggleStock={async () => {
+                          try { await toggleStock(product.id); }
+                          catch { Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.'); }
+                        }}
+                      />
+                    ))}
+                  </>
+                )}
+              </>
             ) : (
+              /* ── Standard (produits / services) ── */
               <>
                 {isEmptyShop && (
                   <Text style={styles.emptyShopHint}>
                     Ajoute ton premier{' '}
-                    {itemLabel === 'prestation' ? 'service' : itemLabel === 'formule' ? 'abonnement' : 'produit'}{' '}
+                    {itemLabel === 'prestation' ? 'service' : 'produit'}{' '}
                     pour compléter ta vitrine.
                   </Text>
                 )}
-                {/* ── Ajouter un produit (masqué pour les onglets abonnement fitness) ── */}
-                {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
-                  <AddMenuSection
-                    sectionTitle="Mon menu"
-                    addLabel={
-                      itemLabel === 'prestation'
-                        ? 'Ajouter une prestation'
-                        : itemLabel === 'formule'
-                          ? 'Ajouter une formule'
-                          : 'Ajouter un produit'
-                    }
-                    onAdd={() => openAdd(activeCat)}
-                    blink={addBlink}
-                  />
-                )}
 
-                {/* ── Onglets + produits masqués si boutique vide ── */}
+                <AddMenuSection
+                  sectionTitle="Mon menu"
+                  addLabel={
+                    itemLabel === 'prestation'
+                      ? 'Ajouter une prestation'
+                      : 'Ajouter un produit'
+                  }
+                  onAdd={() => openAdd(activeCat)}
+                  blink={addBlink}
+                />
+
                 {!isEmptyShop && (
                   <>
                     <CategoryTabs
@@ -1023,9 +1131,56 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                       onSelect={setActiveCat}
                       onDeleteCat={handleDeleteCat}
                       onRenameCat={handleRenameCat}
+                      extraTabs={isRestaurantShop ? [{ id: 'plat_du_jour', label: 'Plat du jour' }] : undefined}
                     />
-
-                    {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
+                    {activeCat === 'plat_du_jour' ? (
+                      <>
+                        <SectionHead title="Plat du jour" count={dailySpecials.length} itemLabel="plat" />
+                        {dailySpecialsLoading ? (
+                          <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
+                        ) : dailySpecials.length === 0 ? (
+                          <Text style={styles.emptyShopHint}>Aucun plat du jour aujourd'hui.</Text>
+                        ) : (
+                          dailySpecials.map(sp => (
+                            <View key={sp.id} style={styles.dailyRow}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.dailyName}>{sp.name}</Text>
+                                <Text style={styles.dailyPrice}>{sp.price} F</Text>
+                              </View>
+                              <TouchableOpacity
+                                onPress={async () => {
+                                  setDeletingSpecialId(sp.id);
+                                  try {
+                                    await deleteTodaySpecialById(sp.id);
+                                    setDailySpecials(prev => prev.filter(s => s.id !== sp.id));
+                                  } catch {
+                                    Alert.alert('Erreur', 'Impossible de supprimer.');
+                                  } finally {
+                                    setDeletingSpecialId(null);
+                                  }
+                                }}
+                                disabled={deletingSpecialId === sp.id}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                              >
+                                {deletingSpecialId === sp.id
+                                  ? <ActivityIndicator size="small" color="#ff5a5a" />
+                                  : <Text style={styles.dailyDelete}>×</Text>}
+                              </TouchableOpacity>
+                            </View>
+                          ))
+                        )}
+                        <Animated.View style={{ opacity: addBlink }}>
+                          <TouchableOpacity
+                            style={[styles.addProd, { marginTop: 10 }]}
+                            onPress={() => setShowDailySpecial(true)}
+                            activeOpacity={0.8}
+                          >
+                            <IcoPlus />
+                            <Text style={styles.addProdTxt}>Ajouter un plat du jour</Text>
+                          </TouchableOpacity>
+                        </Animated.View>
+                      </>
+                    ) : (
                       <>
                         <SectionHead
                           title={activeCatData?.label ?? ''}
@@ -1039,11 +1194,8 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                             promoInfo={promoMap[product.id]}
                             onEdit={() => openEdit(product)}
                             onToggleStock={async () => {
-                              try {
-                                await toggleStock(product.id);
-                              } catch {
-                                Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.');
-                              }
+                              try { await toggleStock(product.id); }
+                              catch { Alert.alert('Erreur', 'Impossible de mettre à jour le stock. Réessaie.'); }
                             }}
                           />
                         ))}
@@ -1052,51 +1204,6 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                   </>
                 )}
               </>
-            )}
-
-            {/* ── Offres d'abonnement (uniquement pour les onglets abonnement) ── */}
-            {!isEmptyShop && context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat) && (
-              <View style={styles.fitnessSection}>
-                <View style={styles.fitnessSectionHeader}>
-                  <Text style={styles.fitnessSectionTitle}>Offres d'abonnement</Text>
-                  <Text style={styles.fitnessSectionCount}>
-                    {offres.length} offre{offres.length !== 1 ? 's' : ''}
-                  </Text>
-                </View>
-                {offresLoading ? (
-                  <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
-                ) : offres.length === 0 ? (
-                  <Text style={styles.fitnessEmpty}>Aucune offre d'abonnement créée</Text>
-                ) : (
-                  offres.map(offre => (
-                    <AbonnementOffreRow
-                      key={offre.id}
-                      offre={offre}
-                      onEdit={() => { setEditOffre(offre); setShowOffreSheet(true); }}
-                      onToggleActif={() => handleToggleOffreActif(offre)}
-                    />
-                  ))
-                )}
-                <Animated.View style={{ opacity: addBlink }}>
-                  <TouchableOpacity
-                    style={[styles.addProd, { marginTop: 10 }]}
-                    onPress={() => { setEditOffre(null); setShowOffreSheet(true); }}
-                    activeOpacity={0.8}
-                  >
-                    <IcoPlus />
-                    <Text style={styles.addProdTxt}>Ajouter une offre d'abonnement</Text>
-                  </TouchableOpacity>
-                </Animated.View>
-                {onAbonnes && (
-                  <TouchableOpacity
-                    style={[styles.addProd, { marginTop: 8, backgroundColor: 'rgba(253,207,52,.08)', borderColor: 'rgba(253,207,52,.3)' }]}
-                    onPress={onAbonnes}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.addProdTxt, { color: colors.accent }]}>Voir mes abonnés →</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
             )}
 
             {/* ── Galerie, Horaires, Infos boutique, Géoloc masqués si boutique vide ── */}
@@ -1285,6 +1392,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     <Text style={[styles.addProdTxt, { color: colors.accent }]}>Mes réservations de table →</Text>
                   </TouchableOpacity>
                 )}
+
               </>
             )}
 
@@ -1385,10 +1493,20 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
       <AddAbonnementOffreSheet
         visible={showOffreSheet}
         offre={editOffre}
+        mode={fitnessMode}
         onSave={handleSaveOffre}
         onDelete={editOffre ? handleDeleteOffre : undefined}
         onClose={() => setShowOffreSheet(false)}
       />
+
+      {shopId && (
+        <DailySpecialModal
+          visible={showDailySpecial}
+          shopId={shopId}
+          onClose={() => setShowDailySpecial(false)}
+          onChanged={setDailySpecials}
+        />
+      )}
 
     </LassiScreen>
 
@@ -1732,6 +1850,10 @@ const styles = StyleSheet.create({
   },
   defineHoursTxt: { color: colors.accent, fontFamily: fonts.title, fontSize: 15 },
   resaHint: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, lineHeight: 17, marginTop: 8, marginHorizontal: 4 },
+  dailyRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 18, marginBottom: 8, backgroundColor: colors.surface, borderRadius: radius.sm, padding: 14, borderWidth: 1, borderColor: colors.border },
+  dailyName: { fontFamily: fonts.title, fontSize: 14, color: colors.white },
+  dailyPrice: { fontFamily: fonts.body, fontSize: 13, color: colors.accent, marginTop: 2 },
+  dailyDelete: { fontSize: 22, color: '#ff5a5a', lineHeight: 26, paddingHorizontal: 4 },
 
   reservRow: {
     marginHorizontal: 18,

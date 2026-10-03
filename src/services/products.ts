@@ -24,6 +24,9 @@ function rowToProduct(row: Record<string, any>): StoreProduct {
     itemType: row.item_type ?? 'product',
     duration: row.duration ?? undefined,
     formulaPeriod: row.formula_period ?? undefined,
+    sizes: row.sizes ?? undefined,
+    colors: row.colors ?? undefined,
+    stockQuantity: row.stock_quantity ?? undefined,
   };
 }
 
@@ -64,6 +67,9 @@ export async function addProduct(
       item_type: product.itemType ?? 'product',
       duration: product.duration ?? null,
       formula_period: product.formulaPeriod ?? null,
+      sizes: product.sizes ?? null,
+      colors: product.colors ?? null,
+      stock_quantity: product.stockQuantity ?? null,
     })
     .select()
     .single();
@@ -85,6 +91,9 @@ export async function updateProduct(
   if (product.itemType !== undefined) updates.item_type = product.itemType;
   if (product.duration !== undefined) updates.duration = product.duration;
   if (product.formulaPeriod !== undefined) updates.formula_period = product.formulaPeriod;
+  if (product.sizes !== undefined) updates.sizes = product.sizes;
+  if (product.colors !== undefined) updates.colors = product.colors;
+  if (product.stockQuantity !== undefined) updates.stock_quantity = product.stockQuantity;
 
   // Keep photo_url in sync: real URL if provided, emoji or empty string otherwise (NOT NULL)
   if (product.photoUrl !== undefined || product.emoji !== undefined) {

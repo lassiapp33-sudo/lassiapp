@@ -11,6 +11,7 @@ export interface BeautyService {
   duree_minutes: number;
   categorie: BeautyCategorie;
   actif: boolean;
+  image_url: string | null;
   created_at: string;
 }
 

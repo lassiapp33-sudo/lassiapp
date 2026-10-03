@@ -65,6 +65,45 @@ export async function getReceipt(orderId: string): Promise<ReceiptInfo | null> {
   };
 }
 
+// ─── Liste des commandes avec reçu (côté prestataire) ────────────────────────
+
+export interface MerchantOrderReceipt {
+  orderId: string;
+  displayId: string;       // ex : "#A427" (4 premiers chars UUID)
+  receiptCode: string;     // 8 chars, même valeur que le client voit
+  clientName: string;
+  total: number;
+  receiptStatus: ReceiptStatus;
+  createdAt: string;
+}
+
+/**
+ * Renvoie les commandes récentes (72h) de la boutique qui ont un receipt_code.
+ * Triées par date décroissante. Utilisé pour la vérification sans saisie manuelle.
+ */
+export async function getMerchantOrdersForVerify(shopId: string): Promise<MerchantOrderReceipt[]> {
+  const since = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from('orders')
+    .select('id, receipt_code, receipt_status, client_name, total, created_at')
+    .eq('shop_id', shopId)
+    .not('receipt_code', 'is', null)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(30);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(row => ({
+    orderId:       row.id,
+    displayId:     '#' + (row.id as string).slice(0, 4).toUpperCase(),
+    receiptCode:   row.receipt_code as string,
+    clientName:    (row.client_name as string | null) ?? 'Client',
+    total:         Number(row.total ?? 0),
+    receiptStatus: (row.receipt_status as ReceiptStatus) ?? 'aucun',
+    createdAt:     row.created_at as string,
+  }));
+}
+
 /** Vérifie et utilise un reçu (côté prestataire, atomique). */
 export async function verifyReceiptMerchant(code: string): Promise<VerifyResult> {
   const { data, error } = await supabase.rpc('verify_receipt', {

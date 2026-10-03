@@ -168,8 +168,8 @@ function ActionCard({ Icon, iconBg, iconStroke, title, desc, badge, onPress }: A
       <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
         <Icon stroke={iconStroke} />
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.desc}>{desc}</Text>
+      <Text style={styles.title} numberOfLines={1}>{title}</Text>
+      <Text style={styles.desc} numberOfLines={1}>{desc}</Text>
       {badge !== undefined && badge > 0 && (
         <View style={styles.badge}>
           <Text style={styles.badgeTxt}>{badge > 99 ? '99+' : badge}</Text>
@@ -206,7 +206,7 @@ export default function QuickActions({
           iconBg="rgba(253,207,52,.13)"
           iconStroke={colors.accent}
           title="Autour de moi"
-          desc="Boutiques du quartier"
+          desc="Autres vendeurs"
           onPress={() => onPress?.('aroundme')}
         />
         <ActionCard
@@ -255,26 +255,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.lg,
-    padding: 15,
+    padding: 11,
     position: 'relative',
   },
   iconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 11,
+    marginBottom: 8,
   },
   title: {
     color: colors.white,
     fontFamily: fonts.title,
-    fontSize: 13.5,
+    fontSize: 11.5,
   },
   desc: {
     color: colors.muted,
     fontFamily: fonts.body,
-    fontSize: 10.5,
+    fontSize: 9.5,
     marginTop: 2,
   },
   badge: {
