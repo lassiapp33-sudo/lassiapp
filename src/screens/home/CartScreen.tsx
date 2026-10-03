@@ -25,7 +25,7 @@ import { AppliedDiscount } from '../../types/promotions';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { notifyError } from '../../utils/errorUtils';
-import { calculerCommission, calculerPrixClient, calculerCommissionVip, calculerPrixClientVip } from '../../config/payment';
+import { calculerCommission, calculerPrixClient, calculerCommissionVip, calculerPrixClientVip, PAYMENT_CONFIG } from '../../config/payment';
 import { PayMethod } from '../../types/payment';
 import PayMethodCard from '../../components/payment/PayMethodCard';
 import { WAVE_ENABLED } from '../../config/features';
@@ -203,6 +203,16 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
     const usedMethod: PayMethod = payMethod ?? method;
     setMethod(usedMethod);
     if (isSubmittingRef.current) return;
+
+    if ((usedMethod === 'wave' || usedMethod === 'om') && grandClientFinal < PAYMENT_CONFIG.MONTANT_MIN_FCFA) {
+      Alert.alert(
+        'Montant insuffisant',
+        `Le montant minimum pour payer par Wave ou Orange Money est de ${PAYMENT_CONFIG.MONTANT_MIN_FCFA} FCFA. Ajoute d'autres articles ou contacte le prestataire directement.`,
+        [{ text: 'OK' }],
+      );
+      return;
+    }
+
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     let releaseInFinally = true;

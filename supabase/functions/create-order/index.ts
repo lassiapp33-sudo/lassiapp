@@ -154,26 +154,6 @@ serve(async (req) => {
     const { error: itemsErr } = await sb.from('order_items').insert(insertRows);
     if (itemsErr) throw new Error(itemsErr.message);
 
-    // 7.5. Décrémenter stock_quantity pour les produits habillement
-    if (fetchedProducts.length > 0) {
-      const productMap = Object.fromEntries(fetchedProducts.map((p: any) => [p.id, p]));
-      await Promise.all(
-        regularItems
-          .filter(item => (productMap[item.productId]?.stock_quantity ?? null) !== null)
-          .map(item => {
-            const p = productMap[item.productId];
-            const newQty = Math.max(0, p.stock_quantity - item.qty);
-            return sb
-              .from('products')
-              .update({
-                stock_quantity: newQty,
-                ...(newQty === 0 ? { stock: 'out' } : {}),
-              })
-              .eq('id', item.productId);
-          }),
-      );
-    }
-
     // 8. Notifier le marchand
     const { data: shop } = await sb
       .from('shops')
