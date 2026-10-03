@@ -236,7 +236,7 @@ serve(async (req) => {
       const moyenStr   = payout.moyen_paiement === 'orange_money' ? 'Orange Money' : 'Wave';
 
       let title     = 'Reversement reçu';
-      let body      = `${montantStr} reversés sur votre ${moyenStr}.`;
+      let body      = `${montantStr} reversés sur votre ${moyenStr}. Les frais Wave/OM sont à votre charge.`;
       let notifType = 'payout_done';
 
       try {
@@ -264,7 +264,7 @@ serve(async (req) => {
               if (cp?.name) clientName = cp.name as string;
             }
             title     = 'Nouvel abonné payé';
-            body      = `${clientName} a souscrit à "${offreNom}". ${montantStr} reversés sur votre ${moyenStr}.`;
+            body      = `${clientName} a souscrit à "${offreNom}". ${montantStr} reversés sur votre ${moyenStr}. Les frais Wave/OM sont à votre charge.`;
             notifType = 'fitness_abonnement_paye';
           }
         }
