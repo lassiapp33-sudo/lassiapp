@@ -487,7 +487,7 @@ serve(async (req) => {
       try {
         const { data: resaRow } = await supabase
           .from('reservations_terrain')
-          .select('client_id, terrain_id, date_reservation, heure_debut, heure_fin')
+          .select('client_id, terrain_id, date_reservation, heure_debut, heure_fin, prestataire_id, montant_prestataire, moyen_paiement, payout_statut')
           .eq('id', result.reservation_id)
           .maybeSingle();
         if (resaRow?.client_id) {
@@ -515,6 +515,18 @@ serve(async (req) => {
               data:    { type: 'reservation_terrain', reservationId: String(result.reservation_id) },
             }),
           ]);
+        }
+        // Reversement prestataire (payout_statut=pending → déclencher)
+        if (resaRow?.prestataire_id && resaRow?.payout_statut === 'pending') {
+          await triggerTerrainPayout(supabase, {
+            reservationId:             String(result.reservation_id),
+            prestataireId:             resaRow.prestataire_id as string,
+            montant:                   resaRow.montant_prestataire as number,
+            moyenPaiement:             (resaRow.moyen_paiement ?? 'orange_money') as string,
+            WAVE_API_KEY,
+            OM_RETAILER_MSISDN,
+            OM_RETAILER_PIN_ENCRYPTED,
+          });
         }
       } catch {
         // best-effort
@@ -1172,13 +1184,13 @@ serve(async (req) => {
       }
     }
 
-    // ── Terrain Wave — notification client uniquement ──────────────────────
+    // ── Terrain Wave — notification client + reversement prestataire ──────
     // ⚠ Prestataire notifié dans triggerTerrainPayout après payout réussi uniquement.
     if (result?.reservation_id) {
       try {
         const { data: resaRow } = await supabase
           .from('reservations_terrain')
-          .select('client_id, terrain_id, date_reservation, heure_debut, heure_fin')
+          .select('client_id, terrain_id, date_reservation, heure_debut, heure_fin, prestataire_id, montant_prestataire, moyen_paiement, payout_statut')
           .eq('id', result.reservation_id)
           .maybeSingle()
         if (resaRow?.client_id) {
@@ -1206,6 +1218,18 @@ serve(async (req) => {
               data:    { type: 'reservation_terrain', reservationId: String(result.reservation_id) },
             }),
           ])
+        }
+        // Reversement prestataire (payout_statut=pending → déclencher)
+        if (resaRow?.prestataire_id && resaRow?.payout_statut === 'pending') {
+          await triggerTerrainPayout(supabase, {
+            reservationId:             String(result.reservation_id),
+            prestataireId:             resaRow.prestataire_id as string,
+            montant:                   resaRow.montant_prestataire as number,
+            moyenPaiement:             (resaRow.moyen_paiement ?? 'wave') as string,
+            WAVE_API_KEY,
+            OM_RETAILER_MSISDN,
+            OM_RETAILER_PIN_ENCRYPTED,
+          })
         }
       } catch {
         // best-effort

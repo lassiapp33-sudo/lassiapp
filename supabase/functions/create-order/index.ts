@@ -16,6 +16,7 @@ const CORS = {
 interface OrderItem {
   productId: string;
   qty:       number;
+  variant?:  string; // ex: "M, Noir" pour habillement
 }
 
 serve(async (req) => {
@@ -29,10 +30,11 @@ serve(async (req) => {
     if (!user) return fail('Non autorisé', 401);
 
     // 2. Paramètres — jamais de montant total côté client
-    const { shopId, items, note } = await req.json() as {
-      shopId: string;
-      items:  OrderItem[];
-      note?:  string;
+    const { shopId, items, note, orderType } = await req.json() as {
+      shopId:     string;
+      items:      OrderItem[];
+      note?:      string;
+      orderType?: 'place' | 'emporter';
     };
 
     if (!shopId || !Array.isArray(items) || items.length === 0) {
@@ -55,6 +57,8 @@ serve(async (req) => {
     // 5a. Récupérer les vrais prix des produits normaux
     let total = 0;
     const orderItemRows: Record<string, unknown>[] = [];
+    // Produits récupérés en base (scope EF entier pour décrémentation stock)
+    let fetchedProducts: any[] = [];
 
     if (regularItems.length > 0) {
       const productIds = regularItems.map(i => i.productId);
@@ -68,6 +72,8 @@ serve(async (req) => {
       if (!products || products.length !== productIds.length) {
         return fail('Certains produits sont introuvables.', 400);
       }
+
+      fetchedProducts = products;
 
       const outOfStock = products.filter((p: any) => p.stock === 'out').map((p: any) => p.name);
       if (outOfStock.length > 0) {
@@ -84,7 +90,7 @@ serve(async (req) => {
         total += info.price * item.qty;
         orderItemRows.push({
           product_id:   item.productId,
-          product_name: info.name,
+          product_name: item.variant ? `${info.name} (${item.variant})` : info.name,
           qty:          item.qty,
           unit_price:   info.price,
         });
@@ -126,15 +132,17 @@ serve(async (req) => {
       }
     }
 
-    // 6. Créer la commande
+    // 6. Créer la commande — order_type doit être 'place' ou 'emporter' (contrainte DB)
+    const safeOrderType = orderType === 'emporter' ? 'emporter' : 'place';
     const { data: order, error: orderErr } = await sb
       .from('orders')
       .insert({
-        shop_id:   shopId,
-        client_id: user.id,
+        shop_id:    shopId,
+        client_id:  user.id,
         total,
-        status:    'pending',
-        note:      note?.trim().slice(0, 300) ?? null,
+        status:     'pending',
+        note:       note?.trim().slice(0, 300) ?? null,
+        order_type: safeOrderType,
       })
       .select('id')
       .single();
@@ -147,8 +155,8 @@ serve(async (req) => {
     if (itemsErr) throw new Error(itemsErr.message);
 
     // 7.5. Décrémenter stock_quantity pour les produits habillement
-    if (regularItems.length > 0) {
-      const productMap = Object.fromEntries((products as any[]).map((p: any) => [p.id, p]));
+    if (fetchedProducts.length > 0) {
+      const productMap = Object.fromEntries(fetchedProducts.map((p: any) => [p.id, p]));
       await Promise.all(
         regularItems
           .filter(item => (productMap[item.productId]?.stock_quantity ?? null) !== null)

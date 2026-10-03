@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { colors, fonts, radius } from '../../theme';
 import { ProductPromoInfo } from '../../types/promotions';
@@ -19,6 +19,8 @@ export interface Product {
   category: string;
   stock?: 'in' | 'out';
   stockQuantity?: number;
+  sizes?: string[];
+  colors?: string[];
 }
 
 interface Props {
@@ -136,6 +138,21 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
           <Text style={[styles.stockTxt, product.stockQuantity <= 5 && styles.stockLow]}>
             {product.stockQuantity} restant{product.stockQuantity > 1 ? 's' : ''}
           </Text>
+        )}
+        {/* Mini-chips tailles */}
+        {!isOut && product.sizes && product.sizes.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.sizesRow}
+            pointerEvents="none"
+          >
+            {product.sizes.slice(0, 4).map(size => (
+              <View key={size} style={styles.sizeChip}>
+                <Text style={styles.sizeChipTxt}>{size}</Text>
+              </View>
+            ))}
+          </ScrollView>
         )}
       </View>
 
@@ -294,5 +311,23 @@ const styles = StyleSheet.create({
   },
   stockLow: {
     color: '#F97316',
+  },
+  sizesRow: {
+    marginTop: 5,
+  },
+  sizeChip: {
+    borderWidth: 1,
+    borderColor: '#FDCF34',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    marginRight: 4,
+    height: 20,
+    justifyContent: 'center',
+  },
+  sizeChipTxt: {
+    color: '#FDCF34',
+    fontSize: 9,
+    fontFamily: 'System',
   },
 });

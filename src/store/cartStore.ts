@@ -8,6 +8,9 @@ export interface CartItem {
   emoji: string;
   price: number;
   qty: number;
+  productId?: string;
+  selectedSize?: string;
+  selectedColor?: string;
 }
 
 export type OrderType = 'place' | 'emporter';

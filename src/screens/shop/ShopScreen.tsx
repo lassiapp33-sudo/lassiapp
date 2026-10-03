@@ -50,6 +50,7 @@ import * as beautyService from '../../services/beauty';
 import { BeautyService } from '../../types/beauty';
 import { calculerPrixBeauteAvecMarge } from '../../services/beauty';
 import { getTodaySpecials, DailySpecial } from '../../services/dailySpecials';
+import HabillementPickerSheet from '../../components/shop/HabillementPickerSheet';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -155,6 +156,8 @@ function storeProductToProduct(p: StoreProduct): Product {
     category: p.category,
     stock: p.stock,
     stockQuantity: p.stockQuantity,
+    sizes: p.sizes,
+    colors: p.colors,
   };
 }
 
@@ -220,6 +223,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const productSectionY = useRef(0);
   const [activePromos, setActivePromos] = useState<Promotion[]>([]);
   const [badges, setBadges] = useState<RecompenseAttribuee[]>([]);
+  const [habPickerProduct, setHabPickerProduct] = useState<StoreProduct | null>(null);
 
   // Position utilisateur (déjà chargée dans locationStore par ClientHomeScreen)
   const userCoords = useLocationStore(s => s.coords);
@@ -495,6 +499,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const cartTotalRaw = useCartStore(selectTotalPrice); // total tous paniers (prix flottant)
   const addItem = useCartStore(s => s.addItem);
   const removeItem = useCartStore(s => s.removeItem);
+  const removeItemFromShop = useCartStore(s => s.removeItemFromShop);
   const setCartOrder = useCartStore(s => s.setOrderType);
   const setActiveShop = useCartStore(s => s.setActiveShop);
 
@@ -518,8 +523,50 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   };
 
   const addToCart = (p: StoreProduct) => {
-    if (p.stock === 'out') return; // garde-fou côté app (le serveur vérifie aussi)
-    addItem(shopInfo, { id: p.id, name: p.name, emoji: p.emoji, price: p.price });
+    if (p.stock === 'out') return;
+    const hasVariants = (p.sizes && p.sizes.length > 0) || (p.colors && p.colors.length > 0);
+    if (hasVariants) {
+      setHabPickerProduct(p);
+      return;
+    }
+    addItem(shopInfo, { id: p.id, productId: p.id, name: p.name, emoji: p.emoji, price: calculerPrixClient(p.price) });
+  };
+
+  const handleHabConfirm = (size: string | undefined, color: string | undefined) => {
+    if (!habPickerProduct) return;
+    const p = habPickerProduct;
+    const variantSuffix = [size, color].filter(Boolean).join(', ');
+    const cartId = `${p.id}|${size ?? ''}|${color ?? ''}`;
+    const displayName = variantSuffix ? `${p.name} (${variantSuffix})` : p.name;
+    addItem(shopInfo, {
+      id: cartId,
+      productId: p.id,
+      name: displayName,
+      emoji: p.emoji,
+      price: calculerPrixClient(p.price),
+      selectedSize: size,
+      selectedColor: color,
+    });
+    setHabPickerProduct(null);
+  };
+
+  const getProductQty = (product: StoreProduct): number => {
+    if (product.stock === 'out') return 0;
+    const hasVariants = (product.sizes && product.sizes.length > 0) || (product.colors && product.colors.length > 0);
+    if (hasVariants) {
+      return cartItems.filter(ci => (ci.productId ?? ci.id) === product.id).reduce((s, ci) => s + ci.qty, 0);
+    }
+    return cartItems.find(ci => ci.id === product.id)?.qty ?? 0;
+  };
+
+  const removeFromCart = (product: StoreProduct) => {
+    const hasVariants = (product.sizes && product.sizes.length > 0) || (product.colors && product.colors.length > 0);
+    if (hasVariants) {
+      const first = cartItems.find(ci => (ci.productId ?? ci.id) === product.id);
+      if (first) removeItemFromShop(shopId!, first.id);
+    } else {
+      removeItem(product.id);
+    }
   };
 
   const cartBottom = FOOTER_HEIGHT + 8;
@@ -920,9 +967,9 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                             <View key={product.id} style={styles.tileWrapper}>
                               <ProductTile
                                 product={storeProductToProduct(product)}
-                                qty={product.stock === 'out' ? 0 : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)}
+                                qty={getProductQty(product)}
                                 onAdd={() => addToCart(product)}
-                                onRemove={() => removeItem(product.id)}
+                                onRemove={() => removeFromCart(product)}
                                 promoInfo={productPromoMap[product.id]}
                                 isVip={isVip}
                                 isPreview={isPreview}
@@ -1136,6 +1183,17 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
 
       {/* Aperçu plein écran (logo + photos galerie) — appui long 3 s */}
       <ImageZoomModal uri={zoomUrl} onClose={() => setZoomUrl(null)} />
+
+      {/* Picker taille/couleur habillement */}
+      <HabillementPickerSheet
+        visible={habPickerProduct !== null}
+        productName={habPickerProduct?.name ?? ''}
+        sizes={habPickerProduct?.sizes ?? []}
+        colors={habPickerProduct?.colors ?? []}
+        stockQuantity={habPickerProduct?.stockQuantity}
+        onConfirm={handleHabConfirm}
+        onClose={() => setHabPickerProduct(null)}
+      />
     </View>
   );
 }

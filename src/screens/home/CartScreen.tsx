@@ -289,7 +289,13 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
       const orderIds: string[] = [];
       const recapItems: { qty: number; name: string; price: number }[] = [];
       for (const sh of freshShops) {
-        const rawItems = sh.items.map(i => ({ productId: i.id, qty: i.qty }));
+        const rawItems = sh.items.map(i => ({
+          productId: i.productId ?? i.id,
+          qty: i.qty,
+          ...(i.selectedSize || i.selectedColor
+            ? { variant: [i.selectedSize, i.selectedColor].filter(Boolean).join(', ') }
+            : {}),
+        }));
         const perShopLivraison = sh.info.id === freshAnchorId ? freshLivraisonFee : 0;
         const res = await createOrderSecure(
           sh.info.id, rawItems, structuredNote, freshOrderType, undefined, voiceNotePath, usedMethod, perShopLivraison,

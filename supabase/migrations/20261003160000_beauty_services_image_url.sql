@@ -7,24 +7,33 @@ VALUES (
   'beauty',
   'beauty',
   true,
-  5242880,  -- 5 Mo max
+  5242880,
   ARRAY['image/jpeg','image/png','image/webp']
 )
 ON CONFLICT (id) DO NOTHING;
 
 -- RLS : lecture publique
-CREATE POLICY IF NOT EXISTS "beauty public read"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'beauty');
+DO $$ BEGIN
+  CREATE POLICY "beauty public read"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'beauty');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- RLS : upload authentifié uniquement
-CREATE POLICY IF NOT EXISTS "beauty auth upload"
-  ON storage.objects FOR INSERT
-  TO authenticated
-  WITH CHECK (bucket_id = 'beauty');
+-- RLS : upload authentifié
+DO $$ BEGIN
+  CREATE POLICY "beauty auth upload"
+    ON storage.objects FOR INSERT
+    TO authenticated
+    WITH CHECK (bucket_id = 'beauty');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- RLS : mise à jour par l'auteur
-CREATE POLICY IF NOT EXISTS "beauty auth update"
-  ON storage.objects FOR UPDATE
-  TO authenticated
-  USING (bucket_id = 'beauty');
+-- RLS : update authentifié
+DO $$ BEGIN
+  CREATE POLICY "beauty auth update"
+    ON storage.objects FOR UPDATE
+    TO authenticated
+    USING (bucket_id = 'beauty');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
