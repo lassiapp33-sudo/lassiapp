@@ -1093,20 +1093,22 @@ const CART_JS = `
           if(d.mode==='simulation'){ sessionStorage.removeItem(SESSION_KEY); window.location.href=confUrl+'&s=ok'; return; }
           var a=document.getElementById('payOpen');
           if(d.qrCode){
-            // OM web : afficher le QR code (le deepLink OM est pour apps mobiles, pas le browser)
-            document.getElementById('waitSub').textContent='Ouvre Orange Money et scanne ce QR code pour payer.';
+            // OM : QR code + bouton deeplink (pas de redirect auto — évite la page Maxit inutile)
+            document.getElementById('waitSub').textContent='Scanne ce QR code avec Orange Money ou clique sur le bouton.';
             var img=document.getElementById('omQr');
             img.src=(String(d.qrCode).indexOf('data:')===0?d.qrCode:'data:image/png;base64,'+d.qrCode);
             img.hidden=false;
-            a.style.display='none';
+            if(d.redirectUrl){ a.textContent='Ouvrir Orange Money'; a.href=d.redirectUrl; a.style.display='inline-block'; }
+            else { a.style.display='none'; }
           } else if(d.redirectUrl){
-            // Wave (ou OM sans QR) : rediriger vers le deepLink
+            // Wave : bouton seulement, AUCUNE redirect auto.
+            // iOS universal link ouvre Wave directement sans passer par pay.wave.com dans le browser.
+            // window.location.replace causait le replay de pay.wave.com → popup Wave à répétition.
             document.getElementById('waitSub').textContent=isW
-              ? 'Valide le paiement dans Wave, puis reviens sur cette page.'
+              ? 'Clique sur le bouton pour payer avec Wave, puis reviens ici après confirmation.'
               : 'Valide le paiement dans Orange Money, puis reviens sur cette page.';
-            a.textContent=isW?'Rouvrir Wave':'Rouvrir Orange Money';
+            a.textContent=isW?'Payer avec Wave':'Ouvrir Orange Money';
             a.href=d.redirectUrl; a.style.display='inline-block';
-            if(isW) window.location.replace(d.redirectUrl);
           } else {
             a.style.display='none';
           }
