@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Modal, KeyboardAvoidingView, Platform,
@@ -45,57 +45,24 @@ const DUREES = [
   { value: 120, label: '2h' },
 ];
 
-const CATEGORIES: { value: BeautyCategorie; label: string }[] = [
-  { value: 'barber',  label: 'Barber' },
-  { value: 'tresse',  label: 'Tresse' },
-  { value: 'ongle',   label: 'Ongles' },
-  { value: 'general', label: 'Général' },
-];
-
 // ─── Modal ajout/édition ───────────────────────────────────────────────────────
 
 interface EditModalProps {
   service: Partial<BeautyService> | null;
   prestataireId: string;
-  customCats: string[];
-  onAddCustomCat: (cat: string) => void;
   onClose: () => void;
   onSaved: (s: BeautyService) => void;
 }
 
-function EditModal({ service, prestataireId, customCats, onAddCustomCat, onClose, onSaved }: EditModalProps) {
+function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps) {
   const [nom, setNom]           = useState(service?.nom ?? '');
   const [desc, setDesc]         = useState(service?.description ?? '');
   const [prix, setPrix]         = useState(service?.prix ? String(service.prix) : '');
   const [duree, setDuree]       = useState(service?.duree_minutes ?? 60);
-  const [cat, setCat]           = useState<BeautyCategorie>(service?.categorie ?? 'general');
+  const cat: BeautyCategorie    = service?.categorie ?? 'general';
   const [imageUrl, setImageUrl] = useState<string | null>(service?.image_url ?? null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving]     = useState(false);
-  const [addingCat, setAddingCat] = useState(false);
-  const [newCatText, setNewCatText] = useState('');
-  const scrollRef = useRef<ScrollView>(null);
-
-  const handleAddCat = () => {
-    const label = newCatText.trim();
-    if (!label) { setAddingCat(false); setNewCatText(''); return; }
-    const preset = CATEGORIES.find(c => c.label.toLowerCase() === label.toLowerCase());
-    if (preset) {
-      setCat(preset.value);
-    } else {
-      if (!customCats.some(c => c.toLowerCase() === label.toLowerCase())) {
-        onAddCustomCat(label);
-      }
-      setCat(label);
-    }
-    setNewCatText('');
-    setAddingCat(false);
-  };
-
-  const handleOpenAddCat = () => {
-    setAddingCat(true);
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-  };
 
   const doPickImage = async (source: 'gallery' | 'camera') => {
     try {
@@ -176,7 +143,7 @@ function EditModal({ service, prestataireId, customCats, onAddCustomCat, onClose
           </TouchableOpacity>
         </View>
 
-        <ScrollView ref={scrollRef} style={modal.scroll} contentContainerStyle={modal.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView style={modal.scroll} contentContainerStyle={modal.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
           {/* ── Photo ── */}
           <Text style={modal.label}>Photo (optionnel)</Text>
@@ -244,56 +211,6 @@ function EditModal({ service, prestataireId, customCats, onAddCustomCat, onClose
             ))}
           </View>
 
-          <Text style={modal.label}>Catégorie</Text>
-          <View style={modal.chipRow}>
-            {CATEGORIES.map(c => (
-              <TouchableOpacity
-                key={c.value}
-                style={[modal.chip, cat === c.value && modal.chipOn]}
-                onPress={() => setCat(c.value)}
-                activeOpacity={0.8}
-              >
-                <Text style={[modal.chipTxt, cat === c.value && modal.chipTxtOn]}>{c.label}</Text>
-              </TouchableOpacity>
-            ))}
-            {customCats.map(c => (
-              <TouchableOpacity
-                key={c}
-                style={[modal.chip, cat === c && modal.chipOn]}
-                onPress={() => setCat(c)}
-                activeOpacity={0.8}
-              >
-                <Text style={[modal.chipTxt, cat === c && modal.chipTxtOn]}>{c}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={[modal.chip, modal.chipAdd]}
-              onPress={handleOpenAddCat}
-              activeOpacity={0.8}
-            >
-              <Text style={[modal.chipTxt, modal.chipAddTxt]}>+ Nouvelle</Text>
-            </TouchableOpacity>
-          </View>
-
-          {addingCat && (
-            <View style={modal.addCatRow}>
-              <TextInput
-                style={[modal.input, { flex: 1 }]}
-                value={newCatText}
-                onChangeText={setNewCatText}
-                placeholder="Nom de la catégorie"
-                placeholderTextColor={colors.muted}
-                maxLength={24}
-                autoFocus
-                returnKeyType="done"
-                onSubmitEditing={handleAddCat}
-              />
-              <TouchableOpacity style={modal.addCatBtn} onPress={handleAddCat} activeOpacity={0.85}>
-                <Text style={modal.addCatBtnTxt}>OK</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
           <View style={{ height: 60 }} />
         </ScrollView>
 
@@ -323,25 +240,12 @@ export default function BeautyServiceCatalogScreen({ onBack }: Props) {
   const [services, setServices]       = useState<BeautyService[]>([]);
   const [loading, setLoading]         = useState(true);
   const [editTarget, setEditTarget]   = useState<Partial<BeautyService> | null | 'new'>(null);
-  const [customCats, setCustomCats]   = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await beautyService.getBeautyServicesByMerchant(prestataireId);
       setServices(data);
-      const existingCustom = data
-        .map(s => s.categorie)
-        .filter(c => c && !CATEGORIES.some(x => x.value === c)) as string[];
-      if (existingCustom.length > 0) {
-        setCustomCats(prev => {
-          const merged = [...prev];
-          existingCustom.forEach(c => {
-            if (!merged.some(x => x.toLowerCase() === c.toLowerCase())) merged.push(c);
-          });
-          return merged;
-        });
-      }
     } catch (e) {
       logger.error('[BeautyServiceCatalog] load:', e);
     } finally {
@@ -434,10 +338,6 @@ export default function BeautyServiceCatalogScreen({ onBack }: Props) {
         <EditModal
           service={editTarget === 'new' ? {} : editTarget}
           prestataireId={prestataireId}
-          customCats={customCats}
-          onAddCustomCat={cat => setCustomCats(prev =>
-            prev.some(c => c.toLowerCase() === cat.toLowerCase()) ? prev : [...prev, cat]
-          )}
           onClose={() => setEditTarget(null)}
           onSaved={handleSaved}
         />
@@ -582,11 +482,6 @@ const modal = StyleSheet.create({
   chipOn:  { backgroundColor: colors.accent, borderColor: colors.accent },
   chipTxt: { color: colors.muted, fontFamily: fonts.ui, fontSize: 13 },
   chipTxtOn: { color: colors.bg },
-  chipAdd:    { borderStyle: 'dashed', borderColor: colors.accent, backgroundColor: 'transparent' },
-  chipAddTxt: { color: colors.accent, fontFamily: fonts.title },
-  addCatRow:  { flexDirection: 'row', gap: 8, marginTop: 10, alignItems: 'center' },
-  addCatBtn:  { paddingHorizontal: 18, height: 46, borderRadius: radius.md, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
-  addCatBtnTxt: { color: colors.bg, fontFamily: fonts.title, fontSize: 14 },
 
   footer:  { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 34, borderTopWidth: 1, borderTopColor: colors.border },
   saveBtn: { height: 54, borderRadius: radius.lg, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },

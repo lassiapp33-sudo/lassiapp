@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
@@ -136,11 +136,16 @@ export default function BeautyBookingScreen({
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Infos service */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoPrice}>{formatPrice(prixTotal)}</Text>
-          <Text style={styles.infoDuree}>{service.duree_minutes} min</Text>
-          {service.description ? (
-            <Text style={styles.infoDesc}>{service.description}</Text>
+          {service.image_url ? (
+            <Image source={{ uri: service.image_url }} style={styles.infoImg} resizeMode="cover" />
           ) : null}
+          <View style={styles.infoBody}>
+            <Text style={styles.infoPrice}>{formatPrice(prixTotal)}</Text>
+            <Text style={styles.infoDuree}>{service.duree_minutes} min</Text>
+            {service.description ? (
+              <Text style={styles.infoDesc}>{service.description}</Text>
+            ) : null}
+          </View>
         </View>
 
         {/* Sélecteur de date */}
@@ -246,8 +251,10 @@ const styles = StyleSheet.create({
 
   infoCard: {
     margin: 18, backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: 16,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, overflow: 'hidden',
   },
+  infoImg:  { width: '100%', height: 160 },
+  infoBody: { padding: 16 },
   infoPrice: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 20 },
   infoDuree: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 2 },
   infoDesc:  { color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 8, lineHeight: 18 },

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert, Modal, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert, Modal, Pressable, ActivityIndicator } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Svg, { Path, Rect, Circle as SvgCircle } from 'react-native-svg';
 
@@ -1028,6 +1028,10 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                             : `${svc.duree_minutes} min`;
                         return (
                           <View key={svc.id} style={styles.beautyCard}>
+                            {svc.image_url ? (
+                              <Image source={{ uri: svc.image_url }} style={styles.beautyImg} resizeMode="cover" />
+                            ) : null}
+                            <View style={styles.beautyCardBody}>
                             <View style={{ flex: 1 }}>
                               <Text style={styles.beautyNom}>{svc.nom}</Text>
                               {svc.description ? (
@@ -1046,6 +1050,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                                   <Text style={styles.beautyBtnTxt}>Réserver</Text>
                                 </TouchableOpacity>
                               ) : null}
+                            </View>
                             </View>
                           </View>
                         );
@@ -1345,10 +1350,12 @@ const styles = StyleSheet.create({
   beautyCatLabel: { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
   beautyCatCount: { color: colors.muted, fontFamily: fonts.body, fontSize: 12 },
   beautyCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.lg, padding: 14, marginBottom: 10, marginHorizontal: 18,
+    borderRadius: radius.lg, marginBottom: 10, marginHorizontal: 18,
+    overflow: 'hidden',
   },
+  beautyImg: { width: '100%', height: 160 },
+  beautyCardBody: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14 },
   beautyNom:   { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
   beautyDesc:  { color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 3, lineHeight: 16 },
   beautyMeta:  { color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginTop: 4 },

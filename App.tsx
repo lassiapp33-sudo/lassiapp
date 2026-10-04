@@ -111,7 +111,7 @@ function handleNotifData(data: Record<string, any> | undefined | null) {
     // Prestataire → terrain_reservations (MerchantNavigator gère via terrainId)
     // Client      → terrain_my_reservations (HomeNavigator gère)
     setPendingNav({ type: 'terrain_resa', terrainId: data.terrainId as string | undefined });
-  } else if (data.type === 'beauty_reservation' || data.type === 'beauty_acces_valide') {
+  } else if (data.type === 'beauty_reservation' || data.type === 'beauty_acces_valide' || data.type === 'beauty_payment_confirme') {
     // Prestataire → beauty_reservations (à la bonne date) ; Client → Mes rendez-vous
     setPendingNav({ type: 'beauty_resa', date: data.dateResa as string | undefined });
   } else if (data.type === 'payout_done') {
