@@ -85,13 +85,15 @@ export async function confirmBeautyReservation(
     return { ok: false, error: `update beauté échoué: ${updErr.message}` };
   }
 
-  // 5. Numéro prestataire
-  const { data: profil } = await supabase
-    .from('profiles')
-    .select('phone, name')
-    .eq('id', resa.prestataire_id)
-    .maybeSingle();
+  // 5. Numéro prestataire + nom client
+  const [profilRes, clientProfilRes] = await Promise.all([
+    supabase.from('profiles').select('phone, name').eq('id', resa.prestataire_id).maybeSingle(),
+    resa.client_id
+      ? supabase.from('profiles').select('name').eq('id', resa.client_id as string).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
+  const profil = profilRes.data;
   const phone = (profil?.phone ?? '').trim().replace(/^\+221/, '');
 
   // 6. Reversement
@@ -136,7 +138,10 @@ export async function confirmBeautyReservation(
     const serviceNom  = (resa.beauty_services as { nom: string } | null)?.nom ?? 'Service beauté';
     const montantStr  = `${montant} FCFA`;
     const moyenStr    = moyen === 'orange_money' ? 'Orange Money' : 'Wave';
-    const clientLabel = (resa.client_name as string | null) ?? 'Un client';
+    const clientLabel =
+      (clientProfilRes.data as { name?: string | null } | null)?.name ||
+      (resa.client_name as string | null) ||
+      'Un client';
 
     const prestTitle = 'Reversement reçu';
     const prestBody  = `${clientLabel} a réservé "${serviceNom}". ${montantStr} reversés sur votre ${moyenStr}. Les frais Wave/OM sont à votre charge.`;
