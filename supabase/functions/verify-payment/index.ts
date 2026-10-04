@@ -92,9 +92,10 @@ serve(async (req) => {
       }
 
       // ── Production ──────────────────────────────────────────────────────────
-      const provider   = pi.moyen_paiement;
+      const provider = pi.moyen_paiement;
+      // Pour Wave : utiliser external_ref (cos-*) si dispo (après webhook), sinon client_reference (UUID)
       const paid = provider === 'wave'
-        ? await checkWavePayment(piId)
+        ? await checkWavePayment(pi.external_ref ?? null, piId)
         : await checkOmPayment(piId);
 
       if (paid) {
@@ -151,9 +152,9 @@ serve(async (req) => {
       return ok({ paid: true, confirmed: true, statut: 'paid', mode: 'simulation' });
     }
 
-    // Production — ticket
+    // Production — ticket (reference = client_reference passé à Wave, pas un session ID)
     const paid = method === 'wave'
-      ? await checkWavePayment(reference)
+      ? await checkWavePayment(null, reference)
       : await checkOmPayment(reference);
 
     if (paid) {
@@ -181,16 +182,41 @@ serve(async (req) => {
   }
 });
 
-// ─── Wave : vérifier via client_reference ────────────────────────────────────
+// ─── Wave : vérifier le statut d'un paiement ─────────────────────────────────
+// sessionId = external_ref (cos-*) si connu (après webhook), sinon null
+// clientRef = UUID du payment_intent (client_reference passé à Wave)
 
-async function checkWavePayment(reference: string): Promise<boolean> {
+import { buildWaveSignature } from '../_shared/waveSign.ts';
+
+async function checkWavePayment(sessionId: string | null, clientRef: string): Promise<boolean> {
+  const sig = await buildWaveSignature('');
+  const headers: Record<string, string> = { 'Authorization': `Bearer ${WAVE_API_KEY}` };
+  if (sig) headers['Wave-Signature'] = sig;
+
+  if (sessionId) {
+    // GET direct via session ID (plus rapide, disponible après le webhook)
+    const res = await fetch(
+      `https://api.wave.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`,
+      { headers },
+    );
+    if (!res.ok) return false;
+    const data = await res.json() as Record<string, unknown>;
+    const cs = String(data?.checkout_status ?? '');
+    const ps = String(data?.payment_status  ?? '');
+    return cs === 'complete' || ps === 'succeeded' || ps === 'SUCCESSFUL' || ps === 'paid' || ps === 'PAID';
+  }
+
+  // Fallback : recherche par client_reference (avant que le webhook n'ait rempli external_ref)
   const res = await fetch(
-    `https://api.wave.com/v1/checkout/sessions?client_reference=${encodeURIComponent(reference)}`,
-    { headers: { Authorization: `Bearer ${WAVE_API_KEY}` } },
+    `https://api.wave.com/v1/checkout/sessions?client_reference=${encodeURIComponent(clientRef)}`,
+    { headers },
   );
-  const data = await res.json();
-  const session = data?.sessions?.[0] ?? data;
-  return session?.checkout_status === 'complete' || session?.payment_status === 'succeeded';
+  if (!res.ok) return false;
+  const data = await res.json() as Record<string, unknown>;
+  const session = (data as Record<string, unknown[]>)?.sessions?.[0] as Record<string, unknown> | undefined ?? data;
+  const cs = String(session?.checkout_status ?? '');
+  const ps = String(session?.payment_status  ?? '');
+  return cs === 'complete' || ps === 'succeeded' || ps === 'SUCCESSFUL' || ps === 'paid' || ps === 'PAID';
 }
 
 // ─── Orange Money : vérifier via order_id ────────────────────────────────────

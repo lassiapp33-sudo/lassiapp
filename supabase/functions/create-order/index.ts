@@ -29,6 +29,14 @@ serve(async (req) => {
     const { data: { user } } = await sb.auth.getUser(token);
     if (!user) return fail('Non autorisé', 401);
 
+    // Récupérer le nom du client depuis profiles
+    const { data: profile } = await sb
+      .from('profiles')
+      .select('name')
+      .eq('id', user.id)
+      .single();
+    const clientName = profile?.name ?? null;
+
     // 2. Paramètres — jamais de montant total côté client
     const { shopId, items, note, orderType } = await req.json() as {
       shopId:     string;
@@ -137,12 +145,13 @@ serve(async (req) => {
     const { data: order, error: orderErr } = await sb
       .from('orders')
       .insert({
-        shop_id:    shopId,
-        client_id:  user.id,
+        shop_id:     shopId,
+        client_id:   user.id,
+        client_name: clientName,
         total,
-        status:     'pending',
-        note:       note?.trim().slice(0, 300) ?? null,
-        order_type: safeOrderType,
+        status:      'pending',
+        note:        note?.trim().slice(0, 300) ?? null,
+        order_type:  safeOrderType,
       })
       .select('id')
       .single();

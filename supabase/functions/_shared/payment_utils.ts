@@ -4,8 +4,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 type Sb = ReturnType<typeof createClient>;
 
-export const COMMISSION_RATE = 0.10;  // 10% — doit rester en sync avec PAYMENT_CONFIG
-export const MONTANT_MIN     = 1;
+export const COMMISSION_RATE = 0.01;  // 1% — doit rester en sync avec PAYMENT_CONFIG (src/config/payment.ts)
+export const MONTANT_MIN     = 10;   // minimum interne (Wave/OM acceptent > 10 FCFA)
 export const MONTANT_MAX     = 5_000_000;
 
 export type PaymentEventType =

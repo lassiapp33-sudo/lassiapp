@@ -18,16 +18,22 @@ import {
   setIdempotency,
   calculerCommission,
 } from '../_shared/payment_utils.ts';
+import { callWaveCheckout } from '../_shared/waveProxy.ts';
+import { getOmToken, OM_BASE_URL, isOmReady } from '../_shared/omAuth.ts';
 
-const WAVE_API_KEY  = Deno.env.get('WAVE_API_KEY')              ?? '';
-const OM_API_KEY    = Deno.env.get('OM_API_KEY')                ?? '';
-const OM_API_SECRET = Deno.env.get('OM_API_SECRET')             ?? '';
-const SUPABASE_URL  = Deno.env.get('SUPABASE_URL')              ?? '';
-const SUPABASE_SRK  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const PAYMENT_MODE  = Deno.env.get('PAYMENT_MODE')              ?? 'simulation';
-const WEBHOOK_BASE  = `${SUPABASE_URL}/functions/v1`;
+const WAVE_API_KEY       = Deno.env.get('WAVE_API_KEY')              ?? '';
+const OM_MERCHANT_CODE   = Deno.env.get('OM_MERCHANT_CODE')          ?? '';
+const OM_WEBHOOK_SECRET  = Deno.env.get('OM_WEBHOOK_SECRET')         ?? '';
+const SUPABASE_URL       = Deno.env.get('SUPABASE_URL')              ?? '';
+const SUPABASE_SRK       = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const PAYMENT_MODE       = Deno.env.get('PAYMENT_MODE')              ?? 'simulation';
+const WEBHOOK_BASE       = `${SUPABASE_URL}/functions/v1`;
+// Wave EXIGE https:// — les schémas custom (lassiapp://) sont refusés
+const LASSI_PAY_BASE = 'https://lassi.tech/paiement';
 
-const isSimulation = () => PAYMENT_MODE !== 'production' || !WAVE_API_KEY;
+const isWaveSimulation = () => PAYMENT_MODE !== 'production' || !WAVE_API_KEY;
+const isOmSimulation   = () => PAYMENT_MODE !== 'production' || !isOmReady();
+const isSimulation     = () => PAYMENT_MODE !== 'production';
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -72,7 +78,7 @@ serve(async (req) => {
     if (!ticketId || !amount || !method)
       return fail('Paramètres manquants', 400);
     if (!validerMontant(amount))
-      return fail(`Montant invalide (min 100, max 5 000 000 FCFA)`, 400);
+      return fail(`Montant invalide (min 10, max 5 000 000 FCFA)`, 400);
     if (!validerMethode(method))
       return fail('Moyen de paiement non supporté', 400);
 
@@ -117,9 +123,10 @@ serve(async (req) => {
         return fail('Impossible de créer le paiement', 500);
       }
 
+      const methodSim = method === 'wave' ? isWaveSimulation() : isOmSimulation();
+
       // ── Simulation (sans clé API) ──────────────────────────────────────────
-      if (isSimulation()) {
-        // Marquer comme simulé directement
+      if (methodSim) {
         await sb.from('payment_intents').update({
           statut:     'simulated',
           updated_at: new Date().toISOString(),
@@ -149,12 +156,20 @@ serve(async (req) => {
 
       // ── Production ────────────────────────────────────────────────────────
       let paymentUrl: string;
+      let qrCode: string | null = null;
       try {
-        // piId sert de client_reference — c'est ce que le webhook reçoit
-        paymentUrl = method === 'wave'
-          ? await createWaveSession({ amount: amount + commission, reference: piId, merchantName })
-          : await createOmSession({ amount: amount + commission, reference: piId, merchantName });
+        if (method === 'wave') {
+          paymentUrl = await createWaveSession({ amount: amount + commission, reference: piId, merchantName });
+        } else {
+          const om = await createOmSession({ amount: amount + commission, piId });
+          paymentUrl = om.deepLink;
+          qrCode     = om.qrCode;
+        }
       } catch (e) {
+        await sb.from('payment_intents').update({
+          statut:     'failed',
+          updated_at: new Date().toISOString(),
+        }).eq('id', piId).eq('statut', 'pending');
         await logEvent(sb, {
           event_type:        'create_failed',
           reference:         piId, ticket_id: ticketId, user_id: user.id,
@@ -162,7 +177,7 @@ serve(async (req) => {
           status:            'failed',
           provider_response: (e as Error).message,
         });
-        throw e;
+        return fail('Le paiement n\'a pas pu être initié. Réessaie.', 400);
       }
 
       await sb.from('payment_intents').update({
@@ -175,6 +190,7 @@ serve(async (req) => {
         paymentIntentId: piId,
         redirectUrl:     paymentUrl,
         paymentUrl,
+        qrCode,
         reference:       piId,
         simulation:      false,
         mode:            'production' as const,
@@ -195,7 +211,7 @@ serve(async (req) => {
     // ── Flux TICKET/CHAT legacy ───────────────────────────────────────────────
     const reference = `LASSI_${ticketId}_${Date.now()}`;
 
-    if (isSimulation()) {
+    if (method === 'wave' ? isWaveSimulation() : isOmSimulation()) {
       await sb.rpc('merge_ticket_reference', { p_message_id: ticketId, p_reference: reference });
       const result = {
         success:         true,
@@ -221,10 +237,15 @@ serve(async (req) => {
 
     // Production — flux ticket
     let paymentUrl: string;
+    let ticketQrCode: string | null = null;
     try {
-      paymentUrl = method === 'wave'
-        ? await createWaveSession({ amount, reference, merchantName })
-        : await createOmSession({ amount, reference, merchantName });
+      if (method === 'wave') {
+        paymentUrl = await createWaveSession({ amount, reference, merchantName });
+      } else {
+        const om = await createOmSession({ amount, piId: reference });
+        paymentUrl   = om.deepLink;
+        ticketQrCode = om.qrCode;
+      }
     } catch (e) {
       await logEvent(sb, {
         event_type:        'create_failed',
@@ -243,6 +264,7 @@ serve(async (req) => {
       paymentIntentId: reference,
       redirectUrl:     paymentUrl,
       paymentUrl,
+      qrCode:          ticketQrCode,
       reference,
       simulation:      false,
       mode:            'production' as const,
@@ -265,25 +287,19 @@ serve(async (req) => {
   }
 });
 
-// ─── Wave Checkout API ────────────────────────────────────────────────────────
+// ─── Wave Checkout API (via waveProxy pour signature + proxy IP) ─────────────
 
 async function createWaveSession(p: {
   amount: number; reference: string; merchantName: string;
 }): Promise<string> {
-  const res = await fetch('https://api.wave.com/v1/checkout/sessions', {
-    method:  'POST',
-    headers: {
-      Authorization:  `Bearer ${WAVE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      amount:           p.amount,
-      currency:         'XOF',
-      client_reference: p.reference,
-      success_url:      `lassiapp://paiement/succes?pi=${p.reference}`,
-      error_url:        `lassiapp://paiement/echec?pi=${p.reference}`,
-    }),
+  const waveBody = JSON.stringify({
+    amount:           p.amount,
+    currency:         'XOF',
+    client_reference: p.reference,
+    success_url:      `${LASSI_PAY_BASE}/succes?pi=${p.reference}`,
+    error_url:        `${LASSI_PAY_BASE}/echec?pi=${p.reference}`,
   });
+  const res  = await callWaveCheckout(waveBody, `checkout_${p.reference}`);
   const data = await res.json();
   if (!res.ok || !data.wave_launch_url) {
     console.error('[Wave] erreur:', data);
@@ -292,49 +308,39 @@ async function createWaveSession(p: {
   return data.wave_launch_url;
 }
 
-// ─── Orange Money Web Payment API (Sénégal / WAEMU) ─────────────────────────
+// ─── Orange Money Sonatel QR Code API (même flow que create-guest-order) ────────
 
 async function createOmSession(p: {
-  amount: number; reference: string; merchantName: string;
-}): Promise<string> {
-  const tokenRes = await fetch('https://api.orange.com/oauth/v3/token', {
+  amount: number; piId: string;
+}): Promise<{ deepLink: string; qrCode: string | null }> {
+  const omToken      = await getOmToken();
+  const callbackUrl  = `${WEBHOOK_BASE}/webhook-payment?source=om&pi_id=${encodeURIComponent(p.piId)}&secret=${encodeURIComponent(OM_WEBHOOK_SECRET)}`;
+  const resp = await fetch(`${OM_BASE_URL}/api/eWallet/v4/qrcode`, {
     method:  'POST',
     headers: {
-      Authorization:  `Basic ${btoa(`${OM_API_KEY}:${OM_API_SECRET}`)}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials',
-  });
-  const tokenData = await tokenRes.json();
-  if (!tokenRes.ok || !tokenData.access_token) {
-    console.error('[OM] token error:', tokenData);
-    throw new Error('Orange Money : authentification échouée');
-  }
-
-  const payRes = await fetch('https://api.orange.com/orange-money-webpay/sn/v1/webpayment', {
-    method:  'POST',
-    headers: {
-      Authorization:  `Bearer ${tokenData.access_token}`,
-      'Content-Type': 'application/json',
+      Authorization:    `Bearer ${omToken}`,
+      'Content-Type':   'application/json',
+      'X-Callback-Url': callbackUrl,
     },
     body: JSON.stringify({
-      merchant_key: OM_API_KEY,
-      currency:     'OUV',
-      order_id:     p.reference,
-      amount:       p.amount,
-      return_url:   `lassiapp://paiement/succes?pi=${p.reference}`,
-      cancel_url:   `lassiapp://paiement/echec?pi=${p.reference}`,
-      notif_url:    `${WEBHOOK_BASE}/om-webhook`,
-      lang:         'fr',
-      reference:    p.reference,
+      code:            OM_MERCHANT_CODE,
+      name:            'LASSI',
+      amount:          { value: p.amount, unit: 'XOF' },
+      validity:        900,
+      metadata:        { pi_id: p.piId },
+      notificationUrl: callbackUrl,
     }),
   });
-  const payData = await payRes.json();
-  if (!payRes.ok || !payData.payment_url) {
-    console.error('[OM] payment error:', payData);
-    throw new Error('Orange Money : création du paiement échouée');
+  if (!resp.ok) {
+    const errBody = await resp.text();
+    console.error('[OM] qrcode error:', resp.status, errBody);
+    throw new Error(`Orange Money : QR code échoué (${resp.status})`);
   }
-  return payData.payment_url;
+  const d         = await resp.json();
+  const deepLink  = d.deepLinks?.OM ?? d.deepLink ?? '';
+  const qrCode    = (d.qrCode ?? null) as string | null;
+  if (!deepLink && !qrCode) throw new Error('Orange Money : QR code absent de la réponse');
+  return { deepLink, qrCode };
 }
 
 function ok(data: unknown) {

@@ -124,6 +124,18 @@ export default async function handler(
     });
   }
 
+  // GARDE-FOU PERMANENT : si l'URL contient ?id=<uuid>&s=ok|ko, c'est une page de
+  // confirmation de paiement — on NE redirige JAMAIS vers lassi.tech dans ce cas,
+  // même si vercel.json n'injecte pas ?slug=commande (protection contre toute régression config).
+  const _gfId = url.searchParams.get('id') ?? '';
+  const _gfS  = url.searchParams.get('s') ?? '';
+  if (_gfId && (_gfS === 'ok' || _gfS === 'ko')) {
+    return new Response(renderConfirmation(url), {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
+  }
+
   if (!slug) return Response.redirect('https://lassi.tech', 302);
 
   const shop = await fetchShop(slug);
@@ -1080,21 +1092,23 @@ const CART_JS = `
           try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify({orderId:d.orderId, confUrl:confUrl})); }catch(e){}
           if(d.mode==='simulation'){ sessionStorage.removeItem(SESSION_KEY); window.location.href=confUrl+'&s=ok'; return; }
           var a=document.getElementById('payOpen');
-          if(d.redirectUrl){
+          if(d.qrCode){
+            // OM web : afficher le QR code (le deepLink OM est pour apps mobiles, pas le browser)
+            document.getElementById('waitSub').textContent='Ouvre Orange Money et scanne ce QR code pour payer.';
+            var img=document.getElementById('omQr');
+            img.src=(String(d.qrCode).indexOf('data:')===0?d.qrCode:'data:image/png;base64,'+d.qrCode);
+            img.hidden=false;
+            a.style.display='none';
+          } else if(d.redirectUrl){
+            // Wave (ou OM sans QR) : rediriger vers le deepLink
             document.getElementById('waitSub').textContent=isW
               ? 'Valide le paiement dans Wave, puis reviens sur cette page.'
               : 'Valide le paiement dans Orange Money, puis reviens sur cette page.';
             a.textContent=isW?'Rouvrir Wave':'Rouvrir Orange Money';
             a.href=d.redirectUrl; a.style.display='inline-block';
-            window.location.replace(d.redirectUrl);
+            if(isW) window.location.replace(d.redirectUrl);
           } else {
             a.style.display='none';
-          }
-          if(d.qrCode){
-            document.getElementById('waitSub').textContent='Scanne ce QR code avec Orange Money.';
-            var img=document.getElementById('omQr');
-            img.src=(String(d.qrCode).indexOf('data:')===0?d.qrCode:'data:image/png;base64,'+d.qrCode);
-            img.hidden=false;
           }
           pollStatus(d.orderId, confUrl);
         }).catch(function(e){
@@ -1319,7 +1333,7 @@ const CONFIRM_JS = `
     } else {
       t.textContent='Commande confirmée';
       d.innerHTML='Merci ! <span class="gold">Le marchand a reçu ta commande</span> et va te rappeler pour le retrait ou la livraison.';
-      var recu=document.getElementById('recu'); if(recu&&CFG.id){ recu.href=CFG.url+'/functions/v1/create-guest-order?receipt='+encodeURIComponent(CFG.id); recu.style.display='inline-flex'; }
+      var recu=document.getElementById('recu'); if(recu&&CFG.id){ recu.style.display='inline-flex'; recu.addEventListener('click',function(e){ e.preventDefault(); recu.style.opacity='0.5'; fetch(CFG.url+'/functions/v1/create-guest-order?receipt='+encodeURIComponent(CFG.id),{headers:{'apikey':CFG.key,'Authorization':'Bearer '+CFG.key}}).then(function(r){return r.ok?r.blob():Promise.reject(r.status);}).then(function(b){var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='recu-lassi.pdf';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(u);},5000);}).catch(function(){alert('Erreur lors du téléchargement. Réessaie.');}).finally(function(){recu.style.opacity='';});});}
     }
     home.style.display='inline-block';
   }

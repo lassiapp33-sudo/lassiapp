@@ -34,13 +34,17 @@ const IS_PRODUCTION             = WAVE_API_KEY !== '' ||
                                   (OM_RETAILER_MSISDN !== '' && OM_RETAILER_PIN_ENCRYPTED !== '');
 
 // Erreurs Wave qui ne bénéficient pas d'un retry — terminal = true
+// IMPORTANT : 'insufficient-funds' est RETIRÉ des terminaux — c'est un état
+// temporaire (rechargement portefeuille LASSI Wave) qui doit être retenté.
 const TERMINAL_WAVE_ERRORS = new Set([
   'country-mismatch', 'currency-mismatch', 'idempotency-mismatch',
-  'insufficient-funds', 'invalid-aggregated-merchant-id', 'aggregated-merchant-required',
+  'invalid-aggregated-merchant-id', 'aggregated-merchant-required',
   'recipient-minor', 'recipient-account-blocked', 'recipient-account-inactive',
   'recipient-limit-exceeded', 'request-not-json', 'request-parsing-error',
   'request-validation-error',
 ]);
+// Erreur de solde insuffisant : non-terminal mais déclenche alerte admin
+const INSUFFICIENT_FUNDS_CODE = 'insufficient-funds';
 
 class WavePayoutError extends Error {
   isTerminal: boolean;
@@ -185,6 +189,21 @@ serve(async (req) => {
       const msg        = err instanceof Error ? err.message : 'Erreur fournisseur de paiement';
       const isTerminal = err instanceof WavePayoutError ? err.isTerminal : false;
       console.error('[process-payouts] échec appel fournisseur, payout', payout.id, msg);
+
+      // Alerte admin si solde Wave insuffisant (non-terminal, sera retenté)
+      if (msg.includes(INSUFFICIENT_FUNDS_CODE)) {
+        console.error('[ALERTE ADMIN] Portefeuille Wave LASSI insuffisant — recharger pour débloquer les reversements');
+        try {
+          await supabase.from('notifications').insert({
+            user_id: null,
+            type:    'payment',
+            title:   '⚠️ Portefeuille Wave LASSI vide',
+            body:    `Reversement ${payout.id} bloqué (${payout.montant} FCFA) — solde Wave insuffisant. Recharger le compte Wave LASSI.`,
+            data:    { type: 'admin_alert', payout_id: payout.id, error: INSUFFICIENT_FUNDS_CODE },
+          });
+        } catch { /* best-effort */ }
+      }
+
       await supabase.rpc('payout_queue_mark_failure', {
         p_payout_id: payout.id,
         p_error:     msg,

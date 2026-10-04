@@ -111,9 +111,14 @@ export default function ReceiptScreen({ orderId, onBack }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<ReceiptStatus>('aucun');
 
-  const { mm, ss, expired } = useCountdown(
-    liveStatus === 'valide' ? receipt?.receiptValidUntil : undefined,
-  );
+  // Si receipt_valid_until est NULL (trigger n'a pas tiré), fallback = created_at + 2h
+  const receiptValidUntil = liveStatus === 'valide'
+    ? (receipt?.receiptValidUntil ??
+       (receipt?.createdAt
+         ? new Date(new Date(receipt.createdAt).getTime() + 120 * 60 * 1000).toISOString()
+         : undefined))
+    : undefined;
+  const { mm, ss, expired } = useCountdown(receiptValidUntil);
 
   const load = async () => {
     setLoading(true);
@@ -231,7 +236,7 @@ export default function ReceiptScreen({ orderId, onBack }: Props) {
             <View style={s.expireBox}>
               <Text style={s.expireTitle}>Reçu expiré</Text>
               <Text style={s.expireSub}>
-                La validité de 40 min est dépassée. Contacte le prestataire ou notre service client
+                La validité de 2h est dépassée. Contacte le prestataire ou notre service client
                 pour régulariser.
               </Text>
             </View>

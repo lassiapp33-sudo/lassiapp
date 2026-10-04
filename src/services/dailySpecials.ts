@@ -16,12 +16,13 @@ function toRow(r: any): DailySpecial {
 /** Tous les plats du jour actifs pour une boutique (date = aujourd'hui). */
 export async function getTodaySpecials(shopId: string): Promise<DailySpecial[]> {
   const today = new Date().toISOString().slice(0, 10);
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('daily_specials')
     .select('id,shop_id,name,price,photo_url,date')
     .eq('shop_id', shopId)
     .eq('date', today)
     .order('created_at', { ascending: true });
+  if (error) console.warn('[dailySpecials] getTodaySpecials error:', error.message);
   return (data ?? []).map(toRow);
 }
 

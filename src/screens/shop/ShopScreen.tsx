@@ -310,7 +310,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     };
   }, [targetProductId, realProducts]);
 
-  useEffect(() => {
+  const fetchDailySpecials = useCallback(() => {
     if (!isRestaurantShop || !shopId) return;
     setDailySpecialsLoading(true);
     getTodaySpecials(shopId)
@@ -318,6 +318,13 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
       .catch(() => {})
       .finally(() => setDailySpecialsLoading(false));
   }, [shopId, isRestaurantShop]);
+
+  useEffect(() => { fetchDailySpecials(); }, [fetchDailySpecials]);
+
+  // Re-fetch à chaque fois que l'utilisateur ouvre l'onglet plat du jour
+  useEffect(() => {
+    if (activeTab === 'plat_du_jour') fetchDailySpecials();
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Type de vitrine ───────────────────────────────────────────────────────
   const subcats = shopData?.subcategories ?? [];
@@ -523,13 +530,17 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   };
 
   const addToCart = (p: StoreProduct) => {
+    if (!isOpen) {
+      Alert.alert('Boutique fermée', 'Ce prestataire est exceptionnellement fermé. Revenez plus tard.', [{ text: 'OK' }]);
+      return;
+    }
     if (p.stock === 'out') return;
     const hasVariants = (p.sizes && p.sizes.length > 0) || (p.colors && p.colors.length > 0);
     if (hasVariants) {
       setHabPickerProduct(p);
       return;
     }
-    addItem(shopInfo, { id: p.id, productId: p.id, name: p.name, emoji: p.emoji, price: calculerPrixClient(p.price) });
+    addItem(shopInfo, { id: p.id, productId: p.id, name: p.name, emoji: p.emoji, price: p.price });
   };
 
   const handleHabConfirm = (size: string | undefined, color: string | undefined) => {
@@ -543,7 +554,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
       productId: p.id,
       name: displayName,
       emoji: p.emoji,
-      price: calculerPrixClient(p.price),
+      price: p.price,
       selectedSize: size,
       selectedColor: color,
     });
@@ -666,7 +677,14 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
             isOpen={isOpen}
           />
 
-          {/* 5b — Bandeau promos actives */}
+          {/* 5b — Bannière fermé exceptionnel */}
+          {manuallyClose && (
+            <View style={styles.exceptBanner}>
+              <Text style={styles.exceptBannerTxt}>⚠️  Exceptionnellement fermé — commandes impossibles</Text>
+            </View>
+          )}
+
+          {/* 5c — Bandeau promos actives */}
           {shopWidePromos.length > 0 && (
             <View style={styles.promoBanner}>
               <IcoTag />
@@ -787,7 +805,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                         <ProductTile
                           product={product}
                           qty={cartItems.find(ci => ci.id === product.id)?.qty ?? 0}
-                          onAdd={() => addItem(shopInfo, { id: product.id, name: product.name, emoji: '', price: isPreview ? product.price : calculerPrixClient(product.price) })}
+                          onAdd={() => addItem(shopInfo, { id: product.id, name: product.name, emoji: '', price: product.price })}
                           onRemove={() => removeItem(product.id)}
                           isVip={isVip} isPreview={isPreview}
                         />
@@ -828,7 +846,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                           <ProductTile
                             product={product}
                             qty={cartItems.find(ci => ci.id === product.id)?.qty ?? 0}
-                            onAdd={() => addItem(shopInfo, { id: product.id, name: product.name, emoji: '', price: isPreview ? product.price : calculerPrixClient(product.price) })}
+                            onAdd={() => addItem(shopInfo, { id: product.id, name: product.name, emoji: '', price: product.price })}
                             onRemove={() => removeItem(product.id)}
                             isVip={isVip}
                             isPreview={isPreview}
@@ -1436,6 +1454,23 @@ const styles = StyleSheet.create({
   terrainCtaTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 13 },
 
   // Bandeau promotions
+  exceptBanner: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 4,
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.45)',
+    borderRadius: radius.md,
+    padding: 12,
+    alignItems: 'center',
+  },
+  exceptBannerTxt: {
+    color: '#f87171',
+    fontFamily: fonts.ui,
+    fontSize: 13,
+    textAlign: 'center',
+  },
   promoBanner: {
     marginHorizontal: 20,
     marginBottom: 12,

@@ -49,7 +49,11 @@ function ShopCard({ shop, onPress }: Props) {
         : colors.muted;
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={[styles.card, shop.status === 'closed' && styles.cardClosed]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
       {/* Logo boutique — Avatar unique, source de vérité shops.logo_url */}
       <Avatar imageUrl={shop.logoUrl} name={shop.name} size={58} variant="shop" />
 
@@ -110,6 +114,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 13,
     marginBottom: 11,
+  },
+  cardClosed: {
+    opacity: 0.45,
   },
   info: { flex: 1, minWidth: 0 },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 5 },

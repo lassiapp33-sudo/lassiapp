@@ -279,7 +279,7 @@ serve(async (req) => {
             }),
             supabase.from('notifications').insert({
               user_id: resa.client_id,
-              type:    'reservation_terrain',
+              type:    'order',
               title:   'Réservation payée ✓',
               body:    notifBodyClient,
               data:    { type: 'reservation_terrain', reservationId: terrainRFromUrl },
@@ -509,7 +509,7 @@ serve(async (req) => {
             }),
             supabase.from('notifications').insert({
               user_id: resaRow.client_id,
-              type:    'reservation_terrain',
+              type:    'order',
               title:   'Réservation payée ✓',
               body:    notifBodyCR,
               data:    { type: 'reservation_terrain', reservationId: String(result.reservation_id) },
@@ -624,24 +624,33 @@ serve(async (req) => {
             if (lErr) {
               console.error('[webhook-payment] livraison insert erreur:', lErr.message);
             } else {
-              await supabase
+              // Verrouillage optimiste : l'UPDATE n'écrit que si livraison_id est encore null.
+              // Si un webhook concurrent a déjà pris la main, on supprime la livraison créée.
+              const { data: claimedOm } = await supabase
                 .from('livraison_paiements')
                 .update({ livraison_id: nouvelleL.id })
-                .eq('id', lp.id);
-              const { data: livreurs } = await supabase
-                .from('livreurs')
-                .select('id')
-                .eq('actif', true);
-              const distKm = lp.distance_km ? `${Number(lp.distance_km).toFixed(1)} km` : '';
-              for (const livreur of (livreurs ?? [])) {
-                await sendPushToUser(supabase, livreur.id, {
-                  title:     'Nouvelle livraison disponible',
-                  body:      `${lp.depart_label} → ${lp.arrivee_label}${distKm ? ' · ' + distKm : ''}`,
-                  data:      { type: 'livraison_nouvelle', livraisonId: String(nouvelleL.id) },
-                  channelId: 'commandes-v2',
-                });
+                .eq('id', lp.id)
+                .is('livraison_id', null)
+                .select('id');
+              if (!claimedOm || claimedOm.length === 0) {
+                console.warn('[webhook-payment] livraison doublon OM détecté, rollback', piId);
+                await supabase.from('livraisons').delete().eq('id', nouvelleL.id);
+              } else {
+                const { data: livreurs } = await supabase
+                  .from('livreurs')
+                  .select('id')
+                  .eq('actif', true);
+                const distKm = lp.distance_km ? `${Number(lp.distance_km).toFixed(1)} km` : '';
+                for (const livreur of (livreurs ?? [])) {
+                  await sendPushToUser(supabase, livreur.id, {
+                    title:     'Nouvelle livraison disponible',
+                    body:      `${lp.depart_label} → ${lp.arrivee_label}${distKm ? ' · ' + distKm : ''}`,
+                    data:      { type: 'livraison_nouvelle', livraisonId: String(nouvelleL.id) },
+                    channelId: 'commandes-v2',
+                  });
+                }
+                console.log('[webhook-payment] livraison créée pi', piId, 'id', nouvelleL.id, 'livreurs:', (livreurs ?? []).length);
               }
-              console.log('[webhook-payment] livraison créée pi', piId, 'id', nouvelleL.id, 'livreurs:', (livreurs ?? []).length);
             }
           }
         }
@@ -771,6 +780,128 @@ serve(async (req) => {
     // Reversement immédiat — sans attendre le cron 2 min
     if (result?.ok && !result?.already_processed && !result?.disputed) {
       triggerPayoutsNow();
+    }
+
+    // ── Abonnement visibilité OM : piId peut être un visibility_subscriptions.id ──
+    // Si process_payment_webhook ne trouve pas de payment_intent, on tente l'activation visibilité.
+    if (!rpcError && result?.error === 'payment_intent_not_found' && isSuccess) {
+      try {
+        const { data: visSub } = await supabase
+          .from('visibility_subscriptions')
+          .select('id, shop_id, merchant_id, status, offer_type, amount, plan_id, plan_duration_days, product_ids, product_id, all_products, metadata, transaction_id')
+          .eq('id', piId)
+          .eq('status', 'pending')
+          .maybeSingle();
+
+        if (visSub) {
+          const expectedAmount = Math.round(Number(visSub.amount));
+          if (receivedAmount !== null && receivedAmount !== expectedAmount) {
+            console.error('[webhook-visibility-om] montant incohérent', piId,
+              { received: receivedAmount, expected: expectedAmount });
+          } else {
+            const durationDays: number = visSub.plan_duration_days ?? 30;
+            const now       = new Date();
+            const expiresAt = new Date(now.getTime() + durationDays * 86_400_000);
+
+            const { data: omClaim } = await supabase
+              .rpc('claim_visibility_finalization', { p_sub_id: String(piId) });
+
+            if (!omClaim) {
+              console.log('[webhook-visibility-om] déjà finalisé (verrou) — skip', piId);
+            } else {
+              const offerType = (visSub.offer_type as string) ?? 'quartier';
+              try {
+                if (offerType === 'recherche') {
+                  const { error } = await supabase.rpc('grant_recherche_boost',
+                    { p_shop_id: visSub.shop_id, p_days: durationDays });
+                  if (error) throw error;
+                } else if (offerType === 'carte') {
+                  const { error } = await supabase.rpc('grant_carte_pin',
+                    { p_shop_id: visSub.shop_id, p_days: durationDays });
+                  if (error) throw error;
+                } else if (offerType === 'annonce') {
+                  type AdMeta = { format: string; titre?: string | null; corps?: string | null; imageUrl?: string | null; durationHours: number; estMin: number; estMax: number };
+                  const meta = visSub.metadata as AdMeta | null;
+                  if (meta?.format && meta.durationHours) {
+                    const adExp = new Date(Date.now() + meta.durationHours * 3_600_000).toISOString();
+                    const { error } = await supabase.from('sponsored_ads').upsert({
+                      subscription_id: visSub.id,
+                      shop_id: visSub.shop_id, merchant_id: visSub.merchant_id,
+                      format: meta.format, titre: meta.titre ?? null, corps: meta.corps ?? null,
+                      image_url: meta.imageUrl ?? null,
+                      budget_credits: Math.round(Number(visSub.amount)),
+                      duration_hours: meta.durationHours,
+                      estimated_views_min: meta.estMin, estimated_views_max: meta.estMax,
+                      expires_at: adExp, status: 'active',
+                    }, { onConflict: 'subscription_id', ignoreDuplicates: true });
+                    if (error) throw error;
+                  } else {
+                    const { error } = await supabase.rpc('increment_shop_credit',
+                      { p_shop_id: visSub.shop_id, p_amount: Math.round(Number(visSub.amount)) });
+                    if (error) throw error;
+                  }
+                }
+
+                const { error: flipErr } = await supabase.from('visibility_subscriptions')
+                  .update({
+                    status:         'active',
+                    started_at:     now.toISOString(),
+                    expires_at:     expiresAt.toISOString(),
+                    paid_at:        now.toISOString(),
+                    transaction_id: externalRef ?? visSub.transaction_id,
+                  })
+                  .eq('id', String(piId))
+                  .eq('status', 'pending');
+                if (flipErr) throw flipErr;
+
+                if (offerType === 'quartier') {
+                  const { error: featErr } = await supabase.rpc('recompute_shop_quartier_featuring',
+                    { p_shop_id: visSub.shop_id });
+                  if (featErr) throw featErr;
+                  const paidIds: string[] = visSub.all_products ? [] : ((visSub.product_ids as string[] | null) ?? []);
+                  await populateCarrouselQuartier(supabase, visSub.merchant_id as string, paidIds, String(piId));
+                }
+
+                const OFFER_LBL: Record<string, string> = {
+                  quartier: "l'Offre du Quartier", recherche: 'Booster recherche',
+                  carte: 'Épingle dorée (carte)', annonce: 'Annonce Sponsorisée',
+                };
+                const visBody = offerType === 'annonce'
+                  ? `Votre paiement a été confirmé et votre annonce sponsorisée est maintenant en ligne. Bonne visibilité.`
+                  : `Votre abonnement « ${OFFER_LBL[offerType] ?? offerType} » est maintenant actif jusqu'au ${expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`;
+
+                try {
+                  await supabase.from('notifications').insert({
+                    user_id: visSub.merchant_id, type: 'payment',
+                    title: 'Félicitations pour votre achat',
+                    body: visBody,
+                    data: { subscription_id: String(piId), offer_type: offerType },
+                  });
+                } catch { /* best-effort */ }
+
+                await sendPushToUser(supabase, visSub.merchant_id as string, {
+                  title: 'Paiement Orange Money confirmé',
+                  body:  visBody,
+                  data:  { type: 'visibility', subscription_id: String(piId), offer_type: offerType },
+                });
+
+                console.log('[webhook-visibility-om] abonnement activé —', piId, 'type', offerType);
+              } catch (finErr) {
+                try {
+                  await supabase.from('visibility_subscriptions')
+                    .update({ notified_at: null }).eq('id', String(piId));
+                } catch { /* best-effort */ }
+                console.error('[webhook-visibility-om] activation échouée, verrou relâché —', piId,
+                  finErr instanceof Error ? finErr.message : finErr);
+              }
+            }
+          }
+        } else {
+          console.error('[webhook-om] payment_intent et visibility_subscription introuvables pour', piId);
+        }
+      } catch (visOmErr) {
+        console.error('[webhook-visibility-om] erreur:', visOmErr instanceof Error ? visOmErr.message : visOmErr);
+      }
     }
 
     // Orange attend toujours 200 (sinon elle retry en boucle)
@@ -1212,7 +1343,7 @@ serve(async (req) => {
             }),
             supabase.from('notifications').insert({
               user_id: resaRow.client_id,
-              type:    'reservation_terrain',
+              type:    'order',
               title:   'Réservation payée ✓',
               body:    notifBodyCW,
               data:    { type: 'reservation_terrain', reservationId: String(result.reservation_id) },
@@ -1415,6 +1546,33 @@ serve(async (req) => {
                   body:    clientBodyW,
                   data:    { type: 'fitness_abonnement' },
                 });
+
+                // Notif in-app + push prestataire (symétrique avec chemin OM)
+                const { data: cpRowW } = await supabase.from('profiles').select('name').eq('id', piDataW.client_id as string).maybeSingle();
+                const cNameW  = (cpRowW?.name as string) ?? 'Un client';
+                const pTitleW = 'Nouvel abonné';
+                const pBodyW  = `${cNameW} a souscrit à "${offreNomW}".`;
+
+                await supabase.from('notifications').insert({
+                  user_id: piDataW.prestataire_id,
+                  type:    'payment',
+                  title:   pTitleW,
+                  body:    pBodyW,
+                  data:    { type: 'fitness_abonnement_nouveau', offre_id: offreIdW },
+                });
+
+                try {
+                  await sendPushToUser(supabase, piDataW.prestataire_id as string, {
+                    title:     pTitleW,
+                    body:      pBodyW,
+                    data:      { type: 'fitness_abonnement_nouveau', offre_id: offreIdW },
+                    channelId: 'commandes-v2',
+                    priority:  'high',
+                  });
+                } catch (e) {
+                  console.error('[webhook-fitness-wave] push prestataire:', e instanceof Error ? e.message : e);
+                }
+
                 console.log('[webhook-fitness-wave] fitness abonnement activé pi', piId, 'client', piDataW.client_id);
               }
             }

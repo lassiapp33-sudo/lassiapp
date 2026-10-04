@@ -17,10 +17,9 @@ export async function waveRequest(
 ): Promise<Response> {
   const extraHeaders: Record<string, string> = {};
   if (idempotencyKey) extraHeaders['Idempotency-Key'] = idempotencyKey;
-  if (body) {
-    const sig = await buildWaveSignature(body);
-    if (sig) extraHeaders['Wave-Signature'] = sig;
-  }
+  // Wave exige la signature sur TOUS les appels (GET inclus) — signer avec '' si pas de body
+  const sig = await buildWaveSignature(body ?? '');
+  if (sig) extraHeaders['Wave-Signature'] = sig;
 
   if (WAVE_PROXY_BASE) {
     return fetch(`${WAVE_PROXY_BASE}${path}`, {

@@ -121,13 +121,13 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
   };
 
   const perShop = activeShops.map(shopTotals);
-  const grandClient = perShop.reduce((s, t) => s + t.client, 0);
+  const grandTotal = perShop.reduce((s, t) => s + t.total, 0);
   const grandCommission = perShop.reduce((s, t) => s + t.commission, 0);
 
   const livraisonFeeDisplay = (isVip && vipOrderMode === 'livraison' && devisBtn && !devisBtn.horsZone)
     ? devisBtn.prix
     : 0;
-  const grandClientFinal = grandClient + livraisonFeeDisplay;
+  const grandTotalFinal = grandTotal + livraisonFeeDisplay;
 
   const hasItems = activeShops.some(sh => sh.items.length > 0);
 
@@ -204,7 +204,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
     setMethod(usedMethod);
     if (isSubmittingRef.current) return;
 
-    if ((usedMethod === 'wave' || usedMethod === 'om') && grandClientFinal < PAYMENT_CONFIG.MONTANT_MIN_FCFA) {
+    if ((usedMethod === 'wave' || usedMethod === 'om') && grandTotalFinal < PAYMENT_CONFIG.MONTANT_MIN_FCFA) {
       Alert.alert(
         'Montant insuffisant',
         `Le montant minimum pour payer par Wave ou Orange Money est de ${PAYMENT_CONFIG.MONTANT_MIN_FCFA} FCFA. Ajoute d'autres articles ou contacte le prestataire directement.`,
@@ -286,7 +286,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         const t = shopTotals(sh);
         const vipItems = sh.items.map(i => ({ prestationId: i.id, qty: i.qty }));
         const res = await createVipOrder(sh.info.id, vipItems, 'emporter', structuredNote, usedMethod, freshLivraisonFee);
-        const amount = t.client + freshLivraisonFee;
+        const amount = t.total + freshLivraisonFee;
         await finalizeSingle(res.orderId, sh.info.name, sh.info.initial, sh.info.location, sh.items, amount, t.commission);
         return;
       }
@@ -318,7 +318,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
       if (orderIds.length === 1) {
         const sh = freshShops[0];
         const t = shopTotals(sh);
-        const amount = t.client + freshLivraisonFee;
+        const amount = t.total + freshLivraisonFee;
         await finalizeSingle(orderIds[0], sh.info.name, sh.info.initial, sh.info.location, sh.items, amount, t.commission, sh.info.merchantId);
         return;
       }
@@ -484,7 +484,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
                     <Text style={styles.shopName}>{sh.info.name}</Text>
                     {!!sh.info.location && <Text style={styles.shopLoc}>{sh.info.location}</Text>}
                   </View>
-                  <Text style={styles.shopSubtotal}>{formatPrice(t.client)}</Text>
+                  <Text style={styles.shopSubtotal}>{formatPrice(t.total)}</Text>
                 </View>
 
                 {sh.items.map(item => (
@@ -495,7 +495,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
                     <View style={styles.itemInfo}>
                       <Text style={styles.itemName}>{item.name}</Text>
                       <Text style={styles.itemPrice}>
-                        {formatPrice(isVip ? calculerPrixClientVip(item.price) : calculerPrixClient(item.price))}
+                        {formatPrice(item.price)}
                       </Text>
                     </View>
                     <View style={styles.qtyWrap}>
@@ -578,7 +578,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
               activeShops.map(sh => (
                 <View key={sh.info.id} style={styles.summaryLine}>
                   <Text style={styles.summaryKey}>{sh.info.name}</Text>
-                  <Text style={styles.summaryVal}>{formatPrice(shopTotals(sh).client)}</Text>
+                  <Text style={styles.summaryVal}>{formatPrice(shopTotals(sh).total)}</Text>
                 </View>
               ))}
             {livraisonFeeDisplay > 0 && (
@@ -590,7 +590,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
             <View style={styles.separator} />
             <View style={styles.totalRow}>
               <Text style={styles.totalKey}>Total</Text>
-              <Text style={styles.totalVal}>{formatPrice(grandClientFinal)}</Text>
+              <Text style={styles.totalVal}>{formatPrice(grandTotalFinal)}</Text>
             </View>
           </View>
         </ScrollView>

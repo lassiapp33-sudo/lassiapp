@@ -42,7 +42,7 @@ serve(async (req) => {
       const amt   = parseInt(body.amount ?? '0', 10);
 
       if (!/^7[05678][0-9]{7}$/.test(phone)) return json({ error: 'Numéro invalide' }, 400);
-      if (!amt || amt < 100)                   return json({ error: 'Montant minimum 100 FCFA' }, 400);
+      if (!amt || amt < 10)                    return json({ error: 'Montant minimum 10 FCFA' }, 400);
 
       const idempKey = `admin_manual_payout_${Date.now()}`;
       const payoutBody: Record<string, string> = {

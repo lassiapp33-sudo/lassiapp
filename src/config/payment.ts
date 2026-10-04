@@ -17,10 +17,10 @@ export const PAYMENT_CONFIG = {
   VIP_COMMISSION_PERCENT_DISPLAY: '2%',
 
   // Reçu
-  RECEIPT_VALIDITY_MINUTES: 40,
+  RECEIPT_VALIDITY_MINUTES: 120,
 
   // Limites sécurité
-  MONTANT_MIN_FCFA: 100,            // minimum acceptable
+  MONTANT_MIN_FCFA: 10,             // minimum interne (Wave/OM acceptent > 10 FCFA)
   MONTANT_MAX_FCFA: 5_000_000,      // 5 millions FCFA max par transaction
 
   // Moyens de paiement disponibles

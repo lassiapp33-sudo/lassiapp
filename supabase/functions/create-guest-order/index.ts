@@ -425,7 +425,6 @@ Deno.serve(async (req) => {
         const waveBody = JSON.stringify({
           currency: 'XOF', amount: String(montantTotal),
           success_url: successUrl, error_url: errorUrl, client_reference: piId,
-          webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/webhook-payment`,
         });
         const resp = await callWaveCheckout(waveBody, piId);
         if (!resp.ok) throw new Error(`Wave ${resp.status}`);
