@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { colors, fonts, radius } from '../../theme';
 import { ProductPromoInfo } from '../../types/promotions';
 import { formatPrice } from '../../utils/format';
-import { calculerPrixClientVip } from '../../config/payment';
+import { calculerPrixClient, calculerPrixClientVip } from '../../config/payment';
 import { calcPromoClientPrice } from '../../services/promotions';
 import { Product } from './ProductTile';
 
@@ -32,7 +32,7 @@ export default function ProductRow({
   isVip = false,
 }: Props) {
   const isOut = product.stock === 'out';
-  const calcPrix = isVip ? calculerPrixClientVip : (p: number) => p;
+  const calcPrix = isVip ? calculerPrixClientVip : calculerPrixClient;
   const prixPromo = calcPromoClientPrice(product.price, promoInfo, isVip);
 
   return (

@@ -21,6 +21,7 @@ import { supabase } from '../../lib/supabase';
 import PayMethodCard from '../../components/payment/PayMethodCard';
 import { WAVE_ENABLED } from '../../config/features';
 import * as payService from '../../services/payment';
+import { calculerPrixClient, calculerCommission } from '../../config/payment';
 import { notifyError } from '../../utils/errorUtils';
 import type { BlocALaUne, ElementALaUne } from '../../types/aLaUne';
 import type { OrderInfo, PayMethod } from '../../types/payment';
@@ -63,7 +64,8 @@ interface ElCardProps {
 
 function ElCard({ el, highlighted, onShop, onCommander }: ElCardProps) {
   const hasPrix = el.prix > 0;
-  const prixClient = hasPrix ? el.prix : 0;
+  const prixClient = hasPrix ? calculerPrixClient(el.prix) : 0;
+  const commission = hasPrix ? calculerCommission(el.prix) : 0;
 
   return (
     <View style={[styles.elCard, highlighted && styles.elCardHighlight]}>
@@ -73,6 +75,9 @@ function ElCard({ el, highlighted, onShop, onCommander }: ElCardProps) {
       {hasPrix ? (
         <>
           <Text style={styles.elPrix}>{formatPrice(prixClient)}</Text>
+          <Text style={styles.elCommission}>
+            Prix vendeur {formatPrice(el.prix)} · +{formatPrice(commission)} frais LASSI (1%)
+          </Text>
         </>
       ) : (
         <Text style={styles.elPrixNone}>Prix sur demande</Text>
@@ -103,7 +108,8 @@ interface CheckoutSheetProps {
 
 function CheckoutSheet({ el, shopName, loading, onConfirm, onClose }: CheckoutSheetProps) {
   const [method, setMethod] = useState<PayMethod>(WAVE_ENABLED ? 'wave' : 'om');
-  const prixClient = el.prix;
+  const prixClient = calculerPrixClient(el.prix);
+  const commission = calculerCommission(el.prix);
 
   return (
     <Modal visible transparent presentationStyle="overFullScreen" animationType="slide" onRequestClose={onClose}>
