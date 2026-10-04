@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/commande", "destination": "/api/preview" },
+    { "source": "/:slug", "destination": "/api/preview" }
+  ]
+}
