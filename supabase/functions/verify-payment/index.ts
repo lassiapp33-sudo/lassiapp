@@ -94,9 +94,21 @@ serve(async (req) => {
       // ── Production ──────────────────────────────────────────────────────────
       const provider = pi.moyen_paiement;
       // Pour Wave : utiliser external_ref (cos-*) si dispo (après webhook), sinon client_reference (UUID)
-      const paid = provider === 'wave'
+      let paid = provider === 'wave'
         ? await checkWavePayment(pi.external_ref ?? null, piId)
         : await checkOmPayment(piId);
+
+      // Race condition : le webhook peut avoir confirmé le PI entre notre fetch initial et l'appel Wave/OM
+      if (!paid) {
+        const { data: piRefresh } = await sb
+          .from('payment_intents')
+          .select('statut')
+          .eq('id', piId)
+          .single();
+        if (piRefresh?.statut === 'confirmed' || piRefresh?.statut === 'split_done') {
+          paid = true;
+        }
+      }
 
       if (paid) {
         await sb.from('payment_intents').update({

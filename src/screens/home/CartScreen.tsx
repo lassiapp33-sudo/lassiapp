@@ -289,7 +289,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         const vipItems = sh.items.map(i => ({ prestationId: i.id, qty: i.qty }));
         const res = await createVipOrder(sh.info.id, vipItems, 'emporter', structuredNote, usedMethod, freshLivraisonFee);
         const amount = t.total + freshLivraisonFee;
-        await finalizeSingle(res.orderId, sh.info.name, sh.info.initial, sh.info.location, sh.items, amount, t.commission);
+        await finalizeSingle(res.orderId, sh.info.name, sh.info.initial, sh.info.location, sh.items, amount, t.commission, undefined, t.client + freshLivraisonFee);
         return;
       }
 
@@ -321,7 +321,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         const sh = freshShops[0];
         const t = shopTotals(sh);
         const amount = t.total + freshLivraisonFee;
-        await finalizeSingle(orderIds[0], sh.info.name, sh.info.initial, sh.info.location, sh.items, amount, t.commission, sh.info.merchantId);
+        await finalizeSingle(orderIds[0], sh.info.name, sh.info.initial, sh.info.location, sh.items, amount, t.commission, sh.info.merchantId, t.client + freshLivraisonFee);
         return;
       }
 
@@ -378,6 +378,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
       amount: number,
       commission: number,
       merchantId?: string,
+      displayTotal?: number,
     ) {
       let preInitiatedPiId: string | undefined;
       let preQrCode: string | undefined;
@@ -424,7 +425,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
         shopName:               sName,
         shopLocation:           sLocation,
         items:                  items.map(i => ({ qty: i.qty, name: i.name, price: i.price * i.qty })),
-        total:                  amount,
+        total:                  displayTotal ?? amount,
         commission,
         orderType:              (activeShops[0]?.info.showOrderType) ? orderType : undefined,
         preMethod:              usedMethod,
