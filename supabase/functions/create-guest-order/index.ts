@@ -254,8 +254,10 @@ Deno.serve(async (req) => {
     const cleanPhone = String(phone ?? '').replace(/[\s.+]/g, '').replace(/^221/, '');
     if (!PHONE_RE.test(cleanPhone)) return err('Numéro de téléphone invalide (ex : 77 123 45 67)', 400);
 
-    if (note != null && !isSafeString(String(note), { maxLen: 400 })) return err('Note trop longue', 400);
-    if (adresse != null && !isSafeString(String(adresse), { maxLen: 200 })) return err('Adresse trop longue', 400);
+    const cleanNote = note != null ? String(note).trim() : '';
+    if (cleanNote.length > 400) return err('Note trop longue', 400);
+    const cleanAdresse = adresse != null ? String(adresse).trim() : '';
+    if (cleanAdresse.length > 200) return err('Adresse trop longue', 400);
 
     const moyen = moyenPaiement === 'orange_money' ? 'orange_money' : moyenPaiement === 'wave' ? 'wave' : null;
     if (!moyen) return err('Moyen de paiement invalide', 400);
@@ -321,8 +323,8 @@ Deno.serve(async (req) => {
 
     // Note marchand : téléphone + adresse + message client
     const noteParts = [`📞 ${cleanPhone}`];
-    if (adresse && String(adresse).trim()) noteParts.push(`📍 ${String(adresse).trim()}`);
-    if (note && String(note).trim()) noteParts.push(String(note).trim());
+    if (cleanAdresse) noteParts.push(`📍 ${cleanAdresse}`);
+    if (cleanNote) noteParts.push(cleanNote);
     const fullNote = noteParts.join('\n').slice(0, 490);
 
     // ── Créer la commande (RPC atomique existant, client_id = invité) ─────────
@@ -423,6 +425,7 @@ Deno.serve(async (req) => {
         const waveBody = JSON.stringify({
           currency: 'XOF', amount: String(montantTotal),
           success_url: successUrl, error_url: errorUrl, client_reference: piId,
+          webhook_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/webhook-payment`,
         });
         const resp = await callWaveCheckout(waveBody, piId);
         if (!resp.ok) throw new Error(`Wave ${resp.status}`);
