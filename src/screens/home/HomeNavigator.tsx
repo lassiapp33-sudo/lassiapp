@@ -897,7 +897,7 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
             return;
           }
           // Réservation beauté (payée / confirmée) → Mes rendez-vous, PAS Mes commandes
-          if (d.type === 'beauty_reservation' || d.type === 'beauty_acces_valide') {
+          if (d.type === 'beauty_reservation' || d.type === 'beauty_acces_valide' || d.type === 'beauty_payment_confirme') {
             setHistory(h => [...h.slice(0, -1), { id: 'mes_rdv_beauty' }]);
             return;
           }

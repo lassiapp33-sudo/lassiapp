@@ -28,12 +28,12 @@ export async function getTodaySpecials(shopId: string): Promise<DailySpecial[]> 
 /** Ajoute un nouveau plat du jour. */
 export async function addTodaySpecial(
   shopId: string,
-  params: { name: string; price: number },
+  params: { name: string; price: number; photo_url?: string },
 ): Promise<DailySpecial> {
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from('daily_specials')
-    .insert({ shop_id: shopId, name: params.name.trim(), price: params.price, date: today })
+    .insert({ shop_id: shopId, name: params.name.trim(), price: params.price, date: today, photo_url: params.photo_url ?? null })
     .select('id,shop_id,name,price,photo_url,date')
     .single();
   if (error) throw new Error(error.message);

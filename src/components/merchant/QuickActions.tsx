@@ -206,7 +206,7 @@ export default function QuickActions({
           iconBg="rgba(253,207,52,.13)"
           iconStroke={colors.accent}
           title="Autour de moi"
-          desc="Boutiques du quartier"
+          desc="Achetez chez d'autres vendeurs"
           onPress={() => onPress?.('aroundme')}
         />
         <ActionCard

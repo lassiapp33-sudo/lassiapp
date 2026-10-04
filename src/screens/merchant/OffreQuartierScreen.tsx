@@ -156,6 +156,7 @@ export default function OffreQuartierScreen({ onBack }: Props) {
   const [paidSelBySub, setPaidSelBySub] = useState<Record<string, string[]>>({});
   const [promoMap, setPromoMap] = useState<Record<string, ProductPromoInfo>>({});
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [teaserOpen, setTeaserOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId || !shopId) { setLoading(false); return; }
@@ -382,6 +383,16 @@ export default function OffreQuartierScreen({ onBack }: Props) {
 
   const hasContent = !!quota || paidSubs.length > 0;
 
+  const teaserItems: PreviewItem[] = eligibleItems.slice(0, 5).map(it => ({
+    id: it.id,
+    nom: it.nom,
+    prix: it.prix,
+    image: it.image,
+    prixPromo: it.prixPromo,
+    promoBadge: it.promoBadge,
+    rang: null,
+  }));
+
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: TOP_INSET + 8 }]}>
@@ -406,6 +417,16 @@ export default function OffreQuartierScreen({ onBack }: Props) {
             Termine dans le Top 5 du classement national pour débloquer un emplacement dans le
             carrousel "Offre du Quartier", mis en avant sur l'accueil de tous les clients.
           </Text>
+          {eligibleItems.length > 0 && (
+            <TouchableOpacity
+              style={styles.teaserBtn}
+              onPress={() => setTeaserOpen(true)}
+              activeOpacity={0.85}
+            >
+              <IcoEye />
+              <Text style={styles.teaserBtnTxt}>Voir l'aperçu du carrousel</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
@@ -541,6 +562,13 @@ export default function OffreQuartierScreen({ onBack }: Props) {
         visible={previewOpen}
         items={previewItems}
         onClose={() => setPreviewOpen(false)}
+      />
+
+      <OffreQuartierPreviewModal
+        visible={teaserOpen}
+        items={teaserItems}
+        onClose={() => setTeaserOpen(false)}
+        teaser
       />
     </View>
   );
@@ -726,6 +754,22 @@ const styles = StyleSheet.create({
   saveBtnPaid: { backgroundColor: colors.success },
   saveBtnDisabled: { opacity: 0.6 },
   saveBtnTxt: { color: colors.bg, fontFamily: fonts.titleXL, fontSize: 15 },
+
+  // ── Bouton aperçu teaser (état vide) ─────────────────────────────────────────
+  teaserBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 20,
+    paddingHorizontal: 22,
+    height: 48,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    backgroundColor: 'rgba(253,207,52,.06)',
+  },
+  teaserBtnTxt: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 14 },
 
   // ── Bouton aperçu ─────────────────────────────────────────────────────────────
   previewBtn: {

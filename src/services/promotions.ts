@@ -18,9 +18,18 @@ function rowToPromo(row: Record<string, any>): Promotion {
     montantMin: Number(row.montant_min ?? 0),
     dateDebut: row.date_debut ?? undefined,
     dateFin: row.date_fin ?? undefined,
+    joursActifs: Array.isArray(row.jours_semaine) && row.jours_semaine.length > 0
+      ? row.jours_semaine
+      : undefined,
     actif: row.actif,
     createdAt: row.created_at,
   };
+}
+
+/** Retourne true si la promo est active aujourd'hui (jour de semaine). */
+function isPromoActiveToday(promo: Promotion): boolean {
+  if (!promo.joursActifs || promo.joursActifs.length === 0) return true;
+  return promo.joursActifs.includes(new Date().getDay());
 }
 
 // ─── Requêtes ─────────────────────────────────────────────────────────────────
@@ -52,7 +61,8 @@ export async function getActivePromos(shopId: string): Promise<Promotion[]> {
         const fin = r.date_fin ? new Date(r.date_fin as string) : null;
         return (!debut || debut <= now) && (!fin || fin >= now);
       })
-      .map(rowToPromo);
+      .map(rowToPromo)
+      .filter(isPromoActiveToday);
   } catch {
     return [];
   }
@@ -90,6 +100,7 @@ export async function createPromo(
       montant_min: promo.montantMin,
       date_debut: promo.dateDebut ?? null,
       date_fin: promo.dateFin ?? null,
+      jours_semaine: promo.joursActifs && promo.joursActifs.length > 0 ? promo.joursActifs : null,
       actif: promo.actif,
     })
     .select()
@@ -112,6 +123,9 @@ export async function updatePromo(
   if (updates.montantMin !== undefined) row.montant_min = updates.montantMin;
   if (updates.dateDebut !== undefined) row.date_debut = updates.dateDebut ?? null;
   if (updates.dateFin !== undefined) row.date_fin = updates.dateFin ?? null;
+  if (updates.joursActifs !== undefined) {
+    row.jours_semaine = updates.joursActifs && updates.joursActifs.length > 0 ? updates.joursActifs : null;
+  }
   if (updates.actif !== undefined) row.actif = updates.actif;
   const { error } = await supabase.from('promotions').update(row).eq('id', promoId);
   if (error) throw new Error(error.message);
@@ -144,6 +158,7 @@ export function calcClientDiscount(
   const results: AppliedDiscount[] = [];
 
   for (const promo of promos) {
+    if (!isPromoActiveToday(promo)) continue;
     if (promo.montantMin > 0 && subtotal < promo.montantMin) continue;
 
     let reduction = 0;
@@ -225,6 +240,7 @@ export function calcClientDiscount(
 export function buildProductPromoMap(promos: Promotion[]): Record<string, ProductPromoInfo> {
   const map: Record<string, ProductPromoInfo> = {};
   for (const promo of promos) {
+    if (!isPromoActiveToday(promo)) continue;
     if (promo.cibleType !== 'produit' || !promo.cibleId) continue;
     const existing = map[promo.cibleId];
     if (existing) continue; // garder la première (tri par date desc depuis l'API)

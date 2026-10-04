@@ -202,6 +202,12 @@ export async function getShops(): Promise<Shop[]> {
 export async function getShopsByCategory(category: string): Promise<Shop[]> {
   const hit = catShopsCache.get(category);
   if (hit && Date.now() - hit.ts < SHOPS_CACHE_TTL) return hit.data;
+  // allShopsCache chaud (chargé depuis HomeScreen/Search/Map) → filtre en mémoire, zéro réseau
+  if (allShopsCache && Date.now() - allShopsCache.ts < SHOPS_CACHE_TTL) {
+    const filtered = allShopsCache.data.filter(s => s.category === category);
+    catShopsCache.set(category, { data: filtered, ts: allShopsCache.ts });
+    return filtered;
+  }
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/shops?select=*&category=eq.${encodeURIComponent(category)}&is_admin_account=neq.true&has_content=eq.true&order=rating.desc`,

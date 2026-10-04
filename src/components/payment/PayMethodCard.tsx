@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 import { PayMethod } from '../../types/payment';
 
@@ -37,16 +37,19 @@ interface Props {
   method: PayMethod;
   selected: boolean;
   onSelect: () => void;
+  loading?: boolean;
+  disabled?: boolean;
 }
 
-export default function PayMethodCard({ method, selected, onSelect }: Props) {
+export default function PayMethodCard({ method, selected, onSelect, loading, disabled }: Props) {
   const cfg = CONFIG[method];
 
   return (
     <TouchableOpacity
-      style={[styles.card, selected && styles.cardSel]}
+      style={[styles.card, selected && styles.cardSel, disabled && styles.cardDisabled]}
       onPress={onSelect}
       activeOpacity={0.8}
+      disabled={disabled || loading}
     >
       {/* Logo partenaire — intégré tel quel */}
       <Image
@@ -58,13 +61,19 @@ export default function PayMethodCard({ method, selected, onSelect }: Props) {
       {/* Infos */}
       <View style={styles.info}>
         <Text style={styles.label}>{cfg.label}</Text>
-        <Text style={styles.desc}>{cfg.desc}</Text>
+        <Text style={styles.desc}>
+          {loading && selected ? 'Connexion en cours…' : cfg.desc}
+        </Text>
       </View>
 
-      {/* Radio */}
-      <View style={[styles.radio, selected && styles.radioSel]}>
-        {selected && <View style={styles.radioDot} />}
-      </View>
+      {/* Spinner si loading sur ce mode, sinon flèche */}
+      {loading && selected ? (
+        <ActivityIndicator size="small" color={colors.accent} />
+      ) : (
+        <View style={[styles.arrow, selected && styles.arrowSel]}>
+          <Text style={[styles.arrowTxt, selected && styles.arrowTxtSel]}>›</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -107,22 +116,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Bouton radio
-  radio: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
+  cardDisabled: { opacity: 0.45 },
+
+  arrow: {
+    width: 28, height: 28, borderRadius: 14,
+    borderWidth: 1.5, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  radioSel: { borderColor: colors.accent },
-  radioDot: {
-    width: 11,
-    height: 11,
-    borderRadius: 5.5,
-    backgroundColor: colors.accent,
-  },
+  arrowSel: { borderColor: colors.accent, backgroundColor: colors.accent },
+  arrowTxt: { color: colors.muted, fontSize: 18, lineHeight: 22, marginLeft: 1 },
+  arrowTxtSel: { color: colors.bg },
 });

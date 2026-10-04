@@ -62,6 +62,13 @@ export default function OffreDuQuartier({ onPress }: Props) {
     return () => { cancelled = true; };
   }, []);
 
+  // Précharge toutes les images en mémoire dès que les données arrivent
+  useEffect(() => {
+    produits.forEach(p => {
+      if (p.image_url.startsWith('http')) Image.prefetch(p.image_url);
+    });
+  }, [produits]);
+
   // Défilement automatique
   useEffect(() => {
     if (produits.length < 2) return;
@@ -98,7 +105,8 @@ export default function OffreDuQuartier({ onPress }: Props) {
                 source={{ uri: item.image_url }}
                 style={styles.img}
                 contentFit="cover"
-                transition={150}
+                cachePolicy="memory-disk"
+                transition={100}
               />
             ) : (
               <View style={[styles.img, styles.emojiBox]}>

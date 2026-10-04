@@ -38,18 +38,24 @@ const IcoClock = () => (
 
 // ─── Méthode paiement ─────────────────────────────────────────────────────────
 
-function MethodCard({ method, selected, onSelect }: { method: PayMethod; selected: boolean; onSelect: () => void }) {
+function MethodCard({ method, processing, onPay }: { method: PayMethod; processing: boolean; onPay: () => void }) {
   const label = method === 'wave' ? 'Wave' : 'Orange Money';
   const logo  = method === 'wave' ? WAVE_LOGO : OM_LOGO;
   return (
-    <TouchableOpacity style={[styles.methodCard, selected && styles.methodCardOn]} onPress={onSelect} activeOpacity={0.85}>
+    <TouchableOpacity
+      style={[styles.methodCard, processing && { opacity: 0.7 }]}
+      onPress={onPay}
+      activeOpacity={0.85}
+      disabled={processing}
+    >
       <View style={styles.methodLeft}>
         <Image source={logo} style={styles.methodLogo} resizeMode="cover" />
-        <Text style={[styles.methodLabel, selected && styles.methodLabelOn]}>{label}</Text>
+        <Text style={styles.methodLabel}>{label}</Text>
       </View>
-      <View style={[styles.methodRadio, selected && styles.methodRadioOn]}>
-        {selected && <View style={styles.methodRadioDot} />}
-      </View>
+      {processing
+        ? <ActivityIndicator color={colors.accent} />
+        : <Text style={styles.methodPayTxt}>Payer</Text>
+      }
     </TouchableOpacity>
   );
 }
@@ -110,14 +116,12 @@ export default function BeautyPaymentScreen({
   // Moyens de paiement acceptés par le prestataire (respecte son choix, comme les commandes)
   const [allowedMethods, setAllowedMethods] = useState<('wave' | 'om')[]>(['wave', 'om']);
   const merchantMethods = allowedMethods.filter((m): m is PayMethod => m !== 'wave' || WAVE_ENABLED);
-  const [method, setMethod]       = useState<PayMethod>(WAVE_ENABLED ? 'wave' : 'om');
   const [processing, setProcessing] = useState(false);
   const [verifying, setVerifying]   = useState(false);
   const referenceRef    = useRef('');
   const reservationIdRef = useRef('');
   const processingRef   = useRef(false);
-
-  const moyenPaiement = method === 'wave' ? 'wave' : 'orange_money' as const;
+  const moyenRef        = useRef<'wave' | 'orange_money'>('wave');
 
   // Charge les moyens de paiement du prestataire + corrige la sélection
   useEffect(() => {
@@ -126,15 +130,14 @@ export default function BeautyPaymentScreen({
       .then(methods => {
         if (!alive) return;
         setAllowedMethods(methods);
-        const usable = methods.filter(m => m !== 'wave' || WAVE_ENABLED);
-        setMethod(prev => (usable.includes(prev) ? prev : (usable[0] ?? 'om')));
       })
       .catch(() => {});
     return () => { alive = false; };
   }, [prestataireId]);
 
-  const handlePay = async () => {
+  const handlePay = async (moyen: 'wave' | 'orange_money') => {
     if (processingRef.current || !clientId) return;
+    moyenRef.current = moyen;
     processingRef.current = true;
     setProcessing(true);
     try {
@@ -153,7 +156,7 @@ export default function BeautyPaymentScreen({
 
       const session = await beautyService.createBeautyPaymentSession({
         reservationId: reservationIdRef.current,
-        moyenPaiement,
+        moyenPaiement: moyen,
       });
       referenceRef.current = session.reference;
 
@@ -187,7 +190,7 @@ export default function BeautyPaymentScreen({
         const result = await beautyService.verifyBeautyPaymentById({
           reference:     referenceRef.current,
           reservationId: reservationIdRef.current,
-          method:        moyenPaiement,
+          method:        moyenRef.current,
         });
         if (result.paid) {
           onSuccess(result.receiptCode ?? '');
@@ -219,7 +222,7 @@ export default function BeautyPaymentScreen({
           <TouchableOpacity style={styles.backBtn} onPress={handleCancel} activeOpacity={0.8}><IcoBack /></TouchableOpacity>
           <Text style={styles.topTitle}>Paiement en cours</Text>
         </View>
-        <WaitingView method={method} total={prixTotal} verifying={verifying} onVerify={handleVerify} onBack={handleCancel} />
+        <WaitingView method={moyenRef.current === 'wave' ? 'wave' : 'om'} total={prixTotal} verifying={verifying} onVerify={handleVerify} onBack={handleCancel} />
       </View>
     );
   }
@@ -254,28 +257,14 @@ export default function BeautyPaymentScreen({
 
         <Text style={styles.secLabel}>Mode de paiement</Text>
         {merchantMethods.includes('wave') && (
-          <MethodCard method="wave" selected={method === 'wave'} onSelect={() => setMethod('wave')} />
+          <MethodCard method="wave" processing={processing} onPay={() => handlePay('wave')} />
         )}
         {merchantMethods.includes('om') && (
-          <MethodCard method="om" selected={method === 'om'} onSelect={() => setMethod('om')} />
+          <MethodCard method="om" processing={processing} onPay={() => handlePay('orange_money')} />
         )}
 
-        <View style={{ height: 20 }} />
+        <View style={{ height: 32 }} />
       </ScrollView>
-
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.payBtn, processing && { opacity: 0.7 }]}
-          onPress={handlePay}
-          activeOpacity={0.85}
-          disabled={processing}
-        >
-          {processing
-            ? <ActivityIndicator color={colors.bg} />
-            : <Text style={styles.payTxt}>Payer {formatPrice(prixTotal)}</Text>
-          }
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -319,21 +308,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.lg, padding: 16, marginBottom: 10,
   },
-  methodCardOn:  { borderColor: colors.accent },
   methodLeft:    { flexDirection: 'row', alignItems: 'center', gap: 12 },
   methodLogo:    { width: 32, height: 32, borderRadius: 8 },
   methodLabel:   { color: colors.white, fontFamily: fonts.ui, fontSize: 15 },
-  methodLabelOn: { color: colors.accent },
-  methodRadio:   { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  methodRadioOn: { borderColor: colors.accent },
-  methodRadioDot:{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accent },
-
-  footer: {
-    paddingHorizontal: 20, paddingTop: 12, paddingBottom: BOTTOM_PAD,
-    borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.bg,
-  },
-  payBtn: { height: 54, borderRadius: radius.lg, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
-  payTxt: { color: colors.bg, fontFamily: fonts.titleXL, fontSize: 16 },
+  methodPayTxt:  { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 14 },
 
   waitRoot: { flex: 1, paddingHorizontal: 24, paddingBottom: BOTTOM_PAD, alignItems: 'center', justifyContent: 'center', gap: 20 },
   waitCard: { width: '100%', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: 24, alignItems: 'center', gap: 14 },

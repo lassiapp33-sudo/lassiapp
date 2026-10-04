@@ -21,6 +21,7 @@ export interface CartShopInfo {
   showOrderType?: boolean;
   isVip?: boolean;
   paymentMethods?: ('wave' | 'om')[];
+  merchantId?: string;
 }
 
 /** Un panier = un ensemble de sous-paniers par boutique (multi-prestataire). */

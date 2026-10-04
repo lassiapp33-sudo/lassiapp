@@ -56,7 +56,7 @@ import useCartStore             from './src/store/cartStore';
 import AsyncStorage             from '@react-native-async-storage/async-storage';
 import * as authService         from './src/services/auth';
 import { SESSION_ACTIVE_KEY }   from './src/services/auth';
-import { onSessionExpired }     from './src/lib/supabase';
+import { onSessionExpired, SUPABASE_MISCONFIGURED } from './src/lib/supabase';
 import { usePushToken, removeCurrentDeviceToken } from './src/hooks/usePushToken';
 import { usePaymentDeepLink } from './src/hooks/usePaymentDeepLink';
 import usePendingNavStore from './src/store/pendingNavStore';
@@ -111,7 +111,7 @@ function handleNotifData(data: Record<string, any> | undefined | null) {
     // Prestataire → terrain_reservations (MerchantNavigator gère via terrainId)
     // Client      → terrain_my_reservations (HomeNavigator gère)
     setPendingNav({ type: 'terrain_resa', terrainId: data.terrainId as string | undefined });
-  } else if (data.type === 'beauty_reservation' || data.type === 'beauty_acces_valide') {
+  } else if (data.type === 'beauty_reservation' || data.type === 'beauty_acces_valide' || data.type === 'beauty_payment_confirme') {
     // Prestataire → beauty_reservations (à la bonne date) ; Client → Mes rendez-vous
     setPendingNav({ type: 'beauty_resa', date: data.dateResa as string | undefined });
   } else if (data.type === 'payout_done') {
@@ -119,7 +119,23 @@ function handleNotifData(data: Record<string, any> | undefined | null) {
   }
 }
 
-export default function App() {
+// Guard: OTA bundle without env vars → placeholder Supabase URL → all requests fail
+// but no native crash. Show a user-facing error screen instead.
+function MisconfiguredScreen() {
+  return (
+    <View style={{ flex: 1, backgroundColor: '#14152A', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <Text style={{ color: '#FDCF34', fontSize: 20, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' }}>
+        Mise à jour corrompue
+      </Text>
+      <Text style={{ color: '#fff', fontSize: 15, textAlign: 'center', lineHeight: 22 }}>
+        Une mise à jour incomplète a été téléchargée.{'\n'}
+        Désinstalle et réinstalle LASSI depuis le Store pour retrouver l'accès.
+      </Text>
+    </View>
+  );
+}
+
+function AppContent() {
   const [screen, setScreen] = useState<Screen>('splash');
   const userId       = useAuthStore(s => s.user?.id ?? null);
   const gerantActive = useGerantStore(s => s.isActive);
@@ -141,37 +157,34 @@ export default function App() {
   // Résultat disponible dès onFinish, sans délai supplémentaire.
   const sessionFetch = React.useRef<Promise<AuthUser | null> | null>(null);
 
-  // Vérifie + télécharge + applique les OTA en foreground au démarrage.
-  // Fonctionne sur tous les appareils (Android/iOS) sans dépendre des process background
-  // qui peuvent être tués par les surcouches constructeurs (EMUI, MagicUI, MIUI…).
-  useEffect(() => {
-    if (__DEV__ || IS_EXPO_GO || Platform.OS === 'web') return;
-    (async () => {
-      try {
-        const { isAvailable } = await Updates.checkForUpdateAsync();
-        if (isAvailable) {
-          await Updates.fetchUpdateAsync();
-          await Updates.reloadAsync();
-          return;
-        }
-      } catch (_) {}
-    })();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // OTA SDK 54 — useUpdates() réagit aux événements de la state machine native.
+  // checkAutomatically: ON_LOAD fait check+download en arrière-plan ; quand
+  // isUpdatePending passe à true (download terminé), on reload immédiatement.
+  // Évite la race condition : checkForUpdateAsync() retournait false si le natif
+  // avait déjà démarré son check, empêchant tout rechargement.
+  const { isUpdateAvailable, isUpdatePending } =
+    !__DEV__ && !IS_EXPO_GO && Platform.OS !== 'web'
+      ? Updates.useUpdates()
+      : { isUpdateAvailable: false, isUpdatePending: false };
 
-  // Check OTA au retour en foreground (app jamais fermée).
+  // Téléchargement automatique dès qu'un update est disponible
+  useEffect(() => {
+    if (!isUpdateAvailable) return;
+    Updates.fetchUpdateAsync().catch(() => {});
+  }, [isUpdateAvailable]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Rechargement dès que le téléchargement est terminé
+  useEffect(() => {
+    if (!isUpdatePending) return;
+    Updates.reloadAsync().catch(() => {});
+  }, [isUpdatePending]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Check manuel au retour en foreground (si app jamais fermée)
   useEffect(() => {
     if (__DEV__ || IS_EXPO_GO || Platform.OS === 'web') return;
     const sub = AppState.addEventListener('change', state => {
       if (state !== 'active') return;
-      (async () => {
-        try {
-          const { isAvailable } = await Updates.checkForUpdateAsync();
-          if (isAvailable) {
-            await Updates.fetchUpdateAsync();
-            await Updates.reloadAsync();
-          }
-        } catch (_) {}
-      })();
+      Updates.checkForUpdateAsync().catch(() => {});
     });
     return () => sub.remove();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -458,6 +471,11 @@ export default function App() {
       </ErrorBoundary>
     </View>
   );
+}
+
+export default function App() {
+  if (SUPABASE_MISCONFIGURED) return <MisconfiguredScreen />;
+  return <AppContent />;
 }
 
 const styles = StyleSheet.create({

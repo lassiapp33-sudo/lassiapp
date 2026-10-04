@@ -9,9 +9,10 @@ interface Props {
   onSelect: (id: string) => void;
   onDeleteCat?: (id: string) => void;
   onRenameCat?: (id: string) => void;
+  extraTabs?: { id: string; label: string }[];
 }
 
-export default function CategoryTabs({ categories, active, onSelect, onDeleteCat, onRenameCat }: Props) {
+export default function CategoryTabs({ categories, active, onSelect, onDeleteCat, onRenameCat, extraTabs }: Props) {
   const canDelete = !!onDeleteCat && categories.length > 1;
 
   return (
@@ -52,6 +53,21 @@ export default function CategoryTabs({ categories, active, onSelect, onDeleteCat
                 <Text style={[styles.delTxt, on && styles.delTxtOn]}>×</Text>
               </TouchableOpacity>
             )}
+          </TouchableOpacity>
+        );
+      })}
+      {(extraTabs ?? []).map(tab => {
+        const on = tab.id === active;
+        return (
+          <TouchableOpacity
+            key={tab.id}
+            style={[styles.pill, on && styles.pillOn]}
+            onPress={() => onSelect(tab.id)}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.pillTxt, on ? styles.pillTxtOn : styles.pillTxtOff]}>
+              {tab.label}
+            </Text>
           </TouchableOpacity>
         );
       })}

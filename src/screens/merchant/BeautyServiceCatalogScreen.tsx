@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, Modal,
+  TextInput, Alert, ActivityIndicator, Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -48,26 +48,22 @@ const CATEGORIES: { value: BeautyCategorie; label: string }[] = [
 interface EditModalProps {
   service: Partial<BeautyService> | null;
   prestataireId: string;
+  customCats: string[];
+  onAddCustomCat: (cat: string) => void;
   onClose: () => void;
   onSaved: (s: BeautyService) => void;
 }
 
-function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps) {
+function EditModal({ service, prestataireId, customCats, onAddCustomCat, onClose, onSaved }: EditModalProps) {
   const [nom, setNom]           = useState(service?.nom ?? '');
   const [desc, setDesc]         = useState(service?.description ?? '');
   const [prix, setPrix]         = useState(service?.prix ? String(service.prix) : '');
   const [duree, setDuree]       = useState(service?.duree_minutes ?? 60);
   const [cat, setCat]           = useState<BeautyCategorie>(service?.categorie ?? 'general');
   const [saving, setSaving]     = useState(false);
-
-  // Catégories personnalisées ajoutées par le prestataire (préremplies si le service
-  // édité porte une catégorie hors presets).
-  const [customCats, setCustomCats] = useState<string[]>(() => {
-    const c = service?.categorie;
-    return c && !CATEGORIES.some(x => x.value === c) ? [c] : [];
-  });
   const [addingCat, setAddingCat] = useState(false);
   const [newCatText, setNewCatText] = useState('');
+  const scrollRef = useRef<ScrollView>(null);
 
   const handleAddCat = () => {
     const label = newCatText.trim();
@@ -77,12 +73,17 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
       setCat(preset.value);
     } else {
       if (!customCats.some(c => c.toLowerCase() === label.toLowerCase())) {
-        setCustomCats(prev => [...prev, label]);
+        onAddCustomCat(label);
       }
       setCat(label);
     }
     setNewCatText('');
     setAddingCat(false);
+  };
+
+  const handleOpenAddCat = () => {
+    setAddingCat(true);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
   const handleSave = async () => {
@@ -114,7 +115,7 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
 
   return (
     <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={modal.root}>
+      <KeyboardAvoidingView style={modal.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
         <View style={modal.header}>
           <Text style={modal.title}>{service?.id ? 'Modifier' : 'Ajouter'} un service</Text>
           <TouchableOpacity onPress={onClose} style={modal.closeBtn} activeOpacity={0.7}>
@@ -122,7 +123,7 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={modal.scroll} contentContainerStyle={modal.content} showsVerticalScrollIndicator={false}>
+        <ScrollView ref={scrollRef} style={modal.scroll} contentContainerStyle={modal.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <Text style={modal.label}>Nom du service *</Text>
           <TextInput
             style={modal.input}
@@ -193,7 +194,7 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
             ))}
             <TouchableOpacity
               style={[modal.chip, modal.chipAdd]}
-              onPress={() => setAddingCat(true)}
+              onPress={handleOpenAddCat}
               activeOpacity={0.8}
             >
               <Text style={[modal.chipTxt, modal.chipAddTxt]}>+ Nouvelle</Text>
@@ -219,7 +220,7 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
             </View>
           )}
 
-          <View style={{ height: 40 }} />
+          <View style={{ height: 60 }} />
         </ScrollView>
 
         <View style={modal.footer}>
@@ -232,7 +233,7 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
             {saving ? <ActivityIndicator color={colors.bg} /> : <Text style={modal.saveTxt}>Enregistrer</Text>}
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -248,12 +249,26 @@ export default function BeautyServiceCatalogScreen({ onBack }: Props) {
   const [services, setServices]       = useState<BeautyService[]>([]);
   const [loading, setLoading]         = useState(true);
   const [editTarget, setEditTarget]   = useState<Partial<BeautyService> | null | 'new'>(null);
+  const [customCats, setCustomCats]   = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await beautyService.getBeautyServicesByMerchant(prestataireId);
       setServices(data);
+      // Récupère les catégories custom déjà utilisées par ce prestataire
+      const existingCustom = data
+        .map(s => s.categorie)
+        .filter(c => c && !CATEGORIES.some(x => x.value === c)) as string[];
+      if (existingCustom.length > 0) {
+        setCustomCats(prev => {
+          const merged = [...prev];
+          existingCustom.forEach(c => {
+            if (!merged.some(x => x.toLowerCase() === c.toLowerCase())) merged.push(c);
+          });
+          return merged;
+        });
+      }
     } catch (e) {
       logger.error('[BeautyServiceCatalog] load:', e);
     } finally {
@@ -346,6 +361,10 @@ export default function BeautyServiceCatalogScreen({ onBack }: Props) {
         <EditModal
           service={editTarget === 'new' ? {} : editTarget}
           prestataireId={prestataireId}
+          customCats={customCats}
+          onAddCustomCat={cat => setCustomCats(prev =>
+            prev.some(c => c.toLowerCase() === cat.toLowerCase()) ? prev : [...prev, cat]
+          )}
           onClose={() => setEditTarget(null)}
           onSaved={handleSaved}
         />

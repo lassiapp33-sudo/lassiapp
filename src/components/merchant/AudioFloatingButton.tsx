@@ -133,7 +133,7 @@ export default function AudioFloatingButton({
       {/* Label au-dessus */}
       <View style={styles.labelBubble}>
         <Text style={styles.labelText}>
-          {playing ? '⏸ En lecture...' : '🎙 Écoute le message !'}
+          {playing ? 'En lecture...' : 'Écoute le message'}
         </Text>
         {/* Petite flèche pointant vers le bas */}
         <View style={styles.labelArrow} />

@@ -29,6 +29,8 @@ import AddProductSheet from '../../components/store/AddProductSheet';
 import OpeningHoursCard from '../../components/store/OpeningHoursCard';
 import AbonnementOffreRow from '../../components/fitness/AbonnementOffreRow';
 import AddAbonnementOffreSheet from '../../components/fitness/AddAbonnementOffreSheet';
+import DailySpecialModal from '../../components/store/DailySpecialModal';
+import { getTodaySpecials, deleteTodaySpecialById, DailySpecial } from '../../services/dailySpecials';
 import { colors, fonts, radius } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
 import { StoreProduct, StoreCategory } from '../../types/store';
@@ -196,6 +198,13 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   // ── Services réservables (beauté) — table beauty_services ──────────────────
   const [reservServices, setReservServices] = useState<BeautyService[]>([]);
 
+  // ── Plat du jour (restaurant/fastfood) ────────────────────────────────────
+  const [showDailySpecial, setShowDailySpecial] = useState(false);
+  const [dailySpecials, setDailySpecials] = useState<DailySpecial[]>([]);
+  const [dailySpecialsLoading, setDailySpecialsLoading] = useState(false);
+  const [deletingSpecialId, setDeletingSpecialId] = useState<string | null>(null);
+  const isRestaurantShop = (context.subcategories ?? []).some(s => s === 'restaurant' || s === 'fastfood');
+
   // ── Récupération vitrine manquante ────────────────────────────────────────
   const [recoveryName, setRecoveryName] = useState('');
   const [recoveryCatId, setRecoveryCatId] = useState(CATEGORIES[0]?.id ?? '');
@@ -269,8 +278,10 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     return products.length === 0;
   }, [isBeautySlotShop, reservServices.length, products, context.shopType, offres.length]);
 
-  // ── Infos boutique collapsible ────────────────────────────────────────────────
-  const [showInfosBoutique, setShowInfosBoutique] = useState(false);
+  // ── Infos boutique collapsible (révèle automatiquement si déjà renseigné) ────
+  const [showInfosBoutique, setShowInfosBoutique] = useState(
+    !!(profile.description || profile.addressText || profile.phone),
+  );
 
   // ── Stats clics lien de partage ─────────────────────────────────────────────
   const [clicsTotal, setClicsTotal] = useState<number | null>(null);
@@ -360,7 +371,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   }, [shopId]);
 
   useEffect(() => {
-    if (categories.length > 0 && !categories.find(c => c.id === activeCat)) {
+    if (categories.length > 0 && !categories.find(c => c.id === activeCat) && activeCat !== 'plat_du_jour') {
       setActiveCat(categories[0].id);
     }
   }, [categories, activeCat]);
@@ -390,6 +401,15 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   useEffect(() => {
     if (context.shopType === 'memberships') loadOffres();
   }, [context.shopType, activeCat, loadOffres]);
+
+  useEffect(() => {
+    if (activeCat !== 'plat_du_jour' || !shopId) return;
+    setDailySpecialsLoading(true);
+    getTodaySpecials(shopId)
+      .then(setDailySpecials)
+      .catch(() => {})
+      .finally(() => setDailySpecialsLoading(false));
+  }, [activeCat, shopId]);
 
   // Auto-suppression des produits shop_items orphelins dans les catégories abonnement fitness
   const cleanupDone = React.useRef(false);
@@ -1021,9 +1041,57 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                       onSelect={setActiveCat}
                       onDeleteCat={handleDeleteCat}
                       onRenameCat={handleRenameCat}
+                      extraTabs={isRestaurantShop ? [{ id: 'plat_du_jour', label: 'Plat du jour' }] : undefined}
                     />
 
-                    {!(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
+                    {activeCat === 'plat_du_jour' ? (
+                      <>
+                        <SectionHead title="Plat du jour" count={dailySpecials.length} itemLabel="plat" />
+                        {dailySpecialsLoading ? (
+                          <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
+                        ) : dailySpecials.length === 0 ? (
+                          <Text style={styles.emptyShopHint}>Aucun plat du jour aujourd'hui.</Text>
+                        ) : (
+                          dailySpecials.map(sp => (
+                            <View key={sp.id} style={styles.dailyRow}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.dailyName}>{sp.name}</Text>
+                                <Text style={styles.dailyPrice}>{sp.price} F</Text>
+                              </View>
+                              <TouchableOpacity
+                                onPress={async () => {
+                                  setDeletingSpecialId(sp.id);
+                                  try {
+                                    await deleteTodaySpecialById(sp.id);
+                                    setDailySpecials(prev => prev.filter(s => s.id !== sp.id));
+                                  } catch {
+                                    Alert.alert('Erreur', 'Impossible de supprimer.');
+                                  } finally {
+                                    setDeletingSpecialId(null);
+                                  }
+                                }}
+                                disabled={deletingSpecialId === sp.id}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                              >
+                                {deletingSpecialId === sp.id
+                                  ? <ActivityIndicator size="small" color="#ff5a5a" />
+                                  : <Text style={styles.dailyDelete}>×</Text>}
+                              </TouchableOpacity>
+                            </View>
+                          ))
+                        )}
+                        <Animated.View style={{ opacity: addBlink }}>
+                          <TouchableOpacity
+                            style={[styles.addProd, { marginTop: 10 }]}
+                            onPress={() => setShowDailySpecial(true)}
+                            activeOpacity={0.8}
+                          >
+                            <IcoPlus />
+                            <Text style={styles.addProdTxt}>Ajouter un plat du jour</Text>
+                          </TouchableOpacity>
+                        </Animated.View>
+                      </>
+                    ) : !(context.shopType === 'memberships' && FITNESS_SUBSCRIPTION_CATS.has(activeCat)) && (
                       <>
                         <SectionHead
                           title={activeCatData?.label ?? ''}
@@ -1144,59 +1212,18 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
               <Text style={styles.galleryHint}>Appui long sur une photo pour la supprimer.</Text>
             </View>
 
-            {/* ── Horaires d'ouverture ─────────────────────────────────────── */}
+            {/* ── Infos boutique (bouton style horaires, avant horaires) ──── */}
             <View style={styles.sectionWrap}>
-              <Text style={styles.sectionTitle}>Horaires</Text>
-              {!showHours ? (
-                <Animated.View style={{ opacity: hoursBlink }}>
-                  <TouchableOpacity
-                    style={styles.defineHoursBtn}
-                    onPress={revealHours}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.defineHoursTxt}>Définissez vos horaires</Text>
-                  </TouchableOpacity>
-                </Animated.View>
+              {!showInfosBoutique ? (
+                <TouchableOpacity
+                  style={styles.defineHoursBtn}
+                  onPress={() => setShowInfosBoutique(true)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.defineHoursTxt}>Mettre les infos de ma boutique</Text>
+                </TouchableOpacity>
               ) : (
-                <OpeningHoursCard
-                  hours={context.openingHours}
-                  isManuallyClose={context.isManuallyClose}
-                  readOnly={false}
-                  onChange={async h => {
-                    try {
-                      await updateOpeningHours(h);
-                    } catch {
-                      Alert.alert('Erreur', 'Impossible de sauvegarder les horaires. Réessaie.');
-                    }
-                  }}
-                  onToggleManuallyClose={async () => {
-                    try {
-                      await toggleManuallyClose();
-                    } catch {
-                      Alert.alert(
-                        'Erreur',
-                        'Impossible de mettre à jour le statut exceptionnel. Réessaie.',
-                      );
-                    }
-                  }}
-                />
-              )}
-            </View>
-
-            {/* ── Infos boutique (collapsible, après horaires) ─────────────── */}
-            <View style={styles.sectionWrap}>
-              <TouchableOpacity
-                style={styles.infosToggleBtn}
-                onPress={() => setShowInfosBoutique(v => !v)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.sectionTitle}>Infos boutique</Text>
-                <Text style={styles.infosToggleChevron}>
-                  {showInfosBoutique ? '▲' : '▼'}
-                </Text>
-              </TouchableOpacity>
-              {showInfosBoutique && (
-                <View style={[styles.card, { marginTop: 8 }]}>
+                <View style={styles.card}>
                   <Text style={styles.fieldLabel}>Nom de la boutique</Text>
                   <TextInput
                     style={styles.fieldInput}
@@ -1258,6 +1285,45 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
               )}
             </View>
 
+            {/* ── Horaires d'ouverture ─────────────────────────────────────── */}
+            <View style={styles.sectionWrap}>
+              <Text style={styles.sectionTitle}>Horaires</Text>
+              {!showHours ? (
+                <Animated.View style={{ opacity: hoursBlink }}>
+                  <TouchableOpacity
+                    style={styles.defineHoursBtn}
+                    onPress={revealHours}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.defineHoursTxt}>Définissez vos horaires</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              ) : (
+                <OpeningHoursCard
+                  hours={context.openingHours}
+                  isManuallyClose={context.isManuallyClose}
+                  readOnly={false}
+                  onChange={async h => {
+                    try {
+                      await updateOpeningHours(h);
+                    } catch {
+                      Alert.alert('Erreur', 'Impossible de sauvegarder les horaires. Réessaie.');
+                    }
+                  }}
+                  onToggleManuallyClose={async () => {
+                    try {
+                      await toggleManuallyClose();
+                    } catch {
+                      Alert.alert(
+                        'Erreur',
+                        'Impossible de mettre à jour le statut exceptionnel. Réessaie.',
+                      );
+                    }
+                  }}
+                />
+              )}
+            </View>
+
             {/* ── Restaurant : espace de réservation de table ──────────────── */}
             {(context.subcategories ?? []).some(s => s === 'restaurant' || s === 'fastfood') && (
               <>
@@ -1289,6 +1355,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     <Text style={[styles.addProdTxt, { color: colors.accent }]}>Mes réservations de table →</Text>
                   </TouchableOpacity>
                 )}
+
               </>
             )}
 
@@ -1393,6 +1460,15 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
         onDelete={editOffre ? handleDeleteOffre : undefined}
         onClose={() => setShowOffreSheet(false)}
       />
+
+      {shopId && (
+        <DailySpecialModal
+          visible={showDailySpecial}
+          shopId={shopId}
+          onClose={() => setShowDailySpecial(false)}
+          onChanged={setDailySpecials}
+        />
+      )}
 
     </LassiScreen>
 
@@ -1735,6 +1811,10 @@ const styles = StyleSheet.create({
   },
   defineHoursTxt: { color: colors.accent, fontFamily: fonts.title, fontSize: 15 },
   resaHint: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, lineHeight: 17, marginTop: 8, marginHorizontal: 4 },
+  dailyRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 18, marginBottom: 8, backgroundColor: colors.surface, borderRadius: radius.sm, padding: 14, borderWidth: 1, borderColor: colors.border },
+  dailyName: { fontFamily: fonts.title, fontSize: 14, color: colors.white },
+  dailyPrice: { fontFamily: fonts.body, fontSize: 13, color: colors.accent, marginTop: 2 },
+  dailyDelete: { fontSize: 22, color: '#ff5a5a', lineHeight: 26, paddingHorizontal: 4 },
 
   reservRow: {
     marginHorizontal: 18,
