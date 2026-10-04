@@ -29,8 +29,6 @@ const IcoOMPayment = () => (
 import {
   initierPaiement,
   verifierPaiement,
-  calculerPrixClient,
-  calculerCommission,
   PAYMENT_CONFIG,
   MoyenPaiement,
 } from '../../services/paymentService';
@@ -48,8 +46,6 @@ export default function CheckoutPayment({ orderId, prestataireId, prixBase, onSu
   const [loading, setLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
 
-  const prixClient = calculerPrixClient(prixBase);
-  const commission = calculerCommission(prixBase);
 
   const handlePayer = async () => {
     setLoading(true);
@@ -91,14 +87,7 @@ export default function CheckoutPayment({ orderId, prestataireId, prixBase, onSu
       <Text style={styles.title}>Paiement</Text>
 
       <View style={styles.recap}>
-        <Row label="Prix produit" value={`${prixBase.toLocaleString()} FCFA`} />
-        <Row
-          label={`Frais de service LASSİ (${PAYMENT_CONFIG.COMMISSION_PERCENT_DISPLAY})`}
-          value={`${commission.toLocaleString()} FCFA`}
-          muted
-        />
-        <View style={styles.divider} />
-        <Row label="Total à payer" value={`${prixClient.toLocaleString()} FCFA`} gold />
+        <Row label="Total à payer" value={`${prixBase.toLocaleString()} FCFA`} gold />
       </View>
 
       <Text style={styles.sectionLabel}>Payer avec</Text>
@@ -126,7 +115,7 @@ export default function CheckoutPayment({ orderId, prestataireId, prixBase, onSu
           <ActivityIndicator color="#14152A" />
         ) : (
           <Text style={styles.payBtnText}>
-            Payer {prixClient.toLocaleString()} FCFA via{' '}
+            Payer {prixBase.toLocaleString()} FCFA via{' '}
             {moyen === 'wave' ? 'Wave' : 'Orange Money'}
           </Text>
         )}

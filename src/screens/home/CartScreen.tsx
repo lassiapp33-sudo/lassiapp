@@ -25,7 +25,7 @@ import { AppliedDiscount } from '../../types/promotions';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
 import { notifyError } from '../../utils/errorUtils';
-import { calculerCommission, calculerPrixClient, calculerCommissionVip, calculerPrixClientVip, PAYMENT_CONFIG } from '../../config/payment';
+import { calculerCommission, calculerCommissionVip, calculerPrixClientVip, PAYMENT_CONFIG } from '../../config/payment';
 import { PayMethod } from '../../types/payment';
 import PayMethodCard from '../../components/payment/PayMethodCard';
 import { WAVE_ENABLED } from '../../config/features';
@@ -116,8 +116,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
     const discount = (discountsByShop[sh.info.id] ?? []).reduce((s, d) => s + d.reductionFcfa, 0);
     const total = Math.max(subtotal - discount, 0);
     const commission = isVip ? calculerCommissionVip(total) : calculerCommission(total);
-    const client = isVip ? calculerPrixClientVip(total) : calculerPrixClient(total);
-    return { subtotal, discount, total, commission, client };
+    return { subtotal, discount, total, commission };
   };
 
   const perShop = activeShops.map(shopTotals);

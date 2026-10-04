@@ -19,7 +19,6 @@ const IcoProductFallback = () => (
 );
 import { radius } from '../../theme';
 import { formatPrice } from '../../utils/format';
-import { calculerPrixClient } from '../../config/payment';
 import { calcPromoClientPrice } from '../../services/promotions';
 import { usePromoItems, PromoItem } from '../../hooks/usePromoItems';
 
@@ -66,7 +65,7 @@ function PromoCard({
   item: PromoItem;
   onPress?: () => void;
 }) {
-  const prixTotal = calculerPrixClient(item.price);
+  const prixTotal = item.price;
   const prixPromo = calcPromoClientPrice(item.price, item.promoInfo);
 
   return (

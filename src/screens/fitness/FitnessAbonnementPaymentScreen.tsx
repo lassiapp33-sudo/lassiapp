@@ -14,7 +14,6 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
-import { calculerPrixClient } from '../../config/payment';
 import { PayMethod } from '../../types/payment';
 import { WAVE_ENABLED } from '../../config/features';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
@@ -159,7 +158,7 @@ export default function FitnessAbonnementPaymentScreen({
     return () => { alive = false; };
   }, [offre.prestataireId]);
 
-  const prixClient = calculerPrixClient(offre.prix);
+  const prixClient = offre.prix;
 
   const handlePay = async () => {
     if (processingRef.current) return;

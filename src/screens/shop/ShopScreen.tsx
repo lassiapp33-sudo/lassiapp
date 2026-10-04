@@ -40,7 +40,7 @@ import {
 } from '../../services/hours';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
-import { calculerPrixClient, calculerPrixClientVip } from '../../config/payment';
+import { calculerPrixClientVip } from '../../config/payment';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ImageZoomModal from '../../components/common/ImageZoomModal';
 import * as fitnessService from '../../services/fitnessAbonnements';
@@ -516,7 +516,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     if (stableId) setActiveShop(stableId);
   }, [stableId, setActiveShop]);
 
-  const cartTotal = isVip ? calculerPrixClientVip(cartTotalRaw) : calculerPrixClient(cartTotalRaw);
+  const cartTotal = isVip ? calculerPrixClientVip(cartTotalRaw) : cartTotalRaw;
 
   const shopInfo = {
     id: stableId,
@@ -957,7 +957,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                         ) : null}
                         <View style={styles.aboMeta}>
                           <Text style={styles.aboDuree}>⏱ {offre.dureeJours} jours</Text>
-                          <Text style={styles.aboPrix}>{formatPrice(isPreview ? offre.prix : calculerPrixClient(offre.prix))}</Text>
+                          <Text style={styles.aboPrix}>{formatPrice(offre.prix)}</Text>
                         </View>
                       </View>
                       <TouchableOpacity

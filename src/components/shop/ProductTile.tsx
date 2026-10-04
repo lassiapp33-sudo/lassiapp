@@ -5,7 +5,7 @@ import { colors, fonts, radius } from '../../theme';
 import { ProductPromoInfo } from '../../types/promotions';
 import { IcoCartAdd } from '../icons';
 import { formatPrice } from '../../utils/format';
-import { calculerPrixClient, calculerPrixClientVip } from '../../config/payment';
+import { calculerPrixClientVip } from '../../config/payment';
 import { calcPromoClientPrice } from '../../services/promotions';
 import ImageZoomModal from '../common/ImageZoomModal';
 
@@ -36,7 +36,7 @@ interface Props {
 
 export default function ProductTile({ product, qty, onAdd, onRemove, onPress, promoInfo, isVip = false, isPreview = false }: Props) {
   const isOut = product.stock === 'out';
-  const calcPrix = isPreview ? (p: number) => p : (isVip ? calculerPrixClientVip : calculerPrixClient);
+  const calcPrix = isVip ? calculerPrixClientVip : (p: number) => p;
   const prixPromo = isPreview ? null : calcPromoClientPrice(product.price, promoInfo, isVip);
   const [zoom, setZoom] = useState(false);
 
