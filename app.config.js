@@ -76,7 +76,7 @@ module.exports = withSecurityPlugins({
     name: "LASSI",
     slug: "LassiApp",
     scheme: "lassiapp",
-    version: "1.0.3",
+    version: "1.0.1",
     orientation: "default",
     updates: {
       url: "https://u.expo.dev/e9058ef3-df10-43e4-af04-6830a98025e9",
