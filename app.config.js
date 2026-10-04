@@ -1,4 +1,4 @@
-﻿const { withAndroidManifest, withGradleProperties } = require('@expo/config-plugins');
+const { withAndroidManifest, withGradleProperties } = require('@expo/config-plugins');
 
 // Plugin 1 : usesCleartextTraffic="false" au manifest release.
 // Le debug manifest override via tools:replace â€” le dev n'est pas affectÃ©.
@@ -76,7 +76,7 @@ module.exports = withSecurityPlugins({
     name: "LASSI",
     slug: "LassiApp",
     scheme: "lassiapp",
-    version: "1.0.3",
+    version: "1.0.1",
     orientation: "default",
     updates: {
       url: "https://u.expo.dev/e9058ef3-df10-43e4-af04-6830a98025e9",
@@ -235,5 +235,17 @@ module.exports = withSecurityPlugins({
     owner: "lassiapp",
   },
 });
+
+
+
+
+
+
+
+
+
+
+
+
 
 
