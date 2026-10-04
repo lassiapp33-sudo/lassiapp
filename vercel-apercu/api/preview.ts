@@ -76,6 +76,9 @@ interface Product {
   id: string; name: string | null; description: string | null;
   emoji: string | null; photo_url: string | null; price: number | null;
   category: string | null;
+  sizes?: string[] | null;
+  colors?: string[] | null;
+  stock_quantity?: number | null;
 }
 // Prestation/service (non commandable via panier web — réservation/abonnement dans l'app).
 interface ServiceItem {
@@ -176,7 +179,7 @@ async function fetchProducts(shopId: string): Promise<Product[]> {
   try {
     const q =
       `${SUPABASE_URL}/rest/v1/products?shop_id=eq.${encodeURIComponent(shopId)}` +
-      `&stock=eq.in&order=created_at.asc&limit=48&select=id,name,description,emoji,photo_url,price,category`;
+      `&stock=eq.in&order=created_at.asc&limit=48&select=id,name,description,emoji,photo_url,price,category,sizes,colors,stock_quantity`;
     const res = await fetch(q, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
     if (!res.ok) return [];
     const rows = (await res.json()) as Product[];
@@ -302,18 +305,24 @@ function productVisual(p: Product): string {
 
 // Carte produit = ajout au panier (data-* lus par le JS). data-base = prix BRUT
 // prestataire (le total client = somme base + ceil(1%) = exactement le montant EF).
+// data-sizes / data-colors = JSON si habillement, sinon vide.
 function productCard(p: Product): string {
   const base = Math.round(Number(p.price));
   const desc = (p.description ?? '').trim();
-  return `<div class="prod" data-id="${escAttr(p.id)}" data-name="${escAttr(p.name ?? '')}" data-base="${base}">
+  const sizesJson = p.sizes && p.sizes.length > 0 ? JSON.stringify(p.sizes) : '';
+  const colorsJson = p.colors && p.colors.length > 0 ? JSON.stringify(p.colors) : '';
+  const stockAttr = p.stock_quantity != null ? String(p.stock_quantity) : '';
+  const hasVariants = sizesJson !== '' || colorsJson !== '';
+  return `<div class="prod" data-id="${escAttr(p.id)}" data-name="${escAttr(p.name ?? '')}" data-base="${base}" data-sizes="${escAttr(sizesJson)}" data-colors="${escAttr(colorsJson)}" data-stock="${escAttr(stockAttr)}">
     <div class="pimgzone">${productVisual(p)}</div>
     <div class="pbody">
       <div class="pname">${esc(clip(p.name ?? '', 48))}</div>
       ${desc ? `<div class="pdesc">${esc(clip(desc, 60))}</div>` : ''}
       <div class="pprice">${fmtPrice(prixClient(base))}</div>
-      <div class="stepper" data-id="${escAttr(p.id)}">
+      ${stockAttr !== '' ? `<div class="pstock">${stockAttr} restant${Number(stockAttr) > 1 ? 's' : ''}</div>` : ''}
+      <div class="stepper" data-id="${escAttr(p.id)}" data-variants="${hasVariants ? '1' : ''}">
         <button class="add" type="button" aria-label="Ajouter">Ajouter</button>
-        <span class="qtybox" hidden><button class="minus" type="button">−</button><b class="q">0</b><button class="plus" type="button">+</button></span>
+        ${!hasVariants ? `<span class="qtybox" hidden><button class="minus" type="button">−</button><b class="q">0</b><button class="plus" type="button">+</button></span>` : ''}
       </div>
     </div>
   </div>`;
@@ -628,6 +637,15 @@ function page(o: {
   .bslot { background:var(--g); border:1.5px solid var(--b); border-radius:9px; padding:9px 13px; color:var(--d); font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; }
   .bslot.on { background:var(--y); border-color:var(--y); color:var(--d); }
   .bhint { font-size:13px; color:var(--m); }
+  /* HABILLEMENT */
+  .pstock { font-size:11px; color:var(--m); margin-top:2px; }
+  .hab-sec { margin-bottom:14px; }
+  .hab-sec label { display:block; font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--m); margin-bottom:8px; }
+  .hab-chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .hab-chip { flex:0 0 auto; padding:8px 14px; border-radius:9px; border:1.5px solid var(--d); background:transparent; color:var(--d); font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .hab-chip.on { background:var(--y); border-color:var(--y); color:var(--d); }
+  #habStock { font-size:13px; color:var(--m); margin:0 0 14px; }
+  #habStock.low { color:#F97316; }
 </style>
 </head>
 <body>
@@ -705,6 +723,24 @@ function page(o: {
         <p class="sub" id="bWaitMsg">En attente de confirmation du paiement…</p>
         <button class="pay" id="bCheckNow" type="button" style="margin-top:8px;width:auto;padding:10px 20px">J'ai payé — vérifier</button>
       </div>
+    </div>
+  </div>
+  ` : ''}
+  ${hasProducts ? `
+  <div class="sheet" id="habsheet">
+    <div class="panel" style="position:relative">
+      <button class="close" id="habClose" type="button">×</button>
+      <h2 id="habName" style="margin-bottom:4px"></h2>
+      <p id="habStock"></p>
+      <div id="habSizeSec" class="hab-sec" style="display:none">
+        <label>Taille</label>
+        <div class="hab-chips" id="habSizeBtns"></div>
+      </div>
+      <div id="habColorSec" class="hab-sec" style="display:none">
+        <label>Couleur</label>
+        <div class="hab-chips" id="habColorBtns"></div>
+      </div>
+      <button class="payer" id="habConfirm" type="button" disabled style="margin-top:8px">Ajouter au panier</button>
     </div>
   </div>
   ` : ''}
@@ -871,12 +907,71 @@ const CART_JS = `
     dsCard.querySelector('.ds-btn').addEventListener('click', function(){ change(dsKey,'🍽 Plat du jour \xB7 '+dsName,dsBase,1,dsId); });
   });
 
+  // cartVariants : cartId -> {productId, selectedSize, selectedColor}
+  var cartVariants={};
+
+  // ── Picker habillement (taille + couleur) ─────────────────────────────────
+  var habId=null, habName=null, habBase=null, habHasSz=false, habHasCl=false, habSelSz=null, habSelCl=null;
+  function updateHabConfirm(){ var ok=(!habHasSz||habSelSz)&&(!habHasCl||habSelCl); document.getElementById('habConfirm').disabled=!ok; }
+  function openHabPicker(id,name,base,szJson,clJson,stock){
+    habId=id; habName=name; habBase=base; habSelSz=null; habSelCl=null;
+    var sizes=[],colors=[];
+    try{sizes=JSON.parse(szJson||'[]');}catch(e){}
+    try{colors=JSON.parse(clJson||'[]');}catch(e){}
+    habHasSz=sizes.length>0; habHasCl=colors.length>0;
+    document.getElementById('habName').textContent=name;
+    var stEl=document.getElementById('habStock');
+    if(stock!==''&&stock!==null){var n=parseInt(stock,10); stEl.textContent=n+' restant'+(n>1?'s':''); stEl.className=n<=5?'low':''; stEl.style.display='';}
+    else{stEl.style.display='none';}
+    var szSec=document.getElementById('habSizeSec'), szBtns=document.getElementById('habSizeBtns');
+    if(habHasSz){
+      szBtns.innerHTML='';
+      sizes.forEach(function(s){
+        var b=document.createElement('button'); b.type='button'; b.className='hab-chip'; b.textContent=s;
+        b.addEventListener('click',function(){ document.querySelectorAll('#habSizeBtns .hab-chip').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); habSelSz=s; updateHabConfirm(); });
+        szBtns.appendChild(b);
+      });
+      szSec.style.display='';
+    } else { szSec.style.display='none'; }
+    var clSec=document.getElementById('habColorSec'), clBtns=document.getElementById('habColorBtns');
+    if(habHasCl){
+      clBtns.innerHTML='';
+      colors.forEach(function(c){
+        var b=document.createElement('button'); b.type='button'; b.className='hab-chip'; b.textContent=c;
+        b.addEventListener('click',function(){ document.querySelectorAll('#habColorBtns .hab-chip').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); habSelCl=c; updateHabConfirm(); });
+        clBtns.appendChild(b);
+      });
+      clSec.style.display='';
+    } else { clSec.style.display='none'; }
+    updateHabConfirm();
+    document.getElementById('habsheet').classList.add('open');
+  }
+  var habCloseEl=document.getElementById('habClose');
+  if(habCloseEl) habCloseEl.addEventListener('click',function(){ document.getElementById('habsheet').classList.remove('open'); });
+  var habConfirmEl=document.getElementById('habConfirm');
+  if(habConfirmEl) habConfirmEl.addEventListener('click',function(){
+    if(!habId) return;
+    var parts=[habSelSz,habSelCl].filter(Boolean);
+    var suffix=parts.length>0?' ('+parts.join(', ')+')':'';
+    var cartId=habId+'|'+(habSelSz||'')+'|'+(habSelCl||'');
+    cartVariants[cartId]={productId:habId,selectedSize:habSelSz||null,selectedColor:habSelCl||null};
+    change(cartId,habName+suffix,habBase,1);
+    document.getElementById('habsheet').classList.remove('open');
+  });
+
   document.querySelectorAll('.prod').forEach(function(card){
-    if(card.classList.contains('svc') || !card.querySelector('.add')) return; // carte service = pas de panier
+    if(card.classList.contains('svc') || !card.querySelector('.add')) return;
     var id=card.getAttribute('data-id'), name=card.getAttribute('data-name'), base=parseInt(card.getAttribute('data-base'),10)||0;
-    card.querySelector('.add').addEventListener('click', function(){ change(id,name,base,1); });
-    card.querySelector('.plus').addEventListener('click', function(){ change(id,name,base,1); });
-    card.querySelector('.minus').addEventListener('click', function(){ change(id,name,base,-1); });
+    var szJson=card.getAttribute('data-sizes')||'', clJson=card.getAttribute('data-colors')||'', stockStr=card.getAttribute('data-stock')||'';
+    var hasVars=szJson!==''||clJson!=='';
+    card.querySelector('.add').addEventListener('click', function(){
+      if(hasVars){ openHabPicker(id,name,base,szJson,clJson,stockStr); }
+      else{ change(id,name,base,1); }
+    });
+    if(!hasVars){
+      card.querySelector('.plus').addEventListener('click', function(){ change(id,name,base,1); });
+      card.querySelector('.minus').addEventListener('click', function(){ change(id,name,base,-1); });
+    }
   });
 
   // ── Onglets catégories (chips) : filtre les sections ──
@@ -1054,7 +1149,7 @@ const CART_JS = `
       if(name.length<2){ msg.textContent='Entre ton nom.'; return; }
       var digits=phone.replace(/[^0-9]/g,'').replace(/^221/,'');
       if(!/^7[05678][0-9]{7}$/.test(digits)){ msg.textContent='Num\xe9ro invalide (ex\xa0: 77 123 45 67).'; return; }
-      var items=[]; for(var k in cart){ var it=cart[k]; if(it.dsId) items.push({dailySpecialId:it.dsId, qty:it.qty}); else items.push({productId:k, qty:it.qty}); }
+      var items=[]; for(var k in cart){ var it=cart[k]; if(it.dsId) items.push({dailySpecialId:it.dsId, qty:it.qty}); else if(cartVariants[k]){ var v=cartVariants[k]; var vi={productId:v.productId, qty:it.qty}; if(v.selectedSize) vi.selectedSize=v.selectedSize; if(v.selectedColor) vi.selectedColor=v.selectedColor; items.push(vi); } else items.push({productId:k, qty:it.qty}); }
       if(items.length===0){ msg.textContent='Ton panier est vide.'; return; }
       paying=true;
       var isW=(moyen==='wave');

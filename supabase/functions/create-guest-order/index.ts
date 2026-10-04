@@ -70,7 +70,7 @@ const PHONE_RE       = /^7[05678][0-9]{7}$/;
 const MAX_ITEMS      = 50;
 const MAX_QTY        = 999;
 
-interface ItemInput { productId?: string; dailySpecialId?: string; qty: number }
+interface ItemInput { productId?: string; dailySpecialId?: string; qty: number; selectedSize?: string; selectedColor?: string; }
 
 Deno.serve(async (req) => {
   const CORS = buildCorsHeaders(req);
@@ -314,7 +314,9 @@ Deno.serve(async (req) => {
       if (!p) throw new Error('Produit introuvable');
       if (p.stock === 'out') throw new Error(`"${p.name}" est en rupture de stock`);
       subtotal += Math.round(p.price) * it.qty;
-      return { product_name: p.name, qty: it.qty, unit_price: Math.round(p.price) };
+      const variantParts = [it.selectedSize, it.selectedColor].filter(Boolean);
+      const productName = variantParts.length > 0 ? `${p.name} (${variantParts.join(', ')})` : p.name;
+      return { product_name: productName, qty: it.qty, unit_price: Math.round(p.price) };
     });
     const total = Math.max(Math.round(subtotal), 1);
 

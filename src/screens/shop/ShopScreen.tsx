@@ -310,6 +310,17 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     };
   }, [targetProductId, realProducts]);
 
+  // ── Type de vitrine ───────────────────────────────────────────────────────
+  const subcats = shopData?.subcategories ?? [];
+  const shopType: 'products' | 'services' | 'memberships' | 'terrains' =
+    subcats.some(s => PRODUCT_SUBCATS.includes(s))
+      ? 'products'
+      : (shopData?.shopType ?? 'products');
+  const isTerrainShop = shopType === 'terrains';
+  const isSlotShop = subcats.some(s => SLOT_SUBCATS.includes(s));
+  const isBeautyShop = subcats.some(s => BEAUTY_SLOT_SUBCATS.includes(s));
+  const isRestaurantShop = subcats.some(s => s === 'restaurant' || s === 'fastfood');
+
   const fetchDailySpecials = useCallback(() => {
     if (!isRestaurantShop || !shopId) return;
     setDailySpecialsLoading(true);
@@ -325,17 +336,6 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   useEffect(() => {
     if (activeTab === 'plat_du_jour') fetchDailySpecials();
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Type de vitrine ───────────────────────────────────────────────────────
-  const subcats = shopData?.subcategories ?? [];
-  const shopType: 'products' | 'services' | 'memberships' | 'terrains' =
-    subcats.some(s => PRODUCT_SUBCATS.includes(s))
-      ? 'products'
-      : (shopData?.shopType ?? 'products');
-  const isTerrainShop = shopType === 'terrains';
-  const isSlotShop = subcats.some(s => SLOT_SUBCATS.includes(s));
-  const isBeautyShop = subcats.some(s => BEAUTY_SLOT_SUBCATS.includes(s));
-  const isRestaurantShop = subcats.some(s => s === 'restaurant' || s === 'fastfood');
 
   // ── Services beauté regroupés par catégorie (comme la vitrine prestataire) ──
   const BEAUTY_CAT_LABELS: Record<string, string> = {
