@@ -122,12 +122,14 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
 
   const perShop = activeShops.map(shopTotals);
   const grandTotal = perShop.reduce((s, t) => s + t.total, 0);
+  const grandClient = perShop.reduce((s, t) => s + t.client, 0);
   const grandCommission = perShop.reduce((s, t) => s + t.commission, 0);
 
   const livraisonFeeDisplay = (isVip && vipOrderMode === 'livraison' && devisBtn && !devisBtn.horsZone)
     ? devisBtn.prix
     : 0;
   const grandTotalFinal = grandTotal + livraisonFeeDisplay;
+  const grandClientFinal = grandClient + livraisonFeeDisplay;
 
   const hasItems = activeShops.some(sh => sh.items.length > 0);
 
@@ -484,7 +486,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
                     <Text style={styles.shopName}>{sh.info.name}</Text>
                     {!!sh.info.location && <Text style={styles.shopLoc}>{sh.info.location}</Text>}
                   </View>
-                  <Text style={styles.shopSubtotal}>{formatPrice(t.total)}</Text>
+                  <Text style={styles.shopSubtotal}>{formatPrice(t.client)}</Text>
                 </View>
 
                 {sh.items.map(item => (
@@ -495,7 +497,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
                     <View style={styles.itemInfo}>
                       <Text style={styles.itemName}>{item.name}</Text>
                       <Text style={styles.itemPrice}>
-                        {formatPrice(item.price)}
+                        {formatPrice(isVip ? calculerPrixClientVip(item.price) : calculerPrixClient(item.price))}
                       </Text>
                     </View>
                     <View style={styles.qtyWrap}>
@@ -590,7 +592,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
             <View style={styles.separator} />
             <View style={styles.totalRow}>
               <Text style={styles.totalKey}>Total</Text>
-              <Text style={styles.totalVal}>{formatPrice(grandTotalFinal)}</Text>
+              <Text style={styles.totalVal}>{formatPrice(grandClientFinal)}</Text>
             </View>
           </View>
         </ScrollView>
