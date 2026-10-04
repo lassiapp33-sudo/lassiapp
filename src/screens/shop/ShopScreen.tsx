@@ -488,6 +488,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const menuTabsStickyIdx = 5
     + (shopData?.description ? 1 : 0)
     + (hasGallery ? 1 : 0)
+    + (manuallyClose ? 1 : 0)
     + (shopWidePromos.length > 0 ? 1 : 0)
     + (showOrderOptions ? 1 : 0)
     + (hasInfoSection ? 1 : 0);
