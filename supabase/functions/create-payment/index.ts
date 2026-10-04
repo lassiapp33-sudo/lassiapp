@@ -72,7 +72,7 @@ serve(async (req) => {
     if (!ticketId || !amount || !method)
       return fail('Paramètres manquants', 400);
     if (!validerMontant(amount))
-      return fail(`Montant invalide (min 100, max 5 000 000 FCFA)`, 400);
+      return fail(`Montant invalide (min 1, max 5 000 000 FCFA)`, 400);
     if (!validerMethode(method))
       return fail('Moyen de paiement non supporté', 400);
 

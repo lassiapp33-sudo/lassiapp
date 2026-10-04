@@ -761,6 +761,12 @@ const ALL_CATEGORIES: CatConfig[] = [
         SvgIcon: IcoCafeWass,
       },
       {
+        id: 'habillement',
+        emoji: '👕',
+        label: 'Habillement',
+        desc: 'Vêtements, mode, accessoires',
+      },
+      {
         id: 'quincaillerie',
         emoji: '🔧',
         label: 'Quincaillerie',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert, Modal, Pressable } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert, Modal, Pressable, ActivityIndicator } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Svg, { Path, Rect, Circle as SvgCircle } from 'react-native-svg';
 
@@ -49,6 +49,8 @@ import { FITNESS_SUBSCRIPTION_CATS } from '../../config/fitnessConfig';
 import * as beautyService from '../../services/beauty';
 import { BeautyService } from '../../types/beauty';
 import { calculerPrixBeauteAvecMarge } from '../../services/beauty';
+import { getTodaySpecials, DailySpecial } from '../../services/dailySpecials';
+import HabillementPickerSheet from '../../components/shop/HabillementPickerSheet';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
 
@@ -153,6 +155,9 @@ function storeProductToProduct(p: StoreProduct): Product {
     price: p.price,
     category: p.category,
     stock: p.stock,
+    stockQuantity: p.stockQuantity,
+    sizes: p.sizes,
+    colors: p.colors,
   };
 }
 
@@ -211,11 +216,14 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [fitnessOffres, setFitnessOffres] = useState<FitnessOffre[]>([]);
   const [beautyServices, setBeautyServices] = useState<BeautyService[]>([]);
+  const [dailySpecials, setDailySpecials] = useState<DailySpecial[]>([]);
+  const [dailySpecialsLoading, setDailySpecialsLoading] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const productSectionY = useRef(0);
   const [activePromos, setActivePromos] = useState<Promotion[]>([]);
   const [badges, setBadges] = useState<RecompenseAttribuee[]>([]);
+  const [habPickerProduct, setHabPickerProduct] = useState<StoreProduct | null>(null);
 
   // Position utilisateur (déjà chargée dans locationStore par ClientHomeScreen)
   const userCoords = useLocationStore(s => s.coords);
@@ -311,6 +319,23 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const isTerrainShop = shopType === 'terrains';
   const isSlotShop = subcats.some(s => SLOT_SUBCATS.includes(s));
   const isBeautyShop = subcats.some(s => BEAUTY_SLOT_SUBCATS.includes(s));
+  const isRestaurantShop = subcats.some(s => s === 'restaurant' || s === 'fastfood');
+
+  const fetchDailySpecials = useCallback(() => {
+    if (!isRestaurantShop || !shopId) return;
+    setDailySpecialsLoading(true);
+    getTodaySpecials(shopId)
+      .then(setDailySpecials)
+      .catch(() => {})
+      .finally(() => setDailySpecialsLoading(false));
+  }, [shopId, isRestaurantShop]);
+
+  useEffect(() => { fetchDailySpecials(); }, [fetchDailySpecials]);
+
+  // Re-fetch à chaque fois que l'utilisateur ouvre l'onglet plat du jour
+  useEffect(() => {
+    if (activeTab === 'plat_du_jour') fetchDailySpecials();
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Services beauté regroupés par catégorie (comme la vitrine prestataire) ──
   const BEAUTY_CAT_LABELS: Record<string, string> = {
@@ -415,8 +440,10 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const membershipAboTab = shopType === 'memberships' && fitnessOffres.length > 0
     ? [{ id: 'abonnements', label: 'Abonnements' }]
     : [];
+  const platDuJourTab = isRestaurantShop ? [{ id: 'plat_du_jour', label: 'Plat du jour' }] : [];
   const tabs = [
     { id: 'all', label: 'Tout' },
+    ...platDuJourTab,
     ...membershipAboTab,
     ...catIds.map(id => ({ id, label: capitalize(id) })),
     ...(hasAvisTab ? [{ id: 'avis', label: 'Avis' }] : []),
@@ -479,6 +506,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const cartTotalRaw = useCartStore(selectTotalPrice); // total tous paniers (prix flottant)
   const addItem = useCartStore(s => s.addItem);
   const removeItem = useCartStore(s => s.removeItem);
+  const removeItemFromShop = useCartStore(s => s.removeItemFromShop);
   const setCartOrder = useCartStore(s => s.setOrderType);
   const setActiveShop = useCartStore(s => s.setActiveShop);
 
@@ -498,11 +526,58 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     logoUrl: displayLogoUrl,
     showOrderType: showOrderOptions,
     paymentMethods: shopData?.paymentMethods ?? (['wave', 'om'] as ('wave' | 'om')[]),
+    merchantId: shopData?.merchantId,
   };
 
   const addToCart = (p: StoreProduct) => {
-    if (p.stock === 'out') return; // garde-fou côté app (le serveur vérifie aussi)
-    addItem(shopInfo, { id: p.id, name: p.name, emoji: p.emoji, price: p.price });
+    if (!isOpen) {
+      Alert.alert('Boutique fermée', 'Ce prestataire est exceptionnellement fermé. Revenez plus tard.', [{ text: 'OK' }]);
+      return;
+    }
+    if (p.stock === 'out') return;
+    const hasVariants = (p.sizes && p.sizes.length > 0) || (p.colors && p.colors.length > 0);
+    if (hasVariants) {
+      setHabPickerProduct(p);
+      return;
+    }
+    addItem(shopInfo, { id: p.id, productId: p.id, name: p.name, emoji: p.emoji, price: p.price });
+  };
+
+  const handleHabConfirm = (size: string | undefined, color: string | undefined) => {
+    if (!habPickerProduct) return;
+    const p = habPickerProduct;
+    const variantSuffix = [size, color].filter(Boolean).join(', ');
+    const cartId = `${p.id}|${size ?? ''}|${color ?? ''}`;
+    const displayName = variantSuffix ? `${p.name} (${variantSuffix})` : p.name;
+    addItem(shopInfo, {
+      id: cartId,
+      productId: p.id,
+      name: displayName,
+      emoji: p.emoji,
+      price: p.price,
+      selectedSize: size,
+      selectedColor: color,
+    });
+    setHabPickerProduct(null);
+  };
+
+  const getProductQty = (product: StoreProduct): number => {
+    if (product.stock === 'out') return 0;
+    const hasVariants = (product.sizes && product.sizes.length > 0) || (product.colors && product.colors.length > 0);
+    if (hasVariants) {
+      return cartItems.filter(ci => (ci.productId ?? ci.id) === product.id).reduce((s, ci) => s + ci.qty, 0);
+    }
+    return cartItems.find(ci => ci.id === product.id)?.qty ?? 0;
+  };
+
+  const removeFromCart = (product: StoreProduct) => {
+    const hasVariants = (product.sizes && product.sizes.length > 0) || (product.colors && product.colors.length > 0);
+    if (hasVariants) {
+      const first = cartItems.find(ci => (ci.productId ?? ci.id) === product.id);
+      if (first) removeItemFromShop(shopId!, first.id);
+    } else {
+      removeItem(product.id);
+    }
   };
 
   const cartBottom = FOOTER_HEIGHT + 8;
@@ -602,7 +677,14 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
             isOpen={isOpen}
           />
 
-          {/* 5b — Bandeau promos actives */}
+          {/* 5b — Bannière fermé exceptionnel */}
+          {manuallyClose && (
+            <View style={styles.exceptBanner}>
+              <Text style={styles.exceptBannerTxt}>⚠️  Exceptionnellement fermé — commandes impossibles</Text>
+            </View>
+          )}
+
+          {/* 5c — Bandeau promos actives */}
           {shopWidePromos.length > 0 && (
             <View style={styles.promoBanner}>
               <IcoTag />
@@ -708,8 +790,76 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
           ) : null}
 
 
+          {/* 8c — Plat du jour dans "Tout" */}
+          {isRestaurantShop && activeTab === 'all' && dailySpecials.length > 0 && (
+            <View style={{ paddingHorizontal: 18, paddingTop: 8 }}>
+              <Text style={styles.catTitle}>Plat du jour</Text>
+              <View style={styles.grid}>
+                {toPairs(dailySpecials.map(sp => ({
+                  id: 'daily_' + sp.id, emoji: '', photoUrl: sp.photoUrl ?? undefined,
+                  name: sp.name, desc: '', price: sp.price, category: 'plat_du_jour', stock: 'in' as const,
+                }))).map((pair, i) => (
+                  <View key={i} style={styles.gridRow}>
+                    {pair.map(product => (
+                      <View key={product.id} style={styles.tileWrapper}>
+                        <ProductTile
+                          product={product}
+                          qty={cartItems.find(ci => ci.id === product.id)?.qty ?? 0}
+                          onAdd={() => addItem(shopInfo, { id: product.id, name: product.name, emoji: '', price: product.price })}
+                          onRemove={() => removeItem(product.id)}
+                          isVip={isVip} isPreview={isPreview}
+                        />
+                      </View>
+                    ))}
+                    {pair.length === 1 && <View style={styles.tileSpacer} />}
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
           {/* 9 — Catalogue / Terrains / Créneaux foot-basket */}
-          {isSlotShop ? (
+          {isRestaurantShop && activeTab === 'plat_du_jour' ? (
+            <View style={{ paddingHorizontal: 18, paddingTop: 8 }}>
+              <Text style={styles.catTitle}>Plat du jour</Text>
+              {dailySpecialsLoading ? (
+                <ActivityIndicator color={colors.accent} style={{ marginVertical: 20 }} />
+              ) : dailySpecials.length === 0 ? (
+                <View style={styles.emptyProducts}>
+                  <Text style={styles.emptyTxt}>Aucun plat du jour aujourd'hui.</Text>
+                </View>
+              ) : (
+                <View style={styles.grid}>
+                  {toPairs(dailySpecials.map(sp => ({
+                    id: 'daily_' + sp.id,
+                    emoji: '',
+                    photoUrl: sp.photoUrl ?? undefined,
+                    name: sp.name,
+                    desc: '',
+                    price: sp.price,
+                    category: 'plat_du_jour',
+                    stock: 'in' as const,
+                  }))).map((pair, i) => (
+                    <View key={i} style={styles.gridRow}>
+                      {pair.map(product => (
+                        <View key={product.id} style={styles.tileWrapper}>
+                          <ProductTile
+                            product={product}
+                            qty={cartItems.find(ci => ci.id === product.id)?.qty ?? 0}
+                            onAdd={() => addItem(shopInfo, { id: product.id, name: product.name, emoji: '', price: product.price })}
+                            onRemove={() => removeItem(product.id)}
+                            isVip={isVip}
+                            isPreview={isPreview}
+                          />
+                        </View>
+                      ))}
+                      {pair.length === 1 && <View style={styles.tileSpacer} />}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          ) : isSlotShop ? (
             terrains.length > 0 ? (
               <>
                 {terrains.length > 1 && (
@@ -835,9 +985,9 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                             <View key={product.id} style={styles.tileWrapper}>
                               <ProductTile
                                 product={storeProductToProduct(product)}
-                                qty={product.stock === 'out' ? 0 : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)}
+                                qty={getProductQty(product)}
                                 onAdd={() => addToCart(product)}
-                                onRemove={() => removeItem(product.id)}
+                                onRemove={() => removeFromCart(product)}
                                 promoInfo={productPromoMap[product.id]}
                                 isVip={isVip}
                                 isPreview={isPreview}
@@ -878,6 +1028,10 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                             : `${svc.duree_minutes} min`;
                         return (
                           <View key={svc.id} style={styles.beautyCard}>
+                            {svc.image_url ? (
+                              <Image source={{ uri: svc.image_url }} style={styles.beautyImg} resizeMode="cover" />
+                            ) : null}
+                            <View style={styles.beautyCardBody}>
                             <View style={{ flex: 1 }}>
                               <Text style={styles.beautyNom}>{svc.nom}</Text>
                               {svc.description ? (
@@ -896,6 +1050,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                                   <Text style={styles.beautyBtnTxt}>Réserver</Text>
                                 </TouchableOpacity>
                               ) : null}
+                            </View>
                             </View>
                           </View>
                         );
@@ -1051,6 +1206,17 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
 
       {/* Aperçu plein écran (logo + photos galerie) — appui long 3 s */}
       <ImageZoomModal uri={zoomUrl} onClose={() => setZoomUrl(null)} />
+
+      {/* Picker taille/couleur habillement */}
+      <HabillementPickerSheet
+        visible={habPickerProduct !== null}
+        productName={habPickerProduct?.name ?? ''}
+        sizes={habPickerProduct?.sizes ?? []}
+        colors={habPickerProduct?.colors ?? []}
+        stockQuantity={habPickerProduct?.stockQuantity}
+        onConfirm={handleHabConfirm}
+        onClose={() => setHabPickerProduct(null)}
+      />
     </View>
   );
 }
@@ -1184,10 +1350,12 @@ const styles = StyleSheet.create({
   beautyCatLabel: { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
   beautyCatCount: { color: colors.muted, fontFamily: fonts.body, fontSize: 12 },
   beautyCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.lg, padding: 14, marginBottom: 10, marginHorizontal: 18,
+    borderRadius: radius.lg, marginBottom: 10, marginHorizontal: 18,
+    overflow: 'hidden',
   },
+  beautyImg: { width: '100%', height: 160 },
+  beautyCardBody: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14 },
   beautyNom:   { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
   beautyDesc:  { color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 3, lineHeight: 16 },
   beautyMeta:  { color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginTop: 4 },
@@ -1293,6 +1461,23 @@ const styles = StyleSheet.create({
   terrainCtaTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 13 },
 
   // Bandeau promotions
+  exceptBanner: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 4,
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.45)',
+    borderRadius: radius.md,
+    padding: 12,
+    alignItems: 'center',
+  },
+  exceptBannerTxt: {
+    color: '#f87171',
+    fontFamily: fonts.ui,
+    fontSize: 13,
+    textAlign: 'center',
+  },
   promoBanner: {
     marginHorizontal: 20,
     marginBottom: 12,

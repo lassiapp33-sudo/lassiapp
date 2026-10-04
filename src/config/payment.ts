@@ -20,7 +20,7 @@ export const PAYMENT_CONFIG = {
   RECEIPT_VALIDITY_MINUTES: 40,
 
   // Limites sécurité
-  MONTANT_MIN_FCFA: 100,            // minimum acceptable
+  MONTANT_MIN_FCFA: 1,              // minimum acceptable
   MONTANT_MAX_FCFA: 5_000_000,      // 5 millions FCFA max par transaction
 
   // Moyens de paiement disponibles
