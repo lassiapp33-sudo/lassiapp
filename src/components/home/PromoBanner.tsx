@@ -61,19 +61,20 @@ const dot = StyleSheet.create({
 // ─── Image avec placeholder ───────────────────────────────────────────────────
 
 function ImageWithLoader({ uri }: { uri: string }) {
-  const [loaded, setLoaded] = useState(false);
+  const [status, setStatus] = useState<'loading' | 'done' | 'error'>('loading');
   return (
     <View style={styles.imgBox}>
-      {!loaded && (
-        <ActivityIndicator
-          color="#FBBF24"
-          style={StyleSheet.absoluteFill}
-        />
+      {status === 'loading' && (
+        <ActivityIndicator color="#FBBF24" style={StyleSheet.absoluteFill} />
+      )}
+      {status === 'error' && (
+        <IcoProductFallback />
       )}
       <Image
         source={{ uri }}
-        style={[styles.img, !loaded && { opacity: 0 }]}
-        onLoad={() => setLoaded(true)}
+        style={[styles.img, status !== 'done' && { opacity: 0, position: 'absolute' }]}
+        onLoad={() => setStatus('done')}
+        onError={() => setStatus('error')}
         fadeDuration={150}
       />
     </View>

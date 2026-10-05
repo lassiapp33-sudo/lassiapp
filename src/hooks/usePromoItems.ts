@@ -17,20 +17,7 @@ export interface PromoItem {
   promoInfo?: ProductPromoInfo;
 }
 
-const CACHE_KEY = 'promo_items_cache_v2'; // v2 : URLs optimisées
-
-// Redirige les images Supabase Storage vers l'endpoint render/image
-// pour un redimensionnement + compression côté serveur.
-// Les URLs externes (non-Supabase) sont retournées telles quelles.
-function optimizeImageUrl(url: string | undefined, px: number): string | undefined {
-  if (!url) return undefined;
-  const marker = '/storage/v1/object/public/';
-  const idx = url.indexOf(marker);
-  if (idx === -1) return url; // URL externe, pas de transformation
-  const path = url.slice(idx + marker.length);
-  const base = url.slice(0, idx);
-  return `${base}/storage/v1/render/image/public/${path}?width=${px}&quality=80&resize=contain`;
-}
+const CACHE_KEY = 'promo_items_cache_v2';
 
 function prefetchImages(items: PromoItem[]): void {
   items.forEach(item => {
@@ -126,12 +113,10 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean; isConne
           name: row.name as string,
           price: row.price as number,
           emoji: (row.emoji as string) ?? '',
-          photoUrl: optimizeImageUrl(
+          photoUrl:
             typeof row.photo_url === 'string' && row.photo_url.startsWith('http')
               ? row.photo_url
               : undefined,
-            700,
-          ),
           shopName: shop.name,
           shopCategory: shop.category,
           shopId: shop.id,
@@ -183,7 +168,7 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean; isConne
                 name: r.nom,
                 price: r.prix,
                 emoji: isUrl ? '' : (r.image_url ?? ''),
-                photoUrl: optimizeImageUrl(isUrl ? r.image_url : undefined, 700),
+                photoUrl: isUrl ? r.image_url : undefined,
                 shopName: shop?.name ?? '',
                 shopCategory: shop?.category ?? '',
                 shopId: shop?.id ?? '',
