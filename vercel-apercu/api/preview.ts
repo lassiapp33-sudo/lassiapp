@@ -896,23 +896,36 @@ const LIGHTBOX_JS = `
   var lbx=document.getElementById('lbx');
   var lbxImg=document.getElementById('lbxImg');
   if(!lbx||!lbxImg) return;
-  function openLbx(src,alt){ lbxImg.src=src; lbxImg.alt=alt||''; lbx.classList.add('open'); document.body.style.overflow='hidden'; }
+  var justOpened=false;
+  function openLbx(src,alt){
+    justOpened=true; setTimeout(function(){ justOpened=false; },350);
+    lbxImg.src=src; lbxImg.alt=alt||'';
+    lbx.classList.add('open'); document.body.style.overflow='hidden';
+  }
   function closeLbx(){ lbx.classList.remove('open'); document.body.style.overflow=''; setTimeout(function(){ lbxImg.src=''; },300); }
-  lbx.addEventListener('click',function(e){ if(e.target===lbx||e.target.id==='lbxClose') closeLbx(); });
+  lbx.addEventListener('click',function(e){ if(justOpened) return; if(e.target===lbx||e.target.id==='lbxClose') closeLbx(); });
   document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeLbx(); });
   var lpTimer=null, lpActive=false;
-  function bindImg(img){
-    img.style.cursor='zoom-in';
-    img.addEventListener('click',function(){ if(lpActive){lpActive=false;return;} openLbx(img.src,img.alt); });
-    img.addEventListener('touchstart',function(){
+  function bindZone(el,src,alt){
+    el.style.cursor='zoom-in';
+    el.addEventListener('click',function(){ if(lpActive){lpActive=false;return;} openLbx(src,alt); });
+    el.addEventListener('touchstart',function(){
       lpActive=false; clearTimeout(lpTimer);
-      lpTimer=setTimeout(function(){ lpActive=true; openLbx(img.src,img.alt); },450);
+      lpTimer=setTimeout(function(){ lpActive=true; openLbx(src,alt); },450);
     },{passive:true});
-    img.addEventListener('touchend',function(){ clearTimeout(lpTimer); lpTimer=null; },{passive:true});
-    img.addEventListener('touchmove',function(){ clearTimeout(lpTimer); lpTimer=null; },{passive:true});
-    img.addEventListener('contextmenu',function(e){ e.preventDefault(); });
+    el.addEventListener('touchend',function(){ clearTimeout(lpTimer); lpTimer=null; },{passive:true});
+    el.addEventListener('touchmove',function(){ clearTimeout(lpTimer); lpTimer=null; },{passive:true});
+    el.addEventListener('contextmenu',function(e){ e.preventDefault(); });
   }
-  document.querySelectorAll('.pimg,.ds-img').forEach(bindImg);
+  // Produits + services : bind sur .pimgzone (le container, pas l'img absolute qui rate les clicks)
+  document.querySelectorAll('.pimgzone').forEach(function(zone){
+    var img=zone.querySelector('img');
+    if(img) bindZone(zone, img.src, img.alt);
+  });
+  // Plats du jour : img inline (pas absolute), bind direct
+  document.querySelectorAll('.ds-img').forEach(function(img){
+    bindZone(img, img.src, img.alt);
+  });
 })();
 `;
 
