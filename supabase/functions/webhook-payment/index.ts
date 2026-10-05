@@ -27,6 +27,11 @@ import { populateCarrouselQuartier } from '../_shared/carrouselOffreQuartier.ts'
 
 const WAVE_WEBHOOK_SECRET       = Deno.env.get('WAVE_WEBHOOK_SECRET')       ?? '';
 const OM_WEBHOOK_SECRET         = Deno.env.get('OM_WEBHOOK_SECRET')         ?? '';
+
+// Limite stricte payload : 512 Ko — protège contre DoS par corps géant
+const MAX_BODY_BYTES = 512 * 1024;
+// Anti-replay OM : rejeter les callbacks de plus de 15 min
+const OM_REPLAY_WINDOW_MS = 15 * 60 * 1000;
 const WAVE_API_KEY              = Deno.env.get('WAVE_API_KEY')              ?? '';
 const OM_RETAILER_MSISDN        = Deno.env.get('OM_RETAILER_MSISDN')        ?? '';
 const OM_RETAILER_PIN_ENCRYPTED = Deno.env.get('OM_RETAILER_PIN_ENCRYPTED') ?? '';
@@ -140,7 +145,22 @@ serve(async (req) => {
     });
   }
 
+  // ── Méthode POST obligatoire pour les webhooks ───────────────────────────
+  if (req.method !== 'POST') {
+    return new Response('Méthode non autorisée', { status: 405 });
+  }
+
+  // ── Limite taille body (anti-DoS) ───────────────────────────────────────
+  const contentLength = parseInt(req.headers.get('content-length') ?? '0', 10);
+  if (contentLength > MAX_BODY_BYTES) {
+    console.error('[webhook] payload trop grand (content-length):', contentLength);
+    return new Response('Payload trop grand', { status: 413 });
+  }
   const body = await req.text();
+  if (body.length > MAX_BODY_BYTES) {
+    console.error('[webhook] payload trop grand (body):', body.length);
+    return new Response('Payload trop grand', { status: 413 });
+  }
 
   // ── Détection source : Sonatel OM (query param) ou Wave (HMAC header) ────
   const sourceParam    = url.searchParams.get('source');          // "om" si Sonatel
@@ -158,7 +178,8 @@ serve(async (req) => {
       console.error('[webhook-om] OM_WEBHOOK_SECRET non configuré — webhook désactivé par sécurité');
       return new Response('Configuration manquante', { status: 503 });
     }
-    if (secret !== OM_WEBHOOK_SECRET) {
+    // Comparaison en temps constant — évite timing attack sur le secret OM
+    if (!timingSafeEqual(secret, OM_WEBHOOK_SECRET)) {
       console.error('[webhook-om] secret invalide:', { received: secret.slice(0, 8) + '...' });
       return new Response('Non autorisé', { status: 401 });
     }
@@ -168,6 +189,16 @@ serve(async (req) => {
       omPayload = JSON.parse(body);
     } catch {
       return new Response('Body invalide', { status: 400 });
+    }
+
+    // ── Anti-replay OM : rejeter si createdAt > 15 min ──────────────────────
+    const omCreatedAt = omPayload.createdAt as string | undefined;
+    if (omCreatedAt) {
+      const tsMs = new Date(omCreatedAt).getTime();
+      if (isNaN(tsMs) || Date.now() - tsMs > OM_REPLAY_WINDOW_MS || tsMs - Date.now() > 60_000) {
+        console.error('[webhook-om] timestamp expiré (anti-replay):', omCreatedAt);
+        return new Response('Timestamp expiré', { status: 401 });
+      }
     }
 
     // ── Chemin terrain : terrain_r en query param (réservations_terrain) ──────
