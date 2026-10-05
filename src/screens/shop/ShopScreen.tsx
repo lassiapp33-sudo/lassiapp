@@ -437,8 +437,13 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     ? rawCatIds.filter(id => !FITNESS_SUBSCRIPTION_CATS.has(id))
     : rawCatIds;
   const hasAvisTab = !isSlotShop && !isTerrainShop && (catIds.length > 0 || shopType === 'memberships');
-  const membershipAboTab = shopType === 'memberships' && fitnessOffres.length > 0
-    ? [{ id: 'abonnements', label: 'Abonnements' }]
+  const fitnessFormules    = fitnessOffres.filter(o => o.categorieTab !== 'abonnements');
+  const fitnessAbonnements = fitnessOffres.filter(o => o.categorieTab === 'abonnements');
+  const membershipAboTab = shopType === 'memberships'
+    ? [
+        ...(fitnessFormules.length    > 0 ? [{ id: 'formules',    label: 'Formules'    }] : []),
+        ...(fitnessAbonnements.length > 0 ? [{ id: 'abonnements', label: 'Abonnements' }] : []),
+      ]
     : [];
   const platDuJourTab = isRestaurantShop ? [{ id: 'plat_du_jour', label: 'Plat du jour' }] : [];
   const tabs = [
@@ -963,9 +968,9 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
           ) : shopType === 'memberships' ? (
             <View>
               {/* Formules + Abonnements — séparés en deux sections */}
-              {(activeTab === 'all' || activeTab === 'abonnements') && fitnessOffres.length > 0 ? (() => {
-                const formules     = fitnessOffres.filter(o => o.categorieTab !== 'abonnements');
-                const abonnements  = fitnessOffres.filter(o => o.categorieTab === 'abonnements');
+              {(activeTab === 'all' || activeTab === 'formules' || activeTab === 'abonnements') && fitnessOffres.length > 0 ? (() => {
+                const formules    = activeTab === 'abonnements' ? [] : fitnessFormules;
+                const abonnements = activeTab === 'formules'    ? [] : fitnessAbonnements;
                 const renderOffre  = (offre: import('../../services/fitnessAbonnements').FitnessOffre) => (
                   <View key={offre.id} style={styles.aboCard}>
                     <View style={styles.aboInfo}>
