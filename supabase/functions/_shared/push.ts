@@ -42,5 +42,11 @@ export async function sendPushToUser(
 ): Promise<void> {
   const tokens = await getPushTokens(sb, userId);
   if (tokens.length === 0) return;
-  await sendExpoPush(tokens.map(to => ({ ...message, to })));
+  await sendExpoPush(tokens.map(to => ({
+    sound: 'default',
+    priority: 'high' as const,
+    _contentAvailable: false,
+    ...message,
+    to,
+  })));
 }
