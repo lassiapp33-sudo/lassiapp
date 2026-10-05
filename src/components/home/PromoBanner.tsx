@@ -30,7 +30,7 @@ const W = Dimensions.get('window').width;
 const CARD_WIDTH = W - 32 - 28; // W - marges - paddings wrapper
 const CARD_GAP = 12;
 const ITEM_STRIDE = CARD_WIDTH + CARD_GAP;
-const IMG_H = Math.floor(CARD_WIDTH * 0.68); // image plus haute
+const IMG_H = Math.floor(CARD_WIDTH * 0.54); // -20% vs 0.68
 const INTERVAL_MS = 3000;
 
 // ─── Indicateurs de page ─────────────────────────────────────────────────────
