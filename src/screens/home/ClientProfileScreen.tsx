@@ -418,7 +418,7 @@ export default function ClientProfileScreen({
           />
           <ProfileOptionRow
             icon={<IcoFitness />}
-            title="Mes abonnements fitness"
+            title="Mes formules et abonnements fitness"
             subtitle="Salle de sport & musculation"
             onPress={onAbonnements}
           />
