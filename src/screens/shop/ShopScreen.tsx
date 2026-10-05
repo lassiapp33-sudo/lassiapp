@@ -962,33 +962,48 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
             </View>
           ) : shopType === 'memberships' ? (
             <View>
-              {/* Abonnements — visible si onglet Tout ou Abonnements */}
-              {(activeTab === 'all' || activeTab === 'abonnements') && fitnessOffres.length > 0 ? (
-                <View>
-                  <Text style={styles.catTitle}>Abonnements disponibles</Text>
-                  {fitnessOffres.map(offre => (
-                    <View key={offre.id} style={styles.aboCard}>
-                      <View style={styles.aboInfo}>
-                        <Text style={styles.aboNom}>{offre.nom}</Text>
-                        {offre.description ? (
-                          <Text style={styles.aboDesc} numberOfLines={3}>{offre.description}</Text>
-                        ) : null}
-                        <View style={styles.aboMeta}>
-                          <Text style={styles.aboDuree}>⏱ {offre.dureeJours} jours</Text>
-                          <Text style={styles.aboPrix}>{formatPrice(isPreview ? offre.prix : calculerPrixClient(offre.prix))}</Text>
-                        </View>
+              {/* Formules + Abonnements — séparés en deux sections */}
+              {(activeTab === 'all' || activeTab === 'abonnements') && fitnessOffres.length > 0 ? (() => {
+                const formules     = fitnessOffres.filter(o => o.categorieTab !== 'abonnements');
+                const abonnements  = fitnessOffres.filter(o => o.categorieTab === 'abonnements');
+                const renderOffre  = (offre: import('../../services/fitnessAbonnements').FitnessOffre) => (
+                  <View key={offre.id} style={styles.aboCard}>
+                    <View style={styles.aboInfo}>
+                      <Text style={styles.aboNom}>{offre.nom}</Text>
+                      {offre.description ? (
+                        <Text style={styles.aboDesc} numberOfLines={3}>{offre.description}</Text>
+                      ) : null}
+                      <View style={styles.aboMeta}>
+                        <Text style={styles.aboDuree}>⏱ {offre.dureeJours} jours</Text>
+                        <Text style={styles.aboPrix}>{formatPrice(isPreview ? offre.prix : calculerPrixClient(offre.prix))}</Text>
                       </View>
-                      <TouchableOpacity
-                        style={styles.aboBtn}
-                        activeOpacity={0.85}
-                        onPress={() => onFitnessAboPayment?.(offre, displayName, shopId)}
-                      >
-                        <Text style={styles.aboBtnTxt}>S'abonner</Text>
-                      </TouchableOpacity>
                     </View>
-                  ))}
-                </View>
-              ) : null}
+                    <TouchableOpacity
+                      style={styles.aboBtn}
+                      activeOpacity={0.85}
+                      onPress={() => onFitnessAboPayment?.(offre, displayName, shopId)}
+                    >
+                      <Text style={styles.aboBtnTxt}>S'abonner</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+                return (
+                  <View>
+                    {formules.length > 0 && (
+                      <View>
+                        <Text style={styles.catTitle}>Formules</Text>
+                        {formules.map(renderOffre)}
+                      </View>
+                    )}
+                    {abonnements.length > 0 && (
+                      <View>
+                        <Text style={styles.catTitle}>Abonnements</Text>
+                        {abonnements.map(renderOffre)}
+                      </View>
+                    )}
+                  </View>
+                );
+              })() : null}
               {/* Tous les produits non-abonnement — toutes catégories visibles selon onglet */}
               {visibleSections.map(section => {
                 const sectionItems = realProducts.filter(p => p.category === section.id);
