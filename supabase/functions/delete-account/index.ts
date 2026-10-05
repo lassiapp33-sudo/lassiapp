@@ -86,6 +86,12 @@ serve(async (req) => {
         // Supprimer réservations terrain liées à la boutique
         await sb.from('reservations_terrain').delete().eq('shop_id', shopId);
 
+        // Supprimer réservations de table liées au prestataire
+        await sb.from('table_reservations').delete().eq('prestataire_id', userId);
+
+        // Supprimer payment_intents où prestataire_id = userId (fitness, table, visibilité)
+        await sb.from('payment_intents').delete().eq('prestataire_id', userId).neq('statut', 'confirmed');
+
         // Supprimer la boutique (CASCADE couvre produits, orders, order_items,
         // dettes, debt_transactions, conversations, messages)
         const { error: shopErr } = await sb
