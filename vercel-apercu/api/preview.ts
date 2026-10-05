@@ -655,6 +655,11 @@ function page(o: {
   .hab-chip.on { background:var(--y); border-color:var(--y); color:var(--d); }
   #habStock { font-size:13px; color:var(--m); margin:0 0 14px; }
   #habStock.low { color:#F97316; }
+  /* LIGHTBOX */
+  .lbx { position:fixed; inset:0; z-index:999; background:rgba(0,0,0,.92); display:none; align-items:center; justify-content:center; cursor:zoom-out; }
+  .lbx.open { display:flex; }
+  .lbx-img { max-width:96vw; max-height:92vh; object-fit:contain; border-radius:12px; pointer-events:none; display:block; }
+  .lbx-close { position:absolute; top:16px; right:16px; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,.15); border:none; color:#fff; font-size:24px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 </style>
 </head>
 <body>
@@ -756,6 +761,8 @@ function page(o: {
   ${(hasProducts || hasBeauty) ? `<script id="cfg" type="application/json">${cfg}</script>` : ''}
   ${hasProducts ? `<script>${CART_JS}</script>` : ''}
   ${hasBeauty ? `<script>${BOOKING_JS}</script>` : ''}
+  <div class="lbx" id="lbx"><button class="lbx-close" id="lbxClose">\xD7</button><img class="lbx-img" id="lbxImg" src="" alt=""></div>
+  <script>${LIGHTBOX_JS}</script>
 </body>
 </html>`;
 }
@@ -882,6 +889,32 @@ function computeShopStatus(hours: unknown, manuallyClosed: boolean | null | unde
   if (overnight && nowMin >= closeMin && nowMin < openMin) return { ...base, isOpen: false, label: 'Pas encore ouvert', todayOpen: today.open, todayClose: today.close, todayClosed: false };
   return { ...base, isOpen: false, label: 'Fermé', todayOpen: today.open, todayClose: today.close, todayClosed: false };
 }
+
+// ── Lightbox — aperçu image plein écran (clic desktop, appui long mobile) ────
+const LIGHTBOX_JS = `
+(function(){
+  var lbx=document.getElementById('lbx');
+  var lbxImg=document.getElementById('lbxImg');
+  if(!lbx||!lbxImg) return;
+  function openLbx(src,alt){ lbxImg.src=src; lbxImg.alt=alt||''; lbx.classList.add('open'); document.body.style.overflow='hidden'; }
+  function closeLbx(){ lbx.classList.remove('open'); document.body.style.overflow=''; setTimeout(function(){ lbxImg.src=''; },300); }
+  lbx.addEventListener('click',function(e){ if(e.target===lbx||e.target.id==='lbxClose') closeLbx(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeLbx(); });
+  var lpTimer=null, lpActive=false;
+  function bindImg(img){
+    img.style.cursor='zoom-in';
+    img.addEventListener('click',function(){ if(lpActive){lpActive=false;return;} openLbx(img.src,img.alt); });
+    img.addEventListener('touchstart',function(){
+      lpActive=false; clearTimeout(lpTimer);
+      lpTimer=setTimeout(function(){ lpActive=true; openLbx(img.src,img.alt); },450);
+    },{passive:true});
+    img.addEventListener('touchend',function(){ clearTimeout(lpTimer); lpTimer=null; },{passive:true});
+    img.addEventListener('touchmove',function(){ clearTimeout(lpTimer); lpTimer=null; },{passive:true});
+    img.addEventListener('contextmenu',function(e){ e.preventDefault(); });
+  }
+  document.querySelectorAll('.pimg,.ds-img').forEach(bindImg);
+})();
+`;
 
 // ── JS client : panier + checkout (concaténation, aucun backtick) ────────────
 const CART_JS = `
