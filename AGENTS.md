@@ -1,26 +1,33 @@
-# PROTOCOLE FIN DE SESSION — COMMIT UNIQUEMENT, PAS D'OTA
+# PROTOCOLE FIN DE SESSION — OBLIGATOIRE
 
-Après chaque fix, l'agent fait UNIQUEMENT le commit :
+Quand le travail est terminé, l'agent fait **exactement ceci** :
 
+## Étape 1 — Commit (l'agent exécute)
 ```powershell
 git add -A
-git commit -m "fix(scope): description courte"
+git commit -m "fix(scope-reel): description-reelle"
 git log --oneline -1
 ```
 
-## ⛔ OTA INTERDIT AUX AGENTS
+## Étape 2 — Afficher la commande OTA prête (l'agent affiche, N'EXÉCUTE PAS)
 
-**L'agent ne lance JAMAIS l'OTA de lui-même.**
-L'OTA est lancé UNIQUEMENT par l'utilisateur, quand il donne explicitement cette commande :
+L'agent affiche ce bloc en fin de réponse, avec le vrai scope et la vraie description remplis :
 
 ```
+Commande OTA à lancer quand tu es prêt :
+
 1. git add -A
-2. git commit -m "fix(scope): description"
+2. git commit -m "fix(scope-reel): description-reelle"
 3. git log --oneline -1
-4. .\ota-triple-publish.ps1 -Message "fix(scope): description"
+4. .\ota-triple-publish.ps1 -Message "fix(scope-reel): description-reelle"
+
+Depuis C:\Users\USER\Desktop\lassiapp\
 ```
 
-Si l'utilisateur ne donne pas cette commande → l'agent s'arrête après le commit et attend.
+## ⛔ RÈGLE ABSOLUE
+
+L'agent **N'EXÉCUTE JAMAIS** `ota-triple-publish.ps1` ni `eas update`.
+Il prépare la commande avec le bon scope → il attend que l'utilisateur la renvoie → alors seulement il l'exécute.
 
 ---
 
