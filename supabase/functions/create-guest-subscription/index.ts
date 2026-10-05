@@ -140,6 +140,7 @@ Deno.serve(async (req) => {
     const guestId = await ensureGuestUser(admin);
 
     // ── Créer le payment_intent ─────────────────────────────────────────────────
+    const idempotencyKey = `gsub_${offre.id}_${cleanPhone}_${Date.now()}`;
     const { data: pi, error: piErr } = await admin
       .from('payment_intents')
       .insert({
@@ -158,6 +159,7 @@ Deno.serve(async (req) => {
         montant_total:     total,
         moyen_paiement:    moyen,
         statut:            'pending',
+        idempotency_key:   idempotencyKey,
       })
       .select('id')
       .single();
