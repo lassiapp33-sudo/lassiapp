@@ -127,6 +127,14 @@ export function computeStatus(hours: WeekHours | null, manuallyClose: boolean): 
     // Ouvert si on est après l'heure d'ouverture OU avant l'heure de fermeture (matin)
     const isOpen = nowMin >= openMin || nowMin < closeMin;
     if (isOpen) {
+      // Vérifier pause même en mode overnight
+      if (today.pauseStart && today.pauseEnd) {
+        const ps = toMinutes(today.pauseStart);
+        const pe = toMinutes(today.pauseEnd);
+        if (ps < pe && nowMin >= ps && nowMin < pe) {
+          return { isOpen: false, isPause: true, label: 'En pause', nextChange: `Reprend à ${formatHour(today.pauseEnd)}` };
+        }
+      }
       const remaining = nowMin >= openMin ? (1440 - nowMin) + closeMin : closeMin - nowMin;
       const nextChange =
         remaining <= 60 ? `Ferme dans ${remaining}min` : `Ferme à ${formatHour(today.close)}`;

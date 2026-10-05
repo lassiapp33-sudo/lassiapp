@@ -16,12 +16,13 @@ interface Props {
   logoUrl?: string;
   isVip: boolean;
   isOpen: boolean;
+  isPause?: boolean;
   badge?: string | null;
   /** Appui long 3 s sur le logo → aperçu plein écran. */
   onZoomLogo?: () => void;
 }
 
-export default function ShopIdentity({ initial, logoUrl, isVip, isOpen, badge, onZoomLogo }: Props) {
+export default function ShopIdentity({ initial, logoUrl, isVip, isOpen, isPause, badge, onZoomLogo }: Props) {
   return (
     // -42 : la moitié du logo (84px) chevauche la bannière du dessus
     <View style={styles.row}>
@@ -42,13 +43,13 @@ export default function ShopIdentity({ initial, logoUrl, isVip, isOpen, badge, o
           <View
             style={[
               styles.badgeStatus,
-              { backgroundColor: isOpen ? 'rgba(95,211,138,.15)' : 'rgba(224,122,122,.12)' },
+              { backgroundColor: isOpen ? 'rgba(95,211,138,.15)' : isPause ? 'rgba(253,207,52,.12)' : 'rgba(224,122,122,.12)' },
             ]}
           >
             <Text
-              style={[styles.badgeStatusTxt, { color: isOpen ? colors.success : colors.danger }]}
+              style={[styles.badgeStatusTxt, { color: isOpen ? colors.success : isPause ? colors.accent : colors.danger }]}
             >
-              {isOpen ? '● Ouvert' : '● Fermé'}
+              {isOpen ? '● Ouvert' : isPause ? '● En pause' : '● Fermé'}
             </Text>
           </View>
         </View>

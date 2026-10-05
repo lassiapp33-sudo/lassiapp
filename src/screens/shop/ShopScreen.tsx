@@ -532,7 +532,11 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
 
   const addToCart = (p: StoreProduct) => {
     if (!isOpen) {
-      Alert.alert('Boutique fermée', 'Ce prestataire est exceptionnellement fermé. Revenez plus tard.', [{ text: 'OK' }]);
+      if (status.isPause) {
+        Alert.alert('En pause', status.nextChange ? `Cette boutique est en pause.\n${status.nextChange}` : 'Cette boutique est en pause.', [{ text: 'OK' }]);
+      } else {
+        Alert.alert('Boutique fermée', status.nextChange || 'Ce prestataire est fermé. Revenez plus tard.', [{ text: 'OK' }]);
+      }
       return;
     }
     if (p.stock === 'out') return;
@@ -623,6 +627,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
             logoUrl={displayLogoUrl}
             isVip={isVip}
             isOpen={isOpen}
+            isPause={status.isPause}
             badge={badges[0]?.badge ?? null}
             onZoomLogo={displayLogoUrl ? () => setZoomUrl(displayLogoUrl) : undefined}
           />

@@ -64,7 +64,7 @@ function toShopCard(
     isChampion: !!s.merchantId && !!badgeMap[s.merchantId],
     rating: s.rating,
     status: realStatus.isOpen ? 'open' : 'closed',
-    statusLabel: realStatus.isOpen ? 'Ouvert' : 'Fermé',
+    statusLabel: realStatus.label,
     specialty: s.subtitle,
     distance,
   };
