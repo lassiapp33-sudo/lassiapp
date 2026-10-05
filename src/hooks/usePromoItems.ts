@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Image } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import { ProductPromoInfo, Promotion } from '../types/promotions';
@@ -21,7 +21,7 @@ const CACHE_KEY = 'promo_items_cache_v2';
 
 function prefetchImages(items: PromoItem[]): void {
   items.forEach(item => {
-    if (item.photoUrl) Image.prefetch(item.photoUrl).catch(() => {});
+    if (item.photoUrl) ExpoImage.prefetch(item.photoUrl, { cachePolicy: 'disk' }).catch(() => {});
   });
 }
 

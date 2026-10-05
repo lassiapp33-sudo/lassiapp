@@ -4,11 +4,10 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Image,
   StyleSheet,
   Dimensions,
-  ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 
 const IcoProductFallback = () => (
@@ -60,26 +59,6 @@ const dot = StyleSheet.create({
 
 // ─── Image avec placeholder ───────────────────────────────────────────────────
 
-function ImageWithLoader({ uri }: { uri: string }) {
-  const [status, setStatus] = useState<'loading' | 'done' | 'error'>('loading');
-  return (
-    <View style={styles.imgBox}>
-      {status === 'loading' && (
-        <ActivityIndicator color="#FBBF24" style={StyleSheet.absoluteFill} />
-      )}
-      {status === 'error' && (
-        <IcoProductFallback />
-      )}
-      <Image
-        source={{ uri }}
-        style={[styles.img, status !== 'done' && { opacity: 0, position: 'absolute' }]}
-        onLoad={() => setStatus('done')}
-        onError={() => setStatus('error')}
-        fadeDuration={150}
-      />
-    </View>
-  );
-}
 
 // ─── Carte produit ────────────────────────────────────────────────────────────
 
@@ -97,7 +76,14 @@ function PromoCard({
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       {/* Image / emoji du produit */}
       {item.photoUrl ? (
-        <ImageWithLoader uri={item.photoUrl} />
+        <Image
+          source={{ uri: item.photoUrl }}
+          style={styles.img}
+          contentFit="cover"
+          cachePolicy="disk"
+          transition={200}
+          placeholder={{ color: '#0d1228' }}
+        />
       ) : (
         <View style={styles.imgBox}>
           {item.emoji ? (
@@ -349,7 +335,6 @@ const styles = StyleSheet.create({
   img: {
     width: CARD_WIDTH,
     height: IMG_H,
-    resizeMode: 'cover',
   },
   emoji: { fontSize: Math.floor(IMG_H * 0.52) },
 
