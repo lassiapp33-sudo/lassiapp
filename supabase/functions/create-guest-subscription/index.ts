@@ -49,6 +49,49 @@ Deno.serve(async (req) => {
   if (req.method === 'GET') {
     const params = new URL(req.url).searchParams;
 
+    // ── GET ?pdf=<piId> — reçu PDF téléchargeable ────────────────────────────
+    const pdfId = params.get('pdf') ?? '';
+    if (pdfId) {
+      if (!isUUID(pdfId)) return err('pi invalide', 400);
+      const { data: pi } = await admin
+        .from('payment_intents')
+        .select('metadata, montant_total, prestataire_id, moyen_paiement, created_at')
+        .eq('id', pdfId)
+        .maybeSingle();
+      if (!pi) return err('Paiement introuvable', 404);
+      const meta = (pi.metadata as Record<string, unknown>) ?? {};
+      const { data: prest } = await admin
+        .from('profiles')
+        .select('name')
+        .eq('id', String(pi.prestataire_id))
+        .maybeSingle();
+      const dureeJours = Number(meta.duree_jours ?? 0);
+      const dureeLabel = dureeJours >= 365
+        ? `${Math.round(dureeJours / 365)} an${dureeJours >= 730 ? 's' : ''}`
+        : dureeJours >= 28
+          ? `${Math.round(dureeJours / 30)} mois`
+          : `${dureeJours} jour${dureeJours > 1 ? 's' : ''}`;
+      const pdf = buildAboReceiptPDF({
+        prestataire: prest?.name ?? 'Prestataire',
+        ref:         String(pdfId).slice(0, 8).toUpperCase(),
+        date:        fmtDate(pi.created_at as string),
+        client:      String(meta.client_name ?? 'Client'),
+        offre_nom:   String(meta.offre_nom ?? 'Abonnement'),
+        duree_label: dureeLabel,
+        total:       Number(pi.montant_total ?? 0),
+        pay:         pi.moyen_paiement === 'wave' ? 'Wave' : 'Orange Money',
+      });
+      return new Response(pdf, {
+        status: 200,
+        headers: {
+          ...CORS,
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="recu-abonnement-${String(pdfId).slice(0, 8)}.pdf"`,
+          'Cache-Control': 'no-store',
+        },
+      });
+    }
+
     // ── GET ?receipt=<piId> — données du reçu pour la page succès ────────────
     const receiptId = params.get('receipt') ?? '';
     if (receiptId) {
@@ -283,6 +326,79 @@ Deno.serve(async (req) => {
     return err('Une erreur est survenue. Réessaie.', 500);
   }
 });
+
+// ── PDF helpers ──────────────────────────────────────────────────────────────
+function fmtDate(iso: string): string {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function money(n: number): string {
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' F';
+}
+function stripAccents(s: string): string {
+  return (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^\x20-\x7e]/g, ' ').replace(/[()\\]/g, ' ').trim();
+}
+function buildAboReceiptPDF(d: {
+  prestataire: string; ref: string; date: string; client: string;
+  offre_nom: string; duree_label: string; total: number; pay: string;
+}): Uint8Array {
+  const GOLD = '0.992 0.812 0.204';
+  const BLACK = '0 0 0';
+  const LH = 18;
+  type Row = { t: string; f: 'F1' | 'F2'; s: number; c: string };
+  const rows: Row[] = [];
+  const sep = '------------------------------';
+  rows.push({ t: 'LASSI', f: 'F1', s: 24, c: GOLD });
+  rows.push({ t: 'Recu d\'abonnement fitness', f: 'F2', s: 11, c: BLACK });
+  rows.push({ t: sep, f: 'F2', s: 11, c: BLACK });
+  rows.push({ t: 'Etablissement : ' + stripAccents(d.prestataire), f: 'F2', s: 11, c: BLACK });
+  rows.push({ t: 'Date : ' + d.date, f: 'F2', s: 11, c: BLACK });
+  rows.push({ t: 'Ref : #' + d.ref, f: 'F2', s: 11, c: BLACK });
+  rows.push({ t: 'Client : ' + stripAccents(d.client), f: 'F2', s: 11, c: BLACK });
+  rows.push({ t: sep, f: 'F2', s: 11, c: BLACK });
+  rows.push({ t: 'FORMULE', f: 'F1', s: 10, c: BLACK });
+  rows.push({ t: stripAccents(d.offre_nom).slice(0, 38), f: 'F2', s: 11, c: BLACK });
+  rows.push({ t: 'Duree : ' + stripAccents(d.duree_label), f: 'F2', s: 11, c: BLACK });
+  rows.push({ t: sep, f: 'F2', s: 11, c: BLACK });
+  rows.push({ t: 'TOTAL : ' + money(d.total), f: 'F1', s: 14, c: BLACK });
+  rows.push({ t: 'Paiement : ' + stripAccents(d.pay) + ' - Paye', f: 'F2', s: 10, c: BLACK });
+  rows.push({ t: '', f: 'F2', s: 6, c: BLACK });
+  rows.push({ t: 'Merci pour ton abonnement !', f: 'F1', s: 12, c: GOLD });
+  rows.push({ t: 'lassi.tech', f: 'F2', s: 9, c: BLACK });
+
+  const W = 380;
+  const TOP = 46;
+  const H = TOP + rows.length * LH + 30;
+  let y = H - TOP;
+  let content = 'BT\n';
+  let cf = '', cs = 0, cc = '';
+  for (const r of rows) {
+    if (r.f !== cf || r.s !== cs) { content += '/' + r.f + ' ' + r.s + ' Tf\n'; cf = r.f; cs = r.s; }
+    if (r.c !== cc) { content += r.c + ' rg\n'; cc = r.c; }
+    content += '1 0 0 1 40 ' + y.toFixed(0) + ' Tm (' + r.t + ') Tj\n';
+    y -= LH;
+  }
+  content += 'ET';
+
+  const objs: Record<number, string> = {
+    1: '<< /Type /Catalog /Pages 2 0 R >>',
+    2: '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    3: '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>',
+    4: '<< /Length ' + content.length + ' >>\nstream\n' + content + '\nendstream',
+    5: '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>',
+    6: '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  };
+  let pdf = '%PDF-1.4\n';
+  const off: number[] = [];
+  for (let i = 1; i <= 6; i++) { off[i] = pdf.length; pdf += i + ' 0 obj\n' + objs[i] + '\nendobj\n'; }
+  const xref = pdf.length;
+  pdf += 'xref\n0 7\n0000000000 65535 f \n';
+  for (let i = 1; i <= 6; i++) pdf += String(off[i]).padStart(10, '0') + ' 00000 n \n';
+  pdf += 'trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF';
+  return new TextEncoder().encode(pdf);
+}
 
 async function ensureGuestUser(admin: ReturnType<typeof createClient>): Promise<string> {
   const { data: prof } = await admin.from('profiles').select('id').eq('auth_email', GUEST_EMAIL).maybeSingle();
