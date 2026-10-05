@@ -85,7 +85,7 @@ export async function triggerTerrainPayout(
   try {
     const { data: resaRow } = await supabase
       .from('reservations_terrain')
-      .select('terrain_id, date_reservation, heure_debut, heure_fin')
+      .select('terrain_id, date_reservation, heure_debut, heure_fin, client_name')
       .eq('id', params.reservationId)
       .maybeSingle();
 
@@ -102,8 +102,11 @@ export async function triggerTerrainPayout(
     const heureFinStr = resaRow?.heure_fin   ? String(resaRow.heure_fin).slice(0, 5)   : '';
     const creneauStr  = heureStr && heureFinStr ? ` · ${heureStr} → ${heureFinStr}` : '';
 
+    const clientStr = (resaRow?.client_name as string | undefined)?.trim() ?? '';
+    const clientPart = clientStr ? ` — ${clientStr}` : '';
+
     const title = 'Reversement reçu';
-    const body  = `Réservation ${terrainNom}${creneauStr}. ${montantStr} reversés sur votre ${moyenStr}. Les frais Wave/OM sont à votre charge.`;
+    const body  = `Réservation ${terrainNom}${clientPart}${creneauStr}. ${montantStr} reversés sur votre ${moyenStr}. Les frais Wave/OM sont à votre charge.`;
 
     await sendPushToUser(supabase, params.prestataireId, {
       title,

@@ -65,6 +65,8 @@ export interface ReservationTerrain {
   receipt_valid_until: string;
   receipt_status: 'pending' | 'valide' | 'utilise' | 'expire';
   statut: 'en_attente' | 'paye' | 'utilise' | 'expire' | 'annule';
+  client_name?: string | null;
+  client_phone?: string | null;
   // Jointure optionnelle depuis les requêtes avec select('*, terrains(...)')
   terrains?: Pick<Terrain, 'nom' | 'sport_type' | 'prix_horaire'>;
 }

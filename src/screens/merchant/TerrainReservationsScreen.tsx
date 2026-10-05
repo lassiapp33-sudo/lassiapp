@@ -110,6 +110,9 @@ function ReservationCard({
           <Text style={styles.cardCreneau}>
             {reservation.heure_debut} → {reservation.heure_fin}
           </Text>
+          {reservation.client_name ? (
+            <Text style={styles.cardCode}>{reservation.client_name}</Text>
+          ) : null}
           <Text style={styles.cardCode}>Code : {reservation.receipt_code}</Text>
         </View>
         <View style={styles.cardRight}>

@@ -128,6 +128,14 @@ export default async function handler(
     });
   }
 
+  // Page réservation terrain invité web.
+  if (slug === 'terrain') {
+    return new Response(renderTerrainPage(url), {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
+  }
+
   // GARDE-FOU PERMANENT : si l'URL contient ?id=<uuid>&s=ok|ko, c'est une page de
   // confirmation de paiement — on NE redirige JAMAIS vers lassi.tech dans ce cas,
   // même si vercel.json n'injecte pas ?slug=commande (protection contre toute régression config).
@@ -1686,14 +1694,20 @@ const CONFIRM_JS = `
   var KO_SVG='<svg viewBox="0 0 72 72"><circle cx="36" cy="36" r="33" fill="none" stroke="#FF6B6B" stroke-width="4"/><path d="M26 26l20 20M46 26l-20 20" stroke="#FF6B6B" stroke-width="6" stroke-linecap="round"/></svg>';
   var isBeauty = CFG.type==='beauty';
   var isAbo = CFG.type==='abonnement';
+  var isTerrain = CFG.type==='terrain';
   var statusUrl = isBeauty
     ? CFG.url+'/functions/v1/create-guest-reservation?status='+encodeURIComponent(CFG.id)
     : isAbo
       ? CFG.url+'/functions/v1/create-guest-subscription?pi='+encodeURIComponent(CFG.id)
-      : CFG.url+'/functions/v1/create-guest-order?order='+encodeURIComponent(CFG.id);
+      : isTerrain
+        ? CFG.url+'/functions/v1/create-guest-terrain-reservation?resa='+encodeURIComponent(CFG.id)
+        : CFG.url+'/functions/v1/create-guest-order?order='+encodeURIComponent(CFG.id);
   function ok(){
     mark.innerHTML=OK_SVG;
-    if(isBeauty){
+    if(isTerrain){
+      t.textContent='R\xe9servation confirm\xe9e';
+      d.innerHTML='Pay\xe9 ! <span class="gold">Ton cr\xe9neau est r\xe9serv\xe9.</span> Pr\xe9sente-toi sur le terrain \xe0 l\\'heure choisie et montre le code \xe0 l\\'accueil.';
+    } else if(isBeauty){
       t.textContent='R\xe9servation confirm\xe9e';
       d.innerHTML='Pay\xe9 ! <span class="gold">Le prestataire a re\xe7u ta r\xe9servation</span> et te confirmera le rendez-vous. Pr\xe9sente-toi \xe0 l\\'heure choisie.';
     } else if(isAbo){
@@ -1707,13 +1721,13 @@ const CONFIRM_JS = `
     }
     home.style.display='inline-block';
   }
-  function fail(){ mark.innerHTML=KO_SVG; t.textContent='Paiement non abouti'; d.textContent=isAbo?'Ton abonnement n\\'a pas \xe9t\xe9 pay\xe9. Tu peux r\xe9essayer depuis la boutique.':isBeauty?'Ta r\xe9servation n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer depuis la boutique.':'Ta commande n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer depuis la boutique.'; home.style.display='inline-block'; }
+  function fail(){ mark.innerHTML=KO_SVG; t.textContent='Paiement non abouti'; d.textContent=isTerrain?'Ta r\xe9servation n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer.':isAbo?'Ton abonnement n\\'a pas \xe9t\xe9 pay\xe9. Tu peux r\xe9essayer depuis la boutique.':isBeauty?'Ta r\xe9servation n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer depuis la boutique.':'Ta commande n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer depuis la boutique.'; home.style.display='inline-block'; }
   if(CFG.s==='ko'){ fail(); return; }
   if(CFG.s==='ok' || !CFG.id){ ok(); return; }
   var tries=0, dbFails=0;
   var iv=setInterval(function(){
     tries++;
-    var url = (!isBeauty && !isAbo && dbFails>=5)
+    var url = (!isBeauty && !isAbo && !isTerrain && dbFails>=5)
       ? CFG.url+'/functions/v1/create-guest-order?verify_order='+encodeURIComponent(CFG.id)
       : (isAbo && dbFails>=5)
         ? CFG.url+'/functions/v1/create-guest-subscription?pi='+encodeURIComponent(CFG.id)+'&verify=1'
@@ -1725,5 +1739,352 @@ const CONFIRM_JS = `
       }).catch(function(){ dbFails++; });
     if(tries>20){ clearInterval(iv); ok(); }
   }, 2000);
+})();
+`;
+
+// ── Page réservation terrain invité web ───────────────────────────────────────
+function renderTerrainPage(url: URL): string {
+  const terrainId = (url.searchParams.get('id') ?? '').trim();
+  const cfg = JSON.stringify({ url: SUPABASE_URL, key: SUPABASE_ANON_KEY, terrainId });
+  return `<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Réserver un terrain — LASSİ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  [hidden]{display:none !important}
+  :root{--y:${BRAND_GOLD};--d:#14152A;--w:#fff;--g:#f5f4f0;--m:#8a8880;--b:#e8e5de}
+  body{background:var(--w);color:var(--d);font-family:'DM Sans',system-ui,sans-serif;font-size:15px;padding-bottom:40px}
+  .hdr{background:var(--d);color:#fff;padding:28px 24px 24px;min-height:140px;display:flex;flex-direction:column;justify-content:flex-end}
+  .hdr-sport{font-size:32px;margin-bottom:8px}
+  .hdr-nom{font-family:'Cormorant Garamond',Georgia,serif;font-size:clamp(26px,5vw,40px);font-weight:300;line-height:1.1;color:#fff}
+  .hdr-addr{font-size:13px;color:rgba(255,255,255,.6);margin-top:6px}
+  .hdr-prix{margin-top:12px;font-size:14px;color:var(--y);font-weight:600}
+  .wrap{max-width:600px;margin:0 auto;padding:28px 20px}
+  .sec-label{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--m);margin-bottom:12px}
+  .dates{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:28px}
+  .dates::-webkit-scrollbar{display:none}
+  .dchip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:1px;background:var(--g);border:1.5px solid var(--b);border-radius:12px;padding:8px 11px;cursor:pointer;font-family:inherit}
+  .dchip b{font-size:11px;font-weight:600;color:var(--m)}
+  .dchip i{font-style:normal;font-size:18px;font-weight:700;color:var(--d)}
+  .dchip small{font-size:10px;color:var(--m)}
+  .dchip.on{background:var(--y);border-color:var(--y)}
+  .dchip.on b,.dchip.on i,.dchip.on small{color:var(--d)}
+  .durs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}
+  .dur{flex:0 0 auto;padding:9px 20px;border-radius:999px;border:1.5px solid var(--b);background:transparent;color:var(--d);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
+  .dur.on{background:var(--d);border-color:var(--d);color:#fff}
+  .slots{display:flex;flex-wrap:wrap;gap:8px;min-height:24px;margin-bottom:28px}
+  .slot{background:var(--g);border:1.5px solid var(--b);border-radius:9px;padding:10px 16px;color:var(--d);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+  .slot.on{background:var(--y);border-color:var(--y)}
+  .hint{font-size:13px;color:var(--m);padding:8px 0}
+  .divider{height:1px;background:var(--b);margin:4px 0 28px}
+  .fld{margin-bottom:14px}
+  .fld label{display:block;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--m);margin-bottom:6px}
+  .fld input{width:100%;background:var(--g);border:1.5px solid var(--b);border-radius:11px;padding:13px;color:var(--d);font-size:15px;font-family:inherit}
+  .pays{display:flex;gap:10px;margin-bottom:16px}
+  .pay{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:12px;border:1.5px solid var(--b);background:var(--g);color:var(--d);font-weight:600;font-size:14px;font-family:inherit;cursor:pointer}
+  .pay img{width:26px;height:26px;flex:0 0 auto;border-radius:7px;object-fit:cover}
+  .pay.sel{border-color:var(--d);background:var(--w)}
+  .recap{background:var(--g);border:1.5px solid var(--b);border-radius:14px;padding:14px 16px;margin-bottom:16px}
+  .recap-row{display:flex;justify-content:space-between;font-size:14px;padding:4px 0}
+  .recap-tot{font-weight:700;border-top:1px solid var(--b);margin-top:6px;padding-top:8px}
+  .payer{width:100%;background:var(--d);color:#fff;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit}
+  .payer[disabled]{opacity:.5}
+  .msg{color:#dc2626;font-size:13px;margin:10px 0 0;min-height:16px;text-align:center}
+  .sheet{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center}
+  .sheet.open{display:flex}
+  .panel{width:100%;max-width:560px;background:var(--w);border-radius:22px 22px 0 0;padding:24px 22px calc(24px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto;position:relative}
+  .panel h2{font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-weight:400;margin-bottom:4px}
+  .panel .sub{color:var(--m);font-size:13px;margin-bottom:18px}
+  .close{position:absolute;top:16px;right:18px;background:var(--g);border:none;color:var(--d);font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .waiting{text-align:center;padding:10px 0}
+  .spin{width:34px;height:34px;border:2.5px solid var(--b);border-top-color:var(--d);border-radius:50%;margin:16px auto;animation:sp 1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .payopen{display:inline-block;margin:12px auto 8px;background:var(--y);color:var(--d);padding:14px 28px;border-radius:14px;font-weight:800;text-decoration:none;font-size:15px}
+  #t-loader{display:flex;align-items:center;justify-content:center;min-height:200px}
+  #t-content{display:none}
+  #t-notfound{display:none;padding:40px 20px;text-align:center;color:var(--m)}
+</style>
+</head>
+<body>
+  <div id="t-loader"><div class="spin" style="width:44px;height:44px;border-width:3px"></div></div>
+  <div id="t-notfound"><h2>Terrain introuvable</h2><p style="margin-top:10px">Ce terrain n'est plus disponible.</p></div>
+  <div id="t-content">
+    <div class="hdr">
+      <div class="hdr-sport" id="t-sport"></div>
+      <div class="hdr-nom" id="t-nom">Chargement…</div>
+      <div class="hdr-addr" id="t-addr"></div>
+      <div class="hdr-prix" id="t-prix"></div>
+    </div>
+    <div class="wrap">
+      <div class="sec-label">Choisis une date</div>
+      <div class="dates" id="t-dates"></div>
+      <div class="sec-label">Durée</div>
+      <div class="durs" id="t-durs"></div>
+      <div class="sec-label">Créneaux disponibles</div>
+      <div class="slots" id="t-slots"><span class="hint">Choisis une date et une durée</span></div>
+      <div class="divider"></div>
+    </div>
+  </div>
+  <div class="sheet" id="t-sheet">
+    <div class="panel">
+      <button class="close" id="t-close" type="button">×</button>
+      <div id="ts-form">
+        <h2 id="t-stitle">Réserver</h2>
+        <p class="sub" id="t-ssub">Paiement sécurisé Wave / Orange Money</p>
+        <div class="recap" id="t-recap"></div>
+        <div class="fld"><label>Ton nom complet *</label><input id="t-name" type="text" placeholder="Ex : Awa Diop" maxlength="80" autocomplete="name"></div>
+        <div class="fld"><label>Téléphone *</label><input id="t-phone" type="text" inputmode="numeric" placeholder="77 123 45 67" maxlength="14" autocomplete="off"></div>
+        <div class="fld"><label>Moyen de paiement *</label>
+          <div class="pays">
+            <button class="pay sel" type="button" data-tm="wave"><img src="/assets/wave.jpg" alt="Wave"><span>Wave</span></button>
+            <button class="pay" type="button" data-tm="orange_money"><img src="/assets/om.png" alt="Orange Money"><span>Orange Money</span></button>
+          </div>
+        </div>
+        <p class="msg" id="t-msg"></p>
+        <button class="payer" id="t-pay" type="button" disabled>Payer</button>
+      </div>
+      <div id="ts-wait" style="display:none" class="waiting">
+        <h2 id="t-wtitle">Paiement en cours</h2>
+        <p class="sub" id="t-wsub">Valide le paiement, puis reviens ici.</p>
+        <a class="payopen" id="t-wopen" style="display:none" href="#">Payer</a>
+        <img id="t-wqr" alt="QR paiement" hidden style="width:210px;height:210px;border-radius:14px;background:var(--g);padding:8px;margin:12px auto;display:block">
+        <div class="spin"></div>
+        <button class="pay" id="t-wcheck" type="button" style="margin-top:8px;width:auto;padding:10px 20px">J'ai payé — vérifier</button>
+      </div>
+    </div>
+  </div>
+  <script id="cfg" type="application/json">${cfg}</script>
+  <script>${TERRAIN_JS}</script>
+</body></html>`;
+}
+
+// ── JS client terrain ─────────────────────────────────────────────────────────
+const TERRAIN_JS = `
+(function(){
+  var CFG = JSON.parse(document.getElementById('cfg').textContent);
+  var EF  = CFG.url + '/functions/v1/create-guest-terrain-reservation';
+  var KEY = CFG.key;
+  var tid = CFG.terrainId;
+  var H   = { 'apikey': KEY, 'Authorization': 'Bearer '+KEY };
+  var SPORT_EMOJI = { football:'\\u26BD', basketball:'\\uD83C\\uDFC0', tennis:'\\uD83C\\uDFBE', volleyball:'\\uD83C\\uDFD0', autre:'\\uD83C\\uDFDF' };
+  var DAYS  = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  var MONTHS= ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+  var DURS  = [{l:'1h',v:60},{l:'1h30',v:90},{l:'2h',v:120},{l:'2h30',v:150},{l:'3h',v:180}];
+
+  var state = { date:null, dur:60, slot:null, moyen:'wave', prixBase:0, prixTotal:0, paying:false };
+  var resaId = null;
+
+  function pad(n){ return (n<10?'0':'')+n; }
+  function dstr(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function fmt(n){ return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ')+' F'; }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function showLoader(on){ document.getElementById('t-loader').style.display=on?'flex':'none'; }
+  function showContent(on){ document.getElementById('t-content').style.display=on?'block':'none'; }
+  function showNotFound(){ document.getElementById('t-loader').style.display='none'; document.getElementById('t-notfound').style.display='block'; }
+
+  // Charger terrain
+  if(!tid){ showNotFound(); return; }
+
+  fetch(EF+'?terrain_id='+encodeURIComponent(tid),{headers:H})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.success||!d.terrain){ showNotFound(); return; }
+      var t=d.terrain;
+      state.prixBase=Math.round(Number(t.prix_horaire)||0);
+      document.getElementById('t-sport').textContent=SPORT_EMOJI[t.sport_type]||'\\uD83C\\uDFDF';
+      document.getElementById('t-nom').textContent=t.nom||'Terrain';
+      if(t.adresse) document.getElementById('t-addr').textContent='\\uD83D\\uDCCD '+t.adresse;
+      document.getElementById('t-prix').textContent=fmt(state.prixBase)+' / heure';
+      buildDates();
+      buildDurs();
+      showLoader(false);
+      showContent(true);
+    })
+    .catch(function(){ showNotFound(); });
+
+  function buildDates(){
+    var wrap=document.getElementById('t-dates'); wrap.innerHTML='';
+    var now=new Date();
+    for(var i=0;i<14;i++){
+      var day=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i);
+      var b=document.createElement('button'); b.type='button'; b.className='dchip';
+      b.setAttribute('data-d',dstr(day));
+      b.innerHTML='<b>'+DAYS[day.getDay()]+'</b><i>'+day.getDate()+'</i><small>'+MONTHS[day.getMonth()]+'</small>';
+      b.addEventListener('click',function(){ selectDate(this); });
+      wrap.appendChild(b);
+    }
+  }
+
+  function buildDurs(){
+    var wrap=document.getElementById('t-durs'); wrap.innerHTML='';
+    DURS.forEach(function(item){
+      var b=document.createElement('button'); b.type='button'; b.className='dur'+(item.v===state.dur?' on':'');
+      b.textContent=item.l; b.setAttribute('data-v',item.v);
+      b.addEventListener('click',function(){
+        state.dur=parseInt(this.getAttribute('data-v'),10);
+        document.querySelectorAll('.dur').forEach(function(x){x.classList.remove('on');});
+        this.classList.add('on');
+        updatePrix();
+        if(state.date) loadSlots();
+      });
+      wrap.appendChild(b);
+    });
+  }
+
+  function updatePrix(){
+    state.prixTotal = state.prixBase * (state.dur/60);
+    state.prixTotal = Math.round(state.prixTotal) + Math.ceil(Math.round(state.prixTotal)*0.01);
+  }
+
+  function selectDate(btn){
+    state.date=btn.getAttribute('data-d'); state.slot=null;
+    document.querySelectorAll('.dchip').forEach(function(x){x.classList.remove('on');});
+    btn.classList.add('on');
+    loadSlots();
+  }
+
+  function loadSlots(){
+    if(!state.date) return;
+    var box=document.getElementById('t-slots');
+    box.innerHTML='<span class="hint">Chargement\\u2026</span>';
+    updatePrix();
+    fetch(EF+'?terrain_id='+encodeURIComponent(tid)+'&date='+encodeURIComponent(state.date)+'&dur='+state.dur,{headers:H})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(!d.success){ box.innerHTML='<span class="hint">Erreur chargement</span>'; return; }
+        if(d.closed){ box.innerHTML='<span class="hint">Fermé ce jour-là</span>'; return; }
+        var slots=d.slots||[];
+        if(!slots.length){ box.innerHTML='<span class="hint">Aucun créneau disponible</span>'; return; }
+        box.innerHTML='';
+        slots.forEach(function(s){
+          var b=document.createElement('button'); b.type='button'; b.className='slot';
+          b.textContent=s.debut+' - '+s.fin;
+          b.setAttribute('data-deb',s.debut); b.setAttribute('data-fin',s.fin);
+          b.addEventListener('click',function(){
+            state.slot={debut:this.getAttribute('data-deb'),fin:this.getAttribute('data-fin')};
+            document.querySelectorAll('.slot').forEach(function(x){x.classList.remove('on');});
+            this.classList.add('on');
+            openSheet();
+          });
+          box.appendChild(b);
+        });
+      })
+      .catch(function(){ box.innerHTML='<span class="hint">Erreur chargement</span>'; });
+  }
+
+  function openSheet(){
+    updatePrix();
+    var nom=document.getElementById('t-nom').textContent||'Terrain';
+    var d=new Date(state.date+'T12:00:00');
+    var dateLabel=DAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()];
+    document.getElementById('t-stitle').textContent='Réserver';
+    document.getElementById('t-ssub').textContent=nom+' · '+dateLabel;
+    var durLabel='';
+    DURS.forEach(function(item){if(item.v===state.dur) durLabel=item.l;});
+    document.getElementById('t-recap').innerHTML=
+      '<div class="recap-row"><span>Créneau</span><span>'+esc(state.slot.debut)+' - '+esc(state.slot.fin)+'</span></div>'+
+      '<div class="recap-row"><span>Durée</span><span>'+esc(durLabel)+'</span></div>'+
+      '<div class="recap-row recap-tot"><span>Total</span><span>'+fmt(state.prixTotal)+'</span></div>';
+    document.getElementById('ts-form').style.display='';
+    document.getElementById('ts-wait').style.display='none';
+    document.getElementById('t-msg').textContent='';
+    document.getElementById('t-pay').disabled=false;
+    document.getElementById('t-sheet').classList.add('open');
+  }
+
+  document.getElementById('t-close').addEventListener('click',function(){
+    document.getElementById('t-sheet').classList.remove('open');
+  });
+
+  // Moyen paiement
+  state.moyen='wave';
+  document.querySelectorAll('[data-tm]').forEach(function(b){
+    b.addEventListener('click',function(){
+      state.moyen=this.getAttribute('data-tm');
+      document.querySelectorAll('[data-tm]').forEach(function(x){x.classList.remove('sel');});
+      this.classList.add('sel');
+    });
+  });
+
+  // Payer
+  document.getElementById('t-pay').addEventListener('click',function(){
+    if(state.paying) return;
+    var name=document.getElementById('t-name').value.trim();
+    var phone=document.getElementById('t-phone').value.replace(/[^0-9]/g,'').replace(/^221/,'');
+    var msg=document.getElementById('t-msg');
+    if(!name){ msg.textContent='Entre ton nom complet.'; return; }
+    if(!/^7[05678][0-9]{7}$/.test(phone)){ msg.textContent='Numéro invalide (ex: 77 123 45 67).'; return; }
+    if(!state.slot||!state.date){ msg.textContent='Créneau non sélectionné.'; return; }
+    msg.textContent='';
+    state.paying=true;
+    document.getElementById('t-pay').disabled=true;
+    fetch(EF,{
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'},H),
+      body:JSON.stringify({
+        terrainId:tid, date:state.date,
+        heureDebut:state.slot.debut, dureeMinutes:state.dur,
+        name:name, phone:phone,
+        moyenPaiement:state.moyen,
+        idem:'tw_'+Date.now()+'_'+Math.random().toString(36).slice(2,8)
+      })
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+      state.paying=false;
+      if(!d.success){ msg.textContent=d.error||'Erreur. Réessaie.'; document.getElementById('t-pay').disabled=false; return; }
+      resaId=d.resaId;
+      document.getElementById('ts-form').style.display='none';
+      document.getElementById('ts-wait').style.display='block';
+      if(d.redirectUrl){
+        if(state.moyen==='wave'){
+          window.location.href=d.redirectUrl;
+        } else {
+          document.getElementById('t-wopen').href=d.redirectUrl;
+          document.getElementById('t-wopen').style.display='inline-block';
+        }
+      }
+      if(d.qrCode){
+        var qrEl=document.getElementById('t-wqr');
+        qrEl.src='data:image/png;base64,'+d.qrCode;
+        qrEl.hidden=false;
+      }
+      startPoll();
+    })
+    .catch(function(){
+      state.paying=false;
+      document.getElementById('t-pay').disabled=false;
+      document.getElementById('t-msg').textContent='Erreur réseau. Réessaie.';
+    });
+  });
+
+  function startPoll(){
+    if(!resaId) return;
+    var tries=0;
+    var iv=setInterval(function(){
+      tries++;
+      fetch(EF+'?resa='+encodeURIComponent(resaId),{headers:H})
+        .then(function(r){return r.json();})
+        .then(function(x){
+          if(x&&x.paid){ clearInterval(iv); window.location.href=window.location.origin+'/commande?id='+encodeURIComponent(resaId)+'&type=terrain&s=ok'; }
+        }).catch(function(){});
+      if(tries>30) clearInterval(iv);
+    },3000);
+  }
+
+  document.getElementById('t-wcheck').addEventListener('click',function(){
+    if(!resaId) return;
+    fetch(EF+'?resa='+encodeURIComponent(resaId),{headers:H})
+      .then(function(r){return r.json();})
+      .then(function(x){
+        if(x&&x.paid){ window.location.href=window.location.origin+'/commande?id='+encodeURIComponent(resaId)+'&type=terrain&s=ok'; }
+        else { document.getElementById('t-wsub').textContent='Paiement pas encore confirmé. Réessaie dans quelques secondes.'; }
+      }).catch(function(){});
+  });
 })();
 `;

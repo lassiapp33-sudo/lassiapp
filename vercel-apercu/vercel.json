@@ -1,6 +1,7 @@
 {
   "rewrites": [
     { "source": "/commande", "destination": "/api/preview?slug=commande" },
+    { "source": "/terrain", "destination": "/api/preview?slug=terrain" },
     { "source": "/:slug", "destination": "/api/preview" }
   ]
 }
