@@ -198,7 +198,7 @@ async function fetchServices(merchantId: string | null): Promise<ServiceItem[]> 
   const [beauty, fitness] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/beauty_services?prestataire_id=eq.${mid}&actif=eq.true&order=created_at.asc&limit=48&select=id,nom,description,prix,duree_minutes,categorie,image_url`, { headers: H })
       .then(r => r.ok ? r.json() : []).catch(() => []),
-    fetch(`${SUPABASE_URL}/rest/v1/fitness_abonnement_offres?prestataire_id=eq.${mid}&actif=eq.true&order=prix.asc&limit=48&select=id,nom,description,prix,duree_jours`, { headers: H })
+    fetch(`${SUPABASE_URL}/rest/v1/fitness_abonnement_offres?prestataire_id=eq.${mid}&actif=eq.true&order=prix.asc&limit=48&select=id,nom,description,prix,duree_jours,categorie_tab`, { headers: H })
       .then(r => r.ok ? r.json() : []).catch(() => []),
   ]) as [Array<Record<string, unknown>>, Array<Record<string, unknown>>];
 
@@ -219,9 +219,11 @@ async function fetchServices(merchantId: string | null): Promise<ServiceItem[]> 
     const nom = String(r.nom ?? '').trim();
     if (!nom || !(price > 0)) continue;
     const dj = Number(r.duree_jours);
+    const catTab = String(r.categorie_tab ?? '').toLowerCase();
+    const category = catTab === 'abonnements' ? 'Abonnements' : 'Formules';
     out.push({
       id: String(r.id), name: nom, description: (r.description as string) ?? null, price,
-      category: 'Abonnements', meta: dj > 0 ? `${Math.round(dj)} jours` : 'Abonnement', kind: 'fitness',
+      category, meta: dj > 0 ? `${Math.round(dj)} jours` : category === 'Abonnements' ? 'Abonnement' : 'Formule', kind: 'fitness',
     });
   }
   return out;

@@ -14,8 +14,6 @@ import {
 } from 'react-native';
 import { colors, fonts, radius } from '../../theme';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
-import { formatPrice } from '../../utils/format';
-import { calculerPrixClient } from '../../config/payment';
 
 interface Props {
   visible: boolean;
@@ -68,7 +66,6 @@ export default function AddAbonnementOffreSheet({ visible, offre, mode, onSave, 
   }, [visible, offre]);
 
   const prix = parseInt(prixStr, 10) || 0;
-  const prixClient = prix > 0 ? calculerPrixClient(prix) : 0;
 
   const dureeFinale = customMode ? (parseInt(dureeCustom, 10) || 0) : dureeJours;
 
@@ -160,11 +157,6 @@ export default function AddAbonnementOffreSheet({ visible, offre, mode, onSave, 
                 keyboardType="number-pad"
                 returnKeyType="done"
               />
-              {prixClient > 0 && (
-                <Text style={styles.hint}>
-                  Prix affiché au client : {formatPrice(prixClient)} (+ 1% LASSI)
-                </Text>
-              )}
 
               {/* Durée — sélecteur */}
               <Text style={[styles.label, { marginTop: 18 }]}>Durée de l'abonnement *</Text>

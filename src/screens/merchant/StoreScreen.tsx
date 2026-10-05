@@ -1049,37 +1049,69 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                   </Animated.View>
                 </View>
 
-                {/* Liste des offres */}
+                {/* Section Formules */}
                 <View style={styles.fitnessSection}>
-                  {offres.length > 0 && (
-                    <View style={styles.fitnessSectionHeader}>
-                      <Text style={styles.fitnessSectionTitle}>Formules & Abonnements</Text>
-                      <Text style={styles.fitnessSectionCount}>
-                        {offres.length} offre{offres.length !== 1 ? 's' : ''}
-                      </Text>
-                    </View>
-                  )}
                   {offresLoading ? (
                     <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
-                  ) : (
-                    offres.map(offre => (
-                      <AbonnementOffreRow
-                        key={offre.id}
-                        offre={offre}
-                        onEdit={() => { setFitnessMode('formule'); setEditOffre(offre); setShowOffreSheet(true); }}
-                        onToggleActif={() => handleToggleOffreActif(offre)}
-                      />
-                    ))
-                  )}
-                  {onAbonnes && (
-                    <TouchableOpacity
-                      style={[styles.addProd, { marginTop: 8, backgroundColor: 'rgba(253,207,52,.08)', borderColor: 'rgba(253,207,52,.3)' }]}
-                      onPress={onAbonnes}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={[styles.addProdTxt, { color: colors.accent }]}>Voir mes abonnés →</Text>
-                    </TouchableOpacity>
-                  )}
+                  ) : (() => {
+                    const formules = offres.filter(o => o.categorieTab !== 'abonnements');
+                    return (
+                      <>
+                        {formules.length > 0 && (
+                          <View style={styles.fitnessSectionHeader}>
+                            <Text style={styles.fitnessSectionTitle}>Formules</Text>
+                            <Text style={styles.fitnessSectionCount}>
+                              {formules.length} offre{formules.length !== 1 ? 's' : ''}
+                            </Text>
+                          </View>
+                        )}
+                        {formules.map(offre => (
+                          <AbonnementOffreRow
+                            key={offre.id}
+                            offre={offre}
+                            onEdit={() => { setFitnessMode('formule'); setEditOffre(offre); setShowOffreSheet(true); }}
+                            onToggleActif={() => handleToggleOffreActif(offre)}
+                          />
+                        ))}
+                      </>
+                    );
+                  })()}
+                </View>
+
+                {/* Section Abonnements */}
+                <View style={styles.fitnessSection}>
+                  {!offresLoading && (() => {
+                    const abonnements = offres.filter(o => o.categorieTab === 'abonnements');
+                    return (
+                      <>
+                        {abonnements.length > 0 && (
+                          <View style={styles.fitnessSectionHeader}>
+                            <Text style={styles.fitnessSectionTitle}>Abonnements</Text>
+                            <Text style={styles.fitnessSectionCount}>
+                              {abonnements.length} offre{abonnements.length !== 1 ? 's' : ''}
+                            </Text>
+                          </View>
+                        )}
+                        {abonnements.map(offre => (
+                          <AbonnementOffreRow
+                            key={offre.id}
+                            offre={offre}
+                            onEdit={() => { setFitnessMode('abonnement'); setEditOffre(offre); setShowOffreSheet(true); }}
+                            onToggleActif={() => handleToggleOffreActif(offre)}
+                          />
+                        ))}
+                        {onAbonnes && (
+                          <TouchableOpacity
+                            style={[styles.addProd, { marginTop: 8, backgroundColor: 'rgba(253,207,52,.08)', borderColor: 'rgba(253,207,52,.3)' }]}
+                            onPress={onAbonnes}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={[styles.addProdTxt, { color: colors.accent }]}>Voir mes abonnés →</Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    );
+                  })()}
                 </View>
 
                 {/* Produits (shop_items) */}

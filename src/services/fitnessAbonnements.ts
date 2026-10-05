@@ -11,6 +11,7 @@ export interface FitnessOffre {
   dureeJours: number;
   actif: boolean;
   createdAt: string;
+  categorieTab?: string;
 }
 
 export interface FitnessAbonnement {
@@ -44,6 +45,7 @@ function rowToOffre(r: Record<string, unknown>): FitnessOffre {
     dureeJours:    r.duree_jours as number,
     actif:         r.actif as boolean,
     createdAt:     r.created_at as string,
+    categorieTab:  (r.categorie_tab as string | null) ?? undefined,
   };
 }
 
