@@ -373,6 +373,8 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
         onFavorites={() => requireAuth(() => setHistory([{ id: 'main' }, { id: 'favorites' }]))}
         onMessages={() => requireAuth(() => setHistory([{ id: 'main' }, { id: 'messages' }]))}
         onProfile={() => requireAuth(() => setHistory([{ id: 'main' }, { id: 'profile' }]))}
+        onOrders={() => requireAuth(() => push({ id: 'orders' }))}
+        onHome={() => setHistory([{ id: 'main' }])}
         onVoice={() => setHistory([{ id: 'main' }, { id: 'voice' }])}
         vip5EtoilesShopIds={vipShopIds}
       />
@@ -824,6 +826,8 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
         onFavorites={() => requireAuth(() => setHistory([{ id: 'main' }, { id: 'favorites' }]))}
         onMessages={() => requireAuth(() => setHistory([{ id: 'main' }, { id: 'messages' }]))}
         onProfile={() => requireAuth(() => setHistory([{ id: 'main' }, { id: 'profile' }]))}
+        onOrders={() => requireAuth(() => push({ id: 'orders' }))}
+        onHome={() => setHistory([{ id: 'main' }])}
         onVoice={() => setHistory([{ id: 'main' }, { id: 'voice' }])}
         onMapPress={filter => {
           setMapFilter(filter);

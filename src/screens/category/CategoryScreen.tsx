@@ -129,6 +129,8 @@ interface Props {
   onFavorites?: () => void;
   onMessages?: () => void;
   onProfile?: () => void;
+  onOrders?: () => void;
+  onHome?: () => void;
   onVoice?: () => void;
   onMapPress?: (filter: string) => void;
   vip5EtoilesShopIds?: Set<string>;
@@ -145,6 +147,8 @@ export default function CategoryScreen({
   onFavorites,
   onMessages,
   onProfile,
+  onOrders,
+  onHome,
   onVoice,
   onMapPress,
   vip5EtoilesShopIds,
@@ -229,6 +233,8 @@ export default function CategoryScreen({
   );
 
   const handleNavPress = (t: NavTab) => {
+    if (t === 'home') { onHome?.(); return; }
+    if (t === 'orders') { onOrders?.(); return; }
     // En mode invité, les onglets protégés déclenchent l'alerte sans changer l'onglet actif
     if (!userId && (t === 'favorites' || t === 'messages' || t === 'profile')) {
       if (t === 'favorites') onFavorites?.();
