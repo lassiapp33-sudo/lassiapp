@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import { ProductPromoInfo, Promotion } from '../types/promotions';
@@ -16,7 +17,26 @@ export interface PromoItem {
   promoInfo?: ProductPromoInfo;
 }
 
-const CACHE_KEY = 'promo_items_cache_v1';
+const CACHE_KEY = 'promo_items_cache_v2'; // v2 : URLs optimisées
+
+// Redirige les images Supabase Storage vers l'endpoint render/image
+// pour un redimensionnement + compression côté serveur.
+// Les URLs externes (non-Supabase) sont retournées telles quelles.
+function optimizeImageUrl(url: string | undefined, px: number): string | undefined {
+  if (!url) return undefined;
+  const marker = '/storage/v1/object/public/';
+  const idx = url.indexOf(marker);
+  if (idx === -1) return url; // URL externe, pas de transformation
+  const path = url.slice(idx + marker.length);
+  const base = url.slice(0, idx);
+  return `${base}/storage/v1/render/image/public/${path}?width=${px}&quality=80&resize=contain`;
+}
+
+function prefetchImages(items: PromoItem[]): void {
+  items.forEach(item => {
+    if (item.photoUrl) Image.prefetch(item.photoUrl).catch(() => {});
+  });
+}
 
 const HEADERS = {
   apikey: SUPABASE_ANON,
@@ -44,6 +64,7 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean; isConne
           if (cached.length > 0) {
             setRaw(cached);
             setLoading(false);
+            prefetchImages(cached);
           }
         }
       })
@@ -105,10 +126,12 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean; isConne
           name: row.name as string,
           price: row.price as number,
           emoji: (row.emoji as string) ?? '',
-          photoUrl:
+          photoUrl: optimizeImageUrl(
             typeof row.photo_url === 'string' && row.photo_url.startsWith('http')
               ? row.photo_url
               : undefined,
+            700,
+          ),
           shopName: shop.name,
           shopCategory: shop.category,
           shopId: shop.id,
@@ -160,7 +183,7 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean; isConne
                 name: r.nom,
                 price: r.prix,
                 emoji: isUrl ? '' : (r.image_url ?? ''),
-                photoUrl: isUrl ? r.image_url : undefined,
+                photoUrl: optimizeImageUrl(isUrl ? r.image_url : undefined, 700),
                 shopName: shop?.name ?? '',
                 shopCategory: shop?.category ?? '',
                 shopId: shop?.id ?? '',
@@ -203,7 +226,7 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean; isConne
           setRaw(freshItems);
           setLoading(false);
           setIsConnected(true);
-          // Sauvegarde en cache pour la prochaine ouverture hors ligne
+          prefetchImages(freshItems);
           AsyncStorage.setItem(CACHE_KEY, JSON.stringify(freshItems)).catch(() => {});
         }
       } catch {

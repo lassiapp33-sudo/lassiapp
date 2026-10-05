@@ -7,6 +7,7 @@ import {
   Image,
   StyleSheet,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -57,6 +58,28 @@ const dot = StyleSheet.create({
   active: { width: 18, backgroundColor: '#FBBF24', borderRadius: 3 },
 });
 
+// ─── Image avec placeholder ───────────────────────────────────────────────────
+
+function ImageWithLoader({ uri }: { uri: string }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <View style={styles.imgBox}>
+      {!loaded && (
+        <ActivityIndicator
+          color="#FBBF24"
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+      <Image
+        source={{ uri }}
+        style={[styles.img, !loaded && { opacity: 0 }]}
+        onLoad={() => setLoaded(true)}
+        fadeDuration={150}
+      />
+    </View>
+  );
+}
+
 // ─── Carte produit ────────────────────────────────────────────────────────────
 
 function PromoCard({
@@ -72,15 +95,17 @@ function PromoCard({
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       {/* Image / emoji du produit */}
-      <View style={styles.imgBox}>
-        {item.photoUrl ? (
-          <Image source={{ uri: item.photoUrl }} style={styles.img} />
-        ) : item.emoji ? (
-          <Text style={styles.emoji}>{item.emoji}</Text>
-        ) : (
-          <IcoProductFallback />
-        )}
-      </View>
+      {item.photoUrl ? (
+        <ImageWithLoader uri={item.photoUrl} />
+      ) : (
+        <View style={styles.imgBox}>
+          {item.emoji ? (
+            <Text style={styles.emoji}>{item.emoji}</Text>
+          ) : (
+            <IcoProductFallback />
+          )}
+        </View>
+      )}
 
       {/* Texte : boutique · nom · prix */}
       <View style={styles.cardText}>
