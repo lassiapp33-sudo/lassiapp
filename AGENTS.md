@@ -1,3 +1,18 @@
+# PROTOCOLE FIN DE SESSION — OBLIGATOIRE AVANT DE RENDRE LA MAIN
+
+Après chaque fix, l'agent exécute ces 4 commandes dans l'ordre, **depuis `C:\Users\USER\Desktop\lassiapp\`** :
+
+```powershell
+git add -A
+git commit -m "fix(scope): description courte"
+git log --oneline -1
+.\ota-triple-publish.ps1 -Message "fix(scope): description courte"
+```
+
+**Jamais depuis `Lassi/`.** Jamais de `eas update` direct.
+
+---
+
 # Expo HAS CHANGED
 
 Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before writing any code.
