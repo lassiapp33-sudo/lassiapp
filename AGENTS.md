@@ -1,15 +1,26 @@
-# PROTOCOLE FIN DE SESSION — OBLIGATOIRE AVANT DE RENDRE LA MAIN
+# PROTOCOLE FIN DE SESSION — COMMIT UNIQUEMENT, PAS D'OTA
 
-Après chaque fix, l'agent exécute ces 4 commandes dans l'ordre, **depuis `C:\Users\USER\Desktop\lassiapp\`** :
+Après chaque fix, l'agent fait UNIQUEMENT le commit :
 
 ```powershell
 git add -A
 git commit -m "fix(scope): description courte"
 git log --oneline -1
-.\ota-triple-publish.ps1 -Message "fix(scope): description courte"
 ```
 
-**Jamais depuis `Lassi/`.** Jamais de `eas update` direct.
+## ⛔ OTA INTERDIT AUX AGENTS
+
+**L'agent ne lance JAMAIS l'OTA de lui-même.**
+L'OTA est lancé UNIQUEMENT par l'utilisateur, quand il donne explicitement cette commande :
+
+```
+1. git add -A
+2. git commit -m "fix(scope): description"
+3. git log --oneline -1
+4. .\ota-triple-publish.ps1 -Message "fix(scope): description"
+```
+
+Si l'utilisateur ne donne pas cette commande → l'agent s'arrête après le commit et attend.
 
 ---
 
