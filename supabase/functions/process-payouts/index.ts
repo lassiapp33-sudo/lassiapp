@@ -274,7 +274,10 @@ serve(async (req) => {
 
           if (offreNom) {
             let clientName = 'Un client';
-            if (piData?.client_id) {
+            const metaClientName = (meta?.client_name as string | undefined)?.trim();
+            if (metaClientName) {
+              clientName = metaClientName;
+            } else if (piData?.client_id) {
               const { data: cp } = await supabase
                 .from('profiles')
                 .select('name')

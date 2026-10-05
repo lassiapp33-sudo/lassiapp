@@ -139,8 +139,8 @@ export async function confirmBeautyReservation(
     const montantStr  = `${montant} FCFA`;
     const moyenStr    = moyen === 'orange_money' ? 'Orange Money' : 'Wave';
     const clientLabel =
+      (resa.client_name as string | null)?.trim() ||
       (clientProfilRes.data as { name?: string | null } | null)?.name ||
-      (resa.client_name as string | null) ||
       'Un client';
 
     const prestTitle = 'Reversement reçu';
