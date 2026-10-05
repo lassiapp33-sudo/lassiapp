@@ -575,7 +575,7 @@ function page(o: {
   .cn-label { font-size:15px; font-weight:600; }
   .cn-sub { font-size:13px; color:var(--m); margin-top:3px; }
   .ds-card { display:flex; align-items:center; gap:12px; background:rgba(253,207,52,.08); border:1.5px solid rgba(253,207,52,.35); border-radius:14px; padding:14px 16px; margin:0 0 14px; }
-  .ds-img { width:56px; height:56px; border-radius:10px; object-fit:cover; flex-shrink:0; }
+  .ds-img { width:80px; height:80px; border-radius:12px; object-fit:cover; flex-shrink:0; }
   .ds-info { flex:1; }
   .ds-name { font-family:'Cormorant Garamond',Georgia,serif; font-size:16px; font-weight:400; }
   .ds-price { font-size:14px; font-weight:600; margin-top:4px; }
