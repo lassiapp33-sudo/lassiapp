@@ -29,6 +29,17 @@ Depuis C:\Users\USER\Desktop\lassiapp\
 L'agent **N'EXÉCUTE JAMAIS** `ota-triple-publish.ps1` ni `eas update`.
 Il prépare la commande avec le bon scope → il attend que l'utilisateur la renvoie → alors seulement il l'exécute.
 
+## ✅ RÈGLE D'ENGLOBER — JAMAIS ÉCRASER
+
+Chaque OTA doit englober TOUS les fixes précédents.
+Ceci est **automatiquement garanti** si :
+1. Tous les fixes sont committés dans `lassiapp/` (branche master) AVANT l'OTA
+2. L'OTA est lancé depuis `lassiapp/` avec `.\ota-triple-publish.ps1`
+
+Le bundle capture le code COMPLET de `lassiapp/master` à ce moment.
+Un agent qui travaille sur un fix ne touche PAS au code d'un autre fix — il commite le sien par-dessus.
+**Ne jamais travailler depuis `Lassi/` — ce repo est obsolète et désynchronisé.**
+
 ---
 
 # Expo HAS CHANGED
