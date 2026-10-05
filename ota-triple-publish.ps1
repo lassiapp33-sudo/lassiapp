@@ -45,7 +45,7 @@ function Push-Runtime {
 Write-Host ""
 Write-Host "== Export bundle =="
 Set-AppVersion "1.0.1"
-& npx expo export --platform android --output-dir $DIST
+& npx expo export --platform all --output-dir $DIST
 if ($LASTEXITCODE -ne 0) { throw "expo export a echoue" }
 Write-Host "  Bundle exporte dans $DIST"
 
