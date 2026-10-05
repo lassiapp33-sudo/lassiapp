@@ -7,7 +7,6 @@ import { getReceipt, ReceiptInfo, ReceiptStatus } from '../../services/receipts'
 import { contacterServiceClient } from '../../config/contact';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
-import { calculerPrixClient } from '../../config/payment';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -144,9 +143,14 @@ export default function ReceiptScreen({ orderId, onBack }: Props) {
   }, [orderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Quand le compte à rebours atteint 0, on passe localement à 'expire'
+  // Guard : vérifie que le timestamp a vraiment passé (évite le false-positive
+  // au 1er render où remaining=0 alors que le countdown n'a pas encore démarré)
   useEffect(() => {
-    if (expired && liveStatus === 'valide') setLiveStatus('expire');
-  }, [expired, liveStatus]);
+    if (!expired || liveStatus !== 'valide' || !receiptValidUntil) return;
+    if (new Date(receiptValidUntil).getTime() <= Date.now()) {
+      setLiveStatus('expire');
+    }
+  }, [expired, liveStatus, receiptValidUntil]);
 
   const isExpired = liveStatus === 'expire';
   const isUsed = liveStatus === 'utilise';
@@ -285,7 +289,7 @@ export default function ReceiptScreen({ orderId, onBack }: Props) {
           ))}
           <View style={s.totalRow}>
             <Text style={s.totalLabel}>Total</Text>
-            <Text style={s.totalAmount}>{formatPrice(calculerPrixClient(receipt.total))}</Text>
+            <Text style={s.totalAmount}>{formatPrice(receipt.total)}</Text>
           </View>
         </View>
 
