@@ -347,13 +347,21 @@ function serviceCard(s: ServiceItem, _deep: string): string {
       <button class="svcbtn bookbtn" type="button">Réserver</button></div></div>`;
 }
 
-// Carte abonnement / formule fitness (liste sombre, paiement web direct).
+// Carte abonnement / formule fitness (style light, icônes Wave+OM, paiement web direct).
 function fitnessCard(s: ServiceItem): string {
   const total = prixClient(s.price);
   return `<div class="abocard" data-offreid="${escAttr(s.id)}" data-nom="${escAttr(s.name)}" data-prix="${total}" data-meta="${escAttr(s.meta)}">
-    <div class="abonom">${esc(clip(s.name, 48))}</div>
-    <div class="abodetail"><span class="abometa">⏱ ${esc(s.meta)}</span><span class="aboprix">${fmtPrice(total)}</span></div>
-    <button class="abo-btn" type="button">S’abonner</button>
+    <div class="abo-left">
+      <div class="abonom">${esc(clip(s.name, 48))}</div>
+      <div class="abometa">⏱ ${esc(s.meta)}</div>
+    </div>
+    <div class="abo-right">
+      <div class="aboprix">${fmtPrice(total)}</div>
+      <div class="abo-pays">
+        <button class="abo-pay-btn" data-m="wave" type="button" aria-label="Payer Wave"><img src="/assets/wave.jpg" alt="Wave"></button>
+        <button class="abo-pay-btn" data-m="orange_money" type="button" aria-label="Payer Orange Money"><img src="/assets/om.png" alt="OM"></button>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -668,14 +676,17 @@ function page(o: {
   .hab-chip.on { background:var(--y); border-color:var(--y); color:var(--d); }
   #habStock { font-size:13px; color:var(--m); margin:0 0 14px; }
   #habStock.low { color:#F97316; }
-  /* ABONNEMENT FITNESS (liste sombre) */
-  .abolist { display:flex; flex-direction:column; gap:12px; margin-bottom:32px; }
-  .abocard { background:#14152A; color:#fff; border-radius:16px; padding:18px 20px; }
-  .abonom { font-size:17px; font-weight:700; margin-bottom:6px; }
-  .abodetail { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
-  .abometa { font-size:13px; color:rgba(255,255,255,.6); }
-  .aboprix { font-size:22px; font-weight:800; color:#FDCF34; }
-  .abo-btn { width:100%; background:#FDCF34; color:#14152A; border:none; border-radius:12px; padding:13px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; }
+  /* ABONNEMENT FITNESS */
+  .abolist { display:flex; flex-direction:column; gap:10px; margin-bottom:32px; }
+  .abocard { display:flex; align-items:center; gap:14px; background:var(--w); border:1.5px solid var(--b); border-radius:16px; padding:16px 18px; }
+  .abo-left { flex:1; min-width:0; }
+  .abonom { font-family:'Cormorant Garamond',Georgia,serif; font-size:16px; font-weight:400; color:var(--d); line-height:1.2; }
+  .abometa { font-size:12px; color:var(--m); margin-top:3px; }
+  .abo-right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; }
+  .aboprix { font-size:15px; font-weight:700; color:var(--d); }
+  .abo-pays { display:flex; gap:8px; }
+  .abo-pay-btn { width:38px; height:38px; border-radius:10px; border:1.5px solid var(--b); background:var(--g); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:5px; }
+  .abo-pay-btn img { width:26px; height:26px; border-radius:6px; object-fit:cover; display:block; }
   /* LIGHTBOX */
   .lbx { position:fixed; inset:0; z-index:999; background:rgba(0,0,0,.92); display:none; align-items:center; justify-content:center; cursor:zoom-out; }
   .lbx.open { display:flex; }
@@ -1535,12 +1546,12 @@ const SUBSCRIPTION_JS = `
   var cur={id:null,nom:'',prix:0,meta:'',moyen:'wave'};
   function fmt(n){ return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ')+' F'; }
 
-  function openSheet(card){
+  function openSheet(card, moyen){
     cur.id=card.getAttribute('data-offreid');
     cur.nom=card.getAttribute('data-nom')||'Offre';
     cur.prix=parseInt(card.getAttribute('data-prix'),10)||0;
     cur.meta=card.getAttribute('data-meta')||'';
-    cur.moyen='wave';
+    cur.moyen=moyen||'wave';
     document.getElementById('aboTitle').textContent=cur.nom;
     document.getElementById('aboSub').textContent=CFG.shop+' \xB7 '+fmt(cur.prix);
     var linesHtml='<div class="line"><span>'+cur.nom+'</span><span></span></div>'+
@@ -1550,15 +1561,15 @@ const SUBSCRIPTION_JS = `
     document.getElementById('abostep-form').style.display='';
     document.getElementById('abostep-wait').style.display='none';
     document.getElementById('aboMsg').textContent='';
-    document.getElementById('aboPayer').disabled=true;
-    document.querySelectorAll('#abosheet .pay').forEach(function(p){ p.classList.remove('sel'); });
+    document.querySelectorAll('#abosheet .pay').forEach(function(p){ p.classList.toggle('sel',p.getAttribute('data-am')===cur.moyen); });
     document.getElementById('abo-name').value='';
     document.getElementById('abo-phone').value='';
     sheet.classList.add('open');
+    checkReady();
   }
 
-  document.querySelectorAll('.abocard .abo-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){ openSheet(this.closest('.abocard')); });
+  document.querySelectorAll('.abocard .abo-pay-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ openSheet(this.closest('.abocard'), btn.getAttribute('data-m')); });
   });
   document.getElementById('aboClose').addEventListener('click', function(){ sheet.classList.remove('open'); });
 
