@@ -125,8 +125,10 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!offre || !offre.actif) return err('Offre introuvable ou inactive', 404);
 
-    // Commission 1% LASSI
-    const total = Math.ceil(Number(offre.prix) * 1.01);
+    // Commission 1% LASSI — prix_base + commission_lassi requis par payment_intents
+    const prixBase        = Math.round(Number(offre.prix));
+    const commissionLassi = Math.ceil(prixBase * 0.01);
+    const total           = prixBase + commissionLassi;
 
     // ── Anti-spam ───────────────────────────────────────────────────────────────
     const { data: rl } = await admin.rpc('check_rate_limit', {
@@ -137,23 +139,25 @@ Deno.serve(async (req) => {
     // ── Utilisateur invité système ──────────────────────────────────────────────
     const guestId = await ensureGuestUser(admin);
 
-    // ── Créer le payment_intent directement (pas d'order pour les abonnements) ──
+    // ── Créer le payment_intent ─────────────────────────────────────────────────
     const { data: pi, error: piErr } = await admin
       .from('payment_intents')
       .insert({
-        type:           'fitness_abonnement',
+        type:              'fitness_abonnement',
         metadata: {
-          offre_id:     offre.id,
-          offre_nom:    String(offre.nom),
-          duree_jours:  Number(offre.duree_jours),
-          client_name:  cleanName,
-          client_phone: cleanPhone,
+          offre_id:        offre.id,
+          offre_nom:       String(offre.nom),
+          duree_jours:     Number(offre.duree_jours),
+          client_name:     cleanName,
+          client_phone:    cleanPhone,
         },
-        client_id:      guestId,
-        prestataire_id: String(offre.prestataire_id),
-        montant_total:  total,
-        moyen_paiement: moyen,
-        statut:         'pending',
+        client_id:         guestId,
+        prestataire_id:    String(offre.prestataire_id),
+        prix_base:         prixBase,
+        commission_lassi:  commissionLassi,
+        montant_total:     total,
+        moyen_paiement:    moyen,
+        statut:            'pending',
       })
       .select('id')
       .single();
