@@ -7,6 +7,7 @@ import { getReceipt, ReceiptInfo, ReceiptStatus } from '../../services/receipts'
 import { contacterServiceClient } from '../../config/contact';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
+import { calculerPrixClient } from '../../config/payment';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -284,12 +285,12 @@ export default function ReceiptScreen({ orderId, onBack }: Props) {
               <Text style={s.itemName} numberOfLines={1}>
                 {item.name}
               </Text>
-              <Text style={s.itemPrice}>{formatPrice(item.price)}</Text>
+              <Text style={s.itemPrice}>{formatPrice(calculerPrixClient(item.price))}</Text>
             </View>
           ))}
           <View style={s.totalRow}>
             <Text style={s.totalLabel}>Total</Text>
-            <Text style={s.totalAmount}>{formatPrice(receipt.total)}</Text>
+            <Text style={s.totalAmount}>{formatPrice(calculerPrixClient(receipt.total))}</Text>
           </View>
         </View>
 
