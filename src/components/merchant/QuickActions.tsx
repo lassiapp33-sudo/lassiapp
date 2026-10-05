@@ -205,8 +205,8 @@ export default function QuickActions({
           Icon={IcoMapPin}
           iconBg="rgba(253,207,52,.13)"
           iconStroke={colors.accent}
-          title="Autres vendeurs"
-          desc="Achète ici aussi"
+          title="Autour de moi"
+          desc="Achetez chez d'autres vendeurs"
           onPress={() => onPress?.('aroundme')}
         />
         <ActionCard

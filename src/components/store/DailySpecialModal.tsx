@@ -58,7 +58,7 @@ export default function DailySpecialModal({ visible, shopId, onClose, onChanged 
 
   const suggestions = name.trim().length > 0
     ? savedNames.filter(n => n.toLowerCase().includes(name.trim().toLowerCase()) && n.toLowerCase() !== name.trim().toLowerCase())
-    : [];
+    : savedNames.slice(0, 8);
 
   async function pickPhoto(source: 'gallery' | 'camera') {
     const uri = source === 'gallery'

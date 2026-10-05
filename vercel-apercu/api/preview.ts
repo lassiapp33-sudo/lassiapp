@@ -84,6 +84,7 @@ interface Product {
 interface ServiceItem {
   id: string; name: string; description: string | null;
   price: number; category: string; meta: string; kind: 'beauty' | 'fitness';
+  image_url?: string | null;
 }
 
 // ── Regroupement produits par catégorie (miroir shopStore) ───────────────────
@@ -154,7 +155,7 @@ export default async function handler(
   }
 
   const base = `${url.protocol}//${url.host}`;
-  return new Response(renderHtml(shop, products, services, slug, base, dailySpecial as { id: string; name: string; price: number }[]), {
+  return new Response(renderHtml(shop, products, services, slug, base, dailySpecial as { id: string; name: string; price: number; photo_url?: string | null }[]), {
     status: shop ? 200 : 404,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
@@ -195,7 +196,7 @@ async function fetchServices(merchantId: string | null): Promise<ServiceItem[]> 
   const mid = encodeURIComponent(merchantId);
   const out: ServiceItem[] = [];
   const [beauty, fitness] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/beauty_services?prestataire_id=eq.${mid}&actif=eq.true&order=created_at.asc&limit=48&select=id,nom,description,prix,duree_minutes,categorie`, { headers: H })
+    fetch(`${SUPABASE_URL}/rest/v1/beauty_services?prestataire_id=eq.${mid}&actif=eq.true&order=created_at.asc&limit=48&select=id,nom,description,prix,duree_minutes,categorie,image_url`, { headers: H })
       .then(r => r.ok ? r.json() : []).catch(() => []),
     fetch(`${SUPABASE_URL}/rest/v1/fitness_abonnement_offres?prestataire_id=eq.${mid}&actif=eq.true&order=prix.asc&limit=48&select=id,nom,description,prix,duree_jours`, { headers: H })
       .then(r => r.ok ? r.json() : []).catch(() => []),
@@ -210,6 +211,7 @@ async function fetchServices(merchantId: string | null): Promise<ServiceItem[]> 
       id: String(r.id), name: nom, description: (r.description as string) ?? null, price,
       category: String(r.categorie ?? 'Prestations') || 'Prestations',
       meta: dm > 0 ? `${Math.round(dm)} min · réservable` : 'Réservable', kind: 'beauty',
+      image_url: (r.image_url as string) || null,
     });
   }
   for (const r of fitness ?? []) {
@@ -225,13 +227,13 @@ async function fetchServices(merchantId: string | null): Promise<ServiceItem[]> 
   return out;
 }
 
-async function fetchDailySpecials(shopId: string): Promise<{ id: string; name: string; price: number }[]> {
+async function fetchDailySpecials(shopId: string): Promise<{ id: string; name: string; price: number; photo_url?: string | null }[]> {
   try {
     const today = new Date().toISOString().slice(0, 10);
-    const q = `${SUPABASE_URL}/rest/v1/daily_specials?shop_id=eq.${encodeURIComponent(shopId)}&date=eq.${today}&select=id,name,price&limit=20`;
+    const q = `${SUPABASE_URL}/rest/v1/daily_specials?shop_id=eq.${encodeURIComponent(shopId)}&date=eq.${today}&select=id,name,price,photo_url&limit=20`;
     const res = await fetch(q, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
     if (!res.ok) return [];
-    return await res.json() as { id: string; name: string; price: number }[];
+    return await res.json() as { id: string; name: string; price: number; photo_url?: string | null }[];
   } catch { return []; }
 }
 
@@ -273,7 +275,7 @@ function initialAvatar(name: string): string {
     '&background=FDCF34&color=14152A&size=512&length=1&bold=true&format=png';
 }
 
-function renderHtml(shop: Shop | null, products: Product[], services: ServiceItem[], slug: string, base: string, dailySpecial: { id: string; name: string; price: number }[] = []): string {
+function renderHtml(shop: Shop | null, products: Product[], services: ServiceItem[], slug: string, base: string, dailySpecial: { id: string; name: string; price: number; photo_url?: string | null }[] = []): string {
   const canonical = `${base}/${encodeURIComponent(slug)}`;
   if (!shop) {
     return page({
@@ -332,7 +334,11 @@ function productCard(p: Product): string {
 // Fitness (abonnement) = CTA app (achat abonnement encore côté app).
 function serviceCard(s: ServiceItem, deep: string): string {
   const sub = s.description ? `${s.meta} · ${s.description}` : s.meta;
-  const visual = `<div class="pimgzone"><div class="pemoji">${s.kind === 'fitness' ? '🏋️' : '💇'}</div></div>`;
+  const imgUrl = s.kind === 'beauty' && typeof s.image_url === 'string' && s.image_url.startsWith('http') ? s.image_url : '';
+  const svcEmoji = s.kind === 'fitness' ? '🏋️' : '';
+  const visual = imgUrl
+    ? `<div class="pimgzone"><img class="pimg" src="${escAttr(imgUrl)}" alt="${escAttr(s.name)}" loading="lazy"></div>`
+    : `<div class="pimgzone">${svcEmoji ? `<div class="pemoji">${svcEmoji}</div>` : ''}</div>`;
   const head = `<div class="pname">${esc(clip(s.name, 48))}</div>
       <div class="pdesc">${esc(clip(sub, 64))}</div>
       <div class="pprice">${fmtPrice(prixClient(s.price))}</div>`;
@@ -349,7 +355,7 @@ function page(o: {
   title: string; desc: string; ogImage: string; canonical: string;
   name: string; zone: string; cat: string; logo: string; slug: string; products: Product[]; services: ServiceItem[];
   shopStatus: ShopStatusResult | null;
-  dailySpecial: { id: string; name: string; price: number }[];
+  dailySpecial: { id: string; name: string; price: number; photo_url?: string | null }[];
 }): string {
   const deep = `https://lassi.tech/p/${encodeURIComponent(o.slug)}`;
   const initial = (o.name.charAt(0) || '?').toUpperCase();
@@ -388,6 +394,7 @@ function page(o: {
     ? `<div class="catsec" data-cat="plat-du-jour">` +
       o.dailySpecial.map(ds =>
         `<div class="ds-card" data-ds-id="${escAttr(ds.id)}" data-ds-name="${escAttr(ds.name)}" data-ds-price="${ds.price}">` +
+        (ds.photo_url ? `<img class="ds-img" src="${escAttr(ds.photo_url)}" alt="${escAttr(ds.name)}" loading="lazy">` : '') +
         `<div class="ds-info"><div class="ds-name">${esc(ds.name)}</div><div class="ds-price">${fmtPrice(Math.ceil(ds.price * 1.01))}</div></div>` +
         `<button class="ds-btn" type="button">Commander</button></div>`).join('') +
       `</div>`
@@ -568,6 +575,7 @@ function page(o: {
   .cn-label { font-size:15px; font-weight:600; }
   .cn-sub { font-size:13px; color:var(--m); margin-top:3px; }
   .ds-card { display:flex; align-items:center; gap:12px; background:rgba(253,207,52,.08); border:1.5px solid rgba(253,207,52,.35); border-radius:14px; padding:14px 16px; margin:0 0 14px; }
+  .ds-img { width:56px; height:56px; border-radius:10px; object-fit:cover; flex-shrink:0; }
   .ds-info { flex:1; }
   .ds-name { font-family:'Cormorant Garamond',Georgia,serif; font-size:16px; font-weight:400; }
   .ds-price { font-size:14px; font-weight:600; margin-top:4px; }
