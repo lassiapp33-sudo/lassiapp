@@ -530,6 +530,18 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     merchantId: shopData?.merchantId,
   };
 
+  const addDailySpecialToCart = (id: string, name: string, price: number) => {
+    if (!isOpen) {
+      if (status.isPause) {
+        Alert.alert('En pause', status.nextChange ? `Cette boutique est en pause.\n${status.nextChange}` : 'Cette boutique est en pause.', [{ text: 'OK' }]);
+      } else {
+        Alert.alert('Boutique fermée', status.nextChange || 'Ce prestataire est fermé. Revenez plus tard.', [{ text: 'OK' }]);
+      }
+      return;
+    }
+    addItem(shopInfo, { id, name, emoji: '', price });
+  };
+
   const addToCart = (p: StoreProduct) => {
     if (!isOpen) {
       if (status.isPause) {
@@ -811,7 +823,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                         <ProductTile
                           product={product}
                           qty={cartItems.find(ci => ci.id === product.id)?.qty ?? 0}
-                          onAdd={() => addItem(shopInfo, { id: product.id, name: product.name, emoji: '', price: product.price })}
+                          onAdd={() => addDailySpecialToCart(product.id, product.name, product.price)}
                           onRemove={() => removeItem(product.id)}
                           isVip={isVip} isPreview={isPreview}
                         />
@@ -852,7 +864,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                           <ProductTile
                             product={product}
                             qty={cartItems.find(ci => ci.id === product.id)?.qty ?? 0}
-                            onAdd={() => addItem(shopInfo, { id: product.id, name: product.name, emoji: '', price: product.price })}
+                            onAdd={() => addDailySpecialToCart(product.id, product.name, product.price)}
                             onRemove={() => removeItem(product.id)}
                             isVip={isVip}
                             isPreview={isPreview}
