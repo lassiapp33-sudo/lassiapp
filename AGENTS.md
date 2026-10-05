@@ -9,7 +9,7 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 ## Commande unique autorisée
 
 ```powershell
-# Depuis C:\Users\USER\Desktop\lassiapp\Lassi\
+# Depuis C:\Users\USER\Desktop\lassiapp\   ← TOUJOURS ici, PAS depuis Lassi/
 .\ota-triple-publish.ps1 -Message "fix(scope): description courte"
 ```
 
@@ -26,6 +26,7 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - `eas update --skip-bundler` lit le `app.config.js` COURANT pour le runtime version — si le linter le modifie pendant l'export (30-60s), l'OTA va sur le mauvais runtime
 - Sessions parallèles → EAS sert le plus récent → elles s'écrasent
 - OTA sans commit git → session suivante repart du vieux code → écrase les fixes
+- OTA depuis `Lassi/` au lieu de `lassiapp/` → bundle l'ancien code de Lassi/ au lieu des commits récents → écrase les fixes
 
 ## Ce que fait le script
 
@@ -38,6 +39,7 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 - `eas update` en dehors de ce script
 - Deux sessions qui poussent des OTAs en même temps
 - OTA sans commit git préalable
+- Lancer le script depuis `Lassi/` — toujours depuis `lassiapp/` (racine projet)
 - `EAS_SKIP_AUTO_FINGERPRINT` absent (le script le set)
 - `--branch production-1.0.x` (toujours `--branch production`)
 
