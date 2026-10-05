@@ -49,6 +49,40 @@ Deno.serve(async (req) => {
   if (req.method === 'GET') {
     const params = new URL(req.url).searchParams;
 
+    // ── GET ?receipt=<piId> — données du reçu pour la page succès ────────────
+    const receiptId = params.get('receipt') ?? '';
+    if (receiptId) {
+      if (!isUUID(receiptId)) return err('pi invalide', 400);
+      const { data: pi } = await admin
+        .from('payment_intents')
+        .select('metadata, montant_total, prestataire_id')
+        .eq('id', receiptId)
+        .maybeSingle();
+      if (!pi) return err('Paiement introuvable', 404);
+      const meta = (pi.metadata as Record<string, unknown>) ?? {};
+      const { data: prest } = await admin
+        .from('profiles')
+        .select('name')
+        .eq('id', String(pi.prestataire_id))
+        .maybeSingle();
+      const dureeJours = Number(meta.duree_jours ?? 0);
+      const dureeLabel = dureeJours >= 365
+        ? `${Math.round(dureeJours / 365)} an${dureeJours >= 730 ? 's' : ''}`
+        : dureeJours >= 28
+          ? `${Math.round(dureeJours / 30)} mois`
+          : `${dureeJours} jour${dureeJours > 1 ? 's' : ''}`;
+      const total = Number(pi.montant_total ?? 0);
+      const prixLabel = String(Math.round(total)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' F';
+      return json({
+        success:          true,
+        offre_nom:        String(meta.offre_nom ?? ''),
+        duree_label:      dureeLabel,
+        client_name:      String(meta.client_name ?? ''),
+        prestataire_name: prest?.name ?? '',
+        prix_label:       prixLabel,
+      });
+    }
+
     const piId = params.get('pi') ?? '';
     if (!isUUID(piId)) return err('pi invalide', 400);
 

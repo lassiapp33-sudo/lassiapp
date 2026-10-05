@@ -854,6 +854,12 @@ function renderConfirmation(url: URL): string {
   .ghost svg{width:18px;height:18px;fill:${BRAND_GOLD}}
   .dl{margin-top:34px}
   .dltxt{color:${BRAND_GOLD};font-weight:800;font-size:14.5px;margin:0 0 14px;line-height:1.45}
+  .rcpt{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:16px 18px;margin:18px 0 4px;text-align:left}
+  .rcpt-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+  .rcpt-row:last-child{border-bottom:none;padding-top:10px}
+  .rcpt-lbl{color:rgba(255,255,255,.5);font-size:12.5px;white-space:nowrap}
+  .rcpt-val{font-size:13.5px;font-weight:600;text-align:right;word-break:break-word}
+  .rcpt-prix{color:${BRAND_GOLD};font-size:16px;font-weight:800}
   .cta{display:flex;flex-direction:row;gap:10px;max-width:430px;margin:0 auto}
   .store{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:8px;background:#000;color:#fff;text-decoration:none;padding:11px;border-radius:13px;border:1px solid rgba(255,255,255,.14);animation:pulseDark 2.2s ease-in-out infinite}
   .store svg{width:22px;height:22px;flex:0 0 auto;fill:#fff}
@@ -872,6 +878,13 @@ function renderConfirmation(url: URL): string {
     <div id="mark"><div class="spin"></div></div>
     <h1 id="t">Vérification du paiement…</h1>
     <p id="d">Un instant, on confirme ta commande.</p>
+    <div id="receipt-card" class="rcpt" style="display:none">
+      <div class="rcpt-row"><span class="rcpt-lbl">Formule</span><span class="rcpt-val" id="rc-nom"></span></div>
+      <div class="rcpt-row"><span class="rcpt-lbl">Durée</span><span class="rcpt-val" id="rc-duree"></span></div>
+      <div class="rcpt-row"><span class="rcpt-lbl">Client</span><span class="rcpt-val" id="rc-client"></span></div>
+      <div class="rcpt-row"><span class="rcpt-lbl">Établissement</span><span class="rcpt-val" id="rc-prest"></span></div>
+      <div class="rcpt-row"><span class="rcpt-lbl">Montant payé</span><span class="rcpt-val rcpt-prix" id="rc-prix"></span></div>
+    </div>
     <div class="actions">
       <a class="btn" id="home" href="${escAttr(retour)}" style="display:none">Retour à la boutique</a>
       <a class="ghost" id="recu" download style="display:none"><svg viewBox="0 0 24 24"><path d="M12 3a1 1 0 0 1 1 1v9.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42l2.3 2.3V4a1 1 0 0 1 1-1zM5 19a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1z"/></svg>Télécharger le reçu (PDF)</a>
@@ -1686,6 +1699,7 @@ const CONFIRM_JS = `
     } else if(isAbo){
       t.textContent='Abonnement activ\xe9 !';
       d.innerHTML='<span class="gold">Ton abonnement est actif.</span> Pr\xe9sente-toi chez le prestataire avec ton num\xe9ro de t\xe9l\xe9phone pour valider l\\'acc\xe8s.';
+      if(CFG.id){fetch(CFG.url+'/functions/v1/create-guest-subscription?receipt='+encodeURIComponent(CFG.id),{headers:{'apikey':CFG.key,'Authorization':'Bearer '+CFG.key}}).then(function(r){return r.json();}).then(function(x){if(!x||!x.success)return;var c=document.getElementById('receipt-card');var fn=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v||'—';};fn('rc-nom',x.offre_nom);fn('rc-duree',x.duree_label);fn('rc-client',x.client_name);fn('rc-prest',x.prestataire_name);fn('rc-prix',x.prix_label);if(c)c.style.display='block';}).catch(function(){});}
     } else {
       t.textContent='Commande confirm\xe9e';
       d.innerHTML='Merci ! <span class="gold">Le marchand a re\xe7u ta commande</span> et va te rappeler pour le retrait ou la livraison.';
