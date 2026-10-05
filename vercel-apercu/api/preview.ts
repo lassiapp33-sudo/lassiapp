@@ -347,7 +347,7 @@ function serviceCard(s: ServiceItem, _deep: string): string {
       <button class="svcbtn bookbtn" type="button">Réserver</button></div></div>`;
 }
 
-// Carte abonnement / formule fitness (style light, icônes Wave+OM, paiement web direct).
+// Carte abonnement / formule fitness (style light, bouton Réserver, paiement web direct).
 function fitnessCard(s: ServiceItem): string {
   const total = prixClient(s.price);
   return `<div class="abocard" data-offreid="${escAttr(s.id)}" data-nom="${escAttr(s.name)}" data-prix="${total}" data-meta="${escAttr(s.meta)}">
@@ -357,10 +357,7 @@ function fitnessCard(s: ServiceItem): string {
     </div>
     <div class="abo-right">
       <div class="aboprix">${fmtPrice(total)}</div>
-      <div class="abo-pays">
-        <button class="abo-pay-btn" data-m="wave" type="button" aria-label="Payer Wave"><img src="/assets/wave.jpg" alt="Wave"></button>
-        <button class="abo-pay-btn" data-m="orange_money" type="button" aria-label="Payer Orange Money"><img src="/assets/om.png" alt="OM"></button>
-      </div>
+      <button class="abo-btn" type="button">Réserver</button>
     </div>
   </div>`;
 }
@@ -684,9 +681,7 @@ function page(o: {
   .abometa { font-size:12px; color:var(--m); margin-top:3px; }
   .abo-right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; }
   .aboprix { font-size:15px; font-weight:700; color:var(--d); }
-  .abo-pays { display:flex; gap:8px; }
-  .abo-pay-btn { width:38px; height:38px; border-radius:10px; border:1.5px solid var(--b); background:var(--g); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:5px; }
-  .abo-pay-btn img { width:26px; height:26px; border-radius:6px; object-fit:cover; display:block; }
+  .abo-btn { background:var(--y); color:var(--d); border:none; border-radius:999px; padding:9px 18px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; }
   /* LIGHTBOX */
   .lbx { position:fixed; inset:0; z-index:999; background:rgba(0,0,0,.92); display:none; align-items:center; justify-content:center; cursor:zoom-out; }
   .lbx.open { display:flex; }
@@ -807,7 +802,6 @@ function page(o: {
           </div>
         </div>
         <p class="msg" id="aboMsg"></p>
-        <button class="payer" id="aboPayer" type="button" disabled>S’abonner → Payer</button>
       </div>
       <div id="abostep-wait" style="display:none" class="waiting">
         <h2 id="aboWaitTitle">Paiement</h2>
@@ -1546,12 +1540,12 @@ const SUBSCRIPTION_JS = `
   var cur={id:null,nom:'',prix:0,meta:'',moyen:'wave'};
   function fmt(n){ return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ')+' F'; }
 
-  function openSheet(card, moyen){
+  function openSheet(card){
     cur.id=card.getAttribute('data-offreid');
     cur.nom=card.getAttribute('data-nom')||'Offre';
     cur.prix=parseInt(card.getAttribute('data-prix'),10)||0;
     cur.meta=card.getAttribute('data-meta')||'';
-    cur.moyen=moyen||'wave';
+    cur.moyen='';
     document.getElementById('aboTitle').textContent=cur.nom;
     document.getElementById('aboSub').textContent=CFG.shop+' \xB7 '+fmt(cur.prix);
     var linesHtml='<div class="line"><span>'+cur.nom+'</span><span></span></div>'+
@@ -1561,15 +1555,14 @@ const SUBSCRIPTION_JS = `
     document.getElementById('abostep-form').style.display='';
     document.getElementById('abostep-wait').style.display='none';
     document.getElementById('aboMsg').textContent='';
-    document.querySelectorAll('#abosheet .pay').forEach(function(p){ p.classList.toggle('sel',p.getAttribute('data-am')===cur.moyen); });
+    document.querySelectorAll('#abosheet .pay').forEach(function(p){ p.classList.remove('sel'); });
     document.getElementById('abo-name').value='';
     document.getElementById('abo-phone').value='';
     sheet.classList.add('open');
-    checkReady();
   }
 
-  document.querySelectorAll('.abocard .abo-pay-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){ openSheet(this.closest('.abocard'), btn.getAttribute('data-m')); });
+  document.querySelectorAll('.abocard .abo-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ openSheet(this.closest('.abocard')); });
   });
   document.getElementById('aboClose').addEventListener('click', function(){ sheet.classList.remove('open'); });
 
@@ -1578,7 +1571,6 @@ const SUBSCRIPTION_JS = `
     var v=this.value.replace(/\\D/g,'');
     if(v.startsWith('221')) v=v.slice(3);
     this.value=v.slice(0,9);
-    checkReady();
   });
   aboPhoneInput.addEventListener('blur', function(){
     var v=this.value.replace(/\\D/g,'');
@@ -1591,35 +1583,16 @@ const SUBSCRIPTION_JS = `
     if(v.length>7) f+=' '+v.slice(7,9);
     this.value=f;
   });
-  document.getElementById('abo-name').addEventListener('input', checkReady);
-
-  function checkReady(){
-    var name=document.getElementById('abo-name').value.trim();
-    var phone=document.getElementById('abo-phone').value.replace(/\\D/g,'').replace(/^221/,'');
-    var ok=name.length>=2 && /^7[05678][0-9]{7}$/.test(phone) && cur.moyen;
-    document.getElementById('aboPayer').disabled=!ok;
-  }
-
-  document.querySelectorAll('#abosheet .pay').forEach(function(b){
-    b.addEventListener('click', function(){
-      document.querySelectorAll('#abosheet .pay').forEach(function(x){x.classList.remove('sel');});
-      b.classList.add('sel');
-      cur.moyen=b.getAttribute('data-am');
-      checkReady();
-    });
-  });
-
   var aboPaying=false;
-  document.getElementById('aboPayer').addEventListener('click', function(){
-    if(aboPaying||this.disabled) return;
+
+  function doPayment(){
+    if(aboPaying) return;
     var name=document.getElementById('abo-name').value.trim();
     var phone=document.getElementById('abo-phone').value.replace(/\\D/g,'').replace(/^221/,'');
     var msg=document.getElementById('aboMsg');
     if(name.length<2){ msg.textContent='Entre ton nom.'; return; }
     if(!/^7[05678][0-9]{7}$/.test(phone)){ msg.textContent='Num\xe9ro invalide.'; return; }
-    if(!cur.moyen){ msg.textContent='Choisis un moyen de paiement.'; return; }
     aboPaying=true;
-    this.disabled=true;
     var isW=(cur.moyen==='wave');
     document.getElementById('abostep-form').style.display='none';
     document.getElementById('abostep-wait').style.display='';
@@ -1654,8 +1627,18 @@ const SUBSCRIPTION_JS = `
       aboPaying=false;
       document.getElementById('abostep-wait').style.display='none';
       document.getElementById('abostep-form').style.display='';
-      document.getElementById('aboPayer').disabled=false;
+      document.querySelectorAll('#abosheet .pay').forEach(function(x){x.classList.remove('sel');});
+      cur.moyen='';
       document.getElementById('aboMsg').textContent=e.message||'Une erreur est survenue. R\xe9essaie.';
+    });
+  }
+
+  document.querySelectorAll('#abosheet .pay').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('#abosheet .pay').forEach(function(x){x.classList.remove('sel');});
+      b.classList.add('sel');
+      cur.moyen=b.getAttribute('data-am');
+      doPayment();
     });
   });
 
