@@ -746,7 +746,8 @@ serve(async (req) => {
 
             // In-app + push bannière au prestataire ("Nouvel abonné")
             const { data: cpRow } = await supabase.from('profiles').select('name').eq('id', piData.client_id as string).maybeSingle()
-            const cName  = (cpRow?.name as string) ?? 'Un client'
+            // Pour les abonnements invité web, on utilise meta.client_name si disponible
+            const cName  = (meta.client_name as string) ?? (cpRow?.name as string) ?? 'Un client'
             const pTitle = 'Nouvel abonné'
             const pBody  = `${cName} a souscrit à "${offreNom}".`
 
@@ -1580,7 +1581,8 @@ serve(async (req) => {
 
                 // Notif in-app + push prestataire (symétrique avec chemin OM)
                 const { data: cpRowW } = await supabase.from('profiles').select('name').eq('id', piDataW.client_id as string).maybeSingle();
-                const cNameW  = (cpRowW?.name as string) ?? 'Un client';
+                // metaW déjà déclaré dans le bloc parent — utiliser directement
+                const cNameW  = (metaW.client_name as string) ?? (cpRowW?.name as string) ?? 'Un client';
                 const pTitleW = 'Nouvel abonné';
                 const pBodyW  = `${cNameW} a souscrit à "${offreNomW}".`;
 

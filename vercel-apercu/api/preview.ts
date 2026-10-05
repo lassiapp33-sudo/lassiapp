@@ -332,25 +332,29 @@ function productCard(p: Product): string {
   </div>`;
 }
 
-// Carte prestation/service. Beauté = réservable sur le web (créneaux + Wave/OM).
-// Fitness (abonnement) = CTA app (achat abonnement encore côté app).
-function serviceCard(s: ServiceItem, deep: string): string {
+// Carte prestation beauté (réservable web).
+function serviceCard(s: ServiceItem, _deep: string): string {
   const sub = s.description ? `${s.meta} · ${s.description}` : s.meta;
-  const imgUrl = s.kind === 'beauty' && typeof s.image_url === 'string' && s.image_url.startsWith('http') ? s.image_url : '';
-  const svcEmoji = s.kind === 'fitness' ? '🏋️' : '';
+  const imgUrl = typeof s.image_url === 'string' && s.image_url.startsWith('http') ? s.image_url : '';
   const visual = imgUrl
     ? `<div class="pimgzone svc-imgzone"><img class="pimg" src="${escAttr(imgUrl)}" alt="${escAttr(s.name)}" loading="lazy"></div>`
-    : (svcEmoji ? `<div class="pimgzone"><div class="pemoji">${svcEmoji}</div></div>` : '');
+    : '';
   const head = `<div class="pname">${esc(clip(s.name, 48))}</div>
       <div class="pdesc">${esc(clip(sub, 64))}</div>
       <div class="pprice">${fmtPrice(prixClient(s.price))}</div>`;
-  if (s.kind === 'fitness') {
-    return `<div class="prod svc">${visual}<div class="pbody">${head}
-      <a class="svcbtn" href="${escAttr(deep)}">S'abonner dans l'app</a></div></div>`;
-  }
   return `<div class="prod svc book" data-svc="${escAttr(s.id)}" data-name="${escAttr(s.name)}" data-price="${prixClient(s.price)}" data-meta="${escAttr(s.meta)}" data-min="${Math.max(0, Math.round(s.price))}">
     ${visual}<div class="pbody">${head}
       <button class="svcbtn bookbtn" type="button">Réserver</button></div></div>`;
+}
+
+// Carte abonnement / formule fitness (liste sombre, paiement web direct).
+function fitnessCard(s: ServiceItem): string {
+  const total = prixClient(s.price);
+  return `<div class="abocard" data-offreid="${escAttr(s.id)}" data-nom="${escAttr(s.name)}" data-prix="${total}" data-meta="${escAttr(s.meta)}">
+    <div class="abonom">${esc(clip(s.name, 48))}</div>
+    <div class="abodetail"><span class="abometa">⏱ ${esc(s.meta)}</span><span class="aboprix">${fmtPrice(total)}</span></div>
+    <button class="abo-btn" type="button">S’abonner</button>
+  </div>`;
 }
 
 function page(o: {
@@ -367,6 +371,7 @@ function page(o: {
   const hasProducts = o.products.length > 0;
   const hasServices = o.services.length > 0;
   const hasBeauty   = o.services.some(s => s.kind === 'beauty');
+  const hasFitness  = o.services.some(s => s.kind === 'fitness');
   const hasCatalog = hasProducts || hasServices;
   const st = o.shopStatus;
   const isOpen = st ? st.isOpen : true;
@@ -409,13 +414,18 @@ function page(o: {
     : (groups.length > 0 ? `<div class="cathead"><span class="cathead-title">${esc(groups[0].title)}</span><span class="cathead-count">${o.products.length}</span></div>` : '') +
       `<div class="grid">${o.products.map(productCard).join('')}</div>`;
 
-  // Section prestations/services (beauté, fitness) — affichée en plus des produits.
-  const svcGroups = groupServices(o.services);
+  // Section prestations/services — beauté (grille) + fitness (liste sombre).
+  const svcGroups    = groupServices(o.services);
+  const beautyGroups = svcGroups.filter(g => g.items.some(s => s.kind === 'beauty'));
+  const fitGroups    = svcGroups.filter(g => g.items.some(s => s.kind === 'fitness'));
   const svcSection = !hasServices ? '' :
     `<div class="sectitle">${hasProducts ? 'Prestations &amp; services' : 'Choisis ta prestation'} · ${o.services.length}</div>` +
-    svcGroups.map(g =>
+    beautyGroups.map(g =>
       `<div class="cathead"><span class="cathead-title">${esc(g.title)}</span><span class="cathead-count">${g.items.length}</span></div>` +
-      `<div class="grid">${g.items.map(s => serviceCard(s, deep)).join('')}</div>`).join('');
+      `<div class="grid">${g.items.map(s => serviceCard(s, deep)).join('')}</div>`).join('') +
+    fitGroups.map(g =>
+      `<div class="cathead"><span class="cathead-title">${esc(g.title)}</span><span class="cathead-count">${g.items.length}</span></div>` +
+      `<div class="abolist">${g.items.map(fitnessCard).join('')}</div>`).join('');
 
   const storeButtons = `<div class="cta">
       <a class="store primary" href="${APPSTORE_URL}">
@@ -484,6 +494,7 @@ function page(o: {
 
   const cfg = JSON.stringify({
     url: SUPABASE_URL, key: SUPABASE_ANON_KEY, slug: o.slug, shop: o.name, rate: COMMISSION_RATE,
+    hasFitness,
   });
 
   return `<!DOCTYPE html>
@@ -657,6 +668,14 @@ function page(o: {
   .hab-chip.on { background:var(--y); border-color:var(--y); color:var(--d); }
   #habStock { font-size:13px; color:var(--m); margin:0 0 14px; }
   #habStock.low { color:#F97316; }
+  /* ABONNEMENT FITNESS (liste sombre) */
+  .abolist { display:flex; flex-direction:column; gap:12px; margin-bottom:32px; }
+  .abocard { background:#14152A; color:#fff; border-radius:16px; padding:18px 20px; }
+  .abonom { font-size:17px; font-weight:700; margin-bottom:6px; }
+  .abodetail { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .abometa { font-size:13px; color:rgba(255,255,255,.6); }
+  .aboprix { font-size:22px; font-weight:800; color:#FDCF34; }
+  .abo-btn { width:100%; background:#FDCF34; color:#14152A; border:none; border-radius:12px; padding:13px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; }
   /* LIGHTBOX */
   .lbx { position:fixed; inset:0; z-index:999; background:rgba(0,0,0,.92); display:none; align-items:center; justify-content:center; cursor:zoom-out; }
   .lbx.open { display:flex; }
@@ -760,9 +779,41 @@ function page(o: {
     </div>
   </div>
   ` : ''}
-  ${(hasProducts || hasBeauty) ? `<script id="cfg" type="application/json">${cfg}</script>` : ''}
+  ${hasFitness ? `
+  <div class="sheet" id="abosheet">
+    <div class="panel" style="position:relative">
+      <button class="close" id="aboClose" type="button">\xD7</button>
+      <div id="abostep-form">
+        <h2 id="aboTitle">S’abonner</h2>
+        <p class="sub" id="aboSub">${esc(o.name)} \xB7 paiement s\xe9curis\xe9 Wave / Orange Money</p>
+        <div class="lines" id="aboLines"></div>
+        <div class="fld"><label>Ton nom *</label><input id="abo-name" type="text" placeholder="Ex : Awa Diop" maxlength="80" autocomplete="name"></div>
+        <div class="fld"><label>T\xe9l\xe9phone *</label><input id="abo-phone" type="text" inputmode="numeric" placeholder="77 123 45 67" maxlength="14" autocomplete="off" autocorrect="off" autocapitalize="off"></div>
+        <div class="fld"><label>Moyen de paiement *</label>
+          <div class="pays">
+            <button class="pay" type="button" data-am="wave"><img src="/assets/wave.jpg" alt="Wave"><span>Wave</span></button>
+            <button class="pay" type="button" data-am="orange_money"><img src="/assets/om.png" alt="Orange Money"><span>Orange Money</span></button>
+          </div>
+        </div>
+        <p class="msg" id="aboMsg"></p>
+        <button class="payer" id="aboPayer" type="button" disabled>S’abonner → Payer</button>
+      </div>
+      <div id="abostep-wait" style="display:none" class="waiting">
+        <h2 id="aboWaitTitle">Paiement</h2>
+        <p class="sub" id="aboWaitSub">Valide le paiement, puis reviens sur cette page.</p>
+        <a class="payer" id="aboPayOpen" style="display:none;text-decoration:none;width:auto;padding:15px 30px" href="#">Payer</a>
+        <img id="aboOmQr" alt="QR paiement" hidden>
+        <div class="spin"></div>
+        <p class="sub" id="aboWaitMsg">En attente de confirmation du paiement…</p>
+        <button class="pay" id="aboCheckNow" type="button" style="margin-top:8px;width:auto;padding:10px 20px">J’ai pay\xe9 — v\xe9rifier</button>
+      </div>
+    </div>
+  </div>
+  ` : ''}
+  ${(hasProducts || hasBeauty || hasFitness) ? `<script id="cfg" type="application/json">${cfg}</script>` : ''}
   ${hasProducts ? `<script>${CART_JS}</script>` : ''}
   ${hasBeauty ? `<script>${BOOKING_JS}</script>` : ''}
+  ${hasFitness ? `<script>${SUBSCRIPTION_JS}</script>` : ''}
   <div class="lbx" id="lbx"><button class="lbx-close" id="lbxClose">\xD7</button><img class="lbx-img" id="lbxImg" src="" alt=""></div>
   <script>${LIGHTBOX_JS}</script>
 </body>
@@ -1475,6 +1526,150 @@ const BOOKING_JS = `
 })();
 `;
 
+// ── JS client : abonnement fitness invité ────────────────────────────────────
+const SUBSCRIPTION_JS = `
+(function(){
+  var cfgEl=document.getElementById('cfg'); if(!cfgEl) return;
+  var CFG=JSON.parse(cfgEl.textContent);
+  var sheet=document.getElementById('abosheet'); if(!sheet) return;
+  var cur={id:null,nom:'',prix:0,meta:'',moyen:'wave'};
+  function fmt(n){ return String(Math.round(n)).replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ')+' F'; }
+
+  function openSheet(card){
+    cur.id=card.getAttribute('data-offreid');
+    cur.nom=card.getAttribute('data-nom')||'Offre';
+    cur.prix=parseInt(card.getAttribute('data-prix'),10)||0;
+    cur.meta=card.getAttribute('data-meta')||'';
+    cur.moyen='wave';
+    document.getElementById('aboTitle').textContent=cur.nom;
+    document.getElementById('aboSub').textContent=CFG.shop+' \xB7 '+fmt(cur.prix);
+    var linesHtml='<div class="line"><span>'+cur.nom+'</span><span></span></div>'+
+      '<div class="line"><span>⏱ '+cur.meta+'</span><span></span></div>'+
+      '<div class="line tot"><span>Total</span><span>'+fmt(cur.prix)+'</span></div>';
+    document.getElementById('aboLines').innerHTML=linesHtml;
+    document.getElementById('abostep-form').style.display='';
+    document.getElementById('abostep-wait').style.display='none';
+    document.getElementById('aboMsg').textContent='';
+    document.getElementById('aboPayer').disabled=true;
+    document.querySelectorAll('#abosheet .pay').forEach(function(p){ p.classList.remove('sel'); });
+    document.getElementById('abo-name').value='';
+    document.getElementById('abo-phone').value='';
+    sheet.classList.add('open');
+  }
+
+  document.querySelectorAll('.abocard .abo-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ openSheet(this.closest('.abocard')); });
+  });
+  document.getElementById('aboClose').addEventListener('click', function(){ sheet.classList.remove('open'); });
+
+  var aboPhoneInput=document.getElementById('abo-phone');
+  aboPhoneInput.addEventListener('input', function(){
+    var v=this.value.replace(/\\D/g,'');
+    if(v.startsWith('221')) v=v.slice(3);
+    this.value=v.slice(0,9);
+    checkReady();
+  });
+  aboPhoneInput.addEventListener('blur', function(){
+    var v=this.value.replace(/\\D/g,'');
+    if(v.startsWith('221')) v=v.slice(3);
+    v=v.slice(0,9);
+    var f='';
+    if(v.length>0) f=v.slice(0,2);
+    if(v.length>2) f+=' '+v.slice(2,5);
+    if(v.length>5) f+=' '+v.slice(5,7);
+    if(v.length>7) f+=' '+v.slice(7,9);
+    this.value=f;
+  });
+  document.getElementById('abo-name').addEventListener('input', checkReady);
+
+  function checkReady(){
+    var name=document.getElementById('abo-name').value.trim();
+    var phone=document.getElementById('abo-phone').value.replace(/\\D/g,'').replace(/^221/,'');
+    var ok=name.length>=2 && /^7[05678][0-9]{7}$/.test(phone) && cur.moyen;
+    document.getElementById('aboPayer').disabled=!ok;
+  }
+
+  document.querySelectorAll('#abosheet .pay').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('#abosheet .pay').forEach(function(x){x.classList.remove('sel');});
+      b.classList.add('sel');
+      cur.moyen=b.getAttribute('data-am');
+      checkReady();
+    });
+  });
+
+  var aboPaying=false;
+  document.getElementById('aboPayer').addEventListener('click', function(){
+    if(aboPaying||this.disabled) return;
+    var name=document.getElementById('abo-name').value.trim();
+    var phone=document.getElementById('abo-phone').value.replace(/\\D/g,'').replace(/^221/,'');
+    var msg=document.getElementById('aboMsg');
+    if(name.length<2){ msg.textContent='Entre ton nom.'; return; }
+    if(!/^7[05678][0-9]{7}$/.test(phone)){ msg.textContent='Num\xe9ro invalide.'; return; }
+    if(!cur.moyen){ msg.textContent='Choisis un moyen de paiement.'; return; }
+    aboPaying=true;
+    this.disabled=true;
+    var isW=(cur.moyen==='wave');
+    document.getElementById('abostep-form').style.display='none';
+    document.getElementById('abostep-wait').style.display='';
+    document.getElementById('aboWaitTitle').textContent=isW?'Paiement Wave':'Paiement Orange Money';
+    document.getElementById('aboWaitSub').textContent='Connexion en cours…';
+    document.getElementById('aboPayOpen').style.display='none';
+    fetch(CFG.url+'/functions/v1/create-guest-subscription',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':CFG.key,'Authorization':'Bearer '+CFG.key},
+      body:JSON.stringify({offreId:cur.id,name:name,phone:phone,moyenPaiement:cur.moyen,shopSlug:CFG.slug})
+    }).then(function(r){return r.json();}).then(function(d){
+      if(!d||!d.success){ throw new Error((d&&d.error)||'Erreur'); }
+      var confUrl='https://s.lassi.tech/commande?id='+encodeURIComponent(d.piId)+'&shop='+encodeURIComponent(CFG.slug)+'&type=abonnement';
+      if(d.mode==='simulation'){ window.location.href=confUrl+'&s=ok'; return; }
+      var a=document.getElementById('aboPayOpen');
+      if(d.redirectUrl){
+        document.getElementById('aboWaitSub').textContent=isW
+          ? 'Valide le paiement dans Wave, puis reviens sur cette page.'
+          : 'Valide le paiement dans Orange Money, puis reviens sur cette page.';
+        a.textContent=isW?'Rouvrir Wave':'Rouvrir Orange Money';
+        a.href=d.redirectUrl; a.style.display='inline-block';
+        window.location.replace(d.redirectUrl);
+      } else { a.style.display='none'; }
+      if(d.qrCode){
+        document.getElementById('aboWaitSub').textContent='Scanne ce QR code avec Orange Money.';
+        var img=document.getElementById('aboOmQr');
+        img.src=(String(d.qrCode).indexOf('data:')===0?d.qrCode:'data:image/png;base64,'+d.qrCode);
+        img.hidden=false;
+      }
+      pollAbo(d.piId, confUrl);
+    }).catch(function(e){
+      aboPaying=false;
+      document.getElementById('abostep-wait').style.display='none';
+      document.getElementById('abostep-form').style.display='';
+      document.getElementById('aboPayer').disabled=false;
+      document.getElementById('aboMsg').textContent=e.message||'Une erreur est survenue. R\xe9essaie.';
+    });
+  });
+
+  function checkAboOnce(piId, confUrl, iv){
+    return fetch(CFG.url+'/functions/v1/create-guest-subscription?pi='+encodeURIComponent(piId),{
+      headers:{apikey:CFG.key,Authorization:'Bearer '+CFG.key}
+    }).then(function(r){return r.json();}).then(function(d){
+      if(d&&d.paid){ if(iv) clearInterval(iv); window.location.href=confUrl+'&s=ok'; return true; }
+      return false;
+    }).catch(function(){ return false; });
+  }
+  function pollAbo(piId, confUrl){
+    var tries=0;
+    var iv=setInterval(function(){
+      tries++;
+      checkAboOnce(piId,confUrl,iv);
+      if(tries>80){ clearInterval(iv); document.getElementById('aboWaitMsg').textContent='Si tu as pay\xe9, ton abonnement est actif. Tu peux fermer cette page.'; }
+    }, 3000);
+    document.addEventListener('visibilitychange', function(){ if(!document.hidden) checkAboOnce(piId,confUrl,iv); });
+    var cn=document.getElementById('aboCheckNow');
+    if(cn) cn.addEventListener('click', function(){ checkAboOnce(piId,confUrl,iv); });
+  }
+})();
+`;
+
 // ── JS client : page de confirmation (poll statut) ───────────────────────────
 const CONFIRM_JS = `
 (function(){
@@ -1483,36 +1678,44 @@ const CONFIRM_JS = `
   var OK_SVG='<svg viewBox="0 0 72 72"><circle cx="36" cy="36" r="34" fill="#FDCF34"/><path d="M22 37l10 10 18-20" fill="none" stroke="#14152A" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var KO_SVG='<svg viewBox="0 0 72 72"><circle cx="36" cy="36" r="33" fill="none" stroke="#FF6B6B" stroke-width="4"/><path d="M26 26l20 20M46 26l-20 20" stroke="#FF6B6B" stroke-width="6" stroke-linecap="round"/></svg>';
   var isBeauty = CFG.type==='beauty';
+  var isAbo = CFG.type==='abonnement';
   var statusUrl = isBeauty
     ? CFG.url+'/functions/v1/create-guest-reservation?status='+encodeURIComponent(CFG.id)
-    : CFG.url+'/functions/v1/create-guest-order?order='+encodeURIComponent(CFG.id);
+    : isAbo
+      ? CFG.url+'/functions/v1/create-guest-subscription?pi='+encodeURIComponent(CFG.id)
+      : CFG.url+'/functions/v1/create-guest-order?order='+encodeURIComponent(CFG.id);
   function ok(){
     mark.innerHTML=OK_SVG;
     if(isBeauty){
-      t.textContent='Réservation confirmée';
-      d.innerHTML='Payé ! <span class="gold">Le prestataire a reçu ta réservation</span> et te confirmera le rendez-vous. Présente-toi à l\\'heure choisie.';
+      t.textContent='R\xe9servation confirm\xe9e';
+      d.innerHTML='Pay\xe9 ! <span class="gold">Le prestataire a re\xe7u ta r\xe9servation</span> et te confirmera le rendez-vous. Pr\xe9sente-toi \xe0 l\\'heure choisie.';
+    } else if(isAbo){
+      t.textContent='Abonnement activ\xe9 !';
+      d.innerHTML='<span class="gold">Ton abonnement est actif.</span> Pr\xe9sente-toi chez le prestataire avec ton num\xe9ro de t\xe9l\xe9phone pour valider l\\'acc\xe8s.';
     } else {
-      t.textContent='Commande confirmée';
-      d.innerHTML='Merci ! <span class="gold">Le marchand a reçu ta commande</span> et va te rappeler pour le retrait ou la livraison.';
-      var recu=document.getElementById('recu'); if(recu&&CFG.id){ recu.style.display='inline-flex'; recu.addEventListener('click',function(e){ e.preventDefault(); recu.style.opacity='0.5'; fetch(CFG.url+'/functions/v1/create-guest-order?receipt='+encodeURIComponent(CFG.id),{headers:{'apikey':CFG.key,'Authorization':'Bearer '+CFG.key}}).then(function(r){return r.ok?r.blob():Promise.reject(r.status);}).then(function(b){var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='recu-lassi.pdf';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(u);},5000);}).catch(function(){alert('Erreur lors du téléchargement. Réessaie.');}).finally(function(){recu.style.opacity='';});});}
+      t.textContent='Commande confirm\xe9e';
+      d.innerHTML='Merci ! <span class="gold">Le marchand a re\xe7u ta commande</span> et va te rappeler pour le retrait ou la livraison.';
+      var recu=document.getElementById('recu'); if(recu&&CFG.id){ recu.style.display='inline-flex'; recu.addEventListener('click',function(e){ e.preventDefault(); recu.style.opacity='0.5'; fetch(CFG.url+'/functions/v1/create-guest-order?receipt='+encodeURIComponent(CFG.id),{headers:{'apikey':CFG.key,'Authorization':'Bearer '+CFG.key}}).then(function(r){return r.ok?r.blob():Promise.reject(r.status);}).then(function(b){var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='recu-lassi.pdf';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(u);},5000);}).catch(function(){alert('Erreur lors du t\xe9l\xe9chargement. R\xe9essaie.');}).finally(function(){recu.style.opacity='';});});}
     }
     home.style.display='inline-block';
   }
-  function fail(){ mark.innerHTML=KO_SVG; t.textContent='Paiement non abouti'; d.textContent=isBeauty?'Ta réservation n\\'a pas été payée. Tu peux réessayer depuis la boutique.':'Ta commande n\\'a pas été payée. Tu peux réessayer depuis la boutique.'; home.style.display='inline-block'; }
+  function fail(){ mark.innerHTML=KO_SVG; t.textContent='Paiement non abouti'; d.textContent=isAbo?'Ton abonnement n\\'a pas \xe9t\xe9 pay\xe9. Tu peux r\xe9essayer depuis la boutique.':isBeauty?'Ta r\xe9servation n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer depuis la boutique.':'Ta commande n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer depuis la boutique.'; home.style.display='inline-block'; }
   if(CFG.s==='ko'){ fail(); return; }
   if(CFG.s==='ok' || !CFG.id){ ok(); return; }
   var tries=0, dbFails=0;
   var iv=setInterval(function(){
     tries++;
-    var url = (!isBeauty && dbFails>=5)
+    var url = (!isBeauty && !isAbo && dbFails>=5)
       ? CFG.url+'/functions/v1/create-guest-order?verify_order='+encodeURIComponent(CFG.id)
-      : statusUrl;
+      : (isAbo && dbFails>=5)
+        ? CFG.url+'/functions/v1/create-guest-subscription?pi='+encodeURIComponent(CFG.id)+'&verify=1'
+        : statusUrl;
     fetch(url,{headers:{'apikey':CFG.key,'Authorization':'Bearer '+CFG.key}})
       .then(function(r){return r.json();}).then(function(x){
         if(x && x.paid){ clearInterval(iv); ok(); return; }
         dbFails++;
       }).catch(function(){ dbFails++; });
-    if(tries>20){ clearInterval(iv); ok(); } // Wave a redirigé sur s=ok → considéré payé
+    if(tries>20){ clearInterval(iv); ok(); }
   }, 2000);
 })();
 `;
