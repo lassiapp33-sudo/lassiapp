@@ -7,10 +7,9 @@
 import { serve }        from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { logEvent }     from '../_shared/payment_utils.ts';
+import { getOmToken, OM_BASE_URL, isOmReady } from '../_shared/omAuth.ts';
 
 const WAVE_API_KEY  = Deno.env.get('WAVE_API_KEY')              ?? '';
-const OM_API_KEY    = Deno.env.get('OM_API_KEY')                ?? '';
-const OM_API_SECRET = Deno.env.get('OM_API_SECRET')             ?? '';
 const SUPABASE_URL  = Deno.env.get('SUPABASE_URL')              ?? '';
 const SUPABASE_SRK  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const PAYMENT_MODE  = Deno.env.get('PAYMENT_MODE')              ?? 'simulation';
@@ -96,7 +95,7 @@ serve(async (req) => {
       // Pour Wave : utiliser external_ref (cos-*) si dispo (après webhook), sinon client_reference (UUID)
       let paid = provider === 'wave'
         ? await checkWavePayment(pi.external_ref ?? null, piId)
-        : await checkOmPayment(piId);
+        : await checkOmPayment(pi.external_ref ?? null, piId);
 
       // Race condition : le webhook peut avoir confirmé le PI entre notre fetch initial et l'appel Wave/OM
       if (!paid) {
@@ -167,7 +166,7 @@ serve(async (req) => {
     // Production — ticket (reference = client_reference passé à Wave, pas un session ID)
     const paid = method === 'wave'
       ? await checkWavePayment(null, reference)
-      : await checkOmPayment(reference);
+      : await checkOmPayment(null, reference);
 
     if (paid) {
       await sb.rpc('mark_ticket_paid', { p_message_id: ticketId });
@@ -231,25 +230,26 @@ async function checkWavePayment(sessionId: string | null, clientRef: string): Pr
   return cs === 'complete' || ps === 'succeeded' || ps === 'SUCCESSFUL' || ps === 'paid' || ps === 'PAID';
 }
 
-// ─── Orange Money : vérifier via order_id ────────────────────────────────────
+// ─── Orange Money : vérifier via eWallet QR code API ────────────────────────
+// externalRef = orderId OM stocké dans payment_intents.external_ref (si dispo)
+// piId        = fallback si external_ref absent
 
-async function checkOmPayment(reference: string): Promise<boolean> {
-  const tokenRes = await fetch('https://api.orange.com/oauth/v3/token', {
-    method:  'POST',
-    headers: {
-      Authorization:  `Basic ${btoa(`${OM_API_KEY}:${OM_API_SECRET}`)}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials',
-  });
-  const { access_token } = await tokenRes.json();
-
-  const res = await fetch(
-    `https://api.orange.com/orange-money-webpay/sn/v1/transactions/${reference}`,
-    { headers: { Authorization: `Bearer ${access_token}` } },
-  );
-  const data = await res.json();
-  return data?.status === 'SUCCESSFUL' || data?.status === 'SUCCESSFULL' || data?.status === 'SUCCESS';
+async function checkOmPayment(externalRef: string | null, piId: string): Promise<boolean> {
+  if (!isOmReady()) return false;
+  try {
+    const omToken = await getOmToken();
+    const ref = (externalRef && externalRef !== piId) ? externalRef : piId;
+    const res = await fetch(
+      `${OM_BASE_URL}/api/eWallet/v4/qrcode/${encodeURIComponent(ref)}`,
+      { headers: { Authorization: `Bearer ${omToken}` } },
+    );
+    if (!res.ok) return false;
+    const data = await res.json() as Record<string, unknown>;
+    const st = String(data?.status ?? data?.statut ?? data?.txStatus ?? '').toUpperCase();
+    return ['PAID', 'COMPLETED', 'SUCCESS', 'SUCCESSFULL', 'SUCCESSFUL', 'PAYMENT_SUCCESS'].includes(st);
+  } catch {
+    return false;
+  }
 }
 
 function ok(data: unknown) {

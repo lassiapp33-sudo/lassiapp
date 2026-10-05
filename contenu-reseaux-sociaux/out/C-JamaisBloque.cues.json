@@ -1,0 +1,41 @@
+{
+  "id": "C-JamaisBloque",
+  "title": "Plus jamais bloqué sans solution",
+  "fps": 30,
+  "durationFrames": 480,
+  "durationSeconds": 16,
+  "voiceover": {
+    "S1": "Panne de gaz, faim à minuit, invité surprise…",
+    "S2": "Quoi qu'il arrive, y'a une solution dans LASSI.",
+    "S3": "Plus jamais bloqué. Nickel."
+  },
+  "cues": [
+    { "at": 0.0, "sfx": "deep-sub-boom", "note": "halo d'ouverture" },
+    { "at": 0.4, "sfx": "low-rumble", "note": "BLOQUÉ entre en scène" },
+    { "at": 0.9, "sfx": "impact", "note": "BLOQUÉ slam (scale overshoot)" },
+    { "at": 1.53, "sfx": "flash", "note": "panne de gaz" },
+    { "at": 1.83, "sfx": "flash", "note": "faim" },
+    { "at": 2.13, "sfx": "flash", "note": "horloge minuit" },
+    { "at": 2.4, "sfx": "flash", "note": "porte / invité surprise" },
+    { "at": 2.6, "sfx": "crack", "note": "fissure jaune sur le mot" },
+    { "at": 2.8, "sfx": "yellow-wipe-whoosh", "note": "wipe jaune + flash + punch zoom" },
+    { "at": 3.2, "sfx": "punch-boom", "note": "BESOIN ? (impact grave)" },
+    { "at": 3.5, "sfx": "shockwave", "note": "onde depuis le centre" },
+    { "at": 3.7, "sfx": "tick", "note": "branche MANGER" },
+    { "at": 4.3, "sfx": "tick", "note": "branche LIVRER" },
+    { "at": 5.0, "sfx": "tick", "note": "branche RÉSERVER" },
+    { "at": 5.7, "sfx": "tick", "note": "branche PAYER" },
+    { "at": 6.4, "sfx": "tick", "note": "branche BEAUTÉ" },
+    { "at": 7.0, "sfx": "rising-digital-hum", "note": "réseau vivant (pulses, particules)" },
+    { "at": 8.3, "sfx": "rapid-riser", "note": "camera dive" },
+    { "at": 9.0, "sfx": "flip-impact-white-flash", "note": "3D flip + white flash" },
+    { "at": 9.5, "sfx": "soft-ui-impact", "note": "carte principale" },
+    { "at": 10.5, "sfx": "soft-ui-impact", "note": "cartes secondaires" },
+    { "at": 11.5, "sfx": "light-whoosh", "note": "fil jaune conducteur" },
+    { "at": 12.2, "sfx": "morph", "note": "réseau devient réel" },
+    { "at": 13.0, "sfx": "tap-ripple", "note": "HandMarker + yellow ripple" },
+    { "at": 13.5, "sfx": "nickel-impact", "note": "NICKEL." },
+    { "at": 15.2, "sfx": "logo-hit", "note": "LASSI" },
+    { "at": 15.4, "sfx": "soft-whoosh", "note": "CTA reveal + pulse jaune" }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "C-AutourDeToi",
+  "fps": 30,
+  "durationFrames": 600,
+  "durationSec": 20,
+  "cues": [
+    { "at": 0.0, "sfx": "sub_impact", "note": "point jaune central" },
+    { "at": 0.27, "sfx": "whoosh_flash", "note": "flash -> blanc" },
+    { "at": 0.75, "sfx": "riser", "note": "montée hook" },
+    { "at": 2.9, "sfx": "whip", "note": "zoom vers le texte" },
+    { "at": 3.0, "sfx": "whip_cut", "note": "whip pan jaune -> S2" },
+    { "at": 5.0, "sfx": "boom", "note": "impact icône position + shockwave" },
+    { "at": 6.3, "sfx": "digital_pulse", "note": "plongée dans le halo" },
+    { "at": 7.0, "sfx": "deep_zoom", "note": "entrée carte" },
+    { "at": 7.2, "sfx": "pin_impact", "note": "pin restos (drop)" },
+    { "at": 8.2, "sfx": "pin_impact", "note": "pin beauté (spin)" },
+    { "at": 9.2, "sfx": "pin_impact", "note": "pin sport (impact)" },
+    { "at": 10.2, "sfx": "pin_impact", "note": "pin boutique (slide)" },
+    { "at": 11.2, "sfx": "pin_impact", "note": "pin tangana (pop)" },
+    { "at": 12.4, "sfx": "riser", "note": "réseau qui se connecte" },
+    { "at": 13.5, "sfx": "streaks_whoosh", "note": "pins -> streaks lumineux" },
+    { "at": 14.0, "sfx": "clock_wipe", "note": "cut téléphone" },
+    { "at": 15.3, "sfx": "ui_click", "note": "chip à 300 m + marqueur" },
+    { "at": 16.5, "sfx": "punch", "note": "PRÈS DE TOI" },
+    { "at": 18.5, "sfx": "magnetic_whoosh", "note": "collapse orbite" },
+    { "at": 19.3, "sfx": "final_hit", "note": "CTA DÉCOUVRE TON QUARTIER" }
+  ]
+}

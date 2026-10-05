@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maison Élégance — LASSİ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+
+  :root {
+    --yellow: #FDCF34;
+    --dark:   #14152A;
+    --white:  #FFFFFF;
+    --gray:   #f5f4f0;
+    --muted:  #8a8880;
+    --border: #e8e5de;
+    --serif:  'Cormorant Garamond', Georgia, serif;
+    --sans:   'DM Sans', system-ui, sans-serif;
+  }
+
+  body {
+    background: var(--white);
+    color: var(--dark);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    padding-bottom: 80px;
+  }
+
+  /* ── HERO ─────────────────────────────────────────────────── */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 80vh;
+    align-items: stretch;
+  }
+  @media (max-width: 680px) {
+    .hero { grid-template-columns: 1fr; min-height: auto; }
+    .hero-img { order: -1; height: 300px; }
+  }
+
+  .hero-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 64px 52px 64px 48px;
+    background: var(--white);
+  }
+  @media (max-width: 680px) { .hero-left { padding: 36px 24px 32px; } }
+
+  .shop-cat {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+
+  .hero-title {
+    font-family: var(--serif);
+    font-size: clamp(38px, 5vw, 62px);
+    font-weight: 300;
+    line-height: 1.1;
+    color: var(--dark);
+    margin-bottom: 22px;
+    letter-spacing: -0.5px;
+  }
+
+  .hero-desc {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 300;
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 380px;
+    margin-bottom: 38px;
+  }
+
+  /* ── HORAIRES ── */
+  .hours-block {
+    border-top: 1px solid var(--border);
+    padding-top: 28px;
+  }
+  .hours-label {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .hours-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 10px;
+  }
+  .hours-status::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+  .h-open  { background: rgba(34, 197, 94, .10); color: #166534; }
+  .h-open::before  { background: #22c55e; }
+  .h-closed { background: rgba(100, 100, 100, .09); color: var(--muted); }
+  .h-closed::before { background: var(--muted); }
+  .h-pause  { background: rgba(253, 207, 52, .15); color: #92610a; }
+  .h-pause::before  { background: var(--yellow); }
+
+  .hours-time {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 300;
+  }
+
+  /* ── HERO IMAGE / LOGO ── */
+  .hero-img {
+    position: relative;
+    background: var(--gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .hero-img img.shop-logo {
+    width: min(280px, 65%);
+    height: min(280px, 65%);
+    object-fit: contain;
+    border-radius: 24px;
+    box-shadow: 0 24px 64px rgba(0,0,0,.10);
+  }
+  .hero-img .logo-initial {
+    width: 180px;
+    height: 180px;
+    border-radius: 24px;
+    background: var(--yellow);
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--serif);
+    font-size: 90px;
+    font-weight: 300;
+    box-shadow: 0 24px 64px rgba(0,0,0,.10);
+  }
+  .verified-badge {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    background: var(--yellow);
+    color: var(--dark);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 999px;
+    letter-spacing: .3px;
+  }
+  .zone-badge {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    background: rgba(255,255,255,.9);
+    backdrop-filter: blur(8px);
+    color: var(--dark);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+    margin: 0;
+  }
+
+  /* ── CATALOG ── */
+  .catalog { max-width: 1200px; margin: 0 auto; padding: 64px 32px 32px; }
+  @media (max-width: 680px) { .catalog { padding: 40px 20px 20px; } }
+
+  .catalog-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 48px;
+  }
+  @media (max-width: 560px) { .catalog-header { flex-direction: column; align-items: flex-start; gap: 12px; } }
+
+  .catalog-eyebrow {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .catalog-title {
+    font-family: var(--serif);
+    font-size: clamp(30px, 4vw, 46px);
+    font-weight: 300;
+    line-height: 1.1;
+    letter-spacing: -0.3px;
+    color: var(--dark);
+  }
+
+  /* ── CATEGORY NAV ── */
+  .catnav {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    margin-bottom: 48px;
+  }
+  .catnav::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: 0 0 auto;
+    padding: 9px 20px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--sans);
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--dark);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all .15s;
+  }
+  .chip.sel, .chip:hover {
+    background: var(--yellow);
+    border-color: var(--yellow);
+    color: var(--dark);
+  }
+
+  /* ── SECTION ── */
+  .catsec { margin-bottom: 56px; }
+
+  .cathead {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .cathead-title {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--dark);
+  }
+  .cathead-count {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--gray);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
+  /* ── GRID ── */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: repeat(2, 1fr); gap: 14px; } }
+  @media (max-width: 440px) { .grid { grid-template-columns: 1fr 1fr; gap: 12px; } }
+
+  /* ── PRODUCT CARD ── */
+  .prod {
+    display: flex;
+    flex-direction: column;
+    border: 1.5px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--white);
+    transition: box-shadow .2s, border-color .2s;
+    cursor: default;
+  }
+  .prod:hover { box-shadow: 0 8px 32px rgba(0,0,0,.07); border-color: #d8d5ce; }
+  .prod.in { border-color: var(--yellow); }
+
+  .pimgzone {
+    width: 100%;
+    aspect-ratio: 1/1;
+    background: var(--gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+  .pimg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .3s;
+  }
+  .prod:hover .pimg { transform: scale(1.04); }
+  .pemoji { font-size: 46px; }
+
+  .pbody {
+    padding: 14px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+  }
+  .pname {
+    font-family: var(--serif);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--dark);
+  }
+  .pdesc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+    font-weight: 300;
+  }
+  .pprice {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--dark);
+    margin-top: auto;
+    padding-top: 8px;
+  }
+  .stepper { margin-top: 10px; }
+  .add {
+    display: block;
+    width: 100%;
+    background: var(--yellow);
+    color: var(--dark);
+    border: none;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: opacity .15s;
+  }
+  .add:hover { opacity: .88; }
+  .qtybox {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--yellow);
+    border-radius: 10px;
+  }
+  .qtybox button {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    color: var(--dark);
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: var(--sans);
+  }
+  .qtybox .q {
+    flex: 1;
+    text-align: center;
+    color: var(--dark);
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  /* ── SERVICE CARD ── */
+  .svcbtn {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    text-align: center;
+    text-decoration: none;
+    background: transparent;
+    color: var(--dark);
+    border: 1.5px solid var(--dark);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+  }
+
+  /* ── CLOSED OVERLAY ── */
+  .closed-overlay { opacity: .4; pointer-events: none; }
+
+  .closed-notice {
+    background: var(--gray);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin: 0 0 32px;
+    text-align: center;
+  }
+  .closed-notice .cn-label { font-size: 15px; font-weight: 600; color: var(--dark); }
+  .closed-notice .cn-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .closed-pause { border-color: rgba(253, 207, 52, .5); background: rgba(253, 207, 52, .07); }
+  .closed-pause .cn-label { color: #92610a; }
+
+  /* ── BARRE PANIER ── */
+  .cartbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,.95) 30%);
+    display: flex;
+    justify-content: center;
+    z-index: 50;
+  }
+  .cartbtn {
+    width: 100%;
+    max-width: 560px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--dark);
+    color: var(--white);
+    font-size: 15px;
+    font-weight: 600;
+    font-family: var(--sans);
+    border: none;
+    padding: 16px 22px;
+    border-radius: 16px;
+    cursor: pointer;
+    box-shadow: 0 8px 28px rgba(20,21,42,.22);
+  }
+  .cartbtn .cnt {
+    background: var(--yellow);
+    color: var(--dark);
+    border-radius: 999px;
+    padding: 3px 11px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .cartbtn .ctot { color: var(--yellow); font-weight: 700; }
+
+  /* ── MODALE CHECKOUT ── */
+  .sheet { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.45); display: none; align-items: flex-end; justify-content: center; }
+  .sheet.open { display: flex; }
+  .panel {
+    width: 100%;
+    max-width: 560px;
+    background: var(--white);
+    border-radius: 22px 22px 0 0;
+    padding: 24px 22px calc(24px + env(safe-area-inset-bottom));
+    max-height: 90vh;
+    overflow: auto;
+    position: relative;
+  }
+  .panel h2 { font-family: var(--serif); font-size: 24px; font-weight: 400; margin-bottom: 4px; }
+  .panel .sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+  .lines { border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; }
+  .line { display: flex; justify-content: space-between; font-size: 14px; padding: 5px 0; }
+  .line.tot { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 10px; font-weight: 700; font-size: 16px; }
+  .fld { margin-bottom: 14px; text-align: left; }
+  .fld label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .fld input, .fld textarea { width: 100%; background: var(--gray); border: 1.5px solid var(--border); border-radius: 11px; padding: 13px; color: var(--dark); font-size: 15px; font-family: var(--sans); }
+  .fld input:focus, .fld textarea:focus { outline: none; border-color: var(--yellow); }
+  .fld textarea { resize: vertical; min-height: 52px; }
+  .pays { display: flex; gap: 10px; margin-bottom: 16px; }
+  .pay { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--gray); color: var(--dark); font-weight: 600; font-size: 14px; font-family: var(--sans); cursor: pointer; }
+  .pay img { width: 26px; height: 26px; border-radius: 7px; object-fit: cover; }
+  .pay.sel { border-color: var(--dark); background: var(--white); }
+  .payer { width: 100%; background: var(--dark); color: var(--white); border: none; border-radius: 14px; padding: 16px; font-size: 16px; font-weight: 700; font-family: var(--sans); cursor: pointer; margin-top: 6px; }
+  .payer[disabled] { opacity: .5; }
+  .msg { color: #dc2626; font-size: 13px; margin: 10px 0 0; min-height: 16px; text-align: center; }
+  .close { position: absolute; top: 16px; right: 18px; background: var(--gray); border: none; color: var(--dark); font-size: 20px; cursor: pointer; line-height: 1; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .spin { width: 34px; height: 34px; border: 2.5px solid var(--border); border-top-color: var(--dark); border-radius: 50%; margin: 20px auto; animation: sp 1s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+
+  /* ── FOOTER ── */
+  .site-footer {
+    background: var(--dark);
+    color: rgba(255,255,255,.55);
+    text-align: center;
+    padding: 32px 24px;
+    font-size: 12px;
+    margin-top: 40px;
+  }
+  .site-footer strong { color: var(--yellow); }
+
+  /* ── APP STORES ── */
+  .app-section {
+    border-top: 1px solid var(--border);
+    padding: 40px 24px;
+    text-align: center;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .app-note {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 300;
+    color: var(--muted);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .cta-stores { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .store {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--dark);
+    color: var(--white);
+    text-decoration: none;
+    padding: 11px 18px;
+    border-radius: 12px;
+    border: 1.5px solid transparent;
+  }
+  .store svg { width: 20px; height: 20px; flex: 0 0 auto; fill: var(--white); }
+  .store .txt { display: flex; flex-direction: column; text-align: left; line-height: 1.05; }
+  .store .txt small { font-size: 9px; color: rgba(255,255,255,.7); font-weight: 400; white-space: nowrap; }
+  .store .txt strong { font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .store.primary { background: var(--yellow); color: var(--dark); }
+  .store.primary svg { fill: var(--dark); }
+  .store.primary .txt small { color: rgba(20,21,42,.65); }
+</style>
+</head>
+<body>
+
+<!-- ── HERO ──────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="shop-cat">Parfumerie · Beauté &amp; Soins</div>
+
+    <h1 class="hero-title">Maison<br>Élégance</h1>
+
+    <p class="hero-desc">
+      Des parfums rares, des soins d'exception et des pièces de beauté sélectionnées avec soin.
+      Une adresse pour ceux qui ne font aucune concession sur le raffinement.
+    </p>
+
+    <!-- HORAIRES -->
+    <div class="hours-block">
+      <div class="hours-label">Horaires aujourd'hui</div>
+
+      <!-- État OUVERT — décommente selon le statut réel -->
+      <div class="hours-status h-open">Ouvert · Ferme à 20h</div>
+      <!-- <div class="hours-status h-closed">Fermé · Ouvre à 9h</div> -->
+      <!-- <div class="hours-status h-pause">En pause · Reprend à 14h30</div> -->
+
+      <div class="hours-time" style="margin-top:6px">Lundi – Samedi · 9h00 – 20h00</div>
+    </div>
+  </div>
+
+  <!-- Logo boutique (remplace l'image luxe du template) -->
+  <div class="hero-img">
+    <div class="zone-badge">📍 Plateau, Dakar</div>
+
+    <!-- Si logo_url existe : -->
+    <!-- <img class="shop-logo" src="URL_LOGO" alt="Maison Élégance"> -->
+
+    <!-- Fallback initiale si pas de logo -->
+    <div class="logo-initial">M</div>
+
+    <div class="verified-badge">✓ Boutique vérifiée sur LASSİ</div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── CATALOGUE ─────────────────────────────────────────────── -->
+<div class="catalog" id="catalog">
+
+  <div class="catalog-header">
+    <div>
+      <div class="catalog-eyebrow">Notre sélection</div>
+      <h2 class="catalog-title">Faites-vous plaisir</h2>
+    </div>
+  </div>
+
+  <!-- Navigation catégories -->
+  <div class="catnav">
+    <button class="chip sel" type="button" data-cat="__all">Tout</button>
+    <button class="chip" type="button" data-cat="parfums">Parfums</button>
+    <button class="chip" type="button" data-cat="soins">Soins</button>
+    <button class="chip" type="button" data-cat="maquillage">Maquillage</button>
+    <button class="chip" type="button" data-cat="accessoires">Accessoires</button>
+  </div>
+
+  <!-- ── Catégorie : Parfums ── -->
+  <div class="catsec" data-cat="parfums">
+    <div class="cathead">
+      <span class="cathead-title">Parfums</span>
+      <span class="cathead-count">3</span>
+    </div>
+    <div class="grid">
+
+      <div class="prod" data-id="p1" data-name="Oud Mystique" data-base="45000">
+        <div class="pimgzone"><div class="pemoji">🌹</div></div>
+        <div class="pbody">
+          <div class="pname">Oud Mystique</div>
+          <div class="pdesc">Notes boisées et florales, tenue longue durée</div>
+          <div class="pprice">45 450 F</div>
+          <div class="stepper" data-id="p1">
+            <button class="add" type="button">Ajouter</button>
+            <span class="qtybox" hidden><button class="minus" type="button">−</button><b class="q">0</b><button class="plus" type="button">+</button></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="prod" data-id="p2" data-name="Santal Royal" data-base="38000">
+        <div class="pimgzone"><div class="pemoji">🪵</div></div>
+        <div class="pbody">
+          <div class="pname">Santal Royal</div>
+          <div class="pdesc">Bois de santal, vanille et musc blanc</div>
+          <div class="pprice">38 380 F</div>
+          <div class="stepper" data-id="p2">
+            <button class="add" type="button">Ajouter</button>
+            <span class="qtybox" hidden><button class="minus" type="button">−</button><b class="q">0</b><button class="plus" type="button">+</button></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="prod" data-id="p3" data-name="Rose d'Éthiopie" data-base="52000">
+        <div class="pimgzone"><div class="pemoji">🌸</div></div>
+        <div class="pbody">
+          <div class="pname">Rose d'Éthiopie</div>
+          <div class="pdesc">Eau de parfum florale &amp; poudré, 50 ml</div>
+          <div class="pprice">52 520 F</div>
+          <div class="stepper" data-id="p3">
+            <button class="add" type="button">Ajouter</button>
+            <span class="qtybox" hidden><button class="minus" type="button">−</button><b class="q">0</b><button class="plus" type="button">+</button></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Catégorie : Soins ── -->
+  <div class="catsec" data-cat="soins">
+    <div class="cathead">
+      <span class="cathead-title">Soins</span>
+      <span class="cathead-count">3</span>
+    </div>
+    <div class="grid">
+
+      <div class="prod" data-id="p4" data-name="Huile de Coco Pure" data-base="7500">
+        <div class="pimgzone"><div class="pemoji">🥥</div></div>
+        <div class="pbody">
+          <div class="pname">Huile de Coco Pure</div>
+          <div class="pdesc">Hydratation corps &amp; cheveux, 200 ml</div>
+          <div class="pprice">7 575 F</div>
+          <div class="stepper" data-id="p4">
+            <button class="add" type="button">Ajouter</button>
+            <span class="qtybox" hidden><button class="minus" type="button">−</button><b class="q">0</b><button class="plus" type="button">+</button></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="prod" data-id="p5" data-name="Crème Karité Naturel" data-base="12000">
+        <div class="pimgzone"><div class="pemoji">✨</div></div>
+        <div class="pbody">
+          <div class="pname">Crème Karité Naturel</div>
+          <div class="pdesc">Formule riche, peau sèche et mixte</div>
+          <div class="pprice">12 120 F</div>
+          <div class="stepper" data-id="p5">
+            <button class="add" type="button">Ajouter</button>
+            <span class="qtybox" hidden><button class="minus" type="button">−</button><b class="q">0</b><button class="plus" type="button">+</button></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="prod" data-id="p6" data-name="Sérum Éclat Vitamin C" data-base="18500">
+        <div class="pimgzone"><div class="pemoji">🍊</div></div>
+        <div class="pbody">
+          <div class="pname">Sérum Éclat Vitamin C</div>
+          <div class="pdesc">Anti-tache, peau lumineuse, 30 ml</div>
+          <div class="pprice">18 685 F</div>
+          <div class="stepper" data-id="p6">
+            <button class="add" type="button">Ajouter</button>
+            <span class="qtybox" hidden><button class="minus" type="button">−</button><b class="q">0</b><button class="plus" type="button">+</button></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Catégorie : Maquillage ── -->
+  <div class="catsec" data-cat="maquillage">
+    <div class="cathead">
+      <span class="cathead-title">Maquillage</span>
+      <span class="cathead-count">2</span>
+    </div>
+    <div class="grid">
+
+      <div class="prod" data-id="p7" data-name="Rouge Lèvres Velours" data-base="8000">
+        <div class="pimgzone"><div class="pemoji">💄</div></div>
+        <div class="pbody">
+          <div class="pname">Rouge Lèvres Velours</div>
+          <div class="pdesc">Finition mat longue tenue, 6 teintes</div>
+          <div class="pprice">8 080 F</div>
+          <div class="stepper" data-id="p7">
+            <button class="add" type="button">Ajouter</button>
+            <span class="qtybox" hidden><button class="minus" type="button">−</button><b class="q">0</b><button class="plus" type="button">+</button></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="prod" data-id="p8" data-name="Fond de Teint Tafta" data-base="14000">
+        <div class="pimgzone"><div class="pemoji">🪞</div></div>
+        <div class="pbody">
+          <div class="pname">Fond de Teint Tafta</div>
+          <div class="pdesc">Couverture modulable, 8 teintes adaptées</div>
+          <div class="pprice">14 140 F</div>
+          <div class="stepper" data-id="p8">
+            <button class="add" type="button">Ajouter</button>
+            <span class="qtybox" hidden><button class="minus" type="button">−</button><b class="q">0</b><button class="plus" type="button">+</button></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ── STORES ── -->
+<div class="app-section">
+  <p class="app-note">Découvrez tous les commerçants autour de vous sur l'application LASSİ</p>
+  <div class="cta-stores">
+    <a class="store primary" href="#">
+      <svg viewBox="0 0 24 24"><path d="M16.365 1.43c0 1.14-.417 2.2-1.25 3.06-.95.99-2.08 1.56-3.2 1.47-.14-1.09.43-2.26 1.22-3.05.89-.9 2.33-1.57 3.23-1.48zM20.9 17.1c-.55 1.27-.81 1.83-1.52 2.96-.99 1.57-2.38 3.53-4.1 3.54-1.53.02-1.92-.99-4-.98-2.08.01-2.51 1-4.04.97-1.72-.01-3.04-1.77-4.03-3.34C-.5 16.73-.78 11.08 1.38 8.17c1.07-1.46 2.76-2.38 4.36-2.38 1.63 0 2.66 1 4.01 1 1.31 0 2.11-1 4-1 1.43 0 2.94.78 4.02 2.12-3.53 1.94-2.95 6.98 1.13 9.19z"/></svg>
+      <span class="txt"><small>Télécharger dans l'</small><strong>App Store</strong></span>
+    </a>
+    <a class="store" href="#">
+      <svg viewBox="0 0 24 24"><path d="M3.6 1.8c-.32.34-.51.86-.51 1.53v17.34c0 .67.19 1.19.53 1.52l.06.05L13.5 12.4v-.23L3.68 1.75l-.08.05z" fill="#00D0FF"/><path d="M17.2 15.7l-3.7-3.3v-.24l3.7-3.3.08.05 4.37 2.48c1.25.71 1.25 1.87 0 2.58l-4.37 2.48-.08.02z" fill="#FFCE00"/><path d="M17.28 15.65l-3.78-3.38L3.6 22.2c.41.44 1.09.49 1.86.06l11.82-6.61" fill="#FF3A44"/><path d="M17.28 8.9L5.46 2.3C4.69 1.86 4.01 1.92 3.6 2.36l9.9 9.91 3.78-3.37z" fill="#00F076"/></svg>
+      <span class="txt"><small>Disponible sur</small><strong>Google Play</strong></span>
+    </a>
+  </div>
+</div>
+
+<footer class="site-footer">
+  Commande &amp; paie en sécurité (Wave / Orange Money) — <strong>LASSİ</strong>, l'app qui connecte Dakar.
+</footer>
+
+<!-- ── BARRE PANIER ── -->
+<div class="cartbar" id="cartbar" hidden>
+  <button class="cartbtn" id="cartbtn" type="button">
+    <span><span class="cnt" id="cnt">0</span> &nbsp;Commander</span>
+    <span class="ctot" id="cartTotal">0 F</span>
+  </button>
+</div>
+
+<!-- ── MODALE CHECKOUT ── -->
+<div class="sheet" id="sheet">
+  <div class="panel">
+    <button class="close" id="closeSheet" type="button">×</button>
+    <div id="step-form">
+      <h2>Finaliser la commande</h2>
+      <p class="sub">Maison Élégance · paiement sécurisé Wave / Orange Money</p>
+      <div class="lines" id="lines"></div>
+      <div class="fld"><label>Ton nom</label><input id="f-name" type="text" placeholder="Ex : Awa Diop" maxlength="80"></div>
+      <div class="fld"><label>Téléphone</label><input id="f-phone" type="text" inputmode="numeric" placeholder="77 123 45 67" maxlength="14"></div>
+      <div class="fld"><label>Adresse / précisions</label><textarea id="f-note" placeholder="Retrait sur place ou livraison…"></textarea></div>
+      <div class="fld"><label>Moyen de paiement</label>
+        <div class="pays">
+          <button class="pay sel" type="button" data-m="wave">
+            <img src="/assets/wave.jpg" alt="Wave" onerror="this.style.display='none'">
+            <span>Wave</span>
+          </button>
+          <button class="pay" type="button" data-m="orange_money">
+            <img src="/assets/om.png" alt="OM" onerror="this.style.display='none'">
+            <span>Orange Money</span>
+          </button>
+        </div>
+      </div>
+      <p class="msg" id="msg"></p>
+      <button class="payer" type="button" id="payBtn">Payer</button>
+    </div>
+    <div id="step-wait" style="display:none" class="waiting" style="text-align:center;padding:20px 0">
+      <div class="spin"></div>
+      <p style="color:var(--muted);font-size:14px">En attente de confirmation du paiement…</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var RATE = 0.01;
+  var cart = {};
+  function fmt(n){ return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,' ') + ' F'; }
+  function sumBase(){ var s=0; for(var k in cart){ s += cart[k].base*cart[k].qty; } return s; }
+  function count(){ var c=0; for(var k in cart){ c += cart[k].qty; } return c; }
+  function total(){ var b=sumBase(); return b>0 ? b + Math.ceil(b*RATE) : 0; }
+
+  function syncStepper(id){
+    var box = document.querySelector('.stepper[data-id="'+id+'"]');
+    if(!box) return;
+    var q = cart[id] ? cart[id].qty : 0;
+    var add = box.querySelector('.add'), qb = box.querySelector('.qtybox');
+    var card = box.closest('.prod');
+    if(q>0){ add.hidden=true; qb.hidden=false; qb.querySelector('.q').textContent=q; card.classList.add('in'); }
+    else { add.hidden=false; qb.hidden=true; card.classList.remove('in'); }
+  }
+  function refreshBar(){
+    var c=count(), bar=document.getElementById('cartbar');
+    document.getElementById('cnt').textContent=c;
+    document.getElementById('cartTotal').textContent=fmt(total());
+    bar.hidden = c===0;
+  }
+  function change(id,name,base,delta){
+    var cur = cart[id] ? cart[id].qty : 0;
+    var next = Math.max(0, cur+delta);
+    if(next===0) delete cart[id]; else cart[id]={name:name,base:base,qty:next};
+    syncStepper(id); refreshBar();
+  }
+
+  document.querySelectorAll('.prod').forEach(function(card){
+    if(card.classList.contains('svc') || !card.querySelector('.add')) return;
+    var id=card.getAttribute('data-id'), name=card.getAttribute('data-name'), base=parseInt(card.getAttribute('data-base'),10)||0;
+    card.querySelector('.add').addEventListener('click', function(){ change(id,name,base,1); });
+    card.querySelector('.plus').addEventListener('click', function(){ change(id,name,base,1); });
+    card.querySelector('.minus').addEventListener('click', function(){ change(id,name,base,-1); });
+  });
+
+  // Chips catégories
+  var chips=document.querySelectorAll('.chip');
+  var secs=document.querySelectorAll('.catsec');
+  chips.forEach(function(ch){
+    ch.addEventListener('click', function(){
+      chips.forEach(function(x){ x.classList.remove('sel'); });
+      ch.classList.add('sel');
+      var cat=ch.getAttribute('data-cat');
+      secs.forEach(function(sec){ sec.hidden = (cat!=='__all' && sec.getAttribute('data-cat')!==cat); });
+    });
+  });
+
+  // Paiement — modale
+  var sheet=document.getElementById('sheet');
+  function openSheet(){
+    var lines=document.getElementById('lines'), h='';
+    for(var k in cart){
+      var it=cart[k];
+      h += '<div class="line"><span>'+it.qty+'\xD7 '+it.name+'</span><span>'+fmt((it.base+Math.ceil(it.base*RATE))*it.qty)+'</span></div>';
+    }
+    h += '<div class="line tot"><span>Total</span><span>'+fmt(total())+'</span></div>';
+    lines.innerHTML=h;
+    document.getElementById('step-form').style.display='';
+    document.getElementById('step-wait').style.display='none';
+    sheet.classList.add('open');
+  }
+  document.getElementById('cartbtn').addEventListener('click', openSheet);
+  document.getElementById('closeSheet').addEventListener('click', function(){ sheet.classList.remove('open'); });
+
+  // Sélection moyen de paiement
+  document.querySelectorAll('.pay').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.pay').forEach(function(b){ b.classList.remove('sel'); });
+      btn.classList.add('sel');
+    });
+  });
+})();
+</script>
+</body>
+</html>

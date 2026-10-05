@@ -1,4 +1,4 @@
-﻿const { withAndroidManifest, withGradleProperties } = require('@expo/config-plugins');
+const { withAndroidManifest, withGradleProperties } = require('@expo/config-plugins');
 
 // Plugin 1 : usesCleartextTraffic="false" au manifest release.
 // Le debug manifest override via tools:replace â€” le dev n'est pas affectÃ©.

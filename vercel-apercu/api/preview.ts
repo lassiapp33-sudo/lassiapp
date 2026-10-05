@@ -852,8 +852,14 @@ function computeShopStatus(hours: unknown, manuallyClosed: boolean | null | unde
   const fmtH = (hhmm: string) => { const [h2, m2] = hhmm.split(':').map(Number); return m2 === 0 ? h2 + 'h' : h2 + 'h' + String(m2).padStart(2, '0'); };
   const nowMin = now.getHours()*60 + now.getMinutes();
   const openMin = toMin(today.open);
-  const closeMin = toMin(today.close) || 1440;
-  if (nowMin >= openMin && nowMin < closeMin) {
+  const rawClose = toMin(today.close);
+  const closeMin = rawClose || 1440;
+  // Horaire traversant minuit (ex: 07:00–02:58)
+  const overnight = rawClose > 0 && rawClose < openMin;
+  const inRange = overnight
+    ? (nowMin >= openMin || nowMin < closeMin)
+    : (nowMin >= openMin && nowMin < closeMin);
+  if (inRange) {
     // Vérifier pause
     if (today.pauseStart && today.pauseEnd) {
       const ps = toMin(today.pauseStart); const pe = toMin(today.pauseEnd);
@@ -863,7 +869,8 @@ function computeShopStatus(hours: unknown, manuallyClosed: boolean | null | unde
     }
     return { ...base, isOpen: true, label: 'Ouvert', todayOpen: today.open, todayClose: today.close, todayClosed: false };
   }
-  if (nowMin < openMin) return { ...base, isOpen: false, label: 'Pas encore ouvert', todayOpen: today.open, todayClose: today.close, todayClosed: false };
+  if (!overnight && nowMin < openMin) return { ...base, isOpen: false, label: 'Pas encore ouvert', todayOpen: today.open, todayClose: today.close, todayClosed: false };
+  if (overnight && nowMin >= closeMin && nowMin < openMin) return { ...base, isOpen: false, label: 'Pas encore ouvert', todayOpen: today.open, todayClose: today.close, todayClosed: false };
   return { ...base, isOpen: false, label: 'Fermé', todayOpen: today.open, todayClose: today.close, todayClosed: false };
 }
 

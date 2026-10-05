@@ -50,3 +50,16 @@ credentials/
 
 # Google Play service account key (JAMAIS dans git)
 google-play-service-account.json
+
+# OTA bundles locaux — déjà publiés sur EAS, inutiles dans git
+dist_*/
+dist/
+out/
+
+# Clés et secrets (JAMAIS dans git)
+KEY/
+
+# Fichiers temporaires
+tmp_*.png
+tmp_*.jpeg
+tmp_*.jpg
