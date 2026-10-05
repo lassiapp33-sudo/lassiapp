@@ -25,6 +25,7 @@ import {
 } from '../../types/store';
 import * as storageService from '../../services/storage';
 import useShopStore from '../../store/shopStore';
+import { FITNESS_SUBSCRIPTION_CATS } from '../../config/fitnessConfig';
 
 // ─── Placeholders adaptatifs ──────────────────────────────────────────────────
 
@@ -270,13 +271,18 @@ export default function AddProductSheet({
   const { namePH, descPH } = getPlaceholders(shopCategory, shopSubcategories, shopType);
   const catSuggestions = getCategorySuggestions(shopCategory, shopSubcategories, shopType);
 
+  const isFitness = shopType === 'memberships';
+  const displayCategories = isFitness
+    ? categories.filter(c => !FITNESS_SUBSCRIPTION_CATS.has(c.id))
+    : categories;
+
   const [emoji, setEmoji] = useState('');
   const [photoUrl, setPhotoUrl] = useState<string | undefined>();
   const [uploading, setUploading] = useState(false);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [price, setPrice] = useState('');
-  const [catId, setCatId] = useState(categories[0]?.id ?? '');
+  const [catId, setCatId] = useState(displayCategories[0]?.id ?? '');
   const [addingCat, setAddingCat] = useState(false);
   const [newCatText, setNewCatText] = useState('');
 
@@ -351,7 +357,7 @@ export default function AddProductSheet({
       setName(prefill?.name ?? '');
       setDesc(prefill?.desc ?? '');
       setPrice(prefill?.price != null ? String(prefill.price) : '');
-      setCatId(defaultCatId ?? categories[0]?.id ?? '');
+      setCatId(defaultCatId ?? displayCategories[0]?.id ?? '');
       setDuration('');
       setFormulaPeriod('seance');
       setSelectedSizes([]);
@@ -652,7 +658,7 @@ export default function AddProductSheet({
             <View style={{ marginTop: 14 }}>
               <FieldLabel>Catégorie</FieldLabel>
               <View style={styles.catChipRow}>
-                {categories.map(c => {
+                {displayCategories.map(c => {
                   const on = catId === c.id;
                   return (
                     <TouchableOpacity
@@ -662,18 +668,20 @@ export default function AddProductSheet({
                       activeOpacity={0.8}
                     >
                       <Text style={[styles.catChipTxt, on && styles.catChipTxtOn]} numberOfLines={1}>
-                        {c.emoji ? `${c.emoji} ` : ''}{c.label}
+                        {!isFitness && c.emoji ? `${c.emoji} ` : ''}{c.label}
                       </Text>
                     </TouchableOpacity>
                   );
                 })}
-                <TouchableOpacity
-                  style={[styles.catChip, styles.catChipAdd]}
-                  onPress={() => setAddingCat(v => !v)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.catChipTxt, styles.catChipAddTxt]}>+ Nouvelle</Text>
-                </TouchableOpacity>
+                {!isFitness && (
+                  <TouchableOpacity
+                    style={[styles.catChip, styles.catChipAdd]}
+                    onPress={() => setAddingCat(v => !v)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.catChipTxt, styles.catChipAddTxt]}>+ Nouvelle</Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {addingCat && (
