@@ -431,7 +431,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
             return;
           }
           // Réservation beauté → écran dédié (à la bonne date), PAS l'écran Commandes
-          if (d.type === 'beauty_reservation' || d.type === 'beauty_acces_valide') {
+          if (d.type === 'beauty_reservation' || d.type === 'beauty_acces_valide' || d.type === 'beauty_reservation_paye') {
             setScreen({ id: 'beauty_reservations', date: d.dateResa as string | undefined });
             return;
           }
