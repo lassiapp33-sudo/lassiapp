@@ -165,8 +165,8 @@ Deno.serve(async (req) => {
       .single();
 
     if (piErr || !pi?.id) {
-      console.error('[create-guest-subscription] pi insert', piErr?.message);
-      return err('Erreur interne', 500);
+      console.error('[create-guest-subscription] pi insert', piErr?.message, piErr?.code);
+      return err('Erreur interne. Réessaie.', 500);
     }
 
     const piId = pi.id as string;
