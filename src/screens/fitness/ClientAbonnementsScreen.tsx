@@ -31,6 +31,8 @@ interface Props {
   onBack: () => void;
 }
 
+type Tab = 'formules' | 'abonnements';
+
 // ─── Barre de progression ────────────────────────────────────────────────────
 function ProgressBar({ pct }: { pct: number }) {
   const filled = Math.max(0, Math.min(1, pct));
@@ -53,13 +55,12 @@ const pb = StyleSheet.create({
   fill: { backgroundColor: colors.accent, borderRadius: 3 },
 });
 
-// ─── Carte abonnement ─────────────────────────────────────────────────────────
+// ─── Carte formule / abonnement ───────────────────────────────────────────────
 function AboCard({ abo }: { abo: FitnessAbonnement }) {
   const expireLocal  = fitnessService.isExpireLocalement(abo);
   const isExpired    = abo.statut === 'expire' || expireLocal;
   const joursRestant = isExpired ? 0 : fitnessService.joursRestants(abo.dateExpiration);
 
-  // durée totale reconstituée (approx depuis prix_paye, ou 30j par défaut)
   const dateAchat = new Date(abo.dateAchat);
   const dateExp   = new Date(abo.dateExpiration);
   const dureeMs   = dateExp.getTime() - dateAchat.getTime();
@@ -72,7 +73,6 @@ function AboCard({ abo }: { abo: FitnessAbonnement }) {
 
   return (
     <View style={[styles.card, isExpired && styles.cardExpired]}>
-      {/* Overlay croix pour les expirés */}
       {isExpired && (
         <View style={styles.expiredOverlay} pointerEvents="none">
           <IcoX />
@@ -81,7 +81,6 @@ function AboCard({ abo }: { abo: FitnessAbonnement }) {
       )}
 
       <View style={[styles.cardContent, isExpired && { opacity: 0.5 }]}>
-        {/* Logo + nom de la boutique/salle */}
         {(abo.shopName ?? abo.prestataireName) ? (
           <View style={styles.prestataireRow}>
             <Avatar
@@ -94,10 +93,8 @@ function AboCard({ abo }: { abo: FitnessAbonnement }) {
           </View>
         ) : null}
 
-        {/* Nom de l'offre */}
         <Text style={styles.nomOffre}>{abo.nomOffre}</Text>
 
-        {/* Jours restants */}
         {!isExpired ? (
           <>
             <Text style={styles.joursNum}>{joursRestant}</Text>
@@ -108,7 +105,6 @@ function AboCard({ abo }: { abo: FitnessAbonnement }) {
           <Text style={styles.expiredDate}>Expiré le {dateExpFr}</Text>
         )}
 
-        {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.prixPaye}>{formatPrice(abo.prixPaye)}</Text>
           {!isExpired && (
@@ -123,25 +119,19 @@ function AboCard({ abo }: { abo: FitnessAbonnement }) {
 // ─── Écran principal ──────────────────────────────────────────────────────────
 export default function ClientAbonnementsScreen({ onBack }: Props) {
   const userId = useAuthStore(s => s.user?.id);
-  const [abonnements, setAbonnements] = useState<FitnessAbonnement[]>([]);
-  const [loading, setLoading]         = useState(true);
-
-  function sortAbonnements(list: FitnessAbonnement[]) {
-    return list
-      .filter(a => !fitnessService.isExpireLocalement(a) && a.statut === 'actif')
-      .sort((a, b) => new Date(a.dateExpiration).getTime() - new Date(b.dateExpiration).getTime());
-  }
+  const [all, setAll]         = useState<FitnessAbonnement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab]         = useState<Tab>('formules');
 
   const load = useCallback(async () => {
     if (!userId) { setLoading(false); return; }
 
-    // Affiche le cache immédiatement, refresh en arrière-plan
     const cached = await getFastCache<FitnessAbonnement[]>(`abonnements_${userId}`);
     if (cached) {
-      setAbonnements(sortAbonnements(cached));
+      setAll(cached);
       setLoading(false);
       fitnessService.getMesAbonnements(userId)
-        .then(fresh => { setAbonnements(sortAbonnements(fresh)); setFastCache(`abonnements_${userId}`, fresh); })
+        .then(fresh => { setAll(fresh); setFastCache(`abonnements_${userId}`, fresh); })
         .catch(() => {});
       return;
     }
@@ -152,7 +142,7 @@ export default function ClientAbonnementsScreen({ onBack }: Props) {
         fitnessService.getMesAbonnements(userId),
         new Promise<FitnessAbonnement[]>(resolve => setTimeout(() => resolve([]), 6000)),
       ]);
-      setAbonnements(sortAbonnements(list));
+      setAll(list);
       setFastCache(`abonnements_${userId}`, list);
     } finally {
       setLoading(false);
@@ -161,31 +151,86 @@ export default function ClientAbonnementsScreen({ onBack }: Props) {
 
   useEffect(() => { load(); }, [load]);
 
-  const actifCount = abonnements.filter(a => !fitnessService.isExpireLocalement(a) && a.statut === 'actif').length;
+  // Formules = tout ce qui n'est PAS categorie 'abonnements' (ou null)
+  const formules = all
+    .filter(a => a.categorieTab !== 'abonnements')
+    .sort((a, b) => new Date(b.dateAchat).getTime() - new Date(a.dateAchat).getTime());
+
+  // Abonnements = categorie 'abonnements' ET actifs uniquement
+  const abonnementsActifs = all
+    .filter(a => a.categorieTab === 'abonnements' && a.statut === 'actif' && !fitnessService.isExpireLocalement(a))
+    .sort((a, b) => new Date(a.dateExpiration).getTime() - new Date(b.dateExpiration).getTime());
+
+  const items = tab === 'formules' ? formules : abonnementsActifs;
+
+  const emptyMsg = tab === 'formules'
+    ? "Tu n'as pas encore acheté de formule fitness."
+    : "Tu n'as pas d'abonnement fitness actif.";
 
   return (
     <View style={styles.root}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
           <IcoBack />
         </TouchableOpacity>
         <View>
-          <Text style={styles.headerTitle}>Mes abonnements</Text>
+          <Text style={styles.headerTitle}>Mes formules et abonnements</Text>
           {!loading && (
             <Text style={styles.headerSub}>
-              {actifCount} actif{actifCount !== 1 ? 's' : ''}
+              {tab === 'formules'
+                ? `${formules.length} formule${formules.length !== 1 ? 's' : ''}`
+                : `${abonnementsActifs.length} actif${abonnementsActifs.length !== 1 ? 's' : ''}`}
             </Text>
           )}
         </View>
       </View>
 
+      {/* Onglets */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={[styles.tabBtn, tab === 'formules' && styles.tabBtnActive]}
+          onPress={() => setTab('formules')}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.tabLabel, tab === 'formules' && styles.tabLabelActive]}>
+            Formules
+          </Text>
+          {formules.length > 0 && (
+            <View style={[styles.badge, tab === 'formules' && styles.badgeActive]}>
+              <Text style={[styles.badgeTxt, tab === 'formules' && styles.badgeTxtActive]}>
+                {formules.length}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tabBtn, tab === 'abonnements' && styles.tabBtnActive]}
+          onPress={() => setTab('abonnements')}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.tabLabel, tab === 'abonnements' && styles.tabLabelActive]}>
+            Abonnements
+          </Text>
+          {abonnementsActifs.length > 0 && (
+            <View style={[styles.badge, tab === 'abonnements' && styles.badgeActive]}>
+              <Text style={[styles.badgeTxt, tab === 'abonnements' && styles.badgeTxtActive]}>
+                {abonnementsActifs.length}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Contenu */}
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.accent} />
         </View>
-      ) : abonnements.length === 0 ? (
+      ) : items.length === 0 ? (
         <View style={styles.center}>
-          <Text style={styles.emptyTxt}>Tu n'as pas encore d'abonnement fitness.</Text>
+          <Text style={styles.emptyTxt}>{emptyMsg}</Text>
         </View>
       ) : (
         <ScrollView
@@ -193,7 +238,7 @@ export default function ClientAbonnementsScreen({ onBack }: Props) {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {abonnements.map(abo => <AboCard key={abo.id} abo={abo} />)}
+          {items.map(abo => <AboCard key={abo.id} abo={abo} />)}
         </ScrollView>
       )}
     </View>
@@ -225,6 +270,58 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 12,
     marginTop: 1,
+  },
+
+  tabBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  tabBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 16,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: 'transparent',
+  },
+  tabBtnActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  tabLabel: {
+    color: colors.muted,
+    fontFamily: fonts.title,
+    fontSize: 13,
+  },
+  tabLabelActive: {
+    color: colors.bg,
+  },
+  badge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeActive: {
+    backgroundColor: colors.bg,
+  },
+  badgeTxt: {
+    color: colors.muted,
+    fontFamily: fonts.title,
+    fontSize: 10,
+  },
+  badgeTxtActive: {
+    color: colors.accent,
   },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },

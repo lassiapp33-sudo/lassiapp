@@ -25,6 +25,7 @@ export interface FitnessAbonnement {
   dateExpiration: string;
   statut: 'actif' | 'expire';
   paymentIntentId?: string;
+  categorieTab?: string;
   // Champs joints (optionnels selon la requête)
   prestataireName?: string;
   prestataireAvatar?: string;
@@ -70,6 +71,7 @@ function rowToAbonnement(
     paymentIntentId:  (r.payment_intent_id as string | null) ?? undefined,
     shopName:         (shop?.name          as string | null) ?? undefined,
     shopLogo:         (shop?.logo_url      as string | null) ?? undefined,
+    categorieTab:     (r.categorie_tab     as string | null) ?? undefined,
   };
 }
 
@@ -156,11 +158,11 @@ export async function deleteOffre(offreId: string): Promise<void> {
 
 // ─── Abonnements client ────────────────────────────────────────────────────────
 
-/** Abonnements d'un client (avec nom et logo de la boutique via shops.merchant_id). */
+/** Abonnements d'un client (avec nom/logo boutique + categorie_tab de l'offre). */
 export async function getMesAbonnements(clientId: string): Promise<FitnessAbonnement[]> {
   const { data, error } = await supabase
     .from('fitness_abonnements_clients')
-    .select('*')
+    .select('*, fitness_abonnement_offres(categorie_tab)')
     .eq('client_id', clientId)
     .order('date_achat', { ascending: false });
   if (error) throw new Error(error.message);
@@ -182,7 +184,12 @@ export async function getMesAbonnements(clientId: string): Promise<FitnessAbonne
     } catch {}
   }
 
-  return rows.map(r => rowToAbonnement(r as Record<string, unknown>, shopMap));
+  return rows.map(r => {
+    const joined = r as Record<string, unknown>;
+    const offreRow = joined.fitness_abonnement_offres as Record<string, unknown> | null;
+    const categorieTab = (offreRow?.categorie_tab as string | null) ?? undefined;
+    return { ...rowToAbonnement(joined, shopMap), categorieTab };
+  });
 }
 
 /** Abonnés d'un fitness (avec nom réel du client via RPC SECURITY DEFINER). */
