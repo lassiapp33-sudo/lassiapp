@@ -26,11 +26,11 @@ import { usePromoItems, PromoItem } from '../../hooks/usePromoItems';
 // ─── Constantes de mise en page ───────────────────────────────────────────────
 
 const W = Dimensions.get('window').width;
-// wrapper: marginH 16×2=32, padding 14×2=28, gap 12 entre 2 cartes → 32+28+12=72
-const CARD_WIDTH = Math.floor((W - 72) / 2);
+// wrapper: marginH 16×2=32, padding 14×2=28 → carte plein-largeur intérieure
+const CARD_WIDTH = W - 32 - 28; // W - marges - paddings wrapper
 const CARD_GAP = 12;
 const ITEM_STRIDE = CARD_WIDTH + CARD_GAP;
-const IMG_H = Math.floor(CARD_WIDTH * 0.58); // proportion image réduite
+const IMG_H = Math.floor(CARD_WIDTH * 0.68); // image plus haute
 const INTERVAL_MS = 3000;
 
 // ─── Indicateurs de page ─────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ interface Props {
 export default function PromoBanner({ onPress, onView }: Props) {
   const { items, isConnected } = usePromoItems();
   const N = items.length;
-  const totalPages = Math.ceil(N / 2);
+  const totalPages = N; // 1 carte par page
 
   // Liste triplée : copy1 | copy2 (départ) | copy3 (buffer boucle)
   const looped = useMemo(
@@ -150,15 +150,13 @@ export default function PromoBanner({ onPress, onView }: Props) {
       idxRef.current += 1;
       const idx = idxRef.current;
       scrollRef.current?.scrollTo({ x: idx * ITEM_STRIDE, animated: true });
-      setPage(Math.floor(((idx - n) % n) / 2));
-      // Vue pour les 2 cartes désormais visibles
+      setPage((idx - n + n * 100) % n);
+      // Vue pour la carte désormais visible
       const vFn = onViewRef.current;
       if (vFn) {
         const ll = loopedRef.current;
         const a = ll[idx];
-        const b = ll[idx + 1];
         if (a) vFn(a.shopId, a.id);
-        if (b) vFn(b.shopId, b.id);
       }
       if (idx === n * 2) {
         jumpRef.current = setTimeout(() => {
@@ -182,15 +180,13 @@ export default function PromoBanner({ onPress, onView }: Props) {
       scrollRef.current?.scrollTo({ x: idx * ITEM_STRIDE, animated: false });
     }
     idxRef.current = idx;
-    setPage(Math.floor(((idx - n) % n) / 2));
-    // Vue pour les 2 cartes visibles après scroll manuel
+    setPage((idx - n + n * 100) % n);
+    // Vue pour la carte visible après scroll manuel
     const vFn = onViewRef.current;
     if (vFn) {
       const ll = loopedRef.current;
       const a = ll[idx];
-      const b = ll[idx + 1];
       if (a) vFn(a.shopId, a.id);
-      if (b) vFn(b.shopId, b.id);
     }
     if (resumeRef.current) clearTimeout(resumeRef.current);
     resumeRef.current = setTimeout(startTimer, 800);
@@ -206,9 +202,8 @@ export default function PromoBanner({ onPress, onView }: Props) {
       // Vues initiales pour les 2 cartes visibles au démarrage
       const vFn = onViewRef.current;
       const ll = loopedRef.current;
-      if (vFn && ll.length > N + 1) {
+      if (vFn && ll.length > N) {
         vFn(ll[N].shopId, ll[N].id);
-        vFn(ll[N + 1].shopId, ll[N + 1].id);
       }
     }, 100);
     return () => {
@@ -334,41 +329,41 @@ const styles = StyleSheet.create({
 
   // Zone texte (bas de la carte)
   cardText: {
-    padding: 10,
-    gap: 4,
+    padding: 14,
+    gap: 5,
   },
   cardShop: {
     color: '#FBBF24',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
   },
   cardItem: {
     color: '#E2E8F8',
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '500',
-    lineHeight: 15,
+    lineHeight: 20,
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     flexWrap: 'wrap',
-    marginTop: 2,
+    marginTop: 4,
   },
   cardPriceOld: {
     color: '#8892b0',
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '600',
     textDecorationLine: 'line-through',
   },
   cardPrice: {
     backgroundColor: '#FBBF24',
     color: '#12193a',
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '800',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     alignSelf: 'flex-start',
     overflow: 'hidden',
   },
