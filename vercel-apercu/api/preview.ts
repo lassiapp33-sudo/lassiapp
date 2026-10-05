@@ -1,4 +1,4 @@
-﻿// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // Vercel Edge Function — Vitrine + CHECKOUT INVITÉ + Aperçu OG sur s.lassi.tech
 //
 // https://s.lassi.tech/<slug> :
@@ -337,8 +337,8 @@ function serviceCard(s: ServiceItem, deep: string): string {
   const imgUrl = s.kind === 'beauty' && typeof s.image_url === 'string' && s.image_url.startsWith('http') ? s.image_url : '';
   const svcEmoji = s.kind === 'fitness' ? '🏋️' : '';
   const visual = imgUrl
-    ? `<div class="pimgzone"><img class="pimg" src="${escAttr(imgUrl)}" alt="${escAttr(s.name)}" loading="lazy"></div>`
-    : `<div class="pimgzone">${svcEmoji ? `<div class="pemoji">${svcEmoji}</div>` : ''}</div>`;
+    ? `<div class="pimgzone svc-imgzone"><img class="pimg" src="${escAttr(imgUrl)}" alt="${escAttr(s.name)}" loading="lazy"></div>`
+    : (svcEmoji ? `<div class="pimgzone"><div class="pemoji">${svcEmoji}</div></div>` : '');
   const head = `<div class="pname">${esc(clip(s.name, 48))}</div>
       <div class="pdesc">${esc(clip(sub, 64))}</div>
       <div class="pprice">${fmtPrice(prixClient(s.price))}</div>`;
@@ -554,6 +554,7 @@ function page(o: {
   .prod { display:flex; flex-direction:column; border:1.5px solid var(--b); border-radius:18px; overflow:hidden; background:var(--w); }
   .prod.in { border-color:var(--y); }
   .pimgzone { width:100%; aspect-ratio:1/1; background:var(--g); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
+  .svc-imgzone { aspect-ratio:4/3; }
   .pimg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   .pemoji { font-size:46px; }
   .pbody { padding:14px 16px 16px; display:flex; flex-direction:column; gap:4px; flex:1; }
