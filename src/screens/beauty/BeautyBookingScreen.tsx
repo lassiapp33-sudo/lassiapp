@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
@@ -137,7 +138,7 @@ export default function BeautyBookingScreen({
         {/* Infos service */}
         <View style={styles.infoCard}>
           {service.image_url ? (
-            <Image source={{ uri: service.image_url }} style={styles.infoImg} resizeMode="cover" />
+            <Image source={{ uri: service.image_url }} style={styles.infoImg} contentFit="cover" cachePolicy="disk" transition={200} />
           ) : null}
           <View style={styles.infoBody}>
             <Text style={styles.infoPrice}>{formatPrice(prixTotal)}</Text>

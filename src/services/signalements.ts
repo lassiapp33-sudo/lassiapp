@@ -1,5 +1,5 @@
 import { getValidToken, getCachedToken, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
-import * as ImageManipulator from 'expo-image-manipulator';
+import { compressImage } from './storage';
 import logger from '../utils/logger';
 
 export type SignalementType = 'bug' | 'paiement' | 'commande' | 'commerce' | 'arnaque' | 'autre';
@@ -150,13 +150,8 @@ export async function envoyerSignalement(params: EnvoyerParams): Promise<void> {
 export async function uploadScreenshot(localUri: string, userId: string): Promise<string> {
   const path = `${userId}/${Date.now()}.jpg`;
 
-  const compressed = await ImageManipulator.manipulateAsync(
-    localUri,
-    [{ resize: { width: 1080 } }],
-    { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG },
-  );
-
-  const response = await fetch(compressed.uri);
+  const compressedUri = await compressImage(localUri);
+  const response = await fetch(compressedUri);
   const arrayBuffer = await response.arrayBuffer();
 
   const token = getCachedToken() ?? SUPABASE_ANON;

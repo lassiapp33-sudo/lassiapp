@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert, Modal, Pressable, ActivityIndicator } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert, Modal, Pressable, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path, Rect, Circle as SvgCircle } from 'react-native-svg';
 
 import ShopCover from '../../components/shop/ShopCover';
@@ -685,7 +685,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                   onLongPress={() => setZoomUrl(url)}
                   delayLongPress={250}
                 >
-                  <ExpoImage source={{ uri: url }} style={styles.galleryPhoto} contentFit="cover" />
+                  <Image source={{ uri: url }} style={styles.galleryPhoto} contentFit="cover" cachePolicy="disk" transition={200} />
                 </Pressable>
               ))}
             </ScrollView>
@@ -1067,7 +1067,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                         return (
                           <View key={svc.id} style={styles.beautyCard}>
                             {svc.image_url ? (
-                              <Image source={{ uri: svc.image_url }} style={styles.beautyImg} resizeMode="cover" />
+                              <Image source={{ uri: svc.image_url }} style={styles.beautyImg} contentFit="cover" cachePolicy="disk" transition={200} />
                             ) : null}
                             <View style={styles.beautyCardBody}>
                             <View style={{ flex: 1 }}>

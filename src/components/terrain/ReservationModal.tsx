@@ -1,8 +1,9 @@
 ﻿import React, { useRef, useState } from 'react';
 import {
-  Modal, View, Text, Image, StyleSheet, TouchableOpacity,
+  Modal, View, Text, StyleSheet, TouchableOpacity,
   ActivityIndicator, Alert, Linking,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { createReservation, verifyTerrainPayment, calculerPrixAvecMarge } from '../../services/terrains';
 import { createPayment } from '../../services/payment';
 import { Terrain, ReservationTerrain } from '../../types/terrain';
@@ -158,7 +159,9 @@ export default function ReservationModal({
                     <Image
                       source={m === 'wave' ? WAVE_LOGO : OM_LOGO}
                       style={styles.paiLogo}
-                      resizeMode="cover"
+                      contentFit="cover"
+                      cachePolicy="disk"
+                      transition={200}
                     />
                     <Text style={styles.paiBtnText}>
                       {m === 'wave' ? 'Wave' : 'Orange Money'}

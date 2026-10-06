@@ -11,8 +11,8 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -352,7 +352,7 @@ function CreerModal({ visible, onClose, onCreer, loading, quotaRestants }: Creer
                 <Text style={styles.fieldLabel}>Image (optionnel)</Text>
                 {imageUri ? (
                   <View style={styles.imagePreviewBox}>
-                    <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="contain" />
+                    <Image source={{ uri: imageUri }} style={styles.imagePreview} contentFit="contain" cachePolicy="disk" transition={200} />
                     <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => setImageUri(null)}>
                       <Text style={styles.imageRemoveTxt}>✕</Text>
                     </TouchableOpacity>

@@ -10,13 +10,14 @@ import {
   Alert,
   Modal,
   Pressable,
-  Image,
   Switch,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { royal as r } from '../theme';
 import { TOP_INSET } from '../../theme';
 import useGerantStore from '../../store/gerantStore';
@@ -69,10 +70,16 @@ async function uploadSpacePhoto(localUri: string, vipProfilId: string, spaceId: 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Non authentifié');
 
-  const ext = localUri.split('.').pop()?.toLowerCase() ?? 'jpg';
-  const path = `restaurant-spaces/${vipProfilId}/${spaceId}.${ext}`;
+  // Compression avant upload
+  const compressed = await ImageManipulator.manipulateAsync(
+    localUri,
+    [{ resize: { width: 1200 } }],
+    { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG },
+  );
 
-  const fileRes = await fetch(localUri);
+  const path = `restaurant-spaces/${vipProfilId}/${spaceId}.jpg`;
+
+  const fileRes = await fetch(compressed.uri);
   const arrayBuffer = await fileRes.arrayBuffer();
 
   const res = await fetch(`${SUPABASE_URL}/functions/v1/upload-image`, {
@@ -80,7 +87,7 @@ async function uploadSpacePhoto(localUri: string, vipProfilId: string, spaceId: 
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
       'apikey':        SUPABASE_ANON,
-      'Content-Type':  `image/${ext}`,
+      'Content-Type':  'image/jpeg',
       'x-bucket':      'gallery',
       'x-path':        path,
     },
@@ -265,7 +272,7 @@ export default function GerantEspacesScreen({ onBack }: Props) {
           {spaces.map((sp, i) => (
             <View key={sp.id} style={[s.card, !sp.actif && s.cardInactif]}>
               {sp.photo_url ? (
-                <Image source={{ uri: sp.photo_url }} style={s.cardPhoto} resizeMode="cover" />
+                <Image source={{ uri: sp.photo_url }} style={s.cardPhoto} contentFit="cover" cachePolicy="disk" transition={200} />
               ) : (
                 <View style={s.cardPhotoPlaceholder}>
                   <IcoCamera />
@@ -309,7 +316,7 @@ export default function GerantEspacesScreen({ onBack }: Props) {
                 {/* Photo */}
                 <TouchableOpacity style={s.photoBox} onPress={pickPhoto} activeOpacity={0.8}>
                   {form.photo_url ? (
-                    <Image source={{ uri: form.photo_url }} style={s.photoPreview} resizeMode="cover" />
+                    <Image source={{ uri: form.photo_url }} style={s.photoPreview} contentFit="cover" cachePolicy="disk" transition={200} />
                   ) : (
                     <View style={s.photoPlaceholder}>
                       <IcoCamera />

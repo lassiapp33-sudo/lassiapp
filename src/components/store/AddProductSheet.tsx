@@ -10,11 +10,11 @@ import {
   StyleSheet,
   Platform,
   KeyboardAvoidingView,
-  Image,
   ActionSheetIOS,
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import {
@@ -551,7 +551,7 @@ export default function AddProductSheet({
                 </ScrollView>
               ) : photoUrl ? (
                 // Vraie photo uploadée
-                <Image source={{ uri: photoUrl }} style={styles.photoPreview} />
+                <Image source={{ uri: photoUrl }} style={styles.photoPreview} contentFit="cover" cachePolicy="disk" transition={200} />
               ) : emoji ? (
                 // Emoji choisi — appuie pour changer
                 <>

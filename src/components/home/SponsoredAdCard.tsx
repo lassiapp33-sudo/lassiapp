@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import Avatar from '../Avatar';
@@ -79,9 +79,11 @@ export default function SponsoredAdCard({ ad, onContact, onViewShop }: Props) {
             ? { width: '100%', aspectRatio: imgRatio }
             : s.imgPlaceholder
           }
-          resizeMode={imgRatio ? 'cover' : 'contain'}
+          contentFit={imgRatio ? 'cover' : 'contain'}
+          cachePolicy="disk"
+          transition={200}
           onLoad={e => {
-            const { width, height } = e.nativeEvent.source;
+            const { width, height } = e.source;
             if (width > 0 && height > 0) setImgRatio(width / height);
           }}
         />

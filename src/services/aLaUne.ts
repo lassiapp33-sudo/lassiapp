@@ -1,6 +1,7 @@
 import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import type { BlocALaUne, ElementALaUne } from '../types/aLaUne';
 import { lienElement } from '../utils/deepLinks';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const ANON_HEADERS = {
   apikey: SUPABASE_ANON,
@@ -17,10 +18,17 @@ export const uploadBlocImage = async (
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return { error: 'Non authentifié' };
 
-  const ext = localUri.split('.').pop()?.toLowerCase() ?? 'jpg';
+  // Compression avant upload
+  const compressed = await ImageManipulator.manipulateAsync(
+    localUri,
+    [{ resize: { width: 1200 } }],
+    { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG },
+  );
 
-  // Lire le fichier en binaire
-  const fileRes = await fetch(localUri);
+  const ext = 'jpg';
+
+  // Lire le fichier compressé en binaire
+  const fileRes = await fetch(compressed.uri);
   const arrayBuffer = await fileRes.arrayBuffer();
 
   // Appel Edge Function — upload côté serveur avec service_role

@@ -11,8 +11,8 @@ import {
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import StarRating from './StarRating';
@@ -286,7 +286,7 @@ export default function AvisForm({
             </Text>
             {hasPhoto ? (
               <View style={styles.photoPreviewRow}>
-                <Image source={{ uri: previewUri ?? '' }} style={styles.photoThumb} />
+                <Image source={{ uri: previewUri ?? '' }} style={styles.photoThumb} contentFit="cover" cachePolicy="disk" transition={200} />
                 <Text style={styles.photoCaption} numberOfLines={1}>
                   {photoLocalUri ? 'Photo sélectionnée' : (photoUrl?.split('/').pop() ?? 'Photo')}
                 </Text>

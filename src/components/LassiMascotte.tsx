@@ -3,11 +3,11 @@ import {
   AccessibilityInfo,
   Animated,
   Easing,
-  Image,
   Pressable,
   StyleProp,
   ViewStyle,
 } from 'react-native';
+import { Image } from 'expo-image';
 
 export const MASCOTTE_NOM = 'Lassi';
 
@@ -318,7 +318,9 @@ export function LassiMascotte({
     <Image
       source={getMascotteSource(forme)}
       style={{ width: taille, height: imgH }}
-      resizeMode="contain"
+      contentFit="contain"
+      cachePolicy="disk"
+      transition={200}
     />
   );
 

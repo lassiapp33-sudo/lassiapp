@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Image,
   StyleSheet,
   ActivityIndicator,
   Alert,
@@ -12,6 +11,7 @@ import {
   ScrollView,
   findNodeHandle,
 } from 'react-native';
+import { Image } from 'expo-image';
 
 const FORM_W = Dimensions.get('window').width - 36; // marginHorizontal: 18 × 2
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -171,22 +171,24 @@ function ImagePicker({
 }) {
   const [imgRatio, setImgRatio] = useState<number>(3 / 4);
 
-  useEffect(() => {
-    if (uri) {
-      Image.getSize(
-        uri,
-        (w, h) => { if (w && h) setImgRatio(w / h); },
-        () => {},
-      );
-    }
-  }, [uri]);
+  // TODO: Image.getSize n'existe pas dans expo-image — ratio calculé via onLoad uniquement
 
   const previewHeight = Math.round(FORM_W / imgRatio);
 
   if (uri) {
     return (
       <View style={s.imagePreviewWrap}>
-        <Image source={{ uri }} style={[s.imagePreview, { height: previewHeight }]} resizeMode="cover" />
+        <Image
+          source={{ uri }}
+          style={[s.imagePreview, { height: previewHeight }]}
+          contentFit="cover"
+          cachePolicy="disk"
+          transition={200}
+          onLoad={e => {
+            const { width, height } = e.source;
+            if (width && height) setImgRatio(width / height);
+          }}
+        />
         {uploading && (
           <View style={s.uploadOverlay}>
             <ActivityIndicator color={colors.accent} />

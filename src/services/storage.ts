@@ -16,7 +16,7 @@ import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
  * Redimensionne et compresse une image locale avant upload.
  * Retourne l'URI de l'image compressée (nouvelle API expo-image-manipulator v14).
  */
-async function compressImage(localUri: string): Promise<string> {
+export async function compressImage(localUri: string): Promise<string> {
   const imageRef = await ImageManipulator.manipulate(localUri)
     .resize({ width: 800 })
     .renderAsync();

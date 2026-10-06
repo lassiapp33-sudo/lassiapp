@@ -2,13 +2,13 @@
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   StyleSheet,
   Modal,
   ScrollView,
   Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import Avatar from '../Avatar';
@@ -62,16 +62,8 @@ export default function SponsoredAdModal({ ad, onDismiss, onContact, onViewShop 
     incrementerVue(ad.id);
   }, [ad.id]);
 
-  // Image.getSize en premier (avant render), onLoad en backup
-  useEffect(() => {
-    if (ad.imageUrl) {
-      Image.getSize(
-        ad.imageUrl,
-        (w, h) => { if (w > 0 && h > 0) setImgRatio(w / h); },
-        () => {}, // onLoad prendra le relais
-      );
-    }
-  }, [ad.imageUrl]);
+  // onLoad d'expo-image récupère les dimensions réelles
+  // TODO: Image.getSize n'existe pas dans expo-image — ratio calculé via onLoad uniquement
 
   const hasText = !!(ad.titre || ad.corps);
   // Hauteur calculée selon le ratio réel — par défaut carré jusqu'au chargement
@@ -121,9 +113,11 @@ export default function SponsoredAdModal({ ad, onDismiss, onContact, onViewShop 
               <Image
                 source={{ uri: ad.imageUrl }}
                 style={{ width: '100%', height: imgHeight }}
-                resizeMode="cover"
+                contentFit="cover"
+                cachePolicy="disk"
+                transition={200}
                 onLoad={e => {
-                  const { width, height } = e.nativeEvent.source;
+                  const { width, height } = e.source;
                   if (width > 0 && height > 0) setImgRatio(width / height);
                 }}
               />

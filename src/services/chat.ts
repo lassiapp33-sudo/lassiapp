@@ -1,5 +1,6 @@
 import { supabase, getCachedToken, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import useAuthStore from '../store/authStore';
+import { compressImage } from './storage';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -187,8 +188,9 @@ export async function uploadChatImage(localUri: string, conversationId: string):
   const user = useAuthStore.getState().user;
   if (!user) throw new Error('Non connecté');
 
+  const compressed = await compressImage(localUri);
   const path = `${conversationId}/images/${Date.now()}_${user.id}.jpg`;
-  return uploadToStorage(localUri, path, 'image/jpeg');
+  return uploadToStorage(compressed, path, 'image/jpeg');
 }
 
 export interface SendMessageParams {

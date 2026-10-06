@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { colors, fonts, radius } from '../../theme';
 import { PayMethod } from '../../types/payment';
 
@@ -55,7 +56,9 @@ export default function PayMethodCard({ method, selected, onSelect, loading, dis
       <Image
         source={cfg.logo}
         style={[styles.logo, { borderColor: cfg.color }]}
-        resizeMode="cover"
+        contentFit="cover"
+        cachePolicy="disk"
+        transition={200}
       />
 
       {/* Infos */}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
+import { View, Text, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { IcoLightning, IcoCart } from '../common/LassiIcons';
 import { colors, fonts, radius } from '../../theme';
 import type { BlocALaUne } from '../../types/aLaUne';
@@ -60,13 +60,13 @@ const BlocStoryCard = React.forwardRef<View, Props>(
             <IcoLightning size={14} />
             <Text style={styles.alaUneLabel}>À la une</Text>
           </View>
-          <Image source={MASCOTTE} style={styles.mascotte} resizeMode="contain" />
+          <Image source={MASCOTTE} style={styles.mascotte} contentFit="contain" cachePolicy="disk" transition={200} />
         </View>
 
         {/* ── Boutique ── */}
         <View style={styles.shopRow}>
           {shopLogoUrl ? (
-            <ExpoImage source={{ uri: shopLogoUrl }} style={styles.shopLogo} contentFit="cover" />
+            <Image source={{ uri: shopLogoUrl }} style={styles.shopLogo} contentFit="cover" cachePolicy="disk" transition={200} />
           ) : (
             <View style={styles.shopAvatarFallback}>
               <Text style={styles.shopAvatarInitial}>{initial}</Text>
@@ -136,10 +136,12 @@ const BlocStoryCard = React.forwardRef<View, Props>(
 
         {/* ── Photo produit (optionnelle) ── */}
         {productImageUri ? (
-          <ExpoImage
+          <Image
             source={{ uri: productImageUri }}
             style={[styles.productImage, { height: imgHeight }]}
             contentFit="cover"
+            cachePolicy="disk"
+            transition={200}
             onLoad={(e) => {
               const { width, height } = e.source;
               if (width > 0) setImgHeight(Math.round(STORY_W * height / width));
@@ -151,8 +153,8 @@ const BlocStoryCard = React.forwardRef<View, Props>(
         <View style={styles.footer}>
           <View style={styles.footerAccentLine} />
           <View style={styles.footerRow}>
-            <Image source={PLAYSTORE} style={styles.storeIcon} resizeMode="contain" />
-            <Image source={APPSTORE} style={styles.storeIcon} resizeMode="contain" />
+            <Image source={PLAYSTORE} style={styles.storeIcon} contentFit="contain" cachePolicy="disk" transition={200} />
+            <Image source={APPSTORE} style={styles.storeIcon} contentFit="contain" cachePolicy="disk" transition={200} />
             <Text style={styles.footerTxt}>Propulsé par LASSİ 🇸🇳</Text>
           </View>
         </View>

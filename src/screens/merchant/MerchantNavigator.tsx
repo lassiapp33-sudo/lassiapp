@@ -118,9 +118,10 @@ interface Props {
 
 export default function MerchantNavigator({ onLogout }: Props) {
   const [screen, setScreen] = useState<MerchantScreen>('dashboard');
-  const shopId    = useShopStore(s => s.shopId);
-  const shopSlug  = useShopStore(s => s.profile?.slug ?? null);
-  const shopName  = useShopStore(s => s.profile?.name ?? 'Ma boutique');
+  const shopId           = useShopStore(s => s.shopId);
+  const shopSlug         = useShopStore(s => s.profile?.slug ?? null);
+  const shopName         = useShopStore(s => s.profile?.name ?? 'Ma boutique');
+  const shopSubcategories = useShopStore(s => s.context.subcategories ?? []);
 
   // Persiste le filtre/recherche de la carte entre navigations
   const [mapFilter, setMapFilter] = useState('all');
@@ -168,8 +169,16 @@ export default function MerchantNavigator({ onLogout }: Props) {
 
   const handleVitrineConfigure = () => {
     dismissVitrineModal();
-    setStoreFrom('dashboard');
-    setScreen('store');
+    const isTerrainSlot = shopSubcategories.some(
+      s => s === 'reservation_terrain_foot' || s === 'reservation_terrain_basket',
+    );
+    if (isTerrainSlot) {
+      setTerrainsFrom('dashboard');
+      setScreen('terrains');
+    } else {
+      setStoreFrom('dashboard');
+      setScreen('store');
+    }
   };
 
   const dismissRewardBanner = () => {

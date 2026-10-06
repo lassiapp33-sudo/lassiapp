@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
   Linking,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
 
 const IcoWavePayment = () => (
@@ -138,7 +138,9 @@ export default function CheckoutPayment({ orderId, prestataireId, prixBase, onSu
           <Image
             source={{ uri: `data:image/png;base64,${qrCode}` }}
             style={styles.qrImage}
-            resizeMode="contain"
+            contentFit="contain"
+            cachePolicy="disk"
+            transition={200}
           />
           <TouchableOpacity onPress={() => setQrCode(null)}>
             <Text style={styles.qrClose}>Fermer</Text>

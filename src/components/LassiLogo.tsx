@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, StyleProp, ImageStyle } from 'react-native';
+import { StyleProp, ImageStyle } from 'react-native';
+import { Image } from 'expo-image';
 
 // Logo officiel LASSI — PNG transparent (658×211px)
 // Ne pas modifier ce fichier ni l'image source
@@ -16,8 +17,9 @@ const LassiLogo = React.memo(function LassiLogo({ width = 220, style }: Props) {
     <Image
       source={SOURCE}
       style={[{ width, height: width / RATIO }, style]}
-      resizeMode="contain"
-      fadeDuration={0}
+      contentFit="contain"
+      cachePolicy="disk"
+      transition={0}
     />
   );
 });

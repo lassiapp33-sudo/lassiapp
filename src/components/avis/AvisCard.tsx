@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   StyleSheet,
   Alert,
   TextInput,
@@ -11,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius } from '../../theme';
 import StarRating from './StarRating';
@@ -148,7 +148,7 @@ function AvisCard({ avis, isOwn, isMerchant, onEdit, onDelete, onReport, onRefre
 
       {/* ── Photo ── */}
       {!!avis.photoUrl && (
-        <Image source={{ uri: avis.photoUrl }} style={styles.photo} resizeMode="cover" />
+        <Image source={{ uri: avis.photoUrl }} style={styles.photo} contentFit="cover" cachePolicy="disk" transition={200} />
       )}
 
       {/* ── Actions auteur / signalement ── */}

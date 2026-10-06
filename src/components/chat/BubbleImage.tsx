@@ -1,7 +1,6 @@
 ﻿import React, { useState, useCallback } from 'react';
 import {
   View,
-  Image,
   Text,
   TouchableOpacity,
   Modal,
@@ -11,6 +10,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -134,7 +134,9 @@ export default function BubbleImage({ sender, imageUrl, time, read }: Props) {
         <Image
           source={{ uri: imageUrl }}
           style={[styles.img, !loaded && { opacity: 0 }]}
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy="disk"
+          transition={200}
           onLoad={() => setLoaded(true)}
         />
 
@@ -182,7 +184,7 @@ export default function BubbleImage({ sender, imageUrl, time, read }: Props) {
             {saving ? <ActivityIndicator color="#fff" size="small" /> : <IcoDownload />}
           </TouchableOpacity>
 
-          <Image source={{ uri: imageUrl }} style={styles.fullImg} resizeMode="contain" />
+          <Image source={{ uri: imageUrl }} style={styles.fullImg} contentFit="contain" cachePolicy="disk" transition={200} />
         </Pressable>
       </Modal>
     </View>

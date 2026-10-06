@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
-import { View, Image, StyleSheet, Animated, Easing } from 'react-native';
+import { View, StyleSheet, Animated, Easing } from 'react-native';
+import { Image } from 'expo-image';
 import { colors, fonts } from '../theme';
 
 const SIZE = 240;
@@ -62,14 +63,18 @@ export default function SplashScreen({ onFinish }: Props) {
         <Image
           source={require('../../assets/icon/lassi-radar-base.png')}
           style={styles.layer}
-          fadeDuration={0}
+          contentFit="contain"
+          cachePolicy="disk"
+          transition={0}
         />
         {/* Aiguille PNG dans Animated.View — évite Animated.Image qui bug sur Android */}
         <Animated.View style={[styles.layer, { transform: [{ rotate }] }]}>
           <Image
             source={require('../../assets/icon/lassi-radar-aiguille.png')}
             style={styles.layer}
-            fadeDuration={0}
+            contentFit="contain"
+            cachePolicy="disk"
+            transition={0}
           />
         </Animated.View>
       </View>
@@ -96,10 +101,9 @@ const styles = StyleSheet.create({
     height: SIZE,
   },
   layer: {
-    position:   'absolute',
-    width:      SIZE,
-    height:     SIZE,
-    resizeMode: 'contain',
+    position: 'absolute',
+    width:    SIZE,
+    height:   SIZE,
   },
   tagline: {
     color:      '#8a8eb5',

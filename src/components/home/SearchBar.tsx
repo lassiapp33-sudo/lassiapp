@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Animated, Easing, Image } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, Animated, Easing } from 'react-native';
+import { Image } from 'expo-image';
 import { colors, fonts } from '../../theme';
 import { IcoSearch } from '../icons';
 
@@ -68,7 +69,7 @@ export default function SearchBar({ value, onChangeText, onMicPress, onPress }: 
             style={[styles.ring, { transform: [{ scale: pulseScale }], opacity: pulseOpacity }]}
           />
           <TouchableOpacity style={styles.mic} onPress={onMicPress} activeOpacity={0.85}>
-            <Image source={require('../../../assets/trophy.png')} style={styles.trophyImg} />
+            <Image source={require('../../../assets/trophy.png')} style={styles.trophyImg} contentFit="contain" cachePolicy="disk" transition={200} />
           </TouchableOpacity>
         </View>
       )}
@@ -133,6 +134,5 @@ const styles = StyleSheet.create({
   trophyImg: {
     width: 36,
     height: 36,
-    resizeMode: 'contain',
   },
 });

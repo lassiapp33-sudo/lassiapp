@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Platform,
+  ActivityIndicator, Alert, Share,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
@@ -10,6 +11,7 @@ import { formatPrice } from '../../utils/format';
 import { Terrain, SPORT_EMOJI, SPORT_LABEL } from '../../types/terrain';
 import * as terrainsService from '../../services/terrains';
 import useAuthStore from '../../store/authStore';
+import useShopStore from '../../store/shopStore';
 import logger from '../../utils/logger';
 
 // ─── Icônes ───────────────────────────────────────────────────────────────────
@@ -88,6 +90,8 @@ interface Props {
 
 export default function TerrainScreen({ onBack, onAddTerrain, onEditTerrain, onTerrainReservations }: Props) {
   const prestataireId = useAuthStore(s => s.user?.id ?? '');
+  const shopSlug      = useShopStore(s => s.profile?.slug ?? null);
+  const shopName      = useShopStore(s => s.profile?.name ?? 'Mon terrain');
   const [terrains, setTerrains] = useState<Terrain[]>([]);
   const [loading, setLoading] = useState(true);
 

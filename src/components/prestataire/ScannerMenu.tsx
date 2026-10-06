@@ -3,12 +3,12 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   StyleSheet,
   Alert,
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import TextRecognition, { TextRecognitionScript } from '@react-native-ml-kit/text-recognition';
 import { colors, fonts, radius } from '../../theme';
@@ -120,7 +120,7 @@ export default function ScannerMenu({ onProduitsExtraits }: Props) {
       </Text>
 
       {photoUri && (
-        <Image source={{ uri: photoUri }} style={s.preview} resizeMode="cover" />
+        <Image source={{ uri: photoUri }} style={s.preview} contentFit="cover" cachePolicy="disk" transition={200} />
       )}
 
       {loading ? (

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import Constants from 'expo-constants';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -74,7 +75,9 @@ export default function AProposScreen({ onBack }: Props) {
           <Image
             source={require('../../../assets/mascotte/lassi-roi-couronne.png')}
             style={s.mascotte}
-            resizeMode="contain"
+            contentFit="contain"
+            cachePolicy="disk"
+            transition={200}
           />
           <LassiLogo width={160} style={s.logo} />
           <Text style={s.slogan}>Tout ton quotidien, au même endroit</Text>

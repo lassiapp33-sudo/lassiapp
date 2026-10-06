@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   Modal, View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView,
-  Platform, ScrollView, Image,
+  Platform, ScrollView,
 } from 'react-native';
+import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fonts, radius } from '../../theme';
 import { DailySpecial, getTodaySpecials, addTodaySpecial, deleteTodaySpecialById } from '../../services/dailySpecials';
@@ -140,7 +141,7 @@ export default function DailySpecialModal({ visible, shopId, onClose, onChanged 
               specials.map(item => (
                 <View key={item.id} style={styles.specialRow}>
                   {item.photoUrl ? (
-                    <Image source={{ uri: item.photoUrl }} style={styles.thumb} />
+                    <Image source={{ uri: item.photoUrl }} style={styles.thumb} contentFit="cover" cachePolicy="disk" transition={200} />
                   ) : (
                     <View style={[styles.thumb, styles.thumbPlaceholder]} />
                   )}
@@ -179,7 +180,7 @@ export default function DailySpecialModal({ visible, shopId, onClose, onChanged 
                 <View style={styles.previewWrap}>
                   {uploading
                     ? <ActivityIndicator size="small" color={colors.accent} />
-                    : <Image source={{ uri: photoUri }} style={styles.preview} />}
+                    : <Image source={{ uri: photoUri }} style={styles.preview} contentFit="cover" cachePolicy="disk" transition={200} />}
                   <TouchableOpacity
                     style={styles.removePhoto}
                     onPress={() => { setPhotoUri(null); setPhotoUrl(null); }}
