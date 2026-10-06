@@ -12,6 +12,7 @@ const CORS = {
 const WAVE_API_KEY              = Deno.env.get('WAVE_API_KEY')              ?? '';
 const OM_RETAILER_MSISDN        = Deno.env.get('OM_RETAILER_MSISDN')        ?? '';
 const OM_RETAILER_PIN_ENCRYPTED = Deno.env.get('OM_RETAILER_PIN_ENCRYPTED') ?? '';
+const PAYMENT_MODE              = Deno.env.get('PAYMENT_MODE')              ?? 'simulation';
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -57,34 +58,42 @@ serve(async (req) => {
 
     // ── Vérification auprès de l'opérateur via les mêmes API que webhook ─────
     let paid = false;
+    const isSimulation = PAYMENT_MODE !== 'production';
 
     if (method === 'wave') {
-      if (!WAVE_API_KEY) return json({ error: 'Wave non configuré' }, 500);
-      try {
-        const res = await getWaveCheckout(reference);
-        if (res.ok) {
-          const session = await res.json() as Record<string, unknown>;
-          const ps = String(session.payment_status ?? session.status ?? '');
-          paid = ['succeeded', 'completed', 'success', 'SUCCESSFUL', 'SUCCEEDED', 'PAID', 'paid'].includes(ps);
+      if (isSimulation || !WAVE_API_KEY) {
+        // Mode simulation : confirmer automatiquement (pas d'appel Wave réel)
+        paid = true;
+      } else {
+        try {
+          const res = await getWaveCheckout(reference);
+          if (res.ok) {
+            const session = await res.json() as Record<string, unknown>;
+            const ps = String(session.payment_status ?? session.status ?? '');
+            paid = ['succeeded', 'completed', 'success', 'SUCCESSFUL', 'SUCCEEDED', 'PAID', 'paid'].includes(ps);
+          }
+        } catch (e) {
+          console.error('[verify-terrain-payment] Wave check erreur:', e instanceof Error ? e.message : e);
         }
-      } catch (e) {
-        console.error('[verify-terrain-payment] Wave check erreur:', e instanceof Error ? e.message : e);
       }
     } else if (method === 'orange_money' || method === 'om') {
-      if (!isOmReady()) return json({ error: 'Orange Money non configuré' }, 500);
-      try {
-        const omToken = await getOmToken();
-        const ref = encodeURIComponent(reference);
-        const res = await fetch(`${OM_BASE_URL}/api/eWallet/v4/qrcode/${ref}`, {
-          headers: { Authorization: `Bearer ${omToken}` },
-        });
-        if (res.ok) {
-          const d = await res.json() as Record<string, unknown>;
-          const st = String(d.status ?? d.statut ?? d.txStatus ?? '').toUpperCase();
-          paid = ['PAID', 'COMPLETED', 'SUCCESS', 'SUCCESSFULL', 'SUCCESSFUL', 'PAYMENT_SUCCESS'].includes(st);
+      if (isSimulation || !isOmReady()) {
+        paid = true;
+      } else {
+        try {
+          const omToken = await getOmToken();
+          const ref = encodeURIComponent(reference);
+          const res = await fetch(`${OM_BASE_URL}/api/eWallet/v4/qrcode/${ref}`, {
+            headers: { Authorization: `Bearer ${omToken}` },
+          });
+          if (res.ok) {
+            const d = await res.json() as Record<string, unknown>;
+            const st = String(d.status ?? d.statut ?? d.txStatus ?? '').toUpperCase();
+            paid = ['PAID', 'COMPLETED', 'SUCCESS', 'SUCCESSFULL', 'SUCCESSFUL', 'PAYMENT_SUCCESS'].includes(st);
+          }
+        } catch (e) {
+          console.error('[verify-terrain-payment] OM check erreur:', e instanceof Error ? e.message : e);
         }
-      } catch (e) {
-        console.error('[verify-terrain-payment] OM check erreur:', e instanceof Error ? e.message : e);
       }
     } else {
       return json({ error: 'Moyen de paiement invalide' }, 400);

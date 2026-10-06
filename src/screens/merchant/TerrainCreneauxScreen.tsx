@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.surface,
   },
   backBtn:     { padding: 4 },
-  headerTitle: { fontFamily: fonts.title, fontSize: 17, color: colors.text },
+  headerTitle: { fontFamily: fonts.title, fontSize: 17, color: colors.white },
 
   scroll:  { flex: 1 },
   content: { padding: 18, paddingBottom: 8 },
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   },
   infoTxt: { fontFamily: fonts.body, fontSize: 13, color: colors.accent },
 
-  sectionLabel: { fontFamily: fonts.title, fontSize: 15, color: colors.text, marginBottom: 4 },
+  sectionLabel: { fontFamily: fonts.title, fontSize: 15, color: colors.white, marginBottom: 4 },
   sectionSub:   { fontFamily: fonts.body, fontSize: 12, color: colors.muted, marginBottom: 16 },
 
   jourCard: {
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   jourHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  jourLabel:      { fontFamily: fonts.title, fontSize: 14, color: colors.text },
+  jourLabel:      { fontFamily: fonts.title, fontSize: 14, color: colors.white },
   jourLabelFerme: { color: colors.muted },
   jourToggleRow:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
   jourToggleTxt:  { fontFamily: fonts.body, fontSize: 12, color: colors.muted },
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontFamily: fonts.title,
     fontSize: 15,
-    color: colors.text,
+    color: colors.white,
     textAlign: 'center',
   },
   heureSep: { fontFamily: fonts.body, fontSize: 16, color: colors.muted, marginTop: 16 },

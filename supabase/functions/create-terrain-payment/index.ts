@@ -89,8 +89,10 @@ serve(async (req) => {
         console.error('[create-terrain-payment] Wave erreur:', data);
         return json({ error: 'Wave : session de paiement échouée' }, 500);
       }
+      // data.id = Wave checkout session ID — nécessaire pour la vérification
+      const waveSessionId = (data.id ?? data.checkout_id ?? reservationId) as string;
       return json({
-        reference:  reservationId,
+        reference:  waveSessionId,
         paymentUrl: data.wave_launch_url as string,
         simulation: false,
       });
