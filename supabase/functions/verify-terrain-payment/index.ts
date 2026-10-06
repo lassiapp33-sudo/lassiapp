@@ -45,12 +45,12 @@ serve(async (req) => {
     // ── Vérifier que la réservation appartient à l'utilisateur ────────────────
     const { data: reservation, error: resErr } = await supabase
       .from('reservations_terrain')
-      .select('user_id, statut, prestataire_id, montant_prestataire, moyen_paiement, date_reservation, heure_fin')
+      .select('client_id, statut, prestataire_id, montant_prestataire, moyen_paiement, date_reservation, heure_fin')
       .eq('id', reservationId)
       .single();
 
     if (resErr || !reservation) return json({ error: 'Réservation introuvable' }, 404);
-    if (reservation.user_id !== user.id) return json({ error: 'Non autorisé' }, 403);
+    if (reservation.client_id !== user.id) return json({ error: 'Non autorisé' }, 403);
 
     // ── Idempotence : déjà payée → retour immédiat ────────────────────────────
     if (reservation.statut === 'paye') return json({ paid: true });
