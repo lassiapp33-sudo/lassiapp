@@ -52,8 +52,7 @@ credentials/
 google-play-service-account.json
 
 # OTA bundles locaux — déjà publiés sur EAS, inutiles dans git
-dist_*/
-dist/
+dist*/
 out/
 
 # Clés et secrets (JAMAIS dans git)
