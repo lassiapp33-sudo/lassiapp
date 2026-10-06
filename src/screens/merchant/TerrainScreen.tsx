@@ -159,6 +159,49 @@ export default function TerrainScreen({ onBack, onAddTerrain, onEditTerrain, onT
             <Text style={styles.addTxt}>Ajouter un terrain</Text>
           </TouchableOpacity>
 
+          {shopSlug ? (
+            <View style={styles.shareSection}>
+              <Text style={styles.shareSectionTitle}>Mon lien de réservation</Text>
+              <View style={styles.shareCard}>
+                <Text style={styles.shareLink} numberOfLines={1}>{`s.lassi.tech/${shopSlug}`}</Text>
+                <Text style={styles.shareHint}>
+                  Partagez ce lien à vos clients pour qu'ils réservent un créneau directement sur votre terrain.
+                </Text>
+                <View style={styles.shareRow}>
+                  <TouchableOpacity
+                    style={[styles.shareBtn, styles.shareBtnGhost]}
+                    onPress={async () => {
+                      await Clipboard.setStringAsync(`https://s.lassi.tech/${shopSlug}`);
+                      Alert.alert('Copié', 'Lien copié dans le presse-papier.');
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.shareBtnGhostTxt}>Copier</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.shareBtn, styles.shareBtnSolid]}
+                    onPress={() =>
+                      Share.share({
+                        message: `Réservez un terrain sur ${shopName} ! 🏟️\nDisponibilités et paiement ici : https://s.lassi.tech/${shopSlug}`,
+                      }).catch(() => {})
+                    }
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.shareBtnSolidTxt}>Partager</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
+          <TouchableOpacity
+            style={styles.creneauxBtn}
+            onPress={onAddTerrain}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.creneauxBtnTxt}>Définir mes créneaux</Text>
+          </TouchableOpacity>
+
           <View style={{ height: 40 }} />
         </ScrollView>
       )}
@@ -224,4 +267,38 @@ const styles = StyleSheet.create({
     height: 50, marginTop: 8,
   },
   addTxt: { color: colors.bg, fontFamily: fonts.title, fontSize: 14 },
+
+  shareSection: { marginTop: 24 },
+  shareSectionTitle: {
+    color: colors.white, fontFamily: fonts.title, fontSize: 14,
+    marginBottom: 10,
+  },
+  shareCard: {
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg, padding: 16,
+  },
+  shareLink: {
+    color: colors.accent, fontFamily: fonts.titleXL, fontSize: 15,
+    marginBottom: 6,
+  },
+  shareHint: {
+    color: colors.muted, fontFamily: fonts.body, fontSize: 12,
+    lineHeight: 17, marginBottom: 14,
+  },
+  shareRow: { flexDirection: 'row', gap: 10 },
+  shareBtn: {
+    flex: 1, height: 42, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  shareBtnGhost: { borderWidth: 1, borderColor: colors.border },
+  shareBtnGhostTxt: { color: colors.white, fontFamily: fonts.ui, fontSize: 13 },
+  shareBtnSolid: { backgroundColor: colors.accent },
+  shareBtnSolidTxt: { color: colors.bg, fontFamily: fonts.ui, fontSize: 13, fontWeight: '700' },
+
+  creneauxBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: `${colors.accent}18`, borderWidth: 1, borderColor: colors.accent,
+    borderRadius: radius.lg, height: 50, marginTop: 12,
+  },
+  creneauxBtnTxt: { color: colors.accent, fontFamily: fonts.title, fontSize: 15 },
 });
