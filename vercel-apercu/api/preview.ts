@@ -89,6 +89,7 @@ interface ServiceItem {
 interface Terrain {
   id: string; nom: string | null; description: string | null;
   prix_horaire: number | null; sport_type: string | null; adresse: string | null;
+  images: string[] | null;
 }
 
 // ── Regroupement produits par catégorie (miroir shopStore) ───────────────────
@@ -244,7 +245,7 @@ async function fetchServices(merchantId: string | null): Promise<ServiceItem[]> 
 async function fetchTerrains(merchantId: string | null): Promise<Terrain[]> {
   if (!merchantId) return [];
   try {
-    const q = `${SUPABASE_URL}/rest/v1/terrains?prestataire_id=eq.${encodeURIComponent(merchantId)}&actif=eq.true&order=created_at.asc&limit=20&select=id,nom,description,prix_horaire,sport_type,adresse`;
+    const q = `${SUPABASE_URL}/rest/v1/terrains?prestataire_id=eq.${encodeURIComponent(merchantId)}&actif=eq.true&order=created_at.asc&limit=20&select=id,nom,description,prix_horaire,sport_type,adresse,images`;
     const res = await fetch(q, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
     if (!res.ok) return [];
     return (await res.json()) as Terrain[];
@@ -380,8 +381,12 @@ function terrainCard(t: Terrain, base: string): string {
   const link = `${base}/terrain?id=${encodeURIComponent(t.id)}`;
   const desc = t.description ? `<div class="pdesc">${esc(clip(t.description, 60))}</div>` : '';
   const addr = t.adresse ? `<div class="terrain-addr">📍 ${esc(clip(t.adresse, 50))}</div>` : '';
+  const imgUrl = Array.isArray(t.images) && t.images.length > 0 && typeof t.images[0] === 'string' ? t.images[0] : null;
+  const visual = imgUrl
+    ? `<img class="terrain-img" src="${escAttr(imgUrl)}" alt="${escAttr(t.nom ?? 'Terrain')}" loading="lazy">`
+    : `<div class="terrain-emoji-box">${emoji}</div>`;
   return `<div class="terrain-card">
-    <div class="terrain-emoji">${emoji}</div>
+    ${visual}
     <div class="terrain-body">
       <div class="pname">${esc(t.nom ?? 'Terrain')}</div>
       ${desc}${addr}
@@ -737,14 +742,15 @@ function page(o: {
   .abo-btn { background:var(--y); color:var(--d); border:none; border-radius:999px; padding:9px 18px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; }
   /* TERRAINS */
   .terrain-list { display:flex; flex-direction:column; gap:14px; margin-bottom:40px; }
-  .terrain-card { display:flex; align-items:center; gap:16px; background:var(--w); border:1.5px solid var(--b); border-radius:18px; padding:18px 20px; text-decoration:none; color:var(--d); }
-  .terrain-emoji { font-size:36px; flex-shrink:0; }
-  .terrain-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+  .terrain-card { display:flex; align-items:center; gap:16px; background:var(--w); border:1.5px solid var(--b); border-radius:18px; overflow:hidden; text-decoration:none; color:var(--d); }
+  .terrain-img { width:110px; height:100px; object-fit:cover; flex-shrink:0; }
+  .terrain-emoji-box { width:80px; height:80px; display:flex; align-items:center; justify-content:center; font-size:40px; flex-shrink:0; background:var(--g); border-radius:14px; margin:10px 0 10px 10px; }
+  .terrain-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; padding:14px 0 14px 0; }
   .terrain-addr { font-size:12px; color:var(--m); font-weight:300; }
   .terrain-prix { font-size:15px; font-weight:700; margin-top:4px; }
   .terrain-unit { font-size:12px; font-weight:400; color:var(--m); }
-  .terrain-btn { flex-shrink:0; background:var(--y); color:var(--d); border:none; border-radius:12px; padding:12px 18px; font-size:13px; font-weight:700; text-decoration:none; white-space:nowrap; display:inline-block; font-family:inherit; cursor:pointer; }
-  @media(max-width:560px){ .terrain-card{flex-wrap:wrap;} .terrain-btn{width:100%;text-align:center;margin-top:4px;} }
+  .terrain-btn { flex-shrink:0; background:var(--y); color:var(--d); border:none; border-radius:0; padding:12px 18px; font-size:13px; font-weight:700; text-decoration:none; white-space:nowrap; display:flex; align-items:center; align-self:stretch; font-family:inherit; cursor:pointer; writing-mode:horizontal-tb; }
+  @media(max-width:560px){ .terrain-card{flex-wrap:wrap;} .terrain-img{width:100%;height:160px;} .terrain-emoji-box{width:60px;height:60px;margin:10px;font-size:32px;} .terrain-btn{width:100%;justify-content:center;border-radius:0 0 18px 18px;} .terrain-body{padding:10px 14px 0;} }
   /* LIGHTBOX */
   .lbx { position:fixed; inset:0; z-index:999; background:rgba(0,0,0,.92); display:none; align-items:center; justify-content:center; cursor:zoom-out; }
   .lbx.open { display:flex; }
