@@ -202,7 +202,7 @@ serve(async (req) => {
     }
 
     // ── Chemin terrain : terrain_r en query param (réservations_terrain) ──────
-    const terrainRFromUrl = url.searchParams.get('terrain_r') ?? '';
+    const terrainRFromUrl = url.searchParams.get('terrain_r') ?? url.searchParams.get('amp;terrain_r') ?? '';
     if (isUUID(terrainRFromUrl)) {
       // Charger la réservation (paiement_ref nécessaire pour vérification API fallback)
       const { data: resa } = await supabase
