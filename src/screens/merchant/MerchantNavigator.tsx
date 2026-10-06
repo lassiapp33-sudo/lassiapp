@@ -456,6 +456,27 @@ export default function MerchantNavigator({ onLogout }: Props) {
             setScreen({ id: 'chat', conversationId: targetId });
             return;
           }
+          if (d.type === 'terrain_reservation_paye') {
+            const reservationId = d.reservation_id as string | undefined;
+            if (reservationId) {
+              supabase
+                .from('reservations_terrain')
+                .select('terrain_id')
+                .eq('id', reservationId)
+                .maybeSingle()
+                .then(({ data: resa }) =>
+                  resa?.terrain_id ? getTerrainById(resa.terrain_id as string) : null,
+                )
+                .then(terrain => {
+                  if (terrain) setScreen({ id: 'terrain_reservations', terrain });
+                  else setScreen('terrains');
+                })
+                .catch(() => setScreen('terrains'));
+            } else {
+              setScreen('terrains');
+            }
+            return;
+          }
           if (type === 'reservation_terrain') {
             const terrainId = (data ?? {}).terrainId as string | undefined;
             if (terrainId) {

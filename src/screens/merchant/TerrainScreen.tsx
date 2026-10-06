@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Alert, Share,
 } from 'react-native';
+import { Image } from 'expo-image';
 import * as Clipboard from 'expo-clipboard';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -46,10 +47,23 @@ function TerrainCard({
   onEdit: () => void;
   onReservations: () => void;
 }) {
+  const imgUrl = terrain.images?.[0] ?? null;
   return (
     <View style={styles.card}>
+      {imgUrl ? (
+        <Image
+          source={{ uri: imgUrl }}
+          style={styles.cardImg}
+          contentFit="cover"
+          cachePolicy="disk"
+          transition={200}
+          placeholder={{ color: '#0d1228' }}
+        />
+      ) : null}
       <View style={styles.cardTop}>
-        <Text style={styles.cardEmoji}>{SPORT_EMOJI[terrain.sport_type]}</Text>
+        {!imgUrl ? (
+          <Text style={styles.cardEmoji}>{SPORT_EMOJI[terrain.sport_type]}</Text>
+        ) : null}
         <View style={{ flex: 1 }}>
           <Text style={styles.cardNom}>{terrain.nom}</Text>
           <Text style={styles.cardSport}>{SPORT_LABEL[terrain.sport_type]}</Text>
@@ -70,7 +84,7 @@ function TerrainCard({
         </TouchableOpacity>
         <TouchableOpacity style={[styles.actionBtn, styles.actionBtnAccent]} onPress={onReservations} activeOpacity={0.8}>
           <IcoCal />
-          <Text style={[styles.actionTxt, styles.actionTxtAccent]}>Réservations</Text>
+          <Text style={[styles.actionTxt, styles.actionTxtAccent]}>Mes réservations</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -231,6 +245,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.lg, marginBottom: 12, overflow: 'hidden',
   },
+  cardImg: { width: '100%', height: 140 },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14 },
   cardEmoji: { fontSize: 28 },
   cardNom: { color: colors.white, fontFamily: fonts.title, fontSize: 15 },
