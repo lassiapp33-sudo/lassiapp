@@ -84,11 +84,12 @@ interface Props {
   onAddTerrain: () => void;
   onEditTerrain: (terrain: Terrain) => void;
   onTerrainReservations: (terrain: Terrain) => void;
+  onCreneaux: () => void;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 
-export default function TerrainScreen({ onBack, onAddTerrain, onEditTerrain, onTerrainReservations }: Props) {
+export default function TerrainScreen({ onBack, onAddTerrain, onEditTerrain, onTerrainReservations, onCreneaux }: Props) {
   const prestataireId = useAuthStore(s => s.user?.id ?? '');
   const shopSlug      = useShopStore(s => s.profile?.slug ?? null);
   const shopName      = useShopStore(s => s.profile?.name ?? 'Mon terrain');
@@ -196,7 +197,7 @@ export default function TerrainScreen({ onBack, onAddTerrain, onEditTerrain, onT
 
           <TouchableOpacity
             style={styles.creneauxBtn}
-            onPress={onAddTerrain}
+            onPress={onCreneaux}
             activeOpacity={0.85}
           >
             <Text style={styles.creneauxBtnTxt}>Définir mes créneaux</Text>

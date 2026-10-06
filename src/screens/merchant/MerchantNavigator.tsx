@@ -17,6 +17,7 @@ import PromotionsScreen from './PromotionsScreen';
 import TerrainScreen from './TerrainScreen';
 import TerrainEditScreen from './TerrainEditScreen';
 import TerrainReservationsScreen from './TerrainReservationsScreen';
+import TerrainCreneauxScreen from './TerrainCreneauxScreen';
 import TerrainScanScreen from './TerrainScanScreen';
 import MerchantAbonnementsScreen from '../fitness/MerchantAbonnementsScreen';
 import AlaUneScreen from './AlaUneScreen';
@@ -95,6 +96,7 @@ type MerchantScreen =
       backTo?: 'aroundme' | 'assistant';
     }
   | 'terrains'
+  | 'terrain_creneaux'
   | { id: 'terrain_edit'; terrain?: Terrain }
   | { id: 'terrain_reservations'; terrain: Terrain }
   | 'terrain_scan'
@@ -521,6 +523,9 @@ export default function MerchantNavigator({ onLogout }: Props) {
       <TerrainReservationsScreen terrain={screen.terrain} onBack={() => setScreen('terrains')} />
     );
 
+  if (screen === 'terrain_creneaux')
+    return <TerrainCreneauxScreen onBack={() => setScreen('terrains')} />;
+
   if (screen === 'terrains')
     return (
       <TerrainScreen
@@ -528,6 +533,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
         onAddTerrain={() => setScreen({ id: 'terrain_edit' })}
         onEditTerrain={t => setScreen({ id: 'terrain_edit', terrain: t })}
         onTerrainReservations={t => setScreen({ id: 'terrain_reservations', terrain: t })}
+        onCreneaux={() => setScreen('terrain_creneaux')}
       />
     );
 
