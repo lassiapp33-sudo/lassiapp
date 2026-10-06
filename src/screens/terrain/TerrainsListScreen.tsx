@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet,
-  TouchableOpacity, Image, ActivityIndicator,
+  TouchableOpacity, ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { getTerrains, calculerPrixAvecMarge } from '../../services/terrains';
 import { Terrain, SportType, SPORT_LABEL } from '../../types/terrain';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -104,7 +105,14 @@ export default function TerrainsListScreen({ onBack, onSelectTerrain, initialSpo
               activeOpacity={0.85}
             >
               {item.images[0] ? (
-                <Image source={{ uri: item.images[0] }} style={styles.img} />
+                <Image
+                  source={{ uri: item.images[0] }}
+                  style={styles.img}
+                  contentFit="cover"
+                  cachePolicy="disk"
+                  transition={200}
+                  placeholder={{ color: '#0d1228' }}
+                />
               ) : (
                 <View style={styles.imgPlaceholder}>
                   <SportIcon sport={item.sport_type} />

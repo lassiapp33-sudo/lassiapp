@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Pressable,
@@ -41,6 +40,7 @@ import { getCurrentLocation, reverseGeocode } from '../../services/location';
 import { updateShopZoneManual } from '../../services/shops';
 import { CATEGORIES } from '../../config/categories';
 import * as storageService from '../../services/storage';
+import { Image } from 'expo-image';
 import * as promoService from '../../services/promotions';
 import * as fitnessService from '../../services/fitnessAbonnements';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
@@ -1259,7 +1259,14 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     activeOpacity={0.85}
                     style={styles.galleryThumbWrap}
                   >
-                    <Image source={{ uri: url }} style={styles.galleryThumb} />
+                    <Image
+                      source={{ uri: url }}
+                      style={styles.galleryThumb}
+                      contentFit="cover"
+                      cachePolicy="disk"
+                      transition={200}
+                      placeholder={{ color: '#0d1228' }}
+                    />
                   </TouchableOpacity>
                 ))}
 

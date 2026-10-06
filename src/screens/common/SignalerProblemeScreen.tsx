@@ -6,13 +6,13 @@ import {
   TextInput,
   ScrollView,
   StyleSheet,
-  Image,
   Platform,
   ActionSheetIOS,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import LassiScreen from '../../components/LassiScreen';
@@ -310,7 +310,7 @@ export default function SignalerProblemeScreen({
           </Text>
           {screenshotUri ? (
             <View style={s.screenshotWrap}>
-              <Image source={{ uri: screenshotUri }} style={s.screenshotThumb} />
+              <Image source={{ uri: screenshotUri }} style={s.screenshotThumb} contentFit="cover" transition={150} />
               <TouchableOpacity
                 style={s.screenshotRemove}
                 onPress={() => setScreenshotUri(null)}

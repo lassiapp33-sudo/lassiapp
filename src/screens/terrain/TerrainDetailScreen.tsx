@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  Image, TouchableOpacity, Platform,
+  TouchableOpacity, Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
 import { formatPrice } from '../../utils/format';
@@ -75,7 +76,14 @@ export default function TerrainDetailScreen({ terrain, onBack }: Props) {
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Hero image */}
         {terrain.images[0] ? (
-          <Image source={{ uri: terrain.images[0] }} style={styles.hero} />
+          <Image
+            source={{ uri: terrain.images[0] }}
+            style={styles.hero}
+            contentFit="cover"
+            cachePolicy="disk"
+            transition={200}
+            placeholder={{ color: '#0d1228' }}
+          />
         ) : (
           <View style={styles.heroPlaceholder}>
             <Text style={styles.heroEmoji}>{SPORT_EMOJI[terrain.sport_type]}</Text>

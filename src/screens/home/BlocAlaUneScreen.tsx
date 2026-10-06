@@ -8,9 +8,9 @@ import {
   FlatList,
   Modal,
   Linking,
-  Image,
   Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 
 const SCREEN_W = Dimensions.get('window').width;
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -353,9 +353,12 @@ export default function BlocAlaUneScreen({ blocCode, elementIndex, onBack, onSho
               <Image
                 source={{ uri: bloc.image_url }}
                 style={[styles.heroImage, { height: heroH }]}
-                resizeMode="cover"
+                contentFit="cover"
+                cachePolicy="disk"
+                transition={200}
+                placeholder={{ color: '#0d1228' }}
                 onLoad={(e) => {
-                  const { width, height } = e.nativeEvent.source;
+                  const { width, height } = e.source;
                   if (width > 0) setHeroH(Math.round(SCREEN_W * height / width));
                 }}
               />

@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Modal, KeyboardAvoidingView, Platform,
-  Image, ActionSheetIOS,
+  ActionSheetIOS,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
@@ -151,7 +152,7 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
             {uploading ? (
               <ActivityIndicator color={colors.accent} />
             ) : imageUrl ? (
-              <Image source={{ uri: imageUrl }} style={modal.photoPreview} />
+              <Image source={{ uri: imageUrl }} style={modal.photoPreview} contentFit="cover" transition={150} />
             ) : (
               <View style={modal.photoPlaceholder}>
                 <IcoCamera />
@@ -363,7 +364,14 @@ function ServiceCard({ service, onEdit, onDelete, inactive = false }: {
         onPress={onEdit}
         activeOpacity={0.88}
       >
-        <Image source={{ uri: service.image_url }} style={styles.visualImg} />
+        <Image
+          source={{ uri: service.image_url }}
+          style={styles.visualImg}
+          contentFit="cover"
+          cachePolicy="disk"
+          transition={200}
+          placeholder={{ color: '#0d1228' }}
+        />
         <View style={styles.visualDeleteBtn}>
           <TouchableOpacity onPress={onDelete} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
             <IcoTrash />

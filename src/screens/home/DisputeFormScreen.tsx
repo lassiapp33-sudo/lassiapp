@@ -12,9 +12,9 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Image,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { colors, fonts, radius, spacing, TOP_INSET } from '../../theme';
 import * as disputeService from '../../services/disputes';
 import * as storageService from '../../services/storage';
@@ -157,7 +157,7 @@ export default function DisputeFormScreen({
         <View style={styles.photoRow}>
           {photos.map((uri, i) => (
             <View key={i} style={styles.photoWrap}>
-              <Image source={{ uri }} style={styles.photo} />
+              <Image source={{ uri }} style={styles.photo} contentFit="cover" transition={150} />
               <TouchableOpacity
                 style={styles.photoRemove}
                 onPress={() => setPhotos(prev => prev.filter((_, idx) => idx !== i))}

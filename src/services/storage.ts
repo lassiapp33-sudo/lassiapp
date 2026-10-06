@@ -18,10 +18,10 @@ import { supabase, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
  */
 async function compressImage(localUri: string): Promise<string> {
   const imageRef = await ImageManipulator.manipulate(localUri)
-    .resize({ width: 1080 })
+    .resize({ width: 800 })
     .renderAsync();
   const result = await imageRef.saveAsync({
-    compress: 0.75,
+    compress: 0.70,
     format: SaveFormat.JPEG,
   });
   return result.uri;

@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, TextInput, TouchableOpacity, Image,
+  View, Text, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, Alert, ActivityIndicator, SafeAreaView,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path, Circle } from 'react-native-svg';
 import SelecteurPuces from '../../components/store/SelecteurPuces';
 import { getToutesSuggestions } from '../../services/ficheGuidee';
@@ -336,7 +337,7 @@ export default function FicheGuideeScreen({ onClose, mode }: Props) {
               </Text>
               {ligne.imageUri ? (
                 <View>
-                  <Image source={{ uri: ligne.imageUri }} style={s.imagePreview} resizeMode="cover" />
+                  <Image source={{ uri: ligne.imageUri }} style={s.imagePreview} contentFit="cover" transition={150} />
                   <TouchableOpacity
                     onPress={() => modifierLigne(ligne.id, 'imageUri', null)}
                     activeOpacity={0.7}

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Platform, KeyboardAvoidingView,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
@@ -279,7 +280,7 @@ export default function TerrainEditScreen({ terrain, onBack, onSaved }: Props) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imgScroll}>
             {images.map((uri, idx) => (
               <View key={idx} style={styles.imgThumb}>
-                <Image source={{ uri }} style={styles.imgThumbImg} />
+                <Image source={{ uri }} style={styles.imgThumbImg} contentFit="cover" transition={150} />
                 <TouchableOpacity
                   style={styles.imgDel}
                   onPress={() => removeImage(idx)}

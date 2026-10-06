@@ -7,8 +7,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   FlatList,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
 import { IcoBack } from '../../components/icons';
@@ -58,7 +58,14 @@ function BlocMiniCard({ bloc, onPress }: BlocMiniCardProps) {
     <TouchableOpacity style={styles.miniCard} onPress={onPress} activeOpacity={0.82}>
       {/* Image si disponible */}
       {bloc.image_url ? (
-        <Image source={{ uri: bloc.image_url }} style={styles.miniCardImg} resizeMode="contain" />
+        <Image
+            source={{ uri: bloc.image_url }}
+            style={styles.miniCardImg}
+            contentFit="contain"
+            cachePolicy="disk"
+            transition={200}
+            placeholder={{ color: '#0d1228' }}
+          />
       ) : (
         <View style={styles.miniCardImgPlaceholder}>
           <IcoFlame />

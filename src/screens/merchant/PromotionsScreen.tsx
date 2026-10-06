@@ -12,9 +12,9 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
-  Image,
   Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 
 const SCREEN_H = Dimensions.get('window').height;
 
@@ -402,7 +402,14 @@ export default function PromotionsScreen({ onBack }: Props) {
                         activeOpacity={0.8}
                       >
                         {p.photoUrl ? (
-                          <Image source={{ uri: p.photoUrl }} style={styles.prodPillImg} />
+                          <Image
+                            source={{ uri: p.photoUrl }}
+                            style={styles.prodPillImg}
+                            contentFit="cover"
+                            cachePolicy="disk"
+                            transition={150}
+                            placeholder={{ color: '#0d1228' }}
+                          />
                         ) : (
                           p.emoji ? <Text style={styles.prodPillEmoji}>{p.emoji}</Text> : null
                         )}

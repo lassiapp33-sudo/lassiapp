@@ -9,9 +9,9 @@ import {
   TextInput,
   Alert,
   Linking,
-  Image,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Svg, { Path, Circle, Rect, Ellipse } from 'react-native-svg';
 import { royal as r } from '../theme';
 import { TOP_INSET } from '../../theme';
@@ -336,7 +336,14 @@ export default function ReservationFlowScreen({ vipProfilId, vipNom, onBack, onS
                         activeOpacity={0.8}
                       >
                         {sp.photo_url ? (
-                          <Image source={{ uri: sp.photo_url }} style={s.spaceImg} resizeMode="cover" />
+                          <Image
+                            source={{ uri: sp.photo_url }}
+                            style={s.spaceImg}
+                            contentFit="cover"
+                            cachePolicy="disk"
+                            transition={200}
+                            placeholder={{ color: '#0d1228' }}
+                          />
                         ) : (
                           <View style={s.spaceImgPlaceholder} />
                         )}
@@ -528,7 +535,7 @@ export default function ReservationFlowScreen({ vipProfilId, vipNom, onBack, onS
                   <Image
                     source={m === 'wave' ? WAVE_LOGO : OM_LOGO}
                     style={s.methodLogo}
-                    resizeMode="cover"
+                    contentFit="contain"
                   />
                   <Text style={[s.methodLabel, payMethod === m && s.methodLabelOn]}>
                     {m === 'wave' ? 'Wave' : 'Orange Money'}
