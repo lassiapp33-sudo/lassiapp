@@ -86,6 +86,41 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
 
+  // ── GET ?receipt=<uuid> → données reçu terrain ───────────────────────────────
+  const receiptResaId = url.searchParams.get('receipt') ?? '';
+  if (req.method === 'GET' && isUUID(receiptResaId)) {
+    const { data: resa } = await admin
+      .from('reservations_terrain')
+      .select('client_name, client_phone, date_reservation, heure_debut, heure_fin, prix_total, receipt_code, prestataire_id, terrain_id, statut')
+      .eq('id', receiptResaId)
+      .maybeSingle();
+    if (!resa || resa.statut !== 'paye') return err('Réservation introuvable ou non payée', 404);
+    const [terrainRow, shopRow] = await Promise.all([
+      admin.from('terrains').select('nom, sport_type').eq('id', String(resa.terrain_id)).maybeSingle(),
+      admin.from('shops').select('name').eq('merchant_id', String(resa.prestataire_id)).maybeSingle(),
+    ]);
+    const SPORT_EMOJI: Record<string, string> = { football: '⚽', basketball: '🏀', tennis: '🎾', volleyball: '🏐', autre: '🏟' };
+    const DAYS_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+    const MONTHS_FR = ['jan.', 'f\xe9v.', 'mar.', 'avr.', 'mai', 'juin', 'juil.', 'ao\xfbt', 'sep.', 'oct.', 'nov.', 'd\xe9c.'];
+    const d = new Date(String(resa.date_reservation) + 'T12:00:00');
+    const dateLabel = DAYS_FR[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS_FR[d.getMonth()];
+    const montant = Math.round(Number(resa.prix_total));
+    const montantLabel = String(montant).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' F';
+    const sportType = String(terrainRow.data?.sport_type ?? '');
+    return jsonR({
+      success:          true,
+      terrain_nom:      terrainRow.data?.nom ?? 'Terrain',
+      sport_emoji:      SPORT_EMOJI[sportType] ?? '🏟',
+      date_label:       dateLabel,
+      heure_debut:      String(resa.heure_debut ?? ''),
+      heure_fin:        String(resa.heure_fin ?? ''),
+      montant_label:    montantLabel,
+      receipt_code:     String(resa.receipt_code ?? ''),
+      client_name:      String(resa.client_name ?? ''),
+      prestataire_name: shopRow.data?.name ?? '',
+    });
+  }
+
   // ── GET ?resa=<uuid> → poll statut (avec auto-vérification paiement) ──────────
   const resaId = url.searchParams.get('resa') ?? '';
   if (req.method === 'GET' && isUUID(resaId)) {
