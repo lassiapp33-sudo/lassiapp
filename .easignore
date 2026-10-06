@@ -1,4 +1,5 @@
 # Dossiers dist OTA locaux — non nécessaires pour le build EAS
+/dist*/
 dist*/
 out/
 
