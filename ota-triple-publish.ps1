@@ -16,7 +16,7 @@ $SUPABASE_URL      = "https://tsdemraszwtbzgtyjzum.supabase.co"
 $SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzZGVtcmFzend0YnpndHlqenVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2Mjc5MjcsImV4cCI6MjA5NTIwMzkyN30.EQ64jUdey9U344pXMDmysM0UJrk3zhKA66JfVuQ3W-s"
 $DIST              = "dist_ota_$(Get-Date -Format 'yyyyMMdd_HHmm')"
 $CONFIG            = "app.config.js"
-$RUNTIMES          = @("1.0.1", "1.0.2", "1.0.3")
+$RUNTIMES          = @("1.0.1", "1.0.2", "1.0.3", "1.0.4")
 
 $env:EXPO_PUBLIC_SUPABASE_URL      = $SUPABASE_URL
 $env:EXPO_PUBLIC_SUPABASE_ANON_KEY = $SUPABASE_ANON_KEY
