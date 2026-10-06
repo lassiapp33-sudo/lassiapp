@@ -86,6 +86,10 @@ interface ServiceItem {
   price: number; category: string; meta: string; kind: 'beauty' | 'fitness';
   image_url?: string | null;
 }
+interface Terrain {
+  id: string; nom: string | null; description: string | null;
+  prix_horaire: number | null; sport_type: string | null; adresse: string | null;
+}
 
 // ── Regroupement produits par catégorie (miroir shopStore) ───────────────────
 // Normalise l'id de catégorie, préserve l'ordre d'apparition, libellés = app.
@@ -152,9 +156,9 @@ export default async function handler(
 
   const shop = await fetchShop(slug);
   const bot = isCrawler(req.headers.get('user-agent') ?? '');
-  const [products, services] = shop
-    ? await Promise.all([fetchProducts(shop.id), fetchServices(shop.merchant_id)])
-    : [[], []];
+  const [products, services, terrains] = shop
+    ? await Promise.all([fetchProducts(shop.id), fetchServices(shop.merchant_id), fetchTerrains(shop.merchant_id)])
+    : [[], [], []];
   const dailySpecial = shop ? await fetchDailySpecials(shop.id) : [];
 
   if (!bot && shop) {
@@ -163,7 +167,7 @@ export default async function handler(
   }
 
   const base = `${url.protocol}//${url.host}`;
-  return new Response(renderHtml(shop, products, services, slug, base, dailySpecial as { id: string; name: string; price: number; photo_url?: string | null }[]), {
+  return new Response(renderHtml(shop, products, services, terrains as Terrain[], slug, base, dailySpecial as { id: string; name: string; price: number; photo_url?: string | null }[]), {
     status: shop ? 200 : 404,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
@@ -237,6 +241,16 @@ async function fetchServices(merchantId: string | null): Promise<ServiceItem[]> 
   return out;
 }
 
+async function fetchTerrains(merchantId: string | null): Promise<Terrain[]> {
+  if (!merchantId) return [];
+  try {
+    const q = `${SUPABASE_URL}/rest/v1/terrains?prestataire_id=eq.${encodeURIComponent(merchantId)}&actif=eq.true&order=created_at.asc&limit=20&select=id,nom,description,prix_horaire,sport_type,adresse`;
+    const res = await fetch(q, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+    if (!res.ok) return [];
+    return (await res.json()) as Terrain[];
+  } catch { return []; }
+}
+
 async function fetchDailySpecials(shopId: string): Promise<{ id: string; name: string; price: number; photo_url?: string | null }[]> {
   try {
     const today = new Date().toISOString().slice(0, 10);
@@ -285,26 +299,26 @@ function initialAvatar(name: string): string {
     '&background=FDCF34&color=14152A&size=512&length=1&bold=true&format=png';
 }
 
-function renderHtml(shop: Shop | null, products: Product[], services: ServiceItem[], slug: string, base: string, dailySpecial: { id: string; name: string; price: number; photo_url?: string | null }[] = []): string {
+function renderHtml(shop: Shop | null, products: Product[], services: ServiceItem[], terrains: Terrain[], slug: string, base: string, dailySpecial: { id: string; name: string; price: number; photo_url?: string | null }[] = []): string {
   const canonical = `${base}/${encodeURIComponent(slug)}`;
   if (!shop) {
     return page({
       title: 'Boutique introuvable — LASSİ', desc: "Cette boutique n'est plus disponible sur LASSİ.",
-      ogImage: initialAvatar('LASSI'), canonical, name: 'Boutique introuvable', zone: '', cat: '', logo: '', slug, products: [], services: [], shopStatus: null, dailySpecial: [],
+      ogImage: initialAvatar('LASSI'), canonical, base, name: 'Boutique introuvable', zone: '', cat: '', logo: '', slug, products: [], services: [], terrains: [], shopStatus: null, dailySpecial: [],
     });
   }
   const name = shop.name?.trim() || 'Boutique';
   const zone = shop.zone?.trim() || '';
   const cat = categoryLabel(shop.category, shop.subcategories);
   const logo = shop.logo_url?.trim() || '';
-  const nb = products.length + services.length;
+  const nb = products.length + services.length + terrains.length;
   const descRaw = shop.description?.trim() ||
     `Boutique vérifiée sur LASSİ${zone ? ' · ' + zone : ''}${cat ? ' · ' + cat : ''}.` +
       (nb ? ` ${nb} offre${nb > 1 ? 's' : ''} — commandez ou réservez.` : '');
   const shopStatus = computeShopStatus(shop.opening_hours, shop.is_manually_closed);
   return page({
     title: `${name} — sur LASSİ`, desc: clip(descRaw.replace(/\s+/g, ' '), 180),
-    ogImage: logo || initialAvatar(name), canonical, name, zone, cat, logo, slug, products, services, shopStatus, dailySpecial,
+    ogImage: logo || initialAvatar(name), canonical, base, name, zone, cat, logo, slug, products, services, terrains, shopStatus, dailySpecial,
   });
 }
 
@@ -355,6 +369,28 @@ function serviceCard(s: ServiceItem, _deep: string): string {
       <button class="svcbtn bookbtn" type="button">Réserver</button></div></div>`;
 }
 
+const SPORT_EMOJI: Record<string, string> = {
+  football: '⚽', basketball: '🏀', tennis: '🎾', volleyball: '🏐', autre: '🏟',
+};
+
+function terrainCard(t: Terrain, base: string): string {
+  const emoji = SPORT_EMOJI[t.sport_type ?? ''] ?? '🏟';
+  const prix = Math.round(Number(t.prix_horaire ?? 0));
+  const prixClient = prix + Math.ceil(prix * COMMISSION_RATE);
+  const link = `${base}/terrain?id=${encodeURIComponent(t.id)}`;
+  const desc = t.description ? `<div class="pdesc">${esc(clip(t.description, 60))}</div>` : '';
+  const addr = t.adresse ? `<div class="terrain-addr">📍 ${esc(clip(t.adresse, 50))}</div>` : '';
+  return `<div class="terrain-card">
+    <div class="terrain-emoji">${emoji}</div>
+    <div class="terrain-body">
+      <div class="pname">${esc(t.nom ?? 'Terrain')}</div>
+      ${desc}${addr}
+      <div class="terrain-prix">${fmtPrice(prixClient)} <span class="terrain-unit">/ heure</span></div>
+    </div>
+    <a class="terrain-btn" href="${escAttr(link)}">Réserver un créneau →</a>
+  </div>`;
+}
+
 // Carte abonnement / formule fitness (style light, bouton Réserver, paiement web direct).
 function fitnessCard(s: ServiceItem): string {
   const total = prixClient(s.price);
@@ -371,8 +407,9 @@ function fitnessCard(s: ServiceItem): string {
 }
 
 function page(o: {
-  title: string; desc: string; ogImage: string; canonical: string;
+  title: string; desc: string; ogImage: string; canonical: string; base: string;
   name: string; zone: string; cat: string; logo: string; slug: string; products: Product[]; services: ServiceItem[];
+  terrains: Terrain[];
   shopStatus: ShopStatusResult | null;
   dailySpecial: { id: string; name: string; price: number; photo_url?: string | null }[];
 }): string {
@@ -385,7 +422,8 @@ function page(o: {
   const hasServices = o.services.length > 0;
   const hasBeauty   = o.services.some(s => s.kind === 'beauty');
   const hasFitness  = o.services.some(s => s.kind === 'fitness');
-  const hasCatalog = hasProducts || hasServices;
+  const hasTerrains = o.terrains.length > 0;
+  const hasCatalog = hasProducts || hasServices || hasTerrains;
   const st = o.shopStatus;
   const isOpen = st ? st.isOpen : true;
   let hoursHtml = '';
@@ -440,6 +478,10 @@ function page(o: {
       `<div class="cathead"><span class="cathead-title">${esc(g.title)}</span><span class="cathead-count">${g.items.length}</span></div>` +
       `<div class="abolist">${g.items.map(fitnessCard).join('')}</div>`).join('');
 
+  const terrainSection = !hasTerrains ? '' :
+    `<div class="sectitle">Nos terrains · ${o.terrains.length}</div>` +
+    `<div class="terrain-list">${o.terrains.map(t => terrainCard(t, o.base)).join('')}</div>`;
+
   const storeButtons = `<div class="cta">
       <a class="store primary" href="${APPSTORE_URL}">
         <svg viewBox="0 0 24 24"><path d="M16.365 1.43c0 1.14-.417 2.2-1.25 3.06-.95.99-2.08 1.56-3.2 1.47-.14-1.09.43-2.26 1.22-3.05.89-.9 2.33-1.57 3.23-1.48zM20.9 17.1c-.55 1.27-.81 1.83-1.52 2.96-.99 1.57-2.38 3.53-4.1 3.54-1.53.02-1.92-.99-4-.98-2.08.01-2.51 1-4.04.97-1.72-.01-3.04-1.77-4.03-3.34C-.5 16.73-.78 11.08 1.38 8.17c1.07-1.46 2.76-2.38 4.36-2.38 1.63 0 2.66 1 4.01 1 1.31 0 2.11-1 4-1 1.43 0 2.94.78 4.02 2.12-3.53 1.94-2.95 6.98 1.13 9.19z"/></svg>
@@ -453,7 +495,9 @@ function page(o: {
 
   const foot = hasProducts
     ? `<p class="foot">Commande &amp; paie ici en sécurité (Wave / Orange Money). <b>${esc(o.name)}</b> te rappelle pour le retrait ou la livraison.</p>`
-    : `<p class="foot">Réserve tes prestations dans l'app <b>LASSİ</b> — créneaux, paiement sécurisé et rappel automatique.</p>`;
+    : hasTerrains
+      ? `<p class="foot">Réserve ton créneau en ligne et paie directement (Wave / Orange Money). Présente-toi sur place à l'heure choisie.</p>`
+      : `<p class="foot">Réserve tes prestations dans l'app <b>LASSİ</b> — créneaux, paiement sécurisé et rappel automatique.</p>`;
 
   const shopHeader = `
     <section class="hero">
@@ -492,6 +536,7 @@ function page(o: {
       <h2 class="catalog-title">Faites-vous plaisir</h2>
       ${catnav}${dsSection}${grid}
       ${svcSection}
+      ${terrainSection}
     </div>
     <div class="appnote">Découvrez tous les commerçants autour de vous sur l'application LASSİ</div>
     ${storeButtons}
@@ -690,6 +735,16 @@ function page(o: {
   .abo-right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; }
   .aboprix { font-size:15px; font-weight:700; color:var(--d); }
   .abo-btn { background:var(--y); color:var(--d); border:none; border-radius:999px; padding:9px 18px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; }
+  /* TERRAINS */
+  .terrain-list { display:flex; flex-direction:column; gap:14px; margin-bottom:40px; }
+  .terrain-card { display:flex; align-items:center; gap:16px; background:var(--w); border:1.5px solid var(--b); border-radius:18px; padding:18px 20px; text-decoration:none; color:var(--d); }
+  .terrain-emoji { font-size:36px; flex-shrink:0; }
+  .terrain-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+  .terrain-addr { font-size:12px; color:var(--m); font-weight:300; }
+  .terrain-prix { font-size:15px; font-weight:700; margin-top:4px; }
+  .terrain-unit { font-size:12px; font-weight:400; color:var(--m); }
+  .terrain-btn { flex-shrink:0; background:var(--y); color:var(--d); border:none; border-radius:12px; padding:12px 18px; font-size:13px; font-weight:700; text-decoration:none; white-space:nowrap; display:inline-block; font-family:inherit; cursor:pointer; }
+  @media(max-width:560px){ .terrain-card{flex-wrap:wrap;} .terrain-btn{width:100%;text-align:center;margin-top:4px;} }
   /* LIGHTBOX */
   .lbx { position:fixed; inset:0; z-index:999; background:rgba(0,0,0,.92); display:none; align-items:center; justify-content:center; cursor:zoom-out; }
   .lbx.open { display:flex; }
