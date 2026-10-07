@@ -1406,14 +1406,9 @@ const CART_JS = `
             if(d.redirectUrl){ a.textContent='Ouvrir Orange Money'; a.href=d.redirectUrl; a.style.display='inline-block'; }
             else { a.style.display='none'; }
           } else if(d.redirectUrl){
-            // Wave : bouton seulement, AUCUNE redirect auto.
-            // iOS universal link ouvre Wave directement sans passer par pay.wave.com dans le browser.
-            // window.location.replace causait le replay de pay.wave.com → popup Wave à répétition.
-            document.getElementById('waitSub').textContent=isW
-              ? 'Clique sur le bouton pour payer avec Wave, puis reviens ici après confirmation.'
-              : 'Valide le paiement dans Orange Money, puis reviens sur cette page.';
             a.textContent=isW?'Payer avec Wave':'Ouvrir Orange Money';
             a.href=d.redirectUrl; a.style.display='inline-block';
+            window.location.href=d.redirectUrl;
           } else {
             a.style.display='none';
           }
@@ -2117,9 +2112,7 @@ const TERRAIN_JS = `
         wBtn.href=d.redirectUrl;
         wBtn.textContent=state.moyen==='wave'?'Payer avec Wave':'Ouvrir Orange Money';
         wBtn.style.display='inline-block';
-        document.getElementById('t-wsub').textContent=state.moyen==='wave'
-          ? 'Clique sur le bouton pour payer avec Wave, puis reviens ici apr\xe8s confirmation.'
-          : 'Valide le paiement dans Orange Money, puis reviens sur cette page.';
+        window.location.href=d.redirectUrl;
       }
       if(d.qrCode){
         var qrEl=document.getElementById('t-wqr');
