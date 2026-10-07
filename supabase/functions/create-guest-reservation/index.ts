@@ -101,16 +101,20 @@ Deno.serve(async (req) => {
       .eq('slug', slugParam)
       .maybeSingle();
 
+    if (shop?.is_manually_closed) return jsonR({ success: true, closed: true, slots: [] });
+
     const hours = (shop?.opening_hours ?? {}) as Record<string, { open: string; close: string; closed?: boolean }>;
     const d = new Date(dateParam + 'T12:00:00');
     const dayKey = JS_TO_DAY[d.getDay()];
     const dayH = hours[dayKey];
 
-    if (!dayH || dayH.closed) return jsonR({ success: true, closed: true, slots: [] });
+    // Jour explicitement fermé → closed. Horaires absents/vides → suppose ouvert (défaut 08:00-20:00)
+    if (dayH && dayH.closed) return jsonR({ success: true, closed: true, slots: [] });
+    const effectiveDayH = dayH ?? { open: '08:00', close: '20:00' };
 
     const dureeMin = Math.max(15, Number(svc.duree_minutes) || 30);
-    const openMin  = toMin(dayH.open || '08:00');
-    const rawClose = toMin(dayH.close || '20:00');
+    const openMin  = toMin(effectiveDayH.open || '08:00');
+    const rawClose = toMin(effectiveDayH.close || '20:00');
     const closeMin = rawClose || 1440;
 
     // Générer tous les créneaux du jour
