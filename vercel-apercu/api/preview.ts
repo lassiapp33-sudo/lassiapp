@@ -909,6 +909,19 @@ function renderConfirmation(url: URL): string {
   const type = url.searchParams.get('type') ?? '';
   const retour = shop ? `https://s.lassi.tech/${encodeURIComponent(shop)}` : 'https://lassi.tech';
   const cfg = JSON.stringify({ url: SUPABASE_URL, key: SUPABASE_ANON_KEY, id, s, type });
+  const isOk = s === 'ok';
+  const isKo = s === 'ko';
+  const isTerrain = type === 'terrain';
+  const isBeauty = type === 'beauty';
+  const isAbo = type === 'abonnement';
+  const OK_SVG_SSR = `<svg viewBox="0 0 72 72"><circle cx="36" cy="36" r="34" fill="${BRAND_GOLD}"/><path d="M22 37l10 10 18-20" fill="none" stroke="${BRAND_BG}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const KO_SVG_SSR = `<svg viewBox="0 0 72 72"><circle cx="36" cy="36" r="33" fill="none" stroke="#FF6B6B" stroke-width="4"/><path d="M26 26l20 20M46 26l-20 20" stroke="#FF6B6B" stroke-width="6" stroke-linecap="round"/></svg>`;
+  const initMark  = isOk ? OK_SVG_SSR : isKo ? KO_SVG_SSR : `<div class="spin"></div>`;
+  const initTitle = isOk ? (isTerrain || isBeauty ? 'Réservation confirmée' : isAbo ? 'Abonnement activé !' : 'Paiement confirmé') : isKo ? 'Paiement non abouti' : 'Vérification du paiement…';
+  const initDesc  = isOk ? (isTerrain ? 'Ton créneau est réservé.' : isBeauty ? 'Le prestataire a reçu ta réservation.' : isAbo ? 'Ton abonnement est actif.' : 'Merci ! Le marchand a reçu ta commande.') : isKo ? 'Le paiement n\'a pas abouti.' : 'Un instant, on confirme ta commande.';
+  const homeDisplay = (isOk || isKo) ? 'inline-block' : 'none';
+  const recuDisplay = (isOk && id && !isTerrain && !isAbo) ? 'inline-flex' : 'none';
+  const recuHref    = (isOk && id && !isTerrain && !isAbo) ? `${SUPABASE_URL}/functions/v1/create-guest-order?receipt=${encodeURIComponent(id)}&apikey=${encodeURIComponent(SUPABASE_ANON_KEY)}` : '#';
   return `<!DOCTYPE html>
 <html lang="fr"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -951,9 +964,9 @@ function renderConfirmation(url: URL): string {
 </style></head>
 <body>
   <div class="box">
-    <div id="mark"><div class="spin"></div></div>
-    <h1 id="t">Vérification du paiement…</h1>
-    <p id="d">Un instant, on confirme ta commande.</p>
+    <div id="mark">${initMark}</div>
+    <h1 id="t">${initTitle}</h1>
+    <p id="d">${initDesc}</p>
     <div id="receipt-card" class="rcpt" style="display:none">
       <div class="rcpt-row"><span class="rcpt-lbl">Formule</span><span class="rcpt-val" id="rc-nom"></span></div>
       <div class="rcpt-row"><span class="rcpt-lbl">Durée</span><span class="rcpt-val" id="rc-duree"></span></div>
@@ -962,8 +975,8 @@ function renderConfirmation(url: URL): string {
       <div class="rcpt-row"><span class="rcpt-lbl">Montant payé</span><span class="rcpt-val rcpt-prix" id="rc-prix"></span></div>
     </div>
     <div class="actions">
-      <a class="btn" id="home" href="${escAttr(retour)}" style="display:none">Retour à la boutique</a>
-      <a class="ghost" id="recu" download style="display:none"><svg viewBox="0 0 24 24"><path d="M12 3a1 1 0 0 1 1 1v9.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42l2.3 2.3V4a1 1 0 0 1 1-1zM5 19a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1z"/></svg>Télécharger le reçu (PDF)</a>
+      <a class="btn" id="home" href="${escAttr(retour)}" style="display:${homeDisplay}">Retour à la boutique</a>
+      <a class="ghost" id="recu" href="${escAttr(recuHref)}" download style="display:${recuDisplay}"><svg viewBox="0 0 24 24"><path d="M12 3a1 1 0 0 1 1 1v9.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42l2.3 2.3V4a1 1 0 0 1 1-1zM5 19a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1z"/></svg>Télécharger le reçu (PDF)</a>
     </div>
     <div class="dl">
       <p class="dltxt">Télécharge l'application pour découvrir tous les commerçants autour de toi</p>
