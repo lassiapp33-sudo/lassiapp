@@ -3,6 +3,10 @@
 # dependencies
 node_modules/
 
+# Médias marketing — non nécessaires au build EAS
+contenu-reseaux-sociaux/
+dist_ota_*/
+
 # Expo
 .expo/
 dist/
