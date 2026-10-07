@@ -93,16 +93,22 @@ export const verifierPaiement = async (paymentIntentId: string): Promise<{
   const session = sessData?.session ?? null;
   if (!session) return { confirmed: false, statut: 'error', mode: 'unknown' };
 
+  const VERIFY_TIMEOUT_MS = 15_000;
   let data, error;
   try {
-    ({ data, error } = await retryWithBackoff(async () => {
-      const res = await supabase.functions.invoke('verify-payment', {
-        body: { paymentIntentId },
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (res.error && isNetworkError(res.error)) throw res.error;
-      return res;
-    }));
+    ({ data, error } = await Promise.race([
+      retryWithBackoff(async () => {
+        const res = await supabase.functions.invoke('verify-payment', {
+          body: { paymentIntentId },
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (res.error && isNetworkError(res.error)) throw res.error;
+        return res;
+      }),
+      new Promise<never>((_, rej) =>
+        setTimeout(() => rej(new Error('verify_timeout')), VERIFY_TIMEOUT_MS),
+      ),
+    ]));
   } catch {
     useConnectionStore.getState().setOffline(true);
     return { confirmed: false, statut: 'error', mode: 'unknown' };

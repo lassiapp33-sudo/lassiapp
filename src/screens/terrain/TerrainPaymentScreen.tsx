@@ -215,7 +215,7 @@ export default function TerrainPaymentScreen({
 
       // 3. Ouvrir l'app de paiement (null en simulation → on passe directement à waiting)
       if (session.paymentUrl) {
-        await Linking.openURL(session.paymentUrl);
+        Linking.openURL(session.paymentUrl).catch(() => {});
       }
       setStage('waiting');
     } catch (err) {
