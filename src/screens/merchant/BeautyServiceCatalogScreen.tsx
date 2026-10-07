@@ -248,16 +248,16 @@ function EditModal({ service, prestataireId, extraCategories, onClose, onSaved }
               {allCategoryChips.map(c => (
                 <TouchableOpacity
                   key={c.value}
-                  style={[modal.chip, cat === c.value && modal.chipOn]}
+                  style={[modal.chip, cat === c.value && modal.chipOn, { paddingHorizontal: 10, paddingVertical: 7 }]}
                   onPress={() => { setCat(c.value); setAddingCat(false); }}
                   activeOpacity={0.8}
                 >
-                  <Text style={[modal.chipTxt, cat === c.value && modal.chipTxtOn]}>{c.label}</Text>
+                  <Text style={[modal.chipTxt, cat === c.value && modal.chipTxtOn, { fontSize: 11 }]}>{c.label}</Text>
                 </TouchableOpacity>
               ))}
               {!addingCat && (
-                <TouchableOpacity style={modal.chipAdd} onPress={() => setAddingCat(true)} activeOpacity={0.8}>
-                  <Text style={modal.chipAddTxt}>+ Nouvelle</Text>
+                <TouchableOpacity style={[modal.chipAdd, { paddingHorizontal: 10, paddingVertical: 7 }]} onPress={() => setAddingCat(true)} activeOpacity={0.8}>
+                  <Text style={[modal.chipAddTxt, { fontSize: 11 }]}>+ Nouvelle</Text>
                 </TouchableOpacity>
               )}
             </View>
