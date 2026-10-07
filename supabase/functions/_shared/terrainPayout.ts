@@ -11,9 +11,10 @@ type Sb = ReturnType<typeof createClient>;
 
 const PHONE_RE = /^7[05678][0-9]{7}$/;
 
+// 'insufficient-funds' est RETIRÉ des terminaux — état temporaire (rechargement portefeuille).
 const TERMINAL_WAVE_ERRORS = new Set([
   'country-mismatch', 'currency-mismatch', 'idempotency-mismatch',
-  'insufficient-funds', 'invalid-aggregated-merchant-id', 'aggregated-merchant-required',
+  'invalid-aggregated-merchant-id', 'aggregated-merchant-required',
   'recipient-minor', 'recipient-account-blocked', 'recipient-account-inactive',
   'recipient-limit-exceeded', 'request-not-json', 'request-parsing-error',
   'request-validation-error',
@@ -55,18 +56,27 @@ export async function triggerTerrainPayout(
   } else if (!isProduction) {
     payoutRef = `SIM-TERRAIN-${Date.now()}-${params.reservationId.slice(0, 8).toUpperCase()}`;
   } else {
-    try {
-      if (params.moyenPaiement === 'wave') {
-        payoutRef = await sendWavePayout(params.reservationId, params.montant, phone);
-      } else {
-        payoutRef = await sendOmPayout(
-          params.reservationId, params.montant, phone,
-          params.OM_RETAILER_MSISDN,
-          params.OM_RETAILER_PIN_ENCRYPTED,
-        );
+    // 2 tentatives avec 4s d'intervalle pour erreurs transitoires (timeout, réseau)
+    const MAX_ATTEMPTS = 2;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, 4000));
+      try {
+        if (params.moyenPaiement === 'wave') {
+          payoutRef = await sendWavePayout(params.reservationId, params.montant, phone);
+        } else {
+          payoutRef = await sendOmPayout(
+            params.reservationId, params.montant, phone,
+            params.OM_RETAILER_MSISDN,
+            params.OM_RETAILER_PIN_ENCRYPTED,
+          );
+        }
+        payoutError = '';
+        break;
+      } catch (e) {
+        payoutError = e instanceof Error ? e.message : String(e);
+        const isTerminal = (e as { isTerminal?: boolean }).isTerminal === true;
+        if (isTerminal) break;
       }
-    } catch (e) {
-      payoutError = e instanceof Error ? e.message : String(e);
     }
   }
 
