@@ -198,8 +198,9 @@ Deno.serve(async (req) => {
       return jsonR({ paid: rechk?.statut === 'paye' });
     }
 
-    // Déclencher le reversement
-    await triggerTerrainPayout(admin, {
+    // Déclencher le reversement en background — ne pas bloquer la réponse { paid: true }
+    // (le payout Wave/OM peut prendre 10-20s, ce qui maintiendrait le spinner client).
+    const payoutTask = triggerTerrainPayout(admin, {
       reservationId:             resaId,
       prestataireId:             resa.prestataire_id as string,
       montant:                   resa.montant_prestataire as number,
@@ -207,7 +208,12 @@ Deno.serve(async (req) => {
       WAVE_API_KEY,
       OM_RETAILER_MSISDN,
       OM_RETAILER_PIN_ENCRYPTED,
-    });
+    }).catch(e => console.error('[terrain-resa poll] bg payout:', e instanceof Error ? e.message : e));
+    // Garder l'invocation Deno active pendant le payout background
+    try {
+      // @ts-ignore — EdgeRuntime.waitUntil disponible en Supabase Edge Functions
+      (globalThis as Record<string, unknown>).EdgeRuntime?.waitUntil?.(payoutTask);
+    } catch { /* ignore si non dispo */ }
 
     return jsonR({ paid: true });
   }

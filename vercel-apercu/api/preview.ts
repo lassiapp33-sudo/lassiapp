@@ -277,7 +277,7 @@ function groupServices(items: ServiceItem[]): { title: string; items: ServiceIte
     if (!map[key]) { map[key] = []; order.push(key); }
     map[key].push(s);
   }
-  return order.map(k => ({ title: prodCatTitle(normCatId(k)), items: map[k] }));
+  return order.map(k => ({ title: k, items: map[k] }));
 }
 
 async function logClic(slug: string, source: string): Promise<void> {

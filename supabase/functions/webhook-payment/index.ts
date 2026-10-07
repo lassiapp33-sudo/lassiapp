@@ -1129,6 +1129,49 @@ serve(async (req) => {
       }
     }
 
+    // ── Réservation terrain Wave ? (client_reference = reservations_terrain.id) ──
+    // Symétrique du chemin OM (terrain_r en query param), mais déclenché ici
+    // car le webhook Wave ne passe pas par terrain_r.
+    if (isSuccess) {
+      const { data: terrainResa } = await supabase
+        .from('reservations_terrain')
+        .select('id, statut, date_reservation, heure_debut, heure_fin, prestataire_id, montant_prestataire, moyen_paiement')
+        .eq('id', String(piId))
+        .eq('statut', 'en_attente')
+        .maybeSingle();
+      if (terrainResa) {
+        const receiptCode2       = genReceiptCode();
+        const heureFinW2         = (terrainResa.heure_fin as string).slice(0, 5);
+        const receiptValidUntil2 = new Date(`${terrainResa.date_reservation}T${heureFinW2}:00`).toISOString();
+        const { error: terrainUpdErr } = await supabase
+          .from('reservations_terrain')
+          .update({
+            statut:              'paye',
+            receipt_status:      'valide',
+            receipt_code:        receiptCode2,
+            receipt_valid_until: receiptValidUntil2,
+            payout_statut:       'pending',
+          })
+          .eq('id', String(piId))
+          .eq('statut', 'en_attente');
+        if (!terrainUpdErr) {
+          try {
+            await triggerTerrainPayout(supabase, {
+              reservationId:             String(piId),
+              prestataireId:             terrainResa.prestataire_id as string,
+              montant:                   terrainResa.montant_prestataire as number,
+              moyenPaiement:             (terrainResa.moyen_paiement ?? 'wave') as string,
+              WAVE_API_KEY,
+              OM_RETAILER_MSISDN,
+              OM_RETAILER_PIN_ENCRYPTED,
+            });
+          } catch { /* best-effort */ }
+        }
+        console.log('[webhook-wave-terrain] confirm', piId, 'updErr:', terrainUpdErr?.message ?? null);
+        return new Response('OK', { status: 200 });
+      }
+    }
+
     // Peut être un abonnement visibilité (client_reference = sub.id dans le checkout Wave)
     if (isSuccess) {
       try {
