@@ -50,18 +50,19 @@ export default function TerrainReservationsPage() {
   const [filter,  setFilter]  = useState<'all' | 'paye' | 'en_attente'>('all')
 
   useEffect(() => {
-    supabase
-      .from('reservations_terrain')
-      .select(`
-        id, client_name, client_phone,
-        date_reservation, heure_debut, heure_fin,
-        prix_total, commission_lassi, montant_prestataire,
-        moyen_paiement, statut, payout_statut, receipt_code, created_at,
-        terrains ( nom )
-      `)
-      .order('created_at', { ascending: false })
-      .limit(200)
-      .then(({ data, error }) => {
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('reservations_terrain')
+          .select(`
+            id, client_name, client_phone,
+            date_reservation, heure_debut, heure_fin,
+            prix_total, commission_lassi, montant_prestataire,
+            moyen_paiement, statut, payout_statut, receipt_code, created_at,
+            terrains ( nom )
+          `)
+          .order('created_at', { ascending: false })
+          .limit(200)
         if (error) console.error('[terrain-admin]', error.message)
         setRows((data ?? []).map((r: any) => ({
           id:                 r.id,
@@ -80,8 +81,12 @@ export default function TerrainReservationsPage() {
           receiptCode:        r.receipt_code,
           createdAt:          r.created_at,
         })))
-      })
-      .finally(() => setLoading(false))
+      } catch (e) {
+        console.error('[terrain-admin]', e)
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [])
 
   const filtered = filter === 'all' ? rows : rows.filter(r => r.statut === filter)
