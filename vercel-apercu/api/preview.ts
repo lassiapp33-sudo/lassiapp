@@ -776,7 +776,7 @@ function page(o: {
         <div class="lines" id="lines"></div>
         <div class="fld"><label>Ton nom *</label><input id="f-name" type="text" placeholder="Ex : Awa Diop" maxlength="80" autocomplete="name"></div>
         <div class="fld"><label>Téléphone *</label><input id="f-phone" type="text" inputmode="numeric" placeholder="77 123 45 67" maxlength="14" autocomplete="off" autocorrect="off" autocapitalize="off"></div>
-        <div class="fld"><label>Adresse / précisions (optionnel)</label><textarea id="f-note" placeholder="Ex : Livraison Sacré-Cœur 3, villa 12 — ou retrait sur place"></textarea></div>
+        <div class="fld"><label>Adresse / précisions *</label><textarea id="f-note" placeholder="Ex : Livraison Sacré-Cœur 3, villa 12 — ou retrait sur place"></textarea></div>
         <div class="fld"><label>Message vocal (optionnel)</label>
           <div class="voicerow">
             <button class="vrec" id="vrec" type="button"><span class="vdot"></span><span id="vlabel">Enregistrer</span></button>
@@ -1351,6 +1351,7 @@ const CART_JS = `
       if(name.length<2){ msg.textContent='Entre ton nom.'; return; }
       var digits=phone.replace(/[^0-9]/g,'').replace(/^221/,'');
       if(!/^7[05678][0-9]{7}$/.test(digits)){ msg.textContent='Num\xe9ro invalide (ex\xa0: 77 123 45 67).'; return; }
+      if(!note){ msg.textContent='Indique ton adresse ou \xe9cris "retrait sur place".'; return; }
       var items=[]; for(var k in cart){ var it=cart[k]; if(it.dsId) items.push({dailySpecialId:it.dsId, qty:it.qty}); else if(cartVariants[k]){ var v=cartVariants[k]; var vi={productId:v.productId, qty:it.qty}; if(v.selectedSize) vi.selectedSize=v.selectedSize; if(v.selectedColor) vi.selectedColor=v.selectedColor; items.push(vi); } else items.push({productId:k, qty:it.qty}); }
       if(items.length===0){ msg.textContent='Ton panier est vide.'; return; }
       paying=true;
@@ -2104,12 +2105,13 @@ const TERRAIN_JS = `
       document.getElementById('ts-form').style.display='none';
       document.getElementById('ts-wait').style.display='block';
       if(d.redirectUrl){
-        if(state.moyen==='wave'){
-          window.location.href=d.redirectUrl;
-        } else {
-          document.getElementById('t-wopen').href=d.redirectUrl;
-          document.getElementById('t-wopen').style.display='inline-block';
-        }
+        var wBtn=document.getElementById('t-wopen');
+        wBtn.href=d.redirectUrl;
+        wBtn.textContent=state.moyen==='wave'?'Payer avec Wave':'Ouvrir Orange Money';
+        wBtn.style.display='inline-block';
+        document.getElementById('t-wsub').textContent=state.moyen==='wave'
+          ? 'Clique sur le bouton pour payer avec Wave, puis reviens ici apr\xe8s confirmation.'
+          : 'Valide le paiement dans Orange Money, puis reviens sur cette page.';
       }
       if(d.qrCode){
         var qrEl=document.getElementById('t-wqr');
@@ -2147,7 +2149,7 @@ const TERRAIN_JS = `
     var iv=setInterval(function(){
       tries++;
       checkResaOnce(resaId, iv);
-      if(tries>80) clearInterval(iv);
+      if(tries>80){ clearInterval(iv); document.getElementById('t-wsub').textContent='Si tu as pay\xe9, ta r\xe9servation est confirm\xe9e. Tu peux fermer cette page.'; }
     },3000);
     document.addEventListener('visibilitychange',function(){ if(!document.hidden) checkResaOnce(resaId, iv); });
   }
