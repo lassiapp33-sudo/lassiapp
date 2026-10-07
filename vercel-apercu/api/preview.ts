@@ -1761,6 +1761,7 @@ const CONFIRM_JS = `
   var mark=document.getElementById('mark'), t=document.getElementById('t'), d=document.getElementById('d'), home=document.getElementById('home');
   var OK_SVG='<svg viewBox="0 0 72 72"><circle cx="36" cy="36" r="34" fill="#FDCF34"/><path d="M22 37l10 10 18-20" fill="none" stroke="#14152A" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var KO_SVG='<svg viewBox="0 0 72 72"><circle cx="36" cy="36" r="33" fill="none" stroke="#FF6B6B" stroke-width="4"/><path d="M26 26l20 20M46 26l-20 20" stroke="#FF6B6B" stroke-width="6" stroke-linecap="round"/></svg>';
+  var PENDING_SVG='<svg viewBox="0 0 72 72"><circle cx="36" cy="36" r="33" fill="none" stroke="#FDCF34" stroke-width="4"/><path d="M36 20v16l10 6" fill="none" stroke="#FDCF34" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var isBeauty = CFG.type==='beauty';
   var isAbo = CFG.type==='abonnement';
   var isTerrain = CFG.type==='terrain';
@@ -1793,7 +1794,7 @@ const CONFIRM_JS = `
   }
   function fail(){ mark.innerHTML=KO_SVG; t.textContent='Paiement non abouti'; d.textContent=isTerrain?'Ta r\xe9servation n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer.':isAbo?'Ton abonnement n\\'a pas \xe9t\xe9 pay\xe9. Tu peux r\xe9essayer depuis la boutique.':isBeauty?'Ta r\xe9servation n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer depuis la boutique.':'Ta commande n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer depuis la boutique.'; home.style.display='inline-block'; }
   if(CFG.s==='ko'){ fail(); return; }
-  if(CFG.s==='ok' || !CFG.id){ ok(); return; }
+  if(!CFG.id){ ok(); return; }
   var tries=0, dbFails=0;
   var iv=setInterval(function(){
     tries++;
@@ -1807,7 +1808,7 @@ const CONFIRM_JS = `
         if(x && x.paid){ clearInterval(iv); ok(); return; }
         dbFails++;
       }).catch(function(){ dbFails++; });
-    if(tries>20){ clearInterval(iv); ok(); }
+    if(tries>20){ clearInterval(iv); mark.innerHTML=PENDING_SVG; t.textContent='Paiement en cours de traitement'; d.textContent='Ton paiement est en cours. Tu recevras une notification d\\'ici quelques minutes. Si la commande n\\'appara\xeet pas chez le marchand, contacte-le directement.'; home.style.display='inline-block'; return; }
   }, 2000);
 })();
 `;

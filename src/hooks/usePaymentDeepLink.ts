@@ -41,7 +41,12 @@ export function usePaymentDeepLink() {
         const piId = parseParam(url, 'pi');
         if (!piId) return;
         try {
-          const result = await verifierPaiement(piId);
+          // Le webhook Wave/OM peut arriver 2-5s après le redirect — on retente avant de déclarer échec
+          let result = await verifierPaiement(piId);
+          for (let i = 0; i < 2 && !result.confirmed; i++) {
+            await new Promise<void>(r => setTimeout(r, 3000));
+            result = await verifierPaiement(piId);
+          }
           setPendingNav(
             result.confirmed
               ? { type: 'payment_success', paymentIntentId: piId }
