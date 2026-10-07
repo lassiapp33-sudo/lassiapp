@@ -27,7 +27,8 @@ import FinancePage         from './pages/FinancePage'
 import WaveFinancePage     from './pages/WaveFinancePage'
 import VisibilityPlansPage from './pages/VisibilityPlansPage'
 import Vip5EtoilesPage    from './pages/Vip5EtoilesPage'
-import SuggestionsPage    from './pages/SuggestionsPage'
+import SuggestionsPage           from './pages/SuggestionsPage'
+import TerrainReservationsPage   from './pages/TerrainReservationsPage'
 
 // ─── Garde de route ───────────────────────────────────────────────────────────
 
@@ -76,6 +77,7 @@ function AppRoutes() {
         <Route path="visibility"   element={<VisibilityPlansPage />} />
         <Route path="5etoiles"     element={<Vip5EtoilesPage />} />
         <Route path="suggestions"  element={<SuggestionsPage />} />
+        <Route path="terrain"      element={<TerrainReservationsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

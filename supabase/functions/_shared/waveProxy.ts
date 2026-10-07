@@ -22,7 +22,7 @@ export async function waveRequest(
   if (sig) extraHeaders['Wave-Signature'] = sig;
 
   if (WAVE_PROXY_BASE) {
-    return fetch(`${WAVE_PROXY_BASE}${path}`, {
+    const proxyRes = await fetch(`${WAVE_PROXY_BASE}${path}`, {
       method,
       headers: {
         'Content-Type':   'application/json',
@@ -31,6 +31,18 @@ export async function waveRequest(
       },
       body: body || undefined,
     });
+    // Pour les GET (status checkout), fallback direct si le proxy échoue et qu'on a l'API key
+    if (!proxyRes.ok && method === 'GET' && WAVE_API_KEY) {
+      console.warn('[waveProxy] proxy GET failed (' + proxyRes.status + '), fallback direct');
+      return fetch(`https://api.wave.com${path}`, {
+        headers: {
+          'Authorization': `Bearer ${WAVE_API_KEY}`,
+          'Content-Type':  'application/json',
+          ...extraHeaders,
+        },
+      });
+    }
+    return proxyRes;
   }
 
   return fetch(`https://api.wave.com${path}`, {
