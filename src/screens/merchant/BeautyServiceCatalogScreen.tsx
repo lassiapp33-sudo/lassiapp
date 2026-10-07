@@ -46,6 +46,13 @@ const DUREES = [
   { value: 120, label: '2h' },
 ];
 
+const CATEGORIES: { value: BeautyCategorie; label: string }[] = [
+  { value: 'general', label: 'Général' },
+  { value: 'barber',  label: 'Barbier' },
+  { value: 'tresse',  label: 'Tresses' },
+  { value: 'ongle',   label: 'Ongles' },
+];
+
 // ─── Modal ajout/édition ───────────────────────────────────────────────────────
 
 interface EditModalProps {
@@ -60,7 +67,7 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
   const [desc, setDesc]         = useState(service?.description ?? '');
   const [prix, setPrix]         = useState(service?.prix ? String(service.prix) : '');
   const [duree, setDuree]       = useState(service?.duree_minutes ?? 60);
-  const cat: BeautyCategorie    = service?.categorie ?? 'general';
+  const [cat, setCat]           = useState<BeautyCategorie>(service?.categorie ?? 'general');
   const [imageUrl, setImageUrl] = useState<string | null>(service?.image_url ?? null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving]     = useState(false);
@@ -197,6 +204,20 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
             keyboardType="numeric"
             maxLength={7}
           />
+
+          <Text style={modal.label}>Catégorie</Text>
+          <View style={modal.chipRow}>
+            {CATEGORIES.map(c => (
+              <TouchableOpacity
+                key={c.value}
+                style={[modal.chip, cat === c.value && modal.chipOn]}
+                onPress={() => setCat(c.value)}
+                activeOpacity={0.8}
+              >
+                <Text style={[modal.chipTxt, cat === c.value && modal.chipTxtOn]}>{c.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
           <Text style={modal.label}>Durée</Text>
           <View style={modal.chipRow}>
