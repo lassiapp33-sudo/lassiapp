@@ -30,6 +30,13 @@ const APPSTORE_URL = process.env.APPSTORE_URL || 'https://apps.apple.com/app/id6
 const BRAND_BG = '#14152A';
 const BRAND_GOLD = '#FDCF34';
 
+// Échappe </script dans les blocs JS inline pour éviter que le parser HTML
+// ferme le <script> prématurément si une chaîne de caractères contient ce tag.
+// À appliquer sur TOUT JS embedé dans un <script> serveur.
+function safeScript(js: string): string {
+  return js.replace(/<\/script/gi, '<\\/script');
+}
+
 // Commission LASSİ 1% — aligné sur Lassi/src/config/payment.ts (calculerPrixClient)
 // ET sur le total recalculé par create-guest-order (subtotal + ceil(subtotal*1%)).
 const COMMISSION_RATE = 0.01;
@@ -885,11 +892,11 @@ function page(o: {
   </div>
   ` : ''}
   ${(hasProducts || hasBeauty || hasFitness) ? `<script id="cfg" type="application/json">${cfg}</script>` : ''}
-  ${hasProducts ? `<script>${CART_JS}</script>` : ''}
-  ${hasBeauty ? `<script>${BOOKING_JS}</script>` : ''}
-  ${hasFitness ? `<script>${SUBSCRIPTION_JS}</script>` : ''}
+  ${hasProducts ? `<script>${safeScript(CART_JS)}</script>` : ''}
+  ${hasBeauty ? `<script>${safeScript(BOOKING_JS)}</script>` : ''}
+  ${hasFitness ? `<script>${safeScript(SUBSCRIPTION_JS)}</script>` : ''}
   <div class="lbx" id="lbx"><button class="lbx-close" id="lbxClose">\xD7</button><img class="lbx-img" id="lbxImg" src="" alt=""></div>
-  <script>${LIGHTBOX_JS}</script>
+  <script>${safeScript(LIGHTBOX_JS)}</script>
 </body>
 </html>`;
 }
@@ -973,7 +980,7 @@ function renderConfirmation(url: URL): string {
     </div>
   </div>
   <script id="cfg" type="application/json">${cfg}</script>
-  <script>${CONFIRM_JS}</script>
+  <script>${safeScript(CONFIRM_JS)}</script>
 </body></html>`;
 }
 
@@ -1921,7 +1928,7 @@ function renderTerrainPage(url: URL): string {
     </div>
   </div>
   <script id="cfg" type="application/json">${cfg}</script>
-  <script>${TERRAIN_JS}</script>
+  <script>${safeScript(TERRAIN_JS)}</script>
 </body></html>`;
 }
 
