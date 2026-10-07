@@ -1790,6 +1790,7 @@ const CONFIRM_JS = `
   function fail(){ mark.innerHTML=KO_SVG; t.textContent='Paiement non abouti'; d.textContent=isTerrain?'Ta r\xe9servation n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer.':isAbo?'Ton abonnement n\\'a pas \xe9t\xe9 pay\xe9. Tu peux r\xe9essayer depuis la boutique.':isBeauty?'Ta r\xe9servation n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer depuis la boutique.':'Ta commande n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer depuis la boutique.'; home.style.display='inline-block'; }
   if(CFG.s==='ko'){ fail(); return; }
   if(!CFG.id){ ok(); return; }
+  if(CFG.s==='ok' && !isBeauty && !isAbo && !isTerrain){ ok(); return; }
   var tries=0, dbFails=(!isBeauty&&!isAbo&&!isTerrain)?5:0;
   var iv=setInterval(function(){
     tries++;
