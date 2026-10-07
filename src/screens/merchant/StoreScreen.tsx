@@ -435,7 +435,8 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   const BEAUTY_PRODUCT_CATS: StoreCategory[] = [
     { id: 'produits', label: 'Produits', emoji: '🛍️' },
   ];
-  const beautyProducts = products.filter(p => normCat(p.category ?? '') === 'produits');
+  // Tous les shop_items sont des produits (quelle que soit leur catégorie custom)
+  const beautyProducts = products;
 
   // Libellés presets + regroupement des services réservables par catégorie
   const BEAUTY_CAT_LABELS: Record<string, string> = {

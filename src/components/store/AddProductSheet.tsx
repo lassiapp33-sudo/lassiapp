@@ -668,7 +668,7 @@ export default function AddProductSheet({
                       activeOpacity={0.8}
                     >
                       <Text style={[styles.catChipTxt, on && styles.catChipTxtOn]} numberOfLines={1}>
-                        {!isFitness && c.emoji ? `${c.emoji} ` : ''}{c.label}
+                        {c.label}
                       </Text>
                     </TouchableOpacity>
                   );
