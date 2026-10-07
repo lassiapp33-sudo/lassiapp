@@ -1795,7 +1795,7 @@ const CONFIRM_JS = `
   function fail(){ mark.innerHTML=KO_SVG; t.textContent='Paiement non abouti'; d.textContent=isTerrain?'Ta r\xe9servation n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer.':isAbo?'Ton abonnement n\\'a pas \xe9t\xe9 pay\xe9. Tu peux r\xe9essayer depuis la boutique.':isBeauty?'Ta r\xe9servation n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer depuis la boutique.':'Ta commande n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer depuis la boutique.'; home.style.display='inline-block'; }
   if(CFG.s==='ko'){ fail(); return; }
   if(!CFG.id){ ok(); return; }
-  var tries=0, dbFails=0;
+  var tries=0, dbFails=(!isBeauty&&!isAbo&&!isTerrain)?5:0;
   var iv=setInterval(function(){
     tries++;
     var url = (!isBeauty && !isAbo && !isTerrain && dbFails>=5)
@@ -1808,7 +1808,7 @@ const CONFIRM_JS = `
         if(x && x.paid){ clearInterval(iv); ok(); return; }
         dbFails++;
       }).catch(function(){ dbFails++; });
-    if(tries>20){ clearInterval(iv); mark.innerHTML=PENDING_SVG; t.textContent='Paiement en cours de traitement'; d.textContent='Ton paiement est en cours. Tu recevras une notification d\\'ici quelques minutes. Si la commande n\\'appara\xeet pas chez le marchand, contacte-le directement.'; home.style.display='inline-block'; var sIv=setInterval(function(){fetch(statusUrl,{headers:{'apikey':CFG.key,'Authorization':'Bearer '+CFG.key}}).then(function(r){return r.json();}).then(function(x){if(x&&x.paid){clearInterval(sIv);ok();}}).catch(function(){});},8000); return; }
+    if(tries>20){ clearInterval(iv); mark.innerHTML=PENDING_SVG; t.textContent='Paiement en cours de traitement'; d.textContent='Ton paiement est en cours. Tu recevras une notification d\\'ici quelques minutes. Si la commande n\\'appara\xeet pas chez le marchand, contacte-le directement.'; home.style.display='inline-block'; var sIv=setInterval(function(){var sUrl=(!isBeauty&&!isAbo&&!isTerrain)?CFG.url+'/functions/v1/create-guest-order?verify_order='+encodeURIComponent(CFG.id):statusUrl;fetch(sUrl,{headers:{'apikey':CFG.key,'Authorization':'Bearer '+CFG.key}}).then(function(r){return r.json();}).then(function(x){if(x&&x.paid){clearInterval(sIv);ok();}}).catch(function(){});},8000); return; }
   }, 2000);
 })();
 `;
