@@ -55,14 +55,17 @@ const CATEGORIES: { value: BeautyCategorie; label: string }[] = [
 
 // ─── Modal ajout/édition ───────────────────────────────────────────────────────
 
+const PRESET_VALUES = CATEGORIES.map(c => c.value);
+
 interface EditModalProps {
   service: Partial<BeautyService> | null;
   prestataireId: string;
+  extraCategories: BeautyCategorie[];
   onClose: () => void;
   onSaved: (s: BeautyService) => void;
 }
 
-function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps) {
+function EditModal({ service, prestataireId, extraCategories, onClose, onSaved }: EditModalProps) {
   const [nom, setNom]           = useState(service?.nom ?? '');
   const [desc, setDesc]         = useState(service?.description ?? '');
   const [prix, setPrix]         = useState(service?.prix ? String(service.prix) : '');
@@ -71,6 +74,26 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
   const [imageUrl, setImageUrl] = useState<string | null>(service?.image_url ?? null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving]     = useState(false);
+  const [customCats, setCustomCats] = useState<BeautyCategorie[]>(extraCategories);
+  const [addingCat, setAddingCat]   = useState(false);
+  const [newCatInput, setNewCatInput] = useState('');
+
+  const allCategoryChips = [
+    ...CATEGORIES,
+    ...customCats.map(v => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1) })),
+  ];
+
+  const confirmNewCat = () => {
+    const trimmed = newCatInput.trim();
+    if (!trimmed) { setAddingCat(false); return; }
+    const key = trimmed.toLowerCase();
+    if (!PRESET_VALUES.includes(key) && !customCats.includes(key)) {
+      setCustomCats(prev => [...prev, key]);
+    }
+    setCat(key);
+    setNewCatInput('');
+    setAddingCat(false);
+  };
 
   const doPickImage = async (source: 'gallery' | 'camera') => {
     try {
@@ -205,20 +228,6 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
             maxLength={7}
           />
 
-          <Text style={modal.label}>Catégorie</Text>
-          <View style={modal.chipRow}>
-            {CATEGORIES.map(c => (
-              <TouchableOpacity
-                key={c.value}
-                style={[modal.chip, cat === c.value && modal.chipOn]}
-                onPress={() => setCat(c.value)}
-                activeOpacity={0.8}
-              >
-                <Text style={[modal.chipTxt, cat === c.value && modal.chipTxtOn]}>{c.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
           <Text style={modal.label}>Durée</Text>
           <View style={modal.chipRow}>
             {DUREES.map(d => (
@@ -232,6 +241,42 @@ function EditModal({ service, prestataireId, onClose, onSaved }: EditModalProps)
               </TouchableOpacity>
             ))}
           </View>
+
+          <Text style={modal.label}>Catégorie</Text>
+          <View style={modal.chipRow}>
+            {allCategoryChips.map(c => (
+              <TouchableOpacity
+                key={c.value}
+                style={[modal.chip, cat === c.value && modal.chipOn]}
+                onPress={() => { setCat(c.value); setAddingCat(false); }}
+                activeOpacity={0.8}
+              >
+                <Text style={[modal.chipTxt, cat === c.value && modal.chipTxtOn]}>{c.label}</Text>
+              </TouchableOpacity>
+            ))}
+            {!addingCat && (
+              <TouchableOpacity style={modal.chipAdd} onPress={() => setAddingCat(true)} activeOpacity={0.8}>
+                <Text style={modal.chipAddTxt}>+ Nouvelle</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {addingCat && (
+            <View style={modal.newCatRow}>
+              <TextInput
+                style={modal.newCatInput}
+                value={newCatInput}
+                onChangeText={setNewCatInput}
+                placeholder="Nom de la catégorie..."
+                placeholderTextColor={colors.muted}
+                autoFocus
+                maxLength={30}
+                onSubmitEditing={confirmNewCat}
+              />
+              <TouchableOpacity style={modal.newCatConfirm} onPress={confirmNewCat} activeOpacity={0.8}>
+                <Text style={modal.newCatConfirmTxt}>✓</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <View style={{ height: 60 }} />
         </ScrollView>
@@ -262,6 +307,15 @@ export default function BeautyServiceCatalogScreen({ onBack }: Props) {
   const [services, setServices]       = useState<BeautyService[]>([]);
   const [loading, setLoading]         = useState(true);
   const [editTarget, setEditTarget]   = useState<Partial<BeautyService> | null | 'new'>(null);
+
+  const extraCategories = React.useMemo(() => {
+    const seen = new Set<string>(PRESET_VALUES);
+    const result: BeautyCategorie[] = [];
+    for (const s of services) {
+      if (!seen.has(s.categorie)) { seen.add(s.categorie); result.push(s.categorie); }
+    }
+    return result;
+  }, [services]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -360,6 +414,7 @@ export default function BeautyServiceCatalogScreen({ onBack }: Props) {
         <EditModal
           service={editTarget === 'new' ? {} : editTarget}
           prestataireId={prestataireId}
+          extraCategories={extraCategories}
           onClose={() => setEditTarget(null)}
           onSaved={handleSaved}
         />
@@ -511,6 +566,13 @@ const modal = StyleSheet.create({
   chipOn:  { backgroundColor: colors.accent, borderColor: colors.accent },
   chipTxt: { color: colors.muted, fontFamily: fonts.ui, fontSize: 13 },
   chipTxtOn: { color: colors.bg },
+  chipAdd:    { paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.accent, borderStyle: 'dashed' },
+  chipAddTxt: { color: colors.accent, fontFamily: fonts.ui, fontSize: 13 },
+
+  newCatRow:      { flexDirection: 'row', gap: 8, marginTop: 8, alignItems: 'center' },
+  newCatInput:    { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.accent, borderRadius: radius.md, color: colors.white, fontFamily: fonts.body, fontSize: 14, paddingHorizontal: 12, paddingVertical: 10 },
+  newCatConfirm:  { width: 42, height: 42, borderRadius: radius.md, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+  newCatConfirmTxt: { color: colors.bg, fontSize: 18 },
 
   footer:  { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 34, borderTopWidth: 1, borderTopColor: colors.border },
   saveBtn: { height: 54, borderRadius: radius.lg, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
