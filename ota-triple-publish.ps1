@@ -16,7 +16,7 @@ $SUPABASE_URL      = "https://tsdemraszwtbzgtyjzum.supabase.co"
 $SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzZGVtcmFzend0YnpndHlqenVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2Mjc5MjcsImV4cCI6MjA5NTIwMzkyN30.EQ64jUdey9U344pXMDmysM0UJrk3zhKA66JfVuQ3W-s"
 $DIST              = "dist_ota_$(Get-Date -Format 'yyyyMMdd_HHmm')"
 $CONFIG            = "app.config.js"
-$RUNTIMES          = @("1.0.1", "1.0.2", "1.0.3", "1.0.4")
+$RUNTIMES          = @("1.0.1", "1.0.2")
 
 $env:EXPO_PUBLIC_SUPABASE_URL      = $SUPABASE_URL
 $env:EXPO_PUBLIC_SUPABASE_ANON_KEY = $SUPABASE_ANON_KEY
@@ -49,7 +49,7 @@ Set-AppVersion "1.0.1"
 if ($LASTEXITCODE -ne 0) { throw "expo export a echoue" }
 Write-Host "  Bundle exporte dans $DIST"
 
-# ETAPE 2 : push sequentiel rt1.0.1 puis rt1.0.2 puis rt1.0.3
+# ETAPE 2 : push sequentiel rt1.0.1 puis rt1.0.2
 foreach ($rt in $RUNTIMES) {
   Push-Runtime $rt
 }
@@ -57,4 +57,4 @@ foreach ($rt in $RUNTIMES) {
 # ETAPE 3 : reset baseline a 1.0.1
 Set-AppVersion "1.0.1"
 Write-Host ""
-Write-Host "DONE - 3 OTAs publies, baseline reset a 1.0.1"
+Write-Host "DONE - 2 OTAs publies (1.0.1 + 1.0.2), baseline reset a 1.0.1"

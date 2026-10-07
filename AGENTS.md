@@ -74,7 +74,7 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 
 ## Ce que fait le script
 
-1. Export UNIQUE (bundle identique pour rt1.0.1/1.0.2/1.0.3)
+1. Export UNIQUE (bundle identique pour rt1.0.1/1.0.2)
 2. Pour chaque runtime : `Set-Version $rt` → `eas update` immédiat (< 1s, linter ne peut pas intervenir)
 3. Reset baseline `app.config.js` à `1.0.1`
 
@@ -92,9 +92,10 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 | APK | Runtime | Appareils |
 |-----|---------|-----------|
 | Build 1 | 1.0.1 | premiers testeurs |
-| Build 2 | 1.0.2 | beta |
-| Build 3 | 1.0.3 | store actuel |
+| Build 2 | 1.0.2 | store actuel (dernier runtime) |
+| Build 3 | 1.0.3 | après prochain build (pas encore sorti) |
 
-**Baseline `app.config.js` = `1.0.1` — ne jamais laisser à 1.0.2 ou 1.0.3 après un OTA.**
+**Baseline `app.config.js` = `1.0.1` — ne jamais laisser à 1.0.2 après un OTA.**
+**Script publie sur 1.0.1 + 1.0.2 seulement. Ajouter 1.0.3 dans `$RUNTIMES` après build approuvé.**
 
 Documentation complète : `Lassi/OTA_GUARDIAN.md`
