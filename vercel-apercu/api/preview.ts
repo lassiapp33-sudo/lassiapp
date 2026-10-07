@@ -190,10 +190,17 @@ async function fetchShop(slug: string): Promise<Shop | null> {
       `${SUPABASE_URL}/rest/v1/shops?slug=eq.${encodeURIComponent(slug)}` +
       `&select=id,name,logo_url,description,zone,category,subcategories,slug,merchant_id,opening_hours,is_manually_closed&limit=1`;
     const res = await fetch(q, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error('[fetchShop] non-ok', res.status, 'url_prefix:', SUPABASE_URL.slice(0,40), 'key_prefix:', SUPABASE_ANON_KEY.slice(0,20));
+      return null;
+    }
     const rows = (await res.json()) as Shop[];
+    if (!rows[0]) console.warn('[fetchShop] empty rows for slug:', slug, 'url_prefix:', SUPABASE_URL.slice(0,40));
     return rows[0] ?? null;
-  } catch { return null; }
+  } catch (e) {
+    console.error('[fetchShop] exception:', e instanceof Error ? e.message : String(e));
+    return null;
+  }
 }
 
 async function fetchProducts(shopId: string): Promise<Product[]> {
