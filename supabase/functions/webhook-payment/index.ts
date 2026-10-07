@@ -753,7 +753,7 @@ serve(async (req) => {
 
             await supabase.from('notifications').insert({
               user_id: piData.prestataire_id,
-              type:    'commande',
+              type:    'payment',
               title:   pTitle,
               body:    pBody,
               data:    { type: 'fitness_abonnement_nouveau', offre_id: offreId },

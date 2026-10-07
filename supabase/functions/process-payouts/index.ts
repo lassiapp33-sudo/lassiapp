@@ -181,6 +181,26 @@ serve(async (req) => {
       if (!IS_PRODUCTION) {
         payoutRef = await simulatePayout(payout.id, payout.montant);
       } else if (payout.moyen_paiement === 'wave') {
+        // Wave limite les reversements à 500 000 FCFA par transaction
+        if (payout.montant > 500_000) {
+          console.error('[ALERTE ADMIN] Reversement Wave > 500 000 FCFA bloqué', payout.id, payout.montant);
+          try {
+            await supabase.from('notifications').insert({
+              user_id: null,
+              type:    'payment',
+              title:   '⚠️ Reversement Wave > limite',
+              body:    `Reversement ${payout.id} — ${payout.montant} FCFA dépasse la limite Wave (500 000 FCFA). Action manuelle requise.`,
+              data:    { type: 'admin_alert', payout_id: payout.id, error: 'wave_amount_limit_exceeded' },
+            });
+          } catch { /* best-effort */ }
+          await supabase.rpc('payout_queue_mark_failure', {
+            p_payout_id: payout.id,
+            p_error:     'wave_amount_limit_exceeded',
+            p_terminal:  false,
+          });
+          results.retried++;
+          continue;
+        }
         payoutRef = await sendWavePayout({ payoutId: payout.id, montant: payout.montant, phone });
       } else {
         payoutRef = await sendOrangeMoneyPayout({ payoutId: payout.id, montant: payout.montant, phone });
