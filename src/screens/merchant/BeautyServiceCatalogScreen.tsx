@@ -243,23 +243,25 @@ function EditModal({ service, prestataireId, extraCategories, onClose, onSaved }
           </View>
 
           <Text style={modal.label}>Catégorie</Text>
-          <View style={modal.chipRow}>
-            {allCategoryChips.map(c => (
-              <TouchableOpacity
-                key={c.value}
-                style={[modal.chip, cat === c.value && modal.chipOn]}
-                onPress={() => { setCat(c.value); setAddingCat(false); }}
-                activeOpacity={0.8}
-              >
-                <Text style={[modal.chipTxt, cat === c.value && modal.chipTxtOn]}>{c.label}</Text>
-              </TouchableOpacity>
-            ))}
-            {!addingCat && (
-              <TouchableOpacity style={modal.chipAdd} onPress={() => setAddingCat(true)} activeOpacity={0.8}>
-                <Text style={modal.chipAddTxt}>+ Nouvelle</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={[modal.chipRow, { flexWrap: 'nowrap' }]}>
+              {allCategoryChips.map(c => (
+                <TouchableOpacity
+                  key={c.value}
+                  style={[modal.chip, cat === c.value && modal.chipOn]}
+                  onPress={() => { setCat(c.value); setAddingCat(false); }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[modal.chipTxt, cat === c.value && modal.chipTxtOn]}>{c.label}</Text>
+                </TouchableOpacity>
+              ))}
+              {!addingCat && (
+                <TouchableOpacity style={modal.chipAdd} onPress={() => setAddingCat(true)} activeOpacity={0.8}>
+                  <Text style={modal.chipAddTxt}>+ Nouvelle</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </ScrollView>
           {addingCat && (
             <View style={modal.newCatRow}>
               <TextInput
