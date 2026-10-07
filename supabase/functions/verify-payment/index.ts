@@ -119,7 +119,14 @@ serve(async (req) => {
         const { error: rpcErr } = await sb.rpc('confirm_order_from_payment', {
           p_payment_intent_id: piId,
         });
-        if (rpcErr) console.error('[verify-payment] confirm_order_from_payment:', rpcErr.message);
+        if (rpcErr) {
+          console.error('[verify-payment] confirm_order_from_payment:', rpcErr.message);
+          // Vérifie si le webhook a déjà confirmé avant de déclarer confirmed: false
+          const { data: piRechk } = await sb.from('payment_intents').select('statut').eq('id', piId).single();
+          if (piRechk?.statut !== 'confirmed' && piRechk?.statut !== 'split_done') {
+            return ok({ paid: true, confirmed: false, statut: 'processing', mode: 'production' });
+          }
+        }
 
         await logEvent(sb, {
           event_type: 'verify_success',

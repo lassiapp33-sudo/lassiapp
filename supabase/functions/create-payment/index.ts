@@ -180,11 +180,8 @@ serve(async (req) => {
         return fail('Le paiement n\'a pas pu être initié. Réessaie.', 400);
       }
 
-      await sb.from('payment_intents').update({
-        statut:     'initiated',
-        updated_at: new Date().toISOString(),
-      }).eq('id', piId);
-
+      // La session Wave/OM est créée — on doit retourner le paymentUrl même si
+      // les updates DB suivants échouent (PI confirmé plus tard par le webhook).
       const result = {
         success:         true,
         paymentIntentId: piId,
@@ -198,13 +195,21 @@ serve(async (req) => {
         commission,
         montantTotal:    amount + commission,
       };
-      await setIdempotency(sb, idempotencyKey, result);
-      await logEvent(sb, {
-        event_type: 'create_success',
-        reference:  piId, ticket_id: ticketId, user_id: user.id,
-        amount, commission, method: provider, provider,
-        status: 'pending',
-      });
+      try {
+        await sb.from('payment_intents').update({
+          statut:     'initiated',
+          updated_at: new Date().toISOString(),
+        }).eq('id', piId);
+        await setIdempotency(sb, idempotencyKey, result);
+        await logEvent(sb, {
+          event_type: 'create_success',
+          reference:  piId, ticket_id: ticketId, user_id: user.id,
+          amount, commission, method: provider, provider,
+          status: 'pending',
+        });
+      } catch (dbErr) {
+        console.error('[create-payment] DB update post-session failed — PI en pending, webhook confirmera:', dbErr);
+      }
       return ok(result);
     }
 
