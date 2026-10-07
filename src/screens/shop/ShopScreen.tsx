@@ -845,7 +845,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
           {isRestaurantShop && activeTab === 'plat_du_jour' ? (
             <View style={{ paddingHorizontal: 18, paddingTop: 8 }}>
               <Text style={styles.catTitle}>Plat du jour</Text>
-              {dailySpecialsLoading ? (
+              {dailySpecialsLoading && dailySpecials.length === 0 ? (
                 <ActivityIndicator color={colors.accent} style={{ marginVertical: 20 }} />
               ) : dailySpecials.length === 0 ? (
                 <View style={styles.emptyProducts}>

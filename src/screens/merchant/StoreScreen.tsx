@@ -1169,7 +1169,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     {activeCat === 'plat_du_jour' ? (
                       <>
                         <SectionHead title="Plat du jour" count={dailySpecials.length} itemLabel="plat" />
-                        {dailySpecialsLoading ? (
+                        {dailySpecialsLoading && dailySpecials.length === 0 ? (
                           <ActivityIndicator color={colors.accent} style={{ marginVertical: 12 }} />
                         ) : dailySpecials.length === 0 ? (
                           <Text style={styles.emptyShopHint}>Aucun plat du jour aujourd'hui.</Text>
