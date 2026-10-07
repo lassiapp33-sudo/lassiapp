@@ -171,14 +171,22 @@ Deno.serve(async (req) => {
     if (!paid) return jsonR({ paid: false });
 
     // Confirmer la réservation
-    const receiptCode = Array.from(
-      crypto.getRandomValues(new Uint8Array(6)),
-      b => '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'[b % 34],
-    ).join('');
-
-    const receiptValidUntil = new Date(
-      `${resa.date_reservation}T${resa.heure_fin}`,
-    ).toISOString();
+    let receiptCode: string;
+    let receiptValidUntil: string;
+    try {
+      receiptCode = Array.from(
+        crypto.getRandomValues(new Uint8Array(6)),
+        b => '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'[b % 34],
+      ).join('');
+      const hf = String(resa.heure_fin ?? '23:59').slice(0, 5);
+      receiptValidUntil = new Date(`${resa.date_reservation}T${hf}:00`).toISOString();
+      if (isNaN(new Date(receiptValidUntil).getTime())) {
+        receiptValidUntil = new Date(Date.now() + 4 * 3600 * 1000).toISOString();
+      }
+    } catch {
+      receiptCode = Array.from({ length: 6 }, () => '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random() * 34)]).join('');
+      receiptValidUntil = new Date(Date.now() + 4 * 3600 * 1000).toISOString();
+    }
 
     const { error: updErr } = await admin
       .from('reservations_terrain')
@@ -193,6 +201,7 @@ Deno.serve(async (req) => {
       .eq('statut', 'en_attente');
 
     if (updErr) {
+      console.error('[terrain-resa poll] updErr:', updErr.message);
       // Peut arriver si confirmation déjà faite en parallèle
       const { data: rechk } = await admin.from('reservations_terrain').select('statut').eq('id', resaId).maybeSingle();
       return jsonR({ paid: rechk?.statut === 'paye' });

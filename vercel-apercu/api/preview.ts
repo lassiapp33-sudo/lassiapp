@@ -1808,7 +1808,7 @@ const CONFIRM_JS = `
         if(x && x.paid){ clearInterval(iv); ok(); return; }
         dbFails++;
       }).catch(function(){ dbFails++; });
-    if(tries>20){ clearInterval(iv); mark.innerHTML=PENDING_SVG; t.textContent='Paiement en cours de traitement'; d.textContent='Ton paiement est en cours. Tu recevras une notification d\\'ici quelques minutes. Si la commande n\\'appara\xeet pas chez le marchand, contacte-le directement.'; home.style.display='inline-block'; return; }
+    if(tries>20){ clearInterval(iv); mark.innerHTML=PENDING_SVG; t.textContent='Paiement en cours de traitement'; d.textContent='Ton paiement est en cours. Tu recevras une notification d\\'ici quelques minutes. Si la commande n\\'appara\xeet pas chez le marchand, contacte-le directement.'; home.style.display='inline-block'; var sIv=setInterval(function(){fetch(statusUrl,{headers:{'apikey':CFG.key,'Authorization':'Bearer '+CFG.key}}).then(function(r){return r.json();}).then(function(x){if(x&&x.paid){clearInterval(sIv);ok();}}).catch(function(){});},8000); return; }
   }, 2000);
 })();
 `;
