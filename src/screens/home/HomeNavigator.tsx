@@ -282,6 +282,7 @@ export default function HomeNavigator({ onLogout, onLoginRequired }: Props) {
     } else if (pendingNav.type === 'payment_success') {
       setHistory([{ id: 'main' }, { id: 'orders' }]);
     } else if (pendingNav.type === 'payment_failed') {
+      setHistory([{ id: 'main' }, { id: 'orders' }]);
       Alert.alert(
         'Paiement échoué',
         "Le paiement n'a pas pu être confirmé. Réessaie ou contacte le support.",
