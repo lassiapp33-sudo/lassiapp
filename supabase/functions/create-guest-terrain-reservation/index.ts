@@ -380,9 +380,11 @@ Deno.serve(async (req) => {
     return err('Erreur création réservation', 500);
   }
 
-  const resaIdNew   = resa.id as string;
-  const successUrl  = `${WEB_BASE}/commande?id=${resaIdNew}&type=terrain&s=ok`;
-  const errorUrl    = `${WEB_BASE}/commande?id=${resaIdNew}&type=terrain&s=ko`;
+  const resaIdNew = resa.id as string;
+  const { data: _shopSlug } = await admin.from('shops').select('slug').eq('merchant_id', String(terrain.prestataire_id)).maybeSingle();
+  const _shopQ = (_shopSlug as any)?.slug ? `&shop=${encodeURIComponent(String((_shopSlug as any).slug))}` : '';
+  const successUrl  = `${WEB_BASE}/commande?id=${resaIdNew}&type=terrain&s=ok${_shopQ}`;
+  const errorUrl    = `${WEB_BASE}/commande?id=${resaIdNew}&type=terrain&s=ko${_shopQ}`;
   const idempKey    = String(idem || resaIdNew).slice(0, 64);
 
   try {

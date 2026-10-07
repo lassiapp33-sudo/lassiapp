@@ -140,6 +140,37 @@ export default async function handler(
     });
   }
 
+  // Proxy reçu — évite CORS/auth depuis le navigateur mobile
+  if (slug === 'receipt') {
+    const rId   = (url.searchParams.get('id') ?? '').trim();
+    const rType = url.searchParams.get('type') ?? '';
+    if (!rId) return new Response('Missing id', { status: 400 });
+    const ah: Record<string, string> = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` };
+    try {
+      if (rType === 'terrain') {
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/create-guest-terrain-reservation?receipt=${encodeURIComponent(rId)}`, { headers: ah });
+        const d = await r.json() as Record<string, unknown>;
+        if (!d?.success) return new Response('Reçu introuvable', { status: 404 });
+        const G = '#FDCF34', K = '#14152A';
+        const e2 = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reçu terrain — LASSİ</title><style>*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;color:${K};padding:40px 32px}.logo{font-size:22px;font-weight:800;letter-spacing:-1px;margin-bottom:4px}.logo span{color:${G}}.logo-sub{font-size:11px;color:#999;margin-bottom:28px}h1{font-size:18px;font-weight:700;margin:0 0 4px}p.sub{color:#777;font-size:13px;margin:0 0 24px;line-height:1.5}.card{border:1.5px solid #e8e5de;border-radius:14px;padding:16px 18px;margin-bottom:20px}.row{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid #f0ede7;font-size:13px}.row:last-child{border-bottom:none;font-weight:700;font-size:14.5px;padding-top:10px}.lbl{color:#888;flex-shrink:0}.val{text-align:right;word-break:break-word}.code{font-family:monospace;font-size:22px;letter-spacing:4px;background:${K};color:${G};padding:10px 20px;border-radius:10px;display:block;text-align:center;font-weight:700;margin:20px 0 6px}.hint{font-size:11px;color:#999;text-align:center;margin-bottom:16px}.pbtn{display:block;width:100%;margin:10px 0;background:${G};color:${K};border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer}.footer{font-size:11px;color:#bbb;text-align:center;border-top:1px solid #eee;padding-top:14px;margin-top:10px}@media print{.pbtn{display:none!important}}</style></head><body><div class="logo">LASS<span>İ</span></div><div class="logo-sub">lassi.tech</div><h1>Reçu de réservation terrain</h1><p class="sub">Montre ce document à l'accueil du terrain.</p><div class="card"><div class="row"><span class="lbl">Terrain</span><span class="val">${e2(d.sport_emoji)} ${e2(d.terrain_nom)}</span></div><div class="row"><span class="lbl">Date</span><span class="val">${e2(d.date_label)}</span></div><div class="row"><span class="lbl">Créneau</span><span class="val">${e2(d.heure_debut)} → ${e2(d.heure_fin)}</span></div><div class="row"><span class="lbl">Client</span><span class="val">${e2(d.client_name)}</span></div><div class="row"><span class="lbl">Établissement</span><span class="val">${e2(d.prestataire_name)}</span></div><div class="row"><span class="lbl">Montant payé</span><span class="val">${e2(d.montant_label)}</span></div></div><div class="code">${e2(d.receipt_code)}</div><div class="hint">Code unique — valide jusqu'à la fin du créneau</div><button class="pbtn" onclick="window.print()">Imprimer / Enregistrer en PDF</button><div class="footer">LASSİ • lassi.tech • Transaction sécurisée</div></body></html>`;
+        return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+      } else if (rType === 'abonnement') {
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/create-guest-subscription?pdf=${encodeURIComponent(rId)}`, { headers: ah });
+        if (!r.ok) return new Response('Reçu introuvable', { status: 404 });
+        const buf = await r.arrayBuffer();
+        return new Response(buf, { status: 200, headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="recu-abonnement-lassi.pdf"', 'Cache-Control': 'no-store' } });
+      } else {
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/create-guest-order?receipt=${encodeURIComponent(rId)}`, { headers: ah });
+        if (!r.ok) return new Response('Reçu introuvable', { status: 404 });
+        const buf = await r.arrayBuffer();
+        return new Response(buf, { status: 200, headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="recu-lassi.pdf"', 'Cache-Control': 'no-store' } });
+      }
+    } catch (_) {
+      return new Response('Erreur serveur', { status: 500 });
+    }
+  }
+
   // Page réservation terrain invité web.
   if (slug === 'terrain') {
     return new Response(renderTerrainPage(url), {
@@ -920,8 +951,9 @@ function renderConfirmation(url: URL): string {
   const initTitle = isOk ? (isTerrain || isBeauty ? 'Réservation confirmée' : isAbo ? 'Abonnement activé !' : 'Paiement confirmé') : isKo ? 'Paiement non abouti' : 'Vérification du paiement…';
   const initDesc  = isOk ? (isTerrain ? 'Ton créneau est réservé.' : isBeauty ? 'Le prestataire a reçu ta réservation.' : isAbo ? 'Ton abonnement est actif.' : 'Merci ! Le marchand a reçu ta commande.') : isKo ? 'Le paiement n\'a pas abouti.' : 'Un instant, on confirme ta commande.';
   const homeDisplay = (isOk || isKo) ? 'inline-block' : 'none';
-  const recuDisplay = (isOk && id && !isTerrain && !isAbo) ? 'inline-flex' : 'none';
-  const recuHref    = (isOk && id && !isTerrain && !isAbo) ? `${SUPABASE_URL}/functions/v1/create-guest-order?receipt=${encodeURIComponent(id)}&apikey=${encodeURIComponent(SUPABASE_ANON_KEY)}` : '#';
+  const homeHref    = shop ? `https://s.lassi.tech/${encodeURIComponent(shop)}` : 'javascript:history.go(-2)';
+  const recuDisplay = (isOk && id) ? 'inline-flex' : 'none';
+  const recuHref    = (isOk && id) ? `/receipt?id=${encodeURIComponent(id)}&type=${encodeURIComponent(type)}` : '#';
   return `<!DOCTYPE html>
 <html lang="fr"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -975,7 +1007,7 @@ function renderConfirmation(url: URL): string {
       <div class="rcpt-row"><span class="rcpt-lbl">Montant payé</span><span class="rcpt-val rcpt-prix" id="rc-prix"></span></div>
     </div>
     <div class="actions">
-      <a class="btn" id="home" href="${escAttr(retour)}" style="display:${homeDisplay}">Retour à la boutique</a>
+      <a class="btn" id="home" href="${escAttr(homeHref)}" style="display:${homeDisplay}">Retour à la boutique</a>
       <a class="ghost" id="recu" href="${escAttr(recuHref)}" download style="display:${recuDisplay}"><svg viewBox="0 0 24 24"><path d="M12 3a1 1 0 0 1 1 1v9.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42l2.3 2.3V4a1 1 0 0 1 1-1zM5 19a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1z"/></svg>Télécharger le reçu (PDF)</a>
     </div>
     <div class="dl">
