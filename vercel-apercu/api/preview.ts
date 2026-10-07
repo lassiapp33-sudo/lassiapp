@@ -132,6 +132,17 @@ export default async function handler(
   const url = new URL(req.url);
   const slug = (url.searchParams.get('slug') ?? '').trim();
 
+  // Debug endpoint temporaire — à supprimer après diagnostic
+  if (slug === '_debug') {
+    const testUrl = `${SUPABASE_URL}/rest/v1/shops?slug=eq.taif-couture&select=id,slug&limit=1`;
+    let testStatus = 0; let testBody = '';
+    try {
+      const r = await fetch(testUrl, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+      testStatus = r.status; testBody = await r.text();
+    } catch (e) { testBody = String(e); }
+    return new Response(JSON.stringify({ supabase_url_prefix: SUPABASE_URL.slice(0,50), key_prefix: SUPABASE_ANON_KEY.slice(0,20), key_len: SUPABASE_ANON_KEY.length, testStatus, testBody }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+  }
+
   // Page de confirmation post-paiement (invité).
   if (slug === 'commande' || slug === 'merci') {
     return new Response(renderConfirmation(url), {
