@@ -92,6 +92,25 @@ serve(async (req) => {
         // Supprimer payment_intents où prestataire_id = userId (fitness, table, visibilité)
         await sb.from('payment_intents').delete().eq('prestataire_id', userId).neq('statut', 'confirmed');
 
+        // Supprimer réservations beauté liées au prestataire
+        await sb.from('beauty_reservations').delete().eq('prestataire_id', userId);
+
+        // Supprimer services beauté (prestataire_id → profiles, pas couverts par CASCADE shops)
+        await sb.from('beauty_services').delete().eq('prestataire_id', userId);
+
+        // Supprimer offres fitness (prestataire_id → profiles)
+        await sb.from('fitness_abonnement_offres').delete().eq('prestataire_id', userId);
+
+        // Supprimer terrains (prestataire_id → profiles, pas couverts par CASCADE shops)
+        await sb.from('reservations_terrain').delete().eq('prestataire_id', userId);
+        await sb.from('terrains').delete().eq('prestataire_id', userId);
+
+        // Supprimer annonces sponsorisées
+        await sb.from('sponsored_ads').delete().eq('merchant_id', userId);
+
+        // Supprimer TOUS les payment_intents prestataire (y compris confirmed)
+        await sb.from('payment_intents').delete().eq('prestataire_id', userId);
+
         // Supprimer la boutique (CASCADE couvre produits, orders, order_items,
         // dettes, debt_transactions, conversations, messages)
         const { error: shopErr } = await sb
