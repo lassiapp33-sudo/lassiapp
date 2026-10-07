@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
   Image,
+  AppState,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 
@@ -227,6 +228,14 @@ export default function PaymentScreen({ order, onBack, onSuccess }: Props) {
       setVerifying(false);
     }
   };
+
+  // Détection retour de Wave/OM quand l'app revient au premier plan (ex: OM QR sans deep link)
+  useEffect(() => {
+    if (stage !== 'waiting') return;
+    const sub = AppState.addEventListener('change', s => { if (s === 'active') void handleVerify(); });
+    return () => sub.remove();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
 
   // ── Confirmation ──────────────────────────────────────────────────────────
   if (stage === 'confirm') {

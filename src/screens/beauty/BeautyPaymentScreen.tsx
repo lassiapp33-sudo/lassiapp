@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, Image, ScrollView, StyleSheet,
-  Linking, Alert, TouchableOpacity, ActivityIndicator, Platform,
+  Linking, Alert, TouchableOpacity, ActivityIndicator, Platform, AppState,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, fonts, radius, TOP_INSET } from '../../theme';
@@ -205,6 +205,13 @@ export default function BeautyPaymentScreen({
       setVerifying(false);
     }
   };
+
+  useEffect(() => {
+    if (stage !== 'waiting') return;
+    const sub = AppState.addEventListener('change', s => { if (s === 'active') void handleVerify(); });
+    return () => sub.remove();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
 
   const handleCancel = useCallback(async () => {
     if (processingRef.current) return;
