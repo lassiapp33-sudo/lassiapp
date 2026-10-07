@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal, View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView,
@@ -45,6 +45,7 @@ export default function DailySpecialModal({ visible, shopId, onClose, onChanged 
   const [photoUri, setPhotoUri]     = useState<string | null>(null);
   const [photoUrl, setPhotoUrl]     = useState<string | null>(null);
   const [uploading, setUploading]   = useState(false);
+  const nameInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -67,6 +68,7 @@ export default function DailySpecialModal({ visible, shopId, onClose, onChanged 
       : await pickImageFromCamera();
     if (!uri) return;
     setPhotoUri(uri);
+    setTimeout(() => nameInputRef.current?.focus(), 350);
     setUploading(true);
     try {
       const path = `daily_specials/${shopId}/${Date.now()}.jpg`;
@@ -194,6 +196,7 @@ export default function DailySpecialModal({ visible, shopId, onClose, onChanged 
 
             <Text style={styles.label}>Nom du plat</Text>
             <TextInput
+              ref={nameInputRef}
               style={styles.input}
               value={name}
               onChangeText={setName}
