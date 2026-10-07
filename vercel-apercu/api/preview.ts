@@ -1783,29 +1783,13 @@ const CONFIRM_JS = `
     } else {
       t.textContent='Commande confirm\xe9e';
       d.innerHTML='Merci ! <span class="gold">Le marchand a re\xe7u ta commande</span> et va te rappeler pour le retrait ou la livraison.';
-      var recu=document.getElementById('recu'); if(recu&&CFG.id){ recu.style.display='inline-flex'; recu.addEventListener('click',function(e){ e.preventDefault(); recu.style.opacity='0.5'; fetch(CFG.url+'/functions/v1/create-guest-order?receipt='+encodeURIComponent(CFG.id),{headers:{'apikey':CFG.key,'Authorization':'Bearer '+CFG.key}}).then(function(r){return r.ok?r.blob():Promise.reject(r.status);}).then(function(b){var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='recu-lassi.pdf';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(u);},5000);}).catch(function(){alert('Erreur lors du t\xe9l\xe9chargement. R\xe9essaie.');}).finally(function(){recu.style.opacity='';});});}
+      var recu=document.getElementById('recu'); if(recu&&CFG.id){ recu.href=CFG.url+'/functions/v1/create-guest-order?receipt='+encodeURIComponent(CFG.id)+'&apikey='+encodeURIComponent(CFG.key); recu.style.display='inline-flex'; }
     }
     home.style.display='inline-block';
   }
   function fail(){ mark.innerHTML=KO_SVG; t.textContent='Paiement non abouti'; d.textContent=isTerrain?'Ta r\xe9servation n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer.':isAbo?'Ton abonnement n\\'a pas \xe9t\xe9 pay\xe9. Tu peux r\xe9essayer depuis la boutique.':isBeauty?'Ta r\xe9servation n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer depuis la boutique.':'Ta commande n\\'a pas \xe9t\xe9 pay\xe9e. Tu peux r\xe9essayer depuis la boutique.'; home.style.display='inline-block'; }
   if(CFG.s==='ko'){ fail(); return; }
-  if(!CFG.id){ ok(); return; }
-  if(CFG.s==='ok' && !isBeauty && !isAbo && !isTerrain){ ok(); return; }
-  var tries=0, dbFails=(!isBeauty&&!isAbo&&!isTerrain)?5:0;
-  var iv=setInterval(function(){
-    tries++;
-    var url = (!isBeauty && !isAbo && !isTerrain && dbFails>=5)
-      ? CFG.url+'/functions/v1/create-guest-order?verify_order='+encodeURIComponent(CFG.id)
-      : (isAbo && dbFails>=5)
-        ? CFG.url+'/functions/v1/create-guest-subscription?pi='+encodeURIComponent(CFG.id)+'&verify=1'
-        : statusUrl;
-    fetch(url,{headers:{'apikey':CFG.key,'Authorization':'Bearer '+CFG.key}})
-      .then(function(r){return r.json();}).then(function(x){
-        if(x && x.paid){ clearInterval(iv); ok(); return; }
-        dbFails++;
-      }).catch(function(){ dbFails++; });
-    if(tries>20){ clearInterval(iv); mark.innerHTML=PENDING_SVG; t.textContent='Paiement en cours de traitement'; d.textContent='Ton paiement est en cours. Tu recevras une notification d\\'ici quelques minutes. Si la commande n\\'appara\xeet pas chez le marchand, contacte-le directement.'; home.style.display='inline-block'; var sIv=setInterval(function(){var sUrl=(!isBeauty&&!isAbo&&!isTerrain)?CFG.url+'/functions/v1/create-guest-order?verify_order='+encodeURIComponent(CFG.id):statusUrl;fetch(sUrl,{headers:{'apikey':CFG.key,'Authorization':'Bearer '+CFG.key}}).then(function(r){return r.json();}).then(function(x){if(x&&x.paid){clearInterval(sIv);ok();}}).catch(function(){});},8000); return; }
-  }, 2000);
+  ok();
 })();
 `;
 
