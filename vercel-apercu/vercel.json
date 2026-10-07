@@ -2,6 +2,8 @@
   "rewrites": [
     { "source": "/commande", "destination": "/api/preview?slug=commande" },
     { "source": "/terrain", "destination": "/api/preview?slug=terrain" },
+    { "source": "/paiement/terrain-succes", "destination": "/api/preview?slug=paiement-terrain-succes" },
+    { "source": "/paiement/terrain-echec", "destination": "/api/preview?slug=paiement-terrain-echec" },
     { "source": "/:slug", "destination": "/api/preview" }
   ]
 }

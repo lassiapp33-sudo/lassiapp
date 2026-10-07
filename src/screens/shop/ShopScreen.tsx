@@ -207,6 +207,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const [realProducts, setRealProducts] = useState<StoreProduct[]>([]);
   const [terrains, setTerrains] = useState<Terrain[]>([]);
   const [selectedTerrainIdx, setSelectedTerrainIdx] = useState(0);
+  const [terrainBookingReady, setTerrainBookingReady] = useState<import('../../components/terrain/ShopTerrainSlotPicker').SlotBookParams | null>(null);
   // Image affichée en plein écran (appui long 3 s sur produit / photo / logo)
   const [zoomUrl, setZoomUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -604,6 +605,21 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
 
   const cartBottom = FOOTER_HEIGHT + 8;
 
+  const handleTerrainReserve = () => {
+    if (!terrainBookingReady) return;
+    onBookTerrainDirect?.({
+      terrainId:       terrainBookingReady.terrain.id,
+      terrainNom:      terrainBookingReady.terrain.nom,
+      prestataireId:   terrainBookingReady.terrain.prestataire_id,
+      prestataireName: terrainBookingReady.prestataireName,
+      dateReservation: terrainBookingReady.dateReservation,
+      heureDebut:      terrainBookingReady.heureDebut,
+      heureFin:        terrainBookingReady.heureFin,
+      dureeHeures:     terrainBookingReady.dureeHeures,
+      prixTotal:       terrainBookingReady.prixTotal,
+    });
+  };
+
   if (loadError) {
     return (
       <View style={styles.root}>
@@ -905,19 +921,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                   terrain={terrains[selectedTerrainIdx] ?? terrains[0]}
                   prestataireName={displayName}
                   openingHours={effectiveHours}
-                  onBook={(p: SlotBookParams) =>
-                    onBookTerrainDirect?.({
-                      terrainId: p.terrain.id,
-                      terrainNom: p.terrain.nom,
-                      prestataireId: p.terrain.prestataire_id,
-                      prestataireName: p.prestataireName,
-                      dateReservation: p.dateReservation,
-                      heureDebut: p.heureDebut,
-                      heureFin: p.heureFin,
-                      dureeHeures: p.dureeHeures,
-                      prixTotal: p.prixTotal,
-                    })
-                  }
+                  onSlotSelect={setTerrainBookingReady}
                 />
               </>
             ) : (
@@ -1239,7 +1243,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
         isPause={status.isPause}
         nextChange={status.nextChange}
         onChat={onChat ? () => onChat(shopData?.logoUrl ?? null, isVip) : undefined}
-        onCheckout={onCheckout}
+        onCheckout={isSlotShop ? handleTerrainReserve : onCheckout}
       />
 
       {/* Aperçu plein écran (logo + photos galerie) — appui long 3 s */}

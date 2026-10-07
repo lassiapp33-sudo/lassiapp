@@ -48,10 +48,10 @@ interface Props {
   terrain: Terrain;
   prestataireName: string;
   openingHours: WeekHours;
-  onBook: (p: SlotBookParams) => void;
+  onSlotSelect: (p: SlotBookParams | null) => void;
 }
 
-export default function ShopTerrainSlotPicker({ terrain, prestataireName, openingHours, onBook }: Props) {
+export default function ShopTerrainSlotPicker({ terrain, prestataireName, openingHours, onSlotSelect }: Props) {
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
@@ -77,7 +77,7 @@ export default function ShopTerrainSlotPicker({ terrain, prestataireName, openin
         .select('heure_debut, heure_fin')
         .eq('terrain_id', terrain.id)
         .eq('date_reservation', selDate)
-        .in('statut', ['paye', 'en_attente']);
+        .eq('statut', 'paye');
       setPris((data ?? []) as CreneauPris[]);
     } catch {
       setPris([]);
@@ -88,6 +88,7 @@ export default function ShopTerrainSlotPicker({ terrain, prestataireName, openin
 
   useEffect(() => {
     setPicked(null);
+    onSlotSelect(null);
     fetchPris();
 
     const ch = supabase
@@ -118,21 +119,21 @@ export default function ShopTerrainSlotPicker({ terrain, prestataireName, openin
 
   const pickSlot = (debut: string) => {
     if (!isAvail(debut)) return;
-    setPicked(p => (p === debut ? null : debut));
-  };
-
-  const handleBook = () => {
-    if (!picked) return;
-    const heureFin = addMin(picked, BOOKING_MIN);
-    onBook({
-      terrain,
-      prestataireName,
-      dateReservation: selDate,
-      heureDebut: picked,
-      heureFin,
-      dureeHeures: 1.5,
-      prixTotal: calculerPrixAvecMarge(terrain.prix_horaire),
-    });
+    const next = picked === debut ? null : debut;
+    setPicked(next);
+    if (next) {
+      onSlotSelect({
+        terrain,
+        prestataireName,
+        dateReservation: selDate,
+        heureDebut: next,
+        heureFin: addMin(next, BOOKING_MIN),
+        dureeHeures: 1.5,
+        prixTotal: calculerPrixAvecMarge(terrain.prix_horaire),
+      });
+    } else {
+      onSlotSelect(null);
+    }
   };
 
   return (
@@ -201,7 +202,7 @@ export default function ShopTerrainSlotPicker({ terrain, prestataireName, openin
         </View>
       )}
 
-      {/* Récapitulatif de la réservation choisie */}
+      {/* Récapitulatif du créneau sélectionné */}
       {picked && (
         <View style={styles.recap}>
           <View style={styles.recapRow}>
@@ -220,9 +221,6 @@ export default function ShopTerrainSlotPicker({ terrain, prestataireName, openin
               {formatPrice(calculerPrixAvecMarge(terrain.prix_horaire))}
             </Text>
           </View>
-          <TouchableOpacity style={styles.bookBtn} onPress={handleBook} activeOpacity={0.85}>
-            <Text style={styles.bookBtnTxt}>Réserver ce créneau</Text>
-          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -301,12 +299,4 @@ const styles = StyleSheet.create({
   recapLbl: { color: colors.muted, fontFamily: fonts.body, fontSize: 13 },
   recapVal: { color: colors.white, fontFamily: fonts.title, fontSize: 14 },
   recapGold: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 15 },
-  bookBtn: {
-    backgroundColor: colors.accent,
-    borderRadius: radius.md,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  bookBtnTxt: { color: colors.bg, fontFamily: fonts.title, fontSize: 15 },
 });

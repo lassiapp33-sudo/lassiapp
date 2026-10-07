@@ -46,15 +46,15 @@ serve(async (req) => {
     // ── Vérifier que la réservation appartient à l'utilisateur ────────────────
     const { data: reservation, error: resErr } = await supabase
       .from('reservations_terrain')
-      .select('client_id, statut, prestataire_id, montant_prestataire, moyen_paiement, date_reservation, heure_fin')
+      .select('client_id, statut, prestataire_id, montant_prestataire, moyen_paiement, date_reservation, heure_fin, receipt_code')
       .eq('id', reservationId)
       .single();
 
     if (resErr || !reservation) return json({ error: 'Réservation introuvable' }, 404);
     if (reservation.client_id !== user.id) return json({ error: 'Non autorisé' }, 403);
 
-    // ── Idempotence : déjà payée → retour immédiat ────────────────────────────
-    if (reservation.statut === 'paye') return json({ paid: true });
+    // ── Idempotence : déjà payée → retour immédiat avec receipt_code ─────────
+    if (reservation.statut === 'paye') return json({ paid: true, receipt_code: reservation.receipt_code ?? '' });
 
     // ── Vérification auprès de l'opérateur via les mêmes API que webhook ─────
     let paid = false;

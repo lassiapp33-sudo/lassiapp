@@ -40,9 +40,10 @@ export const FOOTER_HEIGHT = 88 + BOTTOM_EXTRA;
 
 // Labels du bouton principal selon le type de vitrine
 const LABELS: Record<string, { main: string; sub: string }> = {
-  products: { main: 'Commander', sub: 'Payer via Wave / OM' },
-  services: { main: 'Réserver', sub: 'Confirmer la réservation' },
+  products:    { main: 'Commander', sub: 'Payer via Wave / OM' },
+  services:    { main: 'Réserver', sub: 'Confirmer la réservation' },
   memberships: { main: 'S\'abonner', sub: 'Voir les offres' },
+  terrains:    { main: 'Réserver', sub: 'Choisir un créneau' },
 };
 
 interface Props {

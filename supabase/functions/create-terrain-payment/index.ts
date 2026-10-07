@@ -13,7 +13,7 @@ const OM_WEBHOOK_SECRET  = Deno.env.get('OM_WEBHOOK_SECRET')         ?? '';
 const SUPABASE_URL       = Deno.env.get('SUPABASE_URL')              ?? '';
 const SUPABASE_SRK       = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const PAYMENT_MODE       = Deno.env.get('PAYMENT_MODE')              ?? 'simulation';
-const LASSI_PAY_BASE     = 'https://lassi.tech/paiement';
+const LASSI_PAY_BASE     = 'https://s.lassi.tech/paiement';
 const WEBHOOK_BASE       = `${SUPABASE_URL}/functions/v1`;
 
 const isWaveReady = () => PAYMENT_MODE === 'production' && !!WAVE_API_KEY;

@@ -171,6 +171,25 @@ export default async function handler(
     }
   }
 
+  // Pages de retour après paiement Wave/OM pour réservation terrain.
+  if (slug === 'paiement-terrain-succes') {
+    const G = BRAND_GOLD, K = BRAND_BG;
+    const html = '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Paiement confirmé — LASSİ</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:' + K + ';color:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}.card{background:#1e2040;border:1px solid #2a2d4a;border-radius:20px;padding:36px 28px;max-width:380px;width:100%;text-align:center}.icon{font-size:56px;margin-bottom:20px}.title{font-size:22px;font-weight:700;margin-bottom:12px;color:' + G + '}.body{font-size:14px;color:#aaa;line-height:1.6;margin-bottom:32px}.btn{display:block;background:' + G + ';color:' + K + ';text-decoration:none;font-weight:700;font-size:15px;padding:16px 24px;border-radius:12px;margin:0 auto}</style></head><body><div class="card"><div class="icon">✅</div><h1 class="title">Paiement confirmé !</h1><p class="body">Ta réservation terrain est confirmée. Retourne dans l\'application pour voir ton billet QR.</p><a class="btn" href="lassiapp://">Retour à l\'application LASSI</a></div></body></html>';
+    return new Response(html, {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
+  }
+
+  if (slug === 'paiement-terrain-echec') {
+    const G = BRAND_GOLD, K = BRAND_BG;
+    const html = '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Paiement échoué — LASSİ</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:' + K + ';color:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}.card{background:#1e2040;border:1px solid #2a2d4a;border-radius:20px;padding:36px 28px;max-width:380px;width:100%;text-align:center}.icon{font-size:56px;margin-bottom:20px}.title{font-size:22px;font-weight:700;margin-bottom:12px;color:#ff6b6b}.body{font-size:14px;color:#aaa;line-height:1.6;margin-bottom:32px}.btn{display:block;background:' + G + ';color:' + K + ';text-decoration:none;font-weight:700;font-size:15px;padding:16px 24px;border-radius:12px;margin:0 auto}</style></head><body><div class="card"><div class="icon">❌</div><h1 class="title">Paiement annulé</h1><p class="body">Le paiement n\'a pas abouti. Retourne dans l\'application pour réessayer.</p><a class="btn" href="lassiapp://">Retour à l\'application LASSI</a></div></body></html>';
+    return new Response(html, {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
+  }
+
   // Page réservation terrain invité web.
   if (slug === 'terrain') {
     return new Response(renderTerrainPage(url), {
