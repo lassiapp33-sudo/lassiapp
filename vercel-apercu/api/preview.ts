@@ -21,8 +21,8 @@ declare const process: { env: Record<string, string | undefined> };
 
 export const config = { runtime: 'edge' };
 
-const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY!;
+const SUPABASE_URL = (process.env.SUPABASE_URL ?? '').replace(/\/$/, '');
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
 
 const PLAY_URL =
   'https://play.google.com/store/apps/details?id=com.lassiapp.lassiapp';
