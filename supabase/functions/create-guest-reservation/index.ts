@@ -19,6 +19,7 @@ const OM_MERCHANT_CODE  = Deno.env.get('OM_MERCHANT_CODE')          ?? '';
 const OM_WEBHOOK_SECRET = Deno.env.get('OM_WEBHOOK_SECRET')         ?? '';
 
 const WEB_BASE = 'https://s.lassi.tech';
+const GUEST_EMAIL = 'commande-web@lassi.tech';
 const COMMISSION_RATE = 0.01;
 const PHONE_RE = /^7[05678][0-9]{7}$/;
 const IS_WAVE_READY = WAVE_API_KEY !== '' || WAVE_PROXY_URL !== '';
@@ -26,6 +27,19 @@ const IS_OM_READY   = isOmReady();
 
 // JS getDay() → DayKey
 const JS_TO_DAY = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+async function ensureGuestUser(admin: ReturnType<typeof createClient>): Promise<string> {
+  const { data: prof } = await admin.from('profiles').select('id').eq('auth_email', GUEST_EMAIL).maybeSingle();
+  if (prof?.id) return prof.id as string;
+  const { data: created, error } = await admin.auth.admin.createUser({
+    email: GUEST_EMAIL, email_confirm: true,
+    user_metadata: { name: 'Commande web', role: 'client' },
+  });
+  if (created?.user?.id) return created.user.id;
+  const { data: prof2 } = await admin.from('profiles').select('id').eq('auth_email', GUEST_EMAIL).maybeSingle();
+  if (prof2?.id) return prof2.id as string;
+  throw new Error('guest user unavailable: ' + (error?.message ?? ''));
+}
 
 function buildCors(req: Request): Record<string, string> {
   const origin = req.headers.get('Origin') ?? '*';
@@ -200,16 +214,22 @@ Deno.serve(async (req) => {
   const prixTotal          = prixBase + commission;
   const montantPrestataire = prixBase;
 
+  // Récupérer l'ID du user système invité web
+  const guestId = await ensureGuestUser(admin).catch(() => null);
+  if (!guestId) return err('Erreur système : utilisateur invité introuvable', 500);
+
   // Créer la réservation
   const { data: resa, error: resaErr } = await admin
     .from('beauty_reservations')
     .insert({
+      client_id:           guestId,
       prestataire_id:      svc.prestataire_id,
       service_id:          serviceId,
       date_reservation:    date,
       heure_debut:         slotDebut,
       heure_fin:           heureFin,
       client_name:         String(name).trim().slice(0, 100),
+      client_phone:        digits,
       prix_total:          prixTotal,
       commission_lassi:    commission,
       montant_prestataire: montantPrestataire,
