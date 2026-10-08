@@ -1,0 +1,18 @@
+project_id = "tsdemraszwtbzgtyjzum"
+
+# Fonctions appelées sans JWT (Wave/OM webhooks, checkout web invité)
+# NE JAMAIS retirer verify_jwt = false ici — sinon Wave/OM ne peuvent plus livrer leurs webhooks
+[functions.webhook-payment]
+verify_jwt = false
+
+[functions.create-guest-order]
+verify_jwt = false
+
+[functions.create-guest-reservation]
+verify_jwt = false
+
+[functions.create-guest-terrain-reservation]
+verify_jwt = false
+
+[functions.create-guest-subscription]
+verify_jwt = false
