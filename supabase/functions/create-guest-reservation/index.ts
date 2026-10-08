@@ -80,6 +80,38 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
 
+  // ── GET ?receipt=<uuid> → données reçu beauté ────────────────────────────────
+  const receiptId = url.searchParams.get('receipt') ?? '';
+  if (req.method === 'GET' && isUUID(receiptId)) {
+    const { data: resa } = await admin
+      .from('beauty_reservations')
+      .select('client_name, client_phone, date_reservation, heure_debut, heure_fin, prix_total, receipt_code, prestataire_id, service_id, statut')
+      .eq('id', receiptId)
+      .maybeSingle();
+    if (!resa || resa.statut !== 'paye') return err('Réservation introuvable ou non payée', 404);
+    const [svcRow, profRow] = await Promise.all([
+      admin.from('beauty_services').select('nom').eq('id', String(resa.service_id)).maybeSingle(),
+      admin.from('profiles').select('full_name').eq('id', String(resa.prestataire_id)).maybeSingle(),
+    ]);
+    const DAYS_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+    const MONTHS_FR = ['jan.', 'f\xe9v.', 'mar.', 'avr.', 'mai', 'juin', 'juil.', 'ao\xfbt', 'sep.', 'oct.', 'nov.', 'd\xe9c.'];
+    const d = new Date(String(resa.date_reservation) + 'T12:00:00');
+    const dateLabel = DAYS_FR[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS_FR[d.getMonth()];
+    const montant = Math.round(Number(resa.prix_total));
+    const montantLabel = String(montant).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' F';
+    return jsonR({
+      success:          true,
+      service_nom:      svcRow.data?.nom ?? 'Service',
+      date_label:       dateLabel,
+      heure_debut:      String(resa.heure_debut ?? '').slice(0, 5),
+      heure_fin:        String(resa.heure_fin ?? '').slice(0, 5),
+      montant_label:    montantLabel,
+      receipt_code:     String(resa.receipt_code ?? ''),
+      client_name:      String(resa.client_name ?? ''),
+      prestataire_name: profRow.data?.full_name ?? '',
+    });
+  }
+
   // ── GET ?status=<reservationId> ───────────────────────────────────────────────
   const statusId = url.searchParams.get('status');
   if (statusId && isUUID(statusId)) {
