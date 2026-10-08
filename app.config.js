@@ -1,4 +1,4 @@
-const { withAndroidManifest, withGradleProperties } = require('@expo/config-plugins');
+const { withAndroidManifest, withGradleProperties, AndroidConfig } = require('@expo/config-plugins');
 
 // Plugin 1 : usesCleartextTraffic="false" au manifest release.
 // Le debug manifest override via tools:replace ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â le dev n'est pas affectÃƒÆ’Ã‚Â©.
@@ -48,21 +48,16 @@ const withR8Release = config =>
   });
 
 
-// Retire READ_MEDIA_IMAGES et READ_MEDIA_VIDEO ajoutÃƒÆ’Ã‚Â©s par expo-media-library.
-// L'app utilise le Photo Picker Android (launchImageLibraryAsync) qui n'a pas
-// besoin de ces permissions larges. saveToLibraryAsync fonctionne sans sur API 29+.
+// Bloque READ_MEDIA_IMAGES et READ_MEDIA_VIDEO via tools:node="remove".
+// Cette directive est respectée par le Gradle manifest merger (contrairement au
+// filtre JS qui ne couvre pas les AARs). Combiné avec granularPermissions:[]
+// dans le plugin expo-media-library, ces permissions n’apparaissent nulle part
+// dans l’APK — requis par la politique Google Play Android 13+ (API 33+).
 const withBlockedMediaPermissions = config =>
-  withAndroidManifest(config, androidConfig => {
-    const BLOCKED = [
-      'android.permission.READ_MEDIA_IMAGES',
-      'android.permission.READ_MEDIA_VIDEO',
-    ];
-    const perms = androidConfig.modResults.manifest['uses-permission'] ?? [];
-    androidConfig.modResults.manifest['uses-permission'] = perms.filter(
-      p => !BLOCKED.includes(p.$['android:name'])
-    );
-    return androidConfig;
-  });
+  AndroidConfig.Permissions.withBlockedPermissions(config, [
+    ‘android.permission.READ_MEDIA_IMAGES’,
+    ‘android.permission.READ_MEDIA_VIDEO’,
+  ]);
 
 // NOTE: le canal Firebase par dÃƒÆ’Ã‚Â©faut (commandes-v2) est injectÃƒÆ’Ã‚Â© via
 // ./plugins/withFirebaseMessagingManifest (tableau `plugins`), PAS ici : les mods
@@ -204,6 +199,7 @@ module.exports = withSecurityPlugins({
           savePhotosPermission:
             "LASSÃƒâ€žÃ‚Â° enregistre dans ta bibliothÃƒÆ’Ã‚Â¨que les images reÃƒÆ’Ã‚Â§ues dans tes conversations. Exemple : sauvegarder la photo d'un produit envoyÃƒÆ’Ã‚Â©e par un prestataire dans le chat.",
           isAccessMediaLocationEnabled: false,
+          granularPermissions: [],
         },
       ],
       [
