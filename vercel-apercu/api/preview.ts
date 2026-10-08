@@ -1480,7 +1480,7 @@ const CART_JS = `
           } else if(d.redirectUrl){
             a.textContent=isW?'Payer avec Wave':'Ouvrir Orange Money';
             a.href=d.redirectUrl; a.style.display='inline-block';
-            window.location.href=d.redirectUrl;
+            document.getElementById('waitSub').textContent=isW?'Clique sur le bouton, paie dans Wave, puis reviens ici — la page se met \xe0 jour automatiquement.':'Valide le paiement dans Orange Money, puis reviens sur cette page.';
           } else {
             a.style.display='none';
           }
@@ -1653,7 +1653,6 @@ const BOOKING_JS = `
             : 'Valide le paiement dans Orange Money, puis reviens sur cette page.';
           a.textContent=isW?'Rouvrir Wave':'Rouvrir Orange Money';
           a.href=d.redirectUrl; a.style.display='inline-block';
-          window.location.replace(d.redirectUrl);
         } else { a.style.display='none'; }
         if(d.qrCode){
           document.getElementById('bWaitSub').textContent='Scanne ce QR code avec Orange Money.';
@@ -1771,7 +1770,6 @@ const SUBSCRIPTION_JS = `
           : 'Valide le paiement dans Orange Money, puis reviens sur cette page.';
         a.textContent=isW?'Rouvrir Wave':'Rouvrir Orange Money';
         a.href=d.redirectUrl; a.style.display='inline-block';
-        window.location.replace(d.redirectUrl);
       } else { a.style.display='none'; }
       if(d.qrCode){
         document.getElementById('aboWaitSub').textContent='Scanne ce QR code avec Orange Money.';
@@ -2169,7 +2167,7 @@ const TERRAIN_JS = `
         wBtn.href=d.redirectUrl;
         wBtn.textContent=state.moyen==='wave'?'Payer avec Wave':'Ouvrir Orange Money';
         wBtn.style.display='inline-block';
-        window.location.href=d.redirectUrl;
+        document.getElementById('t-wsub').textContent=state.moyen==='wave'?'Clique sur le bouton, paie dans Wave, puis reviens ici.':'Valide le paiement dans Orange Money, puis reviens sur cette page.';
       }
       if(d.qrCode){
         var qrEl=document.getElementById('t-wqr');
