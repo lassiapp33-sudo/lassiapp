@@ -979,7 +979,9 @@ function renderConfirmation(url: URL): string {
   const initDesc  = isOk ? (isTerrain ? 'Ton créneau est réservé.' : isBeauty ? 'Le prestataire a reçu ta réservation.' : isAbo ? 'Ton abonnement est actif.' : 'Merci ! Le marchand a reçu ta commande.') : isKo ? 'Le paiement n\'a pas abouti.' : 'Un instant, on confirme ta commande.';
   const homeDisplay = (isOk || isKo) ? 'inline-block' : 'none';
   const homeHref    = shop ? `https://s.lassi.tech/${encodeURIComponent(shop)}` : 'javascript:history.go(-2)';
-  const recuDisplay = (isOk && id) ? 'inline-flex' : 'none';
+  // Pour les commandes normales (type vide), le bouton est caché côté SSR
+  // et affiché par JS uniquement après confirmation de paiement en DB (anti race-condition Wave).
+  const recuDisplay = (isOk && id && type) ? 'inline-flex' : 'none';
   const recuHref    = (isOk && id) ? `/receipt?id=${encodeURIComponent(id)}&type=${encodeURIComponent(type)}` : '#';
   return `<!DOCTYPE html>
 <html lang="fr"><head>
@@ -1853,7 +1855,7 @@ const CONFIRM_JS = `
     } else {
       t.textContent='Commande confirm\xe9e';
       d.innerHTML='Merci ! <span class="gold">Le marchand a re\xe7u ta commande</span> et va te rappeler pour le retrait ou la livraison.';
-      var recu=document.getElementById('recu'); if(recu&&CFG.id){ recu.href=CFG.url+'/functions/v1/create-guest-order?receipt='+encodeURIComponent(CFG.id)+'&apikey='+encodeURIComponent(CFG.key); recu.style.display='inline-flex'; }
+      var recu=document.getElementById('recu'); if(recu){recu.style.display='none';} if(CFG.id){var _rt=0;function _waitOrd(){fetch(CFG.url+'/functions/v1/create-guest-order?order='+encodeURIComponent(CFG.id),{headers:{'apikey':CFG.key,'Authorization':'Bearer '+CFG.key}}).then(function(r){return r.json();}).then(function(x){if(x&&x.paid){if(recu){recu.href=CFG.url+'/functions/v1/create-guest-order?receipt='+encodeURIComponent(CFG.id)+'&apikey='+encodeURIComponent(CFG.key);recu.removeAttribute('download');recu.style.display='inline-flex';}}else if(_rt<12){_rt++;setTimeout(_waitOrd,2500);}}).catch(function(){if(_rt<12){_rt++;setTimeout(_waitOrd,2500);}});}  _waitOrd();}
     }
     home.style.display='inline-block';
   }
