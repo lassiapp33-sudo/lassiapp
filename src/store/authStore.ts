@@ -19,6 +19,7 @@ export interface AuthUser {
 
 interface AuthState {
   user: AuthUser | null;
+  lastPhone: string | null; // conservé même après logout → AuthNavigator pré-remplit le login
   isAuthenticated: boolean;
   isLoading: boolean; // true pendant la vérification de session au démarrage
   hasSeenOnboarding: boolean;
@@ -37,17 +38,22 @@ const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
+      lastPhone: null,
       isAuthenticated: false,
       isLoading: true, // démarrage = en attente de la vérif session
       hasSeenOnboarding: false,
 
       setUser: user => {
         const currentId = get().user?.id;
-        // Vider le panier si l'utilisateur change (autre compte sur même appareil)
         if (currentId && user?.id && currentId !== user.id) {
           useCartStore.getState().clearCart();
         }
-        set({ user, isAuthenticated: !!user, isLoading: false });
+        set({
+          user,
+          isAuthenticated: !!user,
+          isLoading: false,
+          ...(user?.phone ? { lastPhone: user.phone } : {}),
+        });
       },
 
       setLoading: isLoading => set({ isLoading }),
@@ -55,6 +61,7 @@ const useAuthStore = create<AuthState>()(
       logout: () => {
         useCartStore.getState().clearCart();
         useDebtsStore.getState().reset();
+        // lastPhone intentionnellement conservé → AuthNavigator pré-remplit le numéro
         set({ user: null, isAuthenticated: false });
       },
 
@@ -78,6 +85,7 @@ const useAuthStore = create<AuthState>()(
         hasSeenOnboarding: state.hasSeenOnboarding,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        lastPhone: state.lastPhone,
       }),
     },
   ),

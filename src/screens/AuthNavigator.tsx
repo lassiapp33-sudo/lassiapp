@@ -32,7 +32,8 @@ export default function AuthNavigator({ onComplete, onGuest }: Props) {
   // Si un utilisateur était connecté avant (session expirée / OTA), démarrer
   // directement sur l'écran login avec son numéro pré-rempli. Le Zustand authStore
   // persiste le profil même après un signOut Supabase côté serveur.
-  const cachedPhone = useAuthStore(s => s.user?.phone ?? null);
+  // user?.phone = session active ; lastPhone = session expirée mais numéro connu
+  const cachedPhone = useAuthStore(s => s.user?.phone ?? s.lastPhone ?? null);
   const [stack, setStack] = useState<StackItem[]>(
     cachedPhone ? [{ id: 'login', prefillPhone: cachedPhone }] : [{ id: 'role' }],
   );
