@@ -1521,7 +1521,7 @@ const CART_JS = `
     // Retour sur la page (après l'app de paiement) → vérifier tout de suite.
     document.addEventListener('visibilitychange', function(){ if(!document.hidden) checkOnce(orderId, confUrl, iv, dbFails); });
     var cn=document.getElementById('checkNow');
-    if(cn) cn.addEventListener('click', function(){ checkOnce(orderId, confUrl, iv, dbFails); });
+    if(cn) cn.addEventListener('click', function(){ checkOnce(orderId, confUrl, iv, Math.max(dbFails, 5)); });
   }
 })();
 `;

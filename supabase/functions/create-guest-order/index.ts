@@ -185,9 +185,13 @@ Deno.serve(async (req) => {
         });
         if (r.ok) {
           const od = await r.json() as Record<string, unknown>;
-          const st = String(od.status ?? od.statut ?? od.txStatus ?? '').toUpperCase();
+          const odData = (od.data as Record<string, unknown> | undefined) ?? {};
+          const st = String(
+            od.status ?? od.statut ?? od.txStatus ?? od.paymentStatus ??
+            odData.status ?? odData.txStatus ?? odData.paymentStatus ?? ''
+          ).toUpperCase();
           confirmed = ['PAID', 'COMPLETED', 'SUCCESS', 'SUCCESSFULL', 'SUCCESSFUL', 'PAYMENT_SUCCESS'].includes(st);
-          console.log('[create-guest-order] verify_order OM:', { vord, st, confirmed });
+          console.log('[create-guest-order] verify_order OM:', { vord, st, confirmed, keys: Object.keys(od) });
         }
       } catch (e) {
         console.error('[create-guest-order] verify_order OM erreur:', e instanceof Error ? e.message : e);
@@ -212,6 +216,13 @@ Deno.serve(async (req) => {
         console.error('[create-guest-order] verify_order process_payment_webhook:', wErr.message);
       } else {
         console.log('[create-guest-order] verify_order process_payment_webhook:', JSON.stringify(wResult));
+        if (wResult?.ok && !wResult?.already_processed) {
+          fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/process-payouts`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Cron-Secret': Deno.env.get('CRON_SECRET') ?? '' },
+            body: '{}',
+          }).catch(e => console.error('[create-guest-order] trigger payouts erreur:', e instanceof Error ? e.message : e));
+        }
       }
     }
 
