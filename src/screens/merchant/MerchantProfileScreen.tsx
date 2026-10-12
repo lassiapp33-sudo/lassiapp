@@ -40,8 +40,17 @@ import { getShopById } from '../../services/shops';
 import StatsGrid from '../../components/visibility/StatsGrid';
 import { VisibilityStats, getVisibilityStats, getActiveSub } from '../../services/visibilityPayment';
 import { VISIBILITY_PACKS_ENABLED } from '../../config/features';
+import useSpeechStore from '../../store/speechStore';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
+
+const IcoSpeaker = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M11 5L6 9H2v6h4l5 4V5z" stroke={colors.accent} />
+    <Path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke={colors.accent} />
+    <Path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke={colors.accent} />
+  </Svg>
+);
 
 const IcoGrid = () => (
   <Svg
@@ -363,6 +372,8 @@ export default function MerchantProfileScreen({
   const shopSubcategories = useShopStore(s => s.context.subcategories);
   const shopPaymentMethods = useShopStore(s => s.context.paymentMethods);
   const updatePaymentMethods = useShopStore(s => s.updatePaymentMethods);
+  const announceEnabled = useSpeechStore(s => s.announceEnabled);
+  const setAnnounceEnabled = useSpeechStore(s => s.setAnnounceEnabled);
 
   useEffect(() => {
     if (!shopId) return;
@@ -565,7 +576,14 @@ export default function MerchantProfileScreen({
 
         <Text style={profileRowStyles.secLbl}>{t.profile.preferences}</Text>
         <View style={profileRowStyles.grp}>
-          {/* Notifications — MASQUÉE temporairement */}
+          <ProfileOptionRow
+            icon={<IcoSpeaker />}
+            title="Annoncer les commandes"
+            subtitle="Lire à voix haute chaque nouvelle commande"
+            end="toggle"
+            toggled={announceEnabled}
+            onToggle={() => setAnnounceEnabled(!announceEnabled)}
+          />
           <ProfileOptionRow
             icon={<IcoGlobe />}
             title={t.profile.language}

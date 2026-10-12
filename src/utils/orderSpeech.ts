@@ -1,7 +1,22 @@
 import { IncomingOrder } from '../types/orders';
 import { parseMultiBasketNote } from './basketNote';
 
-/** Construit le texte lu à voix haute pour une commande (synthèse vocale). */
+/** Texte court lu automatiquement à l'arrivée d'une commande (style Wave). */
+export function buildOrderAlertAnnouncement(order: IncomingOrder): string {
+  const itemsText = (() => {
+    const parsed = parseMultiBasketNote(order.note);
+    if (parsed) {
+      return parsed.baskets
+        .map(b => `${b.label} : ${b.items.replace(/ x(\d+)/g, ' fois $1')}`)
+        .join(', ');
+    }
+    return order.items.map(i => `${i.qty > 1 ? i.qty + ' ' : ''}${i.name}`).join(', ');
+  })();
+
+  return `Commande reçue ! ${order.total} francs de ${order.clientName}. ${itemsText}.`;
+}
+
+/** Texte détaillé lu manuellement via le bouton play de la carte. */
 export function buildOrderAnnouncement(order: IncomingOrder): string {
   const parsedBaskets = parseMultiBasketNote(order.note);
   const itemsText = parsedBaskets

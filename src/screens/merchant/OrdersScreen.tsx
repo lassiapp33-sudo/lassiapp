@@ -19,13 +19,16 @@ import VerifyReceiptSheet from './VerifyReceiptSheet';
 import ClientRatingModal from '../../components/avis/ClientRatingModal';
 import { colors, fonts } from '../../theme';
 import { IncomingOrder, MerchantTab, OrderStatus } from '../../types/orders';
+import * as Speech from 'expo-speech';
 import useOrdersStore from '../../store/ordersStore';
 import useShopStore from '../../store/shopStore';
+import useSpeechStore from '../../store/speechStore';
 import { useRealtimeOrders } from '../../hooks/useRealtimeOrders';
 import { useForegroundRefresh } from '../../hooks/useForegroundRefresh';
 import { getOrCreateConversationForClient } from '../../services/chat';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { notifyError } from '../../utils/errorUtils';
+import { buildOrderAlertAnnouncement } from '../../utils/orderSpeech';
 
 // ─── Icônes état vide ─────────────────────────────────────────────────────────
 
@@ -121,6 +124,7 @@ export default function OrdersScreen({ onBack, initialTab, onOpenChat }: Props) 
   const refuseOrder = useOrdersStore(s => s.refuseOrder);
   const addOrder = useOrdersStore(s => s.addOrder);
   const loadOrders = useOrdersStore(s => s.loadOrders);
+  const announceEnabled = useSpeechStore(s => s.announceEnabled);
 
   const [activeTab, setActiveTab] = useState<MerchantTab>(initialTab ?? 'new');
   const [acceptTarget, setAcceptTarget] = useState<IncomingOrder | null>(null);
@@ -172,12 +176,16 @@ export default function OrdersScreen({ onBack, initialTab, onOpenChat }: Props) 
     setRefreshing(false);
   }, [shopId, loadOrders]);
 
-  // Nouvelle commande en temps réel → vibration + bascule sur l'onglet Nouvelles
+  // Nouvelle commande en temps réel → vibration + TTS auto + bascule sur l'onglet Nouvelles
   const handleNewOrder = useCallback(
     (order: IncomingOrder) => {
       addOrder(order);
       Vibration.vibrate(400);
       setActiveTab('new');
+      if (useSpeechStore.getState().announceEnabled) {
+        Speech.stop();
+        Speech.speak(buildOrderAlertAnnouncement(order), { language: 'fr-FR' });
+      }
     },
     [addOrder],
   );

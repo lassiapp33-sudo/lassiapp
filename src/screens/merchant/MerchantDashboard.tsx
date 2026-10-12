@@ -18,6 +18,7 @@ import useOrdersStore from '../../store/ordersStore';
 import useDebtsStore from '../../store/debtsStore';
 import useNotificationsStore from '../../store/notificationsStore';
 import useLocationStore from '../../store/locationStore';
+import useSpeechStore from '../../store/speechStore';
 import { supabase } from '../../lib/supabase';
 import { useForegroundRefresh } from '../../hooks/useForegroundRefresh';
 
@@ -124,6 +125,7 @@ export default function MerchantDashboard({ onNavigate, onOrderPress, onNotifPre
     loadMyShop();
     loadNotifications();
     refreshLocation();
+    useSpeechStore.getState().loadAnnouncePreference();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
