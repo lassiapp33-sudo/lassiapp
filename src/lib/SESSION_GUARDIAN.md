@@ -28,6 +28,14 @@ getValidToken()
 4. `safeGetSession(20_000)` — NE PAS baisser en dessous de 20s.
 5. L'AppState listener doit garder `startAutoRefresh()` + `_silentRefresh()` proactif.
 6. `stopAutoRefresh()` en background EST intentionnel (économie batterie).
+7. **NE PAS effacer `_cachedToken` dans le listener `onAuthStateChange` sur SIGNED_OUT involontaire.**
+   - Proxy "explicit" : `logout()` appelle `setCachedToken(null)` AVANT `signOut()`.
+   - Si `_cachedToken === null` quand SIGNED_OUT arrive → logout explicit → OK effacer SESSION_ACTIVE_KEY.
+   - Si `_cachedToken !== null` → SIGNED_OUT involontaire (réseau/reuse) → token préservé jusqu'à exp 24h.
+8. **`onSessionExpired` ne doit PAS être appelé sur panne réseau** — uniquement sur erreur auth 4xx.
+   - `_lastRefreshWasAuthError = true` → vraie session morte → déconnecter.
+   - `_lastRefreshWasAuthError = false` → réseau indispo → throw sans déconnecter.
+9. `logout()` dans `auth.ts` doit TOUJOURS appeler `setCachedToken(null)` AVANT `signOut()`.
 
 ## Action Supabase dashboard obligatoire
 

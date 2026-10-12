@@ -72,14 +72,31 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
 // Token caché : mis à jour à chaque changement d'état auth (login, refresh, logout).
 let _cachedToken: string | null = null;
 supabase.auth.onAuthStateChange((_event, session) => {
-  _cachedToken = session?.access_token ?? null;
-  if (Platform.OS !== 'web') {
-    if (session?.access_token) {
+  if (session?.access_token) {
+    _cachedToken = session.access_token;
+    if (Platform.OS !== 'web') {
       AsyncStorage.setItem(SESSION_ACTIVE_KEY, '1').catch(() => {});
-    } else if (_event === 'SIGNED_OUT') {
+      try { supabase.realtime.setAuth(session.access_token); } catch { /* noop */ }
+    }
+  } else if (_event === 'SIGNED_OUT') {
+    // ── SESSION GUARDIAN — RÈGLE CRITIQUE ──────────────────────────────────
+    // Sur SIGNED_OUT involontaire (réseau instable Sénégal / refresh_token reuse
+    // détecté car la réponse n'est jamais arrivée) : NE PAS effacer _cachedToken.
+    // Avec JWT 24h (obligatoire dans le dashboard Supabase), l'access_token reste
+    // valide jusqu'à son exp naturel — getValidToken() niveau 1 continue à servir
+    // toutes les requêtes API sans interruption.
+    //
+    // Proxy "explicit" : logout() appelle setCachedToken(null) AVANT signOut(),
+    // donc quand cet événement arrive, _cachedToken est déjà null si et seulement
+    // si c'est un logout voulu par l'utilisateur.
+    const wasExplicit = _cachedToken === null;
+    if (wasExplicit && Platform.OS !== 'web') {
       AsyncStorage.removeItem(SESSION_ACTIVE_KEY).catch(() => {});
     }
-    try { supabase.realtime.setAuth(session?.access_token ?? null); } catch { /* noop */ }
+    if (Platform.OS !== 'web') {
+      try { supabase.realtime.setAuth(wasExplicit ? null : _cachedToken); } catch { /* noop */ }
+    }
+    // ────────────────────────────────────────────────────────────────────────
   }
 });
 
@@ -102,11 +119,17 @@ function isJwtFresh(token: string, skewSec = 60): boolean {
   }
 }
 
+// Indique si le dernier _silentRefresh() a échoué sur une vraie erreur auth (4xx)
+// vs une panne réseau (timeout/exception). Utilisé par getValidToken() pour décider
+// si on doit déconnecter l'utilisateur ou juste laisser l'erreur se propager.
+let _lastRefreshWasAuthError = false;
+
 // Refresh silencieux avec 3 tentatives + backoff exponentiel.
 // Stop immédiatement sur erreur serveur (4xx) pour éviter la détection de reuse
 // du refresh_token : si le serveur a déjà roté le token mais qu'on n'a pas reçu
 // la réponse (coupure réseau Android), relancer déclenche SIGNED_OUT côté Supabase.
 async function _silentRefresh(): Promise<string | null> {
+  _lastRefreshWasAuthError = false;
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt > 0) await new Promise(r => setTimeout(r, 1_500 * attempt));
     try {
@@ -115,8 +138,11 @@ async function _silentRefresh(): Promise<string | null> {
         setCachedToken(data.session.access_token);
         return data.session.access_token;
       }
-      // Erreur serveur (token révoqué, reuse détecté, session inconnue) → pas la peine de réessayer
-      if (error?.status && error.status >= 400 && error.status < 500) break;
+      // Erreur serveur (token révoqué, reuse détecté, session inconnue, pas de session) → stop
+      if (error?.status && error.status >= 400 && error.status < 500) {
+        _lastRefreshWasAuthError = true;
+        break;
+      }
     } catch { /* réseau indisponible — on réessaie */ }
   }
   return null;
@@ -197,10 +223,16 @@ export async function getValidToken(): Promise<string> {
   if (refreshed) return refreshed;
 
   // eslint-disable-next-line no-console
-  console.error('[LASSI] getValidToken ECHEC — cached=', !!getCachedToken(), 'session=', !!session, 'time=', new Date().toISOString());
-  // Notifie l'app → navigation vers login (enregistré via onSessionExpired)
-  _sessionExpiredCallbacks.forEach(cb => { try { cb(); } catch {} });
-  throw new Error('Session expirée — reconnecte-toi.');
+  console.error('[LASSI] getValidToken ECHEC — authErr=', _lastRefreshWasAuthError, 'cached=', !!getCachedToken(), 'session=', !!session, 'time=', new Date().toISOString());
+
+  // SESSION GUARDIAN — NE DÉCONNECTER QUE SUR VRAIE ERREUR AUTH (4xx Supabase).
+  // Panne réseau (timeout, ECONNREFUSED) → _lastRefreshWasAuthError = false → on laisse
+  // l'erreur remonter à l'appelant sans kicker l'utilisateur. La session Supabase n'est
+  // pas morte : dès que le réseau revient, le prochain appel ou le watchdog refreshera.
+  if (_lastRefreshWasAuthError) {
+    _sessionExpiredCallbacks.forEach(cb => { try { cb(); } catch {} });
+  }
+  throw new Error(_lastRefreshWasAuthError ? 'Session expirée — reconnecte-toi.' : 'Réseau indisponible — réessaie.');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
