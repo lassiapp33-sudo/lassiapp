@@ -179,7 +179,8 @@ Deno.serve(async (req) => {
     if (!confirmed && pi.moyen_paiement === 'orange_money' && pi.external_ref && IS_OM_READY) {
       try {
         const omToken = await getOmToken();
-        const ref = encodeURIComponent(pi.external_ref as string);
+        const extRef = pi.external_ref as string;
+        const ref = encodeURIComponent(extRef);
         const r = await fetch(`${OM_BASE_URL}/api/eWallet/v4/qrcode/${ref}`, {
           headers: { Authorization: `Bearer ${omToken}` },
         });
@@ -191,7 +192,10 @@ Deno.serve(async (req) => {
             odData.status ?? odData.txStatus ?? odData.paymentStatus ?? ''
           ).toUpperCase();
           confirmed = ['PAID', 'COMPLETED', 'SUCCESS', 'SUCCESSFULL', 'SUCCESSFUL', 'PAYMENT_SUCCESS'].includes(st);
-          console.log('[create-guest-order] verify_order OM:', { vord, st, confirmed, keys: Object.keys(od) });
+          console.log('[create-guest-order] verify_order OM ok:', JSON.stringify({ vord, st, confirmed, keys: Object.keys(od), odData_keys: Object.keys(odData) }));
+        } else {
+          const errBody = await r.text().catch(() => '');
+          console.error('[create-guest-order] verify_order OM GET échoué:', JSON.stringify({ vord, status: r.status, extRef, isFallbackUUID: extRef === pi.id, errBody: errBody.slice(0, 200) }));
         }
       } catch (e) {
         console.error('[create-guest-order] verify_order OM erreur:', e instanceof Error ? e.message : e);
@@ -462,11 +466,18 @@ Deno.serve(async (req) => {
         const d = await resp.json();
         const deepLink = d.deepLinks?.OM ?? d.deepLink ?? null;
         const qrCode   = d.qrCode ?? null;
+        const omExtRef = d.orderId ?? d.id ?? d.payToken ?? null;
+        console.log('[create-guest-order] OM QR créé:', JSON.stringify({
+          piId, keys: Object.keys(d),
+          orderId: d.orderId, id: d.id, payToken: d.payToken,
+          extRefUsed: omExtRef ?? piId,
+          fallbackToPiId: !omExtRef,
+        }));
         if (!deepLink && !qrCode) {
           await admin.from('payment_intents').update({ statut: 'failed', updated_at: new Date().toISOString() }).eq('id', piId);
           return err('QR Orange Money indisponible. Réessaie ou choisis Wave.', 502);
         }
-        await admin.from('payment_intents').update({ statut: 'initiated', external_ref: d.orderId ?? d.id ?? d.payToken ?? piId, updated_at: new Date().toISOString() }).eq('id', piId);
+        await admin.from('payment_intents').update({ statut: 'initiated', external_ref: omExtRef ?? piId, updated_at: new Date().toISOString() }).eq('id', piId);
         return json({ success: true, orderId, montantTotal, redirectUrl: deepLink, qrCode, mode: 'production' });
 
       } else {

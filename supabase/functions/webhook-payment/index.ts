@@ -430,7 +430,8 @@ serve(async (req) => {
     }
 
     // pi_id : depuis l'URL (notificationUrl dynamique) OU depuis metadata (URL statique portail OM)
-    const piIdFromUrl  = url.searchParams.get('pi_id') ?? '';
+    // OM peut HTML-encoder & → &amp; dans le callback, d'où le fallback amp;pi_id (comme amp;secret)
+    const piIdFromUrl  = url.searchParams.get('pi_id') ?? url.searchParams.get('amp;pi_id') ?? '';
     const piIdFromBody = (omPayload.metadata as Record<string, unknown> | undefined)?.pi_id as string | undefined ?? '';
     const piId = isUUID(piIdFromUrl) ? piIdFromUrl : isUUID(piIdFromBody) ? piIdFromBody : '';
 
