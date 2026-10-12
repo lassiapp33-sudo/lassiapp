@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Alert, AppState } from 'react-native';
+import { Alert, AppState, Vibration } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Speech from 'expo-speech';
+import { useRealtimeOrders } from '../../hooks/useRealtimeOrders';
+import { buildOrderAlertAnnouncement } from '../../utils/orderSpeech';
+import useSpeechStore from '../../store/speechStore';
+import useOrdersStore from '../../store/ordersStore';
 import MerchantDashboard from './MerchantDashboard';
 import MerchantProfileScreen from './MerchantProfileScreen';
 import MerchantMessagesScreen from './MerchantMessagesScreen';
@@ -122,6 +127,19 @@ export default function MerchantNavigator({ onLogout }: Props) {
   const [screen, setScreen] = useState<MerchantScreen>('dashboard');
   const shopId           = useShopStore(s => s.shopId);
   const shopSlug         = useShopStore(s => s.profile?.slug ?? null);
+
+  // Annonce vocale globale — actif quelle que soit l'écran affiché
+  const addOrder = useOrdersStore(s => s.addOrder);
+  const handleGlobalNewOrder = useCallback((order: import('../../types/orders').IncomingOrder) => {
+    addOrder(order);
+    Vibration.vibrate(400);
+    setScreen({ id: 'orders', initialTab: 'new' });
+    if (useSpeechStore.getState().announceEnabled) {
+      Speech.stop();
+      Speech.speak(buildOrderAlertAnnouncement(order), { language: 'fr-FR' });
+    }
+  }, [addOrder]);
+  useRealtimeOrders(shopId, handleGlobalNewOrder);
   const shopName         = useShopStore(s => s.profile?.name ?? 'Ma boutique');
   const shopSubcategories = useShopStore(s => s.context.subcategories ?? []);
 

@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Vibration,
   RefreshControl,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -19,16 +18,13 @@ import VerifyReceiptSheet from './VerifyReceiptSheet';
 import ClientRatingModal from '../../components/avis/ClientRatingModal';
 import { colors, fonts } from '../../theme';
 import { IncomingOrder, MerchantTab, OrderStatus } from '../../types/orders';
-import * as Speech from 'expo-speech';
 import useOrdersStore from '../../store/ordersStore';
 import useShopStore from '../../store/shopStore';
-import useSpeechStore from '../../store/speechStore';
 import { useRealtimeOrders } from '../../hooks/useRealtimeOrders';
 import { useForegroundRefresh } from '../../hooks/useForegroundRefresh';
 import { getOrCreateConversationForClient } from '../../services/chat';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { notifyError } from '../../utils/errorUtils';
-import { buildOrderAlertAnnouncement } from '../../utils/orderSpeech';
 
 // ─── Icônes état vide ─────────────────────────────────────────────────────────
 
@@ -122,9 +118,7 @@ export default function OrdersScreen({ onBack, initialTab, onOpenChat }: Props) 
   const setOrderStatus = useOrdersStore(s => s.setOrderStatus);
   const syncOrderStatus = useOrdersStore(s => s.syncOrderStatus);
   const refuseOrder = useOrdersStore(s => s.refuseOrder);
-  const addOrder = useOrdersStore(s => s.addOrder);
   const loadOrders = useOrdersStore(s => s.loadOrders);
-  const announceEnabled = useSpeechStore(s => s.announceEnabled);
 
   const [activeTab, setActiveTab] = useState<MerchantTab>(initialTab ?? 'new');
   const [acceptTarget, setAcceptTarget] = useState<IncomingOrder | null>(null);
@@ -176,18 +170,13 @@ export default function OrdersScreen({ onBack, initialTab, onOpenChat }: Props) 
     setRefreshing(false);
   }, [shopId, loadOrders]);
 
-  // Nouvelle commande en temps réel → vibration + TTS auto + bascule sur l'onglet Nouvelles
-  const handleNewOrder = useCallback(
-    (order: IncomingOrder) => {
-      addOrder(order);
-      Vibration.vibrate(400);
+  // Quand une commande arrive pendant que cet écran est ouvert → basculer sur Nouvelles
+  // (addOrder + speech + vibration sont gérés par MerchantNavigator, toujours actif)
+  const handleNewOrderLocal = useCallback(
+    (_order: IncomingOrder) => {
       setActiveTab('new');
-      if (useSpeechStore.getState().announceEnabled) {
-        Speech.stop();
-        Speech.speak(buildOrderAlertAnnouncement(order), { language: 'fr-FR' });
-      }
     },
-    [addOrder],
+    [],
   );
 
   // Changement de statut en temps réel — statut déjà confirmé côté serveur
@@ -201,7 +190,7 @@ export default function OrdersScreen({ onBack, initialTab, onOpenChat }: Props) 
     [syncOrderStatus],
   );
 
-  useRealtimeOrders(shopId, handleNewOrder, handleStatusChange);
+  useRealtimeOrders(shopId, handleNewOrderLocal, handleStatusChange);
 
   // Compteurs par onglet
   const counts: Record<MerchantTab, number> = {
