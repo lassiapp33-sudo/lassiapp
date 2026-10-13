@@ -20,7 +20,6 @@ import { colors, fonts } from '../../theme';
 import { IncomingOrder, MerchantTab, OrderStatus } from '../../types/orders';
 import useOrdersStore from '../../store/ordersStore';
 import useShopStore from '../../store/shopStore';
-import { useRealtimeOrders } from '../../hooks/useRealtimeOrders';
 import { useForegroundRefresh } from '../../hooks/useForegroundRefresh';
 import { getOrCreateConversationForClient } from '../../services/chat';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -116,7 +115,6 @@ export default function OrdersScreen({ onBack, initialTab, onOpenChat }: Props) 
   const orders = useOrdersStore(s => s.orders);
   const loading = useOrdersStore(s => s.loading);
   const setOrderStatus = useOrdersStore(s => s.setOrderStatus);
-  const syncOrderStatus = useOrdersStore(s => s.syncOrderStatus);
   const refuseOrder = useOrdersStore(s => s.refuseOrder);
   const loadOrders = useOrdersStore(s => s.loadOrders);
 
@@ -170,27 +168,8 @@ export default function OrdersScreen({ onBack, initialTab, onOpenChat }: Props) 
     setRefreshing(false);
   }, [shopId, loadOrders]);
 
-  // Quand une commande arrive pendant que cet écran est ouvert → basculer sur Nouvelles
-  // (addOrder + speech + vibration sont gérés par MerchantNavigator, toujours actif)
-  const handleNewOrderLocal = useCallback(
-    (_order: IncomingOrder) => {
-      setActiveTab('new');
-    },
-    [],
-  );
-
-  // Changement de statut en temps réel — statut déjà confirmé côté serveur
-  const handleStatusChange = useCallback(
-    (orderId: string, status: string) => {
-      const valid: OrderStatus[] = ['new', 'preparing', 'ready', 'done', 'refused'];
-      if (valid.includes(status as OrderStatus)) {
-        syncOrderStatus(orderId, status as OrderStatus);
-      }
-    },
-    [syncOrderStatus],
-  );
-
-  useRealtimeOrders(shopId, handleNewOrderLocal, handleStatusChange);
+  // useRealtimeOrders déjà actif dans MerchantNavigator (channel partagé) —
+  // le monter ici aussi causait "cannot add callbacks after subscribe()" → ErrorBoundary.
 
   // Compteurs par onglet
   const counts: Record<MerchantTab, number> = {
