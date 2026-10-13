@@ -313,6 +313,15 @@ function AppContent() {
           sound:             'default',
           enableVibrate:     true,
         }).catch(() => {});
+        // commandes-v3 : son vocal bundlé (actif après rebuild)
+        N.setNotificationChannelAsync('commandes-v3', {
+          name:              'Commandes (son vocal)',
+          importance:        N.AndroidImportance.MAX,
+          vibrationPattern:  [0, 300, 200, 300],
+          lightColor:        '#FDCF34',
+          sound:             'commande_recue',
+          enableVibrate:     true,
+        }).catch(() => {});
         N.setNotificationChannelAsync('messages-v2', {
           name:          'Messages',
           importance:    N.AndroidImportance.HIGH,
@@ -367,8 +376,10 @@ function AppContent() {
             data?.type === 'commande'  ||
             title.toLowerCase().includes('commande');
           if (isOrder) {
+            const opts = { language: 'fr-FR', rate: 0.85, pitch: 1.1, volume: 1 } as const;
             Speech.stop();
-            Speech.speak('Nouvelle commande reçue', { language: 'fr-FR', rate: 0.9 });
+            Speech.speak('Nouvelle commande reçue', opts);
+            setTimeout(() => { try { Speech.speak('Nouvelle commande reçue', opts); } catch { /* ignore */ } }, 2500);
           }
         } catch { /* best-effort */ }
       });

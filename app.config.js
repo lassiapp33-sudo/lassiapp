@@ -207,7 +207,7 @@ module.exports = withSecurityPlugins({
         {
           icon: "./assets/icon.png",
           color: "#14152A",
-          sounds: [],
+          sounds: ["./assets/audio/commande_recue.wav"],
         },
       ],
       "expo-secure-store",

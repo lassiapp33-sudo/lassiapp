@@ -42,7 +42,11 @@ if (Platform.OS === 'android') try {
         try {
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           const Speech = require('expo-speech') as typeof import('expo-speech');
-          Speech.speak('Nouvelle commande reçue', { language: 'fr-FR', rate: 0.9 });
+          const opts = { language: 'fr-FR', rate: 0.85, pitch: 1.1, volume: 1 };
+          Speech.stop();
+          Speech.speak('Nouvelle commande reçue', opts);
+          // Répétition après 2.5s — plus difficile à rater
+          setTimeout(() => { try { Speech.speak('Nouvelle commande reçue', opts); } catch { /* ignore */ } }, 2500);
         } catch { /* best-effort */ }
       }
 

@@ -85,6 +85,10 @@ serve(async (req) => {
     }
 
     // 5. Envoyer via Expo Push API (tous les appareils du destinataire)
+    // new_order → son vocal bundlé dans l'APK/IPA (rebuild requis pour l'activer)
+    const isOrderType  = type === 'new_order';
+    const notifSound   = isOrderType ? 'commande_recue.wav' : 'default';
+    const notifChannel = isOrderType ? 'commandes-v3' : (channelId ?? 'commandes-v2');
     const expoRes = await fetch(EXPO_PUSH_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -93,8 +97,8 @@ serve(async (req) => {
         title,
         body,
         data:              data ?? {},
-        sound:             'default',
-        channelId:         channelId ?? 'commandes-v2',
+        sound:             notifSound,
+        channelId:         notifChannel,
         priority:          'high',
         _contentAvailable: false,
       }))),
