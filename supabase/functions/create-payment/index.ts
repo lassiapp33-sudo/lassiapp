@@ -109,19 +109,22 @@ serve(async (req) => {
 
     // ── Flux ORDER : créer payment_intent via RPC ─────────────────────────────
     if (isOrderFlow) {
-      const { data: piId, error: piErr } = await sb.rpc('create_payment_intent', {
-        p_order_id:        body.orderId,
-        p_client_id:       user.id,
-        p_prestataire_id:  body.prestataireId,
-        p_prix_base:       amount,
-        p_moyen_paiement:  moyen,
-        p_idempotency_key: idempotencyKey,
+      // initiate_order_payment = même RPC que create-guest-order (validé prod)
+      // recalcule montant+commission depuis l'order → pas besoin de prix_base côté client
+      const { data: init, error: piErr } = await sb.rpc('initiate_order_payment', {
+        p_order_id:       body.orderId,
+        p_client_id:      user.id,
+        p_moyen_paiement: moyen,
       });
 
-      if (piErr || !piId) {
-        console.error('[create-payment] create_payment_intent error:', piErr?.message);
+      if (piErr || !init?.ok) {
+        console.error('[create-payment] initiate_order_payment error:', piErr?.message ?? init?.error);
         return fail('Impossible de créer le paiement', 500);
       }
+
+      const piId       = init.payment_intent_id as string;
+      const montantPI  = init.montant_total     as number;
+      const commissionPI = montantPI - (init.prix_base as number ?? amount);
 
       const methodSim = method === 'wave' ? isWaveSimulation() : isOmSimulation();
 
@@ -141,14 +144,14 @@ serve(async (req) => {
           simulation:       true,
           mode:             'simulation' as const,
           prixBase:         amount,
-          commission,
-          montantTotal:     amount + commission,
+          commission:       commissionPI,
+          montantTotal:     montantPI,
         };
         await setIdempotency(sb, idempotencyKey, result);
         await logEvent(sb, {
           event_type: 'create_success',
           reference:  piId, ticket_id: ticketId, user_id: user.id,
-          amount, commission, method: provider, provider: 'simulation',
+          amount, commission: commissionPI, method: provider, provider: 'simulation',
           status: 'simulated',
         });
         return ok(result);
@@ -159,9 +162,9 @@ serve(async (req) => {
       let qrCode: string | null = null;
       try {
         if (method === 'wave') {
-          paymentUrl = await createWaveSession({ amount: amount + commission, reference: piId, merchantName });
+          paymentUrl = await createWaveSession({ amount: montantPI, reference: piId, merchantName });
         } else {
-          const om = await createOmSession({ amount: amount + commission, piId });
+          const om = await createOmSession({ amount: montantPI, piId });
           paymentUrl = om.deepLink;
           qrCode     = om.qrCode;
         }
@@ -192,8 +195,8 @@ serve(async (req) => {
         simulation:      false,
         mode:            'production' as const,
         prixBase:        amount,
-        commission,
-        montantTotal:    amount + commission,
+        commission:      commissionPI,
+        montantTotal:    montantPI,
       };
       try {
         await sb.from('payment_intents').update({
