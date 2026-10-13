@@ -69,7 +69,8 @@ export const initierPaiement = async (params: {
   useConnectionStore.getState().setOffline(false);
 
   if (error || (!data?.success && !data?.paymentIntentId)) {
-    return { success: false, error: error?.message ?? data?.error ?? 'Erreur paiement' };
+    // FunctionsHttpError.context contient le body parsé par le SDK
+    return { success: false, error: data?.error ?? error?.message ?? 'Erreur paiement' };
   }
 
   return {
