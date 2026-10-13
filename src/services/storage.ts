@@ -120,25 +120,17 @@ export async function uploadImage(
   // 1. Compression avant envoi
   const compressedUri = await compressImage(localUri);
 
-  // 2. Lecture base64 → Uint8Array (fetch(file://).arrayBuffer() renvoie vide sur Android)
-  const base64 = await FileSystem.readAsStringAsync(compressedUri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-
-  // 3. JWT utilisateur
+  // 2. JWT utilisateur
   const { data: sessData } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
   const session = sessData?.session ?? null;
   if (!session?.access_token) throw new Error('Non connecté');
 
-  // 4. Upload via Edge Function (service_role côté serveur = bypass schema check)
+  // 3. Upload via Edge Function — FileSystem.uploadAsync évite le bug Android où
+  //    fetch(body: Uint8Array) envoie un body vide sur Hermes.
   const fnUrl = `${SUPABASE_URL}/functions/v1/upload-image`;
-  const uploadRes = await fetch(fnUrl, {
-    method: 'POST',
+  const uploadRes = await FileSystem.uploadAsync(fnUrl, compressedUri, {
+    httpMethod: 'POST',
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
     headers: {
       Authorization: `Bearer ${session.access_token}`,
       apikey: SUPABASE_ANON,
@@ -146,11 +138,10 @@ export async function uploadImage(
       'x-bucket': bucket,
       'x-path': path,
     },
-    body: bytes,
   });
 
-  const result = await uploadRes.json() as { url?: string; error?: string };
-  if (!uploadRes.ok || !result.url) {
+  const result = JSON.parse(uploadRes.body) as { url?: string; error?: string };
+  if (uploadRes.status < 200 || uploadRes.status >= 300 || !result.url) {
     throw new Error(`Upload échoué : ${result.error ?? uploadRes.status}`);
   }
 
