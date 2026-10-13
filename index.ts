@@ -27,18 +27,26 @@ if (Platform.OS === 'android') try {
 
   messaging().setBackgroundMessageHandler(async (msg: Record<string, any>) => {
     try {
-      // Expo Push → FCM data mapping:
-      //   msg.data.title   = notification title
-      //   msg.data.message = notification body (NOT msg.data.body)
-      //   msg.data.body    = stringified JSON of the Expo 'data' payload
       const title = (msg.notification?.title ?? msg.data?.title ?? 'LASSI') as string;
       const body  = (msg.notification?.body  ?? msg.data?.message ?? '') as string;
       let notifData: Record<string, unknown> = {};
       try { notifData = JSON.parse((msg.data?.body as string) ?? '{}'); } catch { /* ignore */ }
 
+      const isOrderNotif =
+        notifData.type === 'new_order' ||
+        notifData.type === 'commande'  ||
+        (title ?? '').toLowerCase().includes('commande');
+
+      // Annonce vocale Android arrière-plan (TextToSpeech = service système, fonctionne en headless)
+      if (isOrderNotif) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const Speech = require('expo-speech') as typeof import('expo-speech');
+          Speech.speak('Nouvelle commande reçue', { language: 'fr-FR', rate: 0.9 });
+        } catch { /* best-effort */ }
+      }
+
       // Annuler la notification silencieuse Firebase AVANT d'afficher la nôtre
-      // (évite le doublon : Firebase crée FCM-Notification sans son, on crée la
-      // vraie avec son via scheduleNotificationAsync)
       try {
         const { NativeModules } = require('react-native');
         NativeModules.ExpoNotificationsModule?.dismissAll?.();

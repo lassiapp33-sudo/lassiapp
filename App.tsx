@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, Platform, Text, AppState } from 'react-native';
+import * as Speech from 'expo-speech';
 
 
 // Désactive la sélection sur tous les Text de l'app → supprime les soulignements
@@ -346,6 +347,33 @@ function AppContent() {
 
       return () => { try { sub?.remove(); } catch (_) {} };
     } catch (_) {
+      return undefined;
+    }
+  }, []);
+
+  // Annonce vocale iOS foreground : déclenche Speech quand une notif commande arrive
+  // (le MerchantNavigator fait la même chose via Realtime, mais ce listener couvre
+  // le cas où le prestataire est sur un autre écran et n'a pas le Realtime actif)
+  useEffect(() => {
+    try {
+      const N = getN();
+      if (!N || Platform.OS !== 'ios') return;
+      const sub = N.addNotificationReceivedListener((notification) => {
+        try {
+          const data = notification.request.content.data as Record<string, any>;
+          const title = (notification.request.content.title ?? '') as string;
+          const isOrder =
+            data?.type === 'new_order' ||
+            data?.type === 'commande'  ||
+            title.toLowerCase().includes('commande');
+          if (isOrder) {
+            Speech.stop();
+            Speech.speak('Nouvelle commande reçue', { language: 'fr-FR', rate: 0.9 });
+          }
+        } catch { /* best-effort */ }
+      });
+      return () => { try { sub.remove(); } catch { /* ignore */ } };
+    } catch {
       return undefined;
     }
   }, []);
