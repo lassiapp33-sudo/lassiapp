@@ -49,7 +49,8 @@ export async function createPayment(params: {
           method: 'POST',
           headers: await authHeaders(),
           body: JSON.stringify({
-            orderId: params.ticketId,
+            orderId:      params.ticketId,
+            amount:       params.amount,
             moyenPaiement,
             idempotencyKey,
           }),
