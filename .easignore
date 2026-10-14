@@ -8,7 +8,6 @@ KEY/
 
 # Contenus marketing et médias lourds
 contenu-reseaux-sociaux/
-*.wav
 *.mp4
 tmp_wapp.jpeg
 
