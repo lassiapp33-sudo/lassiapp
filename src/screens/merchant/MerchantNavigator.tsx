@@ -215,6 +215,17 @@ export default function MerchantNavigator({ onLogout }: Props) {
   useRealtimeNotifications(userId, notif => {
     addNotif(notif);
     if (shouldShowCard(notif.type)) enqueueCard(notif);
+    const isReservation =
+      notif.type === 'beauty_reservation' ||
+      notif.type === 'beauty_reservation_paye' ||
+      notif.type === 'beauty_acces_valide' ||
+      notif.type === 'table_reservation_nouvelle' ||
+      notif.type === 'terrain_reservation_paye' ||
+      notif.type === 'reservation_terrain';
+    if (isReservation && useSpeechStore.getState().announceEnabled) {
+      Speech.stop();
+      Speech.speak('Nouvelle réservation reçue !', { language: 'fr-FR' });
+    }
   });
 
   // Démarrage : badge + cartes pour les notifs non lues importantes (un seul appel DB)
