@@ -136,7 +136,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
     setScreen({ id: 'orders', initialTab: 'new' });
     if (useSpeechStore.getState().announceEnabled) {
       Speech.stop();
-      Speech.speak(buildOrderAlertAnnouncement(order), { language: 'fr-FR' });
+      Speech.speak(buildOrderAlertAnnouncement(order), { language: 'fr-FR', volume: 1.0, pitch: 1.0, rate: 0.9 });
     }
   }, [addOrder]);
   useRealtimeOrders(shopId, handleGlobalNewOrder);
@@ -224,7 +224,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
       notif.type === 'reservation_terrain';
     if (isReservation && useSpeechStore.getState().announceEnabled) {
       Speech.stop();
-      Speech.speak('Nouvelle réservation reçue !', { language: 'fr-FR' });
+      Speech.speak('Nouvelle réservation reçue !', { language: 'fr-FR', volume: 1.0, pitch: 1.0, rate: 0.9 });
     }
   });
 
