@@ -7,7 +7,6 @@ import React from 'react';
 import Svg, { Path, Circle, Rect, Ellipse } from 'react-native-svg';
 
 const IMG_SOUPE      = require('../../assets/soupe_icon.webp');
-const IMG_NEXX_SOW   = require('../../assets/nexx_sow.webp');
 const IMG_JUS        = require('../../assets/jus_icon.webp');
 const IMG_SNACK      = require('../../assets/snack_icon.png');
 const IMG_BURGER     = require('../../assets/burger_icon.png');
@@ -229,46 +228,6 @@ const IcoEsthetique: React.FC<{ color: string }> = () =>
     }),
   );
 
-// Bol de bouilli (sombi/thiéré) avec vapeur et cuillère en bois
-const IcoSombiThiere: React.FC<{ color: string }> = () =>
-  React.createElement(
-    Svg,
-    { width: 36, height: 36, viewBox: '0 0 56 56' },
-    // Vapeur (3 volutes)
-    React.createElement(Path, {
-      d: 'M 18 14 C 18 10 22 10 22 6',
-      stroke: '#B0BEC5', strokeWidth: 2, fill: 'none', strokeLinecap: 'round', opacity: 0.7,
-    }),
-    React.createElement(Path, {
-      d: 'M 28 12 C 28 8 32 8 32 4',
-      stroke: '#B0BEC5', strokeWidth: 2, fill: 'none', strokeLinecap: 'round', opacity: 0.7,
-    }),
-    React.createElement(Path, {
-      d: 'M 38 14 C 38 10 42 10 42 6',
-      stroke: '#B0BEC5', strokeWidth: 2, fill: 'none', strokeLinecap: 'round', opacity: 0.7,
-    }),
-    // Bol extérieur (argile brun-rouge)
-    React.createElement(Path, {
-      d: 'M 6 26 C 6 42 14 52 28 52 C 42 52 50 42 50 26 Z',
-      fill: '#8D4E28',
-    }),
-    // Bouilli à l'intérieur (millet jaune crème)
-    React.createElement(Ellipse, { cx: 28, cy: 26, rx: 22, ry: 7, fill: '#F0D080' }),
-    // Texture du bouilli (grains)
-    React.createElement(Ellipse, { cx: 20, cy: 25, rx: 2.5, ry: 1.5, fill: '#D4A830', opacity: 0.6 }),
-    React.createElement(Ellipse, { cx: 28, cy: 24, rx: 2.5, ry: 1.5, fill: '#D4A830', opacity: 0.6 }),
-    React.createElement(Ellipse, { cx: 36, cy: 25, rx: 2.5, ry: 1.5, fill: '#D4A830', opacity: 0.6 }),
-    React.createElement(Ellipse, { cx: 24, cy: 28, rx: 2, ry: 1.2, fill: '#D4A830', opacity: 0.45 }),
-    React.createElement(Ellipse, { cx: 32, cy: 28, rx: 2, ry: 1.2, fill: '#D4A830', opacity: 0.45 }),
-    // Bord du bol (rebord épais)
-    React.createElement(Ellipse, { cx: 28, cy: 26, rx: 22, ry: 7, fill: 'none', stroke: '#6D3318', strokeWidth: 2.5 }),
-    // Cuillère en bois (posée sur le bol)
-    React.createElement(Path, {
-      d: 'M 42 18 L 52 8',
-      stroke: '#A0631A', strokeWidth: 3.5, strokeLinecap: 'round',
-    }),
-    React.createElement(Ellipse, { cx: 40, cy: 21, rx: 4, ry: 3, fill: '#C07828' }),
-  );
 
 // ─── Stores ────────────────────────────────────────────────────────────────────
 
@@ -731,23 +690,6 @@ const ALL_CATEGORIES: CatConfig[] = [
     subcatMode: 'multiple',
     subcats: [
       {
-        id: 'nexx_sow',
-        emoji: '🥛',
-        label: 'Nexx sow',
-        desc: 'Lait frais, produits laitiers',
-        imageUri: IMG_NEXX_SOW,
-        imageSize: 60,
-        hidden: true,
-      },
-      {
-        id: 'sombi_ak_thiere',
-        emoji: '🥣',
-        label: 'Sombi ak Thiéré',
-        desc: 'Sombi, thiéré, céréales traditionnelles',
-        SvgIcon: IcoSombiThiere,
-        hidden: true,
-      },
-      {
         id: 'alimentation',
         emoji: '🛒',
         label: 'Alimentation / Boutique',
@@ -765,13 +707,6 @@ const ALL_CATEGORIES: CatConfig[] = [
         emoji: '👗',
         label: 'Habillement',
         desc: 'Vêtements, chaussures, accessoires mode',
-      },
-      {
-        id: 'quincaillerie',
-        emoji: '🔧',
-        label: 'Quincaillerie',
-        desc: 'Outils, matériaux, bricolage',
-        hidden: true,
       },
     ],
     renderIcon: (color, size = 24) =>
