@@ -143,7 +143,7 @@ export default function AuthNavigator({ onComplete, onGuest }: Props) {
             onComplete(user.role);
           }}
           onForgotPassword={() => push({ id: 'forgotPassword' })}
-          onRegister={pop}
+          onRegister={() => push({ id: 'role' })}
         />
       );
       break;
