@@ -53,70 +53,54 @@ serve(async (req) => {
 
     const isMerchant = profile?.role === 'merchant';
 
-    // ── 3. Commerçant : purge manuelle avant suppression boutique ─────────
+    // ── 3. Commerçant : purge manuelle avant suppression boutique(s) ─────────
     if (isMerchant) {
-      // Récupérer l'id de la boutique
-      const { data: shop } = await sb
+      // Récupérer TOUTES les boutiques (multi-compte : jusqu'à 3 shops par uid)
+      const { data: shops } = await sb
         .from('shops')
         .select('id')
-        .eq('merchant_id', userId)
-        .single();
+        .eq('merchant_id', userId);
 
-      if (shop?.id) {
-        const shopId = shop.id;
+      const shopIds = (shops ?? []).map((s: { id: string }) => s.id);
 
-        // Récupérer les order_ids de cette boutique
+      if (shopIds.length > 0) {
+        // Récupérer les order_ids de TOUTES les boutiques
         const { data: orders } = await sb
           .from('orders')
           .select('id')
-          .eq('shop_id', shopId);
+          .in('shop_id', shopIds);
 
         const orderIds = (orders ?? []).map((o: { id: string }) => o.id);
 
         if (orderIds.length > 0) {
-          // Supprimer payment_intents liés à ces commandes (bloque le CASCADE sinon)
           await sb.from('payment_intents').delete().in('order_id', orderIds);
-          // Supprimer order_ratings liés
           await sb.from('order_ratings').delete().in('order_id', orderIds);
         }
 
-        // Supprimer abonnements fitness liés à la boutique
-        await sb.from('abonnements').delete().eq('shop_id', shopId);
+        // Supprimer abonnements fitness liés aux boutiques
+        await sb.from('abonnements').delete().in('shop_id', shopIds);
 
-        // Supprimer réservations terrain liées à la boutique
-        await sb.from('reservations_terrain').delete().eq('shop_id', shopId);
+        // Supprimer réservations terrain liées aux boutiques
+        await sb.from('reservations_terrain').delete().in('shop_id', shopIds);
+      }
 
-        // Supprimer réservations de table liées au prestataire
-        await sb.from('table_reservations').delete().eq('prestataire_id', userId);
+      // Purges liées à userId (indépendantes du nombre de shops)
+      await sb.from('table_reservations').delete().eq('prestataire_id', userId);
+      await sb.from('payment_intents').delete().eq('prestataire_id', userId).neq('statut', 'confirmed');
+      await sb.from('beauty_reservations').delete().eq('prestataire_id', userId);
+      await sb.from('beauty_services').delete().eq('prestataire_id', userId);
+      await sb.from('fitness_abonnement_offres').delete().eq('prestataire_id', userId);
+      await sb.from('reservations_terrain').delete().eq('prestataire_id', userId);
+      await sb.from('terrains').delete().eq('prestataire_id', userId);
+      await sb.from('sponsored_ads').delete().eq('merchant_id', userId);
+      await sb.from('payment_intents').delete().eq('prestataire_id', userId);
 
-        // Supprimer payment_intents où prestataire_id = userId (fitness, table, visibilité)
-        await sb.from('payment_intents').delete().eq('prestataire_id', userId).neq('statut', 'confirmed');
-
-        // Supprimer réservations beauté liées au prestataire
-        await sb.from('beauty_reservations').delete().eq('prestataire_id', userId);
-
-        // Supprimer services beauté (prestataire_id → profiles, pas couverts par CASCADE shops)
-        await sb.from('beauty_services').delete().eq('prestataire_id', userId);
-
-        // Supprimer offres fitness (prestataire_id → profiles)
-        await sb.from('fitness_abonnement_offres').delete().eq('prestataire_id', userId);
-
-        // Supprimer terrains (prestataire_id → profiles, pas couverts par CASCADE shops)
-        await sb.from('reservations_terrain').delete().eq('prestataire_id', userId);
-        await sb.from('terrains').delete().eq('prestataire_id', userId);
-
-        // Supprimer annonces sponsorisées
-        await sb.from('sponsored_ads').delete().eq('merchant_id', userId);
-
-        // Supprimer TOUS les payment_intents prestataire (y compris confirmed)
-        await sb.from('payment_intents').delete().eq('prestataire_id', userId);
-
-        // Supprimer la boutique (CASCADE couvre produits, orders, order_items,
-        // dettes, debt_transactions, conversations, messages)
+      if (shopIds.length > 0) {
+        // Supprimer toutes les boutiques (CASCADE → produits, orders, items, dettes, conversations)
         const { error: shopErr } = await sb
           .from('shops')
           .delete()
-          .eq('id', shopId);
+          .in('id', shopIds);
 
         if (shopErr) {
           console.error('[delete-account] shops delete:', shopErr);

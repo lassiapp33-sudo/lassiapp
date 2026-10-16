@@ -41,11 +41,6 @@ export default function AccountSwitcherModal({
 
   const canAdd = myShops.length < 3;
 
-  const getCatEmoji = (catId: string): string => {
-    const cat = CATEGORIES.find(c => c.id === catId);
-    return cat?.emoji ?? '🏪';
-  };
-
   const getCatLabel = (catId: string): string => {
     const cat = CATEGORIES.find(c => c.id === catId);
     return cat?.label ?? catId;
@@ -91,7 +86,7 @@ export default function AccountSwitcherModal({
                         {item.name}
                       </Text>
                       <Text style={styles.shopCat}>
-                        {getCatEmoji(item.category)} {getCatLabel(item.category)}
+                        {getCatLabel(item.category)}
                       </Text>
                     </View>
                     {isActive && (

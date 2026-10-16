@@ -349,6 +349,8 @@ export async function createAdditionalShop(name: string, catId: string, subcats:
     description: null,
     address_text: firstShop?.addressText ?? null,
     zone: firstShop?.zone ?? 'Grand Dakar',
+    latitude: firstShop?.latitude ?? null,
+    longitude: firstShop?.longitude ?? null,
     is_open: true,
     phone: firstShop?.phone ?? null,
     opening_hours: null,
