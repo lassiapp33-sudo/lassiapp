@@ -113,10 +113,13 @@ const useShopStore = create<ShopState>()((set, get) => ({
   setProducts: p => set({ products: p }),
 
   loadMyShop: async (shopId?: string) => {
+    // Si pas d'argument explicite mais qu'un shop est déjà sélectionné (ex: après switchToShop),
+    // on recharge CE shop — pas le shop par défaut (premier du compte).
+    const effectiveShopId = shopId ?? get().shopId ?? undefined;
     set({ loading: true, shopNotFound: false });
     try {
       const shop = await Promise.race([
-        shopsService.getMyShop(shopId),
+        shopsService.getMyShop(effectiveShopId),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
       ]);
 

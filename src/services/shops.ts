@@ -327,7 +327,7 @@ export async function getMyShops(): Promise<ShopSummary[]> {
   }));
 }
 
-export async function createAdditionalShop(name: string, catId: string): Promise<Shop> {
+export async function createAdditionalShop(name: string, catId: string, subcats: string[] = []): Promise<Shop> {
   const userId = useAuthStore.getState().user?.id;
   if (!userId) throw new Error('Non connecté');
   const { count, error: countErr } = await supabase
@@ -344,7 +344,7 @@ export async function createAdditionalShop(name: string, catId: string): Promise
     name: name.trim(),
     subtitle: '',
     category: catId,
-    subcategories: [],
+    subcategories: subcats,
     shop_type: shopType,
     description: null,
     address_text: firstShop?.addressText ?? null,
