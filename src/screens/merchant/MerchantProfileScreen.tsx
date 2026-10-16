@@ -34,6 +34,8 @@ import { useT } from '../../i18n';
 import useLanguageStore from '../../store/languageStore';
 import { IcoBack } from '../../components/icons';
 import { ProfileOptionRow, profileRowStyles } from '../../components/common/ProfileOptionRow';
+import AccountSwitcherModal from './AccountSwitcherModal';
+import AddAccountScreen from './AddAccountScreen';
 import { ProfileIdCard } from '../../components/common/ProfileIdCard';
 import { getMonCarrouselQuota } from '../../services/classementService';
 import { getShopById } from '../../services/shops';
@@ -314,6 +316,15 @@ const IcoLock = () => (
   </Svg>
 );
 
+const IcoAccounts = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke={colors.accent} />
+    <Path d="M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8z" stroke={colors.accent} />
+    <Path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke={colors.accent} />
+    <Path d="M16 3.13a4 4 0 0 1 0 7.75" stroke={colors.accent} />
+  </Svg>
+);
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -327,6 +338,7 @@ interface Props {
   onPayments?: () => void;
   onMyOrders?: () => void;
   onLogout?: () => void;
+  onSwitchAccount?: () => void;
 }
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
@@ -342,6 +354,7 @@ export default function MerchantProfileScreen({
   onPayments,
   onMyOrders,
   onLogout,
+  onSwitchAccount,
 }: Props) {
   const t = useT();
   const lang = useLanguageStore(s => s.lang);
@@ -357,6 +370,8 @@ export default function MerchantProfileScreen({
   const [showLangModal, setShowLangModal] = useState(false);
   const [showAPropos, setShowAPropos] = useState(false);
   const [showSignaler, setShowSignaler] = useState(false);
+  const [showSwitcher, setShowSwitcher] = useState(false);
+  const [showAddAccount, setShowAddAccount] = useState(false);
   const [merchantRating, setMerchantRating] = useState<{ note: number; count: number } | null>(null);
   const [carrouselEligible, setCarrouselEligible] = useState(false);
   const [hasActiveSub, setHasActiveSub] = useState(false);
@@ -367,6 +382,7 @@ export default function MerchantProfileScreen({
   const user = useAuthStore(s => s.user);
   const updateProfile = useAuthStore(s => s.updateProfile);
   const shopId = useShopStore(s => s.shopId);
+  const myShops = useShopStore(s => s.myShops);
   const updateLogo = useShopStore(s => s.updateLogo);
   const isVip = useShopStore(s => s.profile.isVip ?? false);
   const shopSubcategories = useShopStore(s => s.context.subcategories);
@@ -374,6 +390,15 @@ export default function MerchantProfileScreen({
   const updatePaymentMethods = useShopStore(s => s.updatePaymentMethods);
   const announceEnabled = useSpeechStore(s => s.announceEnabled);
   const setAnnounceEnabled = useSpeechStore(s => s.setAnnounceEnabled);
+
+  useEffect(() => {
+    useShopStore.getState().loadMyShops();
+  }, []);
+
+  const handleSwitch = useCallback(async (newShopId: string) => {
+    await useShopStore.getState().switchToShop(newShopId);
+    onSwitchAccount?.();
+  }, [onSwitchAccount]);
 
   useEffect(() => {
     if (!shopId) return;
@@ -619,6 +644,12 @@ export default function MerchantProfileScreen({
             onPress={() => { setNewPwd(''); setConfirmPwd(''); setShowChangePwd(true); }}
           />
           <ProfileOptionRow
+            icon={<IcoAccounts />}
+            title="Changer de compte"
+            subtitle={`${myShops.length} compte${myShops.length !== 1 ? 's' : ''}`}
+            onPress={() => setShowSwitcher(true)}
+          />
+          <ProfileOptionRow
             icon={<IcoLogout />}
             title={t.profile.logout}
             danger
@@ -720,6 +751,23 @@ export default function MerchantProfileScreen({
         }}
       />
       <LanguageModal visible={showLangModal} onClose={() => setShowLangModal(false)} />
+
+      <AccountSwitcherModal
+        visible={showSwitcher}
+        currentShopId={shopId}
+        onClose={() => setShowSwitcher(false)}
+        onSwitch={handleSwitch}
+        onAddAccount={() => setShowAddAccount(true)}
+      />
+
+      <AddAccountScreen
+        visible={showAddAccount}
+        onClose={() => setShowAddAccount(false)}
+        onCreated={newShopId => {
+          setShowAddAccount(false);
+          handleSwitch(newShopId);
+        }}
+      />
     </View>
   );
 }

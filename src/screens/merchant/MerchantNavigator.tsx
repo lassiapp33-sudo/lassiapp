@@ -666,6 +666,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
         onPayments={() => setScreen('payments')}
         onMyOrders={() => setScreen('myorders')}
         onLogout={onLogout}
+        onSwitchAccount={() => setScreen('dashboard')}
       />
     );
 

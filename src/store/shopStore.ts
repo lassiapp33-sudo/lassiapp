@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { StoreProduct, StoreCategory, StoreProfile, ShopContext } from '../types/store';
 import { WeekHours } from '../services/hours';
 import * as shopsService from '../services/shops';
+import type { ShopSummary } from '../services/shops';
 import * as productsService from '../services/products';
 import * as fitnessService from '../services/fitnessAbonnements';
 import logger from '../utils/logger';
@@ -48,8 +49,11 @@ interface ShopState {
   products: StoreProduct[];
   loading: boolean;
   shopNotFound: boolean;
+  myShops: ShopSummary[];
 
-  loadMyShop: () => Promise<void>;
+  loadMyShop: (shopId?: string) => Promise<void>;
+  loadMyShops: () => Promise<void>;
+  switchToShop: (shopId: string) => Promise<void>;
 
   updateProfile: (updates: Partial<StoreProfile>) => Promise<void>;
   updateLogo: (logoUrl: string) => Promise<void>;
@@ -103,15 +107,16 @@ const useShopStore = create<ShopState>()((set, get) => ({
   products: [],
   loading: false,
   shopNotFound: false,
+  myShops: [],
 
   setLoading: v => set({ loading: v }),
   setProducts: p => set({ products: p }),
 
-  loadMyShop: async () => {
+  loadMyShop: async (shopId?: string) => {
     set({ loading: true, shopNotFound: false });
     try {
       const shop = await Promise.race([
-        shopsService.getMyShop(),
+        shopsService.getMyShop(shopId),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
       ]);
 
@@ -339,6 +344,21 @@ const useShopStore = create<ShopState>()((set, get) => ({
   createMissingShop: async (name, catId, shopType) => {
     await shopsService.createShopForMerchant(name, catId, shopType);
     await get().loadMyShop();
+  },
+
+  loadMyShops: async () => {
+    try {
+      const shops = await shopsService.getMyShops();
+      set({ myShops: shops });
+    } catch (err) {
+      logger.warn('[shopStore] loadMyShops:', err);
+    }
+  },
+
+  switchToShop: async (shopId) => {
+    set({ shopId: null, loading: true, products: [], categories: DEFAULT_CATS, profile: DEFAULT_PROFILE, context: DEFAULT_CONTEXT });
+    await get().loadMyShop(shopId);
+    await get().loadMyShops();
   },
 
   updateLocation: async (lat, lng) => {

@@ -275,16 +275,86 @@ export async function insertShopRow(row: Record<string, unknown>): Promise<Recor
 
 // ─── Marchand : ma boutique ───────────────────────────────────────────────────
 
-export async function getMyShop(): Promise<Shop | null> {
+export async function getMyShop(shopId?: string): Promise<Shop | null> {
   const userId = useAuthStore.getState().user?.id;
   if (!userId) return null;
+  if (shopId) {
+    const { data, error } = await supabase
+      .from('shops')
+      .select('*')
+      .eq('id', shopId)
+      .eq('merchant_id', userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? rowToShop(data) : null;
+  }
   const { data, error } = await supabase
     .from('shops')
     .select('*')
     .eq('merchant_id', userId)
+    .order('created_at', { ascending: true })
+    .limit(1)
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data ? rowToShop(data) : null;
+}
+
+export interface ShopSummary {
+  id: string;
+  name: string;
+  category: string;
+  shopType: 'products' | 'services' | 'memberships' | 'terrains';
+  logoUrl: string | null;
+  isOpen: boolean;
+}
+
+export async function getMyShops(): Promise<ShopSummary[]> {
+  const userId = useAuthStore.getState().user?.id;
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from('shops')
+    .select('id, name, category, shop_type, logo_url, is_open')
+    .eq('merchant_id', userId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(row => ({
+    id: row.id as string,
+    name: row.name as string,
+    category: row.category as string,
+    shopType: (row.shop_type ?? 'products') as ShopSummary['shopType'],
+    logoUrl: (row.logo_url as string | null) ?? null,
+    isOpen: row.is_open as boolean,
+  }));
+}
+
+export async function createAdditionalShop(name: string, catId: string): Promise<Shop> {
+  const userId = useAuthStore.getState().user?.id;
+  if (!userId) throw new Error('Non connecté');
+  const { count, error: countErr } = await supabase
+    .from('shops')
+    .select('id', { count: 'exact', head: true })
+    .eq('merchant_id', userId);
+  if (countErr) throw new Error(countErr.message);
+  if ((count ?? 0) >= 3) throw new Error('Tu as atteint la limite de 3 comptes.');
+  const firstShop = await getMyShop();
+  const { shopTypeFromCategory } = await import('../config/categories');
+  const shopType = shopTypeFromCategory(catId);
+  const row = await insertShopRow({
+    merchant_id: userId,
+    name: name.trim(),
+    subtitle: '',
+    category: catId,
+    subcategories: [],
+    shop_type: shopType,
+    description: null,
+    address_text: firstShop?.addressText ?? null,
+    zone: firstShop?.zone ?? 'Grand Dakar',
+    is_open: true,
+    phone: firstShop?.phone ?? null,
+    opening_hours: null,
+    is_manually_closed: false,
+  });
+  return rowToShop(row);
 }
 
 export interface UpsertShopParams {
