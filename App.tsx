@@ -377,8 +377,7 @@ function AppContent() {
           const title = (notification.request.content.title ?? '') as string;
           const isOrder =
             data?.type === 'new_order' ||
-            data?.type === 'commande'  ||
-            title.toLowerCase().includes('commande');
+            data?.type === 'commande';
           if (isOrder) {
             const opts = { language: 'fr-FR', rate: 0.85, pitch: 1.1, volume: 1 } as const;
             Speech.stop();
