@@ -269,15 +269,19 @@ function AppContent() {
     setScreen('auth');
   }, [clearGerant]);
 
-  // Quand getValidToken() échoue (session SIGNED_OUT / reuse detection) →
-  // logout propre + retour écran auth, sans Alert bloquant.
+  // SESSION GUARDIAN — NE JAMAIS DÉCONNECTER AUTOMATIQUEMENT.
+  // onSessionExpired est gardé pour le logging uniquement.
+  // Même si getValidToken() échoue après tous les fallbacks, l'utilisateur
+  // reste dans l'app. Un JWT périmé cause des 401 sur les actions en cours,
+  // ce qui est récupérable. Un handleLogout() automatique efface tout l'état
+  // et est irrécupérable — c'est la pire chose qu'on puisse faire.
   useEffect(() => {
     return onSessionExpired(() => {
-      // Evite de déclencher si l'utilisateur est déjà sur l'écran auth
-      if (screen === 'auth' || screen === 'onboarding' || screen === 'splash') return;
-      handleLogout().catch(() => {});
+      // eslint-disable-next-line no-console
+      console.warn('[LASSI] onSessionExpired — token introuvable, user garde son écran');
+      // NE PAS appeler handleLogout() ici. Jamais.
     });
-  }, [handleLogout, screen]);
+  }, []);
 
   // Handler de premier plan + canaux Android
   // Le require() ici est lazy : expo-notifications ne charge QUE si !IS_EXPO_GO

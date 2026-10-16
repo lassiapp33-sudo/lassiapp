@@ -179,11 +179,7 @@ function _startWatchdog(): void {
     if (!t || !isJwtFresh(t, 300)) _silentRefresh().catch(() => {});
   }, 4 * 60_000);
 }
-function _stopWatchdog(): void {
-  if (_watchdogHandle === null) return;
-  clearInterval(_watchdogHandle);
-  _watchdogHandle = null;
-}
+// _stopWatchdog intentionnellement supprimé — le watchdog ne s'arrête jamais.
 
 // ── SESSION GUARDIAN : AppState pilote startAutoRefresh + refresh proactif ───
 // Au retour foreground après >1h de background, startAutoRefresh() seul ne
@@ -206,10 +202,11 @@ if (Platform.OS !== 'web') {
         _lastProactiveRefresh = now;
         _silentRefresh().catch(() => {});
       }
-    } else {
-      supabase.auth.stopAutoRefresh();
-      _stopWatchdog();
     }
+    // NE PAS appeler stopAutoRefresh() en background — GoTrue doit rester actif
+    // en permanence. Avec un JWT 24h, GoTrue ne fait qu'UNE requête par jour en
+    // background, coût batterie négligeable. Arrêter le refresh en background est
+    // la principale cause de tokens expirés au retour foreground sur Android Doze.
   });
 }
 
@@ -243,10 +240,20 @@ export async function getValidToken(): Promise<string> {
   // eslint-disable-next-line no-console
   console.error('[LASSI] getValidToken ECHEC — authErr=', _lastRefreshWasAuthError, 'cached=', !!getCachedToken(), 'session=', !!session, 'time=', new Date().toISOString());
 
-  // SESSION GUARDIAN — NE DÉCONNECTER QUE SUR VRAIE ERREUR AUTH (4xx Supabase).
-  // Panne réseau (timeout, ECONNREFUSED) → _lastRefreshWasAuthError = false → on laisse
-  // l'erreur remonter à l'appelant sans kicker l'utilisateur. La session Supabase n'est
-  // pas morte : dès que le réseau revient, le prochain appel ou le watchdog refreshera.
+  // SESSION GUARDIAN — DERNIER RECOURS : retourner le token caché même s'il est expiré.
+  // Un JWT expiré provoque un 401 côté Supabase API, ce qui est récupérable
+  // (l'utilisateur voit une erreur sur l'action en cours). C'est infiniment préférable
+  // à un handleLogout() automatique qui efface tout et renvoie à l'écran de connexion.
+  // On ne déconnecte JAMAIS automatiquement — seulement sur action volontaire.
+  const staleToken = getCachedToken();
+  if (staleToken) {
+    // eslint-disable-next-line no-console
+    console.warn('[LASSI] getValidToken retourne token périmé — user reste connecté');
+    return staleToken;
+  }
+
+  // Aucun token disponible (premier démarrage ou compte supprimé) → throw sans kick.
+  // Les callbacks onSessionExpired ne doivent JAMAIS appeler handleLogout().
   if (_lastRefreshWasAuthError) {
     _sessionExpiredCallbacks.forEach(cb => { try { cb(); } catch {} });
   }
