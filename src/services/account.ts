@@ -6,7 +6,7 @@
  * future réinscription.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase, getValidToken } from '../lib/supabase';
+import { supabase, getValidToken, markExplicitLogout } from '../lib/supabase';
 import { markExplicitSignOut } from './auth';
 import useAuthStore from '../store/authStore';
 import useShopStore from '../store/shopStore';
@@ -45,6 +45,7 @@ export async function deleteAccount(): Promise<void> {
 
   // Déconnecter Supabase Auth côté client
   markExplicitSignOut();
+  markExplicitLogout();
   await supabase.auth.signOut();
 
   // Vider tous les stores Zustand

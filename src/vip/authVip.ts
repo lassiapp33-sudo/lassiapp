@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, markExplicitLogout } from '../lib/supabase';
 import { markExplicitSignOut } from '../services/auth';
 
 // Normalise vers le format local sénégalais (9 chiffres).
@@ -41,5 +41,6 @@ export async function changerMotDePasse(nouveau: string) {
 
 export async function deconnexionVip() {
   markExplicitSignOut();
+  markExplicitLogout();
   await supabase.auth.signOut();
 }

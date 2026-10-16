@@ -13,7 +13,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase, SUPABASE_URL, SUPABASE_ANON, getCachedToken, setCachedToken, safeGetSession, getValidToken } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON, getCachedToken, setCachedToken, safeGetSession, getValidToken, markExplicitLogout } from '../lib/supabase';
 import { SESSION_ACTIVE_KEY } from '../lib/secureStorage';
 import { AuthUser, UserRole } from '../store/authStore';
 import { getInitials } from '../utils/getInitials';
@@ -441,6 +441,7 @@ export async function logout(): Promise<void> {
 
   // Nettoyer immédiatement sans attendre le réseau
   markExplicitSignOut();
+  markExplicitLogout(); // flag dédié pour supabase.ts onAuthStateChange (remplace _cachedToken===null)
   setCachedToken(null);
   AsyncStorage.removeItem(SESSION_ACTIVE_KEY).catch(() => {});
   // Nettoyer SecureStore (session locale) en arrière-plan

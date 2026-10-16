@@ -71,6 +71,24 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
 
 // Token caché : mis à jour à chaque changement d'état auth (login, refresh, logout).
 let _cachedToken: string | null = null;
+
+// ── SESSION GUARDIAN — DÉTECTION LOGOUT EXPLICITE ─────────────────────────
+// FLAG DÉDIÉ — NE PAS remplacer par `_cachedToken === null`.
+// Raison : _cachedToken est null à l'init du module (cold start, OTA reload).
+// Si SIGNED_OUT fire avant le 1er SIGNED_IN (réseau lent, Doze Android, reuse
+// detection suite à coupure réseau), `_cachedToken === null` était un faux
+// positif → SESSION_ACTIVE_KEY supprimé → déconnexion au prochain démarrage.
+// Ce flag n'est levé QUE par markExplicitLogout() appelé depuis logout() et
+// les déconnexions volontaires — jamais par l'état de démarrage du module.
+let _explicitLogoutPending = false;
+
+export function markExplicitLogout(): void {
+  _explicitLogoutPending = true;
+  // Sécurité : si SIGNED_OUT ne se déclenche jamais (réseau coupé), reset après 15s
+  setTimeout(() => { _explicitLogoutPending = false; }, 15_000);
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 supabase.auth.onAuthStateChange((_event, session) => {
   if (session?.access_token) {
     _cachedToken = session.access_token;
@@ -86,10 +104,10 @@ supabase.auth.onAuthStateChange((_event, session) => {
     // valide jusqu'à son exp naturel — getValidToken() niveau 1 continue à servir
     // toutes les requêtes API sans interruption.
     //
-    // Proxy "explicit" : logout() appelle setCachedToken(null) AVANT signOut(),
-    // donc quand cet événement arrive, _cachedToken est déjà null si et seulement
-    // si c'est un logout voulu par l'utilisateur.
-    const wasExplicit = _cachedToken === null;
+    // On utilise _explicitLogoutPending (flag dédié) — pas _cachedToken === null
+    // qui était un faux positif au cold start / OTA reload.
+    const wasExplicit = _explicitLogoutPending;
+    _explicitLogoutPending = false;
     if (wasExplicit && Platform.OS !== 'web') {
       AsyncStorage.removeItem(SESSION_ACTIVE_KEY).catch(() => {});
     }
