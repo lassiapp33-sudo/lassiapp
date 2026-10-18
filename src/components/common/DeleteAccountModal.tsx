@@ -47,20 +47,6 @@ const IcoTrash = ({ color }: { color: string }) => (
   </Svg>
 );
 
-const IcoCheck = () => (
-  <Svg
-    width={13}
-    height={13}
-    viewBox="0 0 24 24"
-    fill="none"
-    strokeWidth={3}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <Path d="M20 6L9 17l-5-5" stroke={colors.bg} />
-  </Svg>
-);
-
 const IcoWarning = () => (
   <Svg
     width={28}
@@ -88,20 +74,18 @@ interface Props {
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 export default function DeleteAccountModal({ visible, role, onClose, onSuccess }: Props) {
-  const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
   // Réinitialiser l'état à chaque ouverture
   const handleClose = () => {
     if (loading) return;
-    setConfirmed(false);
     setErreur(null);
     onClose();
   };
 
   const handleDelete = async () => {
-    if (!confirmed || loading) return;
+    if (loading) return;
     setLoading(true);
     setErreur(null);
     try {
@@ -147,27 +131,15 @@ export default function DeleteAccountModal({ visible, role, onClose, onSuccess }
             <Text style={styles.warnBody}>{consequences}</Text>
           </View>
 
-          {/* ── Case à cocher ─────────────────────────────────────────────── */}
-          <TouchableOpacity
-            style={styles.checkRow}
-            onPress={() => setConfirmed(v => !v)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.checkbox, confirmed && styles.checkboxOn]}>
-              {confirmed && <IcoCheck />}
-            </View>
-            <Text style={styles.checkLabel}>Je comprends que cette suppression est définitive</Text>
-          </TouchableOpacity>
-
           {/* ── Erreur ───────────────────────────────────────────────────── */}
           {erreur ? <Text style={styles.erreur}>{erreur}</Text> : null}
 
           {/* ── Boutons ──────────────────────────────────────────────────── */}
           <TouchableOpacity
-            style={[styles.deleteBtn, (!confirmed || loading) && styles.deleteBtnOff]}
+            style={[styles.deleteBtn, loading && styles.deleteBtnOff]}
             onPress={handleDelete}
             activeOpacity={0.85}
-            disabled={!confirmed || loading}
+            disabled={loading}
           >
             {loading ? (
               <>
@@ -256,34 +228,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 12.5,
     lineHeight: 19,
-  },
-
-  checkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  checkboxOn: {
-    backgroundColor: colors.danger,
-    borderColor: colors.danger,
-  },
-  checkLabel: {
-    flex: 1,
-    color: colors.muted,
-    fontFamily: fonts.body,
-    fontSize: 13,
-    lineHeight: 18,
   },
 
   erreur: {
