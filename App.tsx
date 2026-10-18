@@ -434,6 +434,16 @@ function AppContent() {
       {screen === 'splash' && (
         <SplashScreen onFinish={async () => {
           try {
+            // Attendre la hydration Zustand si elle n'est pas encore terminée.
+            // LargeSecureStore (expo-secure-store + AES) peut être lent sur Android Samsung.
+            // Sans ce guard, getState() retourne user=null → kick vers auth screen.
+            if (!useAuthStore.persist.hasHydrated()) {
+              await new Promise<void>(resolve => {
+                const unsub = useAuthStore.persist.onFinishHydration(() => { unsub(); resolve(); });
+                setTimeout(resolve, 3000); // fallback 3s max
+              });
+            }
+
             const { hasSeenOnboarding, user: cachedUser } = useAuthStore.getState();
 
             // Utilise la promesse lancée au montage (en parallèle avec le splash).
