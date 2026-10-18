@@ -150,7 +150,7 @@ export default function LoginScreen({ onBack, defaultPhone, onSuccess, onForgotP
 
         <View style={styles.swapRow}>
           <Text style={styles.swapTxt}>{t.auth.noAccount}</Text>
-          <TouchableOpacity onPress={onRegister} activeOpacity={0.7}>
+          <TouchableOpacity onPress={onRegister} activeOpacity={0.7} hitSlop={{ top: 14, bottom: 14, left: 12, right: 12 }}>
             <Text style={styles.swapLink}>{t.auth.createAccount}</Text>
           </TouchableOpacity>
         </View>
