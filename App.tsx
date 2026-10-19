@@ -397,6 +397,8 @@ function AppContent() {
     const unsubscribe = authService.onAuthStateChange((user) => {
       useAuthStore.getState().setUser(user);
       if (!user && screen !== 'splash' && screen !== 'onboarding' && screen !== 'auth' && screen !== 'guest') {
+        // eslint-disable-next-line no-console
+        console.warn('[LASSI/auth] onAuthStateChange user=null → setScreen auth, screen=', screen);
         setScreen('auth');
       }
     });
@@ -434,6 +436,10 @@ function AppContent() {
       {screen === 'splash' && (
         <SplashScreen onFinish={async () => {
           try {
+            const t0 = Date.now();
+            // eslint-disable-next-line no-console
+            console.log('[LASSI/splash] onFinish start', { hydrated: useAuthStore.persist.hasHydrated() });
+
             // Attendre la hydration Zustand si elle n'est pas encore terminée.
             // LargeSecureStore (expo-secure-store + AES) peut être lent sur Android Samsung.
             // Sans ce guard, getState() retourne user=null → kick vers auth screen.
@@ -443,8 +449,12 @@ function AppContent() {
                 setTimeout(resolve, 3000); // fallback 3s max
               });
             }
+            // eslint-disable-next-line no-console
+            console.log('[LASSI/splash] hydration done', { ms: Date.now() - t0, hydrated: useAuthStore.persist.hasHydrated() });
 
             const { hasSeenOnboarding, user: cachedUser } = useAuthStore.getState();
+            // eslint-disable-next-line no-console
+            console.log('[LASSI/splash] cachedUser', { id: cachedUser?.id ?? null, role: cachedUser?.role ?? null });
 
             // Utilise la promesse lancée au montage (en parallèle avec le splash).
             // Si elle n'existe pas (rare), on en lance une nouvelle avec un timeout court.
@@ -454,6 +464,8 @@ function AppContent() {
               sessionFetch.current ?? authService.getSessionUser(),
               new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000)),
             ]);
+            // eslint-disable-next-line no-console
+            console.log('[LASSI/splash] sessionUser', { id: sessionUser?.id ?? null, role: sessionUser?.role ?? null, ms: Date.now() - t0 });
 
             if (sessionUser) {
               useAuthStore.getState().setUser(sessionUser);
@@ -473,9 +485,13 @@ function AppContent() {
               return;
             }
 
+            // eslint-disable-next-line no-console
+            console.warn('[LASSI/splash] NO USER → setScreen auth', { hasSeenOnboarding });
             useAuthStore.getState().setLoading(false);
             setScreen(hasSeenOnboarding ? 'auth' : 'onboarding');
-          } catch {
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('[LASSI/splash] CATCH', err);
             const { hasSeenOnboarding, user: cachedUser } = useAuthStore.getState();
             if (cachedUser) {
               useAuthStore.getState().setUser(cachedUser);
