@@ -187,7 +187,8 @@ export default function OrdersScreen({ onBack, initialTab, onOpenChat }: Props) 
     setProcessingId(id);
     try {
       await setOrderStatus(id, to, prepTime);
-    } catch {
+    } catch (err) {
+      console.error('[advance] échec mise à jour statut:', err);
       notifyError('Impossible de mettre à jour la commande. Réessaie.');
     } finally {
       setProcessingId(null);

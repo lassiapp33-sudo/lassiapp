@@ -93,13 +93,18 @@ export async function updateOrderStatus(
   status: OrderStatus | 'refused',
   prepTime?: string,
 ): Promise<void> {
+  await getValidToken();
   const updates: Partial<{ status: string; prep_time: string }> = { status };
   if (prepTime) updates.prep_time = prepTime;
   const { error } = await supabase.from('orders').update(updates).eq('id', orderId);
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[updateOrderStatus] erreur Supabase:', error.code, error.message, error.details);
+    throw new Error(error.message);
+  }
 }
 
 export async function refuseOrder(orderId: string, reason?: string): Promise<void> {
+  await getValidToken();
   const { error } = await supabase
     .from('orders')
     .update({
@@ -108,7 +113,10 @@ export async function refuseOrder(orderId: string, reason?: string): Promise<voi
       refused_at: new Date().toISOString(),
     })
     .eq('id', orderId);
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error('[refuseOrder] erreur Supabase:', error.code, error.message, error.details);
+    throw new Error(error.message);
+  }
 }
 
 export interface CreateOrderParams {
