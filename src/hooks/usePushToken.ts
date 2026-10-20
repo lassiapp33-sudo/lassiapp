@@ -37,9 +37,36 @@ async function logPush(userId: string | undefined, platform: string, status: str
 }
 
 let currentDeviceToken: string | null = null;
+// Garde l'unsubscribe onTokenRefresh pour éviter les doublons au remontage du hook
+let _tokenRefreshUnsub: (() => void) | null = null;
 
 export function getCurrentDeviceToken(): string | null {
   return currentDeviceToken;
+}
+
+// Convertit un FCM token en ExponentPushToken et le sauvegarde en base
+async function fcmToExpoAndSave(fcmToken: string, userId: string | undefined): Promise<void> {
+  const N = getN();
+  if (!N) return;
+  try {
+    await logPush(userId, 'ios', 'fcm_token_ok', { token_prefix: fcmToken.slice(0, 20) });
+    const tokenData = await N.getExpoPushTokenAsync({
+      projectId: EAS_PROJECT_ID,
+      devicePushToken: { type: 'fcm', data: fcmToken },
+    });
+    const expoToken = tokenData?.data ?? null;
+    if (!expoToken) {
+      await logPush(userId, 'ios', 'expo_token_error', { token_prefix: 'null_after_fcm' });
+      return;
+    }
+    if (currentDeviceToken === expoToken) return; // déjà sauvegardé
+    currentDeviceToken = expoToken;
+    await savePushToken(expoToken, 'ios');
+    await logPush(userId, 'ios', 'token_saved', { token_prefix: expoToken.slice(0, 35) });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    await logPush(userId, 'ios', 'expo_token_error', { error: msg.slice(0, 200) });
+  }
 }
 
 export function usePushToken() {
@@ -54,8 +81,6 @@ export function usePushToken() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const nativeBuild = (Constants as any).nativeBuildVersion ?? '?';
     const osVersion = `${Platform.OS} ${Platform.Version} build=${nativeBuild}`;
-    let alive = true;
-    let tokenSaved = false;
 
     (async () => {
       try {
@@ -67,20 +92,15 @@ export function usePushToken() {
           const { status } = await N.requestPermissionsAsync();
           finalStatus = status;
         }
-        if (finalStatus !== 'granted' || !alive) {
+        if (finalStatus !== 'granted') {
           await logPush(userId, os, 'permission_denied', { error: finalStatus });
           return;
         }
         await logPush(userId, os, 'permission_granted');
 
-        let expoToken: string | null = null;
-
         if (Platform.OS === 'ios') {
-          // useFrameworks:static casse le subscriber APNs natif d'expo-notifications
-          // (ni didRegister ni didFail → hang). Le SEUL mécanisme qui capte l'APNs token
-          // est le swizzling Firebase (proxy actif). On passe donc par la route FCM.
-          // La course "No APNS token specified" est évitée en attendant l'APNs token
-          // (getAPNSToken) AVANT d'appeler getToken.
+          // useFrameworks:static casse le subscriber APNs natif d'expo-notifications.
+          // Route FCM via swizzling Firebase (seul mécanisme fonctionnel).
           await logPush(userId, os, 'device_token_attempt');
 
           const messaging = getFirebaseMessaging();
@@ -88,69 +108,63 @@ export function usePushToken() {
             await logPush(userId, os, 'device_token_error', { token_prefix: 'no_fcm_module' });
             return;
           }
+
           try {
             await messaging().registerDeviceForRemoteMessages();
           } catch (e) {
             await logPush(userId, os, 'fcm_register_error', { error: (e instanceof Error ? e.message : String(e)).slice(0, 200) });
           }
 
-          // L'APNs token arrive en async via le swizzling Firebase. On l'attend avant getToken.
+          // ─── onTokenRefresh : listener persistant qui survit aux remontages du hook ──
+          // FIX ROOT CAUSE : la boucle poll s'arrêtait quand l'user naviguait (alive=false)
+          // avant qu'APNs réponde. onTokenRefresh est appelé même après démontage du hook.
+          if (!_tokenRefreshUnsub) {
+            _tokenRefreshUnsub = messaging().onTokenRefresh(async (fcmToken: string) => {
+              await fcmToExpoAndSave(fcmToken, userId);
+            });
+          }
+
+          // Tentative immédiate : APNs token déjà disponible (app ouverte une 2e fois)
           let fcmToken: string | null = null;
-          let apnsSeen = false;
-          for (let i = 0; i < 40 && !fcmToken && alive; i++) {
+          for (let i = 0; i < 10; i++) {
             try {
               const apns = await messaging().getAPNSToken();
-              if (apns && !apnsSeen) {
-                apnsSeen = true;
-                await logPush(userId, os, 'apns_token_ok', { token_prefix: String(apns).slice(0, 20) });
-              }
               if (apns) {
                 const t = await messaging().getToken();
-                if (t) fcmToken = t;
+                if (t) { fcmToken = t; break; }
               }
-            } catch {
-              // APNs pas encore prêt → réessaie
-            }
-            if (!fcmToken) await new Promise<void>(r => setTimeout(r, 1000));
+            } catch { /* APNs pas encore prêt */ }
+            await new Promise<void>(r => setTimeout(r, 1000));
           }
 
-          if (!alive) return;
-          if (!fcmToken) {
-            await logPush(userId, os, 'device_token_error', { token_prefix: 'no_fcm_40s', error: apnsSeen ? 'apns_ok_but_no_fcm' : 'apns_never_arrived' });
-            return;
+          if (fcmToken) {
+            await fcmToExpoAndSave(fcmToken, userId);
+          } else {
+            // Pas de token immédiat → onTokenRefresh prendra le relais dès qu'APNs répond
+            await logPush(userId, os, 'waiting_token_refresh', { error: 'onTokenRefresh registered' });
           }
-          await logPush(userId, os, 'fcm_token_ok', { token_prefix: fcmToken.slice(0, 20) });
 
-          const tokenData = await N.getExpoPushTokenAsync({
-            projectId: EAS_PROJECT_ID,
-            devicePushToken: { type: 'fcm', data: fcmToken },
-          });
-          expoToken = tokenData?.data ?? null;
-          await logPush(userId, os, 'expo_token_via_fcm', { token_prefix: expoToken?.slice(0, 35) });
         } else {
+          // Android
           await logPush(userId, os, 'device_token_attempt');
           const dt = await N.getDevicePushTokenAsync();
-          if (!alive || !dt?.data) {
+          if (!dt?.data) {
             await logPush(userId, os, 'device_token_error', { token_prefix: 'dt_null' });
             return;
           }
           await logPush(userId, os, 'device_token_ok', { token_prefix: dt.data.slice(0, 20) });
           const tokenData = await N.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID });
-          expoToken = tokenData?.data ?? null;
+          const expoToken = tokenData?.data ?? null;
+          if (!expoToken) return;
+          currentDeviceToken = expoToken;
+          await savePushToken(expoToken, os);
+          await logPush(userId, os, 'token_saved', { token_prefix: expoToken.slice(0, 35) });
         }
-
-        if (!expoToken || !alive || tokenSaved) return;
-        tokenSaved = true;
-        currentDeviceToken = expoToken;
-        await savePushToken(expoToken, os);
-        await logPush(userId, os, 'token_saved', { token_prefix: expoToken.slice(0, 35) });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        await logPush(userId, os, 'fatal_error', { error: msg });
+        await logPush(userId, os, 'fatal_error', { error: msg.slice(0, 200) });
       }
     })();
-
-    return () => { alive = false; };
   }, [userId, gerantActive]);
 }
 
@@ -158,5 +172,7 @@ export async function removeCurrentDeviceToken(): Promise<void> {
   const token = currentDeviceToken;
   if (!token) return;
   currentDeviceToken = null;
+  _tokenRefreshUnsub?.();
+  _tokenRefreshUnsub = null;
   await deletePushToken(token).catch(() => {});
 }
