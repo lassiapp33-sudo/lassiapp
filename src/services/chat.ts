@@ -1,4 +1,4 @@
-import { supabase, getCachedToken, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
+import { supabase, getCachedToken, getValidToken, SUPABASE_URL, SUPABASE_ANON } from '../lib/supabase';
 import useAuthStore from '../store/authStore';
 import { compressImage } from './storage';
 
@@ -221,7 +221,7 @@ export async function sendMessage(
   const user = useAuthStore.getState().user;
   if (!user) throw new Error('Non connecté');
 
-  const token = getCachedToken() ?? SUPABASE_ANON;
+  const token = await getValidToken().catch(() => getCachedToken() ?? SUPABASE_ANON);
   const res = await fetch(`${SUPABASE_URL}/rest/v1/messages`, {
     method: 'POST',
     headers: {
