@@ -4,6 +4,7 @@
 
 import { serve }        from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { sendPushToUser } from '../_shared/push.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')              ?? '';
 const SUPABASE_SRK = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -179,6 +180,15 @@ serve(async (req) => {
         data:    JSON.stringify({ orderId: order.id }),
         read:    false,
       });
+      // Push background (Android + iOS) — best-effort
+      sendPushToUser(sb, shop.merchant_id as string, {
+        title:     'Nouvelle commande 🛒',
+        body:      `Commande de ${total.toLocaleString('fr-FR')} FCFA`,
+        sound:     'commande_recue.wav',
+        channelId: 'commandes-v3',
+        priority:  'high',
+        data:      { type: 'new_order', orderId: order.id },
+      }).catch(() => {});
     }
 
     return ok({ orderId: order.id, total });
