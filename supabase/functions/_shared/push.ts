@@ -45,7 +45,7 @@ export async function sendPushToUser(
   await sendExpoPush(tokens.map(to => ({
     sound: 'default',
     priority: 'high' as const,
-    _contentAvailable: false,
+    _contentAvailable: true,
     ...message,
     to,
   })));
