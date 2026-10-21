@@ -100,7 +100,7 @@ serve(async (req) => {
         sound:             notifSound,
         channelId:         notifChannel,
         priority:          'high',
-        _contentAvailable: false,
+        _contentAvailable: true,
       }))),
     });
 

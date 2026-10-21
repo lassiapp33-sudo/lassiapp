@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
             sound:            'default',
             channelId:        'commandes-v2',
             priority:         'high' as const,
-            _contentAvailable: false,
+            _contentAvailable: true,
             title: TITLE,
             body:  'Ta boutique a maintenant son site web. Ouvre l\'app pour récupérer ton lien.',
             data:  { type: 'share_vitrine', slug: t.slug },

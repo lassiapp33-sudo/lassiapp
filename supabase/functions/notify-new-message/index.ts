@@ -89,7 +89,7 @@ serve(async (req) => {
       sound:             'default',
       channelId:         'messages-v2',
       priority:          'high' as const,
-      _contentAvailable: false,
+      _contentAvailable: true,
       data:              { type: 'new_message', conversationId },
     })));
 

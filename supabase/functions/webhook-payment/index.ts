@@ -738,7 +738,7 @@ serve(async (req) => {
                 body: JSON.stringify(cTokens.map(to => ({
                   to, title: 'Abonnement activé', body: clientBody,
                   data: { type: 'fitness_abonnement' }, sound: 'default',
-                  channelId: 'commandes-v2', priority: 'high', _contentAvailable: false,
+                  channelId: 'commandes-v2', priority: 'high', _contentAvailable: true,
                 }))),
               }).catch(() => null)
               const eData = await eRes?.json().catch(() => null)
@@ -770,7 +770,7 @@ serve(async (req) => {
                 body: JSON.stringify(pTokens.map(to => ({
                   to, title: pTitle, body: pBody,
                   data: { type: 'fitness_abonnement_nouveau', offre_id: offreId },
-                  sound: 'default', channelId: 'commandes-v2', priority: 'high', _contentAvailable: false,
+                  sound: 'default', channelId: 'commandes-v2', priority: 'high', _contentAvailable: true,
                 }))),
               }).catch(() => null)
               const eData2 = await eRes2?.json().catch(() => null)

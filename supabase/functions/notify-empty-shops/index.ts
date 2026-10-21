@@ -80,10 +80,11 @@ Deno.serve(async (req) => {
       if (!prof?.is_admin) return fail('Accès réservé aux administrateurs', 403);
     }
 
-    const { userIds, phones, dryRun } = (await req.json().catch(() => ({}))) as {
+    const { userIds, phones, dryRun, platformFilter } = (await req.json().catch(() => ({}))) as {
       userIds?: string[];
       phones?:  string[];
       dryRun?:  boolean;
+      platformFilter?: 'ios' | 'android';
     };
 
     // Résolution phones → userIds
@@ -159,14 +160,20 @@ Deno.serve(async (req) => {
 
       // 2. Push Expo (hors-app), best-effort
       try {
-        const tokens = await getPushTokens(sb, t.userId);
+        let tokens = await getPushTokens(sb, t.userId);
+        if (platformFilter) {
+          const { data: filtered } = await sb.from('push_tokens')
+            .select('token').eq('user_id', t.userId).eq('platform', platformFilter);
+          const allowed = new Set((filtered ?? []).map((r: { token: string }) => r.token));
+          tokens = tokens.filter(tk => allowed.has(tk));
+        }
         if (tokens.length > 0) {
           await sendExpoPush(tokens.map(to => ({
             to,
             sound:             'default',
             channelId:         'commandes-v2',
             priority:          'high' as const,
-            _contentAvailable: false,
+            _contentAvailable: true,
             title,
             body:  'Ajoute tes produits ou services pour que tes clients puissent commander.',
             data:  { type: 'setup_shop', shop_id: t.shopId || null },
