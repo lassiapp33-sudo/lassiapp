@@ -392,6 +392,33 @@ function AppContent() {
     }
   }, []);
 
+  // Firebase foreground message handler (iOS + Android) — Expo setNotificationHandler
+  // n'intercepte pas les messages Firebase avec useFrameworks:static → sans ce handler,
+  // les notifications sont silencieuses en foreground sur iOS.
+  useEffect(() => {
+    if (IS_EXPO_GO || Platform.OS === 'web') return;
+    let unsub: (() => void) | null = null;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const messaging = require('@react-native-firebase/messaging').default;
+      const N = getN();
+      unsub = messaging().onMessage(async (remoteMessage: Record<string, any>) => {
+        if (!N) return;
+        const notif = remoteMessage.notification ?? {};
+        const title = notif.title ?? remoteMessage.data?.title ?? '';
+        const body  = notif.body  ?? remoteMessage.data?.body  ?? '';
+        if (!title && !body) return;
+        try {
+          await N.scheduleNotificationAsync({
+            content: { title, body, sound: 'default', data: remoteMessage.data ?? {} },
+            trigger: null,
+          });
+        } catch (_) {}
+      });
+    } catch (_) {}
+    return () => { try { unsub?.(); } catch (_) {} };
+  }, []);
+
   // Écoute les changements Supabase (login, token refresh, déconnexion explicite…)
   // SESSION GUARDIAN : on ne réagit à user=null QUE si c'est une déconnexion explicite
   // (bouton "Se déconnecter"). Les SIGNED_OUT involontaires (réseau Android instable,
