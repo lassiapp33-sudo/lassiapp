@@ -392,14 +392,26 @@ function AppContent() {
     }
   }, []);
 
-  // Écoute les changements Supabase (expiration de token, déconnexion externe…)
+  // Écoute les changements Supabase (login, token refresh, déconnexion explicite…)
+  // SESSION GUARDIAN : on ne réagit à user=null QUE si c'est une déconnexion explicite
+  // (bouton "Se déconnecter"). Les SIGNED_OUT involontaires (réseau Android instable,
+  // refresh_token reuse detection) sont déjà filtrés dans auth.ts → ce callback ne
+  // reçoit null que via _explicitSignOut. Ne jamais setUser(null) ici sur un null
+  // réseau — l'utilisateur a un cachedUser dans authStore qui le maintient connecté.
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChange((user) => {
-      useAuthStore.getState().setUser(user);
-      if (!user && screen !== 'splash' && screen !== 'onboarding' && screen !== 'auth' && screen !== 'guest') {
+      if (user) {
+        // Toujours accepter un utilisateur valide (login, token refresh)
+        useAuthStore.getState().setUser(user);
+      } else {
+        // user=null ne peut arriver ici que via _explicitSignOut (voir auth.ts).
+        // On kick vers auth UNIQUEMENT dans ce cas, jamais sur erreur réseau.
         // eslint-disable-next-line no-console
-        console.warn('[LASSI/auth] onAuthStateChange user=null → setScreen auth, screen=', screen);
-        setScreen('auth');
+        console.warn('[LASSI/auth] onAuthStateChange user=null (explicit signOut) — screen=', screen);
+        useAuthStore.getState().setUser(null);
+        if (screen !== 'splash' && screen !== 'onboarding' && screen !== 'auth' && screen !== 'guest') {
+          setScreen('auth');
+        }
       }
     });
     return unsubscribe;

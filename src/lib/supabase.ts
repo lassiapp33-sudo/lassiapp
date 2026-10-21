@@ -62,9 +62,11 @@ function fetchWithTimeout(
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
     storage: secureStorage,
+    storageKey: 'supabase.auth.token',
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: Platform.OS === 'web',
+    flowType: 'pkce',
   },
   global: { fetch: fetchWithTimeout },
 });
@@ -110,6 +112,8 @@ supabase.auth.onAuthStateChange((_event, session) => {
     _explicitLogoutPending = false;
     if (wasExplicit && Platform.OS !== 'web') {
       AsyncStorage.removeItem(SESSION_ACTIVE_KEY).catch(() => {});
+      // Reset _active pour que GoTrue ne tente plus de lire le storage jusqu'au prochain login
+      secureStorage.resetActive();
     }
     if (Platform.OS !== 'web') {
       try { supabase.realtime.setAuth(wasExplicit ? null : _cachedToken); } catch { /* noop */ }
@@ -142,14 +146,18 @@ function isJwtFresh(token: string, skewSec = 60): boolean {
 // si on doit déconnecter l'utilisateur ou juste laisser l'erreur se propager.
 let _lastRefreshWasAuthError = false;
 
-// Refresh silencieux avec 3 tentatives + backoff exponentiel.
+// Refresh silencieux avec 3 tentatives + backoff exponentiel agressif (1s/3s/9s).
 // Stop immédiatement sur erreur serveur (4xx) pour éviter la détection de reuse
 // du refresh_token : si le serveur a déjà roté le token mais qu'on n'a pas reçu
 // la réponse (coupure réseau Android), relancer déclenche SIGNED_OUT côté Supabase.
+// Le backoff 1s/3s/9s laisse le temps au réseau de se rétablir (fréquent Sénégal 4G)
+// sans inonder le serveur de requêtes redondantes.
+const _REFRESH_BACKOFFS = [0, 1_000, 3_000, 9_000]; // 4 tentatives total (0 = immédiat)
 async function _silentRefresh(): Promise<string | null> {
   _lastRefreshWasAuthError = false;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0) await new Promise(r => setTimeout(r, 1_500 * attempt));
+  for (let attempt = 0; attempt < _REFRESH_BACKOFFS.length; attempt++) {
+    const backoff = _REFRESH_BACKOFFS[attempt];
+    if (backoff > 0) await new Promise(r => setTimeout(r, backoff));
     try {
       const { data, error } = await supabase.auth.refreshSession();
       if (data.session?.access_token) {
@@ -161,7 +169,8 @@ async function _silentRefresh(): Promise<string | null> {
         _lastRefreshWasAuthError = true;
         break;
       }
-    } catch { /* réseau indisponible — on réessaie */ }
+      // Réseau retourné un 5xx ou pas de session sans erreur → continuer le backoff
+    } catch { /* réseau indisponible — on réessaie après backoff */ }
   }
   return null;
 }

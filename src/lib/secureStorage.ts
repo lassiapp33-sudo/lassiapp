@@ -93,21 +93,30 @@ class SessionAwareStorage {
 
   private async _ensureChecked(): Promise<void> {
     if (this._checked) return;
-    // Premier essai
-    const flag = await AsyncStorage.getItem(SESSION_ACTIVE_KEY).catch(() => null);
-    if (flag) {
+    // Premier essai immédiat
+    const flag0 = await AsyncStorage.getItem(SESSION_ACTIVE_KEY).catch(() => null);
+    if (flag0) {
       this._active = true;
       this._checked = true;
       return;
     }
-    // Sur Android, AsyncStorage peut retourner null pendant quelques centaines de ms
-    // après un OTA reload (Updates.reloadAsync) car le storage bridge n'est pas encore
-    // monté au moment du premier appel JS. On retente une fois après 300ms avant de
+    // Sur Android, AsyncStorage peut retourner null pendant plusieurs centaines de ms
+    // après un OTA reload (Updates.reloadAsync) ou sur Samsung Android 12+ (SELinux strict)
+    // car le storage bridge n'est pas encore monté au moment du premier appel JS.
+    // On retente 4 fois avec backoff progressif (100ms→300ms→600ms→1000ms) avant de
     // conclure que la session est absente — sinon _active reste false définitivement
-    // et GoTrue ne charge jamais le refresh_token → getValidToken() échoue → authErr=true.
-    await new Promise(r => setTimeout(r, 300));
-    const flag2 = await AsyncStorage.getItem(SESSION_ACTIVE_KEY).catch(() => null);
-    this._active = !!flag2;
+    // et GoTrue ne charge jamais le refresh_token → getValidToken() échoue → kick login.
+    const delays = [100, 300, 600, 1000];
+    for (const ms of delays) {
+      await new Promise(r => setTimeout(r, ms));
+      const flagN = await AsyncStorage.getItem(SESSION_ACTIVE_KEY).catch(() => null);
+      if (flagN) {
+        this._active = true;
+        this._checked = true;
+        return;
+      }
+    }
+    this._active = false;
     this._checked = true;
   }
 
@@ -124,6 +133,14 @@ class SessionAwareStorage {
 
   async removeItem(key: string): Promise<void> {
     return _rawSecureStorage.removeItem(key);
+  }
+
+  // Réinitialise l'état actif (appelé par supabase.ts sur SIGNED_OUT explicite).
+  // Empêche GoTrue de tenter de lire le storage après un logout volontaire jusqu'au
+  // prochain login (setItem remet _active=true automatiquement).
+  resetActive(): void {
+    this._active = false;
+    // Ne pas reset _checked : GoTrue peut re-vérifier sans re-attendre le backoff
   }
 }
 
