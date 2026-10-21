@@ -127,6 +127,19 @@ export default function UsersPage() {
     loadData()
   }, [])
 
+  // Recherche serveur quand search >= 3 chars (contourne la limite PAGE_SIZE=200)
+  useEffect(() => {
+    if (search.length < 3) return
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const results = await getProfiles(search)
+        if (!cancelled) setProfiles(results)
+      } catch { /* ignore */ }
+    }, 300)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [search])
+
   // ── Realtime : reflète instantanément les inscriptions/suppressions ──────────
   useEffect(() => {
     const channel = supabase
@@ -191,9 +204,10 @@ export default function UsersPage() {
   }, [])
 
   const filtered = profiles.filter(p => {
-    const q          = search.toLowerCase()
-    const matchSearch = !search || p.name.toLowerCase().includes(q) || p.phone.includes(q)
-    const matchRole   = roleFilter === 'all' || p.role === roleFilter
+    // Si recherche >= 3 chars → résultats déjà filtrés côté serveur, on filtre uniquement par rôle
+    const matchSearch = search.length >= 3 ? true
+      : !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.phone.includes(search)
+    const matchRole = roleFilter === 'all' || p.role === roleFilter
     return matchSearch && matchRole
   })
 
