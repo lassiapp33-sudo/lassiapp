@@ -93,9 +93,22 @@ class SessionAwareStorage {
 
   private async _ensureChecked(): Promise<void> {
     if (this._checked) return;
-    this._checked = true;
+    // Premier essai
     const flag = await AsyncStorage.getItem(SESSION_ACTIVE_KEY).catch(() => null);
-    this._active = !!flag;
+    if (flag) {
+      this._active = true;
+      this._checked = true;
+      return;
+    }
+    // Sur Android, AsyncStorage peut retourner null pendant quelques centaines de ms
+    // après un OTA reload (Updates.reloadAsync) car le storage bridge n'est pas encore
+    // monté au moment du premier appel JS. On retente une fois après 300ms avant de
+    // conclure que la session est absente — sinon _active reste false définitivement
+    // et GoTrue ne charge jamais le refresh_token → getValidToken() échoue → authErr=true.
+    await new Promise(r => setTimeout(r, 300));
+    const flag2 = await AsyncStorage.getItem(SESSION_ACTIVE_KEY).catch(() => null);
+    this._active = !!flag2;
+    this._checked = true;
   }
 
   async getItem(key: string): Promise<string | null> {
