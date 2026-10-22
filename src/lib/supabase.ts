@@ -8,7 +8,7 @@ if (Platform.OS !== 'web') {
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import logger from '../utils/logger';
-import { secureStorage, SESSION_ACTIVE_KEY } from './secureStorage';
+import { secureStorage, rawSecureStorage, SESSION_ACTIVE_KEY } from './secureStorage';
 
 // Si les vars sont absentes (OTA publiée sans env), on fournit des placeholders valides
 // pour que createClient() ne throw pas. L'app affiche un écran d'erreur via SUPABASE_MISCONFIGURED.
@@ -261,12 +261,27 @@ export async function getValidToken(): Promise<string> {
     return staleToken;
   }
 
-  // Aucun token disponible (premier démarrage ou compte supprimé) → throw sans kick.
-  // Les callbacks onSessionExpired ne doivent JAMAIS appeler handleLogout().
-  if (_lastRefreshWasAuthError) {
-    _sessionExpiredCallbacks.forEach(cb => { try { cb(); } catch {} });
-  }
-  throw new Error(_lastRefreshWasAuthError ? 'Session expirée — reconnecte-toi.' : 'Réseau indisponible — réessaie.');
+  // Filet de sécurité ultime : GoTrue a peut-être raté la session (race condition Android).
+  // On lit le storage brut directement pour récupérer le token sans passer par GoTrue.
+  try {
+    const raw = await rawSecureStorage.getItem('supabase.auth.token');
+    if (raw) {
+      const parsed = JSON.parse(raw) as { access_token?: string; refresh_token?: string } | null;
+      const rawToken = parsed?.access_token;
+      if (rawToken) {
+        setCachedToken(rawToken);
+        // Réinjecter la session dans GoTrue pour que les prochains appels fonctionnent
+        if (parsed?.refresh_token) {
+          supabase.auth.setSession({ access_token: rawToken, refresh_token: parsed.refresh_token }).catch(() => {});
+        }
+        console.warn('[LASSI] getValidToken récupéré via rawStorage — GoTrue avait raté la session');
+        return rawToken;
+      }
+    }
+  } catch { /* storage inaccessible — on continue vers le throw */ }
+
+  // Aucun token nulle part → throw, mais JAMAIS de déconnexion automatique.
+  throw new Error('Réseau indisponible — réessaie.');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

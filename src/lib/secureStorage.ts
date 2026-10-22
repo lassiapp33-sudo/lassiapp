@@ -121,8 +121,9 @@ class SessionAwareStorage {
   }
 
   async getItem(key: string): Promise<string | null> {
-    await this._ensureChecked();
-    if (!this._active) return null;
+    // Pass-through direct — le verrou _active causait des faux négatifs Android :
+    // GoTrue recevait null, démarrait sans session, _cachedToken restait null,
+    // et getValidToken() throwait "Session expirée" même si le token était en storage.
     return _rawSecureStorage.getItem(key);
   }
 
