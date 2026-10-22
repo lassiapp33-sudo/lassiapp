@@ -58,10 +58,31 @@ function fetchWithTimeout(
   return Promise.race([fetchPromise, timeoutPromise]);
 }
 
+// ── FLAG LOGOUT EXPLICITE — déclaré ICI pour être disponible dans _sessionGuardStorage
+let _explicitLogoutPending = false;
+
+// Storage adapté : bloque la suppression du token d'auth sur SIGNED_OUT non-explicite.
+// Quand le réseau coupe pendant un refresh (Sénégal), GoTrue retente avec l'ancien
+// refresh token → serveur 400 (rotation) → GoTrue fire SIGNED_OUT ET supprime le
+// token du storage définitivement. _sessionGuardStorage intercepte ce removeItem et
+// le bloque si ce n'est pas un logout volontaire — la session survit à la coupure.
+const _sessionGuardStorage = {
+  getItem:    (key: string)                => secureStorage.getItem(key),
+  setItem:    (key: string, value: string) => secureStorage.setItem(key, value),
+  removeItem: (key: string) => {
+    if (key === 'supabase.auth.token' && !_explicitLogoutPending) {
+      // eslint-disable-next-line no-console
+      console.warn('[LASSI] removeItem(auth token) bloqué — SIGNED_OUT réseau, token préservé');
+      return Promise.resolve();
+    }
+    return secureStorage.removeItem(key);
+  },
+};
+
 // Client Supabase partagé dans toute l'app
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
-    storage: secureStorage,
+    storage: _sessionGuardStorage,
     storageKey: 'supabase.auth.token',
     autoRefreshToken: true,
     persistSession: true,
@@ -75,15 +96,8 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
 let _cachedToken: string | null = null;
 
 // ── SESSION GUARDIAN — DÉTECTION LOGOUT EXPLICITE ─────────────────────────
-// FLAG DÉDIÉ — NE PAS remplacer par `_cachedToken === null`.
-// Raison : _cachedToken est null à l'init du module (cold start, OTA reload).
-// Si SIGNED_OUT fire avant le 1er SIGNED_IN (réseau lent, Doze Android, reuse
-// detection suite à coupure réseau), `_cachedToken === null` était un faux
-// positif → SESSION_ACTIVE_KEY supprimé → déconnexion au prochain démarrage.
-// Ce flag n'est levé QUE par markExplicitLogout() appelé depuis logout() et
-// les déconnexions volontaires — jamais par l'état de démarrage du module.
-let _explicitLogoutPending = false;
-
+// _explicitLogoutPending déclaré plus haut (avant _sessionGuardStorage qui en a besoin).
+// Ne JAMAIS le redéclarer ici.
 export function markExplicitLogout(): void {
   _explicitLogoutPending = true;
   // Sécurité : si SIGNED_OUT ne se déclenche jamais (réseau coupé), reset après 15s
