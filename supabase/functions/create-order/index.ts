@@ -39,11 +39,12 @@ serve(async (req) => {
     const clientName = profile?.name ?? null;
 
     // 2. Paramètres — jamais de montant total côté client
-    const { shopId, items, note, orderType } = await req.json() as {
-      shopId:     string;
-      items:      OrderItem[];
-      note?:      string;
-      orderType?: 'place' | 'emporter';
+    const { shopId, items, note, orderType, paymentMethod } = await req.json() as {
+      shopId:         string;
+      items:          OrderItem[];
+      note?:          string;
+      orderType?:     'place' | 'emporter';
+      paymentMethod?: 'cash' | 'om' | 'wave' | null;
     };
 
     if (!shopId || !Array.isArray(items) || items.length === 0) {
@@ -180,15 +181,19 @@ serve(async (req) => {
         data:    JSON.stringify({ orderId: order.id }),
         read:    false,
       });
-      // Push background (Android + iOS) — best-effort
-      sendPushToUser(sb, shop.merchant_id as string, {
-        title:     'Nouvelle commande 🛒',
-        body:      `Commande de ${total.toLocaleString('fr-FR')} FCFA`,
-        sound:     'default',
-        channelId: 'commandes-v3',
-        priority:  'high',
-        data:      { type: 'new_order', orderId: order.id },
-      }).catch(() => {});
+      // Push uniquement si paiement comptant (cash ou non spécifié)
+      // Pour Wave/OM : le webhook-payment notifie après confirmation du paiement
+      const isOnlinePayment = paymentMethod === 'wave' || paymentMethod === 'om';
+      if (!isOnlinePayment) {
+        sendPushToUser(sb, shop.merchant_id as string, {
+          title:     'Nouvelle commande 🛒',
+          body:      `Commande de ${total.toLocaleString('fr-FR')} FCFA`,
+          sound:     'default',
+          channelId: 'commandes-v3',
+          priority:  'high',
+          data:      { type: 'new_order', orderId: order.id },
+        }).catch(() => {});
+      }
     }
 
     return ok({ orderId: order.id, total });
