@@ -364,26 +364,24 @@ function AppContent() {
     }
   }, []);
 
-  // Annonce vocale iOS foreground : déclenche Speech quand une notif commande arrive
-  // (le MerchantNavigator fait la même chose via Realtime, mais ce listener couvre
-  // le cas où le prestataire est sur un autre écran et n'a pas le Realtime actif)
+  // Annonce vocale foreground iOS + Android : déclenche Speech quand une notif commande/réservation arrive
   useEffect(() => {
     try {
       const N = getN();
-      if (!N || Platform.OS !== 'ios') return;
+      if (!N || Platform.OS === 'web') return;
       const sub = N.addNotificationReceivedListener((notification) => {
         try {
-          const data = notification.request.content.data as Record<string, any>;
-          const title = (notification.request.content.title ?? '') as string;
-          const isOrder =
-            data?.type === 'new_order' ||
-            data?.type === 'commande';
-          if (isOrder) {
-            const opts = { language: 'fr-FR', rate: 0.85, pitch: 1.1, volume: 1 } as const;
-            Speech.stop();
-            Speech.speak('Nouvelle commande reçue', opts);
-            setTimeout(() => { try { Speech.speak('Nouvelle commande reçue', opts); } catch { /* ignore */ } }, 2500);
-          }
+          const data  = notification.request.content.data as Record<string, any>;
+          const type  = data?.type as string | undefined;
+          const isOrder = type === 'new_order' || type === 'commande';
+          const isResa  = type === 'reservation' || type === 'new_reservation' || type === 'table_reservation';
+          if (!isOrder && !isResa) return;
+          const text = isResa ? 'Nouvelle réservation reçue' : 'Nouvelle commande reçue';
+          const opts = { language: 'fr-FR', rate: 0.78, pitch: 1.0, volume: 1 } as const;
+          Speech.stop();
+          Speech.speak(text, opts);
+          setTimeout(() => { try { Speech.speak(text, opts); } catch { /* ignore */ } }, 3000);
+          setTimeout(() => { try { Speech.speak(text, opts); } catch { /* ignore */ } }, 6000);
         } catch { /* best-effort */ }
       });
       return () => { try { sub.remove(); } catch { /* ignore */ } };
@@ -408,6 +406,23 @@ function AppContent() {
         const title = notif.title ?? remoteMessage.data?.title ?? '';
         const body  = notif.body  ?? remoteMessage.data?.body  ?? '';
         if (!title && !body) return;
+        // Annonce vocale Android foreground (addNotificationReceivedListener ne reçoit
+        // pas les messages Firebase sur Android — on doit le faire ici)
+        if (Platform.OS === 'android') {
+          try {
+            const type     = remoteMessage.data?.type as string | undefined;
+            const isOrder  = type === 'new_order' || type === 'commande';
+            const isResa   = type === 'reservation' || type === 'new_reservation' || type === 'table_reservation';
+            if (isOrder || isResa) {
+              const text = isResa ? 'Nouvelle réservation reçue' : 'Nouvelle commande reçue';
+              const opts = { language: 'fr-FR', rate: 0.78, pitch: 1.0, volume: 1 } as const;
+              Speech.stop();
+              Speech.speak(text, opts);
+              setTimeout(() => { try { Speech.speak(text, opts); } catch { /* ignore */ } }, 3000);
+              setTimeout(() => { try { Speech.speak(text, opts); } catch { /* ignore */ } }, 6000);
+            }
+          } catch { /* best-effort */ }
+        }
         try {
           await N.scheduleNotificationAsync({
             content: { title, body, sound: 'default', data: remoteMessage.data ?? {} },
