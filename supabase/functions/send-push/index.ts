@@ -88,6 +88,7 @@ serve(async (req) => {
     // new_order → son vocal bundlé dans l'APK/IPA (rebuild requis pour l'activer)
     const isOrderType  = type === 'new_order';
     const notifChannel = isOrderType ? 'commandes-v3' : (channelId ?? 'commandes-v2');
+    const notifSound   = isOrderType ? 'commande_recue.wav' : 'default';
     const expoRes = await fetch(EXPO_PUSH_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -96,7 +97,7 @@ serve(async (req) => {
         title,
         body,
         data:      data ?? {},
-        sound:     'default',
+        sound:     notifSound,
         channelId: notifChannel,
         priority:  'high',
       }))),

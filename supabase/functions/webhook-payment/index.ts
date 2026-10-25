@@ -1381,8 +1381,9 @@ serve(async (req) => {
             await sendPushToUser(supabase, shopRow.merchant_id, {
               title:     'Nouvelle commande',
               body:      `Paiement reçu — Commande de ${orderRow.client_name ?? 'Client'} · ${montantFr}`,
-              data:      { type: 'commande', orderId: String(result.order_id) },
-              channelId: 'commandes-v2',
+              data:      { type: 'new_order', orderId: String(result.order_id) },
+              sound:     'commande_recue.wav',
+              channelId: 'commandes-v3',
             })
           }
         }
@@ -1692,8 +1693,9 @@ async function notifyGroupResult(supabase: any, groupId: string, gres: Record<st
         await sendPushToUser(supabase, shopRow.merchant_id, {
           title:     'Nouvelle commande',
           body:      `Paiement reçu — Commande de ${orderRow.client_name ?? 'Client'} · ${montantFr}`,
-          data:      { type: 'commande', orderId: String(orderId) },
-          channelId: 'commandes-v2',
+          data:      { type: 'new_order', orderId: String(orderId) },
+          sound:     'commande_recue.wav',
+          channelId: 'commandes-v3',
         });
       }
     }
