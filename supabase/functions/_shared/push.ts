@@ -129,7 +129,6 @@ export async function sendPushToUser(
     tokens.map(to => ({
       sound: 'default',
       priority: 'high' as const,
-      _contentAvailable: true,
       ...message,
       to,
     })),

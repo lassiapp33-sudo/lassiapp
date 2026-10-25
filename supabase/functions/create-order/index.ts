@@ -184,7 +184,7 @@ serve(async (req) => {
       sendPushToUser(sb, shop.merchant_id as string, {
         title:     'Nouvelle commande 🛒',
         body:      `Commande de ${total.toLocaleString('fr-FR')} FCFA`,
-        sound:     'commande_recue.wav',
+        sound:     'default',
         channelId: 'commandes-v3',
         priority:  'high',
         data:      { type: 'new_order', orderId: order.id },

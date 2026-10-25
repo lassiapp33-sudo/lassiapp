@@ -44,22 +44,24 @@ export function getCurrentDeviceToken(): string | null {
   return currentDeviceToken;
 }
 
-// Convertit un FCM token en ExponentPushToken et le sauvegarde en base
-async function fcmToExpoAndSave(fcmToken: string, userId: string | undefined): Promise<void> {
+// Sauvegarde le token APNs (brut) → ExponentPushToken via Expo Push Service
+// IMPORTANT : iOS exige type:'apns' (token APNs brut), jamais type:'fcm'
+// Un FCM token passé avec type:'fcm' sur iOS = Expo ne peut pas router via APNs → zéro lock screen
+async function apnsToExpoAndSave(apnsToken: string, userId: string | undefined): Promise<void> {
   const N = getN();
   if (!N) return;
   try {
-    await logPush(userId, 'ios', 'fcm_token_ok', { token_prefix: fcmToken.slice(0, 20) });
+    await logPush(userId, 'ios', 'apns_token_ok', { token_prefix: apnsToken.slice(0, 20) });
     const tokenData = await N.getExpoPushTokenAsync({
       projectId: EAS_PROJECT_ID,
-      devicePushToken: { type: 'fcm', data: fcmToken },
+      devicePushToken: { type: 'apns', data: apnsToken },
     });
     const expoToken = tokenData?.data ?? null;
     if (!expoToken) {
-      await logPush(userId, 'ios', 'expo_token_error', { token_prefix: 'null_after_fcm' });
+      await logPush(userId, 'ios', 'expo_token_error', { token_prefix: 'null_after_apns' });
       return;
     }
-    if (currentDeviceToken === expoToken) return; // déjà sauvegardé
+    if (currentDeviceToken === expoToken) return;
     currentDeviceToken = expoToken;
     await savePushToken(expoToken, 'ios');
     await logPush(userId, 'ios', 'token_saved', { token_prefix: expoToken.slice(0, 35) });
@@ -118,27 +120,29 @@ export function usePushToken() {
           // ─── onTokenRefresh : listener persistant qui survit aux remontages du hook ──
           // FIX ROOT CAUSE : la boucle poll s'arrêtait quand l'user naviguait (alive=false)
           // avant qu'APNs réponde. onTokenRefresh est appelé même après démontage du hook.
+          // onTokenRefresh : re-register si APNs renouvelle le token
+          // On récupère le token APNs brut via getAPNSToken() après chaque refresh FCM
           if (!_tokenRefreshUnsub) {
-            _tokenRefreshUnsub = messaging().onTokenRefresh(async (fcmToken: string) => {
-              await fcmToExpoAndSave(fcmToken, userId);
+            _tokenRefreshUnsub = messaging().onTokenRefresh(async (_fcmToken: string) => {
+              try {
+                const apns = await messaging().getAPNSToken();
+                if (apns) await apnsToExpoAndSave(apns, userId);
+              } catch { /* best-effort */ }
             });
           }
 
           // Tentative immédiate : APNs token déjà disponible (app ouverte une 2e fois)
-          let fcmToken: string | null = null;
+          let apnsToken: string | null = null;
           for (let i = 0; i < 10; i++) {
             try {
               const apns = await messaging().getAPNSToken();
-              if (apns) {
-                const t = await messaging().getToken();
-                if (t) { fcmToken = t; break; }
-              }
+              if (apns) { apnsToken = apns; break; }
             } catch { /* APNs pas encore prêt */ }
             await new Promise<void>(r => setTimeout(r, 1000));
           }
 
-          if (fcmToken) {
-            await fcmToExpoAndSave(fcmToken, userId);
+          if (apnsToken) {
+            await apnsToExpoAndSave(apnsToken, userId);
           } else {
             // Pas de token immédiat → onTokenRefresh prendra le relais dès qu'APNs répond
             await logPush(userId, os, 'waiting_token_refresh', { error: 'onTokenRefresh registered' });
