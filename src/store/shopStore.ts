@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StoreProduct, StoreCategory, StoreProfile, ShopContext } from '../types/store';
 import { WeekHours } from '../services/hours';
 import * as shopsService from '../services/shops';
@@ -6,6 +7,8 @@ import type { ShopSummary } from '../services/shops';
 import * as productsService from '../services/products';
 import * as fitnessService from '../services/fitnessAbonnements';
 import logger from '../utils/logger';
+
+const ACTIVE_SHOP_KEY = '@lassi_active_shop_id';
 
 const DEFAULT_CATS: StoreCategory[] = [
   { id: 'petitdej', label: 'Petit-déj', emoji: '🍳' },
@@ -113,9 +116,12 @@ const useShopStore = create<ShopState>()((set, get) => ({
   setProducts: p => set({ products: p }),
 
   loadMyShop: async (shopId?: string) => {
-    // Si pas d'argument explicite mais qu'un shop est déjà sélectionné (ex: après switchToShop),
-    // on recharge CE shop — pas le shop par défaut (premier du compte).
-    const effectiveShopId = shopId ?? get().shopId ?? undefined;
+    // Si pas d'argument explicite : lire d'abord l'AsyncStorage (persist après kill),
+    // puis l'état mémoire (persist après background), puis undefined (1er shop).
+    let effectiveShopId = shopId ?? get().shopId ?? undefined;
+    if (!effectiveShopId) {
+      try { effectiveShopId = (await AsyncStorage.getItem(ACTIVE_SHOP_KEY)) ?? undefined; } catch { /* ignore */ }
+    }
     set({ loading: true, shopNotFound: false });
     try {
       const shop = await Promise.race([
@@ -244,6 +250,7 @@ const useShopStore = create<ShopState>()((set, get) => ({
         products,
         loading: false,
       });
+      AsyncStorage.setItem(ACTIVE_SHOP_KEY, shop.id).catch(() => {});
     } catch (err) {
       logger.warn('[shopStore] loadMyShop:', err);
       set({ loading: false });
