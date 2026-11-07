@@ -11,6 +11,7 @@ import ShopStats from '../../components/shop/ShopStats';
 import ShopInfoBar from '../../components/shop/ShopInfoBar';
 import MenuTabs, { MenuTabId } from '../../components/shop/MenuTabs';
 import ProductTile, { Product } from '../../components/shop/ProductTile';
+import ProductRow from '../../components/shop/ProductRow';
 import CartFloating from '../../components/shop/CartFloating';
 import ShopFooter, { FOOTER_HEIGHT } from '../../components/shop/ShopFooter';
 import OpeningHoursCard from '../../components/store/OpeningHoursCard';
@@ -159,6 +160,77 @@ function storeProductToProduct(p: StoreProduct): Product {
     sizes: p.sizes,
     colors: p.colors,
   };
+}
+
+/** Produit sans photo ni emoji → ligne liste ; avec photo/emoji → tuile grille */
+function renderMixedProducts(
+  items: StoreProduct[],
+  opts: {
+    getQty: (p: StoreProduct) => number;
+    onAdd: (p: StoreProduct) => void;
+    onRemove: (p: StoreProduct) => void;
+    promoMap: Record<string, any>;
+    isVip: boolean;
+    isPreview: boolean;
+    highlightId?: string | null;
+    gridStyle: any;
+    gridRowStyle: any;
+    tileWrapperStyle: any;
+    tileHighlightStyle: any;
+    tileSpacerStyle: any;
+  }
+): React.ReactNode {
+  const nodes: React.ReactNode[] = [];
+  let gridBuf: StoreProduct[] = [];
+
+  const flushGrid = () => {
+    if (gridBuf.length === 0) return;
+    for (let i = 0; i < gridBuf.length; i += 2) {
+      const pair = gridBuf.slice(i, i + 2);
+      nodes.push(
+        <View key={`gr-${gridBuf[i].id}`} style={opts.gridRowStyle}>
+          {pair.map(p => (
+            <View key={p.id} style={[opts.tileWrapperStyle, p.id === opts.highlightId && opts.tileHighlightStyle]}>
+              <ProductTile
+                product={storeProductToProduct(p)}
+                qty={opts.getQty(p)}
+                onAdd={() => opts.onAdd(p)}
+                onRemove={() => opts.onRemove(p)}
+                promoInfo={opts.promoMap[p.id]}
+                isVip={opts.isVip}
+                isPreview={opts.isPreview}
+              />
+            </View>
+          ))}
+          {pair.length === 1 && <View style={opts.tileSpacerStyle} />}
+        </View>
+      );
+    }
+    gridBuf = [];
+  };
+
+  for (const p of items) {
+    const prod = storeProductToProduct(p);
+    if (!prod.photoUrl && !prod.emoji) {
+      flushGrid();
+      nodes.push(
+        <ProductRow
+          key={p.id}
+          product={prod}
+          qty={opts.getQty(p)}
+          onAdd={() => opts.onAdd(p)}
+          onRemove={() => opts.onRemove(p)}
+          promoInfo={opts.promoMap[p.id]}
+          isVip={opts.isVip}
+        />
+      );
+    } else {
+      gridBuf.push(p);
+    }
+  }
+  flushGrid();
+
+  return <View style={opts.gridStyle}>{nodes}</View>;
 }
 
 // Correspondance JS Date.getDay() (0=Dim) → DayKey
@@ -605,6 +677,21 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
 
   const cartBottom = FOOTER_HEIGHT + 8;
 
+  const mixedOpts = {
+    getQty: (p: StoreProduct) => p.stock === 'out' ? 0 : (cartItems.find(ci => ci.id === p.id)?.qty ?? 0),
+    onAdd: addToCart,
+    onRemove: removeFromCart,
+    promoMap: productPromoMap,
+    isVip,
+    isPreview,
+    highlightId,
+    gridStyle: styles.grid,
+    gridRowStyle: styles.gridRow,
+    tileWrapperStyle: styles.tileWrapper,
+    tileHighlightStyle: styles.tileHighlight,
+    tileSpacerStyle: styles.tileSpacer,
+  };
+
   const handleTerrainReserve = () => {
     if (!terrainBookingReady) return;
     onBookTerrainDirect?.({
@@ -1020,26 +1107,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                 return (
                   <View key={section.id} onLayout={e => { productSectionY.current = e.nativeEvent.layout.y; }}>
                     <Text style={styles.catTitle}>{section.label}</Text>
-                    <View style={styles.grid}>
-                      {toPairs(sectionItems).map((pair, i) => (
-                        <View key={i} style={styles.gridRow}>
-                          {pair.map(product => (
-                            <View key={product.id} style={styles.tileWrapper}>
-                              <ProductTile
-                                product={storeProductToProduct(product)}
-                                qty={getProductQty(product)}
-                                onAdd={() => addToCart(product)}
-                                onRemove={() => removeFromCart(product)}
-                                promoInfo={productPromoMap[product.id]}
-                                isVip={isVip}
-                                isPreview={isPreview}
-                              />
-                            </View>
-                          ))}
-                          {pair.length === 1 && <View style={styles.tileSpacer} />}
-                        </View>
-                      ))}
-                    </View>
+                    {renderMixedProducts(sectionItems, { ...mixedOpts, getQty: getProductQty })}
                   </View>
                 );
               })}
@@ -1115,26 +1183,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                     return (
                       <View key={section.id}>
                         <Text style={styles.catTitle}>{section.label}</Text>
-                        <View style={styles.grid}>
-                          {toPairs(products).map((pair, i) => (
-                            <View key={i} style={styles.gridRow}>
-                              {pair.map(product => (
-                                <View key={product.id} style={styles.tileWrapper}>
-                                  <ProductTile
-                                    product={storeProductToProduct(product)}
-                                    qty={product.stock === 'out' ? 0 : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)}
-                                    onAdd={() => addToCart(product)}
-                                    onRemove={() => removeItem(product.id)}
-                                    promoInfo={productPromoMap[product.id]}
-                                    isVip={isVip}
-                                    isPreview={isPreview}
-                                  />
-                                </View>
-                              ))}
-                              {pair.length === 1 && <View style={styles.tileSpacer} />}
-                            </View>
-                          ))}
-                        </View>
+                        {renderMixedProducts(products, mixedOpts)}
                       </View>
                     );
                   })}
@@ -1153,36 +1202,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                 return (
                   <View key={section.id}>
                     <Text style={styles.catTitle}>{section.label}</Text>
-                    <View style={styles.grid}>
-                      {toPairs(products).map((pair, i) => (
-                        <View key={i} style={styles.gridRow}>
-                          {pair.map(product => (
-                            <View
-                              key={product.id}
-                              style={[
-                                styles.tileWrapper,
-                                product.id === highlightId && styles.tileHighlight,
-                              ]}
-                            >
-                              <ProductTile
-                                product={storeProductToProduct(product)}
-                                qty={
-                                  product.stock === 'out'
-                                    ? 0
-                                    : (cartItems.find(ci => ci.id === product.id)?.qty ?? 0)
-                                }
-                                onAdd={() => addToCart(product)}
-                                onRemove={() => removeItem(product.id)}
-                                promoInfo={productPromoMap[product.id]}
-                                isVip={isVip}
-                                isPreview={isPreview}
-                              />
-                            </View>
-                          ))}
-                          {pair.length === 1 && <View style={styles.tileSpacer} />}
-                        </View>
-                      ))}
-                    </View>
+                    {renderMixedProducts(products, mixedOpts)}
                   </View>
                 );
               })}
