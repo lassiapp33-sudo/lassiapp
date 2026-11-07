@@ -3,6 +3,7 @@ import {
   Modal,
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
@@ -35,15 +36,17 @@ const IcoCheck = () => (
 );
 
 export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Props) {
-  const [step, setStep]       = useState<Step>('loading');
-  const [info, setInfo]       = useState<RefundInfo | null>(null);
-  const [errMsg, setErrMsg]   = useState('');
+  const [step, setStep]         = useState<Step>('loading');
+  const [info, setInfo]         = useState<RefundInfo | null>(null);
+  const [errMsg, setErrMsg]     = useState('');
+  const [manualPhone, setManualPhone] = useState('');
 
   useEffect(() => {
     if (!visible) return;
     setStep('loading');
     setInfo(null);
     setErrMsg('');
+    setManualPhone('');
     getRefundInfo(orderId)
       .then(d => {
         setInfo(d);
@@ -52,9 +55,11 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
       .catch(e => { setErrMsg(e.message); setStep('error'); });
   }, [visible, orderId]);
 
+  const effectivePhone = info?.clientPhone || manualPhone;
+
   const openAndSend = () => {
     if (!info) return;
-    const phone = info.clientPhone.replace(/^\+?221/, '').trim();
+    const phone = effectivePhone.replace(/^\+?221/, '').trim();
     const montant = Math.round(info.montantPrestataire);
     if (info.payMethod === 'wave') {
       Linking.openURL(`wave://send?mobile=%2B221${phone}&amount=${montant}`);
@@ -104,7 +109,19 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
                 <Text style={s.infoLabel}>Remboursement client</Text>
                 <Text style={s.infoAmount}>{formatPrice(info.montantPrestataire)}</Text>
                 <Text style={s.infoSub}>à envoyer à</Text>
-                <Text style={s.infoPhone}>{info.clientPhone || '—'}</Text>
+                {info.clientPhone ? (
+                  <Text style={s.infoPhone}>{info.clientPhone}</Text>
+                ) : (
+                  <TextInput
+                    style={s.phoneInput}
+                    placeholder="Numéro client (ex: 77 123 45 67)"
+                    placeholderTextColor={colors.muted}
+                    keyboardType="phone-pad"
+                    value={manualPhone}
+                    onChangeText={setManualPhone}
+                    maxLength={15}
+                  />
+                )}
               </View>
 
               <Text style={s.hint}>
@@ -112,8 +129,8 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
               </Text>
 
               <TouchableOpacity
-                style={[s.appBtn, info.payMethod === 'wave' ? s.waveBtn : s.omBtn, { marginBottom: 0 }]}
-                onPress={openAndSend}
+                style={[s.appBtn, info.payMethod === 'wave' ? s.waveBtn : s.omBtn, { marginBottom: 0, opacity: effectivePhone ? 1 : 0.4 }]}
+                onPress={effectivePhone ? openAndSend : undefined}
                 activeOpacity={0.85}
               >
                 <Text style={info.payMethod === 'wave' ? s.waveTxt : s.omTxt}>
@@ -130,7 +147,7 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
                 <Text style={s.infoLabel}>Remboursement client</Text>
                 <Text style={s.infoAmount}>{formatPrice(info.montantPrestataire)}</Text>
                 <Text style={s.infoSub}>envoyé à</Text>
-                <Text style={s.infoPhone}>{info.clientPhone || '—'}</Text>
+                <Text style={s.infoPhone}>{effectivePhone || '—'}</Text>
               </View>
 
               <Text style={s.hint}>
@@ -242,6 +259,18 @@ const s = StyleSheet.create({
     fontFamily: fonts.title,
     fontSize: 16,
     marginTop: 2,
+  },
+  phoneInput: {
+    color: colors.white,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.accent,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginTop: 4,
+    minWidth: 180,
+    textAlign: 'center',
   },
   hint: {
     color: colors.muted,
