@@ -112,9 +112,10 @@ export default function SearchScreen({ initialQuery = '', onBack, onShopPress }:
     setShops(prev => prev.map(s => (s.id === updated.id ? updated : s)));
   });
 
-  const q = query.trim().toLowerCase();
+  const normalize = (s: string) => s.normalize('NFKD').replace(/[^\x00-\x7F]/g, '').toLowerCase();
+  const q = normalize(query.trim());
   const filtered = q
-    ? shops.filter(s => s.name.toLowerCase().includes(q) || s.zone.toLowerCase().includes(q))
+    ? shops.filter(s => normalize(s.name).includes(q) || normalize(s.zone).includes(q))
     : shops;
 
   const vipShops = filtered.filter(s => s.isVip);
