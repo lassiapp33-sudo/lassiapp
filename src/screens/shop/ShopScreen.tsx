@@ -226,7 +226,7 @@ function ProductSectionList({ items, opts }: { items: StoreProduct[]; opts: Sect
       nodes.push(
         <ProductRow
           key={p.id}
-          product={prod}
+          product={{ ...prod, photoUrl: undefined, emoji: '' }}
           qty={opts.getQty(p)}
           onAdd={() => opts.onAdd(p)}
           onRemove={() => opts.onRemove(p)}
