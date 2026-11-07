@@ -162,29 +162,68 @@ function storeProductToProduct(p: StoreProduct): Product {
   };
 }
 
-/** Tous les produits en liste (ProductRow gère photo/no-photo) */
-function renderMixedProducts(
-  items: StoreProduct[],
-  opts: {
-    getQty: (p: StoreProduct) => number;
-    onAdd: (p: StoreProduct) => void;
-    onRemove: (p: StoreProduct) => void;
-    promoMap: Record<string, any>;
-    isVip: boolean;
-    isPreview: boolean;
-    highlightId?: string | null;
-    gridStyle: any;
-    gridRowStyle: any;
-    tileWrapperStyle: any;
-    tileHighlightStyle: any;
-    tileSpacerStyle: any;
-  }
-): React.ReactNode {
+interface SectionOpts {
+  getQty: (p: StoreProduct) => number;
+  onAdd: (p: StoreProduct) => void;
+  onRemove: (p: StoreProduct) => void;
+  promoMap: Record<string, any>;
+  isVip: boolean;
+  isPreview: boolean;
+  highlightId?: string | null;
+  gridStyle: any;
+  gridRowStyle: any;
+  tileWrapperStyle: any;
+  tileHighlightStyle: any;
+  tileSpacerStyle: any;
+}
+
+/**
+ * Produit avec photo qui charge → grille ProductTile
+ * Produit sans photo OU image cassée → carte beauté ProductRow
+ */
+function ProductSectionList({ items, opts }: { items: StoreProduct[]; opts: SectionOpts }) {
+  const [brokenIds, setBrokenIds] = React.useState<Set<string>>(new Set());
+
+  const markBroken = React.useCallback((id: string) => {
+    setBrokenIds(prev => { const s = new Set(prev); s.add(id); return s; });
+  }, []);
+
   const nodes: React.ReactNode[] = [];
+  let gridBuf: StoreProduct[] = [];
+
+  const flushGrid = () => {
+    if (gridBuf.length === 0) return;
+    for (let i = 0; i < gridBuf.length; i += 2) {
+      const pair = gridBuf.slice(i, i + 2);
+      nodes.push(
+        <View key={`gr-${pair[0].id}`} style={opts.gridRowStyle}>
+          {pair.map(p => (
+            <View key={p.id} style={[opts.tileWrapperStyle, p.id === opts.highlightId && opts.tileHighlightStyle]}>
+              <ProductTile
+                product={storeProductToProduct(p)}
+                qty={opts.getQty(p)}
+                onAdd={() => opts.onAdd(p)}
+                onRemove={() => opts.onRemove(p)}
+                promoInfo={opts.promoMap[p.id]}
+                isVip={opts.isVip}
+                isPreview={opts.isPreview}
+                onImageError={() => markBroken(p.id)}
+              />
+            </View>
+          ))}
+          {pair.length === 1 && <View style={opts.tileSpacerStyle} />}
+        </View>
+      );
+    }
+    gridBuf = [];
+  };
 
   for (const p of items) {
     const prod = storeProductToProduct(p);
-    nodes.push(
+    const hasMedia = (!!prod.photoUrl || !!prod.emoji) && !brokenIds.has(p.id);
+    if (!hasMedia) {
+      flushGrid();
+      nodes.push(
         <ProductRow
           key={p.id}
           product={prod}
@@ -195,9 +234,17 @@ function renderMixedProducts(
           isVip={opts.isVip}
         />
       );
+    } else {
+      gridBuf.push(p);
+    }
   }
+  flushGrid();
 
-  return <View>{nodes}</View>;
+  return <View style={opts.gridStyle}>{nodes}</View>;
+}
+
+function renderMixedProducts(items: StoreProduct[], opts: SectionOpts): React.ReactNode {
+  return <ProductSectionList items={items} opts={opts} />;
 }
 
 // Correspondance JS Date.getDay() (0=Dim) → DayKey

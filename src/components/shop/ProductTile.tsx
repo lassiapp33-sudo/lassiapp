@@ -32,9 +32,10 @@ interface Props {
   promoInfo?: ProductPromoInfo;
   isVip?: boolean;
   isPreview?: boolean;
+  onImageError?: () => void;
 }
 
-export default function ProductTile({ product, qty, onAdd, onRemove, onPress, promoInfo, isVip = false, isPreview = false }: Props) {
+export default function ProductTile({ product, qty, onAdd, onRemove, onPress, promoInfo, isVip = false, isPreview = false, onImageError }: Props) {
   const isOut = product.stock === 'out';
   const calcPrix = (p: number) => p;
   const prixPromo = isPreview ? null : calcPromoClientPrice(product.price, promoInfo, isVip);
@@ -57,6 +58,7 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
             style={styles.photo}
             contentFit="cover"
             transition={150}
+            onError={onImageError}
           />
         ) : product.emoji ? (
           <Text style={styles.emoji}>{product.emoji}</Text>
