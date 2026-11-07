@@ -320,7 +320,6 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone, onRefun
                   onPress={onAccept}
                   activeOpacity={0.85}
                 >
-                  <IcoCheck color={colors.bg} />
                   <Text style={[styles.btnWideTxt, { color: colors.bg }]}>Confirmer</Text>
                 </TouchableOpacity>
               </>

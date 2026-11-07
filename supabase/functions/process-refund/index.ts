@@ -41,6 +41,45 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: CORS });
   }
 
+  // — GET : retourne les infos de remboursement sans traiter
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const orderId = url.searchParams.get('order_id');
+    if (!orderId) return new Response(JSON.stringify({ error: 'order_id required' }), { status: 400, headers: CORS });
+
+    const { data: order } = await supabase
+      .from('orders').select('id, status, pay_method, total, client_id, client_phone, shop_id')
+      .eq('id', orderId).maybeSingle();
+    if (!order) return new Response(JSON.stringify({ error: 'order_not_found' }), { status: 404, headers: CORS });
+
+    const { data: shop } = await supabase.from('shops').select('owner_id').eq('id', order.shop_id).maybeSingle();
+    if (!shop || shop.owner_id !== user.id) return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: CORS });
+
+    const { data: pi } = await supabase.from('payment_intents').select('id, commission_lassi').eq('order_id', orderId).maybeSingle();
+    const commissionLassi: number = pi?.commission_lassi ?? Math.round(order.total * 0.01);
+
+    let clientPhone: string = order.client_phone ?? '';
+    if (!clientPhone && order.client_id) {
+      const { data: profile } = await supabase.from('profiles').select('phone').eq('id', order.client_id).maybeSingle();
+      clientPhone = profile?.phone ?? '';
+    }
+    if (clientPhone) clientPhone = clientPhone.replace(/^\+?221/, '').trim();
+
+    let montantPrestataire: number = order.total - commissionLassi;
+    if (pi?.id) {
+      const { data: pq } = await supabase.from('payout_queue').select('montant').eq('payment_intent_id', pi.id).maybeSingle();
+      if (pq?.montant) montantPrestataire = pq.montant;
+    }
+
+    return new Response(JSON.stringify({
+      montant_prestataire: montantPrestataire,
+      commission_lassi:    commissionLassi,
+      client_phone:        clientPhone,
+      pay_method:          order.pay_method,
+      already_refunded:    order.status === 'refunded',
+    }), { headers: { ...CORS, 'Content-Type': 'application/json' } });
+  }
+
   let body: { order_id?: string };
   try { body = await req.json(); } catch { body = {}; }
 

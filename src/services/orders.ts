@@ -289,47 +289,21 @@ export interface RefundInfo {
 }
 
 export async function getRefundInfo(orderId: string): Promise<RefundInfo> {
-  // Requêtes directes aux tables (contourne le cache RPC PostgREST)
-  const { data: order, error: oErr } = await supabase
-    .from('orders')
-    .select('id, client_id, client_phone, status, pay_method, total')
-    .eq('id', orderId)
-    .maybeSingle();
-  if (oErr || !order) throw new Error(oErr?.message ?? 'Commande introuvable');
-  if (['refused', 'refunded'].includes(order.status)) throw new Error('order_not_refundable');
-
-  const { data: pi } = await supabase
-    .from('payment_intents')
-    .select('id, commission_lassi, montant_total')
-    .eq('order_id', orderId)
-    .maybeSingle();
-
-  const commissionLassi: number = pi?.commission_lassi ?? Math.round(order.total * 0.01);
-
-  let montantPrestataire: number = order.total - commissionLassi;
-  if (pi?.id) {
-    const { data: pq } = await supabase
-      .from('payout_queue')
-      .select('montant')
-      .eq('payment_intent_id', pi.id)
-      .maybeSingle();
-    if (pq?.montant) montantPrestataire = pq.montant;
-  }
-
-  let clientPhone: string = order.client_phone ?? '';
-  if (!clientPhone && order.client_id) {
-    // profiles.phone est protégé par RLS → passer par le RPC SECURITY DEFINER
-    const { data: rpcData } = await supabase.rpc('get_refund_info', { p_order_id: orderId });
-    if (rpcData) clientPhone = (rpcData as { client_phone?: string }).client_phone ?? '';
-  }
-
+  // Appel GET sur l'EF process-refund (service_role → bypass RLS total)
+  const token = await getValidToken();
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/process-refund?order_id=${orderId}`, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}`, 'apikey': ANON_KEY },
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? 'Erreur chargement remboursement');
   return {
-    montantPrestataire,
-    commissionLassi,
-    clientPhone,
-    clientId:        order.client_id,
-    payMethod:       order.pay_method,
-    alreadyRefunded: order.status === 'refunded',
+    montantPrestataire: json.montant_prestataire,
+    commissionLassi:    json.commission_lassi,
+    clientPhone:        json.client_phone ?? '',
+    clientId:           null,
+    payMethod:          json.pay_method,
+    alreadyRefunded:    json.already_refunded ?? false,
   };
 }
 
