@@ -179,7 +179,7 @@ export async function getShops(): Promise<Shop[]> {
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/shops?select=*&is_admin_account=neq.true&has_content=eq.true&order=rating.desc`,
+      `${SUPABASE_URL}/rest/v1/shops?select=*&is_admin_account=neq.true&has_content=eq.true&product_count=gte.2&order=rating.desc`,
       {
         headers: {
           apikey: SUPABASE_ANON,
@@ -204,7 +204,7 @@ export async function getShopsByCategory(category: string): Promise<Shop[]> {
   if (hit && Date.now() - hit.ts < SHOPS_CACHE_TTL) return hit.data;
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/shops?select=*&category=eq.${encodeURIComponent(category)}&is_admin_account=neq.true&has_content=eq.true&order=rating.desc`,
+      `${SUPABASE_URL}/rest/v1/shops?select=*&category=eq.${encodeURIComponent(category)}&is_admin_account=neq.true&has_content=eq.true&product_count=gte.2&order=rating.desc`,
       { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } },
     );
     if (!res.ok) return [];
@@ -598,6 +598,7 @@ export async function getShopsInBounds(
     .select('*')
     .eq('is_admin_account', false)
     .eq('has_content', true)
+    .gte('product_count', 2)
     .not('latitude', 'is', null)
     .not('longitude', 'is', null)
     .gte('latitude', minLat)

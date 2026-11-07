@@ -20,7 +20,7 @@ interface Props {
   onSuccess: () => void;
 }
 
-type Step = 'loading' | 'info' | 'confirming' | 'done' | 'error';
+type Step = 'loading' | 'info' | 'sent' | 'confirming' | 'done' | 'error';
 
 const IcoClose = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
@@ -52,8 +52,17 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
       .catch(e => { setErrMsg(e.message); setStep('error'); });
   }, [visible, orderId]);
 
-  const openWave = () => Linking.openURL('wave://');
-  const openOM   = () => Linking.openURL('orangemoney://');
+  const openAndSend = () => {
+    if (!info) return;
+    const phone = info.clientPhone.replace(/^\+?221/, '').trim();
+    const montant = Math.round(info.montantPrestataire);
+    if (info.payMethod === 'wave') {
+      Linking.openURL(`wave://send?mobile=%2B221${phone}&amount=${montant}`);
+    } else {
+      Linking.openURL(`orangemoney://pay?phone=00221${phone}&amount=${montant}`);
+    }
+    setStep('sent');
+  };
 
   const handleConfirm = async () => {
     setStep('confirming');
@@ -88,36 +97,53 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
             </View>
           )}
 
-          {/* Info */}
+          {/* Info — bouton unique d'envoi */}
           {step === 'info' && info && (
             <>
               <View style={s.infoBox}>
-                <Text style={s.infoLabel}>Montant à envoyer manuellement</Text>
+                <Text style={s.infoLabel}>Remboursement client</Text>
                 <Text style={s.infoAmount}>{formatPrice(info.montantPrestataire)}</Text>
-                <Text style={s.infoSub}>via {payLabel} au</Text>
+                <Text style={s.infoSub}>à envoyer à</Text>
                 <Text style={s.infoPhone}>{info.clientPhone || '—'}</Text>
               </View>
 
               <Text style={s.hint}>
-                LASSI rembourse automatiquement sa commission ({formatPrice(info.commissionLassi)}) dès que tu confirmes.
+                LASSI rembourse sa commission ({formatPrice(info.commissionLassi)}) automatiquement.
               </Text>
 
-              <View style={s.appBtns}>
-                {info.payMethod === 'wave' && (
-                  <TouchableOpacity style={[s.appBtn, s.waveBtn]} onPress={openWave} activeOpacity={0.85}>
-                    <Text style={s.waveTxt}>Ouvrir Wave</Text>
-                  </TouchableOpacity>
-                )}
-                {info.payMethod === 'om' && (
-                  <TouchableOpacity style={[s.appBtn, s.omBtn]} onPress={openOM} activeOpacity={0.85}>
-                    <Text style={s.omTxt}>Ouvrir Orange Money</Text>
-                  </TouchableOpacity>
-                )}
+              <TouchableOpacity
+                style={[s.appBtn, info.payMethod === 'wave' ? s.waveBtn : s.omBtn, { marginBottom: 0 }]}
+                onPress={openAndSend}
+                activeOpacity={0.85}
+              >
+                <Text style={info.payMethod === 'wave' ? s.waveTxt : s.omTxt}>
+                  Envoyer {formatPrice(info.montantPrestataire)} via {payLabel}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* Sent — prestataire confirme qu'il a bien envoyé */}
+          {step === 'sent' && info && (
+            <>
+              <View style={s.infoBox}>
+                <Text style={s.infoLabel}>Remboursement client</Text>
+                <Text style={s.infoAmount}>{formatPrice(info.montantPrestataire)}</Text>
+                <Text style={s.infoSub}>envoyé à</Text>
+                <Text style={s.infoPhone}>{info.clientPhone || '—'}</Text>
               </View>
+
+              <Text style={s.hint}>
+                Confirme une fois le virement effectué dans {payLabel}.
+              </Text>
 
               <TouchableOpacity style={s.confirmBtn} onPress={handleConfirm} activeOpacity={0.85}>
                 <IcoCheck />
                 <Text style={s.confirmTxt}>J'ai envoyé — Confirmer</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={s.reopen} onPress={openAndSend} activeOpacity={0.75}>
+                <Text style={s.reopenTxt}>Rouvrir {payLabel}</Text>
               </TouchableOpacity>
             </>
           )}
@@ -222,16 +248,24 @@ const s = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 12,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
     lineHeight: 17,
   },
-  appBtns: {
+  appBtn: {
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
     marginBottom: 12,
   },
-  appBtn: {
-    borderRadius: 12,
-    paddingVertical: 12,
+  reopen: {
+    marginTop: 10,
     alignItems: 'center',
+  },
+  reopenTxt: {
+    color: colors.muted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    textDecorationLine: 'underline',
   },
   waveBtn: { backgroundColor: '#1DC8F2' },
   waveTxt: { color: '#062a33', fontFamily: fonts.title, fontSize: 15 },
