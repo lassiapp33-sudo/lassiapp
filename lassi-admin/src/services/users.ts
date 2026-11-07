@@ -64,6 +64,8 @@ export async function getProfiles(search?: string, page = 0): Promise<AdminProfi
 // ─── Commerces ────────────────────────────────────────────────────────────────
 
 export async function getShops(search?: string, page = 0): Promise<AdminShop[]> {
+  const normalize = (s: string) => s.normalize('NFKD').replace(/[^\x00-\x7F]/g, '').toLowerCase()
+
   let query = supabase
     .from('shops')
     .select(`
@@ -72,16 +74,19 @@ export async function getShops(search?: string, page = 0): Promise<AdminShop[]> 
       profiles!merchant_id(name)
     `)
     .order('name')
-    .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
-  if (search) {
-    query = query.ilike('name', `%${search}%`)
+  if (!search) {
+    query = query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
   }
 
   const { data, error } = await query
   if (error) throw new Error(error.message)
 
-  return (data ?? []).map(row => ({
+  const rows = search
+    ? (data ?? []).filter(row => normalize(row.name ?? '').includes(normalize(search)))
+    : (data ?? [])
+
+  return rows.map(row => ({
     id:           row.id,
     name:         row.name,
     category:     row.category,
