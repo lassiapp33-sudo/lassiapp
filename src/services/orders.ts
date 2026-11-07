@@ -289,15 +289,50 @@ export interface RefundInfo {
 }
 
 export async function getRefundInfo(orderId: string): Promise<RefundInfo> {
-  const { data, error } = await supabase.rpc('get_refund_info', { p_order_id: orderId });
-  if (error) throw new Error(error.message);
+  // Requêtes directes aux tables (contourne le cache RPC PostgREST)
+  const { data: order, error: oErr } = await supabase
+    .from('orders')
+    .select('id, client_id, client_phone, status, pay_method, total')
+    .eq('id', orderId)
+    .maybeSingle();
+  if (oErr || !order) throw new Error(oErr?.message ?? 'Commande introuvable');
+  if (['refused', 'refunded'].includes(order.status)) throw new Error('order_not_refundable');
+
+  const { data: pi } = await supabase
+    .from('payment_intents')
+    .select('id, commission_lassi, montant_total')
+    .eq('order_id', orderId)
+    .maybeSingle();
+
+  const commissionLassi: number = pi?.commission_lassi ?? Math.round(order.total * 0.01);
+
+  let montantPrestataire: number = order.total - commissionLassi;
+  if (pi?.id) {
+    const { data: pq } = await supabase
+      .from('payout_queue')
+      .select('montant')
+      .eq('payment_intent_id', pi.id)
+      .maybeSingle();
+    if (pq?.montant) montantPrestataire = pq.montant;
+  }
+
+  let clientPhone: string = order.client_phone ?? '';
+  if (!clientPhone && order.client_id) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('phone')
+      .eq('id', order.client_id)
+      .maybeSingle();
+    clientPhone = profile?.phone ?? '';
+  }
+
   return {
-    montantPrestataire: data.montant_prestataire,
-    commissionLassi:    data.commission_lassi,
-    clientPhone:        data.client_phone,
-    clientId:           data.client_id,
-    payMethod:          data.pay_method,
-    alreadyRefunded:    data.already_refunded,
+    montantPrestataire,
+    commissionLassi,
+    clientPhone,
+    clientId:        order.client_id,
+    payMethod:       order.pay_method,
+    alreadyRefunded: order.status === 'refunded',
   };
 }
 
