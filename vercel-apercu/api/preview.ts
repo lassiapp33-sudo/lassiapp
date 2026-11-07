@@ -410,7 +410,7 @@ function productCard(p: Product): string {
     <div class="pbody">
       <div class="pname">${esc(clip(p.name ?? '', 48))}</div>
       ${desc ? `<div class="pdesc">${esc(clip(desc, 60))}</div>` : ''}
-      <div class="pprice">${fmtPrice(prixClient(base))}</div>
+      <div class="pprice">${fmtPrice(base)}</div>
       ${stockAttr !== '' ? `<div class="pstock">${stockAttr} restant${Number(stockAttr) > 1 ? 's' : ''}</div>` : ''}
       <div class="stepper" data-id="${escAttr(p.id)}" data-variants="${hasVariants ? '1' : ''}">
         <button class="add" type="button" aria-label="Ajouter">Ajouter</button>
@@ -429,7 +429,7 @@ function serviceCard(s: ServiceItem, _deep: string): string {
     : '';
   const head = `<div class="pname">${esc(clip(s.name, 48))}</div>
       <div class="pdesc">${esc(clip(sub, 64))}</div>
-      <div class="pprice">${fmtPrice(prixClient(s.price))}</div>`;
+      <div class="pprice">${fmtPrice(s.price)}</div>`;
   return `<div class="prod svc book" data-svc="${escAttr(s.id)}" data-name="${escAttr(s.name)}" data-price="${prixClient(s.price)}" data-meta="${escAttr(s.meta)}" data-min="${Math.max(0, Math.round(s.price))}">
     ${visual}<div class="pbody">${head}
       <button class="svcbtn bookbtn" type="button">Réserver</button></div></div>`;
@@ -455,7 +455,7 @@ function terrainCard(t: Terrain, base: string): string {
     <div class="terrain-body">
       <div class="pname">${esc(t.nom ?? 'Terrain')}</div>
       ${desc}${addr}
-      <div class="terrain-prix">${fmtPrice(prixClient)} <span class="terrain-unit">/ heure</span></div>
+      <div class="terrain-prix">${fmtPrice(prix)} <span class="terrain-unit">/ heure</span></div>
     </div>
     <a class="terrain-btn" href="${escAttr(link)}">Réserver un créneau →</a>
   </div>`;
@@ -470,7 +470,7 @@ function fitnessCard(s: ServiceItem): string {
       <div class="abometa">⏱ ${esc(s.meta)}</div>
     </div>
     <div class="abo-right">
-      <div class="aboprix">${fmtPrice(total)}</div>
+      <div class="aboprix">${fmtPrice(s.price)}</div>
       <button class="abo-btn" type="button">Réserver</button>
     </div>
   </div>`;
@@ -523,7 +523,7 @@ function page(o: {
       o.dailySpecial.map(ds =>
         `<div class="ds-card" data-ds-id="${escAttr(ds.id)}" data-ds-name="${escAttr(ds.name)}" data-ds-price="${ds.price}">` +
         (ds.photo_url ? `<img class="ds-img" src="${escAttr(ds.photo_url)}" alt="${escAttr(ds.name)}" loading="lazy">` : '') +
-        `<div class="ds-info"><div class="ds-name">${esc(ds.name)}</div><div class="ds-price">${fmtPrice(Math.ceil(ds.price * 1.01))}</div></div>` +
+        `<div class="ds-info"><div class="ds-name">${esc(ds.name)}</div><div class="ds-price">${fmtPrice(ds.price)}</div></div>` +
         `<button class="ds-btn" type="button">Commander</button></div>`).join('') +
       `</div>`
     : '';
