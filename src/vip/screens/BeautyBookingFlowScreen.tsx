@@ -183,10 +183,10 @@ export default function BeautyBookingFlowScreen({
                       </View>
                       <View style={{ alignItems: 'flex-end' }}>
                         <Text style={[s.prestPrix, sel && s.prestPrixOn]}>
-                          {calculerPrixClientVip(p.prix).toLocaleString('fr-FR')} F
+                          {p.prix.toLocaleString('fr-FR')} F
                         </Text>
                         {p.prixBarre != null && (
-                          <Text style={s.prestBarre}>{calculerPrixClientVip(p.prixBarre).toLocaleString('fr-FR')} F</Text>
+                          <Text style={s.prestBarre}>{p.prixBarre.toLocaleString('fr-FR')} F</Text>
                         )}
                       </View>
                     </TouchableOpacity>

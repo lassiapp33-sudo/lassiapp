@@ -176,9 +176,9 @@ function LigneMets({ presta, onAjouter }: { presta: VipPrestation; onAjouter?: (
         <Text style={[r.caps, s.epuiseLabel]}>Épuisé</Text>
       ) : (
         <Text style={s.metsPrix}>
-          {fcfa(calculerPrixClientVip(presta.prix))}
+          {fcfa(presta.prix)}
           {presta.prixBarre != null && (
-            <Text style={s.metsBarre}>{'  '}{fcfa(calculerPrixClientVip(presta.prixBarre))}</Text>
+            <Text style={s.metsBarre}>{'  '}{fcfa(presta.prixBarre)}</Text>
           )}
           {presta.unite != null && (
             <Text style={s.metsUnite}> / {presta.unite}</Text>
@@ -211,9 +211,9 @@ function LignePresta({ presta, onAjouter }: { presta: VipPrestation; onAjouter?:
           <Text style={[r.caps, s.epuiseLabel]}>Épuisé</Text>
         ) : (
           <>
-            <Text style={s.prestaPrix}>{fcfa(calculerPrixClientVip(presta.prix))}</Text>
+            <Text style={s.prestaPrix}>{fcfa(presta.prix)}</Text>
             {presta.prixBarre != null && (
-              <Text style={s.prestaBarre}>{fcfa(calculerPrixClientVip(presta.prixBarre))}</Text>
+              <Text style={s.prestaBarre}>{fcfa(presta.prixBarre)}</Text>
             )}
             {presta.unite != null && (
               <Text style={s.prestaUnite}>/{presta.unite}</Text>
@@ -404,8 +404,8 @@ export default function FicheVip({ shopId, onBack, onChat, onGoCart, onPrendreRd
             surtitre="Signature maison"
             titre={signature.nom}
             description={signature.description ?? undefined}
-            prix={calculerPrixClientVip(signature.prix)}
-            prixBarre={signature.prixBarre != null ? calculerPrixClientVip(signature.prixBarre) : null}
+            prix={signature.prix}
+            prixBarre={signature.prixBarre ?? null}
           />
         )}
 
@@ -469,7 +469,7 @@ export default function FicheVip({ shopId, onBack, onChat, onGoCart, onPrendreRd
       {/* CartFloating — s'affiche dès qu'un article est dans le panier */}
       <CartFloating
         count={cartCount}
-        total={calculerPrixClientVip(cartTotal)}
+        total={cartTotal}
         onPress={() => onGoCart?.(shopId, profil.nomAffiche, 'normal')}
         bottom={(Platform.OS === 'ios' ? 34 : 14) + 72}
       />

@@ -129,7 +129,7 @@ export default function TerrainBookingScreen({ terrain, prestataireName, onBack,
       >
         {/* Prix + infos */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoPrice}>{formatPrice(calculerPrixAvecMarge(terrain.prix_horaire))} / session</Text>
+          <Text style={styles.infoPrice}>{formatPrice(terrain.prix_horaire)} / session</Text>
           {terrain.capacite > 0 && (
             <Text style={styles.infoSub}>{terrain.capacite} joueurs max</Text>
           )}

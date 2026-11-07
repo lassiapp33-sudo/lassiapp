@@ -47,7 +47,7 @@ function PromoCard({
   item: PromoItem;
   onPress?: () => void;
 }) {
-  const prixTotal = calculerPrixClient(item.price);
+  const prixTotal = item.price;
   const prixPromo = calcPromoClientPrice(item.price, item.promoInfo);
 
   return (

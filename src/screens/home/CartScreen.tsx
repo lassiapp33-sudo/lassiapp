@@ -487,7 +487,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
                     <Text style={styles.shopName}>{sh.info.name}</Text>
                     {!!sh.info.location && <Text style={styles.shopLoc}>{sh.info.location}</Text>}
                   </View>
-                  <Text style={styles.shopSubtotal}>{formatPrice(t.client)}</Text>
+                  <Text style={styles.shopSubtotal}>{formatPrice(t.total)}</Text>
                 </View>
 
                 {sh.items.map(item => (
@@ -498,7 +498,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
                     <View style={styles.itemInfo}>
                       <Text style={styles.itemName}>{item.name}</Text>
                       <Text style={styles.itemPrice}>
-                        {formatPrice(isVip ? calculerPrixClientVip(item.price) : calculerPrixClient(item.price))}
+                        {formatPrice(item.price)}
                       </Text>
                     </View>
                     <View style={styles.qtyWrap}>
@@ -593,7 +593,7 @@ export default function CartScreen({ shopId, shopName, onBack, onCheckout, isVip
             <View style={styles.separator} />
             <View style={styles.totalRow}>
               <Text style={styles.totalKey}>Total</Text>
-              <Text style={styles.totalVal}>{formatPrice(grandClientFinal)}</Text>
+              <Text style={styles.totalVal}>{formatPrice(grandTotalFinal)}</Text>
             </View>
           </View>
         </ScrollView>

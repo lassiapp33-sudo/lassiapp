@@ -523,7 +523,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     if (stableId) setActiveShop(stableId);
   }, [stableId, setActiveShop]);
 
-  const cartTotal = isVip ? calculerPrixClientVip(cartTotalRaw) : calculerPrixClient(cartTotalRaw);
+  const cartTotal = cartTotalRaw;
 
   const shopInfo = {
     id: stableId,
@@ -954,7 +954,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                           <Text style={styles.terrainSport}>{SPORT_LABEL[terrain.sport_type]}</Text>
                         </View>
                         <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={styles.terrainPrice}>{formatPrice(terrainsService.calculerPrixAvecMarge(terrain.prix_horaire))}</Text>
+                          <Text style={styles.terrainPrice}>{formatPrice(terrain.prix_horaire)}</Text>
                           <Text style={styles.terrainPriceSub}>/ session</Text>
                         </View>
                       </View>
@@ -984,7 +984,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
                       ) : null}
                       <View style={styles.aboMeta}>
                         <Text style={styles.aboDuree}>⏱ {offre.dureeJours} jours</Text>
-                        <Text style={styles.aboPrix}>{formatPrice(isPreview ? offre.prix : calculerPrixClient(offre.prix))}</Text>
+                        <Text style={styles.aboPrix}>{formatPrice(offre.prix)}</Text>
                       </View>
                     </View>
                     <TouchableOpacity

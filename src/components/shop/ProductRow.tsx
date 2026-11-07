@@ -32,7 +32,7 @@ export default function ProductRow({
   isVip = false,
 }: Props) {
   const isOut = product.stock === 'out';
-  const calcPrix = isVip ? calculerPrixClientVip : calculerPrixClient;
+  const calcPrix = (p: number) => p;
   const prixPromo = calcPromoClientPrice(product.price, promoInfo, isVip);
 
   return (

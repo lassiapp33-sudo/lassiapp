@@ -64,8 +64,6 @@ interface ElCardProps {
 
 function ElCard({ el, highlighted, onShop, onCommander }: ElCardProps) {
   const hasPrix = el.prix > 0;
-  const prixClient = hasPrix ? calculerPrixClient(el.prix) : 0;
-  const commission = hasPrix ? calculerCommission(el.prix) : 0;
 
   return (
     <View style={[styles.elCard, highlighted && styles.elCardHighlight]}>
@@ -74,10 +72,7 @@ function ElCard({ el, highlighted, onShop, onCommander }: ElCardProps) {
 
       {hasPrix ? (
         <>
-          <Text style={styles.elPrix}>{formatPrice(prixClient)}</Text>
-          <Text style={styles.elCommission}>
-            Prix vendeur {formatPrice(el.prix)} · +{formatPrice(commission)} frais LASSI (1%)
-          </Text>
+          <Text style={styles.elPrix}>{formatPrice(el.prix)}</Text>
         </>
       ) : (
         <Text style={styles.elPrixNone}>Prix sur demande</Text>

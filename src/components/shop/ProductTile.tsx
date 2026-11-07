@@ -36,7 +36,7 @@ interface Props {
 
 export default function ProductTile({ product, qty, onAdd, onRemove, onPress, promoInfo, isVip = false, isPreview = false }: Props) {
   const isOut = product.stock === 'out';
-  const calcPrix = isPreview ? (p: number) => p : (isVip ? calculerPrixClientVip : calculerPrixClient);
+  const calcPrix = (p: number) => p;
   const prixPromo = isPreview ? null : calcPromoClientPrice(product.price, promoInfo, isVip);
   const [zoom, setZoom] = useState(false);
 

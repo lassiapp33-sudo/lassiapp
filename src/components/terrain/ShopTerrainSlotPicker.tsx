@@ -218,7 +218,7 @@ export default function ShopTerrainSlotPicker({ terrain, prestataireName, openin
           <View style={styles.recapRow}>
             <Text style={styles.recapLbl}>Prix</Text>
             <Text style={[styles.recapVal, styles.recapGold]}>
-              {formatPrice(calculerPrixAvecMarge(terrain.prix_horaire))}
+              {formatPrice(terrain.prix_horaire)}
             </Text>
           </View>
         </View>

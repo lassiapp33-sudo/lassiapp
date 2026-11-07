@@ -269,18 +269,16 @@ export function hasShopWidePromo(promos: Promotion[]): boolean {
  * prixBase = prix vendeur brut (avant commission LASSI).
  * isVip = true pour les boutiques 5 Étoiles (commission 2% au lieu de 1%).
  */
-export function calcPromoClientPrice(prixBase: number, promoInfo?: ProductPromoInfo, isVip = false): number | null {
+export function calcPromoClientPrice(prixBase: number, promoInfo?: ProductPromoInfo, _isVip = false): number | null {
   if (!promoInfo) return null;
-  const calcPrix = isVip ? calculerPrixClientVip : calculerPrixClient;
-  const prixTotal = calcPrix(prixBase);
   if (promoInfo.discountPct !== undefined) {
-    return Math.round(prixTotal * (1 - promoInfo.discountPct / 100));
+    return Math.round(prixBase * (1 - promoInfo.discountPct / 100));
   }
   if (promoInfo.discountFixed !== undefined) {
-    return Math.max(0, prixTotal - promoInfo.discountFixed);
+    return Math.max(0, prixBase - promoInfo.discountFixed);
   }
   if (promoInfo.promoPrice !== undefined) {
-    return calcPrix(promoInfo.promoPrice);
+    return promoInfo.promoPrice;
   }
   return null;
 }

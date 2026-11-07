@@ -62,7 +62,7 @@ export default function TerrainDetailScreen({ terrain, onBack }: Props) {
     );
   }
 
-  const prixSelection = selection ? calculerPrixAvecMarge(terrain.prix_horaire) : 0;
+  const prixSelection = selection ? terrain.prix_horaire : 0;
 
   return (
     <View style={styles.root}>
@@ -101,7 +101,7 @@ export default function TerrainDetailScreen({ terrain, onBack }: Props) {
               ) : null}
             </View>
             <View style={styles.prixBox}>
-              <Text style={styles.prix}>{formatPrice(calculerPrixAvecMarge(terrain.prix_horaire))}</Text>
+              <Text style={styles.prix}>{formatPrice(terrain.prix_horaire)}</Text>
               <Text style={styles.prixSub}>/ session</Text>
             </View>
           </View>
