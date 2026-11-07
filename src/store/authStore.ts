@@ -63,6 +63,7 @@ const useAuthStore = create<AuthState>()(
         useDebtsStore.getState().reset();
         // lastPhone intentionnellement conservé → AuthNavigator pré-remplit le numéro
         set({ user: null, isAuthenticated: false });
+        import('@react-native-async-storage/async-storage').then(m => m.default.removeItem('@lassi_active_shop_id').catch(() => {})).catch(() => {});
       },
 
       updateProfile: updates => {
