@@ -1,6 +1,6 @@
 // Types du module Commandes reçues (côté prestataire)
 
-export type OrderStatus = 'new' | 'preparing' | 'ready' | 'done' | 'refused';
+export type OrderStatus = 'new' | 'preparing' | 'ready' | 'done' | 'refused' | 'refunded';
 export type PayMethodOrder = 'wave' | 'om';
 
 // Onglets de filtrage côté prestataire

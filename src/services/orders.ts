@@ -277,6 +277,46 @@ export async function getPayoutRevenue(): Promise<RevenueOrder[]> {
   );
 }
 
+// ─── Remboursement commande ───────────────────────────────────────────────────
+
+export interface RefundInfo {
+  montantPrestataire: number;
+  commissionLassi: number;
+  clientPhone: string;
+  clientId: string | null;
+  payMethod: 'wave' | 'om';
+  alreadyRefunded: boolean;
+}
+
+export async function getRefundInfo(orderId: string): Promise<RefundInfo> {
+  const { data, error } = await supabase.rpc('get_refund_info', { p_order_id: orderId });
+  if (error) throw new Error(error.message);
+  return {
+    montantPrestataire: data.montant_prestataire,
+    commissionLassi:    data.commission_lassi,
+    clientPhone:        data.client_phone,
+    clientId:           data.client_id,
+    payMethod:          data.pay_method,
+    alreadyRefunded:    data.already_refunded,
+  };
+}
+
+export async function processRefund(orderId: string): Promise<{ payoutRef: string | null; commissionLassi: number }> {
+  const token = await getValidToken();
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/process-refund`, {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${token}`,
+      'apikey':        ANON_KEY,
+    },
+    body: JSON.stringify({ order_id: orderId }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? 'Erreur remboursement');
+  return { payoutRef: json.payout_ref, commissionLassi: json.commission_lassi };
+}
+
 // ─── Commande directe (legacy — sans Edge Function) ───────────────────────────
 
 export async function createOrder(params: CreateOrderParams): Promise<string> {

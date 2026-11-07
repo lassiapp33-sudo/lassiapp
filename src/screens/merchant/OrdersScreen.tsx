@@ -14,6 +14,7 @@ import StatusTabs from '../../components/orders/StatusTabs';
 import OrderCard from '../../components/orders/OrderCard';
 import PrepTimeSheet from '../../components/orders/PrepTimeSheet';
 import RefuseSheet from '../../components/orders/RefuseSheet';
+import RefundSheet from '../../components/orders/RefundSheet';
 import VerifyReceiptSheet from './VerifyReceiptSheet';
 import ClientRatingModal from '../../components/avis/ClientRatingModal';
 import { colors, fonts } from '../../theme';
@@ -94,7 +95,7 @@ function filterByTab(orders: IncomingOrder[], tab: MerchantTab): IncomingOrder[]
     case 'preparing':
       return orders.filter(o => o.status === 'preparing' || o.status === 'ready');
     case 'done':
-      return orders.filter(o => o.status === 'done');
+      return orders.filter(o => o.status === 'done' || o.status === 'refunded');
     case 'refused':
       return orders.filter(o => o.status === 'refused');
     default:
@@ -127,6 +128,7 @@ export default function OrdersScreen({ onBack, initialTab, onOpenChat }: Props) 
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [ratingTarget, setRatingTarget] = useState<IncomingOrder | null>(null);
   const ratingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [refundTarget, setRefundTarget] = useState<IncomingOrder | null>(null);
 
   useEffect(() => {
     if (shopId) loadOrders(shopId);
@@ -176,7 +178,7 @@ export default function OrdersScreen({ onBack, initialTab, onOpenChat }: Props) 
     all: orders.length,
     new: orders.filter(o => o.status === 'new').length,
     preparing: orders.filter(o => o.status === 'preparing' || o.status === 'ready').length,
-    done: orders.filter(o => o.status === 'done').length,
+    done: orders.filter(o => o.status === 'done' || o.status === 'refunded').length,
     refused: orders.filter(o => o.status === 'refused').length,
   };
 
@@ -280,6 +282,7 @@ export default function OrdersScreen({ onBack, initialTab, onOpenChat }: Props) 
                   if (ratingTimerRef.current) clearTimeout(ratingTimerRef.current);
                   ratingTimerRef.current = setTimeout(() => setRatingTarget(order), 1000);
                 }}
+                onRefund={() => setRefundTarget(order)}
               />
             ))
           )}
@@ -315,6 +318,16 @@ export default function OrdersScreen({ onBack, initialTab, onOpenChat }: Props) 
         orderId={ratingTarget?.id ?? ''}
         clientName={ratingTarget?.clientName ?? ''}
         onDismiss={() => setRatingTarget(null)}
+      />
+
+      <RefundSheet
+        visible={refundTarget !== null}
+        orderId={refundTarget?.id ?? ''}
+        onClose={() => setRefundTarget(null)}
+        onSuccess={() => {
+          setRefundTarget(null);
+          if (shopId) loadOrders(shopId).catch(() => {});
+        }}
       />
     </View>
   );

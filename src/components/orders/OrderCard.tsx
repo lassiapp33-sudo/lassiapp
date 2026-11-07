@@ -94,26 +94,28 @@ const IcoClock = () => (
 
 // ─── Config badge de statut ───────────────────────────────────────────────────
 
-const BADGE_CFG = {
-  new: { label: 'NOUVELLE', bg: 'rgba(95,211,138,.15)', color: colors.success },
-  preparing: { label: 'CONFIRMÉE', bg: 'rgba(240,168,71,.15)', color: colors.orange },
-  ready: { label: 'EN COURS', bg: `rgba(29,200,242,.15)`, color: WAVE_COLOR },
-  done: { label: 'TERMINÉE', bg: 'rgba(95,211,138,.08)', color: colors.muted },
-  refused: { label: 'ANNULÉE', bg: 'rgba(224,122,122,.15)', color: colors.danger },
+const BADGE_CFG: Record<string, { label: string; bg: string; color: string }> = {
+  new:       { label: 'NOUVELLE',    bg: 'rgba(95,211,138,.15)',  color: colors.success },
+  preparing: { label: 'CONFIRMÉE',   bg: 'rgba(240,168,71,.15)',  color: colors.orange },
+  ready:     { label: 'EN COURS',    bg: 'rgba(29,200,242,.15)',  color: WAVE_COLOR },
+  done:      { label: 'TERMINÉE',    bg: 'rgba(95,211,138,.08)',  color: colors.muted },
+  refused:   { label: 'ANNULÉE',     bg: 'rgba(224,122,122,.15)', color: colors.danger },
+  refunded:  { label: 'REMBOURSÉE',  bg: 'rgba(224,122,122,.10)', color: '#ff8c8c' },
 };
 
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 interface Props {
   order: IncomingOrder;
-  onAccept: () => void; // ouvre le choix du temps de préparation
+  onAccept: () => void;
   onRefuse: () => void;
   onChat: () => void;
-  onReady: () => void; // "En prép" → "Prête"
-  onDone: () => void; // "Prête" → "Terminée"
+  onReady: () => void;
+  onDone: () => void;
+  onRefund: () => void;
 }
 
-function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props) {
+function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone, onRefund }: Props) {
   const badge = BADGE_CFG[order.status];
   const isNew = order.status === 'new';
   const parsedBaskets = parseMultiBasketNote(order.note);
@@ -292,7 +294,18 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone }: Props
           {isSpeaking ? <IcoStop /> : <IcoPlay />}
         </TouchableOpacity>
 
-        {order.status !== 'done' && order.status !== 'refused' && (
+        {/* Terminée via Wave/OM → bouton Rembourser */}
+        {order.status === 'done' && order.payMethod !== 'cash' && (
+          <TouchableOpacity
+            style={[styles.btnWide, styles.btnRefund]}
+            onPress={onRefund}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.btnWideTxt, { color: '#fff' }]}>↩ Rembourser</Text>
+          </TouchableOpacity>
+        )}
+
+        {order.status !== 'done' && order.status !== 'refused' && order.status !== 'refunded' && (
           <>
             {/* Nouvelle : ❌ Refuser | 💬 Chat | ✅ Confirmer */}
             {order.status === 'new' && (
@@ -614,7 +627,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
   },
-  btnAccept: { backgroundColor: colors.accent },
+  btnAccept:  { backgroundColor: colors.accent },
+  btnRefund:  { backgroundColor: '#c0392b' },
   btnWideTxt: {
     fontFamily: fonts.title,
     fontSize: 13,
