@@ -296,11 +296,11 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone, onRefun
 
         {order.status !== 'refused' && order.status !== 'refunded' && order.payMethod !== 'cash' && (
           <TouchableOpacity
-            style={[styles.btnWide, styles.btnRefund]}
+            style={styles.btnRefund}
             onPress={onRefund}
             activeOpacity={0.85}
           >
-            <Text style={[styles.btnWideTxt, { color: '#fff' }]}>↩ Rembourser</Text>
+            <Text style={styles.btnRefundTxt}>Rembourser</Text>
           </TouchableOpacity>
         )}
 
@@ -627,7 +627,19 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   btnAccept:  { backgroundColor: colors.accent },
-  btnRefund:  { backgroundColor: '#c0392b' },
+  btnRefund: {
+    height: 44,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: '#c0392b',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnRefundTxt: {
+    fontFamily: fonts.title,
+    fontSize: 11.5,
+    color: '#fff',
+  },
   btnWideTxt: {
     fontFamily: fonts.title,
     fontSize: 13,
