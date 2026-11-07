@@ -208,7 +208,7 @@ export default function OffreQuartierScreen({ onBack }: Props) {
   const quotaN = quota?.carrousel_produits ?? 0;
   // Nombre de produits autorisés pour un forfait donné.
   const paidQuotaFor = (sub: ActiveSub) =>
-    sub.allProducts ? paidEligibleItems.length : sub.productCount;
+    sub.allProducts ? paidEligibleItems.length : sub.maxProducts;
 
   // Produits + terrains éligibles (section admin)
   const eligibleItems: EligibleItem[] = [

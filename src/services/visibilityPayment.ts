@@ -38,6 +38,7 @@ interface VisibilitySubRow {
   product_ids: string[] | null;
   all_products: boolean;
   plan: { label: string } | null;
+  metadata: { max_products?: number } | null;
 }
 
 // visibility_subscriptions.product_id est POLYMORPHE (produit/terrain/fitness/beauté) :
@@ -86,6 +87,8 @@ export interface ActiveSub {
   productEmoji: string | null;
   /** Nombre de produits mis en avant (0 si allProducts). */
   productCount: number;
+  /** Quota max de produits (depuis metadata.max_products si cadeau admin, sinon = productCount). */
+  maxProducts: number;
   /** Toute la vitrine est mise en avant (plutôt que des produits précis). */
   allProducts: boolean;
 }
@@ -161,7 +164,7 @@ export async function getActiveSub(
     .from('visibility_subscriptions')
     .select(
       'id, plan_id, amount, status, started_at, expires_at, paid_at, pay_method, offer_type, ' +
-        'product_id, product_ids, all_products, ' +
+        'product_id, product_ids, all_products, metadata, ' +
         'plan:plan_id(label)',
     )
     .eq('shop_id', shopId)
@@ -200,6 +203,7 @@ export async function getActiveSub(
     productName: row.all_products ? null : (prod?.name ?? null),
     productEmoji: row.all_products ? null : (prod?.emoji ?? null),
     productCount: row.product_ids?.length ?? (row.product_id ? 1 : 0),
+    maxProducts: row.metadata?.max_products ?? (row.product_ids?.length ?? (row.product_id ? 1 : 0)),
     allProducts: row.all_products,
     offerType: row.offer_type ?? 'quartier',
   };
@@ -426,6 +430,7 @@ export async function getActiveSubs(shopId: string): Promise<ActiveSub[]> {
     productName:  row.all_products ? null : (prod?.name ?? null),
     productEmoji: row.all_products ? null : (prod?.emoji ?? null),
     productCount: row.product_ids?.length ?? (row.product_id ? 1 : 0),
+    maxProducts:  row.metadata?.max_products ?? (row.product_ids?.length ?? (row.product_id ? 1 : 0)),
     allProducts:  row.all_products,
     offerType:    row.offer_type ?? 'quartier',
     };
