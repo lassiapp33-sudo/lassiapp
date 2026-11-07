@@ -149,19 +149,36 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean; isConne
 
         let rewardItems: PromoItem[] = [];
         if (rewardRows.length > 0) {
-          const merchantIds = [...new Set(rewardRows.map(r => r.prestataire_id).filter(Boolean))];
           type RewardShop = { id: string; name: string; category: string; merchant_id: string };
-          const rewardShops = await pgFetch<RewardShop>(
-            `shops?select=id,name,category,merchant_id&merchant_id=in.(${merchantIds.join(',')})`,
-            signal,
-          );
+
+          // Résoudre shop via product_id→shop_id pour les marchands multi-boutiques
+          const productIds2 = rewardRows.map(r => r.product_id).filter(Boolean) as string[];
+          type ProdShop = { id: string; shop_id: string };
+          const prodShopRows = productIds2.length > 0
+            ? await pgFetch<ProdShop>(
+                `products?select=id,shop_id&id=in.(${productIds2.join(',')})`,
+                signal,
+              )
+            : [];
+          const shopIdByProductId = new Map(prodShopRows.map(p => [p.id, p.shop_id]));
+
+          // Collecter les shop_ids + merchant_ids pour la requête shops
+          const shopIds2 = [...new Set(prodShopRows.map(p => p.shop_id).filter(Boolean))];
+          const merchantIds = [...new Set(rewardRows.map(r => r.prestataire_id).filter(Boolean))];
+          const allShopFilter = shopIds2.length > 0
+            ? `shops?select=id,name,category,merchant_id&or=(id.in.(${shopIds2.join(',')}),merchant_id.in.(${merchantIds.join(',')}))`
+            : `shops?select=id,name,category,merchant_id&merchant_id=in.(${merchantIds.join(',')})`;
+          const rewardShops = await pgFetch<RewardShop>(allShopFilter, signal);
+          const shopById2 = new Map(rewardShops.map(s => [s.id, s]));
           const shopByMerchant = new Map(rewardShops.map(s => [s.merchant_id, s]));
           const paidProductIds = new Set(paidItems.map(i => i.id));
 
           rewardItems = rewardRows
             .filter(r => (r.product_id || r.terrain_id || r.abonnement_id || r.beauty_service_id) && (!r.product_id || !paidProductIds.has(r.product_id)))
             .map(r => {
-              const shop = shopByMerchant.get(r.prestataire_id);
+              // Priorité : shop via product_id→shop_id, sinon merchant_id
+              const shopId = r.product_id ? shopIdByProductId.get(r.product_id) : undefined;
+              const shop = (shopId ? shopById2.get(shopId) : undefined) ?? shopByMerchant.get(r.prestataire_id);
               const isUrl = typeof r.image_url === 'string' && r.image_url.startsWith('http');
               return {
                 id: r.product_id ?? r.terrain_id ?? r.abonnement_id ?? r.beauty_service_id ?? '',
