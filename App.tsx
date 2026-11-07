@@ -57,7 +57,7 @@ import useCartStore             from './src/store/cartStore';
 import AsyncStorage             from '@react-native-async-storage/async-storage';
 import * as authService         from './src/services/auth';
 import { SESSION_ACTIVE_KEY }   from './src/services/auth';
-import { onSessionExpired, SUPABASE_MISCONFIGURED } from './src/lib/supabase';
+import { onSessionExpired, SUPABASE_MISCONFIGURED, supabase } from './src/lib/supabase';
 import { usePushToken, removeCurrentDeviceToken } from './src/hooks/usePushToken';
 import { usePaymentDeepLink } from './src/hooks/usePaymentDeepLink';
 import usePendingNavStore from './src/store/pendingNavStore';
@@ -186,6 +186,7 @@ function AppContent() {
     const sub = AppState.addEventListener('change', state => {
       if (state !== 'active') return;
       Updates.checkForUpdateAsync().catch(() => {});
+      supabase.rpc('update_last_seen').catch(() => {});
     });
     return () => sub.remove();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

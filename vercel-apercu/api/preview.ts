@@ -226,6 +226,7 @@ export default async function handler(
     ? await Promise.all([fetchProducts(shop.id), fetchServices(shop.merchant_id), fetchTerrains(shop.merchant_id)])
     : [[], [], []];
   const dailySpecial = shop ? await fetchDailySpecials(shop.id) : [];
+  const promos = shop ? await fetchPromos(shop.id) : [];
 
   if (!bot && shop) {
     const p = logClic(slug, detectSource(req));
@@ -233,7 +234,7 @@ export default async function handler(
   }
 
   const base = `${url.protocol}//${url.host}`;
-  return new Response(renderHtml(shop, products, services, terrains as Terrain[], slug, base, dailySpecial as { id: string; name: string; price: number; photo_url?: string | null }[]), {
+  return new Response(renderHtml(shop, products, services, terrains as Terrain[], slug, base, dailySpecial as { id: string; name: string; price: number; photo_url?: string | null }[], promos), {
     status: shop ? 200 : 404,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
@@ -317,6 +318,17 @@ async function fetchTerrains(merchantId: string | null): Promise<Terrain[]> {
   } catch { return []; }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchPromos(shopId: string): Promise<any[]> {
+  try {
+    const now = new Date().toISOString();
+    const q = SUPABASE_URL + '/rest/v1/promotions?shop_id=eq.' + encodeURIComponent(shopId) + '&actif=eq.true&or=(date_fin.is.null,date_fin.gte.' + encodeURIComponent(now) + ')&select=id,titre,type,valeur,montant_min&limit=10';
+    const res = await fetch(q, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY } });
+    if (!res.ok) return [];
+    return (await res.json()) ?? [];
+  } catch { return []; }
+}
+
 async function fetchDailySpecials(shopId: string): Promise<{ id: string; name: string; price: number; photo_url?: string | null }[]> {
   try {
     const today = new Date().toISOString().slice(0, 10);
@@ -365,12 +377,13 @@ function initialAvatar(name: string): string {
     '&background=FDCF34&color=14152A&size=512&length=1&bold=true&format=png';
 }
 
-function renderHtml(shop: Shop | null, products: Product[], services: ServiceItem[], terrains: Terrain[], slug: string, base: string, dailySpecial: { id: string; name: string; price: number; photo_url?: string | null }[] = []): string {
+function renderHtml(shop: Shop | null, products: Product[], services: ServiceItem[], terrains: Terrain[], slug: string, base: string, dailySpecial: { id: string; name: string; price: number; photo_url?: string | null }[] = [], // eslint-disable-next-line @typescript-eslint/no-explicit-any
+promos: any[] = []): string {
   const canonical = `${base}/${encodeURIComponent(slug)}`;
   if (!shop) {
     return page({
       title: 'Boutique introuvable — LASSİ', desc: "Cette boutique n'est plus disponible sur LASSİ.",
-      ogImage: initialAvatar('LASSI'), canonical, base, name: 'Boutique introuvable', zone: '', cat: '', logo: '', slug, products: [], services: [], terrains: [], shopStatus: null, dailySpecial: [],
+      ogImage: initialAvatar('LASSI'), canonical, base, name: 'Boutique introuvable', zone: '', cat: '', logo: '', slug, products: [], services: [], terrains: [], shopStatus: null, dailySpecial: [], promos: [],
     });
   }
   const name = shop.name?.trim() || 'Boutique';
@@ -384,7 +397,7 @@ function renderHtml(shop: Shop | null, products: Product[], services: ServiceIte
   const shopStatus = computeShopStatus(shop.opening_hours, shop.is_manually_closed);
   return page({
     title: `${name} — sur LASSİ`, desc: clip(descRaw.replace(/\s+/g, ' '), 180),
-    ogImage: logo || initialAvatar(name), canonical, base, name, zone, cat, logo, slug, products, services, terrains, shopStatus, dailySpecial,
+    ogImage: logo || initialAvatar(name), canonical, base, name, zone, cat, logo, slug, products, services, terrains, shopStatus, dailySpecial, promos,
   });
 }
 
@@ -482,6 +495,8 @@ function page(o: {
   terrains: Terrain[];
   shopStatus: ShopStatusResult | null;
   dailySpecial: { id: string; name: string; price: number; photo_url?: string | null }[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  promos: any[];
 }): string {
   const deep = `https://lassi.tech/p/${encodeURIComponent(o.slug)}`;
   const initial = (o.name.charAt(0) || '?').toUpperCase();
@@ -569,13 +584,23 @@ function page(o: {
       ? `<p class="foot">Réserve ton créneau en ligne et paie directement (Wave / Orange Money). Présente-toi sur place à l'heure choisie.</p>`
       : `<p class="foot">Réserve tes prestations dans l'app <b>LASSİ</b> — créneaux, paiement sécurisé et rappel automatique.</p>`;
 
+  const promosHtml = o.promos.length > 0
+    ? o.promos.map(p => {
+        const suffix = p.type === 'pourcentage' ? ' -' + p.valeur + '%'
+          : p.type === 'montant_fixe' ? ' -' + fmtPrice(p.valeur)
+          : '';
+        const min = p.montant_min > 0 ? ' (des ' + fmtPrice(p.montant_min) + ')' : '';
+        return '<div class="promo-banner"><span class="promo-ico">&#x1F3F7;</span><span class="promo-txt">' + esc(p.titre) + suffix + min + '</span></div>';
+      }).join('')
+    : '';
   const shopHeader = `
     <section class="hero">
       <div class="hero-left">
         ${o.cat ? `<div class="shop-cat">${esc(o.cat)}</div>` : ''}
         <h1 class="hero-title">${esc(o.name)}</h1>
         ${o.desc ? `<p class="hero-desc">${esc(clip(o.desc, 200))}</p>` : ''}
-        ${hoursHtml ? `<div class="hours-block"><div class="hours-label">Horaires aujourd’hui</div>${hoursHtml}</div>` : ''}
+        ${hoursHtml ? `<div class="hours-block"><div class="hours-label">Horaires aujourd'hui</div>${hoursHtml}</div>` : ''}
+        ${promosHtml}
       </div>
       <div class="hero-img">
         ${o.zone ? `<div class="zone-badge">📍 ${esc(o.zone)}</div>` : ''}
@@ -671,6 +696,9 @@ function page(o: {
   .h-closed::before { background:var(--m); }
   .h-pause { background:rgba(253,207,52,.15); color:#92610a; }
   .h-pause::before { background:var(--y); }
+  .promo-banner { display:flex; align-items:flex-start; gap:8px; background:rgba(253,207,52,.13); border:1px solid rgba(253,207,52,.35); border-radius:10px; padding:10px 14px; margin-top:10px; }
+  .promo-ico { font-size:15px; flex-shrink:0; margin-top:1px; }
+  .promo-txt { font-size:13px; color:var(--d); line-height:1.4; }
   .hours-time { font-size:13px; color:var(--m); font-weight:300; margin-top:6px; }
   .hero-img { position:relative; background:#e8e7e3; display:flex; align-items:center; justify-content:center; overflow:hidden; }
   .shop-logo { width:80%; max-width:420px; aspect-ratio:1/1; object-fit:cover; border-radius:22%; }
@@ -924,7 +952,7 @@ function page(o: {
     <div class="panel" style="position:relative">
       <button class="close" id="aboClose" type="button">\xD7</button>
       <div id="abostep-form">
-        <h2 id="aboTitle">S’abonner</h2>
+        <h2 id="aboTitle">S'abonner</h2>
         <p class="sub" id="aboSub">${esc(o.name)} \xB7 paiement s\xe9curis\xe9 Wave / Orange Money</p>
         <div class="lines" id="aboLines"></div>
         <div class="fld"><label>Ton nom *</label><input id="abo-name" type="text" placeholder="Ex : Awa Diop" maxlength="80" autocomplete="name"></div>
@@ -944,7 +972,7 @@ function page(o: {
         <img id="aboOmQr" alt="QR paiement" hidden>
         <div class="spin"></div>
         <p class="sub" id="aboWaitMsg">En attente de confirmation du paiement…</p>
-        <button class="pay" id="aboCheckNow" type="button" style="margin-top:8px;width:auto;padding:10px 20px">J’ai pay\xe9 — v\xe9rifier</button>
+        <button class="pay" id="aboCheckNow" type="button" style="margin-top:8px;width:auto;padding:10px 20px">J'ai pay\xe9 — v\xe9rifier</button>
       </div>
     </div>
   </div>
