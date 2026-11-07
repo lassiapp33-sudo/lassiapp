@@ -318,12 +318,9 @@ export async function getRefundInfo(orderId: string): Promise<RefundInfo> {
 
   let clientPhone: string = order.client_phone ?? '';
   if (!clientPhone && order.client_id) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('phone')
-      .eq('id', order.client_id)
-      .maybeSingle();
-    clientPhone = profile?.phone ?? '';
+    // profiles.phone est protégé par RLS → passer par le RPC SECURITY DEFINER
+    const { data: rpcData } = await supabase.rpc('get_refund_info', { p_order_id: orderId });
+    if (rpcData) clientPhone = (rpcData as { client_phone?: string }).client_phone ?? '';
   }
 
   return {

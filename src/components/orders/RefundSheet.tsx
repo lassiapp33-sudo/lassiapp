@@ -154,7 +154,6 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
               </Text>
 
               <TouchableOpacity style={s.confirmBtn} onPress={handleConfirm} activeOpacity={0.85}>
-                <IcoCheck />
                 <Text style={s.confirmTxt}>J'ai envoyé — Confirmer</Text>
               </TouchableOpacity>
 
