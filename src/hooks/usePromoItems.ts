@@ -143,7 +143,7 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean; isConne
           image_url: string;
         };
         const rewardRows = await pgFetch<RewardRow>(
-          'carrousel_offre_quartier?select=id,prestataire_id,product_id,terrain_id,abonnement_id,beauty_service_id,nom,prix,image_url&est_actif=eq.true&order=ordre&limit=25',
+          'carrousel_offre_quartier?select=id,prestataire_id,product_id,terrain_id,abonnement_id,beauty_service_id,nom,prix,image_url&est_actif=eq.true&order=ordre&limit=200',
           signal,
         );
 
