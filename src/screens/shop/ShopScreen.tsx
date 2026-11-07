@@ -162,7 +162,7 @@ function storeProductToProduct(p: StoreProduct): Product {
   };
 }
 
-/** Produit sans photo ni emoji → ligne liste ; avec photo/emoji → tuile grille */
+/** Tous les produits en liste (ProductRow gère photo/no-photo) */
 function renderMixedProducts(
   items: StoreProduct[],
   opts: {
@@ -181,39 +181,10 @@ function renderMixedProducts(
   }
 ): React.ReactNode {
   const nodes: React.ReactNode[] = [];
-  let gridBuf: StoreProduct[] = [];
-
-  const flushGrid = () => {
-    if (gridBuf.length === 0) return;
-    for (let i = 0; i < gridBuf.length; i += 2) {
-      const pair = gridBuf.slice(i, i + 2);
-      nodes.push(
-        <View key={`gr-${gridBuf[i].id}`} style={opts.gridRowStyle}>
-          {pair.map(p => (
-            <View key={p.id} style={[opts.tileWrapperStyle, p.id === opts.highlightId && opts.tileHighlightStyle]}>
-              <ProductTile
-                product={storeProductToProduct(p)}
-                qty={opts.getQty(p)}
-                onAdd={() => opts.onAdd(p)}
-                onRemove={() => opts.onRemove(p)}
-                promoInfo={opts.promoMap[p.id]}
-                isVip={opts.isVip}
-                isPreview={opts.isPreview}
-              />
-            </View>
-          ))}
-          {pair.length === 1 && <View style={opts.tileSpacerStyle} />}
-        </View>
-      );
-    }
-    gridBuf = [];
-  };
 
   for (const p of items) {
     const prod = storeProductToProduct(p);
-    if (!prod.photoUrl && !prod.emoji) {
-      flushGrid();
-      nodes.push(
+    nodes.push(
         <ProductRow
           key={p.id}
           product={prod}
@@ -224,13 +195,9 @@ function renderMixedProducts(
           isVip={opts.isVip}
         />
       );
-    } else {
-      gridBuf.push(p);
-    }
   }
-  flushGrid();
 
-  return <View style={opts.gridStyle}>{nodes}</View>;
+  return <View>{nodes}</View>;
 }
 
 // Correspondance JS Date.getDay() (0=Dim) → DayKey
