@@ -30,7 +30,7 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const TITLE = 'Ta boutique a maintenant son site web - Recupere-le dans LASSI';
+const TITLE = 'Tu arrives pas à vendre ? Partage ton site web LASSI';
 
 // Corps affiché dans le modal in-app ({slug} interpolé par prestataire)
 function modalBody(slug: string): string {
@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
             priority:         'high' as const,
             _contentAvailable: true,
             title: TITLE,
-            body:  'Ta boutique a maintenant son site web. Ouvre l\'app pour récupérer ton lien.',
+            body:  'Tu arrives pas à vendre ? Partage ton site web LASSI et laisse les commandes arriver.',
             data:  { type: 'share_vitrine', slug: t.slug },
           })));
           pushed++;
