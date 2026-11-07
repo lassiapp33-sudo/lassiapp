@@ -71,8 +71,8 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: CORS });
   }
 
-  if (order.status !== 'done') {
-    return new Response(JSON.stringify({ error: 'order_not_done' }), { status: 400, headers: CORS });
+  if (['refused', 'refunded'].includes(order.status)) {
+    return new Response(JSON.stringify({ error: 'order_not_refundable' }), { status: 400, headers: CORS });
   }
   if (!['wave', 'om'].includes(order.pay_method)) {
     return new Response(JSON.stringify({ error: 'cash_not_refundable' }), { status: 400, headers: CORS });

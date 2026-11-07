@@ -31,8 +31,8 @@ BEGIN
     RAISE EXCEPTION 'order_not_found';
   END IF;
 
-  IF v_order.status NOT IN ('done', 'refunded') THEN
-    RAISE EXCEPTION 'order_not_done';
+  IF v_order.status IN ('refused', 'refunded') THEN
+    RAISE EXCEPTION 'order_not_refundable';
   END IF;
 
   -- payment_intent lié à cet order
