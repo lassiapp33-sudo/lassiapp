@@ -4,7 +4,6 @@ import { Image } from 'expo-image';
 import { colors, fonts, radius } from '../../theme';
 import { ProductPromoInfo } from '../../types/promotions';
 import { formatPrice } from '../../utils/format';
-import { calculerPrixClient, calculerPrixClientVip } from '../../config/payment';
 import { calcPromoClientPrice } from '../../services/promotions';
 import { Product } from './ProductTile';
 
@@ -17,6 +16,7 @@ interface Props {
   promoInfo?: ProductPromoInfo;
   highlighted?: boolean;
   isVip?: boolean;
+  actionLabel?: string; // 'Commander' (défaut) ou 'Réserver'
 }
 
 const IMG = 90;
@@ -30,11 +30,74 @@ export default function ProductRow({
   promoInfo,
   highlighted,
   isVip = false,
+  actionLabel = 'Commander',
 }: Props) {
   const isOut = product.stock === 'out';
-  const calcPrix = (p: number) => p;
   const prixPromo = calcPromoClientPrice(product.price, promoInfo, isVip);
+  const hasMedia = !!product.photoUrl || !!product.emoji;
 
+  // ── Mode carte beauté (pas de photo ni emoji) ──────────────────────────────
+  if (!hasMedia) {
+    return (
+      <TouchableOpacity
+        style={[styles.card, isOut && styles.rowOut, highlighted && styles.cardHL]}
+        onPress={isOut ? undefined : onPress}
+        activeOpacity={isOut ? 1 : 0.85}
+        disabled={isOut}
+      >
+        <View style={styles.cardLeft}>
+          <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
+          {!!product.desc && (
+            <Text style={styles.desc} numberOfLines={2}>{product.desc}</Text>
+          )}
+          {isOut && <Text style={styles.epuise}>Épuisé</Text>}
+        </View>
+        <View style={styles.cardRight}>
+          {prixPromo !== null ? (
+            <View style={styles.priceCol}>
+              <Text style={styles.priceOld}>{formatPrice(product.price)}</Text>
+              <Text style={styles.pricePromo}>{formatPrice(prixPromo)}</Text>
+            </View>
+          ) : (
+            <Text style={[styles.price, isOut && styles.priceMuted]}>
+              {formatPrice(product.price)}
+            </Text>
+          )}
+          {!isOut && (
+            qty === 0 ? (
+              <TouchableOpacity
+                style={styles.cardBtn}
+                onPress={e => { e.stopPropagation?.(); onAdd(); }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cardBtnTxt}>{actionLabel}</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.qtyBar}>
+                <TouchableOpacity
+                  style={styles.qtyBtn}
+                  onPress={e => { e.stopPropagation?.(); onRemove(); }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.qtyOp}>−</Text>
+                </TouchableOpacity>
+                <Text style={styles.qtyNum}>{qty}</Text>
+                <TouchableOpacity
+                  style={styles.qtyBtn}
+                  onPress={e => { e.stopPropagation?.(); onAdd(); }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.qtyOp}>+</Text>
+                </TouchableOpacity>
+              </View>
+            )
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  // ── Mode avec photo/emoji ──────────────────────────────────────────────────
   return (
     <TouchableOpacity
       style={[styles.row, isOut && styles.rowOut, highlighted && styles.rowHL]}
@@ -42,7 +105,6 @@ export default function ProductRow({
       activeOpacity={isOut ? 1 : 0.85}
       disabled={isOut}
     >
-      {/* Texte gauche */}
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         {!!product.desc && (
@@ -50,18 +112,17 @@ export default function ProductRow({
         )}
         {prixPromo !== null ? (
           <View style={styles.priceRow}>
-            <Text style={styles.priceOld}>{formatPrice(calcPrix(product.price))}</Text>
+            <Text style={styles.priceOld}>{formatPrice(product.price)}</Text>
             <Text style={styles.pricePromo}>{formatPrice(prixPromo)}</Text>
           </View>
         ) : (
           <Text style={[styles.price, isOut && styles.priceMuted]}>
-            {formatPrice(calcPrix(product.price))}
+            {formatPrice(product.price)}
           </Text>
         )}
         {isOut && <Text style={styles.epuise}>Épuisé</Text>}
       </View>
 
-      {/* Image droite + contrôles panier */}
       <View style={styles.imgZone}>
         {product.photoUrl ? (
           <Image
@@ -70,9 +131,9 @@ export default function ProductRow({
             contentFit="cover"
             transition={150}
           />
-        ) : !!product.emoji ? (
+        ) : (
           <Text style={styles.emoji}>{product.emoji}</Text>
-        ) : null}
+        )}
 
         {!isOut && promoInfo && (
           <View style={styles.badge}>
@@ -115,6 +176,35 @@ export default function ProductRow({
 }
 
 const styles = StyleSheet.create({
+  // ── Carte beauté (sans photo) ───────────────────────────────────────────────
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1b38',
+    borderRadius: radius.md,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginHorizontal: 20,
+    marginBottom: 10,
+    gap: 12,
+  },
+  cardHL: { borderWidth: 1.5, borderColor: colors.accent },
+  cardLeft: { flex: 1, gap: 4 },
+  cardRight: { alignItems: 'flex-end', gap: 8, flexShrink: 0 },
+  priceCol: { alignItems: 'flex-end', gap: 2 },
+  cardBtn: {
+    backgroundColor: colors.accent,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  cardBtnTxt: {
+    color: colors.bg,
+    fontFamily: fonts.titleXL,
+    fontSize: 13,
+  },
+
+  // ── Ligne avec photo ────────────────────────────────────────────────────────
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -129,10 +219,7 @@ const styles = StyleSheet.create({
   rowOut: { opacity: 0.5 },
   rowHL: { backgroundColor: `${colors.accent}18` },
 
-  info: {
-    flex: 1,
-    gap: 4,
-  },
+  info: { flex: 1, gap: 4 },
   name: {
     color: colors.white,
     fontFamily: fonts.title,
@@ -218,9 +305,6 @@ const styles = StyleSheet.create({
   },
 
   qtyBar: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.accent,
