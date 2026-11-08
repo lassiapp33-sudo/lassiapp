@@ -52,8 +52,13 @@ serve(async (req) => {
       .eq('id', orderId).maybeSingle();
     if (!order) return new Response(JSON.stringify({ error: 'order_not_found' }), { status: 404, headers: CORS });
 
-    const { data: shop } = await supabase.from('shops').select('owner_id').eq('id', order.shop_id).maybeSingle();
-    if (!shop || shop.owner_id !== user.id) return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: CORS });
+    // Vérification légère : prestataire = owner du shop OU client de la commande
+    if (order.shop_id) {
+      const { data: shop } = await supabase.from('shops').select('owner_id').eq('id', order.shop_id).maybeSingle();
+      if (shop && shop.owner_id !== user.id && order.client_id !== user.id) {
+        return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: CORS });
+      }
+    }
 
     const { data: pi } = await supabase.from('payment_intents').select('id, commission_lassi').eq('order_id', orderId).maybeSingle();
     const commissionLassi: number = pi?.commission_lassi ?? Math.round(order.total * 0.01);
