@@ -60,15 +60,19 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
       .catch(e => { setErrMsg(e.message); setStep('error'); });
   }, [visible, orderId]);
 
-  const openAndSend = () => {
+  const openWave = () => {
     if (!info) return;
     const phone = info.clientPhone.replace(/^\+?221/, '').trim();
     const montant = Math.round(info.montantPrestataire);
-    if (info.payMethod === 'wave') {
-      Linking.openURL(`wave://send?mobile=%2B221${phone}&amount=${montant}`);
-    } else {
-      Linking.openURL(`orangemoney://pay?phone=00221${phone}&amount=${montant}`);
-    }
+    Linking.openURL(`wave://send?mobile=%2B221${phone}&amount=${montant}`);
+    setStep('sent');
+  };
+
+  const openOM = () => {
+    if (!info) return;
+    const phone = info.clientPhone.replace(/^\+?221/, '').trim();
+    const montant = Math.round(info.montantPrestataire);
+    Linking.openURL(`orangemoney://pay?phone=00221${phone}&amount=${montant}`);
     setStep('sent');
   };
 
@@ -84,7 +88,6 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
     }
   };
 
-  const payLabel = info?.payMethod === 'wave' ? 'Wave' : 'Orange Money';
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -127,14 +130,11 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
                 LASSI rembourse sa commission ({formatPrice(info.commissionLassi)}) automatiquement.
               </Text>
 
-              <TouchableOpacity
-                style={[s.appBtn, info.payMethod === 'wave' ? s.waveBtn : s.omBtn, { marginBottom: 0 }]}
-                onPress={openAndSend}
-                activeOpacity={0.85}
-              >
-                <Text style={info.payMethod === 'wave' ? s.waveTxt : s.omTxt}>
-                  Envoyer {formatPrice(info.montantPrestataire)} via {payLabel}
-                </Text>
+              <TouchableOpacity style={[s.appBtn, s.waveBtn]} onPress={openWave} activeOpacity={0.85}>
+                <Text style={s.waveTxt}>Envoyer {formatPrice(info.montantPrestataire)} via Wave</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.appBtn, s.omBtn, { marginBottom: 0 }]} onPress={openOM} activeOpacity={0.85}>
+                <Text style={s.omTxt}>Envoyer {formatPrice(info.montantPrestataire)} via Orange Money</Text>
               </TouchableOpacity>
             </>
           )}
@@ -150,16 +150,21 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
               </View>
 
               <Text style={s.hint}>
-                Confirme une fois le virement effectué dans {payLabel}.
+                Confirme une fois le virement effectué.
               </Text>
 
               <TouchableOpacity style={s.confirmBtn} onPress={handleConfirm} activeOpacity={0.85}>
                 <Text style={s.confirmTxt}>J'ai envoyé — Confirmer</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={s.reopen} onPress={openAndSend} activeOpacity={0.75}>
-                <Text style={s.reopenTxt}>Rouvrir {payLabel}</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 10 }}>
+                <TouchableOpacity onPress={openWave} activeOpacity={0.75}>
+                  <Text style={s.reopenTxt}>Rouvrir Wave</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={openOM} activeOpacity={0.75}>
+                  <Text style={s.reopenTxt}>Rouvrir OM</Text>
+                </TouchableOpacity>
+              </View>
             </>
           )}
 
