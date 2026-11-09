@@ -10,7 +10,9 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  ToastAndroid,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { formatPrice } from '../../utils/format';
@@ -64,15 +66,25 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
     if (!info) return;
     const phone = info.clientPhone.replace(/^\+?221/, '').trim();
     const montant = Math.round(info.montantPrestataire);
-    Linking.openURL(`wave://send?mobile=%2B221${phone}&amount=${montant}`);
+    // Essaye les deux formats Wave (mobile= et phone=) selon la version de l'app
+    Linking.openURL(`wave://send?phone=%2B221${phone}&amount=${montant}`).catch(() => {
+      Linking.openURL(`wave://send?mobile=%2B221${phone}&amount=${montant}`).catch(() => {});
+    });
     setStep('sent');
   };
 
-  const openOM = () => {
+  const openOM = async () => {
     if (!info) return;
     const phone = info.clientPhone.replace(/^\+?221/, '').trim();
     const montant = Math.round(info.montantPrestataire);
-    Linking.openURL(`orangemoney://pay?phone=00221${phone}&amount=${montant}`);
+    // OM SN n'a pas de deeplink de transfert → copier le numéro + ouvrir l'app
+    await Clipboard.setStringAsync(`00221${phone}`);
+    if (Platform.OS === 'android') {
+      ToastAndroid.show(`Numéro copié — envoie ${montant} F dans Orange Money`, ToastAndroid.LONG);
+    }
+    Linking.openURL('orangemoney://').catch(() => {
+      Linking.openURL('market://details?id=orange.money.sn').catch(() => {});
+    });
     setStep('sent');
   };
 
@@ -134,7 +146,7 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
                 <Text style={s.waveTxt}>Envoyer {formatPrice(info.montantPrestataire)} via Wave</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.appBtn, s.omBtn, { marginBottom: 0 }]} onPress={openOM} activeOpacity={0.85}>
-                <Text style={s.omTxt}>Envoyer {formatPrice(info.montantPrestataire)} via Orange Money</Text>
+                <Text style={s.omTxt}>Ouvrir Orange Money (numéro copié)</Text>
               </TouchableOpacity>
             </>
           )}
@@ -150,7 +162,8 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
               </View>
 
               <Text style={s.hint}>
-                Confirme une fois le virement effectué.
+                Numéro copié : 00221{info.clientPhone.replace(/^\+?221/, '').trim()}{'\n'}
+                Envoie {formatPrice(info.montantPrestataire)} dans l'app, puis confirme.
               </Text>
 
               <TouchableOpacity style={s.confirmBtn} onPress={handleConfirm} activeOpacity={0.85}>
