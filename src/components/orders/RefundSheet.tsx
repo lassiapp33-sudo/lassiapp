@@ -6,13 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Linking,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
-  ToastAndroid,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { formatPrice } from '../../utils/format';
@@ -25,7 +22,7 @@ interface Props {
   onSuccess: () => void;
 }
 
-type Step = 'loading' | 'info' | 'sent' | 'confirming' | 'done' | 'error';
+type Step = 'loading' | 'info' | 'confirming' | 'done' | 'error';
 
 const IcoClose = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
@@ -61,34 +58,6 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
       })
       .catch(e => { setErrMsg(e.message); setStep('error'); });
   }, [visible, orderId]);
-
-  const openWave = () => {
-    if (!info) return;
-    const phone = info.clientPhone.replace(/^\+?221/, '').trim();
-    const montant = Math.round(info.montantPrestataire);
-    // Essaye les deux formats Wave (mobile= et phone=) selon la version de l'app
-    Linking.openURL(`wave://send?phone=+221${phone}&amount=${montant}`).catch(() => {
-      Linking.openURL(`wave://send?mobile=+221${phone}&amount=${montant}`).catch(() => {});
-    });
-    setStep('sent');
-  };
-
-  const openOM = async () => {
-    if (!info) return;
-    const phone = info.clientPhone.replace(/^\+?221/, '').trim();
-    const montant = Math.round(info.montantPrestataire);
-    // OM SN n'a pas de deeplink de transfert → copier le numéro + ouvrir l'app
-    await Clipboard.setStringAsync(`00221${phone}`);
-    if (Platform.OS === 'android') {
-      ToastAndroid.show(`Numéro copié — envoie ${montant} F dans Orange Money`, ToastAndroid.LONG);
-    }
-    Linking.openURL('orangemoney://').catch(() => {
-      Linking.openURL('market://details?id=sn.orange.orangemoney').catch(() => {
-        Linking.openURL('https://play.google.com/store/apps/details?id=sn.orange.orangemoney').catch(() => {});
-      });
-    });
-    setStep('sent');
-  };
 
   const handleConfirm = async () => {
     setStep('confirming');
@@ -130,56 +99,24 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
             </View>
           )}
 
-          {/* Info — bouton unique d'envoi */}
+          {/* Info — confirmation avant remboursement automatique */}
           {step === 'info' && info && (
             <>
               <View style={s.infoBox}>
                 <Text style={s.infoLabel}>Remboursement client</Text>
-                <Text style={s.infoAmount}>{formatPrice(info.montantPrestataire)}</Text>
-                <Text style={s.infoSub}>à envoyer à</Text>
+                <Text style={s.infoAmount}>{formatPrice(info.montantPrestataire + info.commissionLassi)}</Text>
+                <Text style={s.infoSub}>à rembourser à</Text>
                 <Text style={s.infoPhone}>{info.clientPhone}</Text>
               </View>
 
               <Text style={s.hint}>
-                LASSI rembourse sa commission ({formatPrice(info.commissionLassi)}) automatiquement.
-              </Text>
-
-              <TouchableOpacity style={[s.appBtn, s.waveBtn]} onPress={openWave} activeOpacity={0.85}>
-                <Text style={s.waveTxt}>Envoyer {formatPrice(info.montantPrestataire)} via Wave</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[s.appBtn, s.omBtn, { marginBottom: 0 }]} onPress={openOM} activeOpacity={0.85}>
-                <Text style={s.omTxt}>Ouvrir Orange Money (numéro copié)</Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          {/* Sent — prestataire confirme qu'il a bien envoyé */}
-          {step === 'sent' && info && (
-            <>
-              <View style={s.infoBox}>
-                <Text style={s.infoLabel}>Remboursement client</Text>
-                <Text style={s.infoAmount}>{formatPrice(info.montantPrestataire)}</Text>
-                <Text style={s.infoSub}>envoyé à</Text>
-                <Text style={s.infoPhone}>{info.clientPhone}</Text>
-              </View>
-
-              <Text style={s.hint}>
-                Numéro copié : 00221{info.clientPhone.replace(/^\+?221/, '').trim()}{'\n'}
-                Envoie {formatPrice(info.montantPrestataire)} dans l'app, puis confirme.
+                LASSI envoie le remboursement complet automatiquement via {info.payMethod === 'wave' ? 'Wave' : 'Orange Money'}.
               </Text>
 
               <TouchableOpacity style={s.confirmBtn} onPress={handleConfirm} activeOpacity={0.85}>
-                <Text style={s.confirmTxt}>J'ai envoyé — Confirmer</Text>
+                <IcoCheck />
+                <Text style={s.confirmTxt}>Confirmer le remboursement</Text>
               </TouchableOpacity>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 10 }}>
-                <TouchableOpacity onPress={openWave} activeOpacity={0.75}>
-                  <Text style={s.reopenTxt}>Rouvrir Wave</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={openOM} activeOpacity={0.75}>
-                  <Text style={s.reopenTxt}>Rouvrir OM</Text>
-                </TouchableOpacity>
-              </View>
             </>
           )}
 
@@ -288,26 +225,6 @@ const s = StyleSheet.create({
     marginBottom: 14,
     lineHeight: 17,
   },
-  appBtn: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  reopen: {
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  reopenTxt: {
-    color: colors.muted,
-    fontFamily: fonts.body,
-    fontSize: 13,
-    textDecorationLine: 'underline',
-  },
-  waveBtn: { backgroundColor: '#1DC8F2' },
-  waveTxt: { color: '#062a33', fontFamily: fonts.title, fontSize: 15 },
-  omBtn:   { backgroundColor: '#FF7900' },
-  omTxt:   { color: '#fff', fontFamily: fonts.title, fontSize: 15 },
   confirmBtn: {
     backgroundColor: colors.success,
     borderRadius: 14,

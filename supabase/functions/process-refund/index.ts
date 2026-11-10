@@ -153,8 +153,10 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'client_phone_invalid' }), { status: 400, headers: CORS });
   }
 
-  if (commissionLassi <= 0) {
-    // Rien à envoyer → on marque quand même refunded
+  // — Montant total à rembourser au client (LASSI avance tout)
+  const montantRemboursement = order.total;
+
+  if (montantRemboursement <= 0) {
     await supabase
       .from('orders')
       .update({ status: 'refunded', refunded_at: new Date().toISOString() })
@@ -162,19 +164,36 @@ serve(async (req) => {
     return new Response(JSON.stringify({ success: true, payout_ref: null }), { headers: CORS });
   }
 
-  // — Envoie le remboursement de la commission LASSI au client
+  // — Annule le payout_queue du prestataire (LASSI rembourse le client directement)
+  if (pi.id) {
+    await supabase
+      .from('payout_queue')
+      .update({ statut: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('payment_intent_id', pi.id)
+      .not('statut', 'in', '("paid","processing")');
+  }
+
+  // — Envoie le remboursement complet au client via Wave/OM payout
   const refundId = `refund_${orderId}`;
   let payoutRef: string;
 
   try {
     if (order.pay_method === 'wave') {
-      payoutRef = await sendWaveRefund({ refundId, montant: commissionLassi, phone: clientPhone });
+      payoutRef = await sendWaveRefund({ refundId, montant: montantRemboursement, phone: clientPhone });
     } else {
-      payoutRef = await sendOmRefund({ refundId, montant: commissionLassi, phone: clientPhone });
+      payoutRef = await sendOmRefund({ refundId, montant: montantRemboursement, phone: clientPhone });
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erreur payout';
     console.error('[process-refund] payout error:', msg);
+    // Restaure le payout_queue si le payout échoue
+    if (pi.id) {
+      await supabase
+        .from('payout_queue')
+        .update({ statut: 'queued', updated_at: new Date().toISOString() })
+        .eq('payment_intent_id', pi.id)
+        .eq('statut', 'cancelled');
+    }
     return new Response(JSON.stringify({ error: 'payout_failed', detail: msg }), { status: 500, headers: CORS });
   }
 
@@ -190,7 +209,7 @@ serve(async (req) => {
       const methodLabel = order.pay_method === 'wave' ? 'Wave' : 'Orange Money';
       await sendPushToUser(supabase, order.client_id, {
         title: 'Commande remboursée 💸',
-        body:  `Ta commande a été remboursée. ${commissionLassi} F virés par LASSI via ${methodLabel}.`,
+        body:  `Ta commande a été remboursée. ${montantRemboursement} F virés par LASSI via ${methodLabel}.`,
         data:  { type: 'refund', order_id: orderId },
       });
     } catch (e) {
@@ -199,7 +218,7 @@ serve(async (req) => {
   }
 
   return new Response(
-    JSON.stringify({ success: true, payout_ref: payoutRef, commission_lassi: commissionLassi }),
+    JSON.stringify({ success: true, payout_ref: payoutRef, montant_rembourse: montantRemboursement }),
     { headers: { ...CORS, 'Content-Type': 'application/json' } },
   );
 });
