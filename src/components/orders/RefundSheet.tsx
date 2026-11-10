@@ -83,7 +83,9 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
       ToastAndroid.show(`Numéro copié — envoie ${montant} F dans Orange Money`, ToastAndroid.LONG);
     }
     Linking.openURL('orangemoney://').catch(() => {
-      Linking.openURL('market://details?id=orange.money.sn').catch(() => {});
+      Linking.openURL('market://details?id=sn.orange.orangemoney').catch(() => {
+        Linking.openURL('https://play.google.com/store/apps/details?id=sn.orange.orangemoney').catch(() => {});
+      });
     });
     setStep('sent');
   };
