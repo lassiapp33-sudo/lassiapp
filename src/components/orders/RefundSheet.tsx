@@ -67,8 +67,8 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
     const phone = info.clientPhone.replace(/^\+?221/, '').trim();
     const montant = Math.round(info.montantPrestataire);
     // Essaye les deux formats Wave (mobile= et phone=) selon la version de l'app
-    Linking.openURL(`wave://send?phone=%2B221${phone}&amount=${montant}`).catch(() => {
-      Linking.openURL(`wave://send?mobile=%2B221${phone}&amount=${montant}`).catch(() => {});
+    Linking.openURL(`wave://send?phone=+221${phone}&amount=${montant}`).catch(() => {
+      Linking.openURL(`wave://send?mobile=+221${phone}&amount=${montant}`).catch(() => {});
     });
     setStep('sent');
   };
