@@ -51,6 +51,7 @@ import * as beautyService from '../../services/beauty';
 import { BeautyService } from '../../types/beauty';
 import { calculerPrixBeauteAvecMarge } from '../../services/beauty';
 import { getTodaySpecials, DailySpecial } from '../../services/dailySpecials';
+import { registerShopForRecovery } from '../../services/imageRecovery';
 import HabillementPickerSheet from '../../components/shop/HabillementPickerSheet';
 
 // ─── Icônes ──────────────────────────────────────────────────────────────────
@@ -323,6 +324,8 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     }
     setLoading(true);
     setLoadError(false);
+    // Enregistre les images cassées de ce shop pour la récupération via cache (onLoad)
+    registerShopForRecovery(shopId).catch(() => {});
     try {
       const [shop, products, promos] = await Promise.all([
         shopsService.getShopById(shopId),

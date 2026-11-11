@@ -61,6 +61,7 @@ import { onSessionExpired, SUPABASE_MISCONFIGURED, supabase } from './src/lib/su
 import { usePushToken, removeCurrentDeviceToken } from './src/hooks/usePushToken';
 import { usePaymentDeepLink } from './src/hooks/usePaymentDeepLink';
 import usePendingNavStore from './src/store/pendingNavStore';
+import { runImageRecovery } from './src/services/imageRecovery';
 
 // ─── Détection Expo Go / Web ──────────────────────────────────────────────────
 // SDK 53+ : les push notifications Android ne fonctionnent plus dans Expo Go.
@@ -194,6 +195,15 @@ function AppContent() {
   // Charge les IDs de cartes déjà affichées (AsyncStorage) au démarrage
   const loadSeenIds = useNotifPopupStore(s => s.loadSeenIds);
   useEffect(() => { loadSeenIds(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // RÉCUPÉRATION IMAGES PRODUITS — scanne le cache expo-image du téléphone et
+  // ré-uploade les photos produits supprimées du bucket (bug cleanup-storage).
+  // Différé 8s pour ne pas concurrencer l'OTA + le chargement initial.
+  useEffect(() => {
+    if (__DEV__ || IS_EXPO_GO || Platform.OS === 'web') return;
+    const t = setTimeout(() => { runImageRecovery().catch(() => {}); }, 8000);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Annonces admin non lues (table annonces, get_annonces_non_lues)
   const { annonceCourante, nbRestantes, marquerLue } = useAnnonces(userId);

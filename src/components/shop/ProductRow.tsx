@@ -6,6 +6,7 @@ import { ProductPromoInfo } from '../../types/promotions';
 import { formatPrice } from '../../utils/format';
 import { calcPromoClientPrice } from '../../services/promotions';
 import { Product } from './ProductTile';
+import { reportSuccessfulLoad } from '../../services/imageRecovery';
 
 interface Props {
   product: Product;
@@ -130,6 +131,7 @@ export default function ProductRow({
             style={StyleSheet.absoluteFill}
             contentFit="cover"
             transition={150}
+            onLoad={() => reportSuccessfulLoad(product.photoUrl!)}
           />
         ) : (
           <Text style={styles.emoji}>{product.emoji}</Text>

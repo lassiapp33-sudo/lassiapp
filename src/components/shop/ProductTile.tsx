@@ -8,6 +8,7 @@ import { formatPrice } from '../../utils/format';
 import { calculerPrixClient, calculerPrixClientVip } from '../../config/payment';
 import { calcPromoClientPrice } from '../../services/promotions';
 import ImageZoomModal from '../common/ImageZoomModal';
+import { reportSuccessfulLoad } from '../../services/imageRecovery';
 
 export interface Product {
   id: string;
@@ -59,6 +60,7 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
             contentFit="cover"
             transition={150}
             onError={onImageError}
+            onLoad={() => reportSuccessfulLoad(product.photoUrl!)}
           />
         ) : product.emoji ? (
           <Text style={styles.emoji}>{product.emoji}</Text>
