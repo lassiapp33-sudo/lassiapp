@@ -12,7 +12,6 @@ import {
   Modal,
   Pressable,
   Platform,
-  Share,
   Animated,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -48,6 +47,7 @@ import * as beautyService from '../../services/beauty';
 import { BeautyService } from '../../types/beauty';
 import { getErrorMessage } from '../../utils/errorUtils';
 import { getStatsClics } from '../../services/statsPartageService';
+import SharePanel from '../../components/merchant/SharePanel';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { FITNESS_SUBSCRIPTION_CATS } from '../../config/fitnessConfig';
 
@@ -204,6 +204,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
   const [dailySpecials, setDailySpecials] = useState<DailySpecial[]>([]);
   const [dailySpecialsLoading, setDailySpecialsLoading] = useState(false);
   const [deletingSpecialId, setDeletingSpecialId] = useState<string | null>(null);
+  const [sharePanelOpen, setSharePanelOpen] = useState(false);
   const isRestaurantShop = (context.subcategories ?? []).some(s => s === 'restaurant' || s === 'fastfood');
 
   // ── Récupération vitrine manquante ────────────────────────────────────────
@@ -920,11 +921,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.shareBtn, styles.shareBtnSolid]}
-                      onPress={() =>
-                        Share.share({
-                          message: `${profile.name} est maintenant sur LASSİ ! 🎉\nCommandez directement ici : https://s.lassi.tech/${profile.slug}`,
-                        }).catch(() => {})
-                      }
+                      onPress={() => setSharePanelOpen(true)}
                     >
                       <Text style={styles.shareBtnSolidText}>Partager</Text>
                     </TouchableOpacity>
@@ -1581,6 +1578,15 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
         </Pressable>
       </Pressable>
     </Modal>
+
+    {profile.slug ? (
+      <SharePanel
+        visible={sharePanelOpen}
+        slug={profile.slug}
+        shopName={profile.name}
+        onClose={() => setSharePanelOpen(false)}
+      />
+    ) : null}
 
     </KeyboardAvoidingView>
   );
