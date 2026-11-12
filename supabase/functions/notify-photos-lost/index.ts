@@ -115,17 +115,25 @@ Deno.serve(async (req) => {
     const targets = new Map<string, { shopId: string; shopName: string }>();
 
     if (effectiveIds) {
-      // Mode TEST : cible exactement ces user_ids.
-      const shops = await fetchAll(sb, 'shops', 'id,merchant_id,name',
-        (q: any) => q.in('merchant_id', effectiveIds));
-      for (const s of shops) {
-        if (!targets.has(s.merchant_id)) targets.set(s.merchant_id, { shopId: s.id, shopName: s.name });
+      // Mode TEST / ciblage explicite : exactement ces user_ids.
+      // Chunk le .in() (100 ids max) — sinon URL trop longue → erreur http2.
+      const CHUNK = 100;
+      for (let i = 0; i < effectiveIds.length; i += CHUNK) {
+        const slice = effectiveIds.slice(i, i + CHUNK);
+        const shops = await fetchAll(sb, 'shops', 'id,merchant_id,name',
+          (q: any) => q.in('merchant_id', slice));
+        for (const s of shops) {
+          if (!targets.has(s.merchant_id)) targets.set(s.merchant_id, { shopId: s.id, shopName: s.name });
+        }
       }
       for (const uid of effectiveIds) {
         if (!targets.has(uid)) targets.set(uid, { shopId: '', shopName: 'ta boutique' });
       }
     } else {
       // Mode CAMPAGNE : toutes les boutiques ayant AU MOINS un produit, hors admin.
+      // NB : le ciblage FIN des marchands réellement impactés (image manquante /
+      // fichier supprimé du bucket) se fait en amont via userIds (storage.objects
+      // n'est pas exposé à PostgREST, donc non interrogeable ici).
       const shops = await fetchAll(sb, 'shops', 'id,merchant_id,name,is_admin_account',
         (q: any) => q.eq('is_admin_account', false));
       const shopById = new Map<string, { merchant_id: string; name: string }>();
