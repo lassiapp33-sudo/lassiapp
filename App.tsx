@@ -495,6 +495,7 @@ function AppContent() {
         onVoirAlaUne={() => setPendingNav({ type: 'a_la_une_feed' })}
         onVoirVitrine={(shopId, shopName) => setPendingNav({ type: 'new_shop', shopId, shopName })}
         onVoirTerrain={(terrainId) => setPendingNav({ type: 'terrain_resa', terrainId })}
+        onOuvrirCatalogue={() => setPendingNav({ type: 'ma_vitrine' })}
       />
 
       {/* Carte rich-notification pour récompenses et paiements */}

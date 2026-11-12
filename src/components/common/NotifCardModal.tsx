@@ -37,6 +37,7 @@ const TAG_LABEL: Record<NotifType, string> = {
   reservation_terrain: 'RÉSERVATION',
   setup_shop:          'CONFIGURATION',
   share_vitrine:       'PARTAGE',
+  photos_lost:         'PHOTOS',
 };
 
 function NotifIcon({ type, size }: { type: NotifType | string; size: number }) {
@@ -106,7 +107,7 @@ export default function NotifCardModal({ onView }: Props) {
     setTimeout(() => setCopied(false), 2000);
   }, [shareUrl]);
 
-  if (!current || current.type === 'order' || current.type === 'payment' || current.type === 'pay' || current.type === 'msg' || current.type === 'ann' || current.type === 'reservation_terrain') return null;
+  if (!current || current.type === 'order' || current.type === 'payment' || current.type === 'pay' || current.type === 'msg' || current.type === 'ann' || current.type === 'reservation_terrain' || current.type === 'photos_lost') return null;
 
   const isSetup = current.type === 'setup_shop';
   const isShare = current.type === 'share_vitrine';

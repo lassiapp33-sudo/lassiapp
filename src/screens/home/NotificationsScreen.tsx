@@ -40,6 +40,7 @@ const TYPE_CONFIG: Record<
   reservation_terrain: { Icon: IcoFitness, color: colors.orange,  bg: 'rgba(240,168,71,.13)' },
   setup_shop:          { Icon: IcoAnn,     color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
   share_vitrine:       { Icon: IcoAnn,     color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
+  photos_lost:         { Icon: IcoAnn,     color: colors.accent,  bg: 'rgba(253,207,52,.13)' },
 };
 
 const NotifCard = React.memo(function NotifCard({
@@ -52,6 +53,7 @@ const NotifCard = React.memo(function NotifCard({
   const cfg = TYPE_CONFIG[notif.type] ?? TYPE_CONFIG.ann; // garde : type inconnu → carte générique
   const { Icon } = cfg;
   const isSetup = notif.type === 'setup_shop';
+  const isPhotosLost = notif.type === 'photos_lost';
 
   const openWhatsApp = () => {
     const d = (notif.data ?? {}) as Record<string, unknown>;
@@ -78,6 +80,11 @@ const NotifCard = React.memo(function NotifCard({
         {isSetup && (
           <TouchableOpacity style={styles.waBtn} onPress={openWhatsApp} activeOpacity={0.85}>
             <Text style={styles.waBtnTxt}>Joindre le service client</Text>
+          </TouchableOpacity>
+        )}
+        {isPhotosLost && (
+          <TouchableOpacity style={styles.catBtn} onPress={() => onPress(notif)} activeOpacity={0.85}>
+            <Text style={styles.catBtnTxt}>Ouvrir le catalogue</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -243,6 +250,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   waBtnTxt: { color: '#FFFFFF', fontFamily: fonts.ui, fontSize: 12 },
+
+  catBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    backgroundColor: colors.accent,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  catBtnTxt: { color: colors.bg, fontFamily: fonts.ui, fontSize: 12 },
 
   empty: { paddingVertical: 60, alignItems: 'center' },
   emptyTxt: { color: colors.muted, fontFamily: fonts.body, fontSize: 13 },

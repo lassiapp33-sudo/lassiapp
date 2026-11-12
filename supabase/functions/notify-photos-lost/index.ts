@@ -155,14 +155,14 @@ Deno.serve(async (req) => {
     let pushed = 0;
 
     for (const t of targetList) {
-      // 1. Notification in-app (modal statique + Realtime)
+      // 1. Notification in-app (bannière + bouton "Ouvrir le catalogue" → boutique)
       const { error: insErr } = await sb.from('notifications').insert({
         user_id: t.userId,
-        type:    'setup_shop',
+        type:    'photos_lost',
         title:   TITLE,
         body:    BODY,
         data:    {
-          type:      'setup_shop',
+          type:      'photos_lost',
           shop_name: t.shopName,
           shop_id:   t.shopId || null,
           target_id: t.shopId || null,
@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
             _contentAvailable: true,
             title: TITLE,
             body:  PUSH_BODY,
-            data:  { type: 'setup_shop', shop_id: t.shopId || null, reason: 'photos_lost' },
+            data:  { type: 'photos_lost', shop_id: t.shopId || null, reason: 'photos_lost' },
           })));
           pushed++;
         }

@@ -14,7 +14,7 @@ import useNotifPopupStore from '../../store/notifPopupStore';
 function BannerIcon({ type }: { type: NotifType }) {
   if (type === 'msg')                                   return <IcoNotifMsg     size={24} />;
   if (type === 'fitness')                               return <IcoNotifFitness size={24} />;
-  if (type === 'ann' || type === 'vip')                 return <IcoNotifAnn     size={24} />;
+  if (type === 'ann' || type === 'vip' || type === 'photos_lost') return <IcoNotifAnn size={24} />;
   if (type === 'pay' || type === 'payment')             return <IcoNotifPay     size={24} />;
   return <IcoNotifOrder size={24} />;
 }
@@ -31,6 +31,7 @@ const COLOR: Record<NotifType, string> = {
   reservation_terrain: colors.accent,
   setup_shop:          colors.accent,
   share_vitrine:       colors.accent,
+  photos_lost:         colors.accent,
 };
 
 const BG: Record<NotifType, string> = {
@@ -45,13 +46,14 @@ const BG: Record<NotifType, string> = {
   reservation_terrain: 'rgba(253,207,52,.13)',
   setup_shop:          'rgba(253,207,52,.13)',
   share_vitrine:       'rgba(253,207,52,.13)',
+  photos_lost:         'rgba(253,207,52,.13)',
 };
 
 // Types gérés par la BANNIÈRE (auto-dismiss). Les autres (vip modal, setup_shop…)
 // sont pris en charge par NotifCardModal → la bannière doit les IGNORER totalement
 // (ni rendu, ni timer d'auto-dismiss qui fermerait le modal).
 const BANNER_TYPES = new Set<string>([
-  'order', 'payment', 'pay', 'msg', 'fitness', 'ann', 'vip', 'reservation_terrain',
+  'order', 'payment', 'pay', 'msg', 'fitness', 'ann', 'vip', 'reservation_terrain', 'photos_lost',
 ]);
 
 interface Props {
@@ -59,11 +61,12 @@ interface Props {
   onVoirAlaUne: () => void;
   onVoirVitrine: (shopId: string, shopName: string) => void;
   onVoirTerrain: (terrainId?: string) => void;
+  onOuvrirCatalogue: () => void;
 }
 
 // Bannière slide depuis le haut, auto-dismiss 5s (3s pour les annonces).
 // Chaque notification n'apparaît qu'une seule fois (tracké par ID via AsyncStorage).
-export default function NotifPopupBanner({ onView, onVoirAlaUne, onVoirVitrine, onVoirTerrain }: Props) {
+export default function NotifPopupBanner({ onView, onVoirAlaUne, onVoirVitrine, onVoirTerrain, onOuvrirCatalogue }: Props) {
   const current = useNotifPopupStore(s => s.queue[0] ?? null);
   const dismiss  = useNotifPopupStore(s => s.dismiss);
 
@@ -139,10 +142,13 @@ export default function NotifPopupBanner({ onView, onVoirAlaUne, onVoirVitrine, 
   const color = COLOR[current.type];
   const bg    = BG[current.type];
 
-  const isAnn     = current.type === 'ann';
-  const isTerrain = current.type === 'reservation_terrain';
+  const isAnn        = current.type === 'ann';
+  const isTerrain    = current.type === 'reservation_terrain';
+  const isPhotosLost = current.type === 'photos_lost';
   const isAlaUne  = isAnn && current.targetId === 'a_la_une_feed';
   const isNewShop = isAnn && !!current.targetId && current.targetId !== 'a_la_une_feed';
+
+  const handlePhotosLostAction = () => slideOut(onOuvrirCatalogue);
 
   const handleAnnAction = () => {
     if (isAlaUne) {
@@ -167,7 +173,7 @@ export default function NotifPopupBanner({ onView, onVoirAlaUne, onVoirVitrine, 
         {/* Zone principale cliquable */}
         <TouchableOpacity
           style={s.pressArea}
-          onPress={isTerrain ? handleTerrainAction : isAnn ? handleAnnAction : () => slideOut(onView)}
+          onPress={isTerrain ? handleTerrainAction : isAnn ? handleAnnAction : isPhotosLost ? handlePhotosLostAction : () => slideOut(onView)}
           activeOpacity={0.82}
         >
           <View style={[s.iconBox, { backgroundColor: bg }]}>
@@ -187,6 +193,17 @@ export default function NotifPopupBanner({ onView, onVoirAlaUne, onVoirVitrine, 
             activeOpacity={0.85}
           >
             <Text style={s.voirTxt}>Voir</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Bouton "Ouvrir le catalogue" → boutique du marchand */}
+        {isPhotosLost && (
+          <TouchableOpacity
+            style={s.voirBtn}
+            onPress={handlePhotosLostAction}
+            activeOpacity={0.85}
+          >
+            <Text style={s.voirTxt}>Ouvrir le catalogue</Text>
           </TouchableOpacity>
         )}
 

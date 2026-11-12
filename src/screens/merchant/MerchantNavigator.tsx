@@ -58,7 +58,7 @@ import { getRecompenseBienvenue } from '../../services/classementService';
 import { OrderInfo } from '../../types/payment';
 
 function shouldShowCard(type: string): boolean {
-  return type === 'vip' || type === 'pay' || type === 'payment' || type === 'order' || type === 'msg' || type === 'fitness' || type === 'reservation_terrain' || type === 'setup_shop' || type === 'share_vitrine';
+  return type === 'vip' || type === 'pay' || type === 'payment' || type === 'order' || type === 'msg' || type === 'fitness' || type === 'reservation_terrain' || type === 'setup_shop' || type === 'share_vitrine' || type === 'photos_lost';
 }
 
 // Navigateur du cockpit prestataire — tous les modules sont câblés ici.
@@ -465,6 +465,11 @@ export default function MerchantNavigator({ onLogout }: Props) {
         onBack={() => setScreen('dashboard')}
         onNavigate={(type, targetId, data) => {
           const d = data ?? {};
+          // Photos perdues → catalogue/boutique (le marchand rajoute ses photos)
+          if (type === 'photos_lost') {
+            setScreen('store');
+            return;
+          }
           // Ça bouge (réaction / commentaire sur ma story) → mes stories (répondre)
           if (d.type === 'ca_bouge') {
             setScreen('ca_bouge');
