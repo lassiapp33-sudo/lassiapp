@@ -434,12 +434,18 @@ function AppContent() {
             }
           } catch { /* best-effort */ }
         }
-        try {
-          await N.scheduleNotificationAsync({
-            content: { title, body, sound: 'default', data: remoteMessage.data ?? {} },
-            trigger: null,
-          });
-        } catch (_) {}
+        // iOS UNIQUEMENT : useFrameworks:static casse l'interception Expo des
+        // messages Firebase en foreground → on réaffiche manuellement.
+        // Sur Android, expo-notifications affiche DÉJÀ la notif via
+        // setNotificationHandler → ce scheduleNotificationAsync ferait DOUBLON.
+        if (Platform.OS === 'ios') {
+          try {
+            await N.scheduleNotificationAsync({
+              content: { title, body, sound: 'default', data: remoteMessage.data ?? {} },
+              trigger: null,
+            });
+          } catch (_) {}
+        }
       });
     } catch (_) {}
     return () => { try { unsub?.(); } catch (_) {} };
