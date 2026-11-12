@@ -896,7 +896,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
             {/* ── Mon lien de partage ─────────────────────────────────────── */}
             {profile.slug ? (
               <View style={styles.sectionWrap}>
-                <Text style={styles.sectionTitle}>Mon lien de partage</Text>
+                <Text style={styles.sectionTitle}>Mon site web</Text>
                 <View style={styles.card}>
                   <Text style={styles.shareLink} numberOfLines={1}>
                     {`s.lassi.tech/${profile.slug}`}
