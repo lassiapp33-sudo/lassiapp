@@ -100,8 +100,9 @@ export default function SharePanel({ visible, slug, shopName, onClose }: Props) 
       steps: [
         { n: 1, txt: 'Dans TikTok, va sur ton Profil (en bas à droite).' },
         { n: 2, txt: 'Touche « Modifier le profil ».' },
-        { n: 3, txt: 'Touche « Bio », fais un appui long → « Coller ».' },
-        { n: 4, txt: 'Enregistre. Ton lien est dans ta bio ✅' },
+        { n: 3, txt: 'Si tu as 1000 abonnés ou plus : touche « Liens » → « Ajoute un lien » → appui long → « Coller ». Le lien devient cliquable.' },
+        { n: 4, txt: 'Si tu as moins de 1000 abonnés : touche « Bio » → appui long → « Coller ». Le lien s’affiche en texte.' },
+        { n: 5, txt: 'Enregistre. Ton lien est en ligne ✅' },
       ],
     },
     instagram: {
@@ -195,8 +196,8 @@ export default function SharePanel({ visible, slug, shopName, onClose }: Props) 
               />
               <NetBtn
                 bg="#000000"
-                label="Mettre dans ma bio TikTok"
-                sub="On te guide pour coller le lien"
+                label="Mettre mon lien sur TikTok"
+                sub="Dans « Liens » (1000 abonnés+) ou dans la bio"
                 onPress={() => openGuide('tiktok', GUIDES.tiktok, url)}
               />
               <NetBtn
