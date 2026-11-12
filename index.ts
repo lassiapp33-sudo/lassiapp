@@ -13,25 +13,22 @@ import Constants from 'expo-constants';
 const App = (require('./App') as { default: Parameters<typeof registerRootComponent>[0] }).default;
 
 // ─── Firebase background message handler (Android + iOS) ─────────────────────
-// Android : Firebase affiche les notifs background sans son → le handler
-// crée une 2e notif via expo-notifications avec PRIORITY_MAX + son explicite.
+// Android : expo-notifications (ExpoFcmMessagingService) AFFICHE DÉJÀ la notif
+// background via le canal commandes-v2/messages-v2 (son inclus). Le handler ne
+// doit donc PLUS créer de 2e notif — sinon DOUBLON system-tray sur toutes les
+// notifs (crons inclus). On garde le handler (Firebase l'exige en background) +
+// l'annonce vocale commandes, mais AUCUN scheduleNotificationAsync.
 // iOS : APNs affiche nativement (aps.alert), mais Firebase doit avoir un handler
 // enregistré sinon il supprime les messages data-only en background.
-// Note Android : un doublon persiste (FCM-Notification silencieuse + notre notif sonore)
-// → éliminable seulement via rebuild natif (FirebaseMessagingService override).
 if (Platform.OS !== 'web') try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const _fbMsg = require('@react-native-firebase/messaging');
   const messaging = (_fbMsg.default ?? _fbMsg) as { (): { setBackgroundMessageHandler: (h: (m: any) => Promise<void>) => void } };
 
   if (Platform.OS === 'android') {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const Notifications = require('expo-notifications');
-
     messaging().setBackgroundMessageHandler(async (msg: Record<string, any>) => {
       try {
         const title = (msg.notification?.title ?? msg.data?.title ?? 'LASSI') as string;
-        const body  = (msg.notification?.body  ?? msg.data?.message ?? '') as string;
         let notifData: Record<string, unknown> = {};
         try { notifData = JSON.parse((msg.data?.body as string) ?? '{}'); } catch { /* ignore */ }
 
@@ -52,26 +49,9 @@ if (Platform.OS !== 'web') try {
             setTimeout(() => { try { Speech.speak('Nouvelle commande reçue', opts); } catch { /* ignore */ } }, 2500);
           } catch { /* best-effort */ }
         }
-
-        // Annuler la notification silencieuse Firebase AVANT d'afficher la nôtre
-        try {
-          const { NativeModules } = require('react-native');
-          NativeModules.ExpoNotificationsModule?.dismissAll?.();
-        } catch { /* best-effort */ }
-
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title,
-            body,
-            sound:    'default',
-            data:     notifData,
-            priority: Notifications.AndroidNotificationPriority?.MAX ?? 2,
-            vibrate:  [0, 250, 250, 250],
-          },
-          trigger: null,
-        });
+        // PAS de scheduleNotificationAsync : expo-notifications affiche déjà la notif.
       } catch (e) {
-        console.error('[LASSI-BGHandler] scheduleNotification failed:', e);
+        console.error('[LASSI-BGHandler] handler failed:', e);
       }
     });
   } else {
