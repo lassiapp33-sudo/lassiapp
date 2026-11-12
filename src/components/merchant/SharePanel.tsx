@@ -21,7 +21,7 @@ interface Props {
   onClose: () => void;
 }
 
-type TargetId = 'wa_contacts' | 'wa_status' | 'facebook' | 'tiktok' | 'instagram';
+type TargetId = 'wa_contacts' | 'facebook' | 'tiktok' | 'instagram';
 
 interface GuideStep { n: number; txt: string; }
 interface Guide {
@@ -92,18 +92,7 @@ export default function SharePanel({ visible, slug, shopName, onClose }: Props) 
     setGuide({ id, data });
   }, [copy]);
 
-  const GUIDES: Record<'wa_status' | 'tiktok' | 'instagram', Guide> = {
-    wa_status: {
-      appLabel: 'Ouvrir WhatsApp',
-      primary: 'whatsapp://',
-      fallback: Platform.OS === 'ios' ? 'https://apps.apple.com/app/whatsapp-messenger/id310633997' : 'https://play.google.com/store/apps/details?id=com.whatsapp',
-      steps: [
-        { n: 1, txt: 'Dans WhatsApp, va sur l’onglet « Actus » (ou « Statut »).' },
-        { n: 2, txt: 'Touche le crayon ✏️ puis « Texte ».' },
-        { n: 3, txt: 'Appui long sur l’écran → « Coller ».' },
-        { n: 4, txt: 'Touche « Envoyer ». C’est publié ✅' },
-      ],
-    },
+  const GUIDES: Record<'tiktok' | 'instagram', Guide> = {
     tiktok: {
       appLabel: 'Ouvrir TikTok',
       primary: 'tiktok://',
@@ -189,14 +178,14 @@ export default function SharePanel({ visible, slug, shopName, onClose }: Props) 
               <NetBtn
                 bg="#25D366"
                 label="Envoyer à mes contacts"
-                sub="WhatsApp — message déjà écrit"
+                sub="WhatsApp — choisis les contacts, message déjà écrit"
                 onPress={shareWhatsAppContacts}
               />
               <NetBtn
                 bg="#128C7E"
                 label="Mettre en statut WhatsApp"
-                sub="On te guide pour coller"
-                onPress={() => openGuide('wa_status', GUIDES.wa_status, message)}
+                sub="Coche « Mon statut » en haut de la liste"
+                onPress={shareWhatsAppContacts}
               />
               <NetBtn
                 bg="#1877F2"
