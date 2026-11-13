@@ -144,7 +144,7 @@ export async function confirmBeautyReservation(
       'Un client';
 
     const prestTitle = 'Reversement reçu';
-    const prestBody  = `${clientLabel} a réservé "${serviceNom}". ${montantStr} reversés sur votre ${moyenStr}. Les frais Wave/OM sont à votre charge.`;
+    const prestBody  = `${clientLabel} a réservé "${serviceNom}". ${montantStr} reversés sur votre ${moyenStr}. Les frais Wave/OM sont à votre charge. Le client ne paie que les frais LASSI (1%).`;
 
     try {
       await sendPushToUser(supabase, resa.prestataire_id, {

@@ -275,7 +275,7 @@ serve(async (req) => {
       const moyenStr   = payout.moyen_paiement === 'orange_money' ? 'Orange Money' : 'Wave';
 
       let title     = 'Reversement reçu';
-      let body      = `${montantStr} reversés sur votre ${moyenStr}. Les frais Wave/OM sont à votre charge.`;
+      let body      = `${montantStr} reversés sur votre ${moyenStr}. Les frais Wave/OM sont à votre charge. Le client ne paie que les frais LASSI (1%).`;
       let notifType = 'payout_done';
 
       try {
@@ -306,7 +306,7 @@ serve(async (req) => {
               if (cp?.name) clientName = cp.name as string;
             }
             title     = 'Nouvel abonné payé';
-            body      = `${clientName} a souscrit à "${offreNom}". ${montantStr} reversés sur votre ${moyenStr}. Les frais Wave/OM sont à votre charge.`;
+            body      = `${clientName} a souscrit à "${offreNom}". ${montantStr} reversés sur votre ${moyenStr}. Les frais Wave/OM sont à votre charge. Le client ne paie que les frais LASSI (1%).`;
             notifType = 'fitness_abonnement_paye';
           }
         }

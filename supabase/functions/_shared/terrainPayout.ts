@@ -116,7 +116,7 @@ export async function triggerTerrainPayout(
     const clientPart = clientStr ? ` — ${clientStr}` : '';
 
     const title = 'Reversement reçu';
-    const body  = `Réservation ${terrainNom}${clientPart}${creneauStr}. ${montantStr} reversés sur votre ${moyenStr}. Les frais Wave/OM sont à votre charge.`;
+    const body  = `Réservation ${terrainNom}${clientPart}${creneauStr}. ${montantStr} reversés sur votre ${moyenStr}. Les frais Wave/OM sont à votre charge. Le client ne paie que les frais LASSI (1%).`;
 
     await sendPushToUser(supabase, params.prestataireId, {
       title,
