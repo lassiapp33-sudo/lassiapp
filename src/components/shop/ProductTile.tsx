@@ -57,7 +57,7 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
           <Image
             source={{ uri: product.photoUrl }}
             style={styles.photo}
-            contentFit="cover"
+            contentFit="contain"
             transition={150}
             onError={onImageError}
             onLoad={() => reportSuccessfulLoad(product.photoUrl!)}

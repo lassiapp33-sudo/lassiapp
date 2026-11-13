@@ -171,7 +171,6 @@ export default function OpeningHoursCard({
         <View style={styles.manualRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.manualTitle}>Exceptionnellement fermé</Text>
-            <Text style={styles.manualSub}>Override les horaires jusqu'à demain matin</Text>
           </View>
           <Switch
             value={isManuallyClose}
