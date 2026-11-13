@@ -724,7 +724,7 @@ function page(o: {
   .prod.in { border-color:var(--y); }
   .pimgzone { width:100%; aspect-ratio:1/1; background:var(--g); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
   .svc-imgzone { aspect-ratio:4/3; }
-  .pimg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .pimg { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
   .pemoji { font-size:46px; }
   .pbody { padding:14px 16px 16px; display:flex; flex-direction:column; gap:4px; flex:1; }
   .pname { font-family:'Cormorant Garamond',Georgia,serif; font-size:16px; font-weight:400; line-height:1.2; }
