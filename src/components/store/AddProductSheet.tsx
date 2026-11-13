@@ -388,7 +388,8 @@ export default function AddProductSheet({
       setPhotoUrl(url);
     } catch (e) {
       logger.error('[upload photo produit]', e);
-      Alert.alert('Erreur', "Impossible d'uploader la photo. Réessaie.");
+      const msg = e instanceof Error ? e.message : String(e);
+      Alert.alert('Erreur', msg || "Impossible d'uploader la photo. Réessaie.");
     } finally {
       setUploading(false);
     }
