@@ -54,14 +54,24 @@ export default function ProductTile({ product, qty, onAdd, onRemove, onPress, pr
       {/* Zone visuelle photo, emoji, ou vide */}
       <View style={styles.imgZone}>
         {product.photoUrl ? (
-          <Image
-            source={{ uri: product.photoUrl }}
-            style={styles.photo}
-            contentFit="contain"
-            transition={150}
-            onError={onImageError}
-            onLoad={() => reportSuccessfulLoad(product.photoUrl!)}
-          />
+          <>
+            {/* Fond flou (même image) pour remplir le conteneur sans bandes vides */}
+            <Image
+              source={{ uri: product.photoUrl }}
+              style={styles.photoBlur}
+              contentFit="cover"
+              blurRadius={25}
+            />
+            {/* Image complète, jamais coupée */}
+            <Image
+              source={{ uri: product.photoUrl }}
+              style={styles.photo}
+              contentFit="contain"
+              transition={150}
+              onError={onImageError}
+              onLoad={() => reportSuccessfulLoad(product.photoUrl!)}
+            />
+          </>
         ) : product.emoji ? (
           <Text style={styles.emoji}>{product.emoji}</Text>
         ) : null}
@@ -185,6 +195,7 @@ const styles = StyleSheet.create({
   },
   emoji: { fontSize: 38 },
   photo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  photoBlur: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.55 },
 
   addBtn: {
     position: 'absolute',

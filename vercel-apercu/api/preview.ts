@@ -403,7 +403,7 @@ promos: any[] = []): string {
 
 function productVisual(p: Product): string {
   const url = typeof p.photo_url === 'string' && p.photo_url.startsWith('http') ? p.photo_url : '';
-  if (url) return `<img class="pimg" src="${escAttr(url)}" alt="${escAttr(p.name ?? '')}" loading="lazy">`;
+  if (url) return `<img class="pimg-blur" src="${escAttr(url)}" alt="" aria-hidden="true" loading="lazy"><img class="pimg" src="${escAttr(url)}" alt="${escAttr(p.name ?? '')}" loading="lazy">`;
   const emoji = (p.emoji && p.emoji.trim()) || (p.photo_url && !p.photo_url.startsWith('http') ? p.photo_url : '') || '🛍️';
   return `<div class="pemoji">${esc(emoji)}</div>`;
 }
@@ -724,6 +724,7 @@ function page(o: {
   .prod.in { border-color:var(--y); }
   .pimgzone { width:100%; aspect-ratio:1/1; background:var(--g); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
   .svc-imgzone { aspect-ratio:4/3; }
+  .pimg-blur { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:blur(18px); transform:scale(1.1); opacity:.55; }
   .pimg { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
   .pemoji { font-size:46px; }
   .pbody { padding:14px 16px 16px; display:flex; flex-direction:column; gap:4px; flex:1; }
