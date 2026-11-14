@@ -211,11 +211,11 @@ export default async function handler(
     });
   }
 
-  // Vérification Google Search Console (méthode « fichier HTML ».)
-  // Google récupère https://s.lassi.tech/googleXXXX.html et attend le contenu exact
-  // "google-site-verification: googleXXXX.html". Pré-validé pour n'importe quel token.
-  if (/^google[a-z0-9]+\.html$/i.test(slug)) {
-    return new Response('google-site-verification: ' + slug, {
+  // Vérification Google Search Console (méthode « fichier HTML »).
+  // UNIQUEMENT le token exact fourni par Google — tout autre google*.html doit 404
+  // (sinon Google détecte un catch-all et refuse "site peut-être piraté").
+  if (slug === 'google6e77e14024a30e5f.html') {
+    return new Response('google-site-verification: google6e77e14024a30e5f.html', {
       status: 200,
       headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
     });
