@@ -82,9 +82,34 @@ const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
 const SITE_TEMPLATES = ['classic']; // Phase 3 ajoutera les 10 templates
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
+// ── Layout (Phase 2) — agencement des conteneurs, présentation seule ─────────
+// order = permutation des 3 blocs de contenu (données jamais masquées).
+const SECTION_IDS = ['products', 'services', 'terrains'];
+const CARD_STYLES = ['bordered', 'shadow', 'flat'];
+const HERO_STYLES = ['split', 'centered', 'minimal'];
+const DEFAULT_LAYOUT = { order: ['products', 'services', 'terrains'], cols: 3, card: 'bordered', hero: 'split' };
+
+interface SiteLayout { order: string[]; cols: number; card: string; hero: string }
 interface ResolvedTheme {
   template: string; y: string; d: string; w: string; g: string; m: string; b: string;
-  fh: string; fb: string; fontsLink: string; displayName: string | null;
+  fh: string; fb: string; fontsLink: string; displayName: string | null; layout: SiteLayout;
+}
+
+// Valide le layout : permutation stricte des 3 blocs (aucun ajout/retrait), sinon défaut.
+function resolveLayout(raw: unknown): SiteLayout {
+  const d = DEFAULT_LAYOUT;
+  const lo = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+  let order = d.order;
+  if (Array.isArray(lo.order)) {
+    const arr = (lo.order as unknown[]).filter((x): x is string => typeof x === 'string');
+    const uniq = Array.from(new Set(arr));
+    // Doit contenir exactement les 3 ids connus (permutation) — sinon on garde le défaut.
+    if (uniq.length === SECTION_IDS.length && uniq.every(x => SECTION_IDS.includes(x))) order = uniq;
+  }
+  const cols = lo.cols === 2 ? 2 : 3;
+  const card = typeof lo.card === 'string' && CARD_STYLES.includes(lo.card) ? lo.card : d.card;
+  const hero = typeof lo.hero === 'string' && HERO_STYLES.includes(lo.hero) ? lo.hero : d.hero;
+  return { order, cols, card, hero };
 }
 
 // Résout shops.site_config → tokens validés. Entrée nulle/invalide ⇒ DÉFAUT exact.
@@ -109,7 +134,9 @@ function resolveTheme(raw: unknown): ResolvedTheme {
   const q = families.map(c => 'family=' + c).join('&');
   const fontsLink = '<link href="https://fonts.googleapis.com/css2?' + q + '&display=swap" rel="stylesheet">';
 
-  return { template, y: accent, d: pal.d, w: pal.w, g: pal.g, m: pal.m, b: pal.b, fh: fh.stack, fb: fb.stack, fontsLink, displayName };
+  const layout = resolveLayout(sc.layout);
+
+  return { template, y: accent, d: pal.d, w: pal.w, g: pal.g, m: pal.m, b: pal.b, fh: fh.stack, fb: fb.stack, fontsLink, displayName, layout };
 }
 
 const CAT_LABELS: Record<string, string> = {
@@ -773,14 +800,19 @@ function page(o: {
   `) : '';
   const catalogCls = !isOpen ? ' closed-overlay' : '';
   const totalItems = o.products.length + (hasDailySpecials ? o.dailySpecial.length : 0);
+  // Phase 2 — ordre des conteneurs piloté par layout.order (données jamais masquées).
+  const sectionMap: Record<string, string> = {
+    products: `${catnav}${dsSection}${grid}`,
+    services: svcSection,
+    terrains: terrainSection,
+  };
+  const orderedSections = theme.layout.order.map(k => sectionMap[k] ?? '').join('\n      ');
   const body = hasCatalog ? `
     ${shopHeader}
     ${closedNotice}
     <div class="catalog${catalogCls}">
       <h2 class="catalog-title">Faites-vous plaisir</h2>
-      ${catnav}${dsSection}${grid}
-      ${svcSection}
-      ${terrainSection}
+      ${orderedSections}
     </div>
     <div class="appnote">Découvrez tous les commerçants autour de vous sur l'application LASSİ</div>
     ${storeButtons}
@@ -998,9 +1030,22 @@ ${theme.fontsLink}
   .lbx.open { display:flex; }
   .lbx-img { max-width:96vw; max-height:92vh; object-fit:contain; border-radius:12px; pointer-events:none; display:block; }
   .lbx-close { position:absolute; top:16px; right:16px; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,.15); border:none; color:#fff; font-size:24px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  /* LAYOUT (Phase 2) — variantes ; valeurs par défaut (3/bordered/split) = aucune règle = rendu inchangé */
+  body[data-cols="2"] .grid { grid-template-columns:repeat(2,1fr); }
+  body[data-card="shadow"] .prod { border-color:transparent; box-shadow:0 8px 24px rgba(20,21,42,.10); }
+  body[data-card="shadow"] .prod.in { border-color:var(--y); }
+  body[data-card="flat"] .prod { border:none; border-radius:0; border-bottom:1px solid var(--b); }
+  body[data-hero="centered"] .hero { grid-template-columns:1fr; min-height:auto; }
+  body[data-hero="centered"] .hero-img { order:-1; min-height:280px; }
+  body[data-hero="centered"] .hero-left { align-items:center; text-align:center; padding:40px 24px 28px; }
+  body[data-hero="centered"] .hero-desc { margin-left:auto; margin-right:auto; }
+  body[data-hero="centered"] .hours-block { width:100%; }
+  body[data-hero="minimal"] .hero { grid-template-columns:1fr; min-height:auto; }
+  body[data-hero="minimal"] .hero-img { display:none; }
+  body[data-hero="minimal"] .hero-left { padding:44px 28px 24px; }
 </style>
 </head>
-<body data-template="${theme.template}">
+<body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">
   ${body}
   ${hasProducts ? `
   <div class="cartbar" id="cartbar" hidden>

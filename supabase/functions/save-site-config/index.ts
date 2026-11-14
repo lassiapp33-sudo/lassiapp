@@ -30,10 +30,29 @@ const CORS = {
 const FONT_IDS = ['cormorant', 'dmsans', 'playfair', 'lora', 'inter', 'poppins', 'montserrat', 'spacegrotesk'];
 const PALETTE_IDS = ['classic', 'noir', 'sable', 'foret', 'ardoise'];
 const TEMPLATE_IDS = ['classic'];
+const SECTION_IDS = ['products', 'services', 'terrains'];
+const CARD_STYLES = ['bordered', 'shadow', 'flat'];
+const HERO_STYLES = ['split', 'centered', 'minimal'];
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 const DEF = { template: 'classic', palette: 'classic', accent: '#FDCF34', fontHeading: 'cormorant', fontBody: 'dmsans' };
+const DEF_LAYOUT = { order: ['products', 'services', 'terrains'], cols: 3, card: 'bordered', hero: 'split' };
 
-interface CleanConfig { template: string; tokens: { palette: string; accent: string; fontHeading: string; fontBody: string }; displayName?: string }
+interface CleanLayout { order: string[]; cols: number; card: string; hero: string }
+interface CleanConfig { template: string; tokens: { palette: string; accent: string; fontHeading: string; fontBody: string }; layout: CleanLayout; displayName?: string }
+
+function sanitizeLayout(raw: unknown): CleanLayout {
+  const lo = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+  let order = [...DEF_LAYOUT.order];
+  if (Array.isArray(lo.order)) {
+    const arr = (lo.order as unknown[]).filter((x): x is string => typeof x === 'string');
+    const uniq = Array.from(new Set(arr));
+    if (uniq.length === SECTION_IDS.length && uniq.every(x => SECTION_IDS.includes(x))) order = uniq;
+  }
+  const cols = lo.cols === 2 ? 2 : 3;
+  const card = typeof lo.card === 'string' && CARD_STYLES.includes(lo.card) ? lo.card : DEF_LAYOUT.card;
+  const hero = typeof lo.hero === 'string' && HERO_STYLES.includes(lo.hero) ? lo.hero : DEF_LAYOUT.hero;
+  return { order, cols, card, hero };
+}
 
 function sanitize(raw: unknown): CleanConfig {
   const sc = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
@@ -44,18 +63,23 @@ function sanitize(raw: unknown): CleanConfig {
   const fontBody = typeof t.fontBody === 'string' && FONT_IDS.includes(t.fontBody) ? t.fontBody : DEF.fontBody;
   const template = typeof sc.template === 'string' && TEMPLATE_IDS.includes(sc.template) ? sc.template : DEF.template;
   const name = typeof sc.displayName === 'string' ? sc.displayName.trim().slice(0, 60) : '';
-  const out: CleanConfig = { template, tokens: { palette, accent, fontHeading, fontBody } };
+  const out: CleanConfig = { template, tokens: { palette, accent, fontHeading, fontBody }, layout: sanitizeLayout(sc.layout) };
   if (name) out.displayName = name;
   return out;
 }
 
 function isDefault(c: CleanConfig): boolean {
+  const l = c.layout;
+  const layoutDef =
+    l.cols === DEF_LAYOUT.cols && l.card === DEF_LAYOUT.card && l.hero === DEF_LAYOUT.hero &&
+    l.order.length === DEF_LAYOUT.order.length && l.order.every((x, i) => x === DEF_LAYOUT.order[i]);
   return (
     c.template === DEF.template &&
     c.tokens.palette === DEF.palette &&
     c.tokens.accent.toUpperCase() === DEF.accent.toUpperCase() &&
     c.tokens.fontHeading === DEF.fontHeading &&
     c.tokens.fontBody === DEF.fontBody &&
+    layoutDef &&
     !c.displayName
   );
 }

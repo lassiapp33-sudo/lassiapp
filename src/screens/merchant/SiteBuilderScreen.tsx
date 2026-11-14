@@ -8,7 +8,8 @@ import { colors, radius, spacing, fonts, TOP_INSET } from '../../theme';
 import useShopStore from '../../store/shopStore';
 import {
   SITE_PALETTES, SITE_ACCENTS, SITE_FONTS, SITE_TEMPLATES,
-  DEFAULT_SITE_CONFIG, buildDraftPreviewUrl, type SiteConfig,
+  SITE_SECTIONS, CARD_STYLES, HERO_STYLES, COLS_OPTIONS,
+  DEFAULT_SITE_CONFIG, buildDraftPreviewUrl, type SiteConfig, type SiteLayout,
 } from '../../config/siteThemes';
 import { getSiteConfig, saveSiteConfig } from '../../services/siteBuilder';
 
@@ -46,6 +47,20 @@ export default function SiteBuilderScreen({ onBack }: Props) {
 
   const patchTokens = useCallback((p: Partial<SiteConfig['tokens']>) => {
     setCfg(c => ({ ...c, tokens: { ...c.tokens, ...p } }));
+  }, []);
+
+  const patchLayout = useCallback((p: Partial<SiteLayout>) => {
+    setCfg(c => ({ ...c, layout: { ...c.layout, ...p } }));
+  }, []);
+
+  const moveSection = useCallback((idx: number, dir: -1 | 1) => {
+    setCfg(c => {
+      const order = [...c.layout.order];
+      const j = idx + dir;
+      if (j < 0 || j >= order.length) return c;
+      [order[idx], order[j]] = [order[j], order[idx]];
+      return { ...c, layout: { ...c.layout, order } };
+    });
   }, []);
 
   const onSave = useCallback(async () => {
@@ -174,6 +189,71 @@ export default function SiteBuilderScreen({ onBack }: Props) {
             })}
           </View>
 
+          {/* Agencement des sections */}
+          <Text style={styles.secLbl}>Ordre des sections</Text>
+          <View style={styles.orderList}>
+            {cfg.layout.order.map((id, i) => {
+              const sec = SITE_SECTIONS.find(s => s.id === id);
+              if (!sec) return null;
+              return (
+                <View key={id} style={styles.orderRow}>
+                  <Text style={styles.orderPos}>{i + 1}</Text>
+                  <Text style={styles.orderLbl}>{sec.label}</Text>
+                  <TouchableOpacity disabled={i === 0} onPress={() => moveSection(i, -1)}
+                    style={[styles.moveBtn, i === 0 && styles.moveBtnOff]} activeOpacity={0.7}>
+                    <Text style={styles.moveTxt}>↑</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity disabled={i === cfg.layout.order.length - 1} onPress={() => moveSection(i, 1)}
+                    style={[styles.moveBtn, i === cfg.layout.order.length - 1 && styles.moveBtnOff]} activeOpacity={0.7}>
+                    <Text style={styles.moveTxt}>↓</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Colonnes */}
+          <Text style={styles.secLbl}>Colonnes de produits</Text>
+          <View style={styles.wrapChips}>
+            {COLS_OPTIONS.map(n => {
+              const on = cfg.layout.cols === n;
+              return (
+                <TouchableOpacity key={n} activeOpacity={0.8} onPress={() => patchLayout({ cols: n })}
+                  style={[styles.fontChip, on && styles.chipOn]}>
+                  <Text style={[styles.chipLbl, on && styles.chipLblOn]}>{n} colonnes</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Style des cartes */}
+          <Text style={styles.secLbl}>Style des cartes</Text>
+          <View style={styles.wrapChips}>
+            {CARD_STYLES.map(cs => {
+              const on = cfg.layout.card === cs.id;
+              return (
+                <TouchableOpacity key={cs.id} activeOpacity={0.8} onPress={() => patchLayout({ card: cs.id })}
+                  style={[styles.fontChip, on && styles.chipOn]}>
+                  <Text style={[styles.chipLbl, on && styles.chipLblOn]}>{cs.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* En-tête */}
+          <Text style={styles.secLbl}>En-tête (hero)</Text>
+          <View style={styles.wrapChips}>
+            {HERO_STYLES.map(hs => {
+              const on = cfg.layout.hero === hs.id;
+              return (
+                <TouchableOpacity key={hs.id} activeOpacity={0.8} onPress={() => patchLayout({ hero: hs.id })}
+                  style={[styles.fontChip, on && styles.chipOn]}>
+                  <Text style={[styles.chipLbl, on && styles.chipLblOn]}>{hs.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
           {SITE_TEMPLATES.length > 1 && (
             <>
               <Text style={styles.secLbl}>Template</Text>
@@ -241,6 +321,14 @@ const styles = StyleSheet.create({
 
   wrapChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: spacing.screen },
   fontChip: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 10 },
+
+  orderList: { marginHorizontal: spacing.screen, gap: 8 },
+  orderRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: 14 },
+  orderPos: { color: colors.accent, fontFamily: fonts.title, fontSize: 14, width: 22 },
+  orderLbl: { flex: 1, color: colors.white, fontFamily: fonts.ui, fontSize: 14 },
+  moveBtn: { width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  moveBtnOff: { opacity: 0.35 },
+  moveTxt: { color: colors.white, fontSize: 18, lineHeight: 20 },
 
   resetBtn: { marginTop: 30, marginHorizontal: spacing.screen, paddingVertical: 14, alignItems: 'center' },
   resetTxt: { color: colors.danger, fontFamily: fonts.ui, fontSize: 14 },
