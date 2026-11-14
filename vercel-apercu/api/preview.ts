@@ -64,6 +64,8 @@ const SITE_FONTS: Record<string, SiteFont> = {
   montserrat:{ family: 'Montserrat', stack: "'Montserrat',system-ui,sans-serif", css2: 'Montserrat:wght@300;400;500;600;700' },
   spacegrotesk:{ family: 'Space Grotesk', stack: "'Space Grotesk',system-ui,sans-serif", css2: 'Space+Grotesk:wght@300;400;500;600;700' },
   rubik:     { family: 'Rubik', stack: "'Rubik',system-ui,sans-serif", css2: 'Rubik:wght@400;500;600;700' },
+  unbounded: { family: 'Unbounded', stack: "'Unbounded',system-ui,sans-serif", css2: 'Unbounded:wght@500;700' },
+  plusjakarta: { family: 'Plus Jakarta Sans', stack: "'Plus Jakarta Sans',system-ui,sans-serif", css2: 'Plus+Jakarta+Sans:wght@400;500;600;700' },
 };
 const DEFAULT_HEADING = 'cormorant';
 const DEFAULT_BODY = 'dmsans';
@@ -78,10 +80,11 @@ const SITE_PALETTES: Record<string, SitePalette> = {
   foret:   { d: '#14241c', w: '#FFFFFF', g: '#eef3f0', m: '#7d8a83', b: '#dde7e2' },
   ardoise: { d: '#1b2430', w: '#FFFFFF', g: '#eef1f5', m: '#7e8794', b: '#dde3ea' },
   cosmetic: { d: '#171313', w: '#FFFFFF', g: '#F4E7D6', m: '#6e6e75', b: '#ece0cf' },
+  pottery: { d: '#201d1d', w: '#FFFFFF', g: '#f4f4f5', m: '#696767', b: '#eaeaec' },
 };
 const DEFAULT_PALETTE = 'classic';
 const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
-const SITE_TEMPLATES = ['classic', 'cosmetic']; // Phase 3 — template #1 = cosmetic (beauté)
+const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat)
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
 // ── Layout (Phase 2) — agencement des conteneurs, présentation seule ─────────
@@ -1045,52 +1048,98 @@ ${theme.fontsLink}
   body[data-hero="minimal"] .hero { grid-template-columns:1fr; min-height:auto; }
   body[data-hero="minimal"] .hero-img { display:none; }
   body[data-hero="minimal"] .hero-left { padding:44px 28px 24px; }
-  /* ── TEMPLATE COSMETIC (beauté) — d'après réf Cosmetic.html : Rubik, crème/terracotta, boutons pilule, cartes douces ── */
-  body[data-template="cosmetic"] .hero { background:var(--g); }
+  /* ═══ TEMPLATE COSMETIC — éditorial beauté (réf Cosmetic.html) : hero image dominante, cartes image carrée + texte centré, boutons pilule ═══ */
+  body[data-template="cosmetic"] .hero { grid-template-columns:1fr 1.15fr; background:var(--g); min-height:88vh; }
+  body[data-template="cosmetic"] .hero-left { padding:72px 56px; }
   body[data-template="cosmetic"] .hero-img { background:#efe2d0; }
-  body[data-template="cosmetic"] .shop-cat { color:var(--y); letter-spacing:3px; font-weight:600; }
-  body[data-template="cosmetic"] .hero-title { font-weight:600; letter-spacing:-0.8px; }
-  body[data-template="cosmetic"] .verified-badge { background:var(--y); color:#fff; }
-  body[data-template="cosmetic"] .zone-badge { border-color:var(--y); color:var(--d); }
-  body[data-template="cosmetic"] .catalog-title { font-weight:600; letter-spacing:-0.5px; }
-  body[data-template="cosmetic"] .cathead-title,
-  body[data-template="cosmetic"] .sectitle,
-  body[data-template="cosmetic"] .pname,
-  body[data-template="cosmetic"] .abonom,
+  body[data-template="cosmetic"] .shop-logo { border-radius:50%; width:70%; box-shadow:0 30px 60px rgba(23,19,19,.18); }
+  body[data-template="cosmetic"] .logo-initial { border-radius:50%; }
+  body[data-template="cosmetic"] .shop-cat { color:var(--y); letter-spacing:4px; font-weight:600; font-size:12px; }
+  body[data-template="cosmetic"] .hero-title { font-weight:600; letter-spacing:-1px; font-size:clamp(42px,6vw,70px); }
+  body[data-template="cosmetic"] .verified-badge { background:var(--y); color:#fff; border-radius:9999px; }
+  body[data-template="cosmetic"] .zone-badge { border-color:var(--y); color:var(--d); border-radius:9999px; }
+  body[data-template="cosmetic"] .catalog { max-width:1140px; }
+  body[data-template="cosmetic"] .catalog-title { text-align:center; font-weight:600; letter-spacing:-0.5px; font-size:clamp(30px,4vw,46px); }
+  body[data-template="cosmetic"] .catnav { justify-content:center; }
+  body[data-template="cosmetic"] .cathead { justify-content:center; }
+  body[data-template="cosmetic"] .cathead-title { font-weight:600; font-size:24px; }
+  body[data-template="cosmetic"] .sectitle { text-align:center; font-weight:600; }
+  body[data-template="cosmetic"] .grid { gap:26px; }
+  body[data-template="cosmetic"] .prod { border:none; border-radius:20px; box-shadow:0 14px 40px rgba(23,19,19,.08); overflow:hidden; text-align:center; }
+  body[data-template="cosmetic"] .prod.in { box-shadow:0 14px 40px rgba(217,134,100,.30); }
+  body[data-template="cosmetic"] .pimgzone { aspect-ratio:1/1; background:var(--g); }
+  body[data-template="cosmetic"] .pbody { align-items:center; }
+  body[data-template="cosmetic"] .pname { font-weight:600; font-size:17px; }
+  body[data-template="cosmetic"] .pprice { color:var(--y); font-weight:700; font-size:16px; }
+  body[data-template="cosmetic"] .abonom { font-weight:600; }
   body[data-template="cosmetic"] .ds-name { font-weight:600; }
-  body[data-template="cosmetic"] .prod { border:none; border-radius:18px; box-shadow:0 12px 34px rgba(23,19,19,.08); overflow:hidden; }
-  body[data-template="cosmetic"] .prod.in { box-shadow:0 12px 34px rgba(217,134,100,.28); }
-  body[data-template="cosmetic"] .pimgzone { background:var(--g); }
-  body[data-template="cosmetic"] .abocard,
+  body[data-template="cosmetic"] .abocard { border:none; border-radius:18px; box-shadow:0 10px 28px rgba(23,19,19,.07); }
   body[data-template="cosmetic"] .terrain-card { border:none; border-radius:18px; box-shadow:0 10px 28px rgba(23,19,19,.07); }
   body[data-template="cosmetic"] .ds-card { border-color:var(--y); background:rgba(217,134,100,.08); border-radius:18px; }
   body[data-template="cosmetic"] .chip { border-radius:9999px; }
   body[data-template="cosmetic"] .chip.sel { background:var(--y); border-color:var(--y); color:#fff; }
-  /* Boutons pilule + accent terracotta sur texte blanc (signature cosmetic) */
-  body[data-template="cosmetic"] .add,
-  body[data-template="cosmetic"] .bookbtn,
-  body[data-template="cosmetic"] .abo-btn,
-  body[data-template="cosmetic"] .ds-btn,
-  body[data-template="cosmetic"] .svcbtn,
-  body[data-template="cosmetic"] .terrain-btn,
-  body[data-template="cosmetic"] .store,
-  body[data-template="cosmetic"] .store.primary,
-  body[data-template="cosmetic"] .cartbtn,
-  body[data-template="cosmetic"] .btn,
-  body[data-template="cosmetic"] .payer,
-  body[data-template="cosmetic"] .qtybox { border-radius:9999px; }
-  body[data-template="cosmetic"] .add,
-  body[data-template="cosmetic"] .bookbtn,
-  body[data-template="cosmetic"] .abo-btn,
-  body[data-template="cosmetic"] .ds-btn { background:var(--y); color:#fff; }
-  body[data-template="cosmetic"] .svcbtn { border-color:var(--y); color:var(--y); }
-  body[data-template="cosmetic"] .qtybox { background:var(--y); }
-  body[data-template="cosmetic"] .qtybox button, body[data-template="cosmetic"] .qtybox .q { color:#fff; }
+  body[data-template="cosmetic"] .add { background:var(--y); color:#fff; border-radius:9999px; }
+  body[data-template="cosmetic"] .bookbtn { background:var(--y); color:#fff; border-radius:9999px; }
+  body[data-template="cosmetic"] .abo-btn { background:var(--y); color:#fff; border-radius:9999px; }
+  body[data-template="cosmetic"] .ds-btn { background:var(--y); color:#fff; border-radius:9999px; }
+  body[data-template="cosmetic"] .svcbtn { border-color:var(--y); color:var(--y); border-radius:9999px; }
   body[data-template="cosmetic"] .terrain-btn { background:var(--y); color:#fff; }
-  body[data-template="cosmetic"] .cartbtn { background:var(--d); color:#fff; }
+  body[data-template="cosmetic"] .store { border-radius:9999px; }
+  body[data-template="cosmetic"] .btn { border-radius:9999px; }
+  body[data-template="cosmetic"] .payer { border-radius:9999px; }
+  body[data-template="cosmetic"] .qtybox { background:var(--y); border-radius:9999px; }
+  body[data-template="cosmetic"] .qtybox button { color:#fff; }
+  body[data-template="cosmetic"] .qtybox .q { color:#fff; }
+  body[data-template="cosmetic"] .cartbtn { background:var(--d); color:#fff; border-radius:9999px; }
   body[data-template="cosmetic"] .cartbtn .cnt { background:var(--y); color:#fff; }
   body[data-template="cosmetic"] .pay.sel { border-color:var(--y); }
   body[data-template="cosmetic"] .appnote { font-weight:500; }
+  @media(max-width:680px){ body[data-template="cosmetic"] .hero{grid-template-columns:1fr;} body[data-template="cosmetic"] .hero-left{padding:36px 24px 32px;} }
+
+  /* ═══ TEMPLATE POTTERY — artisanat minimal (réf Pottery.html) : hero typographique Unbounded, cartes carrées bord fin, accent terre ═══ */
+  body[data-template="pottery"] .hero { grid-template-columns:1.35fr 1fr; min-height:82vh; }
+  body[data-template="pottery"] .hero-left { padding:72px 56px; justify-content:center; }
+  body[data-template="pottery"] .hero-img { background:var(--g); }
+  body[data-template="pottery"] .shop-logo { border-radius:4px; }
+  body[data-template="pottery"] .logo-initial { border-radius:4px; }
+  body[data-template="pottery"] .shop-cat { color:var(--y); letter-spacing:3px; font-weight:600; font-size:12px; }
+  body[data-template="pottery"] .hero-title { font-weight:700; letter-spacing:-1.5px; line-height:1.02; font-size:clamp(44px,7vw,80px); }
+  body[data-template="pottery"] .verified-badge { background:var(--d); color:#fff; border-radius:4px; }
+  body[data-template="pottery"] .zone-badge { border-radius:4px; }
+  body[data-template="pottery"] .catalog-title { font-weight:700; letter-spacing:-1px; font-size:clamp(32px,5vw,54px); }
+  body[data-template="pottery"] .sectitle { font-weight:700; }
+  /* Unbounded = gros titres seulement ; petits titres repassent en Plus Jakarta */
+  body[data-template="pottery"] .pname { font-family:var(--fb); font-weight:600; font-size:15px; }
+  body[data-template="pottery"] .cathead-title { font-family:var(--fb); font-weight:700; }
+  body[data-template="pottery"] .abonom { font-family:var(--fb); font-weight:600; }
+  body[data-template="pottery"] .ds-name { font-family:var(--fb); font-weight:600; }
+  body[data-template="pottery"] .panel h2 { font-family:var(--fb); font-weight:700; }
+  body[data-template="pottery"] .grid { gap:16px; }
+  body[data-template="pottery"] .prod { border:1px solid var(--b); border-radius:4px; box-shadow:none; }
+  body[data-template="pottery"] .prod.in { border-color:var(--y); }
+  body[data-template="pottery"] .pimgzone { aspect-ratio:1/1; background:var(--g); }
+  body[data-template="pottery"] .pprice { color:var(--d); font-weight:700; }
+  body[data-template="pottery"] .abocard { border:1px solid var(--b); border-radius:4px; box-shadow:none; }
+  body[data-template="pottery"] .terrain-card { border:1px solid var(--b); border-radius:4px; box-shadow:none; }
+  body[data-template="pottery"] .ds-card { border-radius:4px; }
+  body[data-template="pottery"] .chip { border-radius:4px; }
+  body[data-template="pottery"] .chip.sel { background:var(--d); border-color:var(--d); color:#fff; }
+  body[data-template="pottery"] .add { background:var(--y); color:#fff; border-radius:4px; }
+  body[data-template="pottery"] .bookbtn { background:var(--y); color:#fff; border-radius:4px; }
+  body[data-template="pottery"] .abo-btn { background:var(--y); color:#fff; border-radius:4px; }
+  body[data-template="pottery"] .ds-btn { background:var(--y); color:#fff; border-radius:4px; }
+  body[data-template="pottery"] .svcbtn { border-color:var(--d); color:var(--d); border-radius:4px; }
+  body[data-template="pottery"] .terrain-btn { background:var(--y); color:#fff; }
+  body[data-template="pottery"] .store { border-radius:4px; }
+  body[data-template="pottery"] .btn { border-radius:4px; }
+  body[data-template="pottery"] .payer { border-radius:4px; }
+  body[data-template="pottery"] .qtybox { background:var(--y); border-radius:4px; }
+  body[data-template="pottery"] .qtybox button { color:#fff; }
+  body[data-template="pottery"] .qtybox .q { color:#fff; }
+  body[data-template="pottery"] .cartbtn { background:var(--d); color:#fff; border-radius:4px; }
+  body[data-template="pottery"] .cartbtn .cnt { background:var(--y); color:#fff; }
+  body[data-template="pottery"] .pay.sel { border-color:var(--d); }
+  @media(max-width:680px){ body[data-template="pottery"] .hero{grid-template-columns:1fr;} body[data-template="pottery"] .hero-left{padding:36px 24px 32px;} }
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">

@@ -41,6 +41,8 @@ export const SITE_FONTS: FontOption[] = [
   { id: 'montserrat', label: 'Montserrat', category: 'Sans' },
   { id: 'spacegrotesk', label: 'Space Grotesk', category: 'Display' },
   { id: 'rubik', label: 'Rubik', category: 'Sans' },
+  { id: 'unbounded', label: 'Unbounded', category: 'Display' },
+  { id: 'plusjakarta', label: 'Plus Jakarta Sans', category: 'Sans' },
 ];
 
 // ── Palettes (ids = clés SITE_PALETTES côté edge) ────────────────────────────
@@ -59,6 +61,7 @@ export const SITE_PALETTES: PaletteOption[] = [
   { id: 'foret', label: 'Forêt', bg: '#FFFFFF', text: '#14241c', soft: '#eef3f0' },
   { id: 'ardoise', label: 'Ardoise', bg: '#FFFFFF', text: '#1b2430', soft: '#eef1f5' },
   { id: 'cosmetic', label: 'Cosmetic', bg: '#FFFFFF', text: '#171313', soft: '#F4E7D6' },
+  { id: 'pottery', label: 'Pottery', bg: '#FFFFFF', text: '#201d1d', soft: '#f4f4f5' },
 ];
 
 // ── Accents (preset + custom validé) ─────────────────────────────────────────
@@ -76,6 +79,7 @@ export const SITE_ACCENTS: { id: string; hex: string }[] = [
 export const SITE_TEMPLATES: { id: string; label: string }[] = [
   { id: 'classic', label: 'Classique' },
   { id: 'cosmetic', label: 'Cosmetic' },
+  { id: 'pottery', label: 'Pottery' },
 ];
 
 // Preset appliqué quand on choisit un template : fixe palette/accent/polices/layout
@@ -88,6 +92,10 @@ export const TEMPLATE_PRESETS: Record<string, { tokens: SiteConfig['tokens']; la
   cosmetic: {
     tokens: { palette: 'cosmetic', accent: '#D98664', fontHeading: 'rubik', fontBody: 'rubik' },
     layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'shadow', hero: 'split' },
+  },
+  pottery: {
+    tokens: { palette: 'pottery', accent: '#B55D38', fontHeading: 'unbounded', fontBody: 'plusjakarta' },
+    layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'flat', hero: 'split' },
   },
 };
 
