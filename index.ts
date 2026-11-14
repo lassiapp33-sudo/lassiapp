@@ -93,7 +93,7 @@ if (_ErrorUtils) {
     if (__DEV__) {
       defaultHandler(error, isFatal);
     } else {
-      console.error('[GlobalError]', isFatal ? 'FATAL' : 'non-fatal', error?.message ?? String(error));
+      console.error('[GlobalError]', isFatal ? 'FATAL' : 'non-fatal', error?.message ?? String(error), '\nSTACK:', error?.stack ?? '(no stack)');
       reportToCrashlytics(error);
       if (!isFatal) defaultHandler(error, isFatal);
     }
