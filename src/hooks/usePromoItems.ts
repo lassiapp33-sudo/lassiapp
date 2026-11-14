@@ -225,11 +225,24 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean; isConne
 
         if (!signal.aborted) {
           const freshItems = allItems.map(item => ({ ...item, promoInfo: promoMap[item.id] }));
-          setRaw(freshItems);
-          setLoading(false);
-          setIsConnected(true);
-          prefetchImages(freshItems);
-          AsyncStorage.setItem(CACHE_KEY, JSON.stringify(freshItems)).catch(() => {});
+          // Ne garder que les produits dont l'image se charge VRAIMENT. Beaucoup
+          // de photo_url pointent vers des fichiers supprimés du storage (HTTP 400)
+          // → l'URL existe mais l'image est morte. prefetch résout false/throw dans
+          // ce cas, on exclut. Se répare seul si le marchand ré-uploade une image.
+          const checks = await Promise.all(
+            freshItems.map(async it => {
+              if (!it.photoUrl) return false;
+              try { return await ExpoImage.prefetch(it.photoUrl, { cachePolicy: 'disk' }); }
+              catch { return false; }
+            }),
+          );
+          const liveItems = freshItems.filter((_, i) => checks[i]);
+          if (!signal.aborted) {
+            setRaw(liveItems);
+            setLoading(false);
+            setIsConnected(true);
+            AsyncStorage.setItem(CACHE_KEY, JSON.stringify(liveItems)).catch(() => {});
+          }
         }
       } catch {
         if (!signal.aborted) {
