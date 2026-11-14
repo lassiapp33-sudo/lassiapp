@@ -177,6 +177,7 @@ interface Shop {
   zone: string | null; category: string | null; subcategories: unknown; slug: string;
   merchant_id: string | null; opening_hours: unknown; is_manually_closed: boolean | null;
   site_config: unknown;
+  gallery_urls: unknown; cover_url: string | null;
 }
 interface Product {
   id: string; name: string | null; description: string | null;
@@ -423,7 +424,7 @@ async function fetchShop(slug: string): Promise<Shop | null> {
   try {
     const q =
       `${SUPABASE_URL}/rest/v1/shops?slug=eq.${encodeURIComponent(slug)}` +
-      `&select=id,name,logo_url,description,zone,category,subcategories,slug,merchant_id,opening_hours,is_manually_closed,site_config&limit=1`;
+      `&select=id,name,logo_url,description,zone,category,subcategories,slug,merchant_id,opening_hours,is_manually_closed,site_config,gallery_urls,cover_url&limit=1`;
     const res = await fetch(q, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
     if (!res.ok) return null;
     const rows = (await res.json()) as Shop[];
@@ -553,13 +554,27 @@ function initialAvatar(name: string): string {
     '&background=FDCF34&color=14152A&size=512&length=1&bold=true&format=png';
 }
 
+// Pool d'images pour les templates : galerie du prestataire d'abord (cover + gallery_urls),
+// puis photos produits en complément. Les emplacements image des templates y puisent
+// dans l'ordre → toujours remplis même si la galerie est courte.
+function buildImagePool(shop: Shop, products: Product[]): string[] {
+  const out: string[] = [];
+  const push = (u: unknown) => {
+    if (typeof u === 'string' && u.startsWith('http') && !out.includes(u)) out.push(u);
+  };
+  push(shop.cover_url);
+  if (Array.isArray(shop.gallery_urls)) for (const u of shop.gallery_urls) push(u);
+  for (const p of products) push(p.photo_url);
+  return out;
+}
+
 function renderHtml(shop: Shop | null, products: Product[], services: ServiceItem[], terrains: Terrain[], slug: string, base: string, dailySpecial: { id: string; name: string; price: number; photo_url?: string | null }[] = [], // eslint-disable-next-line @typescript-eslint/no-explicit-any
 promos: any[] = []): string {
   const canonical = `${base}/${encodeURIComponent(slug)}`;
   if (!shop) {
     return page({
       title: 'Boutique introuvable — LASSİ', desc: "Cette boutique n'est plus disponible sur LASSİ.",
-      ogImage: initialAvatar('LASSI'), canonical, base, name: 'Boutique introuvable', zone: '', cat: '', logo: '', slug, products: [], services: [], terrains: [], shopStatus: null, dailySpecial: [], promos: [], siteConfig: null,
+      ogImage: initialAvatar('LASSI'), canonical, base, name: 'Boutique introuvable', zone: '', cat: '', logo: '', slug, products: [], services: [], terrains: [], shopStatus: null, dailySpecial: [], promos: [], siteConfig: null, gallery: [],
     });
   }
   // Nom affiché : displayName du Site Builder s'il est défini, sinon shops.name.
@@ -576,7 +591,7 @@ promos: any[] = []): string {
   const shopStatus = computeShopStatus(shop.opening_hours, shop.is_manually_closed);
   return page({
     title: `${name} — sur LASSİ`, desc: clip(descRaw.replace(/\s+/g, ' '), 180),
-    ogImage: logo || initialAvatar(name), canonical, base, name, zone, cat, logo, slug, products, services, terrains, shopStatus, dailySpecial, promos, siteConfig: shop.site_config,
+    ogImage: logo || initialAvatar(name), canonical, base, name, zone, cat, logo, slug, products, services, terrains, shopStatus, dailySpecial, promos, siteConfig: shop.site_config, gallery: buildImagePool(shop, products),
   });
 }
 
@@ -677,6 +692,7 @@ function page(o: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   promos: any[];
   siteConfig: unknown;
+  gallery: string[];
 }): string {
   const deep = `https://lassi.tech/p/${encodeURIComponent(o.slug)}`;
   const theme = resolveTheme(o.siteConfig);
@@ -812,7 +828,7 @@ function page(o: {
     terrains: terrainSection,
   };
   const orderedSections = theme.layout.order.map(k => sectionMap[k] ?? '').join('\n      ');
-  const body = hasCatalog ? `
+  const classicBody = hasCatalog ? `
     ${shopHeader}
     ${closedNotice}
     <div class="catalog${catalogCls}">
@@ -830,6 +846,124 @@ function page(o: {
       <p class="foot">Consultez la boutique, <b>commandez dans l'app LASSİ</b>.</p>
     </div>
   `;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TEMPLATE PLEIN « COSMETIC » — structure landing beauté (réf Cosmetic.html).
+  // Les vraies données du shop sont RÉ-AGENCÉES dans cette structure ; les
+  // emplacements image puisent dans le pool galerie→produits (o.gallery).
+  // Le catalogue (grid .prod + modals + JS) est réutilisé tel quel → commerce OK.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const gal = o.gallery;
+  const pick = (i: number): string => gal.length ? gal[i % gal.length] : (o.logo || '');
+  const bg = (u: string): string => u ? `style="background-image:url('${u.replace(/['")\\]/g, '')}')"` : '';
+  const featItems = (o.cat ? o.cat.split('·').map(s => s.trim()).filter(Boolean) : []).slice(0, 4);
+  const heroImg = pick(0);
+  const cxHeadCta = hasProducts ? 'Commander' : hasTerrains ? 'Réserver' : 'Découvrir';
+  const cxStats = `
+    <div class="cx-stats">
+      ${hasProducts ? `<div class="cx-stat"><b>${o.products.length}</b><span>produits</span></div>` : ''}
+      ${hasServices ? `<div class="cx-stat"><b>${o.services.length}</b><span>prestations</span></div>` : ''}
+      ${o.zone ? `<div class="cx-stat"><b>📍</b><span>${esc(o.zone)}</span></div>` : ''}
+      <div class="cx-stat"><b>✓</b><span>vérifié LASSİ</span></div>
+    </div>`;
+  const cxBanners = `
+    <section class="cx-banners">
+      <a class="cx-banner" href="#cx-shop" ${bg(pick(1))}>
+        <div class="cx-banner-in">
+          <span class="cx-banner-k">${esc(groups[0]?.title || 'Notre sélection')}</span>
+          <h3>Fait avec soin, rien que pour toi</h3>
+          <span class="cx-banner-cta">Commander →</span>
+        </div>
+      </a>
+      <a class="cx-banner" href="#cx-shop" ${bg(pick(2))}>
+        <div class="cx-banner-in">
+          <span class="cx-banner-k">${esc(groups[1]?.title || o.cat || 'Nouveautés')}</span>
+          <h3>Tes favoris, livrés près de chez toi</h3>
+          <span class="cx-banner-cta">Découvrir →</span>
+        </div>
+      </a>
+    </section>`;
+  const cxFeature = `
+    <section class="cx-feature" ${bg(pick(3))}>
+      <div class="cx-feature-ov"></div>
+      <div class="cx-feature-in">
+        <span class="cx-eyebrow light">${esc(o.cat || 'Boutique vérifiée')}</span>
+        <h2>${esc(o.name)}</h2>
+        <p>${esc(clip(o.desc || `Commande en ligne, paie en sécurité (Wave / Orange Money) et fais-toi plaisir. ${o.name} te rappelle pour le retrait ou la livraison.`, 160))}</p>
+        ${featItems.length ? `<div class="cx-feature-tags">${featItems.map(f => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
+        <a class="cx-btn light" href="#cx-shop">${cxHeadCta} maintenant</a>
+      </div>
+    </section>`;
+  const cxPerks = `
+    <section class="cx-perks">
+      <div class="cx-perk"><b>Paiement sécurisé</b><span>Wave &amp; Orange Money</span></div>
+      <div class="cx-perk"><b>Retrait / livraison</b><span>${esc(o.zone || 'À Dakar')}</span></div>
+      <div class="cx-perk"><b>Boutique vérifiée</b><span>sur LASSİ</span></div>
+      <div class="cx-perk"><b>Rappel automatique</b><span>après ta commande</span></div>
+    </section>`;
+  const cxFoot = `
+    <footer id="cx-contact" class="cx-foot">
+      <div class="cx-foot-brand">
+        <div class="cx-logo">${esc(o.name)}</div>
+        <p>${esc(clip(o.desc || `Retrouve ${o.name} sur LASSİ — commande & paiement sécurisé.`, 130))}</p>
+      </div>
+      <div class="cx-foot-col">
+        <h4>Infos</h4>
+        ${o.cat ? `<p>${esc(o.cat)}</p>` : ''}
+        ${o.zone ? `<p>📍 ${esc(o.zone)}</p>` : ''}
+        ${hoursHtml ? `<div class="cx-foot-hours">${hoursHtml}</div>` : ''}
+      </div>
+      <div class="cx-foot-col">
+        <h4>Commander</h4>
+        <p>Wave · Orange Money</p>
+        <p>Retrait sur place ou livraison</p>
+        ${storeButtons}
+      </div>
+    </footer>
+    <div class="cx-copy">Propulsé par LASS<span>İ</span> · lassi.tech</div>`;
+  const cosmeticBody = `
+    <header class="cx-head">
+      <div class="cx-logo">${esc(o.name)}</div>
+      <nav class="cx-nav">
+        <a href="#cx-shop">${hasProducts ? 'Boutique' : hasTerrains ? 'Terrains' : 'Prestations'}</a>
+        ${hasServices && hasProducts ? '<a href="#cx-shop">Prestations</a>' : ''}
+        <a href="#cx-contact">Contact</a>
+      </nav>
+      <a class="cx-head-cta" href="#cx-shop">${cxHeadCta}</a>
+    </header>
+    <section class="cx-hero">
+      <div class="cx-hero-txt">
+        <span class="cx-eyebrow">${esc(o.cat || 'Boutique vérifiée sur LASSİ')}</span>
+        <h1 class="cx-hero-title">${esc(o.name)}</h1>
+        <p class="cx-hero-sub">${esc(clip(o.desc || `Commande tes favoris chez ${o.name} — paiement sécurisé, retrait ou livraison.`, 150))}</p>
+        <div class="cx-hero-cta">
+          <a class="cx-btn" href="#cx-shop">${cxHeadCta}</a>
+          ${hoursHtml ? `<div class="cx-hero-hours">${hoursHtml}</div>` : ''}
+        </div>
+        ${cxStats}
+      </div>
+      <div class="cx-hero-img" ${bg(heroImg)}>
+        ${!heroImg && o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : ''}
+        <div class="cx-hero-badge">✓ Boutique vérifiée sur LASSİ</div>
+      </div>
+    </section>
+    ${gal.length >= 2 ? cxBanners : ''}
+    ${closedNotice}
+    <section id="cx-shop" class="cx-shop${catalogCls}">
+      <div class="cx-sec-head">
+        <span class="cx-sec-k">Notre sélection</span>
+        <h2 class="cx-sec-title">${hasProducts ? 'Nos produits' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2>
+      </div>
+      ${catnav}${dsSection}${grid}
+      ${svcSection}
+      ${terrainSection}
+    </section>
+    ${gal.length >= 1 ? cxFeature : ''}
+    ${cxPerks}
+    ${cxFoot}
+  `;
+
+  const body = theme.template === 'cosmetic' && hasCatalog ? cosmeticBody : classicBody;
 
   const cfg = JSON.stringify({
     url: SUPABASE_URL, key: SUPABASE_ANON_KEY, slug: o.slug, shop: o.name, rate: COMMISSION_RATE,
@@ -1095,6 +1229,67 @@ ${theme.fontsLink}
   body[data-template="cosmetic"] .pay.sel { border-color:var(--y); }
   body[data-template="cosmetic"] .appnote { font-weight:500; }
   @media(max-width:680px){ body[data-template="cosmetic"] .hero{grid-template-columns:1fr;} body[data-template="cosmetic"] .hero-left{padding:36px 24px 32px;} }
+  /* ─── Structure landing COSMETIC (classes cx-*) ─── */
+  .cx-head { position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; gap:20px; padding:16px 40px; background:rgba(255,255,255,.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--b); }
+  .cx-logo { font-family:var(--fh); font-weight:700; font-size:22px; letter-spacing:.5px; text-transform:uppercase; }
+  .cx-nav { display:flex; gap:26px; }
+  .cx-nav a { color:var(--d); text-decoration:none; font-size:14px; font-weight:500; }
+  .cx-nav a:hover { color:var(--y); }
+  .cx-head-cta { background:var(--y); color:#fff; text-decoration:none; font-weight:600; font-size:13px; padding:10px 22px; border-radius:9999px; }
+  @media(max-width:760px){ .cx-head{padding:12px 20px;} .cx-nav{display:none;} }
+  .cx-hero { display:grid; grid-template-columns:1fr 1fr; align-items:stretch; min-height:82vh; background:var(--g); }
+  .cx-hero-txt { display:flex; flex-direction:column; justify-content:center; padding:72px 56px; }
+  .cx-eyebrow { font-size:12px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:var(--y); margin-bottom:18px; }
+  .cx-eyebrow.light { color:#fff; opacity:.85; }
+  .cx-hero-title { font-family:var(--fh); font-weight:600; font-size:clamp(40px,6vw,72px); line-height:1.02; letter-spacing:-1px; margin-bottom:20px; }
+  .cx-hero-sub { font-size:16px; line-height:1.7; color:var(--m); max-width:440px; margin-bottom:30px; }
+  .cx-hero-cta { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:30px; }
+  .cx-btn { display:inline-block; background:var(--y); color:#fff; text-decoration:none; font-weight:600; font-size:15px; padding:15px 34px; border-radius:9999px; }
+  .cx-btn.light { background:#fff; color:var(--d); }
+  .cx-hero-hours .hours-status { margin:0; }
+  .cx-stats { display:flex; gap:34px; border-top:1px solid var(--b); padding-top:24px; flex-wrap:wrap; }
+  .cx-stat { display:flex; flex-direction:column; gap:2px; }
+  .cx-stat b { font-family:var(--fh); font-size:24px; font-weight:600; }
+  .cx-stat span { font-size:12px; color:var(--m); }
+  .cx-hero-img { position:relative; background-size:cover; background-position:center; background-color:#efe2d0; display:flex; align-items:center; justify-content:center; }
+  .cx-hero-img img { width:70%; border-radius:50%; }
+  .cx-hero-badge { position:absolute; bottom:22px; right:22px; background:var(--y); color:#fff; font-size:11px; font-weight:600; padding:7px 15px; border-radius:9999px; }
+  @media(max-width:760px){ .cx-hero{grid-template-columns:1fr;} .cx-hero-txt{padding:44px 24px;} .cx-hero-img{min-height:300px;order:-1;} }
+  .cx-banners { display:grid; grid-template-columns:1fr 1fr; gap:18px; max-width:1180px; margin:60px auto; padding:0 40px; }
+  .cx-banner { position:relative; min-height:230px; border-radius:18px; overflow:hidden; background-size:cover; background-position:center; background-color:#d9c7b5; text-decoration:none; display:flex; align-items:flex-end; }
+  .cx-banner::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,rgba(255,255,255,.88),rgba(255,255,255,.2)); }
+  .cx-banner-in { position:relative; z-index:1; padding:28px; max-width:70%; }
+  .cx-banner-k { font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--y); }
+  .cx-banner-in h3 { font-family:var(--fh); font-weight:600; font-size:24px; line-height:1.15; margin:8px 0 14px; color:var(--d); }
+  .cx-banner-cta { font-size:14px; font-weight:600; color:var(--d); }
+  @media(max-width:760px){ .cx-banners{grid-template-columns:1fr;padding:0 20px;margin:36px auto;} }
+  .cx-shop { max-width:1180px; margin:0 auto; padding:30px 40px 20px; }
+  @media(max-width:760px){ .cx-shop{padding:20px;} }
+  .cx-sec-head { text-align:center; margin-bottom:34px; }
+  .cx-sec-k { font-size:12px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:var(--y); }
+  .cx-sec-title { font-family:var(--fh); font-weight:600; font-size:clamp(30px,4vw,46px); letter-spacing:-0.5px; margin-top:8px; }
+  .cx-feature { position:relative; margin:70px 0; padding:92px 40px; background-size:cover; background-position:center; background-color:#241a16; text-align:center; }
+  .cx-feature-ov { position:absolute; inset:0; background:linear-gradient(180deg,rgba(26,18,15,.72),rgba(26,18,15,.80)); }
+  .cx-feature-in { position:relative; z-index:1; max-width:640px; margin:0 auto; color:#fff; }
+  .cx-feature-in h2 { font-family:var(--fh); font-weight:600; font-size:clamp(30px,4.4vw,50px); margin:10px 0 16px; }
+  .cx-feature-in p { font-size:15px; line-height:1.7; color:rgba(255,255,255,.82); margin-bottom:22px; }
+  .cx-feature-tags { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:28px; }
+  .cx-feature-tags span { border:1px solid rgba(255,255,255,.4); color:#fff; font-size:12px; font-weight:500; padding:7px 16px; border-radius:9999px; }
+  .cx-perks { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--y); margin:0; }
+  .cx-perk { background:var(--y); color:#fff; padding:26px 24px; text-align:center; }
+  .cx-perk b { display:block; font-size:15px; font-weight:700; margin-bottom:5px; }
+  .cx-perk span { font-size:12.5px; opacity:.9; }
+  @media(max-width:760px){ .cx-perks{grid-template-columns:1fr 1fr;} }
+  .cx-foot { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:36px; background:var(--d); color:#fff; padding:60px 40px 36px; }
+  .cx-foot .cx-logo { color:#fff; margin-bottom:14px; }
+  .cx-foot-brand p { font-size:13.5px; line-height:1.7; color:rgba(255,255,255,.6); max-width:300px; }
+  .cx-foot-col h4 { font-size:13px; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:14px; color:rgba(255,255,255,.9); }
+  .cx-foot-col p { font-size:13.5px; color:rgba(255,255,255,.6); margin-bottom:8px; }
+  .cx-foot-hours .hours-status { margin-top:6px; }
+  .cx-foot .cta { justify-content:flex-start; padding:0; margin:14px 0 0; }
+  @media(max-width:760px){ .cx-foot{grid-template-columns:1fr;gap:26px;padding:40px 24px 28px;} }
+  .cx-copy { background:var(--d); color:rgba(255,255,255,.4); text-align:center; font-size:12px; padding:0 0 26px; }
+  .cx-copy span { color:var(--y); }
 
   /* ═══ TEMPLATE POTTERY — artisanat minimal (réf Pottery.html) : hero typographique Unbounded, cartes carrées bord fin, accent terre ═══ */
   body[data-template="pottery"] .hero { grid-template-columns:1.35fr 1fr; min-height:82vh; }
