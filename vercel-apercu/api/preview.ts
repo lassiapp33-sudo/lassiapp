@@ -530,7 +530,10 @@ promos: any[] = []): string {
       ogImage: initialAvatar('LASSI'), canonical, base, name: 'Boutique introuvable', zone: '', cat: '', logo: '', slug, products: [], services: [], terrains: [], shopStatus: null, dailySpecial: [], promos: [], siteConfig: null,
     });
   }
-  const name = shop.name?.trim() || 'Boutique';
+  // Nom affiché : displayName du Site Builder s'il est défini, sinon shops.name.
+  // (shops.name reste intact partout ailleurs — app/admin/paiements.)
+  const siteName = resolveTheme(shop.site_config).displayName;
+  const name = siteName || shop.name?.trim() || 'Boutique';
   const zone = shop.zone?.trim() || '';
   const cat = categoryLabel(shop.category, shop.subcategories);
   const logo = shop.logo_url?.trim() || '';
