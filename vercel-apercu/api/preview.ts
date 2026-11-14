@@ -211,6 +211,16 @@ export default async function handler(
     });
   }
 
+  // Vérification Google Search Console (méthode « fichier HTML ».)
+  // Google récupère https://s.lassi.tech/googleXXXX.html et attend le contenu exact
+  // "google-site-verification: googleXXXX.html". Pré-validé pour n'importe quel token.
+  if (/^google[a-z0-9]+\.html$/i.test(slug)) {
+    return new Response('google-site-verification: ' + slug, {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
+  }
+
   // sitemap.xml — liste toutes les vitrines avec contenu (has_content=true) pour
   // que Google les découvre et les indexe par nom de boutique.
   if (slug === 'sitemap.xml') {
