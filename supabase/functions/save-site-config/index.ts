@@ -27,9 +27,9 @@ const CORS = {
 };
 
 // ── Schéma blanc (MIROIR de src/config/siteThemes.ts + preview.ts) ───────────
-const FONT_IDS = ['cormorant', 'dmsans', 'playfair', 'lora', 'inter', 'poppins', 'montserrat', 'spacegrotesk'];
-const PALETTE_IDS = ['classic', 'noir', 'sable', 'foret', 'ardoise'];
-const TEMPLATE_IDS = ['classic'];
+const FONT_IDS = ['cormorant', 'dmsans', 'playfair', 'lora', 'inter', 'poppins', 'montserrat', 'spacegrotesk', 'rubik'];
+const PALETTE_IDS = ['classic', 'noir', 'sable', 'foret', 'ardoise', 'cosmetic'];
+const TEMPLATE_IDS = ['classic', 'cosmetic'];
 const SECTION_IDS = ['products', 'services', 'terrains'];
 const CARD_STYLES = ['bordered', 'shadow', 'flat'];
 const HERO_STYLES = ['split', 'centered', 'minimal'];

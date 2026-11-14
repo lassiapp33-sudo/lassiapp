@@ -63,6 +63,7 @@ const SITE_FONTS: Record<string, SiteFont> = {
   poppins:   { family: 'Poppins', stack: "'Poppins',system-ui,sans-serif", css2: 'Poppins:wght@300;400;500;600' },
   montserrat:{ family: 'Montserrat', stack: "'Montserrat',system-ui,sans-serif", css2: 'Montserrat:wght@300;400;500;600;700' },
   spacegrotesk:{ family: 'Space Grotesk', stack: "'Space Grotesk',system-ui,sans-serif", css2: 'Space+Grotesk:wght@300;400;500;600;700' },
+  rubik:     { family: 'Rubik', stack: "'Rubik',system-ui,sans-serif", css2: 'Rubik:wght@400;500;600;700' },
 };
 const DEFAULT_HEADING = 'cormorant';
 const DEFAULT_BODY = 'dmsans';
@@ -76,10 +77,11 @@ const SITE_PALETTES: Record<string, SitePalette> = {
   sable:   { d: '#2b2118', w: '#FBF8F3', g: '#f1ece3', m: '#9a8d7a', b: '#e6ddcf' },
   foret:   { d: '#14241c', w: '#FFFFFF', g: '#eef3f0', m: '#7d8a83', b: '#dde7e2' },
   ardoise: { d: '#1b2430', w: '#FFFFFF', g: '#eef1f5', m: '#7e8794', b: '#dde3ea' },
+  cosmetic: { d: '#171313', w: '#FFFFFF', g: '#F4E7D6', m: '#6e6e75', b: '#ece0cf' },
 };
 const DEFAULT_PALETTE = 'classic';
 const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
-const SITE_TEMPLATES = ['classic']; // Phase 3 ajoutera les 10 templates
+const SITE_TEMPLATES = ['classic', 'cosmetic']; // Phase 3 — template #1 = cosmetic (beauté)
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
 // ── Layout (Phase 2) — agencement des conteneurs, présentation seule ─────────
@@ -1043,6 +1045,52 @@ ${theme.fontsLink}
   body[data-hero="minimal"] .hero { grid-template-columns:1fr; min-height:auto; }
   body[data-hero="minimal"] .hero-img { display:none; }
   body[data-hero="minimal"] .hero-left { padding:44px 28px 24px; }
+  /* ── TEMPLATE COSMETIC (beauté) — d'après réf Cosmetic.html : Rubik, crème/terracotta, boutons pilule, cartes douces ── */
+  body[data-template="cosmetic"] .hero { background:var(--g); }
+  body[data-template="cosmetic"] .hero-img { background:#efe2d0; }
+  body[data-template="cosmetic"] .shop-cat { color:var(--y); letter-spacing:3px; font-weight:600; }
+  body[data-template="cosmetic"] .hero-title { font-weight:600; letter-spacing:-0.8px; }
+  body[data-template="cosmetic"] .verified-badge { background:var(--y); color:#fff; }
+  body[data-template="cosmetic"] .zone-badge { border-color:var(--y); color:var(--d); }
+  body[data-template="cosmetic"] .catalog-title { font-weight:600; letter-spacing:-0.5px; }
+  body[data-template="cosmetic"] .cathead-title,
+  body[data-template="cosmetic"] .sectitle,
+  body[data-template="cosmetic"] .pname,
+  body[data-template="cosmetic"] .abonom,
+  body[data-template="cosmetic"] .ds-name { font-weight:600; }
+  body[data-template="cosmetic"] .prod { border:none; border-radius:18px; box-shadow:0 12px 34px rgba(23,19,19,.08); overflow:hidden; }
+  body[data-template="cosmetic"] .prod.in { box-shadow:0 12px 34px rgba(217,134,100,.28); }
+  body[data-template="cosmetic"] .pimgzone { background:var(--g); }
+  body[data-template="cosmetic"] .abocard,
+  body[data-template="cosmetic"] .terrain-card { border:none; border-radius:18px; box-shadow:0 10px 28px rgba(23,19,19,.07); }
+  body[data-template="cosmetic"] .ds-card { border-color:var(--y); background:rgba(217,134,100,.08); border-radius:18px; }
+  body[data-template="cosmetic"] .chip { border-radius:9999px; }
+  body[data-template="cosmetic"] .chip.sel { background:var(--y); border-color:var(--y); color:#fff; }
+  /* Boutons pilule + accent terracotta sur texte blanc (signature cosmetic) */
+  body[data-template="cosmetic"] .add,
+  body[data-template="cosmetic"] .bookbtn,
+  body[data-template="cosmetic"] .abo-btn,
+  body[data-template="cosmetic"] .ds-btn,
+  body[data-template="cosmetic"] .svcbtn,
+  body[data-template="cosmetic"] .terrain-btn,
+  body[data-template="cosmetic"] .store,
+  body[data-template="cosmetic"] .store.primary,
+  body[data-template="cosmetic"] .cartbtn,
+  body[data-template="cosmetic"] .btn,
+  body[data-template="cosmetic"] .payer,
+  body[data-template="cosmetic"] .qtybox { border-radius:9999px; }
+  body[data-template="cosmetic"] .add,
+  body[data-template="cosmetic"] .bookbtn,
+  body[data-template="cosmetic"] .abo-btn,
+  body[data-template="cosmetic"] .ds-btn { background:var(--y); color:#fff; }
+  body[data-template="cosmetic"] .svcbtn { border-color:var(--y); color:var(--y); }
+  body[data-template="cosmetic"] .qtybox { background:var(--y); }
+  body[data-template="cosmetic"] .qtybox button, body[data-template="cosmetic"] .qtybox .q { color:#fff; }
+  body[data-template="cosmetic"] .terrain-btn { background:var(--y); color:#fff; }
+  body[data-template="cosmetic"] .cartbtn { background:var(--d); color:#fff; }
+  body[data-template="cosmetic"] .cartbtn .cnt { background:var(--y); color:#fff; }
+  body[data-template="cosmetic"] .pay.sel { border-color:var(--y); }
+  body[data-template="cosmetic"] .appnote { font-weight:500; }
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">

@@ -9,7 +9,8 @@ import useShopStore from '../../store/shopStore';
 import {
   SITE_PALETTES, SITE_ACCENTS, SITE_FONTS, SITE_TEMPLATES,
   SITE_SECTIONS, CARD_STYLES, HERO_STYLES, COLS_OPTIONS,
-  DEFAULT_SITE_CONFIG, buildDraftPreviewUrl, type SiteConfig, type SiteLayout,
+  DEFAULT_SITE_CONFIG, buildDraftPreviewUrl, applyTemplate,
+  type SiteConfig, type SiteLayout,
 } from '../../config/siteThemes';
 import { getSiteConfig, saveSiteConfig } from '../../services/siteBuilder';
 
@@ -115,6 +116,22 @@ export default function SiteBuilderScreen({ onBack }: Props) {
           <Text style={styles.previewHint}>
             Aperçu en direct de ton site {slug ? `s.lassi.tech/${slug}` : ''}. Tes produits et prix ne changent pas.
           </Text>
+
+          {/* Template — choix principal : applique un design complet (couleurs + polices + agencement) */}
+          <Text style={styles.secLbl}>Thème du site</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rowScroll}>
+            {SITE_TEMPLATES.map(tp => {
+              const on = cfg.template === tp.id;
+              return (
+                <TouchableOpacity key={tp.id} activeOpacity={0.85} onPress={() => setCfg(c => applyTemplate(c, tp.id))}
+                  style={[styles.templateChip, on && styles.templateChipOn]}>
+                  <Text style={[styles.templateLbl, on && styles.templateLblOn]}>{tp.label}</Text>
+                  {on ? <Text style={styles.templateTick}>✓</Text> : null}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          <Text style={styles.fieldHint}>Choisis un thème prêt-à-l'emploi, puis ajuste les détails ci-dessous.</Text>
 
           {/* Nom affiché */}
           <Text style={styles.secLbl}>Nom affiché sur le site</Text>
@@ -254,23 +271,6 @@ export default function SiteBuilderScreen({ onBack }: Props) {
             })}
           </View>
 
-          {SITE_TEMPLATES.length > 1 && (
-            <>
-              <Text style={styles.secLbl}>Template</Text>
-              <View style={styles.wrapChips}>
-                {SITE_TEMPLATES.map(tp => {
-                  const on = cfg.template === tp.id;
-                  return (
-                    <TouchableOpacity key={tp.id} activeOpacity={0.8} onPress={() => setCfg(c => ({ ...c, template: tp.id }))}
-                      style={[styles.fontChip, on && styles.chipOn]}>
-                      <Text style={[styles.chipLbl, on && styles.chipLblOn]}>{tp.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </>
-          )}
-
           <TouchableOpacity style={styles.resetBtn} onPress={onReset} activeOpacity={0.8}>
             <Text style={styles.resetTxt}>Réinitialiser au design par défaut</Text>
           </TouchableOpacity>
@@ -308,6 +308,11 @@ const styles = StyleSheet.create({
   fieldHint: { color: colors.muted, fontSize: 11.5, fontFamily: fonts.body, marginHorizontal: spacing.screen, marginTop: 6 },
 
   rowScroll: { paddingHorizontal: spacing.screen, gap: 10 },
+  templateChip: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 20, paddingVertical: 12 },
+  templateChipOn: { borderColor: colors.accent, backgroundColor: colors.accent },
+  templateLbl: { color: colors.white, fontFamily: fonts.ui, fontSize: 14 },
+  templateLblOn: { color: colors.bg },
+  templateTick: { color: colors.bg, fontSize: 14, fontWeight: '800' },
   paletteChip: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, padding: 10, alignItems: 'center', width: 96 },
   swatchRow: { flexDirection: 'row', gap: 4, marginBottom: 8 },
   swatch: { width: 18, height: 26, borderRadius: 5, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' },

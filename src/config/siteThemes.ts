@@ -40,6 +40,7 @@ export const SITE_FONTS: FontOption[] = [
   { id: 'poppins', label: 'Poppins', category: 'Sans' },
   { id: 'montserrat', label: 'Montserrat', category: 'Sans' },
   { id: 'spacegrotesk', label: 'Space Grotesk', category: 'Display' },
+  { id: 'rubik', label: 'Rubik', category: 'Sans' },
 ];
 
 // ── Palettes (ids = clés SITE_PALETTES côté edge) ────────────────────────────
@@ -57,6 +58,7 @@ export const SITE_PALETTES: PaletteOption[] = [
   { id: 'sable', label: 'Sable', bg: '#FBF8F3', text: '#2b2118', soft: '#f1ece3' },
   { id: 'foret', label: 'Forêt', bg: '#FFFFFF', text: '#14241c', soft: '#eef3f0' },
   { id: 'ardoise', label: 'Ardoise', bg: '#FFFFFF', text: '#1b2430', soft: '#eef1f5' },
+  { id: 'cosmetic', label: 'Cosmetic', bg: '#FFFFFF', text: '#171313', soft: '#F4E7D6' },
 ];
 
 // ── Accents (preset + custom validé) ─────────────────────────────────────────
@@ -70,10 +72,36 @@ export const SITE_ACCENTS: { id: string; hex: string }[] = [
   { id: 'nuit', hex: '#14152A' },
 ];
 
-// ── Templates (Phase 3 en ajoutera 10) ───────────────────────────────────────
+// ── Templates (Phase 3) ──────────────────────────────────────────────────────
 export const SITE_TEMPLATES: { id: string; label: string }[] = [
   { id: 'classic', label: 'Classique' },
+  { id: 'cosmetic', label: 'Cosmetic' },
 ];
+
+// Preset appliqué quand on choisit un template : fixe palette/accent/polices/layout
+// pour matcher le design de référence. L'utilisateur peut ensuite ajuster.
+export const TEMPLATE_PRESETS: Record<string, { tokens: SiteConfig['tokens']; layout: SiteLayout }> = {
+  classic: {
+    tokens: { palette: 'classic', accent: '#FDCF34', fontHeading: 'cormorant', fontBody: 'dmsans' },
+    layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'bordered', hero: 'split' },
+  },
+  cosmetic: {
+    tokens: { palette: 'cosmetic', accent: '#D98664', fontHeading: 'rubik', fontBody: 'rubik' },
+    layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'shadow', hero: 'split' },
+  },
+};
+
+// Applique un template : renvoie une config = preset (en conservant displayName).
+export function applyTemplate(cfg: SiteConfig, templateId: string): SiteConfig {
+  const preset = TEMPLATE_PRESETS[templateId];
+  if (!preset) return cfg;
+  return {
+    template: templateId,
+    tokens: { ...preset.tokens },
+    layout: { ...preset.layout, order: [...preset.layout.order] },
+    ...(cfg.displayName ? { displayName: cfg.displayName } : {}),
+  };
+}
 
 // ── Layout (Phase 2) — agencement des conteneurs ─────────────────────────────
 export const SITE_SECTIONS: { id: string; label: string }[] = [
