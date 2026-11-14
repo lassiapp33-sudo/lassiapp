@@ -320,13 +320,24 @@ export default async function handler(
 
   const shop = await fetchShop(slug);
   const bot = isCrawler(req.headers.get('user-agent') ?? '');
+
+  // Aperçu live Site Builder : ?draft=<JSON encodé> force le THÈME (présentation
+  // seule). Les données restent réelles (par slug). Un aperçu n'est jamais loggé
+  // comme un vrai clic, ni mis en cache. Objet invalide => ignoré (thème réel).
+  let draftConfig: Record<string, unknown> | null = null;
+  const draftRaw = url.searchParams.get('draft');
+  if (draftRaw) {
+    try { const d = JSON.parse(draftRaw); if (d && typeof d === 'object' && !Array.isArray(d)) draftConfig = d as Record<string, unknown>; } catch { /* ignore */ }
+  }
+  if (draftConfig && shop) shop.site_config = draftConfig;
+
   const [products, services, terrains] = shop
     ? await Promise.all([fetchProducts(shop.id), fetchServices(shop.merchant_id), fetchTerrains(shop.merchant_id)])
     : [[], [], []];
   const dailySpecial = shop ? await fetchDailySpecials(shop.id) : [];
   const promos = shop ? await fetchPromos(shop.id) : [];
 
-  if (!bot && shop) {
+  if (!bot && shop && !draftConfig) {
     const p = logClic(slug, detectSource(req));
     if (ctx?.waitUntil) ctx.waitUntil(p);
   }
@@ -336,7 +347,7 @@ export default async function handler(
     status: shop ? 200 : 404,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'public, max-age=30, s-maxage=30, stale-while-revalidate=60',
+      'Cache-Control': draftConfig ? 'no-store' : 'public, max-age=30, s-maxage=30, stale-while-revalidate=60',
     },
   });
 }

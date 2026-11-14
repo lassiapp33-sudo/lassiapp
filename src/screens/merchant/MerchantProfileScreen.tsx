@@ -29,6 +29,7 @@ import * as authService from '../../services/auth';
 import useShopStore from '../../store/shopStore';
 import AProposScreen from '../common/AProposScreen';
 import SignalerProblemeScreen from '../common/SignalerProblemeScreen';
+import SiteBuilderScreen from './SiteBuilderScreen';
 import { contacterServiceClient } from '../../config/contact';
 import { useT } from '../../i18n';
 import useLanguageStore from '../../store/languageStore';
@@ -372,6 +373,7 @@ export default function MerchantProfileScreen({
   const [showSignaler, setShowSignaler] = useState(false);
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [showAddAccount, setShowAddAccount] = useState(false);
+  const [showSiteBuilder, setShowSiteBuilder] = useState(false);
   const [merchantRating, setMerchantRating] = useState<{ note: number; count: number } | null>(null);
   const [carrouselEligible, setCarrouselEligible] = useState(false);
   const [hasActiveSub, setHasActiveSub] = useState(false);
@@ -503,6 +505,7 @@ export default function MerchantProfileScreen({
     );
   };
 
+  if (showSiteBuilder) return <SiteBuilderScreen onBack={() => setShowSiteBuilder(false)} />;
   if (showHelp) return <HelpScreen onBack={() => setShowHelp(false)} role="merchant" />;
   if (showAPropos) return <AProposScreen onBack={() => setShowAPropos(false)} />;
   if (showSignaler)
@@ -552,6 +555,12 @@ export default function MerchantProfileScreen({
               onPress={onStore}
             />
           )}
+          <ProfileOptionRow
+            icon={<IcoGlobe />}
+            title="Personnaliser mon site web"
+            subtitle="Couleurs, polices, template — ton site s.lassi.tech"
+            onPress={() => setShowSiteBuilder(true)}
+          />
           {/* Mes revenus — MASQUÉ temporairement */}
           <ProfileOptionRow
             icon={<IcoWallet />}
