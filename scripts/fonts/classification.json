@@ -1,0 +1,4169 @@
+{
+  "root": "D:\\BLENDER\\font",
+  "counts": {
+    "commercial_ok": 6,
+    "personal_only": 15,
+    "needs_review": 7,
+    "unknown": 314
+  },
+  "families": [
+    {
+      "family": "Abose - Modern Branding Logo Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "adobo",
+      "class": "personal_only",
+      "fontCount": 1,
+      "exts": {
+        "ttf": 1
+      },
+      "licFiles": [
+        "license.txt",
+        "readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Aeros-Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "African Gribald - Artdeco & Greek Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "after_night",
+      "class": "personal_only",
+      "fontCount": 1,
+      "exts": {
+        "ttf": 1
+      },
+      "licFiles": [
+        "LICENSE REQUEST.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Agnotech - Modern Futuristic Dot Pixel Sans Font",
+      "class": "unknown",
+      "fontCount": 7,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 2,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Akiro - Japanese Display Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Albertos - Signature Script Font",
+      "class": "unknown",
+      "fontCount": 5,
+      "exts": {
+        "otf": 1,
+        "ttf": 2,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Alenia Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 2,
+        "ttf": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "almalik",
+      "class": "personal_only",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Aminute - Experimental Unique Sans Font",
+      "class": "unknown",
+      "fontCount": 5,
+      "exts": {
+        "otf": 1,
+        "ttf": 2,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Amithen Brush Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Amsterlusia - Signature Fonts",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Another Danger Horror Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 2,
+        "ttf": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "aquarium-font",
+      "class": "personal_only",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [
+        "read-me-15.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Aquila Handdrawn Script Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Arabic Font - Khollilah",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Arabic Font - Lagoky",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "arabic-ramadan",
+      "class": "personal_only",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [
+        "Read Me.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Arenka Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Ashtonjio Grahamte Modern Signature Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Asrenwave - Futuristic Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 2,
+        "ttf": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Astromax-Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 4,
+        "ttf": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Athios-Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Augrey Font",
+      "class": "unknown",
+      "fontCount": 5,
+      "exts": {
+        "otf": 1,
+        "ttf": 2,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Avalon - Glitch Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Baby Silhouette Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Bagkes Elegant Serif Font Typeface",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Bailey - Wedding Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Baptisia Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Bastone Diamond",
+      "class": "unknown",
+      "fontCount": 27,
+      "exts": {
+        "otf": 9,
+        "ttf": 9,
+        "woff": 9
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Beacon-Modern-Display-1",
+      "class": "personal_only",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [
+        "IMPORTAN!! Readme First.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "bebas_neue",
+      "class": "commercial_ok",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Befolk Script",
+      "class": "needs_review",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": true
+    },
+    {
+      "family": "Befrak - Modern Techno Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Berkah Raya - Arabic Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Best Racer Racing Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Betamincolorful sans-serif font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 6
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Bigar - Sport Display Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "BINNEK Athletic Font",
+      "class": "unknown",
+      "fontCount": 30,
+      "exts": {
+        "otf": 6,
+        "ttf": 12,
+        "woff": 6,
+        "woff2": 6
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Black Square - Sport & Tall Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Blauer Nue - A premium sans-serif font family",
+      "class": "unknown",
+      "fontCount": 108,
+      "exts": {
+        "otf": 18,
+        "woff": 36,
+        "woff2": 36,
+        "ttf": 18
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Boluga Display Font",
+      "class": "unknown",
+      "fontCount": 9,
+      "exts": {
+        "otf": 3,
+        "ttf": 3,
+        "woff": 3
+      },
+      "licFiles": [
+        "readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Bourbon Street Display Font",
+      "class": "unknown",
+      "fontCount": 20,
+      "exts": {
+        "otf": 5,
+        "ttf": 5,
+        "woff": 5,
+        "woff2": 5
+      },
+      "licFiles": [
+        "readme - help.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "BOXIGEN - Tech Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "BOZART - Graffiti font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Bradthen - Death Metal Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Braked - A Family Sans Condensed Font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 3,
+        "woff": 3
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Branden Raulner Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Brandon - Condensed Headline Font Family",
+      "class": "unknown",
+      "fontCount": 16,
+      "exts": {
+        "otf": 4,
+        "ttf": 4,
+        "woff": 4,
+        "woff2": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Braze Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Bronz - Sans Serif Display Font",
+      "class": "unknown",
+      "fontCount": 5,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff2": 2,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Bronzet Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Brown College an Authentic Sport Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Burtonia - A Modern Gothic Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "CALINO - Display Font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Calligraphy Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Calvera-Modern Display Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Canesa Elegant Serif Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Cavas modern & elegant font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 1,
+        "woff": 1
+      },
+      "licFiles": [
+        "Read Me !!!.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Celex Grotesk - Modern Font Family",
+      "class": "unknown",
+      "fontCount": 72,
+      "exts": {
+        "otf": 18,
+        "ttf": 18,
+        "woff": 18,
+        "woff2": 18
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Celliya - Modern and Classy Script Font",
+      "class": "unknown",
+      "fontCount": 5,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff2": 2,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Chalk Board - A Handmade Chalk Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Cherilyn Ligature Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Chunky Monkey Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Cirujano",
+      "class": "unknown",
+      "fontCount": 40,
+      "exts": {
+        "otf": 20,
+        "ttf": 10,
+        "woff2": 10
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Clapotena Font",
+      "class": "unknown",
+      "fontCount": 40,
+      "exts": {
+        "otf": 20,
+        "ttf": 20
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Clarine Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Clarisa Stories Nostalgic Serif Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Clements Morgle Font",
+      "class": "unknown",
+      "fontCount": 16,
+      "exts": {
+        "otf": 4,
+        "ttf": 4,
+        "woff": 4,
+        "woff2": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Clickbait Thumbnails - Cartoon Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Comaxi Goquick - Modern & Minimal Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Counter-Stream",
+      "class": "needs_review",
+      "fontCount": 1,
+      "exts": {
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Coxbra - Futuristic font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Crealen Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Croser - Sport Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Cutie Sugary Font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Cvltre Dope - Funky Brush Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Cyber - Technology Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Dafora Sans Serif Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [
+        "ReadMe.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Daily Shine - Groovy Retro Font",
+      "class": "needs_review",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": true
+    },
+    {
+      "family": "Dalme-Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Dark Grockes Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "DARK LIGHT - Graffiti Display Font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Daydream Kids Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "DEGRIEF Vintage Display Font",
+      "class": "unknown",
+      "fontCount": 7,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 2,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Deliciozo Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 4,
+        "ttf": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "delirium_ncv",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "ttf": 2
+      },
+      "licFiles": [
+        "PersonalUseEULA_DELIRIUM_NCV.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Dexens - Techno And Sport Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Dilo World - Cartoon font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "DirtySick Graffiti Font Logotype",
+      "class": "needs_review",
+      "fontCount": 6,
+      "exts": {
+        "otf": 3,
+        "ttf": 3
+      },
+      "licFiles": [],
+      "hasPdfLic": true
+    },
+    {
+      "family": "Drugsther - Modern Sport Typeface",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Dustrone Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "El Mojo - Bubble Pop Bold Fonts",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Elegant Luxury Serif Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [
+        "Readme Font.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "elements-dope-unique-display-logo-typeface-UMSA48F-2020-12-16",
+      "class": "unknown",
+      "fontCount": 24,
+      "exts": {
+        "otf": 6,
+        "ttf": 6,
+        "woff": 6,
+        "woff2": 6
+      },
+      "licFiles": [
+        "Read Me.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Enigma Typewriter Sans Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Exploria Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Falling Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "feturo-font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [
+        "README Personal Use ( Demo ).txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Fieldstones Modern Sans Serif Family Font",
+      "class": "unknown",
+      "fontCount": 18,
+      "exts": {
+        "otf": 9,
+        "ttf": 9
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Fistro Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Flare - Futuristic Science Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Foodys - Food Display Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Fortuner - Stencil Font",
+      "class": "unknown",
+      "fontCount": 5,
+      "exts": {
+        "otf": 1,
+        "ttf": 2,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Francy Modern Sans Display Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Franie Geometric Sans Font",
+      "class": "unknown",
+      "fontCount": 75,
+      "exts": {
+        "otf": 18,
+        "ttf": 19,
+        "woff": 19,
+        "woff2": 19
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Frizzy vintage font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Fuente Helony Experimental Unique Sans",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Fuente Tronix Cyberpunk Mecha",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Futurina - Techno Futuristic Sci-fi Game Font",
+      "class": "unknown",
+      "fontCount": 7,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 2,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Gacor-Urban Sans Serif Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "galaxy",
+      "class": "personal_only",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [
+        "readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Galdern - Geometric Modern Font",
+      "class": "unknown",
+      "fontCount": 36,
+      "exts": {
+        "otf": 9,
+        "ttf": 9,
+        "woff": 9,
+        "woff2": 9
+      },
+      "licFiles": [
+        "Readme + Access Special Character.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Galdy Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Galgey - Font Family + Variable",
+      "class": "unknown",
+      "fontCount": 37,
+      "exts": {
+        "otf": 9,
+        "ttf": 10,
+        "woff": 9,
+        "woff2": 9
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Gehop Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Gendy Modern Sans Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Generale Script",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 4,
+        "ttf": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "George - Modern Vintage Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 2,
+        "ttf": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Geovano - Vintage Font Family",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 8
+      },
+      "licFiles": [
+        "Read Me!.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Geovano - Vintage Font Family (2)",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 8
+      },
+      "licFiles": [
+        "Read Me!.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Giarek Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Glancyr - Modern Geometric Font",
+      "class": "unknown",
+      "fontCount": 15,
+      "exts": {
+        "otf": 14,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "gontserrat",
+      "class": "commercial_ok",
+      "fontCount": 18,
+      "exts": {
+        "ttf": 18
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Graffiti Fonts City Terror v1",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [
+        "Read me.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Grenosa Gothic Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Grimoire-Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Gucina Geometric Font Family",
+      "class": "unknown",
+      "fontCount": 16,
+      "exts": {
+        "otf": 4,
+        "ttf": 8,
+        "woff": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Guilin - Modern Luxury Font Family",
+      "class": "unknown",
+      "fontCount": 16,
+      "exts": {
+        "otf": 4,
+        "ttf": 4,
+        "woff": 4,
+        "woff2": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Hadley Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Hago - Unique Sans Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [
+        "Readme + Access Special Character.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Hakio - Japanese Brush Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Haltto Font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2
+      },
+      "licFiles": [
+        "readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Handodle - A Hand Scribble Display Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Handwritten Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Havertize-Font",
+      "class": "personal_only",
+      "fontCount": 2,
+      "exts": {
+        "otf": 2
+      },
+      "licFiles": [
+        "Read Me (Mohon dibaca).txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Havertize-Font (1)",
+      "class": "personal_only",
+      "fontCount": 2,
+      "exts": {
+        "otf": 2
+      },
+      "licFiles": [
+        "Read Me (Mohon dibaca).txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Heart Bomber - Layered Graffiti Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Heat Robox – The Ultimate Futuristic Display Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Heibird Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Helony Experimental Unique Sans Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Hidone Font",
+      "class": "unknown",
+      "fontCount": 32,
+      "exts": {
+        "otf": 8,
+        "ttf": 8,
+        "woff": 8,
+        "woff2": 8
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Highkind Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Holigan - Esport Logo Modern Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Hometheater-Font",
+      "class": "needs_review",
+      "fontCount": 1,
+      "exts": {
+        "ttf": 1
+      },
+      "licFiles": [
+        "Read me.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Honey Beezy - Spring Bee Font",
+      "class": "unknown",
+      "fontCount": 16,
+      "exts": {
+        "otf": 4,
+        "ttf": 4,
+        "woff": 4,
+        "woff2": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Hooped Brush - Natural Brush Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Housing - Classy Script Font",
+      "class": "unknown",
+      "fontCount": 5,
+      "exts": {
+        "otf": 1,
+        "ttf": 2,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "iBrand - Logo Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "iBrand Ligature - Fuente de Logo",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Indoor Soccer - Modern Slabserif Old School Font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 3,
+        "ttf": 3
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Inter,Lato,League_Spartan,Londrina_Solid,Open_Sans,etc",
+      "class": "commercial_ok",
+      "fontCount": 218,
+      "exts": {
+        "ttf": 218
+      },
+      "licFiles": [
+        "README.txt",
+        "README.txt",
+        "README.txt",
+        "README.txt",
+        "README.txt",
+        "README.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Jaguar Elegant Serif Font Typeface",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Jedira - Modern Branding Logo font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Jutenka Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Karolie Elegant Script Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [
+        "Readme First.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "kind-avenue-font-1751451727-0",
+      "class": "personal_only",
+      "fontCount": 1,
+      "exts": {
+        "ttf": 1
+      },
+      "licFiles": [
+        "Befonts-License.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "KOBA - Modern Brutalism Logo Font",
+      "class": "unknown",
+      "fontCount": 16,
+      "exts": {
+        "otf": 4,
+        "ttf": 4,
+        "woff": 4,
+        "woff2": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "KOEEYA – Display Graffiti Font",
+      "class": "unknown",
+      "fontCount": 15,
+      "exts": {
+        "otf": 3,
+        "ttf": 6,
+        "woff": 3,
+        "woff2": 3
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Komikido - Cute Comic Display Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Kousis",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Kurdis Condensed Logo Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Kusanagi - Futuristic Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Labora Rounded Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 2,
+        "ttf": 2
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Lagisur - Minimal Logo Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Lato,League_Spartan,Londrina_Solid,Open_Sans,Playfair_Display,etc",
+      "class": "commercial_ok",
+      "fontCount": 162,
+      "exts": {
+        "ttf": 162
+      },
+      "licFiles": [
+        "README.txt",
+        "README.txt",
+        "README.txt",
+        "README.txt",
+        "README.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Lato,Londrina_Solid,Open_Sans,Playfair_Display,Raleway,etc",
+      "class": "commercial_ok",
+      "fontCount": 152,
+      "exts": {
+        "ttf": 152
+      },
+      "licFiles": [
+        "README.txt",
+        "README.txt",
+        "README.txt",
+        "README.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Lato,Londrina_Solid,Raleway,Roboto,Zilla_Slab",
+      "class": "commercial_ok",
+      "fontCount": 100,
+      "exts": {
+        "ttf": 100
+      },
+      "licFiles": [
+        "README.txt",
+        "README.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Lazy Monday - Bold Script Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Le Jour - Font Duo",
+      "class": "unknown",
+      "fontCount": 10,
+      "exts": {
+        "otf": 3,
+        "ttf": 3,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Legendarie Handcrafted Vintage Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [
+        "Readme First.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Legends of the Sea - Rounded Vintage Font",
+      "class": "unknown",
+      "fontCount": 20,
+      "exts": {
+        "otf": 4,
+        "ttf": 8,
+        "woff": 4,
+        "woff2": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "legian-font",
+      "class": "needs_review",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [
+        "Read Me !!!.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Lipstick Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Love You - Funny Cute Balloon font",
+      "class": "unknown",
+      "fontCount": 13,
+      "exts": {
+        "otf": 4,
+        "ttf": 4,
+        "woff2": 4,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Love You Hand Drawn Valentine Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Luxury Serif Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [
+        "Readme Font.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Lyndon Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Lytron Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Magios Ultimate Futuristic Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Maglite-Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Makutu Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Mandau Sans Serif Font Family",
+      "class": "unknown",
+      "fontCount": 40,
+      "exts": {
+        "otf": 8,
+        "ttf": 16,
+        "woff": 8,
+        "woff2": 8
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "MARICLE - A Modern Geometric Sans Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 4,
+        "ttf": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Marquise Pauline Signature Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Mars",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 3,
+        "ttf": 3
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Masteryno Retro Script font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Mavis Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "MAXDRIVE- racing gaming font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Maztech - Fonte de tecnologia militar",
+      "class": "unknown",
+      "fontCount": 12,
+      "exts": {
+        "otf": 4,
+        "ttf": 4,
+        "woff2": 3,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Meara Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Mega Drone - Black Display Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Megafield Font Family",
+      "class": "unknown",
+      "fontCount": 48,
+      "exts": {
+        "otf": 12,
+        "ttf": 12,
+        "woff": 12,
+        "woff2": 12
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Megapolis Display Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [
+        "readme - help.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Melanthios - Handwritten",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Melodi Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "melodin",
+      "class": "needs_review",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [
+        "Read Me !!!.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Merediane - Wedding Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Microphone Check - Marker Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Midnight Motion - Beautiful Modern Sans",
+      "class": "unknown",
+      "fontCount": 18,
+      "exts": {
+        "ttf": 18
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Mist Tropic - Tropic Serif Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [
+        "Read me!.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Mitad",
+      "class": "unknown",
+      "fontCount": 7,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 2,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Mizaj Font",
+      "class": "unknown",
+      "fontCount": 7,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 2,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Modern Elegant Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 2,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Modern Ethnic Display Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "ttf": 1,
+        "otf": 1
+      },
+      "licFiles": [
+        "Readme Rainleaf.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Moderno Sans Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Moldin - Police condensée sans Serif",
+      "class": "unknown",
+      "fontCount": 13,
+      "exts": {
+        "otf": 6,
+        "ttf": 7
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Monda",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 2,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Monigue - Condensed Sans Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Monigue - Condensed Sans Font (2)",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Monire Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Mono Slab - A Modern Display Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Montserrat Roman Font - Ranclo",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Moon Walk Futuristic Modern Fonts",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Mooner Modern Futuristic Font",
+      "class": "unknown",
+      "fontCount": 16,
+      "exts": {
+        "otf": 4,
+        "ttf": 4,
+        "woff": 4,
+        "woff2": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Moonscape-Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Mosafin Sans Serif Font Family",
+      "class": "unknown",
+      "fontCount": 25,
+      "exts": {
+        "otf": 5,
+        "ttf": 10,
+        "woff": 5,
+        "woff2": 5
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Mtry - Geometric Experimental",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Muirne Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Muntea Fun Sans Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "mustopha",
+      "class": "personal_only",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Mustopha - Arabic Style",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 2,
+        "ttf": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Musyafir - Arabic Display Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Neigh - Modern Luxury Logo Font",
+      "class": "unknown",
+      "fontCount": 20,
+      "exts": {
+        "otf": 5,
+        "ttf": 5,
+        "woff": 5,
+        "woff2": 5
+      },
+      "licFiles": [
+        "Readme Envato.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Neon Light - Futuristic Neon Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Ninetea Sans Serif Font",
+      "class": "unknown",
+      "fontCount": 30,
+      "exts": {
+        "otf": 6,
+        "ttf": 12,
+        "woff": 6,
+        "woff2": 6
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Nitrous Oxides - Modern Sport Fonts",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Noise - Display Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [
+        "read me.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Norij - Logo font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Okami - Brush Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Overdrive Avenue – 2 in 1 Retro Wave Font",
+      "class": "unknown",
+      "fontCount": 5,
+      "exts": {
+        "otf": 5
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Patricia Display Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Perfect Thoughts Font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 3,
+        "ttf": 3
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Peyton Display font family with 18 Variants",
+      "class": "unknown",
+      "fontCount": 72,
+      "exts": {
+        "otf": 18,
+        "ttf": 18,
+        "woff": 18,
+        "woff2": 18
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Pitchfork - Powerful Sport Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Polette Geometric Sans Serif Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [
+        "readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Polu Moana - Handwritten Brush Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Polygon Technology Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Portway - Military Font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Preospe - Modern Futuristic Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Prodesk Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Prodiga Font Display",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "ps-kinlock-regular",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "PTG Futurizm Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Qaiken Elegant Ligature Serif Font Typeface",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Qliphort - Futuristic Techno Space font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Qusnaidy - Handwritten Book Font",
+      "class": "unknown",
+      "fontCount": 5,
+      "exts": {
+        "otf": 1,
+        "ttf": 2,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Race Timo Sport Display Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [
+        "readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Racing - Modern Ultra Sport Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "RADEON",
+      "class": "unknown",
+      "fontCount": 32,
+      "exts": {
+        "otf": 8,
+        "ttf": 8,
+        "woff": 8,
+        "woff2": 8
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Rahmuna Arabic Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Rainbow - Modern Vintage Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Raphiola Modern Casual Script Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "RAVERIST - Modern Sport Display Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Rawrote – Crayon-Textured Handwriting Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Regkan Elegant Ligature Serif Font Typeface",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "REQUEST - DISPLAY FONT",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "ResseR Modern Metal Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Retrobox Retro Fancy Font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Revans Font Famil",
+      "class": "unknown",
+      "fontCount": 20,
+      "exts": {
+        "otf": 10,
+        "ttf": 10
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Reytia Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Rhinos Pero - Quirky Graffiti Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Rhinos Rocks Brush Font",
+      "class": "unknown",
+      "fontCount": 12,
+      "exts": {
+        "ttf": 4,
+        "woff": 4,
+        "woff2": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Roan Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Robog Space - Digital & Tech Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "romauntgaolines",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Rosnoc - Futuristic Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Rough Splash - Brush Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Roundkey-Font",
+      "class": "unknown",
+      "fontCount": 24,
+      "exts": {
+        "otf": 24
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "SA Woodland Hills - Modern Display Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "safaniah",
+      "class": "personal_only",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Sagu Exora Sport Display Sans Font",
+      "class": "unknown",
+      "fontCount": 18,
+      "exts": {
+        "otf": 6,
+        "ttf": 6,
+        "woff": 6
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Saint James Script Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "sallafi",
+      "class": "personal_only",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [
+        "1001fonts-sallafi-eula.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Salon Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Samir - Elegant Arabic Style Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Santorio-Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Satoshi-Variable",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Sealand Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Sealand Font (1)",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Selvia Genatu Serif Fonts",
+      "class": "unknown",
+      "fontCount": 10,
+      "exts": {
+        "otf": 2,
+        "ttf": 4,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Shaircut Forman Handmade Display Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [
+        "readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Shankar - Indian Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Shatter - Display Brush Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "sigmatone-font-2023-11-27-05-18-03-utc.zip",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 1,
+        "woff": 1
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Signaturia - Handwritten Signature Font",
+      "class": "unknown",
+      "fontCount": 8,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2,
+        "woff2": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Soraine - Futuristic Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "space-boards-font",
+      "class": "personal_only",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "space-speed-font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Sport Master Font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Sporten-Classic Sport Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Spot Light - Display Sports Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Stagtic - Corporate Logo & Sport Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Sugar Mango Bubble Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Sunthai Modern Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Surfbars Font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 5,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Swashington",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [
+        "EULA.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Sweet Mocha - Display Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "syamsiah-arabic",
+      "class": "personal_only",
+      "fontCount": 1,
+      "exts": {
+        "ttf": 1
+      },
+      "licFiles": [
+        "READ ME PLEASE.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Synthetix - Futuristic Techno Font",
+      "class": "unknown",
+      "fontCount": 16,
+      "exts": {
+        "otf": 4,
+        "ttf": 4,
+        "woff": 4,
+        "woff2": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Tallze - Modern Condensed Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Tarsica - Modern Stylist Psychedelic Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Tekrot Athletic Font",
+      "class": "unknown",
+      "fontCount": 20,
+      "exts": {
+        "otf": 4,
+        "ttf": 8,
+        "woff": 4,
+        "woff2": 4
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "The Calonue Font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 1,
+        "woff": 1
+      },
+      "licFiles": [
+        "Read Me !!!.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "The Fabricant Sans Serif Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "The Punk Notes - Punk Font Rebel Yet Simple",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "The Punk Notes - Punk Font Rebel Yet Simple (2)",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "The Quiz Script + Webfonts",
+      "class": "unknown",
+      "fontCount": 5,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Themex Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "otf": 1,
+        "ttf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "This Appeal Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Thorin Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Togfont - Minimal Logo Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Torkless - A Groovy Retro Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Trawler - Classy Script Font",
+      "class": "unknown",
+      "fontCount": 5,
+      "exts": {
+        "otf": 1,
+        "ttf": 2,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Triester SVG Brush Font Free Sans",
+      "class": "unknown",
+      "fontCount": 7,
+      "exts": {
+        "otf": 4,
+        "ttf": 3
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Trinos - Sporty Tech Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 2,
+        "ttf": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Tugboat Display Typeface Font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Umpqua",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 3
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Urban Graffiti Font",
+      "class": "unknown",
+      "fontCount": 14,
+      "exts": {
+        "otf": 4,
+        "ttf": 4,
+        "woff2": 4,
+        "woff": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Urban Graffiti Font (2)",
+      "class": "unknown",
+      "fontCount": 14,
+      "exts": {
+        "otf": 4,
+        "ttf": 4,
+        "woff2": 4,
+        "woff": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Urban Starblues - Font Duo",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 2,
+        "ttf": 2
+      },
+      "licFiles": [
+        "Read me !.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Vagabonded Sans Serif Display Font",
+      "class": "unknown",
+      "fontCount": 6,
+      "exts": {
+        "otf": 3,
+        "ttf": 3
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Vermina Font",
+      "class": "unknown",
+      "fontCount": 7,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 2,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Versatylo Rounded - Logo Font",
+      "class": "unknown",
+      "fontCount": 14,
+      "exts": {
+        "otf": 4,
+        "ttf": 4,
+        "woff2": 4,
+        "woff": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Visualism Font",
+      "class": "unknown",
+      "fontCount": 7,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 2,
+        "woff": 1
+      },
+      "licFiles": [
+        "README.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Vodan Font",
+      "class": "unknown",
+      "fontCount": 2,
+      "exts": {
+        "ttf": 1,
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Waelon - Futuristic font",
+      "class": "unknown",
+      "fontCount": 7,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 2,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Waom - Korean Style Font",
+      "class": "unknown",
+      "fontCount": 5,
+      "exts": {
+        "otf": 1,
+        "ttf": 2,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "War Heroes - Gaming font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Warfirels - Futuristic Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 2,
+        "ttf": 2
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Whinsy - Minimalist handwritten comic font",
+      "class": "unknown",
+      "fontCount": 5,
+      "exts": {
+        "otf": 1,
+        "ttf": 2,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Wosker - Bold Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Wosker - Bold Font (2)",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Wulandya Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Yorkmade - Rounded Bold Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1,
+        "woff2": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Youra Font",
+      "class": "unknown",
+      "fontCount": 4,
+      "exts": {
+        "otf": 2,
+        "ttf": 2
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Zagelah - Display Font",
+      "class": "unknown",
+      "fontCount": 16,
+      "exts": {
+        "otf": 4,
+        "ttf": 4,
+        "woff2": 4,
+        "woff": 4
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Zamora - Modern and Bold Loopy Sans - Logo Font",
+      "class": "unknown",
+      "fontCount": 7,
+      "exts": {
+        "otf": 2,
+        "ttf": 2,
+        "woff2": 2,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Zdislava Font",
+      "class": "unknown",
+      "fontCount": 3,
+      "exts": {
+        "otf": 1,
+        "ttf": 1,
+        "woff": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Zenlith - Japan Display Font",
+      "class": "unknown",
+      "fontCount": 24,
+      "exts": {
+        "woff": 6,
+        "woff2": 6,
+        "otf": 6,
+        "ttf": 6
+      },
+      "licFiles": [
+        "Readme.txt"
+      ],
+      "hasPdfLic": false
+    },
+    {
+      "family": "Zya Font",
+      "class": "unknown",
+      "fontCount": 1,
+      "exts": {
+        "otf": 1
+      },
+      "licFiles": [],
+      "hasPdfLic": false
+    }
+  ]
+}

@@ -46,6 +46,72 @@ function prixClient(base: number): number {
   return b + Math.ceil(b * COMMISSION_RATE);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SITE BUILDER — thème vitrine piloté par shops.site_config (PRÉSENTATION SEULE).
+// site_config absent/invalide ⇒ thème DÉFAUT = rendu historique EXACT (charte
+// LASSİ + Cormorant/DM Sans). Schéma blanc : tout id inconnu retombe sur le
+// défaut ; l'accent est la seule valeur libre et doit être un hex #RRGGBB validé.
+// Catalogues = miroir de src/config/siteThemes.ts (app) — enrichis en Phase 3.
+// ─────────────────────────────────────────────────────────────────────────────
+interface SiteFont { family: string; stack: string; css2: string; }
+const SITE_FONTS: Record<string, SiteFont> = {
+  cormorant: { family: 'Cormorant Garamond', stack: "'Cormorant Garamond',Georgia,serif", css2: 'Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400' },
+  dmsans:    { family: 'DM Sans', stack: "'DM Sans',system-ui,sans-serif", css2: 'DM+Sans:wght@300;400;500;600' },
+  playfair:  { family: 'Playfair Display', stack: "'Playfair Display',Georgia,serif", css2: 'Playfair+Display:wght@400;500;600;700' },
+  lora:      { family: 'Lora', stack: "'Lora',Georgia,serif", css2: 'Lora:wght@400;500;600' },
+  inter:     { family: 'Inter', stack: "'Inter',system-ui,sans-serif", css2: 'Inter:wght@300;400;500;600;700' },
+  poppins:   { family: 'Poppins', stack: "'Poppins',system-ui,sans-serif", css2: 'Poppins:wght@300;400;500;600' },
+  montserrat:{ family: 'Montserrat', stack: "'Montserrat',system-ui,sans-serif", css2: 'Montserrat:wght@300;400;500;600;700' },
+  spacegrotesk:{ family: 'Space Grotesk', stack: "'Space Grotesk',system-ui,sans-serif", css2: 'Space+Grotesk:wght@300;400;500;600;700' },
+};
+const DEFAULT_HEADING = 'cormorant';
+const DEFAULT_BODY = 'dmsans';
+
+interface SitePalette { d: string; w: string; g: string; m: string; b: string; }
+// d=texte/boutons foncés · w=fond page · g=fond doux · m=texte secondaire · b=bordures.
+// Toutes garanties lisibles (texte foncé sur fond clair). Accent = token séparé.
+const SITE_PALETTES: Record<string, SitePalette> = {
+  classic: { d: '#14152A', w: '#FFFFFF', g: '#f5f4f0', m: '#8a8880', b: '#e8e5de' },
+  noir:    { d: '#1a1a1a', w: '#FFFFFF', g: '#f4f4f4', m: '#8a8a8a', b: '#e6e6e6' },
+  sable:   { d: '#2b2118', w: '#FBF8F3', g: '#f1ece3', m: '#9a8d7a', b: '#e6ddcf' },
+  foret:   { d: '#14241c', w: '#FFFFFF', g: '#eef3f0', m: '#7d8a83', b: '#dde7e2' },
+  ardoise: { d: '#1b2430', w: '#FFFFFF', g: '#eef1f5', m: '#7e8794', b: '#dde3ea' },
+};
+const DEFAULT_PALETTE = 'classic';
+const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
+const SITE_TEMPLATES = ['classic']; // Phase 3 ajoutera les 10 templates
+const HEX6 = /^#[0-9a-fA-F]{6}$/;
+
+interface ResolvedTheme {
+  template: string; y: string; d: string; w: string; g: string; m: string; b: string;
+  fh: string; fb: string; fontsLink: string; displayName: string | null;
+}
+
+// Résout shops.site_config → tokens validés. Entrée nulle/invalide ⇒ DÉFAUT exact.
+function resolveTheme(raw: unknown): ResolvedTheme {
+  const sc = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+  const tokens = sc.tokens && typeof sc.tokens === 'object' ? sc.tokens as Record<string, unknown> : {};
+
+  const headId = typeof tokens.fontHeading === 'string' && SITE_FONTS[tokens.fontHeading] ? tokens.fontHeading : DEFAULT_HEADING;
+  const bodyId = typeof tokens.fontBody === 'string' && SITE_FONTS[tokens.fontBody] ? tokens.fontBody : DEFAULT_BODY;
+  const fh = SITE_FONTS[headId];
+  const fb = SITE_FONTS[bodyId];
+
+  const palId = typeof tokens.palette === 'string' && SITE_PALETTES[tokens.palette] ? tokens.palette : DEFAULT_PALETTE;
+  const pal = SITE_PALETTES[palId];
+  const accent = typeof tokens.accent === 'string' && HEX6.test(tokens.accent) ? tokens.accent : DEFAULT_ACCENT;
+
+  const template = typeof sc.template === 'string' && SITE_TEMPLATES.indexOf(sc.template) >= 0 ? sc.template : 'classic';
+  const displayName = typeof sc.displayName === 'string' && sc.displayName.trim() ? clip(sc.displayName.trim(), 60) : null;
+
+  // Google Fonts : heading puis body, dédupliqués si même famille.
+  const families = fh.css2 === fb.css2 ? [fh.css2] : [fh.css2, fb.css2];
+  const q = families.map(c => 'family=' + c).join('&');
+  const fontsLink = '<link href="https://fonts.googleapis.com/css2?' + q + '&display=swap" rel="stylesheet">';
+
+  return { template, y: accent, d: pal.d, w: pal.w, g: pal.g, m: pal.m, b: pal.b, fh: fh.stack, fb: fb.stack, fontsLink, displayName };
+}
+
 const CAT_LABELS: Record<string, string> = {
   stores: 'Commerçants', tangana: 'Tangana / Ndéki / Soupe', bakery: 'Boulangeries',
   food: 'Restos & Boissons', fruiterie: 'Fruiterie', hair: 'Beauté & Soins', sport: 'Sport',
@@ -78,6 +144,7 @@ interface Shop {
   id: string; name: string | null; logo_url: string | null; description: string | null;
   zone: string | null; category: string | null; subcategories: unknown; slug: string;
   merchant_id: string | null; opening_hours: unknown; is_manually_closed: boolean | null;
+  site_config: unknown;
 }
 interface Product {
   id: string; name: string | null; description: string | null;
@@ -303,7 +370,7 @@ async function fetchShop(slug: string): Promise<Shop | null> {
   try {
     const q =
       `${SUPABASE_URL}/rest/v1/shops?slug=eq.${encodeURIComponent(slug)}` +
-      `&select=id,name,logo_url,description,zone,category,subcategories,slug,merchant_id,opening_hours,is_manually_closed&limit=1`;
+      `&select=id,name,logo_url,description,zone,category,subcategories,slug,merchant_id,opening_hours,is_manually_closed,site_config&limit=1`;
     const res = await fetch(q, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
     if (!res.ok) return null;
     const rows = (await res.json()) as Shop[];
@@ -439,7 +506,7 @@ promos: any[] = []): string {
   if (!shop) {
     return page({
       title: 'Boutique introuvable — LASSİ', desc: "Cette boutique n'est plus disponible sur LASSİ.",
-      ogImage: initialAvatar('LASSI'), canonical, base, name: 'Boutique introuvable', zone: '', cat: '', logo: '', slug, products: [], services: [], terrains: [], shopStatus: null, dailySpecial: [], promos: [],
+      ogImage: initialAvatar('LASSI'), canonical, base, name: 'Boutique introuvable', zone: '', cat: '', logo: '', slug, products: [], services: [], terrains: [], shopStatus: null, dailySpecial: [], promos: [], siteConfig: null,
     });
   }
   const name = shop.name?.trim() || 'Boutique';
@@ -453,7 +520,7 @@ promos: any[] = []): string {
   const shopStatus = computeShopStatus(shop.opening_hours, shop.is_manually_closed);
   return page({
     title: `${name} — sur LASSİ`, desc: clip(descRaw.replace(/\s+/g, ' '), 180),
-    ogImage: logo || initialAvatar(name), canonical, base, name, zone, cat, logo, slug, products, services, terrains, shopStatus, dailySpecial, promos,
+    ogImage: logo || initialAvatar(name), canonical, base, name, zone, cat, logo, slug, products, services, terrains, shopStatus, dailySpecial, promos, siteConfig: shop.site_config,
   });
 }
 
@@ -553,8 +620,10 @@ function page(o: {
   dailySpecial: { id: string; name: string; price: number; photo_url?: string | null }[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   promos: any[];
+  siteConfig: unknown;
 }): string {
   const deep = `https://lassi.tech/p/${encodeURIComponent(o.slug)}`;
+  const theme = resolveTheme(o.siteConfig);
   const initial = (o.name.charAt(0) || '?').toUpperCase();
   const avatar = o.logo
     ? `<img class="shop-logo" src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">`
@@ -728,19 +797,19 @@ function page(o: {
 <meta name="twitter:image" content="${escAttr(o.ogImage)}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+${theme.fontsLink}
 <style>
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
   [hidden] { display:none !important; }
-  :root { --y:${BRAND_GOLD}; --d:#14152A; --w:#FFFFFF; --g:#f5f4f0; --m:#8a8880; --b:#e8e5de; }
-  body { background:var(--w); color:var(--d); font-family:'DM Sans',system-ui,sans-serif; font-size:15px; line-height:1.55; padding-bottom:${hasProducts ? '80px' : '0'}; }
+  :root { --y:${theme.y}; --d:${theme.d}; --w:${theme.w}; --g:${theme.g}; --m:${theme.m}; --b:${theme.b}; --fh:${theme.fh}; --fb:${theme.fb}; }
+  body { background:var(--w); color:var(--d); font-family:var(--fb); font-size:15px; line-height:1.55; padding-bottom:${hasProducts ? '80px' : '0'}; }
   /* HERO */
   .hero { display:grid; grid-template-columns:1fr 1fr; min-height:80vh; align-items:stretch; }
   @media(max-width:680px){ .hero{grid-template-columns:1fr;min-height:auto;} .hero-img{order:-1;height:280px;} }
   .hero-left { display:flex; flex-direction:column; justify-content:center; padding:64px 52px 64px 48px; }
   @media(max-width:680px){ .hero-left{padding:36px 24px 32px;} }
   .shop-cat { font-size:11px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--m); margin-bottom:18px; }
-  .hero-title { font-family:'Cormorant Garamond',Georgia,serif; font-size:clamp(36px,5vw,60px); font-weight:300; line-height:1.1; margin-bottom:22px; letter-spacing:-0.5px; }
+  .hero-title { font-family:var(--fh); font-size:clamp(36px,5vw,60px); font-weight:300; line-height:1.1; margin-bottom:22px; letter-spacing:-0.5px; }
   .hero-desc { font-size:15px; font-weight:300; color:var(--m); line-height:1.7; max-width:380px; margin-bottom:38px; }
   .hours-block { border-top:1px solid var(--b); padding-top:28px; }
   .hours-label { font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--m); margin-bottom:14px; }
@@ -758,21 +827,21 @@ function page(o: {
   .hours-time { font-size:13px; color:var(--m); font-weight:300; margin-top:6px; }
   .hero-img { position:relative; background:#e8e7e3; display:flex; align-items:center; justify-content:center; overflow:hidden; }
   .shop-logo { width:80%; max-width:420px; aspect-ratio:1/1; object-fit:cover; border-radius:22%; }
-  .logo-initial { width:min(60%,220px); aspect-ratio:1/1; border-radius:22%; display:flex; align-items:center; justify-content:center; background:var(--y); color:var(--d); font-family:'Cormorant Garamond',Georgia,serif; font-size:min(90px,16vw); font-weight:300; }
+  .logo-initial { width:min(60%,220px); aspect-ratio:1/1; border-radius:22%; display:flex; align-items:center; justify-content:center; background:var(--y); color:var(--d); font-family:var(--fh); font-size:min(90px,16vw); font-weight:300; }
   .verified-badge { position:absolute; bottom:24px; right:24px; background:var(--y); color:var(--d); font-size:11px; font-weight:600; padding:6px 14px; border-radius:999px; }
   .zone-badge { position:absolute; top:24px; left:24px; background:rgba(255,255,255,.9); color:var(--d); font-size:12px; font-weight:500; padding:6px 14px; border-radius:999px; border:1px solid var(--b); }
   .divider { width:100%; height:1px; background:var(--b); }
   /* CATALOG */
   .catalog { max-width:1100px; margin:0 auto; padding:56px 32px 32px; }
   @media(max-width:680px){ .catalog{padding:36px 20px 20px;} }
-  .catalog-title { font-family:'Cormorant Garamond',Georgia,serif; font-size:clamp(28px,4vw,44px); font-weight:300; line-height:1.1; letter-spacing:-0.3px; margin-bottom:32px; }
+  .catalog-title { font-family:var(--fh); font-size:clamp(28px,4vw,44px); font-weight:300; line-height:1.1; letter-spacing:-0.3px; margin-bottom:32px; }
   .catnav { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; margin-bottom:40px; }
   .catnav::-webkit-scrollbar { display:none; }
   .chip { flex:0 0 auto; padding:9px 20px; border-radius:999px; font-size:13px; font-weight:500; border:1.5px solid var(--b); background:transparent; color:var(--d); cursor:pointer; white-space:nowrap; font-family:inherit; }
   .chip.sel { background:var(--y); border-color:var(--y); }
   .catsec { margin-bottom:52px; }
   .cathead { display:flex; align-items:center; gap:12px; margin-bottom:22px; }
-  .cathead-title { font-family:'Cormorant Garamond',Georgia,serif; font-size:22px; font-weight:400; }
+  .cathead-title { font-family:var(--fh); font-size:22px; font-weight:400; }
   .cathead-count { font-size:12px; font-weight:500; color:var(--m); background:var(--g); padding:3px 10px; border-radius:999px; }
   .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
   @media(max-width:760px){ .grid{grid-template-columns:repeat(2,1fr);gap:14px;} }
@@ -783,7 +852,7 @@ function page(o: {
   .pimg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   .pemoji { font-size:46px; }
   .pbody { padding:14px 16px 16px; display:flex; flex-direction:column; gap:4px; flex:1; }
-  .pname { font-family:'Cormorant Garamond',Georgia,serif; font-size:16px; font-weight:400; line-height:1.2; }
+  .pname { font-family:var(--fh); font-size:16px; font-weight:400; line-height:1.2; }
   .pdesc { font-size:12px; color:var(--m); line-height:1.4; font-weight:300; }
   .pprice { font-size:14px; font-weight:600; margin-top:auto; padding-top:8px; }
   .stepper { margin-top:10px; }
@@ -803,11 +872,11 @@ function page(o: {
   .ds-card { display:flex; align-items:center; gap:12px; background:rgba(253,207,52,.08); border:1.5px solid rgba(253,207,52,.35); border-radius:14px; padding:14px 16px; margin:0 0 14px; }
   .ds-img { width:80px; height:80px; border-radius:12px; object-fit:cover; flex-shrink:0; }
   .ds-info { flex:1; }
-  .ds-name { font-family:'Cormorant Garamond',Georgia,serif; font-size:16px; font-weight:400; }
+  .ds-name { font-family:var(--fh); font-size:16px; font-weight:400; }
   .ds-price { font-size:14px; font-weight:600; margin-top:4px; }
   .ds-btn { flex-shrink:0; background:var(--y); color:var(--d); font-size:14px; font-weight:700; border:none; border-radius:999px; padding:10px 18px; cursor:pointer; font-family:inherit; }
-  .sectitle { font-family:'Cormorant Garamond',Georgia,serif; font-size:26px; font-weight:300; margin:40px 0 20px; }
-  .appnote { font-family:'Cormorant Garamond',Georgia,serif; font-size:17px; font-weight:300; color:var(--m); margin:40px auto 16px; text-align:center; line-height:1.5; max-width:420px; padding:0 24px; }
+  .sectitle { font-family:var(--fh); font-size:26px; font-weight:300; margin:40px 0 20px; }
+  .appnote { font-family:var(--fh); font-size:17px; font-weight:300; color:var(--m); margin:40px auto 16px; text-align:center; line-height:1.5; max-width:420px; padding:0 24px; }
   .cta { display:flex; flex-direction:row; gap:10px; width:100%; max-width:420px; margin:0 auto 40px; justify-content:center; padding:0 24px; }
   .store { flex:0 0 auto; display:flex; align-items:center; gap:8px; background:var(--d); color:var(--w); text-decoration:none; padding:11px 18px; border-radius:12px; border:1.5px solid transparent; }
   .store svg { width:20px; height:20px; flex:0 0 auto; fill:var(--w); }
@@ -828,7 +897,7 @@ function page(o: {
   .sheet { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.45); display:none; align-items:flex-end; justify-content:center; }
   .sheet.open { display:flex; }
   .panel { width:100%; max-width:560px; background:var(--w); border-radius:22px 22px 0 0; padding:24px 22px calc(24px + env(safe-area-inset-bottom)); max-height:90vh; overflow:auto; }
-  .panel h2 { font-family:'Cormorant Garamond',Georgia,serif; font-size:24px; font-weight:400; margin-bottom:4px; }
+  .panel h2 { font-family:var(--fh); font-size:24px; font-weight:400; margin-bottom:4px; }
   .panel .sub { color:var(--m); font-size:13px; margin-bottom:18px; }
   .lines { border:1px solid var(--b); border-radius:12px; padding:10px 14px; margin-bottom:16px; }
   .line { display:flex; justify-content:space-between; font-size:14px; padding:5px 0; }
@@ -884,7 +953,7 @@ function page(o: {
   .abolist { display:flex; flex-direction:column; gap:10px; margin-bottom:32px; }
   .abocard { display:flex; align-items:center; gap:14px; background:var(--w); border:1.5px solid var(--b); border-radius:16px; padding:16px 18px; }
   .abo-left { flex:1; min-width:0; }
-  .abonom { font-family:'Cormorant Garamond',Georgia,serif; font-size:16px; font-weight:400; color:var(--d); line-height:1.2; }
+  .abonom { font-family:var(--fh); font-size:16px; font-weight:400; color:var(--d); line-height:1.2; }
   .abometa { font-size:12px; color:var(--m); margin-top:3px; }
   .abo-right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; }
   .aboprix { font-size:15px; font-weight:700; color:var(--d); }
@@ -907,7 +976,7 @@ function page(o: {
   .lbx-close { position:absolute; top:16px; right:16px; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,.15); border:none; color:#fff; font-size:24px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 </style>
 </head>
-<body>
+<body data-template="${theme.template}">
   ${body}
   ${hasProducts ? `
   <div class="cartbar" id="cartbar" hidden>
@@ -1963,11 +2032,11 @@ function renderTerrainPage(url: URL): string {
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   [hidden]{display:none !important}
-  :root{--y:${BRAND_GOLD};--d:#14152A;--w:#fff;--g:#f5f4f0;--m:#8a8880;--b:#e8e5de}
-  body{background:var(--w);color:var(--d);font-family:'DM Sans',system-ui,sans-serif;font-size:15px;padding-bottom:40px}
+  :root{--y:${BRAND_GOLD};--d:#14152A;--w:#fff;--g:#f5f4f0;--m:#8a8880;--b:#e8e5de;--fh:'Cormorant Garamond',Georgia,serif;--fb:'DM Sans',system-ui,sans-serif}
+  body{background:var(--w);color:var(--d);font-family:var(--fb);font-size:15px;padding-bottom:40px}
   .hdr{background:var(--d);color:#fff;padding:28px 24px 24px;min-height:140px;display:flex;flex-direction:column;justify-content:flex-end}
   .hdr-sport{font-size:32px;margin-bottom:8px}
-  .hdr-nom{font-family:'Cormorant Garamond',Georgia,serif;font-size:clamp(26px,5vw,40px);font-weight:300;line-height:1.1;color:#fff}
+  .hdr-nom{font-family:var(--fh);font-size:clamp(26px,5vw,40px);font-weight:300;line-height:1.1;color:#fff}
   .hdr-addr{font-size:13px;color:rgba(255,255,255,.6);margin-top:6px}
   .hdr-prix{margin-top:12px;font-size:14px;color:var(--y);font-weight:600}
   .wrap{max-width:600px;margin:0 auto;padding:28px 20px}
@@ -2004,7 +2073,7 @@ function renderTerrainPage(url: URL): string {
   .sheet{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center}
   .sheet.open{display:flex}
   .panel{width:100%;max-width:560px;background:var(--w);border-radius:22px 22px 0 0;padding:24px 22px calc(24px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto;position:relative}
-  .panel h2{font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-weight:400;margin-bottom:4px}
+  .panel h2{font-family:var(--fh);font-size:24px;font-weight:400;margin-bottom:4px}
   .panel .sub{color:var(--m);font-size:13px;margin-bottom:18px}
   .close{position:absolute;top:16px;right:18px;background:var(--g);border:none;color:var(--d);font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
   .waiting{text-align:center;padding:10px 0}
