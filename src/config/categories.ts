@@ -1041,6 +1041,7 @@ const ALL_CATEGORIES: CatConfig[] = [
     subLabel: 'Sport',
     emoji: '⚽',
     shopType: 'memberships',
+    hidden: true,
     subcatMode: 'multiple',
     subcats: [
       {

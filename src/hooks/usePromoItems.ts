@@ -243,6 +243,11 @@ export function usePromoItems(): { items: PromoItem[]; loading: boolean; isConne
     return () => { controller.abort(); };
   }, []);
 
-  const items = useMemo(() => [...raw].sort(() => Math.random() - 0.5), [raw]);
+  // Offre du quartier : on n'affiche QUE les produits avec une vraie image
+  // (photoUrl http). Les items sans image (emoji seul / fallback) sont exclus.
+  const items = useMemo(
+    () => raw.filter(i => !!i.photoUrl).sort(() => Math.random() - 0.5),
+    [raw],
+  );
   return { items, loading, isConnected };
 }
