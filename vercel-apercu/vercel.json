@@ -4,6 +4,8 @@
     { "source": "/terrain", "destination": "/api/preview?slug=terrain" },
     { "source": "/paiement/terrain-succes", "destination": "/api/preview?slug=paiement-terrain-succes" },
     { "source": "/paiement/terrain-echec", "destination": "/api/preview?slug=paiement-terrain-echec" },
+    { "source": "/sitemap.xml", "destination": "/api/preview?slug=sitemap.xml" },
+    { "source": "/robots.txt", "destination": "/api/preview?slug=robots.txt" },
     { "source": "/:slug", "destination": "/api/preview" }
   ]
 }

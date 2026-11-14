@@ -132,6 +132,27 @@ export default async function handler(
   const url = new URL(req.url);
   const slug = (url.searchParams.get('slug') ?? '').trim();
 
+  // robots.txt — autorise le crawl + pointe vers le sitemap (SEO Google).
+  if (slug === 'robots.txt') {
+    const body =
+      'User-agent: *\n' +
+      'Allow: /\n' +
+      'Sitemap: https://s.lassi.tech/sitemap.xml\n';
+    return new Response(body, {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600, s-maxage=3600' },
+    });
+  }
+
+  // sitemap.xml — liste toutes les vitrines avec contenu (has_content=true) pour
+  // que Google les découvre et les indexe par nom de boutique.
+  if (slug === 'sitemap.xml') {
+    return new Response(await renderSitemap(url), {
+      status: 200,
+      headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600, s-maxage=3600' },
+    });
+  }
+
   // Page de confirmation post-paiement (invité).
   if (slug === 'commande' || slug === 'merci') {
     return new Response(renderConfirmation(url), {
@@ -241,6 +262,41 @@ export default async function handler(
       'Cache-Control': 'public, max-age=30, s-maxage=30, stale-while-revalidate=60',
     },
   });
+}
+
+// Génère le sitemap XML de toutes les vitrines publiables (slug + has_content).
+// Pagination REST (1000 lignes/req) pour couvrir tout le parc boutiques.
+async function renderSitemap(url: URL): Promise<string> {
+  const base = `${url.protocol}//${url.host}`;
+  const slugs: string[] = [];
+  try {
+    const H = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, Range: '0-4999' };
+    const q =
+      `${SUPABASE_URL}/rest/v1/shops?has_content=eq.true&slug=not.is.null` +
+      `&select=slug&order=slug.asc`;
+    const res = await fetch(q, { headers: H });
+    if (res.ok) {
+      const rows = (await res.json()) as { slug: string | null }[];
+      for (const r of rows ?? []) {
+        const s = (r.slug ?? '').trim();
+        if (s) slugs.push(s);
+      }
+    }
+  } catch { /* sitemap vide tolérable */ }
+
+  const urls = slugs.map(s =>
+    `  <url><loc>${escXml(base + '/' + encodeURIComponent(s))}</loc><changefreq>daily</changefreq><priority>0.8</priority></url>`
+  ).join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    urls + (urls ? '\n' : '') +
+    `</urlset>\n`;
+}
+
+function escXml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
 async function fetchShop(slug: string): Promise<Shop | null> {
