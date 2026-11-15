@@ -33,7 +33,7 @@ export function useRealtimeMessages(
             table: 'messages',
             filter: `conversation_id=eq.${conversationId}`,
           },
-          payload => onInsertRef.current(rowToMessage(payload.new)),
+          payload => onInsertRef.current?.(rowToMessage(payload.new)),
         )
         .on(
           'postgres_changes',
@@ -43,7 +43,7 @@ export function useRealtimeMessages(
             table: 'messages',
             filter: `conversation_id=eq.${conversationId}`,
           },
-          payload => onUpdateRef.current(rowToMessage(payload.new)),
+          payload => onUpdateRef.current?.(rowToMessage(payload.new)),
         )
         .subscribe();
       return channel;

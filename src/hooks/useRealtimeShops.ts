@@ -23,7 +23,7 @@ export function useRealtimeShops(onUpdate: (shop: Shop) => void) {
           payload => {
             clearShopsCache();
             const shop = rowToShop(payload.new as Record<string, unknown>);
-            cbRef.current(shop);
+            cbRef.current?.(shop);
           },
         )
         .subscribe();

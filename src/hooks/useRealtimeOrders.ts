@@ -32,7 +32,7 @@ export function useRealtimeOrders(
             // Recharger les commandes du shop pour avoir les items associés
             const orders = await ordersService.getShopOrders(shopId);
             const found = orders.find(o => o.id === payload.new.id);
-            if (found) onNewRef.current(found);
+            if (found) onNewRef.current?.(found);
           },
         )
         .on(

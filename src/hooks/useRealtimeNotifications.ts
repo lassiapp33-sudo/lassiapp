@@ -31,7 +31,7 @@ export function useRealtimeNotifications(
             table: 'notifications',
             filter: `user_id=eq.${userId}`,
           },
-          payload => callbackRef.current(rowToNotif(payload.new)),
+          payload => callbackRef.current?.(rowToNotif(payload.new)),
         )
         .subscribe();
       return channel;
