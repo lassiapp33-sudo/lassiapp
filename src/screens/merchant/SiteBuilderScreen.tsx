@@ -16,16 +16,31 @@ import { getSiteConfig, saveSiteConfig } from '../../services/siteBuilder';
 
 interface Props { onBack: () => void }
 
+type View3 = 'menu' | 'editor' | 'templates';
+
+// Phrase de présentation par template (affichée dans la galerie).
+const TEMPLATE_PITCH: Record<string, string> = {
+  classic:   'Épuré et polyvalent. Convient à toutes les boutiques.',
+  cosmetic:  'Chaleureux et féminin. Idéal beauté, cosmétique, soins.',
+  pottery:   'Artisanal et brut. Parfait pour le fait-main et la déco.',
+  furniture: 'Élégant et posé. Pensé pour la maison et le mobilier.',
+};
+
 export default function SiteBuilderScreen({ onBack }: Props) {
   const shopId = useShopStore(s => s.shopId);
   const slug = useShopStore(s => s.profile.slug);
   const shopName = useShopStore(s => s.profile.name);
 
+  const [view, setView] = useState<View3>('menu');
   const [cfg, setCfg] = useState<SiteConfig>(DEFAULT_SITE_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Galerie templates : id du template dont on regarde l'aperçu.
+  const [tplPreview, setTplPreview] = useState<string | null>(null);
+  const [applyingTpl, setApplyingTpl] = useState(false);
 
   // Charge la config existante.
   useEffect(() => {
@@ -36,7 +51,7 @@ export default function SiteBuilderScreen({ onBack }: Props) {
       .finally(() => setLoading(false));
   }, [shopId]);
 
-  // Aperçu live : reconstruit l'URL draft (debounce pour la saisie du nom).
+  // Aperçu live éditeur : reconstruit l'URL draft (debounce pour la saisie du nom).
   useEffect(() => {
     if (!slug) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -83,18 +98,134 @@ export default function SiteBuilderScreen({ onBack }: Props) {
     ]);
   }, []);
 
+  // Applique un template choisi dans la galerie, enregistre, puis revient au menu.
+  const chooseTemplate = useCallback(async (templateId: string) => {
+    if (!shopId) return;
+    const next = applyTemplate(cfg, templateId);
+    setApplyingTpl(true);
+    const res = await saveSiteConfig(shopId, next);
+    setApplyingTpl(false);
+    if (res.success) {
+      setCfg(next);
+      setTplPreview(null);
+      setView('menu');
+      Alert.alert('Template appliqué', 'Ton site utilise maintenant ce design. Tu peux l\'ajuster dans « Configurer mon site ».');
+    } else {
+      Alert.alert('Erreur', res.error);
+    }
+  }, [shopId, cfg]);
+
+  const goBack = useCallback(() => {
+    if (view === 'menu') { onBack(); return; }
+    setTplPreview(null);
+    setView('menu');
+  }, [view, onBack]);
+
+  const title = view === 'editor' ? 'Configurer mon site'
+    : view === 'templates' ? 'Choisir un template'
+    : 'Mon site web';
+
   return (
     <View style={styles.root}>
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.backBtn} onPress={goBack} activeOpacity={0.7}>
           <Text style={styles.backTxt}>‹</Text>
         </TouchableOpacity>
-        <Text style={styles.pageTitle}>Mon site web</Text>
+        <Text style={styles.pageTitle}>{title}</Text>
       </View>
 
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={colors.accent} /></View>
+      ) : view === 'menu' ? (
+        /* ───────────────────────── MENU : 2 options ───────────────────────── */
+        <View style={styles.menuWrap}>
+          <Text style={styles.menuIntro}>
+            Gère l'apparence de ta vitrine en ligne {slug ? `s.lassi.tech/${slug}` : ''}.
+          </Text>
+
+          <TouchableOpacity style={styles.menuCard} activeOpacity={0.85} onPress={() => setView('editor')}>
+            <View style={styles.menuCardTxt}>
+              <Text style={styles.menuCardTitle}>Configurer mon site actuel</Text>
+              <Text style={styles.menuCardDesc}>Modifie couleurs, polices, nom, réseaux sociaux et agencement des sections.</Text>
+            </View>
+            <Text style={styles.menuChevron}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuCard} activeOpacity={0.85} onPress={() => setView('templates')}>
+            <View style={styles.menuCardTxt}>
+              <Text style={styles.menuCardTitle}>Choisir un template</Text>
+              <Text style={styles.menuCardDesc}>Parcours les designs prêts-à-l'emploi, regarde l'aperçu et applique celui qui te plaît.</Text>
+            </View>
+            <Text style={styles.menuChevron}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+      ) : view === 'templates' ? (
+        /* ─────────────────────── GALERIE DE TEMPLATES ─────────────────────── */
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
+          <Text style={styles.galleryIntro}>
+            Touche un template pour voir l'aperçu de ta boutique avec ce design, puis applique-le.
+          </Text>
+
+          {SITE_TEMPLATES.map(tp => {
+            const open = tplPreview === tp.id;
+            const active = cfg.template === tp.id;
+            return (
+              <View key={tp.id} style={styles.tplBlock}>
+                <TouchableOpacity
+                  style={[styles.tplHeader, open && styles.tplHeaderOpen]}
+                  activeOpacity={0.85}
+                  onPress={() => setTplPreview(open ? null : tp.id)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.tplName}>{tp.label}</Text>
+                    <Text style={styles.tplPitch}>{TEMPLATE_PITCH[tp.id] ?? 'Design prêt-à-l\'emploi.'}</Text>
+                  </View>
+                  {active ? <Text style={styles.tplActiveBadge}>Actuel</Text> : null}
+                  <Text style={styles.tplChevron}>{open ? '▾' : '▸'}</Text>
+                </TouchableOpacity>
+
+                {open && (
+                  <View style={styles.tplPreviewArea}>
+                    {slug ? (
+                      <WebView
+                        key={`${tp.id}-prev`}
+                        source={{ uri: buildDraftPreviewUrl(slug, applyTemplate(cfg, tp.id)) }}
+                        style={styles.webview}
+                        originWhitelist={['https://*']}
+                        scrollEnabled
+                        startInLoadingState
+                        renderLoading={() => (
+                          <View style={styles.webLoading}><ActivityIndicator color={colors.accent} /></View>
+                        )}
+                      />
+                    ) : (
+                      <View style={styles.webLoading}>
+                        <Text style={styles.noPreview}>Aperçu indisponible (lien de partage manquant).</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {open && (
+                  <TouchableOpacity
+                    style={[styles.tplChooseBtn, active && styles.tplChooseBtnActive]}
+                    activeOpacity={0.85}
+                    disabled={applyingTpl || active}
+                    onPress={() => chooseTemplate(tp.id)}
+                  >
+                    {applyingTpl
+                      ? <ActivityIndicator color={colors.bg} />
+                      : <Text style={styles.tplChooseTxt}>{active ? 'Template déjà appliqué' : 'Choisir ce template'}</Text>}
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+
       ) : (
+        /* ───────────────────────── ÉDITEUR COMPLET ───────────────────────── */
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
           {/* Aperçu live */}
           <View style={styles.previewWrap}>
@@ -119,22 +250,6 @@ export default function SiteBuilderScreen({ onBack }: Props) {
           <Text style={styles.previewHint}>
             Aperçu en direct de ton site {slug ? `s.lassi.tech/${slug}` : ''}. Tes produits et prix ne changent pas.
           </Text>
-
-          {/* Template — choix principal : applique un design complet (couleurs + polices + agencement) */}
-          <Text style={styles.secLbl}>Thème du site</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rowScroll}>
-            {SITE_TEMPLATES.map(tp => {
-              const on = cfg.template === tp.id;
-              return (
-                <TouchableOpacity key={tp.id} activeOpacity={0.85} onPress={() => setCfg(c => applyTemplate(c, tp.id))}
-                  style={[styles.templateChip, on && styles.templateChipOn]}>
-                  <Text style={[styles.templateLbl, on && styles.templateLblOn]}>{tp.label}</Text>
-                  {on ? <Text style={styles.templateTick}>✓</Text> : null}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-          <Text style={styles.fieldHint}>Choisis un thème prêt-à-l'emploi, puis ajuste les détails ci-dessous.</Text>
 
           {/* Nom affiché */}
           <Text style={styles.secLbl}>Nom affiché sur le site</Text>
@@ -311,8 +426,8 @@ export default function SiteBuilderScreen({ onBack }: Props) {
         </ScrollView>
       )}
 
-      {/* Barre d'enregistrement */}
-      {!loading && (
+      {/* Barre d'enregistrement (éditeur uniquement) */}
+      {!loading && view === 'editor' && (
         <View style={styles.saveBar}>
           <TouchableOpacity style={styles.saveBtn} onPress={onSave} activeOpacity={0.85} disabled={saving}>
             {saving ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveTxt}>Enregistrer</Text>}
@@ -331,6 +446,29 @@ const styles = StyleSheet.create({
   pageTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 20 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
+  // Menu
+  menuWrap: { paddingHorizontal: spacing.screen, paddingTop: 10 },
+  menuIntro: { color: colors.muted, fontSize: 13, fontFamily: fonts.body, marginBottom: 22, lineHeight: 19 },
+  menuCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xl, padding: 18, marginBottom: 14 },
+  menuCardTxt: { flex: 1 },
+  menuCardTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 16, marginBottom: 4 },
+  menuCardDesc: { color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, lineHeight: 17 },
+  menuChevron: { color: colors.accent, fontSize: 28, marginLeft: 8 },
+
+  // Galerie templates
+  galleryIntro: { color: colors.muted, fontSize: 13, fontFamily: fonts.body, marginHorizontal: spacing.screen, marginTop: 6, marginBottom: 16, lineHeight: 19 },
+  tplBlock: { marginHorizontal: spacing.screen, marginBottom: 16 },
+  tplHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.lg, padding: 16 },
+  tplHeaderOpen: { borderColor: colors.accent, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  tplName: { color: colors.white, fontFamily: fonts.title, fontSize: 17 },
+  tplPitch: { color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, marginTop: 4, lineHeight: 17 },
+  tplActiveBadge: { color: colors.bg, backgroundColor: colors.accent, fontFamily: fonts.label, fontSize: 11, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, overflow: 'hidden', marginRight: 10 },
+  tplChevron: { color: colors.accent, fontSize: 16 },
+  tplPreviewArea: { height: 440, borderLeftWidth: 1.5, borderRightWidth: 1.5, borderColor: colors.accent, overflow: 'hidden', backgroundColor: '#fff' },
+  tplChooseBtn: { backgroundColor: colors.accent, borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg, paddingVertical: 15, alignItems: 'center' },
+  tplChooseBtnActive: { backgroundColor: colors.surface, borderWidth: 1.5, borderTopWidth: 0, borderColor: colors.accent },
+  tplChooseTxt: { color: colors.bg, fontFamily: fonts.title, fontSize: 15 },
+
   previewWrap: { height: 420, marginHorizontal: spacing.screen, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 1, borderColor: colors.border },
   webview: { flex: 1, backgroundColor: '#fff' },
   webLoading: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
@@ -342,11 +480,6 @@ const styles = StyleSheet.create({
   fieldHint: { color: colors.muted, fontSize: 11.5, fontFamily: fonts.body, marginHorizontal: spacing.screen, marginTop: 6 },
 
   rowScroll: { paddingHorizontal: spacing.screen, gap: 10 },
-  templateChip: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 20, paddingVertical: 12 },
-  templateChipOn: { borderColor: colors.accent, backgroundColor: colors.accent },
-  templateLbl: { color: colors.white, fontFamily: fonts.ui, fontSize: 14 },
-  templateLblOn: { color: colors.bg },
-  templateTick: { color: colors.bg, fontSize: 14, fontWeight: '800' },
   paletteChip: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, padding: 10, alignItems: 'center', width: 96 },
   swatchRow: { flexDirection: 'row', gap: 4, marginBottom: 8 },
   swatch: { width: 18, height: 26, borderRadius: 5, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' },

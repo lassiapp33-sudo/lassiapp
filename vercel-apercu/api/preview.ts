@@ -997,19 +997,42 @@ function page(o: {
     <section class="cx-banners">
       <a class="cx-banner" href="#cx-shop" ${bg(pick(1))}>
         <div class="cx-banner-in">
-          <span class="cx-banner-k">${esc(groups[0]?.title || 'Notre sélection')}</span>
-          <h3>Fait avec soin, rien que pour toi</h3>
-          <span class="cx-banner-cta">Commander →</span>
+          <span class="cx-banner-k">Peau éclatante</span>
+          <h3>Chacune mérite de se sentir belle et confiante</h3>
+          <span class="cx-banner-cta">Acheter</span>
         </div>
       </a>
       <a class="cx-banner" href="#cx-shop" ${bg(pick(2))}>
         <div class="cx-banner-in">
-          <span class="cx-banner-k">${esc(groups[1]?.title || o.cat || 'Nouveautés')}</span>
-          <h3>Tes favoris, livrés près de chez toi</h3>
-          <span class="cx-banner-cta">Découvrir →</span>
+          <span class="cx-banner-k">Rituel éclat</span>
+          <h3>La beauté est l'éternité qui se contemple</h3>
+          <span class="cx-banner-cta">Acheter</span>
         </div>
       </a>
     </section>`;
+  // Section « Meilleures ventes » : tuile éditoriale + grille des premiers produits
+  // (cartes réutilisées = bouton « Ajouter » au panier fonctionnel).
+  const cxBest = hasProducts ? `
+    <section class="cx-best">
+      <div class="cx-sec-head">
+        <span class="cx-sec-k">Nos coups de cœur</span>
+        <h2 class="cx-sec-title">Nos Meilleures Ventes</h2>
+        <p class="cx-sec-sub">Les favoris de nos clientes, sélectionnés rien que pour toi.</p>
+      </div>
+      <div class="cx-best-grid">
+        <div class="cx-best-feature" ${bg(pick(3))}>
+          <div class="cx-best-feature-ov"></div>
+          <div class="cx-best-feature-in">
+            <span class="cx-eyebrow light">Soins naturels</span>
+            <h3>Découvre le pouvoir de la beauté naturelle</h3>
+            <a class="cx-btn light" href="#cx-shop">Voir la boutique</a>
+          </div>
+        </div>
+        <div class="cx-best-products grid">
+          ${o.products.slice(0, 6).map(productCard).join('')}
+        </div>
+      </div>
+    </section>` : '';
   const cxFeature = `
     <section id="cx-about" class="cx-feature" ${bg(pick(3))}>
       <div class="cx-feature-ov"></div>
@@ -1101,11 +1124,12 @@ function page(o: {
       </div>
     </section>
     ${gal.length >= 2 ? cxBanners : ''}
+    ${cxBest}
     ${closedNotice}
     <section id="cx-shop" class="cx-shop${catalogCls}">
       <div class="cx-sec-head">
-        <span class="cx-sec-k">Notre sélection</span>
-        <h2 class="cx-sec-title">${hasProducts ? 'Nos produits' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2>
+        <span class="cx-sec-k">Notre catalogue</span>
+        <h2 class="cx-sec-title">${hasProducts ? 'Tous nos produits' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2>
       </div>
       ${catnav}${dsSection}${grid}
       ${svcSection}
@@ -1511,19 +1535,31 @@ ${theme.fontsLink}
   .cx-play-ic { width:40px; height:40px; border-radius:50%; background:var(--w); border:1px solid var(--b); display:flex; align-items:center; justify-content:center; color:var(--y); font-size:12px; }
   .cx-play:hover .cx-play-ic { background:var(--y); color:#fff; border-color:var(--y); }
   @media(max-width:760px){ .cx-hero{grid-template-columns:1fr;} .cx-hero-txt{padding:44px 24px;} .cx-hero-img{min-height:300px;order:-1;} }
-  .cx-banners { display:grid; grid-template-columns:1fr 1fr; gap:18px; max-width:1180px; margin:60px auto; padding:0 40px; }
-  .cx-banner { position:relative; min-height:230px; border-radius:18px; overflow:hidden; background-size:cover; background-position:center; background-color:#d9c7b5; text-decoration:none; display:flex; align-items:flex-end; }
-  .cx-banner::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,rgba(255,255,255,.88),rgba(255,255,255,.2)); }
-  .cx-banner-in { position:relative; z-index:1; padding:28px; max-width:70%; }
-  .cx-banner-k { font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--y); }
-  .cx-banner-in h3 { font-family:var(--fh); font-weight:600; font-size:24px; line-height:1.15; margin:8px 0 14px; color:var(--d); }
-  .cx-banner-cta { font-size:14px; font-weight:600; color:var(--d); }
-  @media(max-width:760px){ .cx-banners{grid-template-columns:1fr;padding:0 20px;margin:36px auto;} }
+  .cx-banners { display:grid; grid-template-columns:1fr 1fr; gap:22px; max-width:1180px; margin:60px auto; padding:0 40px; }
+  .cx-banner { position:relative; min-height:260px; border-radius:16px; overflow:hidden; background-size:cover; background-position:right center; background-color:#d9c7b5; text-decoration:none; display:flex; align-items:center; }
+  .cx-banner::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,rgba(243,236,227,.72) 0%,rgba(243,236,227,.30) 42%,rgba(243,236,227,0) 65%); }
+  .cx-banner-in { position:relative; z-index:1; padding:34px 36px; max-width:62%; }
+  .cx-banner-k { font-size:11px; font-weight:600; letter-spacing:2.5px; text-transform:uppercase; color:var(--m); }
+  .cx-banner-in h3 { font-family:var(--fh); font-weight:600; font-size:25px; line-height:1.18; margin:10px 0 20px; color:var(--d); }
+  .cx-banner-cta { display:inline-block; font-size:12px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--d); border:1.5px solid var(--d); padding:11px 24px; border-radius:2px; }
+  .cx-banner:hover .cx-banner-cta { background:var(--d); color:#fff; }
+  @media(max-width:760px){ .cx-banners{grid-template-columns:1fr;padding:0 20px;margin:36px auto;} .cx-banner-in{max-width:75%;} }
   .cx-shop { max-width:1180px; margin:0 auto; padding:30px 40px 20px; }
   @media(max-width:760px){ .cx-shop{padding:20px;} }
   .cx-sec-head { text-align:center; margin-bottom:34px; }
   .cx-sec-k { font-size:12px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:var(--y); }
   .cx-sec-title { font-family:var(--fh); font-weight:600; font-size:clamp(30px,4vw,46px); letter-spacing:-0.5px; margin-top:8px; }
+  .cx-sec-sub { font-size:14.5px; color:var(--m); margin-top:10px; max-width:460px; margin-left:auto; margin-right:auto; line-height:1.6; }
+  /* Section meilleures ventes : tuile éditoriale + grille produits */
+  .cx-best { max-width:1180px; margin:70px auto; padding:0 40px; }
+  .cx-best-grid { display:grid; grid-template-columns:0.85fr 1.6fr; gap:24px; align-items:stretch; }
+  .cx-best-feature { position:relative; border-radius:16px; overflow:hidden; background-size:cover; background-position:center; background-color:#241a16; min-height:420px; display:flex; align-items:flex-end; }
+  .cx-best-feature-ov { position:absolute; inset:0; background:linear-gradient(180deg,rgba(23,19,19,0) 40%,rgba(23,19,19,.78)); }
+  .cx-best-feature-in { position:relative; z-index:1; padding:30px; }
+  .cx-best-feature-in h3 { font-family:var(--fh); font-weight:600; font-size:27px; line-height:1.15; color:#fff; margin:10px 0 18px; }
+  .cx-best-products { grid-template-columns:repeat(3,1fr); margin:0; }
+  @media(max-width:860px){ .cx-best-grid{grid-template-columns:1fr;} .cx-best-feature{min-height:300px;} }
+  @media(max-width:760px){ .cx-best{padding:0 20px;margin:44px auto;} .cx-best-products{grid-template-columns:repeat(2,1fr);} }
   .cx-feature { position:relative; margin:70px 0; padding:92px 40px; background-size:cover; background-position:center; background-color:#241a16; text-align:center; }
   .cx-feature-ov { position:absolute; inset:0; background:linear-gradient(180deg,rgba(26,18,15,.72),rgba(26,18,15,.80)); }
   .cx-feature-in { position:relative; z-index:1; max-width:640px; margin:0 auto; color:#fff; }
