@@ -1044,7 +1044,7 @@ function page(o: {
           <p>Des soins naturels, pensés pour révéler l'éclat de ta peau jour après jour.</p>
           <a class="cx-btn-outline" href="#cx-shop">En savoir plus</a>
         </div>
-        <img class="cx-feature-seal" src="/assets/demo/cosmetic/seal.svg" alt="Produit naturel">
+        <div class="cx-feature-seal"><span class="cx-seal-star">&#10038;</span><span class="cx-seal-txt">Produit<br>naturel</span></div>
       </div>
       <div class="cx-feature-hero"><img src="/assets/demo/cosmetic/feature.jpg" alt="Nos produits" loading="lazy"></div>
       <div class="cx-feature-icons">
@@ -1162,12 +1162,12 @@ function page(o: {
     return `<div class="fn-pcard"><span class="fn-pt">${esc(clip(p.name, 24))}</span><span class="fn-pp">${fnPrice(p)}</span><div class="fn-pim" ${bg(p.photo_url || pick(i))}></div><span class="fn-arrow">&#8594;</span></div>`;
   };
   const fnCats = (groups.length ? groups : [{ id: '', title: hasServices ? 'Prestations' : 'Boutique' }]).slice(0, 7);
-  const fnRoomItems = (groups.length ? groups : []).slice(0, 4);
+  const fnRoomItems = (groups.length ? groups : []).slice(0, 3);
   const fnRooms = (gal.length >= 2 && fnRoomItems.length >= 3) ? `
     <section class="fn-rooms"><div class="fn-rooms-in">
       <div class="fn-rooms-top"><h2>Parcourir par catégorie</h2><p>Trouvez l'inspiration pour chaque espace de votre maison.</p></div>
       <div class="fn-rooms-grid">
-        ${fnRoomItems.map((r, i) => `<a class="fn-room ${i === 0 ? 'big' : i === 1 ? 'wide' : ''}" href="#cx-shop" ${bg(pick(i))}><span class="fn-chip"><b>${esc(r.title)}</b></span></a>`).join('')}
+        ${fnRoomItems.map((r, i) => `<a class="fn-room ${i === 0 ? 'big' : ''}" href="#cx-shop" ${bg(pick(i))}><span class="fn-chip"><b>${esc(r.title)}</b></span></a>`).join('')}
       </div>
     </div></section>` : '';
   const fnMaterials = gal.length >= 1 ? `
@@ -1213,13 +1213,13 @@ function page(o: {
     <section class="fn-hero-sec"><div class="fn-hero">
       <div class="fn-hero-l">
         <h1>${esc(o.name)}</h1>
-        <p>${esc(clip(o.desc || `Pièces d'exception et savoir-faire local. Commandez en ligne, paiement sécurisé, retrait ou livraison.`, 150))}</p>
+        <p>${esc(clip(o.desc || `Pièces d'exception et savoir-faire local. Commandez en ligne, paiement sécurisé.`, 115))}</p>
         <div class="fn-hero-cta"><a class="fn-btn" href="#cx-shop">${cxHeadCta}</a>${hoursHtml ? `<div class="fn-hours">${hoursHtml}</div>` : ''}</div>
       </div>
       <div class="fn-collage">
         ${fnCard(0)}${fnCard(1)}
         <div class="fn-big" ${bg(pick(0))}></div>
-        <div class="fn-promo"><h3>✓</h3><p>Boutique vérifiée sur LASSİ. Paiement sécurisé Wave &amp; Orange Money.</p><a href="#cx-shop">Découvrir &#8594;</a></div>
+        <div class="fn-promo"><p>Boutique vérifiée · paiement sécurisé Wave &amp; OM.</p><a href="#cx-shop">Découvrir &#8594;</a></div>
       </div>
     </div></section>
     ${closedNotice}
@@ -1577,9 +1577,11 @@ ${theme.fontsLink}
   .cx-feature-head p { font-size:15px; line-height:1.7; color:rgba(255,255,255,.62); margin-bottom:26px; }
   .cx-btn-outline { display:inline-block; border:1px solid rgba(255,255,255,.45); color:#fff; text-decoration:none; font-size:12px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; padding:14px 28px; border-radius:2px; }
   .cx-btn-outline:hover { background:#fff; color:var(--d); }
-  .cx-feature-seal { flex:0 0 auto; width:92px; height:92px; }
-  .cx-feature-hero { max-width:760px; margin:36px auto 10px; text-align:center; }
-  .cx-feature-hero img { max-width:100%; max-height:360px; object-fit:contain; border-radius:12px; }
+  .cx-feature-seal { flex:0 0 auto; width:96px; height:96px; border:1.5px solid var(--y); border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; color:var(--y); text-align:center; }
+  .cx-seal-star { font-size:15px; line-height:1; }
+  .cx-seal-txt { font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; line-height:1.35; }
+  .cx-feature-hero { max-width:826px; margin:40px auto 10px; }
+  .cx-feature-hero img { width:100%; height:auto; display:block; border-radius:14px; }
   .cx-feature-icons { display:grid; grid-template-columns:repeat(3,1fr); gap:30px; max-width:960px; margin:44px auto 0; }
   .cx-fico { text-align:center; }
   .cx-fico-ic { display:inline-flex; width:30px; height:30px; color:var(--y); }
@@ -1658,9 +1660,9 @@ ${theme.fontsLink}
   /* ═══ TEMPLATE FURNITURE — Maison & Mobilier (réf Furniture.html) : header 2 rangées, hero mint + collage, bandes sombres, cartes carrées ═══ */
   body[data-template="furniture"]{background:#fff}
   .fn-head{max-width:1240px;margin:0 auto;padding:0 28px}
-  .fn-h1{display:flex;align-items:center;gap:26px;min-height:112px}
-  .fn-logo img{height:92px;width:auto}
-  .fn-logo span{font-family:var(--fh);font-size:22px;font-weight:700;color:var(--d)}
+  .fn-h1{display:flex;align-items:center;gap:20px;min-height:92px}
+  .fn-logo img{height:76px;width:auto}
+  .fn-logo span{font-family:var(--fh);font-size:15px;font-weight:700;color:var(--d);white-space:nowrap}
   .fn-search{flex:0 0 280px;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--b);border-radius:22px;padding:9px 16px;color:var(--m);font-size:14px}
   .fn-nav{margin-left:auto;display:flex;gap:26px;font-size:15px;font-weight:500}
   .fn-nav a{color:var(--d)} .fn-nav a:hover{color:var(--y)}
@@ -1671,8 +1673,8 @@ ${theme.fontsLink}
   .fn-info b{display:block;color:var(--d);font-weight:600}
   .fn-hero-sec{max-width:1240px;margin:0 auto;padding:28px 28px 48px}
   .fn-hero{background:var(--g);border-radius:26px;padding:60px 54px;display:grid;grid-template-columns:1fr 1.02fr;gap:46px;align-items:center}
-  .fn-hero-l h1{font-family:var(--fh);font-size:clamp(36px,4.4vw,56px);font-weight:700;line-height:1.08;letter-spacing:-1px;color:var(--d)}
-  .fn-hero-l p{color:var(--m);font-size:15.5px;max-width:400px;margin:20px 0 30px}
+  .fn-hero-l h1{font-family:var(--fh);font-size:clamp(26px,3.3vw,40px);font-weight:700;line-height:1.1;letter-spacing:-.5px;color:var(--d)}
+  .fn-hero-l p{color:var(--m);font-size:13.5px;max-width:380px;margin:16px 0 24px;line-height:1.5}
   .fn-hero-cta{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .fn-btn{display:inline-flex;align-items:center;gap:8px;background:var(--d);color:#fff;padding:15px 30px;border-radius:30px;font-size:15px;font-weight:500;transition:.2s}
   .fn-btn:hover{opacity:.9}
@@ -1690,7 +1692,8 @@ ${theme.fontsLink}
   .fn-shop{max-width:1240px;margin:0 auto;padding:10px 28px 60px}
   .fn-sec-head{text-align:center;max-width:620px;margin:0 auto 40px}
   .fn-sec-head .fn-k{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--y);font-weight:600}
-  .fn-sec-head h2{font-family:var(--fh);font-size:clamp(28px,3.6vw,40px);font-weight:700;color:var(--d);margin-top:10px}
+  .fn-sec-head h2{font-family:var(--fh);font-size:clamp(24px,3vw,34px);font-weight:700;color:var(--d);margin-top:10px}
+  body[data-template="furniture"] .pdesc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12px}
   /* catalogue réel réutilisé — skin mobilier (cartes carrées, boutons verts) */
   body[data-template="furniture"] .grid{gap:0;border-top:1px solid var(--b);border-left:1px solid var(--b)}
   body[data-template="furniture"] .prod{border:none;border-right:1px solid var(--b);border-bottom:1px solid var(--b);border-radius:0;box-shadow:none;padding:22px}
@@ -1710,12 +1713,12 @@ ${theme.fontsLink}
   .fn-rooms{max-width:1240px;margin:0 auto;padding:0 28px 70px}
   .fn-rooms-in{background:var(--d);border-radius:26px;padding:52px;color:#fff}
   .fn-rooms-top{max-width:560px;margin-bottom:30px}
-  .fn-rooms-top h2{font-family:var(--fh);font-size:clamp(26px,3.2vw,36px);font-weight:700}
-  .fn-rooms-top p{color:rgba(255,255,255,.7);font-size:15px;margin-top:10px}
-  .fn-rooms-grid{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:210px 210px;gap:16px}
+  .fn-rooms-top h2{font-family:var(--fh);font-size:clamp(22px,2.8vw,32px);font-weight:700}
+  .fn-rooms-top p{color:rgba(255,255,255,.7);font-size:13.5px;margin-top:10px}
+  .fn-rooms-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:180px 180px;gap:16px}
   .fn-room{position:relative;border-radius:14px;overflow:hidden;background-size:cover;background-position:center}
   .fn-room::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.4),transparent 50%)}
-  .fn-room.big{grid-column:1;grid-row:1/3} .fn-room.wide{grid-column:2/4;grid-row:1}
+  .fn-room.big{grid-column:1;grid-row:1/3}
   .fn-chip{position:absolute;z-index:2;left:16px;bottom:16px;background:#fff;color:var(--d);border-radius:10px;padding:8px 14px}
   .fn-chip b{font-size:14px;font-weight:600}
   .fn-materials{max-width:1240px;margin:0 auto;padding:0 28px 80px}
