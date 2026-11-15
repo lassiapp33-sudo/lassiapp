@@ -1033,15 +1033,26 @@ function page(o: {
         </div>
       </div>
     </section>` : '';
+  const cxFeatThumbs = o.products.slice(0, 6).map(p => {
+    const u = typeof p.photo_url === 'string' && p.photo_url.startsWith('http') ? p.photo_url : '';
+    return u ? `<img src="${escAttr(u)}" alt="${escAttr(p.name ?? '')}" loading="lazy">` : '';
+  }).filter(Boolean).join('');
   const cxFeature = `
-    <section id="cx-about" class="cx-feature" ${bg(pick(3))}>
-      <div class="cx-feature-ov"></div>
-      <div class="cx-feature-in">
-        <span class="cx-eyebrow light">${esc(o.cat || 'Notre maison')}</span>
-        <h2>${esc(o.name)}</h2>
-        <p>${esc(clip(o.desc || `Commande en ligne, paie en sécurité (Wave / Orange Money) et fais-toi plaisir. ${o.name} te rappelle pour le retrait ou la livraison.`, 160))}</p>
-        ${featItems.length ? `<div class="cx-feature-tags">${featItems.map(f => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
-        <a class="cx-btn light" href="#cx-shop">${cxHeadCta} maintenant</a>
+    <section id="cx-about" class="cx-feature">
+      <div class="cx-feature-top">
+        <div class="cx-feature-head">
+          <h2>Une peau éclatante<br>au quotidien</h2>
+          <p>Des soins naturels, pensés pour révéler l'éclat de ta peau jour après jour.</p>
+          <a class="cx-btn-outline" href="#cx-shop">En savoir plus</a>
+        </div>
+        <div class="cx-feature-seal"><span>✦<br>PRODUIT<br>NATUREL</span></div>
+      </div>
+      ${cxFeatThumbs ? `<div class="cx-feature-products">${cxFeatThumbs}</div>` : ''}
+      <div class="cx-feature-icons">
+        <div class="cx-fico"><span>&#128167;</span><b>Hydratation</b></div>
+        <div class="cx-fico"><span>&#128737;</span><b>Protection</b></div>
+        <div class="cx-fico"><span>&#9203;</span><b>Anti-âge</b></div>
+        <div class="cx-fico"><span>&#127807;</span><b>100% Naturel</b></div>
       </div>
     </section>`;
   const cxPerks = `
@@ -1560,13 +1571,22 @@ ${theme.fontsLink}
   .cx-best-products { grid-template-columns:repeat(3,1fr); margin:0; }
   @media(max-width:860px){ .cx-best-grid{grid-template-columns:1fr;} .cx-best-feature{min-height:300px;} }
   @media(max-width:760px){ .cx-best{padding:0 20px;margin:44px auto;} .cx-best-products{grid-template-columns:repeat(2,1fr);} }
-  .cx-feature { position:relative; margin:70px 0; padding:92px 40px; background-size:cover; background-position:center; background-color:#241a16; text-align:center; }
-  .cx-feature-ov { position:absolute; inset:0; background:linear-gradient(180deg,rgba(26,18,15,.72),rgba(26,18,15,.80)); }
-  .cx-feature-in { position:relative; z-index:1; max-width:640px; margin:0 auto; color:#fff; }
-  .cx-feature-in h2 { font-family:var(--fh); font-weight:600; font-size:clamp(30px,4.4vw,50px); margin:10px 0 16px; }
-  .cx-feature-in p { font-size:15px; line-height:1.7; color:rgba(255,255,255,.82); margin-bottom:22px; }
-  .cx-feature-tags { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:28px; }
-  .cx-feature-tags span { border:1px solid rgba(255,255,255,.4); color:#fff; font-size:12px; font-weight:500; padding:7px 16px; border-radius:9999px; }
+  /* Section sombre « peau éclatante » : titre + sceau + rangée produits + 4 features */
+  .cx-feature { background:#171313; color:#fff; margin:70px 0 0; padding:72px 40px; }
+  .cx-feature-top { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; max-width:1180px; margin:0 auto; }
+  .cx-feature-head { max-width:440px; }
+  .cx-feature-head h2 { font-family:var(--fh); font-weight:600; font-size:clamp(32px,4.4vw,50px); line-height:1.08; color:#fff; margin-bottom:16px; }
+  .cx-feature-head p { font-size:15px; line-height:1.7; color:rgba(255,255,255,.62); margin-bottom:26px; }
+  .cx-btn-outline { display:inline-block; border:1px solid rgba(255,255,255,.45); color:#fff; text-decoration:none; font-size:12px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; padding:14px 28px; border-radius:2px; }
+  .cx-btn-outline:hover { background:#fff; color:var(--d); }
+  .cx-feature-seal { flex:0 0 auto; width:92px; height:92px; border:1px solid var(--y); border-radius:50%; display:flex; align-items:center; justify-content:center; text-align:center; color:var(--y); font-size:9.5px; font-weight:700; letter-spacing:1.5px; line-height:1.5; }
+  .cx-feature-products { display:flex; justify-content:center; align-items:flex-end; gap:14px; max-width:1000px; margin:48px auto; flex-wrap:wrap; }
+  .cx-feature-products img { width:135px; height:180px; object-fit:cover; border-radius:10px; }
+  .cx-feature-icons { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; max-width:860px; margin:40px auto 0; }
+  .cx-fico { text-align:center; }
+  .cx-fico span { font-size:26px; }
+  .cx-fico b { display:block; color:#fff; font-size:14px; font-weight:600; margin-top:8px; }
+  @media(max-width:760px){ .cx-feature{padding:48px 20px;} .cx-feature-top{flex-direction:column;align-items:center;text-align:center;} .cx-feature-products img{width:100px;height:135px;} .cx-feature-icons{grid-template-columns:repeat(2,1fr);gap:28px;} }
   .cx-perks { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--y); margin:0; }
   .cx-perk { background:var(--y); color:#fff; padding:26px 24px; text-align:center; }
   .cx-perk b { display:block; font-size:15px; font-weight:700; margin-bottom:5px; }

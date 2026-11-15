@@ -9,7 +9,7 @@ import { sendPushToUser } from './push.ts';
 
 type Sb = ReturnType<typeof createClient>;
 
-const PHONE_RE = /^7[05678][0-9]{7}$/;
+const PHONE_RE = /^7[015678][0-9]{7}$/;
 
 // 'insufficient-funds' est RETIRÉ des terminaux — état temporaire (rechargement portefeuille).
 const TERMINAL_WAVE_ERRORS = new Set([

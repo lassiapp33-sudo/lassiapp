@@ -23,7 +23,7 @@ const CORS = {
 
 const OM_RETAILER_MSISDN        = Deno.env.get('OM_RETAILER_MSISDN')        ?? '';
 const OM_RETAILER_PIN_ENCRYPTED = Deno.env.get('OM_RETAILER_PIN_ENCRYPTED') ?? '';
-const PHONE_RE = /^7[05678][0-9]{7}$/;
+const PHONE_RE = /^7[015678][0-9]{7}$/;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });

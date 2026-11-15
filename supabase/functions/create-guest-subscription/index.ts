@@ -30,7 +30,7 @@ const IS_OM_READY   = isOmReady();
 
 const WEB_BASE    = 'https://s.lassi.tech';
 const GUEST_EMAIL = 'commande-web@lassi.tech';
-const PHONE_RE    = /^7[05678][0-9]{7}$/;
+const PHONE_RE    = /^7[015678][0-9]{7}$/;
 
 Deno.serve(async (req) => {
   const CORS = buildCorsHeaders(req);

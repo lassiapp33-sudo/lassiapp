@@ -21,7 +21,7 @@ const OM_WEBHOOK_SECRET = Deno.env.get('OM_WEBHOOK_SECRET')         ?? '';
 const WEB_BASE = 'https://s.lassi.tech';
 const GUEST_EMAIL = 'commande-web@lassi.tech';
 const COMMISSION_RATE = 0.01;
-const PHONE_RE = /^7[05678][0-9]{7}$/;
+const PHONE_RE = /^7[015678][0-9]{7}$/;
 const IS_WAVE_READY = WAVE_API_KEY !== '' || WAVE_PROXY_URL !== '';
 const IS_OM_READY   = isOmReady();
 

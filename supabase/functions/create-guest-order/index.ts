@@ -67,7 +67,7 @@ function normalizeWavHeader(bytes: Uint8Array): Uint8Array {
 // Page de confirmation web (vitrine) — PAS de deep link lassiapp:// (invité = sans app).
 const WEB_BASE       = 'https://s.lassi.tech';
 const GUEST_EMAIL    = 'commande-web@lassi.tech';
-const PHONE_RE       = /^7[05678][0-9]{7}$/;
+const PHONE_RE       = /^7[015678][0-9]{7}$/;
 const MAX_ITEMS      = 50;
 const MAX_QTY        = 999;
 

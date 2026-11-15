@@ -41,7 +41,7 @@ serve(async (req) => {
       const phone = (body.phone ?? '').replace(/\s/g, '');
       const amt   = parseInt(body.amount ?? '0', 10);
 
-      if (!/^7[05678][0-9]{7}$/.test(phone)) return json({ error: 'Numéro invalide' }, 400);
+      if (!/^7[015678][0-9]{7}$/.test(phone)) return json({ error: 'Numéro invalide' }, 400);
       if (!amt || amt < 10)                    return json({ error: 'Montant minimum 10 FCFA' }, 400);
 
       const idempKey = `admin_manual_payout_${Date.now()}`;

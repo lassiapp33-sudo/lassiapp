@@ -60,8 +60,8 @@ const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
 
 const BATCH_LIMIT = 20;
 
-// Numéro sénégalais : 9 chiffres commençant par 70/75/76/77/78
-const PHONE_RE = /^7[05678][0-9]{7}$/;
+// Numéro sénégalais : 9 chiffres commençant par 70/71/75/76/77/78
+const PHONE_RE = /^7[015678][0-9]{7}$/;
 
 serve(async (req) => {
   // Endpoint financier critique : accès interdit si CRON_SECRET absent ou incorrect.

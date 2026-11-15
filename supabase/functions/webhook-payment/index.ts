@@ -48,7 +48,7 @@ function triggerPayoutsNow(): void {
     body:    '{}',
   }).catch(e => console.error('[webhook] trigger process-payouts erreur:', e instanceof Error ? e.message : e));
 }
-const PHONE_RE                  = /^7[05678][0-9]{7}$/;
+const PHONE_RE                  = /^7[015678][0-9]{7}$/;
 
 function genReceiptCode(): string {
   const chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
