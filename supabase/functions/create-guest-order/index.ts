@@ -17,6 +17,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { isUUID, isPositiveInt, isSafeString } from '../_shared/validation.ts';
 import { getOmToken, OM_BASE_URL, isOmReady } from '../_shared/omAuth.ts';
 import { callWaveCheckout, getWaveCheckout } from '../_shared/waveProxy.ts';
+import { sendPushToUser } from '../_shared/push.ts';
 
 // CORS PUBLIC : cet endpoint est appelé depuis la vitrine web publique
 // (s.lassi.tech), pas seulement l'admin. On reflète l'Origin (endpoint sans
@@ -226,6 +227,32 @@ Deno.serve(async (req) => {
             headers: { 'Content-Type': 'application/json', 'X-Cron-Secret': Deno.env.get('CRON_SECRET') ?? '' },
             body: '{}',
           }).catch(e => console.error('[create-guest-order] trigger payouts erreur:', e instanceof Error ? e.message : e));
+
+          // ── Notification marchand — commande web confirmée via polling ──────────
+          // Quand le webhook Wave/OM tarde, c'est ce chemin qui confirme la commande.
+          // Sans ce push, le marchand reçoit l'argent mais ne voit la commande que
+          // bien plus tard (au refresh). Idempotent : gardé par !already_processed.
+          const confirmedOrderId = (wResult?.order_id as string | undefined) ?? vord;
+          try {
+            const { data: orderRow } = await admin
+              .from('orders').select('shop_id, client_name, total').eq('id', confirmedOrderId).maybeSingle();
+            if (orderRow?.shop_id) {
+              const { data: shopRow } = await admin
+                .from('shops').select('merchant_id').eq('id', orderRow.shop_id).maybeSingle();
+              if (shopRow?.merchant_id) {
+                const montantFr = `${Number(orderRow.total).toLocaleString('fr-FR')} FCFA`;
+                await sendPushToUser(admin, shopRow.merchant_id as string, {
+                  title:     'Nouvelle commande',
+                  body:      `Paiement reçu — Commande de ${orderRow.client_name ?? 'Client'} · ${montantFr}`,
+                  data:      { type: 'new_order', orderId: String(confirmedOrderId) },
+                  sound:     'commande_recue.wav',
+                  channelId: 'commandes-v3',
+                });
+              }
+            }
+          } catch (e) {
+            console.error('[create-guest-order] verify_order push marchand:', e instanceof Error ? e.message : e);
+          }
         }
       }
     }
