@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  ActivityIndicator, Alert, Platform,
+  ActivityIndicator, Alert, Platform, Modal,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { colors, radius, spacing, fonts, TOP_INSET } from '../../theme';
@@ -9,7 +9,7 @@ import useShopStore from '../../store/shopStore';
 import {
   SITE_PALETTES, SITE_ACCENTS, SITE_FONTS, SITE_TEMPLATES,
   SITE_SECTIONS, CARD_STYLES, HERO_STYLES, COLS_OPTIONS,
-  DEFAULT_SITE_CONFIG, buildDraftPreviewUrl, applyTemplate,
+  DEFAULT_SITE_CONFIG, buildDraftPreviewUrl, buildDemoPreviewUrl, applyTemplate,
   type SiteConfig, type SiteLayout,
 } from '../../config/siteThemes';
 import { getSiteConfig, saveSiteConfig } from '../../services/siteBuilder';
@@ -164,62 +164,25 @@ export default function SiteBuilderScreen({ onBack }: Props) {
         /* ─────────────────────── GALERIE DE TEMPLATES ─────────────────────── */
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
           <Text style={styles.galleryIntro}>
-            Touche un template pour voir l'aperçu de ta boutique avec ce design, puis applique-le.
+            Touche un template pour voir en plein écran un exemple de site avec ce design, puis applique-le.
           </Text>
 
           {SITE_TEMPLATES.map(tp => {
-            const open = tplPreview === tp.id;
             const active = cfg.template === tp.id;
             return (
-              <View key={tp.id} style={styles.tplBlock}>
-                <TouchableOpacity
-                  style={[styles.tplHeader, open && styles.tplHeaderOpen]}
-                  activeOpacity={0.85}
-                  onPress={() => setTplPreview(open ? null : tp.id)}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.tplName}>{tp.label}</Text>
-                    <Text style={styles.tplPitch}>{TEMPLATE_PITCH[tp.id] ?? 'Design prêt-à-l\'emploi.'}</Text>
-                  </View>
-                  {active ? <Text style={styles.tplActiveBadge}>Actuel</Text> : null}
-                  <Text style={styles.tplChevron}>{open ? '▾' : '▸'}</Text>
-                </TouchableOpacity>
-
-                {open && (
-                  <View style={styles.tplPreviewArea}>
-                    {slug ? (
-                      <WebView
-                        key={`${tp.id}-prev`}
-                        source={{ uri: buildDraftPreviewUrl(slug, applyTemplate(cfg, tp.id)) }}
-                        style={styles.webview}
-                        originWhitelist={['https://*']}
-                        scrollEnabled
-                        startInLoadingState
-                        renderLoading={() => (
-                          <View style={styles.webLoading}><ActivityIndicator color={colors.accent} /></View>
-                        )}
-                      />
-                    ) : (
-                      <View style={styles.webLoading}>
-                        <Text style={styles.noPreview}>Aperçu indisponible (lien de partage manquant).</Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-
-                {open && (
-                  <TouchableOpacity
-                    style={[styles.tplChooseBtn, active && styles.tplChooseBtnActive]}
-                    activeOpacity={0.85}
-                    disabled={applyingTpl || active}
-                    onPress={() => chooseTemplate(tp.id)}
-                  >
-                    {applyingTpl
-                      ? <ActivityIndicator color={colors.bg} />
-                      : <Text style={styles.tplChooseTxt}>{active ? 'Template déjà appliqué' : 'Choisir ce template'}</Text>}
-                  </TouchableOpacity>
-                )}
-              </View>
+              <TouchableOpacity
+                key={tp.id}
+                style={[styles.tplHeader, active && styles.tplHeaderOpen]}
+                activeOpacity={0.85}
+                onPress={() => setTplPreview(tp.id)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.tplName}>{tp.label}</Text>
+                  <Text style={styles.tplPitch}>{TEMPLATE_PITCH[tp.id] ?? 'Design prêt-à-l\'emploi.'}</Text>
+                </View>
+                {active ? <Text style={styles.tplActiveBadge}>Actuel</Text> : null}
+                <Text style={styles.tplChevron}>▸</Text>
+              </TouchableOpacity>
             );
           })}
         </ScrollView>
@@ -434,6 +397,45 @@ export default function SiteBuilderScreen({ onBack }: Props) {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Aperçu PLEIN ÉCRAN d'un template (exemple de site réel) */}
+      <Modal visible={!!tplPreview} animationType="slide" onRequestClose={() => setTplPreview(null)}>
+        <View style={styles.modalRoot}>
+          <View style={styles.modalBar}>
+            <Text style={styles.modalTitle} numberOfLines={1}>
+              {SITE_TEMPLATES.find(t => t.id === tplPreview)?.label ?? 'Aperçu'}
+            </Text>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setTplPreview(null)} activeOpacity={0.7}>
+              <Text style={styles.modalCloseTxt}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          {tplPreview ? (
+            <WebView
+              key={`demo-${tplPreview}`}
+              source={{ uri: buildDemoPreviewUrl(tplPreview) }}
+              style={{ flex: 1, backgroundColor: '#fff' }}
+              originWhitelist={['https://*']}
+              scrollEnabled
+              startInLoadingState
+              renderLoading={() => (
+                <View style={styles.webLoading}><ActivityIndicator color={colors.accent} /></View>
+              )}
+            />
+          ) : null}
+          <View style={styles.modalFooter}>
+            <TouchableOpacity
+              style={[styles.tplChooseBtn, cfg.template === tplPreview && styles.tplChooseBtnActive]}
+              activeOpacity={0.85}
+              disabled={applyingTpl || cfg.template === tplPreview}
+              onPress={() => tplPreview && chooseTemplate(tplPreview)}
+            >
+              {applyingTpl
+                ? <ActivityIndicator color={colors.bg} />
+                : <Text style={styles.tplChooseTxt}>{cfg.template === tplPreview ? 'Template déjà appliqué' : 'Choisir ce template'}</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -458,8 +460,14 @@ const styles = StyleSheet.create({
   // Galerie templates
   galleryIntro: { color: colors.muted, fontSize: 13, fontFamily: fonts.body, marginHorizontal: spacing.screen, marginTop: 6, marginBottom: 16, lineHeight: 19 },
   tplBlock: { marginHorizontal: spacing.screen, marginBottom: 16 },
-  tplHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.lg, padding: 16 },
-  tplHeaderOpen: { borderColor: colors.accent, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  tplHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.lg, padding: 16, marginHorizontal: spacing.screen, marginBottom: 12 },
+  tplHeaderOpen: { borderColor: colors.accent },
+  modalRoot: { flex: 1, backgroundColor: colors.bg },
+  modalBar: { flexDirection: 'row', alignItems: 'center', paddingTop: TOP_INSET + 6, paddingHorizontal: spacing.screen, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalTitle: { flex: 1, color: colors.white, fontFamily: fonts.title, fontSize: 18 },
+  modalClose: { width: 38, height: 38, borderRadius: radius.pill, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  modalCloseTxt: { color: colors.white, fontSize: 18 },
+  modalFooter: { padding: spacing.screen, paddingBottom: spacing.screen + 8, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.bg },
   tplName: { color: colors.white, fontFamily: fonts.title, fontSize: 17 },
   tplPitch: { color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, marginTop: 4, lineHeight: 17 },
   tplActiveBadge: { color: colors.bg, backgroundColor: colors.accent, fontFamily: fonts.label, fontSize: 11, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, overflow: 'hidden', marginRight: 10 },

@@ -1033,10 +1033,9 @@ function page(o: {
         </div>
       </div>
     </section>` : '';
-  const cxFeatThumbs = o.products.slice(0, 6).map(p => {
-    const u = typeof p.photo_url === 'string' && p.photo_url.startsWith('http') ? p.photo_url : '';
-    return u ? `<img src="${escAttr(u)}" alt="${escAttr(p.name ?? '')}" loading="lazy">` : '';
-  }).filter(Boolean).join('');
+  const icoDrop = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c3.2 4 6 7 6 10a6 6 0 11-12 0c0-3 2.8-6 6-10z"/></svg>';
+  const icoShield = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.2-3 7.3-7 9-4-1.7-7-4.8-7-9V6l7-3z"/><path d="M9.3 12l2 2 3.4-3.6"/></svg>';
+  const icoSpark = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.1 6.4L20.5 12l-6.4 2.1L12 20.5l-2.1-6.4L3.5 12l6.4-2.1z"/></svg>';
   const cxFeature = `
     <section id="cx-about" class="cx-feature">
       <div class="cx-feature-top">
@@ -1045,14 +1044,13 @@ function page(o: {
           <p>Des soins naturels, pensés pour révéler l'éclat de ta peau jour après jour.</p>
           <a class="cx-btn-outline" href="#cx-shop">En savoir plus</a>
         </div>
-        <div class="cx-feature-seal"><span>✦<br>PRODUIT<br>NATUREL</span></div>
+        <img class="cx-feature-seal" src="/assets/demo/cosmetic/seal.svg" alt="Produit naturel">
       </div>
-      ${cxFeatThumbs ? `<div class="cx-feature-products">${cxFeatThumbs}</div>` : ''}
+      <div class="cx-feature-hero"><img src="/assets/demo/cosmetic/feature.jpg" alt="Nos produits" loading="lazy"></div>
       <div class="cx-feature-icons">
-        <div class="cx-fico"><span>&#128167;</span><b>Hydratation</b></div>
-        <div class="cx-fico"><span>&#128737;</span><b>Protection</b></div>
-        <div class="cx-fico"><span>&#9203;</span><b>Anti-âge</b></div>
-        <div class="cx-fico"><span>&#127807;</span><b>100% Naturel</b></div>
+        <div class="cx-fico"><span class="cx-fico-ic">${icoDrop}</span><b>Hydratation</b><small>Nourrit et hydrate la peau en profondeur, pour une sensation de confort durable.</small></div>
+        <div class="cx-fico"><span class="cx-fico-ic">${icoShield}</span><b>Protection</b><small>Protège ta peau des agressions extérieures et préserve son éclat naturel.</small></div>
+        <div class="cx-fico"><span class="cx-fico-ic">${icoSpark}</span><b>Anti-âge</b><small>Raffermit et lisse la peau pour un teint visiblement plus jeune et éclatant.</small></div>
       </div>
     </section>`;
   const cxPerks = `
@@ -1579,14 +1577,16 @@ ${theme.fontsLink}
   .cx-feature-head p { font-size:15px; line-height:1.7; color:rgba(255,255,255,.62); margin-bottom:26px; }
   .cx-btn-outline { display:inline-block; border:1px solid rgba(255,255,255,.45); color:#fff; text-decoration:none; font-size:12px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; padding:14px 28px; border-radius:2px; }
   .cx-btn-outline:hover { background:#fff; color:var(--d); }
-  .cx-feature-seal { flex:0 0 auto; width:92px; height:92px; border:1px solid var(--y); border-radius:50%; display:flex; align-items:center; justify-content:center; text-align:center; color:var(--y); font-size:9.5px; font-weight:700; letter-spacing:1.5px; line-height:1.5; }
-  .cx-feature-products { display:flex; justify-content:center; align-items:flex-end; gap:14px; max-width:1000px; margin:48px auto; flex-wrap:wrap; }
-  .cx-feature-products img { width:135px; height:180px; object-fit:cover; border-radius:10px; }
-  .cx-feature-icons { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; max-width:860px; margin:40px auto 0; }
+  .cx-feature-seal { flex:0 0 auto; width:92px; height:92px; }
+  .cx-feature-hero { max-width:760px; margin:36px auto 10px; text-align:center; }
+  .cx-feature-hero img { max-width:100%; max-height:360px; object-fit:contain; border-radius:12px; }
+  .cx-feature-icons { display:grid; grid-template-columns:repeat(3,1fr); gap:30px; max-width:960px; margin:44px auto 0; }
   .cx-fico { text-align:center; }
-  .cx-fico span { font-size:26px; }
-  .cx-fico b { display:block; color:#fff; font-size:14px; font-weight:600; margin-top:8px; }
-  @media(max-width:760px){ .cx-feature{padding:48px 20px;} .cx-feature-top{flex-direction:column;align-items:center;text-align:center;} .cx-feature-products img{width:100px;height:135px;} .cx-feature-icons{grid-template-columns:repeat(2,1fr);gap:28px;} }
+  .cx-fico-ic { display:inline-flex; width:30px; height:30px; color:var(--y); }
+  .cx-fico-ic svg { width:100%; height:100%; }
+  .cx-fico b { display:block; color:#fff; font-size:16px; font-weight:600; margin:10px 0 6px; }
+  .cx-fico small { display:block; color:rgba(255,255,255,.55); font-size:12.5px; line-height:1.6; max-width:260px; margin:0 auto; }
+  @media(max-width:760px){ .cx-feature{padding:48px 20px;} .cx-feature-top{flex-direction:column;align-items:center;text-align:center;} .cx-feature-icons{grid-template-columns:1fr;gap:28px;} }
   .cx-perks { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--y); margin:0; }
   .cx-perk { background:var(--y); color:#fff; padding:26px 24px; text-align:center; }
   .cx-perk b { display:block; font-size:15px; font-weight:700; margin-bottom:5px; }

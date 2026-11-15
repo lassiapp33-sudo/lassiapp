@@ -236,3 +236,9 @@ export function buildDraftPreviewUrl(slug: string, cfg: SiteConfig): string {
   const q = encodeURIComponent(JSON.stringify(cfg));
   return `https://s.lassi.tech/${encodeURIComponent(slug)}?draft=${q}`;
 }
+
+// Aperçu DÉMO d'un template : boutique fictive cohérente (données d'exemple),
+// pour montrer au prestataire à quoi ressemble un vrai site avec ce design.
+export function buildDemoPreviewUrl(templateId: string): string {
+  return `https://s.lassi.tech/__demo?t=${encodeURIComponent(templateId)}`;
+}
