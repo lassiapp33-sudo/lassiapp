@@ -466,7 +466,7 @@ export async function updatePassword(newPassword: string): Promise<void> {
 
 export function onPasswordRecovery(callback: () => void): () => void {
   const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-    if (event === 'PASSWORD_RECOVERY') callback();
+    if (event === 'PASSWORD_RECOVERY') callback?.();
   });
   return () => subscription.unsubscribe();
 }
@@ -544,7 +544,7 @@ export function onAuthStateChange(callback: (user: AuthUser | null) => void): ()
       // ne doivent PAS kicker l'utilisateur — il a un cache valide dans authStore.
       if (_explicitSignOut) {
         _explicitSignOut = false;
-        callback(null);
+        callback?.(null);
       }
       return;
     }
@@ -553,7 +553,7 @@ export function onAuthStateChange(callback: (user: AuthUser | null) => void): ()
     // la session est valide, c'est probablement une erreur réseau transitoire.
     // On appelle callback(null) uniquement si la session elle-même est invalide.
     if (!profile) return;
-    callback(profile);
+    callback?.(profile);
   });
   return () => subscription.unsubscribe();
 }
