@@ -60,7 +60,7 @@ export const SITE_PALETTES: PaletteOption[] = [
   { id: 'sable', label: 'Sable', bg: '#FBF8F3', text: '#2b2118', soft: '#f1ece3' },
   { id: 'foret', label: 'Forêt', bg: '#FFFFFF', text: '#14241c', soft: '#eef3f0' },
   { id: 'ardoise', label: 'Ardoise', bg: '#FFFFFF', text: '#1b2430', soft: '#eef1f5' },
-  { id: 'cosmetic', label: 'Cosmetic', bg: '#FFFFFF', text: '#171313', soft: '#F4E7D6' },
+  { id: 'cosmetic', label: 'Cosmetic', bg: '#FFFFFF', text: '#171313', soft: '#f6f6f7' },
   { id: 'pottery', label: 'Pottery', bg: '#FFFFFF', text: '#201d1d', soft: '#f4f4f5' },
 ];
 

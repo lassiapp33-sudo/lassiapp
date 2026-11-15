@@ -79,7 +79,7 @@ const SITE_PALETTES: Record<string, SitePalette> = {
   sable:   { d: '#2b2118', w: '#FBF8F3', g: '#f1ece3', m: '#9a8d7a', b: '#e6ddcf' },
   foret:   { d: '#14241c', w: '#FFFFFF', g: '#eef3f0', m: '#7d8a83', b: '#dde7e2' },
   ardoise: { d: '#1b2430', w: '#FFFFFF', g: '#eef1f5', m: '#7e8794', b: '#dde3ea' },
-  cosmetic: { d: '#171313', w: '#FFFFFF', g: '#F4E7D6', m: '#6e6e75', b: '#ece0cf' },
+  cosmetic: { d: '#171313', w: '#FFFFFF', g: '#f6f6f7', m: '#6e6e75', b: '#ececed' },
   pottery: { d: '#201d1d', w: '#FFFFFF', g: '#f4f4f5', m: '#696767', b: '#eaeaec' },
 };
 const DEFAULT_PALETTE = 'classic';
@@ -178,6 +178,7 @@ interface Shop {
   merchant_id: string | null; opening_hours: unknown; is_manually_closed: boolean | null;
   site_config: unknown;
   gallery_urls: unknown; cover_url: string | null;
+  phone: string | null;
 }
 interface Product {
   id: string; name: string | null; description: string | null;
@@ -206,6 +207,7 @@ const PROD_CAT_LABELS: Record<string, string> = {
   catalogue: 'Catalogue', prestations: 'Prestations', formules: 'Formules',
   produits: 'Produits', abonnements: 'Abonnements', tarif: 'Tarif', menus: 'Menus',
   entrees: 'Entrées', desserts: 'Desserts', snack: 'Snack', accompagnements: 'Accompagnements',
+  visage: 'Visage', corps: 'Corps', huiles_serums: 'Huiles & Sérums', soins_cibles: 'Soins ciblés',
 };
 function normCatId(s: string): string {
   return s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -337,6 +339,19 @@ export default async function handler(
     });
   }
 
+  // APERÇU DÉMO d'un template : s.lassi.tech/__demo?t=cosmetic
+  // Rend le template choisi avec un jeu de données fictif COHÉRENT (boutique démo
+  // de l'univers du template). Sert au prestataire à voir le style avant d'appliquer.
+  if (slug === '__demo') {
+    const t = (url.searchParams.get('t') ?? 'cosmetic').trim();
+    const base = `${url.protocol}//${url.host}`;
+    const demo = buildDemo(t, base);
+    return new Response(
+      renderHtml(demo.shop, demo.products, [], [], demo.shop.slug, base, [], []),
+      { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } },
+    );
+  }
+
   // GARDE-FOU PERMANENT : si l'URL contient ?id=<uuid>&s=ok|ko, c'est une page de
   // confirmation de paiement — on NE redirige JAMAIS vers lassi.tech dans ce cas,
   // même si vercel.json n'injecte pas ?slug=commande (protection contre toute régression config).
@@ -424,7 +439,7 @@ async function fetchShop(slug: string): Promise<Shop | null> {
   try {
     const q =
       `${SUPABASE_URL}/rest/v1/shops?slug=eq.${encodeURIComponent(slug)}` +
-      `&select=id,name,logo_url,description,zone,category,subcategories,slug,merchant_id,opening_hours,is_manually_closed,site_config,gallery_urls,cover_url&limit=1`;
+      `&select=id,name,logo_url,description,zone,category,subcategories,slug,merchant_id,opening_hours,is_manually_closed,site_config,gallery_urls,cover_url,phone&limit=1`;
     const res = await fetch(q, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
     if (!res.ok) return null;
     const rows = (await res.json()) as Shop[];
@@ -568,13 +583,64 @@ function buildImagePool(shop: Shop, products: Product[]): string[] {
   return out;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// APERÇU DÉMO — données fictives cohérentes par template (univers natif).
+// Cosmetic → « Yaram bu rafet », soins/cosmétiques naturels (Dakar). Images =
+// /assets/demo/cosmetic/* servies par Vercel. Aucune donnée réelle, aucun appel DB.
+// ─────────────────────────────────────────────────────────────────────────────
+function buildDemo(templateId: string, base: string): { shop: Shop; products: Product[] } {
+  const t = SITE_TEMPLATES.indexOf(templateId) >= 0 ? templateId : 'cosmetic';
+  const img = (f: string) => `${base}/assets/demo/${t}/${f}`;
+
+  if (t === 'cosmetic') {
+    const site_config = {
+      template: 'cosmetic',
+      tokens: { palette: 'cosmetic', accent: '#D98664', fontHeading: 'rubik', fontBody: 'rubik' },
+      layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'shadow', hero: 'split' },
+    };
+    const shop: Shop = {
+      id: 'demo-cosmetic', name: 'Yaram bu rafet', logo_url: null,
+      description: "Soins naturels & cosmétiques bio à base de karité, curcuma et huiles végétales. Pour une peau éclatante, nourrie et unifiée — fabriqué à Dakar.",
+      zone: 'Dakar · Almadies', category: 'hair',
+      subcategories: ['soins_bio', 'parfumerie', 'esthetique'],
+      slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
+      site_config, gallery_urls: [img('hero.jpg'), img('banner1.jpg'), img('banner2.jpg')],
+      cover_url: null, phone: '77 123 45 67',
+    };
+    const P = (id: string, name: string, price: number, description: string, category: string, photo: string): Product =>
+      ({ id, name, description, emoji: null, photo_url: img(photo), price, category });
+    const products: Product[] = [
+      P('c1', 'Sérum Éclat Curcuma', 8500, 'Sérum visage au curcuma bio. Illumine, unifie et ravive l\'éclat naturel du teint.', 'visage', 'p1.jpg'),
+      P('c2', 'Crème Hydratante Karité', 6500, 'Crème visage riche au beurre de karité. Nourrit en profondeur et protège.', 'visage', 'p8.jpg'),
+      P('c3', 'Savon Gommant Miel', 4000, 'Savon exfoliant au miel et à l\'abricot. Peau douce, nette et lumineuse.', 'corps', 'p2.jpg'),
+      P('c4', 'Savon Noir Africain', 3500, 'Savon noir traditionnel. Nettoie, purifie et équilibre la peau au quotidien.', 'corps', 'p3.jpg'),
+      P('c5', 'Lait Corps Teint Marron', 6000, 'Lait hydratant lait & coco. Sublime, nourrit et unifie le teint.', 'corps', 'banner2.jpg'),
+      P('c6', 'Huile de Soin L\'Harmonieuse', 7000, 'Huiles végétales bio (nigelle, noisette, dattier). Idéale peaux mixtes à grasses.', 'huiles_serums', 'p5.jpg'),
+      P('c7', 'Huile de Coco Bio', 4500, 'Huile de coco 100% bio, pression à froid. Usage multiple cheveux & corps.', 'huiles_serums', 'p7.jpg'),
+      P('c8', 'Gel Raffermissant Caféine', 9000, 'Gel corps à la caféine naturelle. Raffermit, tonifie et lisse la peau.', 'soins_cibles', 'p4.jpg'),
+      P('c9', 'Lait Clarifiant Pili-Pili', 5500, 'Lait clarifiant au pili-pili. Purifie, illumine et unifie le teint.', 'soins_cibles', 'p6.jpg'),
+      P('c10', 'Coffret Rituel Éclat', 15000, 'Coffret complet : nettoyant, sérum et crème. Le rituel éclat au quotidien.', 'soins_cibles', 'banner1.jpg'),
+    ];
+    return { shop, products };
+  }
+
+  // Fallback générique (autres templates — démo minimale).
+  const shop: Shop = {
+    id: 'demo', name: 'Boutique Démo', logo_url: null, description: 'Aperçu du template.',
+    zone: 'Dakar', category: 'stores', subcategories: [], slug: '__demo', merchant_id: 'demo',
+    opening_hours: null, is_manually_closed: false, site_config: { template: t },
+    gallery_urls: [], cover_url: null, phone: '',
+  };
+  return { shop, products: [] };
+}
+
 function renderHtml(shop: Shop | null, products: Product[], services: ServiceItem[], terrains: Terrain[], slug: string, base: string, dailySpecial: { id: string; name: string; price: number; photo_url?: string | null }[] = [], // eslint-disable-next-line @typescript-eslint/no-explicit-any
 promos: any[] = []): string {
   const canonical = `${base}/${encodeURIComponent(slug)}`;
   if (!shop) {
     return page({
       title: 'Boutique introuvable — LASSİ', desc: "Cette boutique n'est plus disponible sur LASSİ.",
-      ogImage: initialAvatar('LASSI'), canonical, base, name: 'Boutique introuvable', zone: '', cat: '', logo: '', slug, products: [], services: [], terrains: [], shopStatus: null, dailySpecial: [], promos: [], siteConfig: null, gallery: [],
+      ogImage: initialAvatar('LASSI'), canonical, base, name: 'Boutique introuvable', zone: '', cat: '', logo: '', slug, products: [], services: [], terrains: [], shopStatus: null, dailySpecial: [], promos: [], siteConfig: null, gallery: [], phone: '',
     });
   }
   // Nom affiché : displayName du Site Builder s'il est défini, sinon shops.name.
@@ -591,7 +657,7 @@ promos: any[] = []): string {
   const shopStatus = computeShopStatus(shop.opening_hours, shop.is_manually_closed);
   return page({
     title: `${name} — sur LASSİ`, desc: clip(descRaw.replace(/\s+/g, ' '), 180),
-    ogImage: logo || initialAvatar(name), canonical, base, name, zone, cat, logo, slug, products, services, terrains, shopStatus, dailySpecial, promos, siteConfig: shop.site_config, gallery: buildImagePool(shop, products),
+    ogImage: logo || initialAvatar(name), canonical, base, name, zone, cat, logo, slug, products, services, terrains, shopStatus, dailySpecial, promos, siteConfig: shop.site_config, gallery: buildImagePool(shop, products), phone: (shop.phone ?? '').trim(),
   });
 }
 
@@ -693,6 +759,7 @@ function page(o: {
   promos: any[];
   siteConfig: unknown;
   gallery: string[];
+  phone: string;
 }): string {
   const deep = `https://lassi.tech/p/${encodeURIComponent(o.slug)}`;
   const theme = resolveTheme(o.siteConfig);
@@ -864,7 +931,7 @@ function page(o: {
       ${hasProducts ? `<div class="cx-stat"><b>${o.products.length}</b><span>produits</span></div>` : ''}
       ${hasServices ? `<div class="cx-stat"><b>${o.services.length}</b><span>prestations</span></div>` : ''}
       ${o.zone ? `<div class="cx-stat"><b>📍</b><span>${esc(o.zone)}</span></div>` : ''}
-      <div class="cx-stat"><b>✓</b><span>vérifié LASSİ</span></div>
+      <div class="cx-stat"><b>✓</b><span>Paiement sécurisé</span></div>
     </div>`;
   const cxBanners = `
     <section class="cx-banners">
@@ -884,10 +951,10 @@ function page(o: {
       </a>
     </section>`;
   const cxFeature = `
-    <section class="cx-feature" ${bg(pick(3))}>
+    <section id="cx-about" class="cx-feature" ${bg(pick(3))}>
       <div class="cx-feature-ov"></div>
       <div class="cx-feature-in">
-        <span class="cx-eyebrow light">${esc(o.cat || 'Boutique vérifiée')}</span>
+        <span class="cx-eyebrow light">${esc(o.cat || 'Notre maison')}</span>
         <h2>${esc(o.name)}</h2>
         <p>${esc(clip(o.desc || `Commande en ligne, paie en sécurité (Wave / Orange Money) et fais-toi plaisir. ${o.name} te rappelle pour le retrait ou la livraison.`, 160))}</p>
         ${featItems.length ? `<div class="cx-feature-tags">${featItems.map(f => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
@@ -898,42 +965,67 @@ function page(o: {
     <section class="cx-perks">
       <div class="cx-perk"><b>Paiement sécurisé</b><span>Wave &amp; Orange Money</span></div>
       <div class="cx-perk"><b>Retrait / livraison</b><span>${esc(o.zone || 'À Dakar')}</span></div>
-      <div class="cx-perk"><b>Boutique vérifiée</b><span>sur LASSİ</span></div>
+      <div class="cx-perk"><b>Qualité garantie</b><span>produits sélectionnés</span></div>
       <div class="cx-perk"><b>Rappel automatique</b><span>après ta commande</span></div>
     </section>`;
   const cxFoot = `
     <footer id="cx-contact" class="cx-foot">
       <div class="cx-foot-brand">
         <div class="cx-logo">${esc(o.name)}</div>
-        <p>${esc(clip(o.desc || `Retrouve ${o.name} sur LASSİ — commande & paiement sécurisé.`, 130))}</p>
+        <p>${esc(clip(o.desc || `${o.name} — soins & cosmétiques, commande & paiement sécurisé.`, 130))}</p>
       </div>
       <div class="cx-foot-col">
         <h4>Infos</h4>
         ${o.cat ? `<p>${esc(o.cat)}</p>` : ''}
         ${o.zone ? `<p>📍 ${esc(o.zone)}</p>` : ''}
+        ${o.phone ? `<p>✆ ${esc(o.phone)}</p>` : ''}
         ${hoursHtml ? `<div class="cx-foot-hours">${hoursHtml}</div>` : ''}
       </div>
       <div class="cx-foot-col">
         <h4>Commander</h4>
         <p>Wave · Orange Money</p>
         <p>Retrait sur place ou livraison</p>
-        ${storeButtons}
+        <a class="cx-foot-cta" href="#cx-shop">Voir la boutique →</a>
       </div>
     </footer>
-    <div class="cx-copy">Propulsé par LASS<span>İ</span> · lassi.tech</div>`;
+    <div class="cx-copy">© 2026 ${esc(o.name)} · Tous droits réservés</div>`;
+  const telHref = o.phone ? 'tel:' + o.phone.replace(/[^0-9+]/g, '') : '';
+  const cxCall = o.phone ? `
+      <a class="cx-call" href="${telHref}">
+        <span class="cx-call-ic">✆</span>
+        <span class="cx-call-txt"><small>Une question&nbsp;?</small><b>${esc(o.phone)}</b></span>
+      </a>` : '';
+  const cxCatOptions = (groups.length ? groups : [{ id: '', title: hasServices ? 'Nos prestations' : 'Nos produits' }])
+    .map(g => `<option>${esc(g.title)}</option>`).join('');
   const cosmeticBody = `
-    <header class="cx-head">
-      <div class="cx-logo">${esc(o.name)}</div>
-      <nav class="cx-nav">
-        <a href="#cx-shop">${hasProducts ? 'Boutique' : hasTerrains ? 'Terrains' : 'Prestations'}</a>
-        ${hasServices && hasProducts ? '<a href="#cx-shop">Prestations</a>' : ''}
-        <a href="#cx-contact">Contact</a>
-      </nav>
-      <a class="cx-head-cta" href="#cx-shop">${cxHeadCta}</a>
+    <header class="cx-head" id="cx-top">
+      <div class="cx-top">
+        <div class="cx-logo"><span class="cx-logo-ic">&#10047;</span><span>${esc(o.name)}</span></div>
+        <label class="cx-cat">
+          <select onchange="location.hash='#cx-shop'">
+            <option>Toutes catégories</option>
+            ${cxCatOptions}
+          </select>
+        </label>
+        ${cxCall}
+      </div>
+      <div class="cx-navrow">
+        <nav class="cx-nav">
+          <a href="#cx-top">Accueil</a>
+          <a href="#cx-shop">${hasProducts ? 'Boutique' : hasTerrains ? 'Terrains' : 'Prestations'}</a>
+          <a href="#cx-about">À propos</a>
+          <a href="#cx-contact">Contact</a>
+        </nav>
+        <div class="cx-icons">
+          <span class="cx-ic" title="Rechercher">&#9906;</span>
+          <span class="cx-ic" title="Favoris">&#9825;</span>
+          <a class="cx-ic cx-cart" href="#cx-shop" title="Panier">&#128717;</a>
+        </div>
+      </div>
     </header>
     <section class="cx-hero">
       <div class="cx-hero-txt">
-        <span class="cx-eyebrow">${esc(o.cat || 'Boutique vérifiée sur LASSİ')}</span>
+        <span class="cx-eyebrow">${esc(o.cat || 'Soins & Cosmétiques')}</span>
         <h1 class="cx-hero-title">${esc(o.name)}</h1>
         <p class="cx-hero-sub">${esc(clip(o.desc || `Commande tes favoris chez ${o.name} — paiement sécurisé, retrait ou livraison.`, 150))}</p>
         <div class="cx-hero-cta">
@@ -944,7 +1036,7 @@ function page(o: {
       </div>
       <div class="cx-hero-img" ${bg(heroImg)}>
         ${!heroImg && o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : ''}
-        <div class="cx-hero-badge">✓ Boutique vérifiée sur LASSİ</div>
+        <div class="cx-hero-badge">✓ Produits naturels</div>
       </div>
     </section>
     ${gal.length >= 2 ? cxBanners : ''}
@@ -1230,13 +1322,26 @@ ${theme.fontsLink}
   body[data-template="cosmetic"] .appnote { font-weight:500; }
   @media(max-width:680px){ body[data-template="cosmetic"] .hero{grid-template-columns:1fr;} body[data-template="cosmetic"] .hero-left{padding:36px 24px 32px;} }
   /* ─── Structure landing COSMETIC (classes cx-*) ─── */
-  .cx-head { position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; gap:20px; padding:16px 40px; background:rgba(255,255,255,.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--b); }
-  .cx-logo { font-family:var(--fh); font-weight:700; font-size:22px; letter-spacing:.5px; text-transform:uppercase; }
-  .cx-nav { display:flex; gap:26px; }
-  .cx-nav a { color:var(--d); text-decoration:none; font-size:14px; font-weight:500; }
+  .cx-head { position:sticky; top:0; z-index:40; background:var(--w); border-bottom:1px solid var(--b); }
+  .cx-top { display:flex; align-items:center; justify-content:space-between; gap:24px; max-width:1280px; margin:0 auto; padding:18px 40px; }
+  .cx-logo { display:flex; align-items:center; gap:9px; font-family:var(--fh); font-weight:700; font-size:23px; letter-spacing:.5px; text-transform:uppercase; color:var(--d); }
+  .cx-logo-ic { color:var(--y); font-size:20px; }
+  .cx-cat { flex:0 1 300px; display:flex; align-items:center; border:1px solid var(--b); border-radius:9999px; padding:0 8px 0 18px; background:var(--w); }
+  .cx-cat select { border:none; background:transparent; font-family:inherit; font-size:13.5px; color:var(--m); padding:11px 8px; width:100%; cursor:pointer; outline:none; -webkit-appearance:none; appearance:none; }
+  .cx-call { display:flex; align-items:center; gap:11px; text-decoration:none; }
+  .cx-call-ic { width:40px; height:40px; border-radius:50%; background:rgba(217,134,100,.14); color:var(--y); display:flex; align-items:center; justify-content:center; font-size:18px; flex:0 0 auto; }
+  .cx-call-txt { display:flex; flex-direction:column; line-height:1.25; }
+  .cx-call-txt small { font-size:11px; color:var(--m); }
+  .cx-call-txt b { font-size:15px; color:var(--d); font-weight:700; }
+  .cx-navrow { display:flex; align-items:center; justify-content:space-between; gap:24px; max-width:1280px; margin:0 auto; padding:0 40px 0; border-top:1px solid var(--b); }
+  .cx-nav { display:flex; gap:32px; }
+  .cx-nav a { color:var(--d); text-decoration:none; font-size:13.5px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; padding:16px 0; }
   .cx-nav a:hover { color:var(--y); }
-  .cx-head-cta { background:var(--y); color:#fff; text-decoration:none; font-weight:600; font-size:13px; padding:10px 22px; border-radius:9999px; }
-  @media(max-width:760px){ .cx-head{padding:12px 20px;} .cx-nav{display:none;} }
+  .cx-icons { display:flex; align-items:center; gap:18px; }
+  .cx-ic { color:var(--d); font-size:19px; text-decoration:none; cursor:pointer; line-height:1; position:relative; }
+  .cx-ic:hover { color:var(--y); }
+  @media(max-width:860px){ .cx-cat{display:none;} }
+  @media(max-width:760px){ .cx-top{padding:12px 18px;gap:12px;} .cx-navrow{padding:0 18px;overflow-x:auto;} .cx-nav{gap:20px;} .cx-call-txt{display:none;} }
   .cx-hero { display:grid; grid-template-columns:1fr 1fr; align-items:stretch; min-height:82vh; background:var(--g); }
   .cx-hero-txt { display:flex; flex-direction:column; justify-content:center; padding:72px 56px; }
   .cx-eyebrow { font-size:12px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:var(--y); margin-bottom:18px; }
@@ -1251,7 +1356,7 @@ ${theme.fontsLink}
   .cx-stat { display:flex; flex-direction:column; gap:2px; }
   .cx-stat b { font-family:var(--fh); font-size:24px; font-weight:600; }
   .cx-stat span { font-size:12px; color:var(--m); }
-  .cx-hero-img { position:relative; background-size:cover; background-position:center; background-color:#efe2d0; display:flex; align-items:center; justify-content:center; }
+  .cx-hero-img { position:relative; background-size:cover; background-position:center; background-color:#eeeeef; display:flex; align-items:center; justify-content:center; }
   .cx-hero-img img { width:70%; border-radius:50%; }
   .cx-hero-badge { position:absolute; bottom:22px; right:22px; background:var(--y); color:#fff; font-size:11px; font-weight:600; padding:7px 15px; border-radius:9999px; }
   @media(max-width:760px){ .cx-hero{grid-template-columns:1fr;} .cx-hero-txt{padding:44px 24px;} .cx-hero-img{min-height:300px;order:-1;} }
@@ -1286,6 +1391,7 @@ ${theme.fontsLink}
   .cx-foot-col h4 { font-size:13px; font-weight:600; letter-spacing:1px; text-transform:uppercase; margin-bottom:14px; color:rgba(255,255,255,.9); }
   .cx-foot-col p { font-size:13.5px; color:rgba(255,255,255,.6); margin-bottom:8px; }
   .cx-foot-hours .hours-status { margin-top:6px; }
+  .cx-foot-cta { display:inline-block; margin-top:10px; color:var(--y); text-decoration:none; font-weight:600; font-size:14px; }
   .cx-foot .cta { justify-content:flex-start; padding:0; margin:14px 0 0; }
   @media(max-width:760px){ .cx-foot{grid-template-columns:1fr;gap:26px;padding:40px 24px 28px;} }
   .cx-copy { background:var(--d); color:rgba(255,255,255,.4); text-align:center; font-size:12px; padding:0 0 26px; }
