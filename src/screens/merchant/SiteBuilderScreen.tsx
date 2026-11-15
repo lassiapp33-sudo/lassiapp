@@ -46,6 +46,9 @@ export default function SiteBuilderScreen({ onBack }: Props) {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [slug, cfg]);
 
+  const patchSocial = useCallback((p: Partial<NonNullable<SiteConfig['social']>>) => {
+    setCfg(c => ({ ...c, social: { facebook: '', tiktok: '', instagram: '', ...c.social, ...p } }));
+  }, []);
   const patchTokens = useCallback((p: Partial<SiteConfig['tokens']>) => {
     setCfg(c => ({ ...c, tokens: { ...c.tokens, ...p } }));
   }, []);
@@ -144,6 +147,37 @@ export default function SiteBuilderScreen({ onBack }: Props) {
             maxLength={60}
           />
           <Text style={styles.fieldHint}>Laisse vide pour garder « {shopName} ».</Text>
+
+          {/* Réseaux sociaux */}
+          <Text style={styles.secLbl}>Réseaux sociaux</Text>
+          <Text style={styles.fieldHint}>Colle le lien de tes pages. Ils apparaîtront en bas du site, cliquables. Laisse vide pour masquer.</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="https://facebook.com/ta-page"
+            placeholderTextColor={colors.muted}
+            autoCapitalize="none" keyboardType="url"
+            value={cfg.social?.facebook ?? ''}
+            onChangeText={v => patchSocial({ facebook: v })}
+            maxLength={300}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="https://tiktok.com/@ton-compte"
+            placeholderTextColor={colors.muted}
+            autoCapitalize="none" keyboardType="url"
+            value={cfg.social?.tiktok ?? ''}
+            onChangeText={v => patchSocial({ tiktok: v })}
+            maxLength={300}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="https://instagram.com/ton-compte"
+            placeholderTextColor={colors.muted}
+            autoCapitalize="none" keyboardType="url"
+            value={cfg.social?.instagram ?? ''}
+            onChangeText={v => patchSocial({ instagram: v })}
+            maxLength={300}
+          />
 
           {/* Palette */}
           <Text style={styles.secLbl}>Palette de couleurs</Text>

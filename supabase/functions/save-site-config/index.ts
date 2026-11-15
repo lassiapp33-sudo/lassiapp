@@ -27,9 +27,9 @@ const CORS = {
 };
 
 // ── Schéma blanc (MIROIR de src/config/siteThemes.ts + preview.ts) ───────────
-const FONT_IDS = ['cormorant', 'dmsans', 'playfair', 'lora', 'inter', 'poppins', 'montserrat', 'spacegrotesk', 'rubik', 'unbounded', 'plusjakarta'];
-const PALETTE_IDS = ['classic', 'noir', 'sable', 'foret', 'ardoise', 'cosmetic', 'pottery'];
-const TEMPLATE_IDS = ['classic', 'cosmetic', 'pottery'];
+const FONT_IDS = ['cormorant', 'dmsans', 'playfair', 'lora', 'inter', 'poppins', 'montserrat', 'spacegrotesk', 'rubik', 'unbounded', 'plusjakarta', 'jost'];
+const PALETTE_IDS = ['classic', 'noir', 'sable', 'foret', 'ardoise', 'cosmetic', 'pottery', 'furniture'];
+const TEMPLATE_IDS = ['classic', 'cosmetic', 'pottery', 'furniture'];
 const SECTION_IDS = ['products', 'services', 'terrains'];
 const CARD_STYLES = ['bordered', 'shadow', 'flat'];
 const HERO_STYLES = ['split', 'centered', 'minimal'];
@@ -38,7 +38,22 @@ const DEF = { template: 'classic', palette: 'classic', accent: '#FDCF34', fontHe
 const DEF_LAYOUT = { order: ['products', 'services', 'terrains'], cols: 3, card: 'bordered', hero: 'split' };
 
 interface CleanLayout { order: string[]; cols: number; card: string; hero: string }
-interface CleanConfig { template: string; tokens: { palette: string; accent: string; fontHeading: string; fontBody: string }; layout: CleanLayout; displayName?: string }
+interface CleanSocial { facebook: string; tiktok: string; instagram: string }
+interface CleanConfig { template: string; tokens: { palette: string; accent: string; fontHeading: string; fontBody: string }; layout: CleanLayout; displayName?: string; social?: CleanSocial }
+
+function cleanSocialUrl(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  const s = raw.trim();
+  if (!s || s.length > 300) return '';
+  if (!/^https?:\/\//i.test(s)) return '';
+  if (/[\s"'<>]/.test(s)) return '';
+  return s;
+}
+function sanitizeSocial(raw: unknown): CleanSocial {
+  const s = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+  return { facebook: cleanSocialUrl(s.facebook), tiktok: cleanSocialUrl(s.tiktok), instagram: cleanSocialUrl(s.instagram) };
+}
+function hasAnySocial(s: CleanSocial): boolean { return !!(s.facebook || s.tiktok || s.instagram); }
 
 function sanitizeLayout(raw: unknown): CleanLayout {
   const lo = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
@@ -65,6 +80,8 @@ function sanitize(raw: unknown): CleanConfig {
   const name = typeof sc.displayName === 'string' ? sc.displayName.trim().slice(0, 60) : '';
   const out: CleanConfig = { template, tokens: { palette, accent, fontHeading, fontBody }, layout: sanitizeLayout(sc.layout) };
   if (name) out.displayName = name;
+  const social = sanitizeSocial(sc.social);
+  if (hasAnySocial(social)) out.social = social;
   return out;
 }
 
@@ -80,7 +97,8 @@ function isDefault(c: CleanConfig): boolean {
     c.tokens.fontHeading === DEF.fontHeading &&
     c.tokens.fontBody === DEF.fontBody &&
     layoutDef &&
-    !c.displayName
+    !c.displayName &&
+    !(c.social && hasAnySocial(c.social))
   );
 }
 

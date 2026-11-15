@@ -11,6 +11,12 @@ export interface SiteLayout {
   hero: string; // 'split' | 'centered' | 'minimal'
 }
 
+export interface SiteSocial {
+  facebook: string;
+  tiktok: string;
+  instagram: string;
+}
+
 export interface SiteConfig {
   template: string;
   tokens: {
@@ -21,6 +27,29 @@ export interface SiteConfig {
   };
   layout: SiteLayout;
   displayName?: string;
+  social?: SiteSocial;
+}
+
+export const EMPTY_SOCIAL: SiteSocial = { facebook: '', tiktok: '', instagram: '' };
+
+// Valide un lien réseau : http(s) uniquement, sans espace, borné. Sinon ''.
+export function cleanSocialUrl(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  const s = raw.trim();
+  if (!s || s.length > 300) return '';
+  if (!/^https?:\/\//i.test(s)) return '';
+  if (/[\s"'<>]/.test(s)) return '';
+  return s;
+}
+export function normalizeSocial(raw: Partial<SiteSocial> | null | undefined): SiteSocial {
+  return {
+    facebook: cleanSocialUrl(raw?.facebook),
+    tiktok: cleanSocialUrl(raw?.tiktok),
+    instagram: cleanSocialUrl(raw?.instagram),
+  };
+}
+export function hasAnySocial(s: SiteSocial | undefined): boolean {
+  return !!s && !!(s.facebook || s.tiktok || s.instagram);
 }
 
 // ── Polices (ids = clés css2 côté edge) ──────────────────────────────────────
@@ -43,6 +72,7 @@ export const SITE_FONTS: FontOption[] = [
   { id: 'rubik', label: 'Rubik', category: 'Sans' },
   { id: 'unbounded', label: 'Unbounded', category: 'Display' },
   { id: 'plusjakarta', label: 'Plus Jakarta Sans', category: 'Sans' },
+  { id: 'jost', label: 'Jost', category: 'Sans' },
 ];
 
 // ── Palettes (ids = clés SITE_PALETTES côté edge) ────────────────────────────
@@ -62,6 +92,7 @@ export const SITE_PALETTES: PaletteOption[] = [
   { id: 'ardoise', label: 'Ardoise', bg: '#FFFFFF', text: '#1b2430', soft: '#eef1f5' },
   { id: 'cosmetic', label: 'Cosmetic', bg: '#FFFFFF', text: '#171313', soft: '#f6f6f7' },
   { id: 'pottery', label: 'Pottery', bg: '#FFFFFF', text: '#201d1d', soft: '#f4f4f5' },
+  { id: 'furniture', label: 'Maison & Mobilier', bg: '#FFFFFF', text: '#152420', soft: '#EEF4F5' },
 ];
 
 // ── Accents (preset + custom validé) ─────────────────────────────────────────
@@ -80,6 +111,7 @@ export const SITE_TEMPLATES: { id: string; label: string }[] = [
   { id: 'classic', label: 'Classique' },
   { id: 'cosmetic', label: 'Cosmetic' },
   { id: 'pottery', label: 'Pottery' },
+  { id: 'furniture', label: 'Maison & Mobilier' },
 ];
 
 // Preset appliqué quand on choisit un template : fixe palette/accent/polices/layout
@@ -97,6 +129,10 @@ export const TEMPLATE_PRESETS: Record<string, { tokens: SiteConfig['tokens']; la
     tokens: { palette: 'pottery', accent: '#B55D38', fontHeading: 'unbounded', fontBody: 'plusjakarta' },
     layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'flat', hero: 'split' },
   },
+  furniture: {
+    tokens: { palette: 'furniture', accent: '#274C4F', fontHeading: 'jost', fontBody: 'jost' },
+    layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'bordered', hero: 'split' },
+  },
 };
 
 // Applique un template : renvoie une config = preset (en conservant displayName).
@@ -108,6 +144,7 @@ export function applyTemplate(cfg: SiteConfig, templateId: string): SiteConfig {
     tokens: { ...preset.tokens },
     layout: { ...preset.layout, order: [...preset.layout.order] },
     ...(cfg.displayName ? { displayName: cfg.displayName } : {}),
+    ...(hasAnySocial(cfg.social) ? { social: { ...cfg.social! } } : {}),
   };
 }
 
@@ -154,6 +191,8 @@ export function normalizeSiteConfig(raw: Partial<SiteConfig> | null | undefined)
   const name = typeof raw?.displayName === 'string' ? raw.displayName.trim().slice(0, 60) : '';
   const out: SiteConfig = { template, tokens: { palette, accent, fontHeading, fontBody }, layout: normalizeLayout(raw?.layout) };
   if (name) out.displayName = name;
+  const social = normalizeSocial(raw?.social);
+  if (hasAnySocial(social)) out.social = social;
   return out;
 }
 
@@ -186,7 +225,8 @@ export function isDefaultSiteConfig(c: SiteConfig): boolean {
     c.tokens.fontHeading === d.tokens.fontHeading &&
     c.tokens.fontBody === d.tokens.fontBody &&
     layoutDefault &&
-    !c.displayName
+    !c.displayName &&
+    !hasAnySocial(c.social)
   );
 }
 

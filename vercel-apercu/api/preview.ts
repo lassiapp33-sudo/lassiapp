@@ -66,6 +66,7 @@ const SITE_FONTS: Record<string, SiteFont> = {
   rubik:     { family: 'Rubik', stack: "'Rubik',system-ui,sans-serif", css2: 'Rubik:wght@400;500;600;700' },
   unbounded: { family: 'Unbounded', stack: "'Unbounded',system-ui,sans-serif", css2: 'Unbounded:wght@500;700' },
   plusjakarta: { family: 'Plus Jakarta Sans', stack: "'Plus Jakarta Sans',system-ui,sans-serif", css2: 'Plus+Jakarta+Sans:wght@400;500;600;700' },
+  jost:      { family: 'Jost', stack: "'Jost',system-ui,sans-serif", css2: 'Jost:wght@400;500;600;700' },
 };
 const DEFAULT_HEADING = 'cormorant';
 const DEFAULT_BODY = 'dmsans';
@@ -81,10 +82,11 @@ const SITE_PALETTES: Record<string, SitePalette> = {
   ardoise: { d: '#1b2430', w: '#FFFFFF', g: '#eef1f5', m: '#7e8794', b: '#dde3ea' },
   cosmetic: { d: '#171313', w: '#FFFFFF', g: '#f6f6f7', m: '#6e6e75', b: '#ececed' },
   pottery: { d: '#201d1d', w: '#FFFFFF', g: '#f4f4f5', m: '#696767', b: '#eaeaec' },
+  furniture: { d: '#152420', w: '#FFFFFF', g: '#EEF4F5', m: '#6b7b78', b: '#e4ecec' },
 };
 const DEFAULT_PALETTE = 'classic';
 const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
-const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat)
+const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery', 'furniture']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat), #3 furniture (maison & mobilier)
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
 // ── Layout (Phase 2) — agencement des conteneurs, présentation seule ─────────
@@ -95,9 +97,28 @@ const HERO_STYLES = ['split', 'centered', 'minimal'];
 const DEFAULT_LAYOUT = { order: ['products', 'services', 'terrains'], cols: 3, card: 'bordered', hero: 'split' };
 
 interface SiteLayout { order: string[]; cols: number; card: string; hero: string }
+interface SiteSocial { facebook: string; tiktok: string; instagram: string }
 interface ResolvedTheme {
   template: string; y: string; d: string; w: string; g: string; m: string; b: string;
-  fh: string; fb: string; fontsLink: string; displayName: string | null; layout: SiteLayout;
+  fh: string; fb: string; fontsLink: string; displayName: string | null; layout: SiteLayout; social: SiteSocial;
+}
+
+// Valide un lien réseau social : http(s) uniquement, longueur bornée. Sinon ''.
+function cleanSocialUrl(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  const s = raw.trim();
+  if (!s || s.length > 300) return '';
+  if (!/^https?:\/\//i.test(s)) return '';
+  if (/[\s"'<>]/.test(s)) return '';
+  return s;
+}
+function resolveSocial(raw: unknown): SiteSocial {
+  const s = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+  return {
+    facebook: cleanSocialUrl(s.facebook),
+    tiktok: cleanSocialUrl(s.tiktok),
+    instagram: cleanSocialUrl(s.instagram),
+  };
 }
 
 // Valide le layout : permutation stricte des 3 blocs (aucun ajout/retrait), sinon défaut.
@@ -140,8 +161,9 @@ function resolveTheme(raw: unknown): ResolvedTheme {
   const fontsLink = '<link href="https://fonts.googleapis.com/css2?' + q + '&display=swap" rel="stylesheet">';
 
   const layout = resolveLayout(sc.layout);
+  const social = resolveSocial(sc.social);
 
-  return { template, y: accent, d: pal.d, w: pal.w, g: pal.g, m: pal.m, b: pal.b, fh: fh.stack, fb: fb.stack, fontsLink, displayName, layout };
+  return { template, y: accent, d: pal.d, w: pal.w, g: pal.g, m: pal.m, b: pal.b, fh: fh.stack, fb: fb.stack, fontsLink, displayName, layout, social };
 }
 
 const CAT_LABELS: Record<string, string> = {
@@ -604,7 +626,7 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
       zone: 'Dakar · Almadies', category: 'hair',
       subcategories: ['soins_bio', 'parfumerie', 'esthetique'],
       slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
-      site_config, gallery_urls: [img('hero.jpg'), img('banner1.jpg'), img('banner2.jpg')],
+      site_config, gallery_urls: [img('hero-model.png'), img('banner1.jpg'), img('banner2.jpg'), img('hero.jpg')],
       cover_url: null, phone: '77 123 45 67',
     };
     const P = (id: string, name: string, price: number, description: string, category: string, photo: string): Product =>
@@ -620,6 +642,37 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
       P('c8', 'Gel Raffermissant Caféine', 9000, 'Gel corps à la caféine naturelle. Raffermit, tonifie et lisse la peau.', 'soins_cibles', 'p4.jpg'),
       P('c9', 'Lait Clarifiant Pili-Pili', 5500, 'Lait clarifiant au pili-pili. Purifie, illumine et unifie le teint.', 'soins_cibles', 'p6.jpg'),
       P('c10', 'Coffret Rituel Éclat', 15000, 'Coffret complet : nettoyant, sérum et crème. Le rituel éclat au quotidien.', 'soins_cibles', 'banner1.jpg'),
+    ];
+    return { shop, products };
+  }
+
+  if (t === 'furniture') {
+    const site_config = {
+      template: 'furniture',
+      tokens: { palette: 'furniture', accent: '#274C4F', fontHeading: 'jost', fontBody: 'jost' },
+      layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'bordered', hero: 'split' },
+      social: { facebook: 'https://facebook.com', tiktok: 'https://tiktok.com', instagram: 'https://instagram.com' },
+    };
+    const shop: Shop = {
+      id: 'demo-furniture', name: 'An Ka Taa — Maison & Mobilier', logo_url: null,
+      description: "Mobilier d'exception, matières nobles et savoir-faire local. Pièces choisies pour sublimer votre intérieur — commande en ligne, retrait ou livraison à Dakar.",
+      zone: 'Dakar · Sénégal', category: 'stores',
+      subcategories: ['salon', 'fauteuils', 'tables', 'rangement', 'deco'],
+      slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
+      site_config, gallery_urls: [img('hero.jpg'), img('banner1.jpg'), img('banner2.jpg')],
+      cover_url: null, phone: '76 189 00 03',
+    };
+    const P = (id: string, name: string, price: number, description: string, category: string, photo: string): Product =>
+      ({ id, name, description, emoji: null, photo_url: img(photo), price, category });
+    const products: Product[] = [
+      P('f1', 'Fauteuil Galet', 230000, 'Fauteuil sculptural aux courbes enveloppantes. Confort et caractère pour votre salon.', 'fauteuils', 'p1.jpg'),
+      P('f2', 'Chaise Lounge', 175000, 'Chaise lounge au design épuré. Assise ergonomique, piètement bois massif.', 'fauteuils', 'p2.jpg'),
+      P('f3', 'Enfilade Rétro', 385000, 'Enfilade en bois massif, lignes vintage. Rangement élégant pour la salle à manger.', 'rangement', 'p3.jpg'),
+      P('f4', 'Fauteuils Dune', 420000, 'Paire de fauteuils outdoor aux formes douces. Résistants et raffinés.', 'salon', 'p4.jpg'),
+      P('f5', 'Table d\'Appoint', 95000, 'Petite table d\'appoint en bois. Pratique et design, à côté du canapé.', 'tables', 'p5.jpg'),
+      P('f6', 'Buffet Mollis', 750000, 'Buffet spacieux à finition soignée. Ample rangement et allure intemporelle.', 'rangement', 'p6.jpg'),
+      P('f7', 'Table Basse Noyer', 145000, 'Table basse en noyer, plateau galbé et piètement fuselé. Pièce centrale du salon.', 'tables', 'p7.jpg'),
+      P('f8', 'Lampe d\'Appoint', 68000, 'Lampe d\'appoint au style chaleureux. Lumière douce pour vos soirées.', 'deco', 'p8.jpg'),
     ];
     return { shop, products };
   }
@@ -923,15 +976,22 @@ function page(o: {
   const gal = o.gallery;
   const pick = (i: number): string => gal.length ? gal[i % gal.length] : (o.logo || '');
   const bg = (u: string): string => u ? `style="background-image:url('${u.replace(/['")\\]/g, '')}')"` : '';
+  // Réseaux sociaux (saisis par le prestataire, validés http(s)) — icônes cliquables.
+  const _soc = theme.social;
+  const _socIco = (href: string, name: string, file: string): string =>
+    href ? `<a class="soc" href="${escAttr(href)}" target="_blank" rel="noopener nofollow" title="${name}" aria-label="${name}"><img src="/assets/social/${file}" alt="${name}"></a>` : '';
+  const socialHtml = (_soc.facebook || _soc.tiktok || _soc.instagram)
+    ? `<div class="soc-row">${_socIco(_soc.facebook, 'Facebook', 'facebook.png')}${_socIco(_soc.tiktok, 'TikTok', 'tiktok.png')}${_socIco(_soc.instagram, 'Instagram', 'instagram.png')}</div>`
+    : '';
   const featItems = (o.cat ? o.cat.split('·').map(s => s.trim()).filter(Boolean) : []).slice(0, 4);
   const heroImg = pick(0);
   const cxHeadCta = hasProducts ? 'Commander' : hasTerrains ? 'Réserver' : 'Découvrir';
+  const cxStatCount = hasProducts ? o.products.length : hasServices ? o.services.length : o.terrains.length;
   const cxStats = `
     <div class="cx-stats">
-      ${hasProducts ? `<div class="cx-stat"><b>${o.products.length}</b><span>produits</span></div>` : ''}
-      ${hasServices ? `<div class="cx-stat"><b>${o.services.length}</b><span>prestations</span></div>` : ''}
-      ${o.zone ? `<div class="cx-stat"><b>📍</b><span>${esc(o.zone)}</span></div>` : ''}
-      <div class="cx-stat"><b>✓</b><span>Paiement sécurisé</span></div>
+      <div class="cx-stat"><b>${cxStatCount}+</b><span>${hasProducts ? 'Produits' : hasServices ? 'Prestations' : 'Terrains'}</span></div>
+      <div class="cx-stat"><b>100%</b><span>Naturel &amp; bio</span></div>
+      <div class="cx-stat"><b>24/7</b><span>Commande en ligne</span></div>
     </div>`;
   const cxBanners = `
     <section class="cx-banners">
@@ -986,6 +1046,7 @@ function page(o: {
         <p>Wave · Orange Money</p>
         <p>Retrait sur place ou livraison</p>
         <a class="cx-foot-cta" href="#cx-shop">Voir la boutique →</a>
+        ${socialHtml}
       </div>
     </footer>
     <div class="cx-copy">© 2026 ${esc(o.name)} · Tous droits réservés</div>`;
@@ -1025,17 +1086,17 @@ function page(o: {
     </header>
     <section class="cx-hero">
       <div class="cx-hero-txt">
-        <span class="cx-eyebrow">${esc(o.cat || 'Soins & Cosmétiques')}</span>
-        <h1 class="cx-hero-title">${esc(o.name)}</h1>
-        <p class="cx-hero-sub">${esc(clip(o.desc || `Commande tes favoris chez ${o.name} — paiement sécurisé, retrait ou livraison.`, 150))}</p>
+        <span class="cx-eyebrow">OFFRES LIMITÉES DISPONIBLES</span>
+        <h1 class="cx-hero-title">La beauté inspirée<br>par la nature</h1>
+        <p class="cx-hero-sub">${esc(clip(o.desc || `Des soins naturels pensés pour sublimer ta peau au quotidien. Commande en ligne, paiement sécurisé, retrait ou livraison.`, 150))}</p>
         <div class="cx-hero-cta">
-          <a class="cx-btn" href="#cx-shop">${cxHeadCta}</a>
-          ${hoursHtml ? `<div class="cx-hero-hours">${hoursHtml}</div>` : ''}
+          <a class="cx-btn" href="#cx-shop">${hasProducts ? 'Visiter la boutique' : hasTerrains ? 'Réserver' : 'Découvrir'}</a>
+          <a class="cx-play" href="#cx-about"><span class="cx-play-ic">&#9654;</span> Voir la vidéo</a>
         </div>
         ${cxStats}
       </div>
-      <div class="cx-hero-img" ${bg(heroImg)}>
-        ${!heroImg && o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : ''}
+      <div class="cx-hero-img">
+        ${heroImg ? `<img class="cx-hero-model" src="${escAttr(heroImg)}" alt="${escAttr(o.name)}">` : ''}
         <div class="cx-hero-badge">✓ Produits naturels</div>
       </div>
     </section>
@@ -1055,7 +1116,94 @@ function page(o: {
     ${cxFoot}
   `;
 
-  const body = theme.template === 'cosmetic' && hasCatalog ? cosmeticBody : classicBody;
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TEMPLATE PLEIN « FURNITURE » — Maison & Mobilier (réf Furniture.html).
+  // Header 2 rangées, hero mint + collage, catalogue réel réutilisé, bande
+  // « parcourir par catégorie » (sombre), bande matières, footer + réseaux.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const fnRate = 1 + COMMISSION_RATE;
+  const fnPrice = (p: Product): string => fmtPrice(Math.round(p.price * fnRate));
+  const fnCard = (i: number): string => {
+    const p = o.products[i];
+    if (!p) return `<div class="fn-pcard fn-empty" ${bg(pick(i))}></div>`;
+    return `<div class="fn-pcard"><span class="fn-pt">${esc(clip(p.name, 24))}</span><span class="fn-pp">${fnPrice(p)}</span><div class="fn-pim" ${bg(p.photo_url || pick(i))}></div><span class="fn-arrow">&#8594;</span></div>`;
+  };
+  const fnCats = (groups.length ? groups : [{ id: '', title: hasServices ? 'Prestations' : 'Boutique' }]).slice(0, 7);
+  const fnRoomItems = (groups.length ? groups : []).slice(0, 4);
+  const fnRooms = (gal.length >= 2 && fnRoomItems.length >= 3) ? `
+    <section class="fn-rooms"><div class="fn-rooms-in">
+      <div class="fn-rooms-top"><h2>Parcourir par catégorie</h2><p>Trouvez l'inspiration pour chaque espace de votre maison.</p></div>
+      <div class="fn-rooms-grid">
+        ${fnRoomItems.map((r, i) => `<a class="fn-room ${i === 0 ? 'big' : i === 1 ? 'wide' : ''}" href="#cx-shop" ${bg(pick(i))}><span class="fn-chip"><b>${esc(r.title)}</b></span></a>`).join('')}
+      </div>
+    </div></section>` : '';
+  const fnMaterials = gal.length >= 1 ? `
+    <section class="fn-materials" id="fn-about"><div class="fn-mat">
+      <div class="fn-mat-l">
+        <h2>Un savoir-faire d'exception commence par les meilleures matières</h2>
+        <p>${esc(clip(o.desc || `Matières nobles et finitions soignées. Chaque pièce de ${o.name} est pensée pour durer et traverser les années avec élégance.`, 170))}</p>
+        <a class="fn-btn" href="#cx-shop">${cxHeadCta}</a>
+      </div>
+      <div class="fn-mat-gal"><div class="fn-mg" ${bg(pick(0))}></div><div class="fn-mg" ${bg(pick(1))}></div><div class="fn-mg" ${bg(pick(2))}></div></div>
+    </div></section>` : '';
+  const fnFoot = `
+    <footer id="fn-contact" class="fn-foot">
+      <div class="fn-foot-grid">
+        <div class="fn-foot-brand">
+          ${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<div class="fn-foot-logo">${esc(o.name)}</div>`}
+          <p>${esc(clip(o.desc || `${o.name} sur LASSİ — commande & paiement sécurisé.`, 130))}</p>
+        </div>
+        <div class="fn-foot-col"><h4>Boutique</h4>${fnCats.slice(0, 4).map(g => `<a href="#cx-shop">${esc(g.title)}</a>`).join('')}</div>
+        <div class="fn-foot-col"><h4>Infos</h4>${o.cat ? `<p>${esc(o.cat)}</p>` : ''}${o.zone ? `<p>📍 ${esc(o.zone)}</p>` : ''}${o.phone ? `<p>✆ ${esc(o.phone)}</p>` : ''}${hoursHtml ? `<div class="fn-foot-hours">${hoursHtml}</div>` : ''}</div>
+        <div class="fn-foot-col"><h4>Nous suivre</h4><p>Wave · Orange Money</p>${socialHtml}</div>
+      </div>
+      <div class="fn-copy">© 2026 ${esc(o.name)} · Propulsé par LASSİ</div>
+    </footer>`;
+  const furnitureBody = `
+    <header class="fn-head" id="fn-top">
+      <div class="fn-h1">
+        <a class="fn-logo" href="#fn-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<span>${esc(o.name)}</span>`}</a>
+        <div class="fn-search">&#9906; <span>Rechercher</span></div>
+        <nav class="fn-nav">
+          <a href="#fn-top">Accueil</a>
+          <a href="#cx-shop">${hasProducts ? 'Boutique' : hasTerrains ? 'Terrains' : 'Prestations'}</a>
+          <a href="#fn-about">À propos</a>
+          <a href="#fn-contact">Contact</a>
+        </nav>
+        <a class="fn-cart" href="#cx-shop">&#128722; <span>Panier</span></a>
+      </div>
+      <div class="fn-h2">
+        <div class="fn-cats">${fnCats.map(g => `<a href="#cx-shop">${esc(g.title)}</a>`).join('')}</div>
+        <div class="fn-info">${o.zone ? `<div>Adresse<b>${esc(o.zone)}</b></div>` : ''}${o.phone ? `<div>Téléphone<b>${esc(o.phone)}</b></div>` : ''}</div>
+      </div>
+    </header>
+    <section class="fn-hero-sec"><div class="fn-hero">
+      <div class="fn-hero-l">
+        <h1>${esc(o.name)}</h1>
+        <p>${esc(clip(o.desc || `Pièces d'exception et savoir-faire local. Commandez en ligne, paiement sécurisé, retrait ou livraison.`, 150))}</p>
+        <div class="fn-hero-cta"><a class="fn-btn" href="#cx-shop">${cxHeadCta}</a>${hoursHtml ? `<div class="fn-hours">${hoursHtml}</div>` : ''}</div>
+      </div>
+      <div class="fn-collage">
+        ${fnCard(0)}${fnCard(1)}
+        <div class="fn-big" ${bg(pick(0))}></div>
+        <div class="fn-promo"><h3>✓</h3><p>Boutique vérifiée sur LASSİ. Paiement sécurisé Wave &amp; Orange Money.</p><a href="#cx-shop">Découvrir &#8594;</a></div>
+      </div>
+    </div></section>
+    ${closedNotice}
+    <section id="cx-shop" class="fn-shop${catalogCls}">
+      <div class="fn-sec-head"><span class="fn-k">Notre sélection</span><h2>${hasProducts ? 'La boutique' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2></div>
+      ${catnav}${dsSection}${grid}
+      ${svcSection}
+      ${terrainSection}
+    </section>
+    ${fnRooms}
+    ${fnMaterials}
+    ${fnFoot}
+  `;
+
+  const body = theme.template === 'furniture' && hasCatalog ? furnitureBody
+    : theme.template === 'cosmetic' && hasCatalog ? cosmeticBody
+    : classicBody;
 
   const cfg = JSON.stringify({
     url: SUPABASE_URL, key: SUPABASE_ANON_KEY, slug: o.slug, shop: o.name, rate: COMMISSION_RATE,
@@ -1356,9 +1504,12 @@ ${theme.fontsLink}
   .cx-stat { display:flex; flex-direction:column; gap:2px; }
   .cx-stat b { font-family:var(--fh); font-size:24px; font-weight:600; }
   .cx-stat span { font-size:12px; color:var(--m); }
-  .cx-hero-img { position:relative; background-size:cover; background-position:center; background-color:#eeeeef; display:flex; align-items:center; justify-content:center; }
-  .cx-hero-img img { width:70%; border-radius:50%; }
+  .cx-hero-img { position:relative; background:var(--g); display:flex; align-items:flex-end; justify-content:center; overflow:hidden; }
+  .cx-hero-model { width:100%; height:100%; object-fit:contain; object-position:bottom center; display:block; }
   .cx-hero-badge { position:absolute; bottom:22px; right:22px; background:var(--y); color:#fff; font-size:11px; font-weight:600; padding:7px 15px; border-radius:9999px; }
+  .cx-play { display:inline-flex; align-items:center; gap:11px; color:var(--d); text-decoration:none; font-weight:600; font-size:14px; }
+  .cx-play-ic { width:40px; height:40px; border-radius:50%; background:var(--w); border:1px solid var(--b); display:flex; align-items:center; justify-content:center; color:var(--y); font-size:12px; }
+  .cx-play:hover .cx-play-ic { background:var(--y); color:#fff; border-color:var(--y); }
   @media(max-width:760px){ .cx-hero{grid-template-columns:1fr;} .cx-hero-txt{padding:44px 24px;} .cx-hero-img{min-height:300px;order:-1;} }
   .cx-banners { display:grid; grid-template-columns:1fr 1fr; gap:18px; max-width:1180px; margin:60px auto; padding:0 40px; }
   .cx-banner { position:relative; min-height:230px; border-radius:18px; overflow:hidden; background-size:cover; background-position:center; background-color:#d9c7b5; text-decoration:none; display:flex; align-items:flex-end; }
@@ -1441,6 +1592,99 @@ ${theme.fontsLink}
   body[data-template="pottery"] .cartbtn .cnt { background:var(--y); color:#fff; }
   body[data-template="pottery"] .pay.sel { border-color:var(--d); }
   @media(max-width:680px){ body[data-template="pottery"] .hero{grid-template-columns:1fr;} body[data-template="pottery"] .hero-left{padding:36px 24px 32px;} }
+
+  /* ═══ RÉSEAUX SOCIAUX (toutes templates) — icônes cliquables sur pastille blanche ═══ */
+  .soc-row{display:flex;gap:10px;margin-top:14px}
+  .soc-row .soc{width:40px;height:40px;border-radius:50%;background:#fff;display:grid;place-items:center;transition:.2s;border:1px solid rgba(0,0,0,.06)}
+  .soc-row .soc:hover{transform:translateY(-3px);box-shadow:0 8px 18px rgba(0,0,0,.2)}
+  .soc-row .soc img{width:21px;height:21px;object-fit:contain}
+
+  /* ═══ TEMPLATE FURNITURE — Maison & Mobilier (réf Furniture.html) : header 2 rangées, hero mint + collage, bandes sombres, cartes carrées ═══ */
+  body[data-template="furniture"]{background:#fff}
+  .fn-head{max-width:1240px;margin:0 auto;padding:0 28px}
+  .fn-h1{display:flex;align-items:center;gap:26px;min-height:112px}
+  .fn-logo img{height:92px;width:auto}
+  .fn-logo span{font-family:var(--fh);font-size:22px;font-weight:700;color:var(--d)}
+  .fn-search{flex:0 0 280px;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--b);border-radius:22px;padding:9px 16px;color:var(--m);font-size:14px}
+  .fn-nav{margin-left:auto;display:flex;gap:26px;font-size:15px;font-weight:500}
+  .fn-nav a{color:var(--d)} .fn-nav a:hover{color:var(--y)}
+  .fn-cart{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;color:var(--d)}
+  .fn-h2{display:flex;align-items:center;gap:30px;min-height:54px;border-top:1px solid var(--b);border-bottom:1px solid var(--b);font-size:14px}
+  .fn-cats{display:flex;gap:24px;flex-wrap:wrap} .fn-cats a{color:var(--d);font-weight:500} .fn-cats a:hover{color:var(--y)}
+  .fn-info{margin-left:auto;display:flex;gap:32px;color:var(--m);font-size:13px}
+  .fn-info b{display:block;color:var(--d);font-weight:600}
+  .fn-hero-sec{max-width:1240px;margin:0 auto;padding:28px 28px 48px}
+  .fn-hero{background:var(--g);border-radius:26px;padding:60px 54px;display:grid;grid-template-columns:1fr 1.02fr;gap:46px;align-items:center}
+  .fn-hero-l h1{font-family:var(--fh);font-size:clamp(36px,4.4vw,56px);font-weight:700;line-height:1.08;letter-spacing:-1px;color:var(--d)}
+  .fn-hero-l p{color:var(--m);font-size:15.5px;max-width:400px;margin:20px 0 30px}
+  .fn-hero-cta{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .fn-btn{display:inline-flex;align-items:center;gap:8px;background:var(--d);color:#fff;padding:15px 30px;border-radius:30px;font-size:15px;font-weight:500;transition:.2s}
+  .fn-btn:hover{opacity:.9}
+  .fn-hours{font-size:13px;color:var(--m)}
+  .fn-collage{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .fn-pcard{background:#fff;border-radius:16px;padding:14px;position:relative;display:flex;flex-direction:column;min-height:210px}
+  .fn-pcard.fn-empty{background-size:cover;background-position:center;border-radius:16px}
+  .fn-pt{font-weight:600;font-size:15px;color:var(--d)} .fn-pp{color:var(--m);font-size:13px;margin-top:2px}
+  .fn-pim{margin-top:12px;border-radius:12px;flex:1;min-height:120px;background:var(--g);background-size:cover;background-position:center}
+  .fn-arrow{position:absolute;right:16px;bottom:16px;width:40px;height:40px;border-radius:50%;background:var(--d);color:#fff;display:grid;place-items:center;font-size:17px}
+  .fn-big{border-radius:16px;background:var(--b);background-size:cover;background-position:center;min-height:190px}
+  .fn-promo{background:var(--d);color:#fff;border-radius:16px;padding:24px;display:flex;flex-direction:column;justify-content:center}
+  .fn-promo h3{font-size:34px;font-weight:700;color:var(--y)} .fn-promo p{color:rgba(255,255,255,.8);font-size:13px;margin:8px 0 14px}
+  .fn-promo a{color:#fff;font-weight:500;font-size:14px;align-self:flex-start;border-bottom:1px solid rgba(255,255,255,.5);padding-bottom:3px}
+  .fn-shop{max-width:1240px;margin:0 auto;padding:10px 28px 60px}
+  .fn-sec-head{text-align:center;max-width:620px;margin:0 auto 40px}
+  .fn-sec-head .fn-k{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--y);font-weight:600}
+  .fn-sec-head h2{font-family:var(--fh);font-size:clamp(28px,3.6vw,40px);font-weight:700;color:var(--d);margin-top:10px}
+  /* catalogue réel réutilisé — skin mobilier (cartes carrées, boutons verts) */
+  body[data-template="furniture"] .grid{gap:0;border-top:1px solid var(--b);border-left:1px solid var(--b)}
+  body[data-template="furniture"] .prod{border:none;border-right:1px solid var(--b);border-bottom:1px solid var(--b);border-radius:0;box-shadow:none;padding:22px}
+  body[data-template="furniture"] .prod:hover{background:#fafcfc}
+  body[data-template="furniture"] .prod.in{border-color:var(--y)}
+  body[data-template="furniture"] .pimgzone{aspect-ratio:1/1;border-radius:6px;background:var(--g)}
+  body[data-template="furniture"] .pname{font-weight:600;font-size:16px}
+  body[data-template="furniture"] .pprice{color:var(--d);font-weight:700}
+  body[data-template="furniture"] .add{background:var(--d);color:#fff;border-radius:30px}
+  body[data-template="furniture"] .svcbtn{border-color:var(--d);color:var(--d);border-radius:30px}
+  body[data-template="furniture"] .bookbtn,body[data-template="furniture"] .abo-btn,body[data-template="furniture"] .ds-btn,body[data-template="furniture"] .terrain-btn{background:var(--d);color:#fff;border-radius:30px}
+  body[data-template="furniture"] .chip{border-radius:30px} body[data-template="furniture"] .chip.sel{background:var(--d);border-color:var(--d);color:#fff}
+  body[data-template="furniture"] .abocard,body[data-template="furniture"] .terrain-card{border:1px solid var(--b);border-radius:8px;box-shadow:none}
+  body[data-template="furniture"] .cartbtn{background:var(--d);color:#fff;border-radius:30px}
+  body[data-template="furniture"] .qtybox{background:var(--d);border-radius:30px} body[data-template="furniture"] .qtybox button,body[data-template="furniture"] .qtybox .q{color:#fff}
+  body[data-template="furniture"] .add,body[data-template="furniture"] .store,body[data-template="furniture"] .btn,body[data-template="furniture"] .payer{border-radius:30px}
+  .fn-rooms{max-width:1240px;margin:0 auto;padding:0 28px 70px}
+  .fn-rooms-in{background:var(--d);border-radius:26px;padding:52px;color:#fff}
+  .fn-rooms-top{max-width:560px;margin-bottom:30px}
+  .fn-rooms-top h2{font-family:var(--fh);font-size:clamp(26px,3.2vw,36px);font-weight:700}
+  .fn-rooms-top p{color:rgba(255,255,255,.7);font-size:15px;margin-top:10px}
+  .fn-rooms-grid{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:210px 210px;gap:16px}
+  .fn-room{position:relative;border-radius:14px;overflow:hidden;background-size:cover;background-position:center}
+  .fn-room::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.4),transparent 50%)}
+  .fn-room.big{grid-column:1;grid-row:1/3} .fn-room.wide{grid-column:2/4;grid-row:1}
+  .fn-chip{position:absolute;z-index:2;left:16px;bottom:16px;background:#fff;color:var(--d);border-radius:10px;padding:8px 14px}
+  .fn-chip b{font-size:14px;font-weight:600}
+  .fn-materials{max-width:1240px;margin:0 auto;padding:0 28px 80px}
+  .fn-mat{display:grid;grid-template-columns:1fr 1.25fr;gap:52px;align-items:center}
+  .fn-mat-l h2{font-family:var(--fh);font-size:clamp(28px,3.6vw,44px);font-weight:700;line-height:1.12;color:var(--d)}
+  .fn-mat-l p{color:var(--m);font-size:15px;margin:18px 0 28px;max-width:420px}
+  .fn-mat-gal{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:16px;align-items:center}
+  .fn-mat-gal .fn-mg{border-radius:14px;background-size:cover;background-position:center;aspect-ratio:3/4.4;background-color:var(--g)}
+  .fn-mat-gal .fn-mg:nth-child(2){transform:translateY(-20px)} .fn-mat-gal .fn-mg:nth-child(3){transform:translateY(20px)}
+  .fn-foot{background:var(--d);color:rgba(255,255,255,.72)}
+  .fn-foot-grid{max-width:1240px;margin:0 auto;padding:60px 28px 40px;display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:36px}
+  .fn-foot-brand img{height:74px;margin-bottom:14px} .fn-foot-brand .fn-foot-logo{font-family:var(--fh);font-size:24px;color:#fff;margin-bottom:12px}
+  .fn-foot-brand p{font-size:14px;max-width:280px}
+  .fn-foot-col h4{color:#fff;font-size:15px;font-weight:600;margin-bottom:14px}
+  .fn-foot-col a{display:block;font-size:14px;margin-bottom:9px;color:rgba(255,255,255,.72)} .fn-foot-col a:hover{color:#fff}
+  .fn-foot-col p{font-size:14px;margin-bottom:8px}
+  .fn-copy{border-top:1px solid rgba(255,255,255,.12);padding:20px;text-align:center;font-size:13px;color:rgba(255,255,255,.6)}
+  @media(max-width:860px){
+    .fn-h1 .fn-nav,.fn-search,.fn-info{display:none}
+    .fn-hero{grid-template-columns:1fr;padding:38px 24px}
+    .fn-rooms-grid{grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,150px)}
+    .fn-room.big{grid-column:1/3;grid-row:1}.fn-room.wide{grid-column:1/3;grid-row:2}
+    .fn-mat{grid-template-columns:1fr;gap:26px}
+    .fn-foot-grid{grid-template-columns:1fr 1fr}
+  }
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">
