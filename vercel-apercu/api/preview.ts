@@ -1687,7 +1687,7 @@ ${theme.fontsLink}
   .fn-arrow{position:absolute;right:16px;bottom:16px;width:40px;height:40px;border-radius:50%;background:var(--d);color:#fff;display:grid;place-items:center;font-size:17px}
   .fn-big{border-radius:16px;background:var(--b);background-size:cover;background-position:center;min-height:190px}
   .fn-promo{background:var(--d);color:#fff;border-radius:16px;padding:24px;display:flex;flex-direction:column;justify-content:center}
-  .fn-promo h3{font-size:34px;font-weight:700;color:var(--y)} .fn-promo p{color:rgba(255,255,255,.8);font-size:13px;margin:8px 0 14px}
+  .fn-promo h3{font-size:34px;font-weight:700;color:var(--y)} .fn-promo p{color:rgba(255,255,255,.8);font-size:11.5px;margin:8px 0 14px}
   .fn-promo a{color:#fff;font-weight:500;font-size:14px;align-self:flex-start;border-bottom:1px solid rgba(255,255,255,.5);padding-bottom:3px}
   .fn-shop{max-width:1240px;margin:0 auto;padding:10px 28px 60px}
   .fn-sec-head{text-align:center;max-width:620px;margin:0 auto 40px}
