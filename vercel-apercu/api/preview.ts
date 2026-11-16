@@ -1502,7 +1502,7 @@ function page(o: {
     </section>
     <section class="sc-feature"><div class="sc-feature-in">
       <div class="sc-fcard">
-        <div class="sc-fcard-top"><img class="sc-avatar" src="${escAttr(o.logo || initialAvatar(o.name))}" alt="${escAttr(o.name)}"><div><b>${esc(o.name)}</b><small>${esc(o.cat || o.zone || 'Maroquinerie')}</small></div></div>
+        <div class="sc-fcard-top"><img class="sc-avatar" src="${escAttr(o.logo || (o.slug === '__demo' ? `${base}/assets/demo/sac/avatar.jpg` : initialAvatar(o.name)))}" alt="${escAttr(o.name)}"><div><b>${esc(o.name)}</b><small>${esc(o.cat || o.zone || 'Maroquinerie')}</small></div></div>
         <h2>Le sac qui vous suit partout</h2>
         <p>${esc(clip(o.desc || `${o.name} sélectionne des pièces durables et bien finies. Commande en ligne, paiement sécurisé Wave & Orange Money, retrait ou livraison à Dakar.`, 170))}</p>
       </div>
@@ -2151,7 +2151,7 @@ ${theme.fontsLink}
   .sc-fcard{background:#fff;border:1px solid var(--b);border-radius:16px;padding:34px;display:flex;flex-direction:column;justify-content:center;box-shadow:0 16px 40px rgba(0,0,0,.05)}
   .sc-fcard-top{display:flex;align-items:center;gap:14px;margin-bottom:18px}
   .sc-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;background:var(--g)}
-  .sc-fcard-top b{display:block;font-size:15px;color:var(--d)} .sc-fcard-top small{color:var(--m);font-size:13px}
+  .sc-fcard-top b{display:block;font-size:13px;color:var(--d);line-height:1.25} .sc-fcard-top small{color:var(--m);font-size:12px}
   .sc-fcard h2{font-family:var(--fh);font-weight:700;font-size:clamp(24px,3vw,34px);line-height:1.1;color:var(--d);margin-bottom:14px}
   .sc-fcard p{color:var(--m);font-size:14px;line-height:1.7}
   .sc-promo{position:relative;border-radius:16px;overflow:hidden;min-height:260px;background-size:cover;background-position:center;background-color:var(--d)}
@@ -3617,6 +3617,4 @@ const TERRAIN_JS = `
     document.getElementById('t-wsub').textContent='Vérification de ton paiement en cours…';
     startPoll();
     checkResaOnce(resaId, null);
-  })();
-})();
-`;
+  }
