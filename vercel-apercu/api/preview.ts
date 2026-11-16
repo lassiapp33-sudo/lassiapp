@@ -418,65 +418,138 @@ export default async function handler(
   const base = `${url.protocol}//${url.host}`;
   let html = renderHtml(shop, products, services, terrains as Terrain[], slug, base, dailySpecial as { id: string; name: string; price: number; photo_url?: string | null }[], promos);
 
-  // Mode édition (éditeur avancé in-app) : ?edit=1 injecte l'overlay d'édition
-  // (surbrillance des conteneurs + sélection + bridge postMessage vers l'app RN).
-  // N'est servi qu'avec un draft (contexte éditeur), jamais sur la vitrine publique.
-  if (draftConfig && url.searchParams.get('edit') === '1') {
-    html = html.replace('</body>', EDIT_OVERLAY + '</body>');
+  // Overrides éditeur avancé (texte/style/menu/animations) — appliqués côté client
+  // par un script runtime, template-agnostique. Présents = vitrine publique aussi.
+  const overrides = shop && shop.site_config && typeof shop.site_config === 'object'
+    ? (shop.site_config as Record<string, unknown>).overrides : null;
+  const editMode = !!draftConfig && url.searchParams.get('edit') === '1';
+  const hasOv = overrides && typeof overrides === 'object' && Object.keys(overrides).length > 0;
+
+  if (hasOv || editMode) {
+    let inject = LED_CORE;
+    if (hasOv) inject += `<script>window.__ledApply(${JSON.stringify(overrides)});</script>`;
+    if (editMode) inject += EDIT_OVERLAY;
+    html = html.replace('</body>', inject + '</body>');
   }
 
   return new Response(html, {
     status: shop ? 200 : 404,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-store',
+      // Draft/édition jamais caché ; public avec overrides caché court (cosmétique).
+      'Cache-Control': draftConfig ? 'no-store' : 'public, max-age=30, s-maxage=30, stale-while-revalidate=60',
     },
   });
 }
 
-// ─── Overlay mode édition (Task 2) ───────────────────────────────────────────
-// Injecté avant </body> uniquement en contexte éditeur (draft + edit=1). Rend les
-// conteneurs (section/nav/hero) sélectionnables et poste la sélection à l'app RN
-// via window.ReactNativeWebView.postMessage. L'app affiche le panneau adéquat.
+// ─── Noyau d'édition (LED_CORE) ──────────────────────────────────────────────
+// Partagé par l'application des overrides (public) et l'overlay d'édition (draft).
+// Attribue une clé stable (t0,t1,…) à chaque élément porteur de texte direct, dans
+// l'ordre du document (déterministe car le rendu serveur est identique), et expose
+// __ledLeaves / __ledApply. Base des animations (classes CSS, état final visible).
+const LED_CORE = `<style id="led-core-style">
+@keyframes ledFade{from{opacity:0}to{opacity:1}}
+@keyframes ledUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes ledLeft{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:none}}
+@keyframes ledZoom{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+.led-a-fade{animation:ledFade .6s ease both}
+.led-a-fade-up{animation:ledUp .6s ease both}
+.led-a-fade-left{animation:ledLeft .6s ease both}
+.led-a-zoom{animation:ledZoom .6s ease both}
+</style>
+<script>(function(){
+  var FONTS={cormorant:"'Cormorant Garamond',serif",playfair:"'Playfair Display',serif",lora:"Lora,serif",dmsans:"'DM Sans',sans-serif",inter:"Inter,sans-serif",poppins:"Poppins,sans-serif",montserrat:"Montserrat,sans-serif",spacegrotesk:"'Space Grotesk',sans-serif",rubik:"Rubik,sans-serif",unbounded:"Unbounded,cursive",plusjakarta:"'Plus Jakarta Sans',sans-serif",jost:"Jost,sans-serif"};
+  var ANIM={fade:'led-a-fade','fade-up':'led-a-fade-up','fade-left':'led-a-fade-left',zoom:'led-a-zoom'};
+  function leaves(){
+    var out=[], w=document.createTreeWalker(document.body,NodeFilter.SHOW_ELEMENT,null);
+    var el;
+    while(el=w.nextNode()){
+      var tn=el.tagName;
+      if(tn==='SCRIPT'||tn==='STYLE'||tn==='NAV') continue;
+      if(el.id==='lassi-ed-badge'||el.className&&(''+el.className).indexOf&&(''+el.className).indexOf('led-tag')>=0) continue;
+      var has=false, cn=el.childNodes;
+      for(var i=0;i<cn.length;i++){ if(cn[i].nodeType===3 && cn[i].textContent.trim()){ has=true; break; } }
+      if(has) out.push(el);
+    }
+    return out;
+  }
+  window.__ledLeaves=leaves;
+  window.__ledApply=function(ov){
+    try{
+      var L=leaves();
+      L.forEach(function(el,i){ el.setAttribute('data-k','t'+i); });
+      ov=ov||{};
+      var tx=ov.text||{}, st=ov.style||{}, an=ov.anim||{};
+      L.forEach(function(el){
+        var k=el.getAttribute('data-k');
+        if(tx[k]!=null){ // remplace uniquement le 1er noeud texte, garde les enfants
+          var done=false, cn=el.childNodes;
+          for(var i=0;i<cn.length;i++){ if(cn[i].nodeType===3 && cn[i].textContent.trim()){ cn[i].textContent=tx[k]; done=true; break; } }
+          if(!done) el.textContent=tx[k];
+        }
+        var s=st[k];
+        if(s){ if(s.size) el.style.fontSize=s.size+'px'; if(s.color) el.style.color=s.color; if(s.font&&FONTS[s.font]) el.style.fontFamily=FONTS[s.font]; }
+        if(an[k]&&ANIM[an[k]]){ el.classList.add(ANIM[an[k]]); }
+      });
+      // Menu
+      var nav=document.querySelector('nav');
+      if(nav){
+        var links=[].slice.call(nav.querySelectorAll('a'));
+        (ov.menuHidden||[]).forEach(function(n){ if(links[n]) links[n].style.display='none'; });
+        var ms=ov.menuStyle;
+        if(ms){ links.forEach(function(a){ if(ms.size)a.style.fontSize=ms.size+'px'; if(ms.color)a.style.color=ms.color; if(ms.font&&FONTS[ms.font])a.style.fontFamily=FONTS[ms.font]; }); }
+      }
+    }catch(e){}
+  };
+})();</script>`;
+
+// ─── Overlay mode édition ────────────────────────────────────────────────────
+// Injecté après LED_CORE en contexte éditeur (draft + edit=1). Surligne les blocs,
+// rend le texte éditable inline, et poste la sélection/les éditions à l'app RN.
 const EDIT_OVERLAY = `<style id="lassi-edit-style">
-.lassi-ed [data-led]{outline:1.5px dashed rgba(61,139,253,.55);outline-offset:-2px;cursor:pointer;transition:outline-color .15s}
-.lassi-ed [data-led]:hover{outline-color:rgba(61,139,253,.95)}
-.lassi-ed [data-led].led-sel{outline:2.5px solid #3D8BFD;outline-offset:-2px}
-.lassi-ed .led-tag{position:absolute;top:0;left:0;z-index:2147483646;background:#3D8BFD;color:#fff;font:600 10px/1 -apple-system,sans-serif;padding:3px 7px;border-radius:0 0 6px 0;pointer-events:none}
+.lassi-ed section,.lassi-ed nav{outline:1.5px dashed rgba(61,139,253,.4);outline-offset:-2px}
+.lassi-ed [data-k]{cursor:text}
+.lassi-ed [data-k].led-sel{outline:2px solid #3D8BFD;outline-offset:2px;border-radius:3px}
+.lassi-ed nav.led-sel{outline:2.5px solid #3D8BFD;outline-offset:-2px}
 #lassi-ed-badge{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#14152A;color:#FDCF34;font:600 11px -apple-system,sans-serif;padding:6px 14px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.25)}
 </style>
-<div id="lassi-ed-badge">Mode édition — touche un bloc</div>
+<div id="lassi-ed-badge">Mode édition — touche un texte ou le menu</div>
 <script>(function(){
   var doc=document, body=doc.body; body.classList.add('lassi-ed');
   function post(m){try{window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify(m));}catch(e){}}
-  function labelFor(el){
-    var c=el.className||'';
-    if(/hero/.test(c)) return 'En-tête';
-    if(/shop|best|products/.test(c)) return 'Produits';
-    if(/about|feature|materials/.test(c)) return 'À propos';
-    if(/perks|rooms|types|banners/.test(c)) return 'Bloc';
-    return 'Section';
-  }
-  var blocks=[].slice.call(doc.querySelectorAll('section,nav'));
-  blocks.forEach(function(el,i){
-    el.setAttribute('data-led', el.tagName.toLowerCase()+'-'+i);
-    var tag=doc.createElement('span'); tag.className='led-tag';
-    tag.textContent = el.tagName==='NAV' ? 'Menu' : labelFor(el);
-    if(getComputedStyle(el).position==='static') el.style.position='relative';
-    el.appendChild(tag);
-  });
+  // S'assure que les clés existent même sans overrides (applique un objet vide).
+  if(window.__ledApply) window.__ledApply({});
+  var leaves=(window.__ledLeaves?window.__ledLeaves():[]);
   var sel=null;
-  doc.addEventListener('click',function(e){
-    var t=e.target; while(t&&t!==body&&!t.hasAttribute('data-led')) t=t.parentElement;
-    if(!t||t===body) return;
-    e.preventDefault(); e.stopPropagation();
+  function selectLeaf(el){
     if(sel) sel.classList.remove('led-sel');
-    sel=t; sel.classList.add('led-sel');
-    var r=t.getBoundingClientRect();
-    post({type:'led:select', id:t.getAttribute('data-led'), tag:t.tagName.toLowerCase(),
-      label:(t.querySelector('.led-tag')||{}).textContent||'', y:Math.round(r.top+window.scrollY)});
-  },true);
-  post({type:'led:ready', blocks:blocks.length});
+    sel=el; el.classList.add('led-sel');
+    var cs=getComputedStyle(el), r=el.getBoundingClientRect();
+    post({type:'led:text', key:el.getAttribute('data-k'),
+      text:(el.textContent||'').trim().slice(0,200),
+      size:Math.round(parseFloat(cs.fontSize)||16),
+      color:rgbHex(cs.color), y:Math.round(r.top+window.scrollY)});
+  }
+  function rgbHex(c){var m=/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/.exec(c||'');if(!m)return '';function h(n){n=(+n).toString(16);return n.length<2?'0'+n:n;}return '#'+h(m[1])+h(m[2])+h(m[3]);}
+  // Texte éditable inline : édition directe dans la page, commit au blur.
+  leaves.forEach(function(el){
+    el.setAttribute('contenteditable','true'); el.style.outlineColor='transparent';
+    el.addEventListener('focus',function(){ selectLeaf(el); });
+    el.addEventListener('input',function(){
+      post({type:'led:textChange', key:el.getAttribute('data-k'), text:(el.textContent||'').slice(0,200)});
+    });
+  });
+  // Sélection du menu.
+  var nav=doc.querySelector('nav');
+  if(nav){
+    nav.addEventListener('click',function(e){
+      e.preventDefault(); e.stopPropagation();
+      if(sel) sel.classList.remove('led-sel'); sel=nav; nav.classList.add('led-sel');
+      var links=[].slice.call(nav.querySelectorAll('a')).map(function(a,i){return {i:i,label:(a.textContent||'').trim().slice(0,30)};});
+      post({type:'led:menu', items:links});
+    },true);
+  }
+  post({type:'led:ready'});
 })();</script>`;
 
 // Génère le sitemap XML de toutes les vitrines publiables (slug + has_content).
@@ -2187,7 +2260,7 @@ ${theme.fontsLink}
   .sc-hero-ov{position:absolute;inset:0;background:linear-gradient(90deg,rgba(18,18,18,.78),rgba(18,18,18,.35) 60%,rgba(18,18,18,.15))}
   .sc-hero-in{position:relative;z-index:2;width:100%;max-width:1240px;margin:0 auto;padding:0 28px;display:flex;align-items:center;justify-content:space-between;gap:30px}
   .sc-hero-l{max-width:560px}
-  .sc-eyebrow{display:inline-block;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--y);margin-bottom:16px}
+  .sc-eyebrow{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--y);margin-bottom:16px;white-space:nowrap}
   .sc-hero-l h1{font-family:var(--fh);font-weight:800;font-size:clamp(34px,5.2vw,62px);line-height:1.04;letter-spacing:-1px;color:#fff}
   .sc-hero-l p{color:rgba(255,255,255,.82);font-size:15px;line-height:1.7;margin:20px 0 28px;max-width:440px}
   .sc-hero-cta{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
@@ -2204,22 +2277,25 @@ ${theme.fontsLink}
   .sc-fcard{background:#fff;border:1px solid var(--b);border-radius:16px;padding:34px;display:flex;flex-direction:column;justify-content:center;box-shadow:0 16px 40px rgba(0,0,0,.05)}
   .sc-fcard-top{display:flex;align-items:center;gap:14px;margin-bottom:18px}
   .sc-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;background:var(--g)}
-  .sc-fcard-top b{display:block;font-size:13px;color:var(--d);line-height:1.25} .sc-fcard-top small{color:var(--m);font-size:12px}
+  .sc-fcard-top b{display:block;font-size:12px;color:var(--d);line-height:1.2;white-space:nowrap} .sc-fcard-top small{color:var(--m);font-size:11.5px}
   .sc-fcard h2{font-family:var(--fh);font-weight:700;font-size:clamp(24px,3vw,34px);line-height:1.1;color:var(--d);margin-bottom:14px}
   .sc-fcard p{color:var(--m);font-size:14px;line-height:1.7}
   .sc-promo{position:relative;border-radius:16px;overflow:hidden;min-height:260px;background-size:cover;background-position:center;background-color:var(--d)}
   .sc-promo-ov{position:absolute;inset:0;background:linear-gradient(90deg,rgba(26,26,26,.82),rgba(26,26,26,.35));display:flex;flex-direction:column;justify-content:center;padding:40px;color:#fff}
   .sc-promo-k{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--y);margin-bottom:12px}
-  .sc-promo h3{font-family:var(--fh);font-weight:700;font-size:clamp(17px,2vw,23px);line-height:1.2;margin-bottom:22px;max-width:400px}
-  .sc-promo .sc-btn-y{align-self:flex-start}
+  .sc-promo h3{font-family:var(--fh);font-weight:700;font-size:clamp(17px,2vw,23px);line-height:1.2;margin-bottom:12px;max-width:400px}
+  .sc-promo p{color:rgba(255,255,255,.72);font-size:13px;line-height:1.6;margin-bottom:20px;max-width:330px}
+  .sc-btn-dark{background:#000;color:#fff}
+  .sc-promo .sc-btn{align-self:flex-start}
   .sc-types{max-width:1240px;margin:0 auto;padding:48px 28px}
   .sc-types-head{text-align:center;margin-bottom:34px}
   .sc-types-head h2{font-family:var(--fh);font-weight:700;font-size:clamp(26px,3.4vw,42px);color:var(--d)}
   .sc-types-head p{color:var(--m);font-size:14px;margin-top:8px}
   .sc-types-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
   .sc-type{position:relative;border-radius:14px;overflow:hidden;aspect-ratio:3/4;background-size:cover;background-position:center;background-color:var(--g)}
-  .sc-type::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.55),transparent 55%)}
-  .sc-type-ov{position:absolute;z-index:2;left:16px;bottom:16px} .sc-type-ov b{color:#fff;font-size:16px;font-weight:600}
+  .sc-type::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.78),rgba(0,0,0,.1) 62%)}
+  .sc-type-ov{position:absolute;z-index:2;left:16px;right:16px;bottom:16px} .sc-type-ov b{display:block;color:#fff;font-size:16px;font-weight:700}
+  .sc-type-ov small{display:block;color:rgba(255,255,255,.82);font-size:11.5px;line-height:1.45;margin-top:5px}
   .sc-shop{max-width:1240px;margin:0 auto;padding:40px 28px 20px}
   .sc-sec-head{text-align:center;margin-bottom:30px}
   .sc-k{display:block;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--m);margin-bottom:6px}

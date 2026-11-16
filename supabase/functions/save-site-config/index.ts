@@ -28,18 +28,69 @@ const CORS = {
 
 // ── Schéma blanc (MIROIR de src/config/siteThemes.ts + preview.ts) ───────────
 const FONT_IDS = ['cormorant', 'dmsans', 'playfair', 'lora', 'inter', 'poppins', 'montserrat', 'spacegrotesk', 'rubik', 'unbounded', 'plusjakarta', 'jost'];
-const PALETTE_IDS = ['classic', 'noir', 'sable', 'foret', 'ardoise', 'cosmetic', 'pottery', 'furniture'];
-const TEMPLATE_IDS = ['classic', 'cosmetic', 'pottery', 'furniture'];
+const PALETTE_IDS = ['classic', 'noir', 'sable', 'foret', 'ardoise', 'cosmetic', 'pottery', 'furniture', 'garderobe', 'sac'];
+const TEMPLATE_IDS = ['classic', 'cosmetic', 'pottery', 'furniture', 'garderobe', 'sac'];
 const SECTION_IDS = ['products', 'services', 'terrains'];
 const CARD_STYLES = ['bordered', 'shadow', 'flat'];
 const HERO_STYLES = ['split', 'centered', 'minimal'];
+const ANIM_IDS = ['fade', 'fade-up', 'fade-left', 'zoom'];
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
+const KEY_RE = /^[a-z0-9]{1,16}$/;
 const DEF = { template: 'classic', palette: 'classic', accent: '#FDCF34', fontHeading: 'cormorant', fontBody: 'dmsans' };
 const DEF_LAYOUT = { order: ['products', 'services', 'terrains'], cols: 3, card: 'bordered', hero: 'split' };
 
 interface CleanLayout { order: string[]; cols: number; card: string; hero: string }
 interface CleanSocial { facebook: string; tiktok: string; instagram: string }
-interface CleanConfig { template: string; tokens: { palette: string; accent: string; fontHeading: string; fontBody: string }; layout: CleanLayout; displayName?: string; social?: CleanSocial }
+interface CleanStyle { size?: number; color?: string; font?: string }
+interface CleanOverrides { text?: Record<string, string>; style?: Record<string, CleanStyle>; anim?: Record<string, string>; menuHidden?: number[]; menuStyle?: CleanStyle }
+interface CleanConfig { template: string; tokens: { palette: string; accent: string; fontHeading: string; fontBody: string }; layout: CleanLayout; displayName?: string; social?: CleanSocial; overrides?: CleanOverrides }
+
+function cleanStyle(raw: unknown): CleanStyle | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  const out: CleanStyle = {};
+  if (typeof r.size === 'number' && r.size >= 10 && r.size <= 60) out.size = Math.round(r.size);
+  if (typeof r.color === 'string' && HEX6.test(r.color)) out.color = r.color;
+  if (typeof r.font === 'string' && FONT_IDS.includes(r.font)) out.font = r.font;
+  return Object.keys(out).length ? out : undefined;
+}
+function sanitizeOverrides(raw: unknown): CleanOverrides | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  const out: CleanOverrides = {};
+  if (r.text && typeof r.text === 'object') {
+    const t: Record<string, string> = {};
+    for (const k of Object.keys(r.text as object).slice(0, 60)) {
+      const v = (r.text as Record<string, unknown>)[k];
+      if (KEY_RE.test(k) && typeof v === 'string' && v.length <= 200) t[k] = v;
+    }
+    if (Object.keys(t).length) out.text = t;
+  }
+  if (r.style && typeof r.style === 'object') {
+    const s: Record<string, CleanStyle> = {};
+    for (const k of Object.keys(r.style as object).slice(0, 60)) {
+      const cs = cleanStyle((r.style as Record<string, unknown>)[k]);
+      if (KEY_RE.test(k) && cs) s[k] = cs;
+    }
+    if (Object.keys(s).length) out.style = s;
+  }
+  if (r.anim && typeof r.anim === 'object') {
+    const a: Record<string, string> = {};
+    for (const k of Object.keys(r.anim as object).slice(0, 60)) {
+      const v = (r.anim as Record<string, unknown>)[k];
+      if (KEY_RE.test(k) && typeof v === 'string' && ANIM_IDS.includes(v)) a[k] = v;
+    }
+    if (Object.keys(a).length) out.anim = a;
+  }
+  if (Array.isArray(r.menuHidden)) {
+    const h = Array.from(new Set((r.menuHidden as unknown[]).filter((n): n is number => Number.isInteger(n) && (n as number) >= 0 && (n as number) < 30)));
+    if (h.length) out.menuHidden = h;
+  }
+  const ms = cleanStyle(r.menuStyle);
+  if (ms) out.menuStyle = ms;
+  return Object.keys(out).length ? out : undefined;
+}
+function hasOverrides(o: CleanOverrides | undefined): boolean { return !!o && Object.keys(o).length > 0; }
 
 function cleanSocialUrl(raw: unknown): string {
   if (typeof raw !== 'string') return '';
@@ -82,6 +133,8 @@ function sanitize(raw: unknown): CleanConfig {
   if (name) out.displayName = name;
   const social = sanitizeSocial(sc.social);
   if (hasAnySocial(social)) out.social = social;
+  const ov = sanitizeOverrides(sc.overrides);
+  if (ov) out.overrides = ov;
   return out;
 }
 
@@ -98,7 +151,8 @@ function isDefault(c: CleanConfig): boolean {
     c.tokens.fontBody === DEF.fontBody &&
     layoutDef &&
     !c.displayName &&
-    !(c.social && hasAnySocial(c.social))
+    !(c.social && hasAnySocial(c.social)) &&
+    !hasOverrides(c.overrides)
   );
 }
 
