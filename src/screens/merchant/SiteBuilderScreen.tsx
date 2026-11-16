@@ -137,6 +137,7 @@ export default function SiteBuilderScreen({ onBack }: Props) {
         cfg={cfg}
         saving={saving}
         onSave={onSave}
+        onChange={setCfg}
         onBack={() => setView('editor')}
       />
     );

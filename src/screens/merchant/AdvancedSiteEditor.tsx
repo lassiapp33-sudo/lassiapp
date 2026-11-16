@@ -4,13 +4,14 @@ import {
 } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { colors, radius, spacing, fonts, TOP_INSET } from '../../theme';
-import { buildEditPreviewUrl, type SiteConfig } from '../../config/siteThemes';
+import { buildEditPreviewUrl, SITE_SECTIONS, type SiteConfig } from '../../config/siteThemes';
 
 interface Props {
   slug: string | null;
   cfg: SiteConfig;
   saving: boolean;
   onSave: () => void;
+  onChange: (next: SiteConfig) => void;
   onBack: () => void;
 }
 
@@ -34,10 +35,19 @@ const TOOLS: { id: Tool; label: string; icon: string }[] = [
 // Bloc sélectionné dans la page (reçu par postMessage depuis l'overlay web).
 interface Selection { id: string; tag: string; label: string; y: number }
 
-export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onBack }: Props) {
+export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange, onBack }: Props) {
   const [tool, setTool] = useState<Tool | null>(null);
   const [sel, setSel] = useState<Selection | null>(null);
   const uri = useMemo(() => (slug ? buildEditPreviewUrl(slug, cfg) : null), [slug, cfg]);
+
+  // Réordonne un conteneur (déplacement haut/bas), applique en live (recharge draft).
+  const moveSection = useCallback((idx: number, dir: -1 | 1) => {
+    const order = [...cfg.layout.order];
+    const j = idx + dir;
+    if (j < 0 || j >= order.length) return;
+    [order[idx], order[j]] = [order[j], order[idx]];
+    onChange({ ...cfg, layout: { ...cfg.layout, order } });
+  }, [cfg, onChange]);
 
   // Réception des messages de l'overlay d'édition (sélection d'un conteneur).
   const onMessage = useCallback((e: WebViewMessageEvent) => {
@@ -99,7 +109,33 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onBack }
           {sel ? (
             <Text style={styles.panelSel}>Bloc sélectionné : <Text style={styles.panelSelHl}>{sel.label || sel.tag}</Text></Text>
           ) : null}
-          <Text style={styles.panelSoon}>Touche un conteneur dans l'aperçu pour le sélectionner. Les réglages arrivent dans les prochaines étapes.</Text>
+
+          {tool === 'sections' ? (
+            /* Réordonner les conteneurs de contenu (produits / prestations / terrains) */
+            <View style={styles.orderList}>
+              <Text style={styles.panelHint}>Déplace les conteneurs pour changer leur ordre sur le site.</Text>
+              {cfg.layout.order.map((id, i) => {
+                const sec = SITE_SECTIONS.find(s => s.id === id);
+                if (!sec) return null;
+                return (
+                  <View key={id} style={styles.orderRow}>
+                    <Text style={styles.orderPos}>{i + 1}</Text>
+                    <Text style={styles.orderLbl}>{sec.label}</Text>
+                    <TouchableOpacity disabled={i === 0} onPress={() => moveSection(i, -1)}
+                      style={[styles.moveBtn, i === 0 && styles.moveBtnOff]} activeOpacity={0.7}>
+                      <Text style={styles.moveTxt}>↑</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity disabled={i === cfg.layout.order.length - 1} onPress={() => moveSection(i, 1)}
+                      style={[styles.moveBtn, i === cfg.layout.order.length - 1 && styles.moveBtnOff]} activeOpacity={0.7}>
+                      <Text style={styles.moveTxt}>↓</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            <Text style={styles.panelSoon}>Touche un conteneur dans l'aperçu pour le sélectionner. Les réglages de cet outil arrivent dans les prochaines étapes.</Text>
+          )}
         </View>
       ) : null}
 
@@ -144,6 +180,14 @@ const styles = StyleSheet.create({
   panelSel: { color: colors.white, fontFamily: fonts.body, fontSize: 12.5, marginBottom: 6 },
   panelSelHl: { color: colors.accent, fontFamily: fonts.title },
   panelSoon: { color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, lineHeight: 17 },
+  panelHint: { color: colors.muted, fontFamily: fonts.body, fontSize: 11.5, marginBottom: 8, lineHeight: 15 },
+  orderList: { gap: 7, marginTop: 2 },
+  orderRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 8, paddingHorizontal: 12 },
+  orderPos: { color: colors.accent, fontFamily: fonts.title, fontSize: 13, width: 20 },
+  orderLbl: { flex: 1, color: colors.white, fontFamily: fonts.ui, fontSize: 13.5 },
+  moveBtn: { width: 34, height: 34, borderRadius: radius.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  moveBtnOff: { opacity: 0.35 },
+  moveTxt: { color: colors.white, fontSize: 16, lineHeight: 18 },
 
   toolbar: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.screen, paddingTop: 8, paddingBottom: Platform.OS === 'ios' ? 28 : 14, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.bg },
   toolBtn: { alignItems: 'center', flex: 1 },
