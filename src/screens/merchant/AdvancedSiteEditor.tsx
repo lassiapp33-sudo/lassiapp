@@ -1,0 +1,131 @@
+import React, { useMemo, useState } from 'react';
+import {
+  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform,
+} from 'react-native';
+import { WebView } from 'react-native-webview';
+import { colors, radius, spacing, fonts, TOP_INSET } from '../../theme';
+import { buildDraftPreviewUrl, type SiteConfig } from '../../config/siteThemes';
+
+interface Props {
+  slug: string | null;
+  cfg: SiteConfig;
+  saving: boolean;
+  onSave: () => void;
+  onBack: () => void;
+}
+
+// Outils de l'éditeur avancé (façon Wix). Les panneaux sont branchés tâche par tâche.
+type Tool = 'sections' | 'texte' | 'menu' | 'medias' | 'animations' | 'dispo';
+const TOOLS: { id: Tool; label: string; icon: string }[] = [
+  { id: 'sections',   label: 'Conteneurs', icon: '▦' },
+  { id: 'texte',      label: 'Texte',      icon: 'T' },
+  { id: 'menu',       label: 'Menu',       icon: '☰' },
+  { id: 'medias',     label: 'Médias',     icon: '▣' },
+  { id: 'animations', label: 'Animations', icon: '✦' },
+  { id: 'dispo',      label: 'Disposition', icon: '⬒' },
+];
+
+/**
+ * Éditeur avancé du site — espace plein écran où le prestataire a le contrôle
+ * total (déplacer conteneurs, textes, menu, médias, animations) de façon simple.
+ * Scaffold (Task 1) : aperçu plein écran + barre d'outils. Les panneaux arrivent
+ * tâche par tâche (mode édition web `?edit=1`, bridge postMessage, etc.).
+ */
+export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onBack }: Props) {
+  const [tool, setTool] = useState<Tool | null>(null);
+  const uri = useMemo(() => (slug ? buildDraftPreviewUrl(slug, cfg) : null), [slug, cfg]);
+
+  return (
+    <View style={styles.root}>
+      {/* Barre haute : retour + titre + enregistrer */}
+      <View style={styles.topBar}>
+        <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.7}>
+          <Text style={styles.iconTxt}>‹</Text>
+        </TouchableOpacity>
+        <Text style={styles.title} numberOfLines={1}>Éditeur avancé</Text>
+        <TouchableOpacity
+          style={[styles.saveBtn, saving && styles.saveBtnOff]}
+          onPress={onSave}
+          activeOpacity={0.85}
+          disabled={saving}
+        >
+          {saving ? <ActivityIndicator color={colors.bg} size="small" /> : <Text style={styles.saveTxt}>Enregistrer</Text>}
+        </TouchableOpacity>
+      </View>
+
+      {/* Canevas : aperçu plein écran du site réel */}
+      <View style={styles.canvas}>
+        {slug && uri ? (
+          <WebView
+            key={uri}
+            source={{ uri }}
+            style={styles.webview}
+            originWhitelist={['https://*']}
+            scrollEnabled
+            startInLoadingState
+            renderLoading={() => (
+              <View style={styles.webLoading}><ActivityIndicator color={colors.accent} /></View>
+            )}
+          />
+        ) : (
+          <View style={styles.webLoading}>
+            <Text style={styles.noPreview}>Aperçu indisponible (lien de partage manquant).</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Panneau d'outil actif (placeholder tant que la tâche dédiée n'est pas faite) */}
+      {tool ? (
+        <View style={styles.panel}>
+          <Text style={styles.panelTitle}>{TOOLS.find(t => t.id === tool)?.label}</Text>
+          <Text style={styles.panelSoon}>Outil en cours de câblage. Bientôt disponible ici.</Text>
+        </View>
+      ) : null}
+
+      {/* Barre d'outils */}
+      <View style={styles.toolbar}>
+        {TOOLS.map(t => {
+          const on = tool === t.id;
+          return (
+            <TouchableOpacity
+              key={t.id}
+              style={styles.toolBtn}
+              activeOpacity={0.75}
+              onPress={() => setTool(on ? null : t.id)}
+            >
+              <Text style={[styles.toolIcon, on && styles.toolIconOn]}>{t.icon}</Text>
+              <Text style={[styles.toolLbl, on && styles.toolLblOn]}>{t.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.bg },
+  topBar: { flexDirection: 'row', alignItems: 'center', paddingTop: TOP_INSET + 6, paddingHorizontal: spacing.screen, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  iconBtn: { width: 38, height: 38, borderRadius: radius.pill, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  iconTxt: { color: colors.white, fontSize: 26, lineHeight: 28, marginTop: -2 },
+  title: { flex: 1, color: colors.white, fontFamily: fonts.title, fontSize: 18 },
+  saveBtn: { backgroundColor: colors.accent, borderRadius: radius.pill, paddingHorizontal: 18, paddingVertical: 9, minWidth: 96, alignItems: 'center' },
+  saveBtnOff: { opacity: 0.6 },
+  saveTxt: { color: colors.bg, fontFamily: fonts.title, fontSize: 14 },
+
+  canvas: { flex: 1, backgroundColor: '#fff', margin: spacing.screen, borderRadius: radius.xl, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
+  webview: { flex: 1, backgroundColor: '#fff' },
+  webLoading: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  noPreview: { color: '#888', fontSize: 13, textAlign: 'center', paddingHorizontal: 20 },
+
+  panel: { marginHorizontal: spacing.screen, marginBottom: 8, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: 16 },
+  panelTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 15, marginBottom: 6 },
+  panelSoon: { color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, lineHeight: 17 },
+
+  toolbar: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.screen, paddingTop: 8, paddingBottom: Platform.OS === 'ios' ? 28 : 14, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.bg },
+  toolBtn: { alignItems: 'center', flex: 1 },
+  toolIcon: { color: colors.muted, fontSize: 20, marginBottom: 3 },
+  toolIconOn: { color: colors.accent },
+  toolLbl: { color: colors.muted, fontFamily: fonts.label, fontSize: 10 },
+  toolLblOn: { color: colors.white },
+});

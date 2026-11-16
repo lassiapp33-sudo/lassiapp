@@ -84,10 +84,11 @@ const SITE_PALETTES: Record<string, SitePalette> = {
   pottery: { d: '#201d1d', w: '#FFFFFF', g: '#f4f4f5', m: '#696767', b: '#eaeaec' },
   furniture: { d: '#152420', w: '#FFFFFF', g: '#EEF4F5', m: '#6b7b78', b: '#e4ecec' },
   garderobe: { d: '#1b1b1f', w: '#FFFFFF', g: '#f5f5f6', m: '#7c7c82', b: '#e8e8ea' },
+  sac:     { d: '#1a1a1a', w: '#FFFFFF', g: '#f4f3f1', m: '#86868b', b: '#e9e7e3' },
 };
 const DEFAULT_PALETTE = 'classic';
 const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
-const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery', 'furniture', 'garderobe']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat), #3 furniture (maison & mobilier), #4 garderobe (mode / prêt-à-porter)
+const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery', 'furniture', 'garderobe', 'sac']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat), #3 furniture (maison & mobilier), #4 garderobe (mode / prêt-à-porter), #5 sac (maroquinerie / bagagerie)
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
 // ── Layout (Phase 2) — agencement des conteneurs, présentation seule ─────────
@@ -721,6 +722,37 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
       P('g6', 'Sweat à Capuche', 18000, 'Hoodie molletonné, poche kangourou. Confort maximal, style urbain.', 'homme', 'p6.jpg'),
       P('g7', 'Chemise Lin', 16000, 'Chemise en lin léger, coupe régulière. Fraîcheur et élégance pour vos sorties.', 'femme', 'p7.jpg'),
       P('g8', 'Ceinture Cuir', 7000, 'Ceinture cuir véritable, boucle métal. Accessoire durable qui habille toute tenue.', 'accessoires', 'p8.jpg'),
+    ];
+    return { shop, products };
+  }
+
+  if (t === 'sac') {
+    const site_config = {
+      template: 'sac',
+      tokens: { palette: 'sac', accent: '#FDCF34', fontHeading: 'poppins', fontBody: 'inter' },
+      layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'shadow', hero: 'split' },
+      social: { facebook: 'https://facebook.com', tiktok: 'https://tiktok.com', instagram: 'https://instagram.com' },
+    };
+    const shop: Shop = {
+      id: 'demo-sac', name: 'Modu — Maroquinerie & Bagagerie', logo_url: null,
+      description: "Sacs, sacs à dos et bagagerie en cuir et toile. Pièces robustes et élégantes pour la ville comme le voyage — commande en ligne, paiement sécurisé, retrait ou livraison à Dakar.",
+      zone: 'Dakar · Sénégal', category: 'stores', shop_type: 'products',
+      subcategories: ['sacs_a_dos', 'sacs_main', 'bagages', 'accessoires', 'nouveautes'],
+      slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
+      site_config, gallery_urls: [img('hero.jpg'), img('banner1.jpg'), img('banner2.jpg'), img('banner3.jpg')],
+      cover_url: null, phone: '76 189 00 03',
+    };
+    const P = (id: string, name: string, price: number, description: string, category: string, photo: string): Product =>
+      ({ id, name, description, emoji: null, photo_url: img(photo), price, category });
+    const products: Product[] = [
+      P('s1', 'Sac à Dos Voyageur', 32000, 'Sac à dos en toile enduite et cuir. Grand volume, compartiment ordinateur, finitions robustes.', 'sacs_a_dos', 'p1.jpg'),
+      P('s2', 'Sac à Dos Urbain', 26000, 'Sac à dos compact pour la ville. Léger, résistant à l\'eau, bretelles confort.', 'sacs_a_dos', 'p2.jpg'),
+      P('s3', 'Sac à Main Cuir', 38000, 'Sac à main en cuir pleine fleur. Élégant et spacieux, bandoulière amovible.', 'sacs_main', 'p3.jpg'),
+      P('s4', 'Besace Bandoulière', 22000, 'Besace en cuir souple. Format tablette, idéale au quotidien, port croisé.', 'sacs_main', 'p4.jpg'),
+      P('s5', 'Sac de Voyage', 45000, 'Sac de voyage en toile et cuir. Grande capacité, double anse, bandoulière.', 'bagages', 'p5.jpg'),
+      P('s6', 'Valise Cabine', 58000, 'Valise cabine rigide 4 roues. Format avion, serrure TSA, coque résistante.', 'bagages', 'p6.jpg'),
+      P('s7', 'Pochette Cuir', 12000, 'Pochette en cuir à glissière. Range l\'essentiel avec style, finition soignée.', 'accessoires', 'p7.jpg'),
+      P('s8', 'Sac Banane', 9500, 'Sac banane toile résistante. Port taille ou épaule, pratique et tendance.', 'accessoires', 'p8.jpg'),
     ];
     return { shop, products };
   }
@@ -1360,9 +1392,100 @@ function page(o: {
     ${gdFoot}
   `;
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TEMPLATE PLEIN « SAC » — Maroquinerie & Bagagerie (réf « Modern Shop »).
+  // Header clair logo centré + nav, hero split (texte + grand visuel), bloc
+  // discount + carte à propos, grille « catégories » 4 visuels, catalogue réel.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const scCats = (groups.length ? groups : [{ id: '', title: hasServices ? 'Prestations' : 'Boutique' }]).slice(0, 5);
+  const scTypeItems = (groups.length ? groups : []).slice(0, 4);
+  const scTypes = (gal.length >= 2 && scTypeItems.length >= 3) ? `
+    <section class="sc-types" id="sc-types"><div class="sc-types-in">
+      <div class="sc-types-head"><h2>Nos catégories</h2><p>Trouvez le sac fait pour vous.</p></div>
+      <div class="sc-types-grid">
+        ${scTypeItems.map((r, i) => `<a class="sc-type" href="#sc-shop" ${bg(pick(i))}><span class="sc-type-ov"><b>${esc(r.title)}</b></span></a>`).join('')}
+      </div>
+    </div></section>` : '';
+  const scFoot = `
+    <footer id="sc-contact" class="sc-foot">
+      <div class="sc-foot-grid">
+        <div class="sc-foot-brand">
+          ${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<div class="sc-foot-logo">${esc(o.name)}</div>`}
+          <p>${esc(clip(o.desc || `${o.name} — maroquinerie & bagagerie. Commande & paiement sécurisé sur LASSİ.`, 140))}</p>
+          ${socialHtml}
+        </div>
+        <div class="sc-foot-col"><h4>Boutique</h4>${scCats.slice(0, 4).map(g => `<a href="#sc-shop">${esc(g.title)}</a>`).join('')}</div>
+        <div class="sc-foot-col"><h4>Infos</h4>${o.cat ? `<p>${esc(o.cat)}</p>` : ''}${o.zone ? `<p>📍 ${esc(o.zone)}</p>` : ''}${o.phone ? `<p>✆ ${esc(o.phone)}</p>` : ''}${hoursHtml ? `<div class="sc-foot-hours">${hoursHtml}</div>` : ''}</div>
+        <div class="sc-foot-col"><h4>Commander</h4><p>Wave · Orange Money</p><p>Retrait sur place ou livraison</p><a class="sc-foot-cta" href="#sc-shop">Voir la boutique →</a></div>
+      </div>
+      <div class="sc-copy">© 2026 ${esc(o.name)} · Propulsé par LASSİ</div>
+    </footer>`;
+  const sacBody = `
+    <header class="sc-head" id="sc-top">
+      <div class="sc-head-top">
+        <div class="sc-head-side sc-head-social">${socialHtml || '<span class="sc-ic">&#9906;</span>'}</div>
+        <a class="sc-logo" href="#sc-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<span>${esc(o.name)}</span>`}</a>
+        <div class="sc-head-side sc-head-tools"><span class="sc-ic" title="Rechercher">&#9906;</span><a class="sc-ic sc-cart" href="#sc-shop" title="Panier">&#128722;</a></div>
+      </div>
+      <nav class="sc-nav">
+        <a class="sc-nav-active" href="#sc-top">Accueil</a>
+        <a href="#sc-shop">${hasProducts ? 'Boutique' : hasTerrains ? 'Terrains' : 'Prestations'}</a>
+        <a href="#sc-types">Catégories</a>
+        <a href="#sc-about">À propos</a>
+        <a href="#sc-contact">Contact</a>
+      </nav>
+    </header>
+    <section class="sc-hero" ${bg(pick(0))}>
+      <div class="sc-hero-ov"></div>
+      <div class="sc-hero-in">
+        <div class="sc-hero-l">
+          <span class="sc-eyebrow">${o.cat ? esc(o.cat) : 'Nouvelle collection'}</span>
+          <h1>${esc(o.name)}</h1>
+          <p>${esc(clip(o.desc || `Sacs, sacs à dos et bagagerie robustes et élégants. Commande en ligne, paiement sécurisé.`, 150))}</p>
+          <div class="sc-hero-cta"><a class="sc-btn" href="#sc-shop">${cxHeadCta === 'Commander' ? 'Voir la collection' : cxHeadCta}</a>${hoursHtml ? `<div class="sc-hours">${hoursHtml}</div>` : ''}</div>
+        </div>
+        <a class="sc-play" href="#sc-shop" aria-label="Lecture vidéo">
+          <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </a>
+      </div>
+      <span class="sc-badge">✓ Boutique vérifiée · LASSİ</span>
+    </section>
+    <section class="sc-feature"><div class="sc-feature-in">
+      <div class="sc-fcard">
+        <div class="sc-fcard-top"><img class="sc-avatar" src="${escAttr(o.logo || initialAvatar(o.name))}" alt="${escAttr(o.name)}"><div><b>${esc(o.name)}</b><small>${esc(o.cat || o.zone || 'Maroquinerie')}</small></div></div>
+        <h2>Le sac qui vous suit partout</h2>
+        <p>${esc(clip(o.desc || `${o.name} sélectionne des pièces durables et bien finies. Commande en ligne, paiement sécurisé Wave & Orange Money, retrait ou livraison à Dakar.`, 170))}</p>
+      </div>
+      <div class="sc-promo" ${bg(pick(1))}><div class="sc-promo-ov">
+        <span class="sc-promo-k">Boutique vérifiée</span>
+        <h3>Paiement sécurisé Wave &amp; Orange Money</h3>
+        <a class="sc-btn sc-btn-y" href="#sc-shop">Découvrir &#8594;</a>
+      </div></div>
+    </div></section>
+    ${scTypes}
+    ${closedNotice}
+    <section id="sc-shop" class="sc-shop${catalogCls}">
+      <div class="sc-sec-head"><span class="sc-k">Notre sélection</span><h2>${hasProducts ? 'La boutique' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2></div>
+      ${catnav}${dsSection}${grid}
+      ${svcSection}
+      ${terrainSection}
+    </section>
+    <section class="sc-about" id="sc-about"><div class="sc-about-in">
+      <div class="sc-about-img" ${bg(pick(2))}></div>
+      <div class="sc-about-txt">
+        <span class="sc-k">À propos</span>
+        <h2>Robuste, élégant, pensé pour durer</h2>
+        <p>${esc(clip(o.desc || `${o.name} — maroquinerie & bagagerie. Des matières nobles et des finitions soignées, pour la ville comme le voyage. Commande en ligne, paiement sécurisé, retrait ou livraison à Dakar.`, 180))}</p>
+        <a class="sc-btn" href="#sc-shop">${cxHeadCta === 'Commander' ? 'Voir la collection' : cxHeadCta}</a>
+      </div>
+    </div></section>
+    ${scFoot}
+  `;
+
   const body = theme.template === 'furniture' && hasCatalog ? furnitureBody
     : theme.template === 'cosmetic' && hasCatalog ? cosmeticBody
     : theme.template === 'garderobe' && hasCatalog ? garderobeBody
+    : theme.template === 'sac' && hasCatalog ? sacBody
     : classicBody;
 
   const cfg = JSON.stringify({
@@ -1943,6 +2066,99 @@ ${theme.fontsLink}
     .gd-perks-in{grid-template-columns:1fr 1fr;gap:18px}
     .gd-about-in{grid-template-columns:1fr;gap:24px}
     .gd-foot-grid{grid-template-columns:1fr 1fr}
+  }
+  /* ── Template SAC (maroquinerie / bagagerie — « Modern Shop ») ── */
+  body[data-template="sac"]{background:#fff}
+  .sc-head{position:sticky;top:0;z-index:40;background:#fff;border-bottom:1px solid var(--b)}
+  .sc-head-top{max-width:1240px;margin:0 auto;padding:16px 28px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px}
+  .sc-head-side{display:flex;align-items:center;gap:14px}
+  .sc-head-tools{justify-content:flex-end}
+  .sc-head-social a,.sc-head-social span{display:inline-flex}
+  .sc-logo{justify-self:center;text-align:center}
+  .sc-logo img{height:40px;display:block} .sc-logo span{font-family:var(--fh);font-weight:700;font-size:22px;color:var(--d);letter-spacing:1px;text-transform:uppercase}
+  .sc-ic{color:var(--d);font-size:18px;cursor:pointer;text-decoration:none}
+  .sc-nav{display:flex;justify-content:center;gap:34px;padding:0 28px 14px}
+  .sc-nav a{color:var(--m);text-decoration:none;font-size:12px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;padding-bottom:4px;white-space:nowrap}
+  .sc-nav a:hover{color:var(--d)}
+  .sc-nav .sc-nav-active{color:var(--d);border-bottom:2px solid var(--y)}
+  .sc-hero{position:relative;min-height:clamp(440px,72vh,640px);background-size:cover;background-position:center;background-color:var(--d);display:flex;align-items:center}
+  .sc-hero-ov{position:absolute;inset:0;background:linear-gradient(90deg,rgba(18,18,18,.78),rgba(18,18,18,.35) 60%,rgba(18,18,18,.15))}
+  .sc-hero-in{position:relative;z-index:2;width:100%;max-width:1240px;margin:0 auto;padding:0 28px;display:flex;align-items:center;justify-content:space-between;gap:30px}
+  .sc-hero-l{max-width:560px}
+  .sc-eyebrow{display:inline-block;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--y);margin-bottom:16px}
+  .sc-hero-l h1{font-family:var(--fh);font-weight:800;font-size:clamp(34px,5.2vw,62px);line-height:1.04;letter-spacing:-1px;color:#fff}
+  .sc-hero-l p{color:rgba(255,255,255,.82);font-size:15px;line-height:1.7;margin:20px 0 28px;max-width:440px}
+  .sc-hero-cta{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  .sc-btn{display:inline-block;background:var(--y);color:var(--d);font-weight:700;font-size:14px;padding:15px 32px;border-radius:6px;text-decoration:none}
+  .sc-btn:hover{opacity:.92}
+  .sc-btn-y{background:var(--y);color:var(--d)}
+  .sc-hours{font-size:13px;color:rgba(255,255,255,.75)}
+  .sc-play{flex:0 0 auto;width:84px;height:84px;border-radius:50%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.7);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;transition:.2s;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+  .sc-play:hover{background:var(--y);border-color:var(--y);color:var(--d);transform:scale(1.06)}
+  .sc-play svg{margin-left:4px}
+  .sc-badge{position:absolute;z-index:2;left:28px;bottom:24px;background:#fff;color:var(--d);font-size:12px;font-weight:600;padding:8px 14px;border-radius:30px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+  .sc-feature{max-width:1240px;margin:0 auto;padding:64px 28px 24px}
+  .sc-feature-in{display:grid;grid-template-columns:1fr 1.1fr;gap:28px;align-items:stretch}
+  .sc-fcard{background:#fff;border:1px solid var(--b);border-radius:16px;padding:34px;display:flex;flex-direction:column;justify-content:center;box-shadow:0 16px 40px rgba(0,0,0,.05)}
+  .sc-fcard-top{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+  .sc-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;background:var(--g)}
+  .sc-fcard-top b{display:block;font-size:15px;color:var(--d)} .sc-fcard-top small{color:var(--m);font-size:13px}
+  .sc-fcard h2{font-family:var(--fh);font-weight:700;font-size:clamp(24px,3vw,34px);line-height:1.1;color:var(--d);margin-bottom:14px}
+  .sc-fcard p{color:var(--m);font-size:14px;line-height:1.7}
+  .sc-promo{position:relative;border-radius:16px;overflow:hidden;min-height:260px;background-size:cover;background-position:center;background-color:var(--d)}
+  .sc-promo-ov{position:absolute;inset:0;background:linear-gradient(90deg,rgba(26,26,26,.82),rgba(26,26,26,.35));display:flex;flex-direction:column;justify-content:center;padding:40px;color:#fff}
+  .sc-promo-k{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--y);margin-bottom:12px}
+  .sc-promo h3{font-family:var(--fh);font-weight:700;font-size:clamp(22px,2.6vw,30px);line-height:1.15;margin-bottom:22px;max-width:340px}
+  .sc-promo .sc-btn-y{align-self:flex-start}
+  .sc-types{max-width:1240px;margin:0 auto;padding:48px 28px}
+  .sc-types-head{text-align:center;margin-bottom:34px}
+  .sc-types-head h2{font-family:var(--fh);font-weight:700;font-size:clamp(26px,3.4vw,42px);color:var(--d)}
+  .sc-types-head p{color:var(--m);font-size:14px;margin-top:8px}
+  .sc-types-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .sc-type{position:relative;border-radius:14px;overflow:hidden;aspect-ratio:3/4;background-size:cover;background-position:center;background-color:var(--g)}
+  .sc-type::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.55),transparent 55%)}
+  .sc-type-ov{position:absolute;z-index:2;left:16px;bottom:16px} .sc-type-ov b{color:#fff;font-size:16px;font-weight:600}
+  .sc-shop{max-width:1240px;margin:0 auto;padding:40px 28px 20px}
+  .sc-sec-head{text-align:center;margin-bottom:30px}
+  .sc-k{display:block;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--m);margin-bottom:6px}
+  .sc-sec-head h2{font-family:var(--fh);font-weight:700;font-size:clamp(26px,3.4vw,40px);color:var(--d)}
+  body[data-template="sac"] .catnav,body[data-template="sac"] .cathead{justify-content:center}
+  body[data-template="sac"] .grid{gap:22px}
+  body[data-template="sac"] .prod{border:1px solid var(--b);border-radius:12px;box-shadow:none;overflow:hidden;transition:box-shadow .2s}
+  body[data-template="sac"] .prod:hover{box-shadow:0 14px 34px rgba(0,0,0,.09)}
+  body[data-template="sac"] .prod.in{border-color:var(--y);box-shadow:0 14px 34px rgba(253,207,52,.28)}
+  body[data-template="sac"] .pimgzone{aspect-ratio:1/1;background:var(--g)}
+  body[data-template="sac"] .pname{font-weight:600;font-size:15px}
+  body[data-template="sac"] .pprice{color:var(--d);font-weight:700;font-size:16px}
+  body[data-template="sac"] .chip{border-radius:30px} body[data-template="sac"] .chip.sel{background:var(--d);border-color:var(--d);color:#fff}
+  body[data-template="sac"] .add{background:var(--d);color:#fff;border-radius:6px}
+  body[data-template="sac"] .svcbtn{border-color:var(--d);color:var(--d);border-radius:6px}
+  body[data-template="sac"] .bookbtn,body[data-template="sac"] .abo-btn,body[data-template="sac"] .ds-btn,body[data-template="sac"] .terrain-btn{background:var(--d);color:#fff;border-radius:6px}
+  body[data-template="sac"] .qtybox{background:var(--d);border-radius:6px} body[data-template="sac"] .qtybox button,body[data-template="sac"] .qtybox .q{color:#fff}
+  body[data-template="sac"] .cartbtn{background:var(--d);color:#fff;border-radius:6px} body[data-template="sac"] .cartbtn .cnt{background:var(--y);color:var(--d)}
+  body[data-template="sac"] .abocard,body[data-template="sac"] .terrain-card{border:1px solid var(--b);border-radius:12px;box-shadow:none}
+  body[data-template="sac"] .store,body[data-template="sac"] .btn,body[data-template="sac"] .payer{border-radius:6px}
+  .sc-about{max-width:1240px;margin:0 auto;padding:40px 28px 80px}
+  .sc-about-in{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+  .sc-about-img{border-radius:14px;background-size:cover;background-position:center;aspect-ratio:4/3;background-color:var(--g)}
+  .sc-about-txt h2{font-family:var(--fh);font-weight:700;font-size:clamp(26px,3.4vw,40px);color:var(--d);margin:6px 0 14px}
+  .sc-about-txt p{color:var(--m);font-size:15px;line-height:1.7;margin-bottom:26px;max-width:440px}
+  .sc-foot{background:var(--d);color:rgba(255,255,255,.72)}
+  .sc-foot-grid{max-width:1240px;margin:0 auto;padding:60px 28px 40px;display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:36px}
+  .sc-foot-brand img{height:40px;margin-bottom:14px} .sc-foot-brand .sc-foot-logo{font-family:var(--fh);font-size:22px;color:#fff;margin-bottom:12px}
+  .sc-foot-brand p{font-size:14px;max-width:290px;margin-bottom:16px}
+  .sc-foot-col h4{color:#fff;font-size:15px;font-weight:600;margin-bottom:14px}
+  .sc-foot-col a{display:block;font-size:14px;margin-bottom:9px;color:rgba(255,255,255,.72);text-decoration:none} .sc-foot-col a:hover{color:#fff}
+  .sc-foot-col p{font-size:14px;margin-bottom:8px}
+  .sc-foot-cta{color:var(--y);font-weight:600}
+  .sc-copy{border-top:1px solid rgba(255,255,255,.12);padding:20px;text-align:center;font-size:13px;color:rgba(255,255,255,.6)}
+  @media(max-width:860px){
+    .sc-nav{gap:20px;overflow-x:auto;justify-content:flex-start}
+    .sc-hero{min-height:clamp(380px,62vh,520px)} .sc-hero-in{flex-direction:column;align-items:flex-start;gap:24px;padding:48px 24px} .sc-hero-l{max-width:none} .sc-play{width:68px;height:68px;align-self:flex-start}
+    .sc-feature-in{grid-template-columns:1fr;gap:18px} .sc-promo{min-height:220px}
+    .sc-types-grid{grid-template-columns:1fr 1fr;gap:14px}
+    .sc-about-in{grid-template-columns:1fr;gap:24px}
+    .sc-foot-grid{grid-template-columns:1fr 1fr}
   }
 </style>
 </head>

@@ -13,10 +13,11 @@ import {
   type SiteConfig, type SiteLayout,
 } from '../../config/siteThemes';
 import { getSiteConfig, saveSiteConfig } from '../../services/siteBuilder';
+import AdvancedSiteEditor from './AdvancedSiteEditor';
 
 interface Props { onBack: () => void }
 
-type View3 = 'menu' | 'editor' | 'templates';
+type View3 = 'menu' | 'editor' | 'templates' | 'advanced';
 
 // Phrase de présentation par template (affichée dans la galerie).
 const TEMPLATE_PITCH: Record<string, string> = {
@@ -24,6 +25,8 @@ const TEMPLATE_PITCH: Record<string, string> = {
   cosmetic:  'Chaleureux et féminin. Idéal beauté, cosmétique, soins.',
   pottery:   'Artisanal et brut. Parfait pour le fait-main et la déco.',
   furniture: 'Élégant et posé. Pensé pour la maison et le mobilier.',
+  garderobe: 'Mode et urbain. Idéal prêt-à-porter et accessoires.',
+  sac: 'Épuré et robuste. Pensé pour sacs, maroquinerie et bagagerie.',
 };
 
 export default function SiteBuilderScreen({ onBack }: Props) {
