@@ -120,13 +120,27 @@ export default function SiteBuilderScreen({ onBack }: Props) {
 
   const goBack = useCallback(() => {
     if (view === 'menu') { onBack(); return; }
+    if (view === 'advanced') { setView('editor'); return; }
     setTplPreview(null);
     setView('menu');
   }, [view, onBack]);
 
-  const title = view === 'editor' ? 'Configurer mon site'
+  const title = view === 'editor' ? ''
     : view === 'templates' ? 'Choisir un template'
     : 'Mon site web';
+
+  // Éditeur avancé : écran plein (barre haute + outils propres).
+  if (view === 'advanced') {
+    return (
+      <AdvancedSiteEditor
+        slug={slug ?? null}
+        cfg={cfg}
+        saving={saving}
+        onSave={onSave}
+        onBack={() => setView('editor')}
+      />
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -193,6 +207,16 @@ export default function SiteBuilderScreen({ onBack }: Props) {
       ) : (
         /* ───────────────────────── ÉDITEUR COMPLET ───────────────────────── */
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+          {/* Accès éditeur avancé (contrôle total façon Wix) */}
+          <TouchableOpacity style={styles.advBtn} activeOpacity={0.85} onPress={() => setView('advanced')}>
+            <Text style={styles.advBtnIcon}>⚙️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.advBtnTitle}>Configuration avancée du site</Text>
+              <Text style={styles.advBtnDesc}>Déplace les conteneurs, édite les textes, le menu, les médias et les animations.</Text>
+            </View>
+            <Text style={styles.advBtnChevron}>›</Text>
+          </TouchableOpacity>
+
           {/* Aperçu live */}
           <View style={styles.previewWrap}>
             {slug && previewUri ? (
@@ -479,6 +503,12 @@ const styles = StyleSheet.create({
   tplChooseBtn: { backgroundColor: colors.accent, borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg, paddingVertical: 15, alignItems: 'center' },
   tplChooseBtnActive: { backgroundColor: colors.surface, borderWidth: 1.5, borderTopWidth: 0, borderColor: colors.accent },
   tplChooseTxt: { color: colors.bg, fontFamily: fonts.title, fontSize: 15 },
+
+  advBtn: { flexDirection: 'row', alignItems: 'center', marginHorizontal: spacing.screen, marginTop: 6, marginBottom: 16, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.accent, borderRadius: radius.lg, padding: 16 },
+  advBtnIcon: { fontSize: 22, marginRight: 12 },
+  advBtnTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 15, marginBottom: 3 },
+  advBtnDesc: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, lineHeight: 16 },
+  advBtnChevron: { color: colors.accent, fontSize: 26, marginLeft: 8 },
 
   previewWrap: { height: 420, marginHorizontal: spacing.screen, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 1, borderColor: colors.border },
   webview: { flex: 1, backgroundColor: '#fff' },
