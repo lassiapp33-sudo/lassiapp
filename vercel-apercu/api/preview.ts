@@ -1516,7 +1516,7 @@ ${theme.fontsLink}
   .cx-call-txt b { font-size:15px; color:var(--d); font-weight:700; }
   .cx-navrow { display:flex; align-items:center; justify-content:space-between; gap:24px; max-width:1280px; margin:0 auto; padding:0 40px 0; border-top:1px solid var(--b); }
   .cx-nav { display:flex; gap:32px; }
-  .cx-nav a { color:var(--d); text-decoration:none; font-size:13.5px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; padding:16px 0; }
+  .cx-nav a { color:var(--d); text-decoration:none; font-size:13.5px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; padding:16px 0; white-space:nowrap; }
   .cx-nav a:hover { color:var(--y); }
   .cx-icons { display:flex; align-items:center; gap:18px; }
   .cx-ic { color:var(--d); font-size:19px; text-decoration:none; cursor:pointer; line-height:1; position:relative; }
@@ -1570,7 +1570,7 @@ ${theme.fontsLink}
   @media(max-width:860px){ .cx-best-grid{grid-template-columns:1fr;} .cx-best-feature{min-height:300px;} }
   @media(max-width:760px){ .cx-best{padding:0 20px;margin:44px auto;} .cx-best-products{grid-template-columns:repeat(2,1fr);} }
   /* Section sombre « peau éclatante » : titre + sceau + rangée produits + 4 features */
-  .cx-feature { background:#171313; color:#fff; margin:70px 0 0; padding:72px 40px; }
+  .cx-feature { background:#171313; color:#fff; margin:70px 0 0; padding:50px 40px; }
   .cx-feature-top { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; max-width:1180px; margin:0 auto; }
   .cx-feature-head { max-width:440px; }
   .cx-feature-head h2 { font-family:var(--fh); font-weight:600; font-size:clamp(32px,4.4vw,50px); line-height:1.08; color:#fff; margin-bottom:16px; }
@@ -1580,9 +1580,9 @@ ${theme.fontsLink}
   .cx-feature-seal { flex:0 0 auto; width:96px; height:96px; border:1.5px solid var(--y); border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; color:var(--y); text-align:center; }
   .cx-seal-star { font-size:15px; line-height:1; }
   .cx-seal-txt { font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; line-height:1.35; }
-  .cx-feature-hero { max-width:826px; margin:40px auto 10px; }
-  .cx-feature-hero img { width:100%; height:auto; display:block; border-radius:14px; }
-  .cx-feature-icons { display:grid; grid-template-columns:repeat(3,1fr); gap:30px; max-width:960px; margin:44px auto 0; }
+  .cx-feature-hero { max-width:1180px; margin:30px auto 8px; }
+  .cx-feature-hero img { width:100%; height:440px; object-fit:cover; object-position:center; display:block; border-radius:14px; }
+  .cx-feature-icons { display:grid; grid-template-columns:repeat(3,1fr); gap:30px; max-width:960px; margin:32px auto 0; }
   .cx-fico { text-align:center; }
   .cx-fico-ic { display:inline-flex; width:30px; height:30px; color:var(--y); }
   .cx-fico-ic svg { width:100%; height:100%; }
@@ -1739,7 +1739,8 @@ ${theme.fontsLink}
   @media(max-width:860px){
     .fn-h1 .fn-nav,.fn-search,.fn-info{display:none}
     .fn-hero{grid-template-columns:1fr;padding:38px 24px}
-    .fn-rooms-grid{grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,150px)}
+    .fn-hero-l h1{font-size:20px;line-height:1.15}
+    .fn-rooms-grid{grid-template-columns:1fr 1fr;grid-template-rows:repeat(2,150px)}
     .fn-room.big{grid-column:1/3;grid-row:1}.fn-room.wide{grid-column:1/3;grid-row:2}
     .fn-mat{grid-template-columns:1fr;gap:26px}
     .fn-foot-grid{grid-template-columns:1fr 1fr}
