@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { colors, radius, spacing, fonts, TOP_INSET } from '../../theme';
-import { buildDraftPreviewUrl, type SiteConfig } from '../../config/siteThemes';
+import { buildEditPreviewUrl, type SiteConfig } from '../../config/siteThemes';
 
 interface Props {
   slug: string | null;
@@ -31,9 +31,26 @@ const TOOLS: { id: Tool; label: string; icon: string }[] = [
  * Scaffold (Task 1) : aperçu plein écran + barre d'outils. Les panneaux arrivent
  * tâche par tâche (mode édition web `?edit=1`, bridge postMessage, etc.).
  */
+// Bloc sélectionné dans la page (reçu par postMessage depuis l'overlay web).
+interface Selection { id: string; tag: string; label: string; y: number }
+
 export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onBack }: Props) {
   const [tool, setTool] = useState<Tool | null>(null);
-  const uri = useMemo(() => (slug ? buildDraftPreviewUrl(slug, cfg) : null), [slug, cfg]);
+  const [sel, setSel] = useState<Selection | null>(null);
+  const uri = useMemo(() => (slug ? buildEditPreviewUrl(slug, cfg) : null), [slug, cfg]);
+
+  // Réception des messages de l'overlay d'édition (sélection d'un conteneur).
+  const onMessage = useCallback((e: WebViewMessageEvent) => {
+    let m: any;
+    try { m = JSON.parse(e.nativeEvent.data); } catch { return; }
+    if (!m || typeof m !== 'object') return;
+    if (m.type === 'led:select') {
+      const s: Selection = { id: String(m.id ?? ''), tag: String(m.tag ?? ''), label: String(m.label ?? ''), y: Number(m.y ?? 0) };
+      setSel(s);
+      // Ouvre automatiquement le panneau pertinent selon le bloc touché.
+      setTool(s.tag === 'nav' ? 'menu' : 'sections');
+    }
+  }, []);
 
   return (
     <View style={styles.root}>
@@ -63,6 +80,7 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onBack }
             originWhitelist={['https://*']}
             scrollEnabled
             startInLoadingState
+            onMessage={onMessage}
             renderLoading={() => (
               <View style={styles.webLoading}><ActivityIndicator color={colors.accent} /></View>
             )}
@@ -78,7 +96,10 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onBack }
       {tool ? (
         <View style={styles.panel}>
           <Text style={styles.panelTitle}>{TOOLS.find(t => t.id === tool)?.label}</Text>
-          <Text style={styles.panelSoon}>Outil en cours de câblage. Bientôt disponible ici.</Text>
+          {sel ? (
+            <Text style={styles.panelSel}>Bloc sélectionné : <Text style={styles.panelSelHl}>{sel.label || sel.tag}</Text></Text>
+          ) : null}
+          <Text style={styles.panelSoon}>Touche un conteneur dans l'aperçu pour le sélectionner. Les réglages arrivent dans les prochaines étapes.</Text>
         </View>
       ) : null}
 
@@ -120,6 +141,8 @@ const styles = StyleSheet.create({
 
   panel: { marginHorizontal: spacing.screen, marginBottom: 8, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: 16 },
   panelTitle: { color: colors.white, fontFamily: fonts.title, fontSize: 15, marginBottom: 6 },
+  panelSel: { color: colors.white, fontFamily: fonts.body, fontSize: 12.5, marginBottom: 6 },
+  panelSelHl: { color: colors.accent, fontFamily: fonts.title },
   panelSoon: { color: colors.muted, fontFamily: fonts.body, fontSize: 12.5, lineHeight: 17 },
 
   toolbar: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.screen, paddingTop: 8, paddingBottom: Platform.OS === 'ios' ? 28 : 14, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.bg },

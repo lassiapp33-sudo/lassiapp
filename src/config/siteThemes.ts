@@ -249,6 +249,12 @@ export function buildDraftPreviewUrl(slug: string, cfg: SiteConfig): string {
   return `https://s.lassi.tech/${encodeURIComponent(slug)}?draft=${q}`;
 }
 
+// URL d'aperçu en MODE ÉDITION : ajoute &edit=1 pour injecter l'overlay éditable
+// (surbrillance conteneurs + bridge postMessage). Éditeur avancé in-app uniquement.
+export function buildEditPreviewUrl(slug: string, cfg: SiteConfig): string {
+  return `${buildDraftPreviewUrl(slug, cfg)}&edit=1`;
+}
+
 // Aperçu DÉMO d'un template : boutique fictive cohérente (données d'exemple),
 // pour montrer au prestataire à quoi ressemble un vrai site avec ce design.
 export function buildDemoPreviewUrl(templateId: string): string {

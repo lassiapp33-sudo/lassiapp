@@ -416,14 +416,68 @@ export default async function handler(
   }
 
   const base = `${url.protocol}//${url.host}`;
-  return new Response(renderHtml(shop, products, services, terrains as Terrain[], slug, base, dailySpecial as { id: string; name: string; price: number; photo_url?: string | null }[], promos), {
+  let html = renderHtml(shop, products, services, terrains as Terrain[], slug, base, dailySpecial as { id: string; name: string; price: number; photo_url?: string | null }[], promos);
+
+  // Mode édition (éditeur avancé in-app) : ?edit=1 injecte l'overlay d'édition
+  // (surbrillance des conteneurs + sélection + bridge postMessage vers l'app RN).
+  // N'est servi qu'avec un draft (contexte éditeur), jamais sur la vitrine publique.
+  if (draftConfig && url.searchParams.get('edit') === '1') {
+    html = html.replace('</body>', EDIT_OVERLAY + '</body>');
+  }
+
+  return new Response(html, {
     status: shop ? 200 : 404,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': draftConfig ? 'no-store' : 'public, max-age=30, s-maxage=30, stale-while-revalidate=60',
+      'Cache-Control': 'no-store',
     },
   });
 }
+
+// ─── Overlay mode édition (Task 2) ───────────────────────────────────────────
+// Injecté avant </body> uniquement en contexte éditeur (draft + edit=1). Rend les
+// conteneurs (section/nav/hero) sélectionnables et poste la sélection à l'app RN
+// via window.ReactNativeWebView.postMessage. L'app affiche le panneau adéquat.
+const EDIT_OVERLAY = `<style id="lassi-edit-style">
+.lassi-ed [data-led]{outline:1.5px dashed rgba(61,139,253,.55);outline-offset:-2px;cursor:pointer;transition:outline-color .15s}
+.lassi-ed [data-led]:hover{outline-color:rgba(61,139,253,.95)}
+.lassi-ed [data-led].led-sel{outline:2.5px solid #3D8BFD;outline-offset:-2px}
+.lassi-ed .led-tag{position:absolute;top:0;left:0;z-index:2147483646;background:#3D8BFD;color:#fff;font:600 10px/1 -apple-system,sans-serif;padding:3px 7px;border-radius:0 0 6px 0;pointer-events:none}
+#lassi-ed-badge{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#14152A;color:#FDCF34;font:600 11px -apple-system,sans-serif;padding:6px 14px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+</style>
+<div id="lassi-ed-badge">Mode édition — touche un bloc</div>
+<script>(function(){
+  var doc=document, body=doc.body; body.classList.add('lassi-ed');
+  function post(m){try{window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify(m));}catch(e){}}
+  function labelFor(el){
+    var c=el.className||'';
+    if(/hero/.test(c)) return 'En-tête';
+    if(/shop|best|products/.test(c)) return 'Produits';
+    if(/about|feature|materials/.test(c)) return 'À propos';
+    if(/perks|rooms|types|banners/.test(c)) return 'Bloc';
+    return 'Section';
+  }
+  var blocks=[].slice.call(doc.querySelectorAll('section,nav'));
+  blocks.forEach(function(el,i){
+    el.setAttribute('data-led', el.tagName.toLowerCase()+'-'+i);
+    var tag=doc.createElement('span'); tag.className='led-tag';
+    tag.textContent = el.tagName==='NAV' ? 'Menu' : labelFor(el);
+    if(getComputedStyle(el).position==='static') el.style.position='relative';
+    el.appendChild(tag);
+  });
+  var sel=null;
+  doc.addEventListener('click',function(e){
+    var t=e.target; while(t&&t!==body&&!t.hasAttribute('data-led')) t=t.parentElement;
+    if(!t||t===body) return;
+    e.preventDefault(); e.stopPropagation();
+    if(sel) sel.classList.remove('led-sel');
+    sel=t; sel.classList.add('led-sel');
+    var r=t.getBoundingClientRect();
+    post({type:'led:select', id:t.getAttribute('data-led'), tag:t.tagName.toLowerCase(),
+      label:(t.querySelector('.led-tag')||{}).textContent||'', y:Math.round(r.top+window.scrollY)});
+  },true);
+  post({type:'led:ready', blocks:blocks.length});
+})();</script>`;
 
 // Génère le sitemap XML de toutes les vitrines publiables (slug + has_content).
 // Pagination REST (1000 lignes/req) pour couvrir tout le parc boutiques.
@@ -1323,10 +1377,10 @@ function page(o: {
   const gdFeats = ['Qualité garantie', 'Paiement sécurisé', 'Livraison rapide'];
   const gdPerks = `
     <section class="gd-perks"><div class="gd-perks-in">
-      <div class="gd-perk"><span class="gd-perk-ic">&#128179;</span><div><b>Paiement sécurisé</b><small>Wave &amp; Orange Money</small></div></div>
-      <div class="gd-perk"><span class="gd-perk-ic">&#8635;</span><div><b>Retrait / livraison</b><small>${esc(o.zone || 'À Dakar')}</small></div></div>
-      <div class="gd-perk"><span class="gd-perk-ic">&#9733;</span><div><b>Qualité garantie</b><small>pièces sélectionnées</small></div></div>
-      <div class="gd-perk"><span class="gd-perk-ic">&#128222;</span><div><b>Support client</b><small>rappel après commande</small></div></div>
+      <div class="gd-perk"><div><b>Paiement sécurisé</b><small>Wave &amp; Orange Money</small></div></div>
+      <div class="gd-perk"><div><b>Retrait / livraison</b><small>${esc(o.zone || 'À Dakar')}</small></div></div>
+      <div class="gd-perk"><div><b>Qualité garantie</b><small>pièces sélectionnées</small></div></div>
+      <div class="gd-perk"><div><b>Support client</b><small>rappel après commande</small></div></div>
     </div></section>`;
   const gdFoot = `
     <footer id="gd-contact" class="gd-foot">
@@ -1337,8 +1391,8 @@ function page(o: {
           ${socialHtml}
         </div>
         <div class="gd-foot-col"><h4>Boutique</h4>${gdCats.slice(0, 4).map(g => `<a href="#gd-shop">${esc(g.title)}</a>`).join('')}</div>
-        <div class="gd-foot-col"><h4>Infos</h4>${o.cat ? `<p>${esc(o.cat)}</p>` : ''}${o.zone ? `<p>📍 ${esc(o.zone)}</p>` : ''}${o.phone ? `<p>✆ ${esc(o.phone)}</p>` : ''}${hoursHtml ? `<div class="gd-foot-hours">${hoursHtml}</div>` : ''}</div>
-        <div class="gd-foot-col"><h4>Commander</h4><p>Wave · Orange Money</p><p>Retrait sur place ou livraison</p><a class="gd-foot-cta" href="#gd-shop">Voir la boutique →</a></div>
+        <div class="gd-foot-col"><h4>Infos</h4>${o.cat ? `<p>${esc(o.cat)}</p>` : ''}${o.zone ? `<p>${esc(o.zone)}</p>` : ''}${o.phone ? `<p>${esc(o.phone)}</p>` : ''}${hoursHtml ? `<div class="gd-foot-hours">${hoursHtml}</div>` : ''}</div>
+        <div class="gd-foot-col"><h4>Commander</h4><p>Wave · Orange Money</p><p>Retrait sur place ou livraison</p><a class="gd-foot-cta" href="#gd-shop">Voir la boutique</a></div>
       </div>
       <div class="gd-copy">© 2026 ${esc(o.name)} · Propulsé par LASSİ</div>
     </footer>`;
@@ -1352,24 +1406,20 @@ function page(o: {
           <a href="#gd-about">À propos</a>
           <a href="#gd-contact">Contact</a>
         </nav>
-        <div class="gd-icons">
-          <span class="gd-ic" title="Rechercher">&#9906;</span>
-          <span class="gd-ic" title="Favoris">&#9825;</span>
-          <a class="gd-ic gd-cart" href="#gd-shop" title="Panier">&#128722;</a>
-        </div>
+        <a class="gd-head-cta" href="#gd-shop">${cxHeadCta === 'Commander' ? 'Boutique' : cxHeadCta}</a>
       </div>
     </header>
     <section class="gd-hero">
       <div class="gd-hero-l">
-        <span class="gd-eyebrow">${o.cat ? esc(o.cat) : 'Nouvelle collection disponible'}</span>
-        <h1 class="gd-hero-title">${esc(o.name)}</h1>
+        <span class="gd-eyebrow">${esc(o.name)}</span>
+        <h1 class="gd-hero-title">La nouvelle collection<br>est arrivée</h1>
         <p class="gd-hero-sub">${esc(clip(o.desc || `Vêtements, sneakers et accessoires tendance. Commande en ligne, paiement sécurisé, retrait ou livraison.`, 160))}</p>
-        <div class="gd-feats">${gdFeats.map(f => `<span class="gd-feat">&#10003; ${esc(f)}</span>`).join('')}</div>
+        <div class="gd-feats">${gdFeats.map(f => `<span class="gd-feat">${esc(f)}</span>`).join('')}</div>
         <div class="gd-hero-cta"><a class="gd-btn" href="#gd-shop">${cxHeadCta === 'Commander' ? 'Explorer la boutique' : cxHeadCta}</a>${hoursHtml ? `<div class="gd-hours">${hoursHtml}</div>` : ''}</div>
       </div>
       <div class="gd-hero-r">
         ${heroImg ? `<img class="gd-hero-img" src="${escAttr(heroImg)}" alt="${escAttr(o.name)}">` : ''}
-        <div class="gd-hero-badge">✓ Boutique vérifiée · LASSİ</div>
+        <div class="gd-hero-badge">Boutique vérifiée · LASSİ</div>
       </div>
     </section>
     ${gdPerks}
@@ -2003,15 +2053,15 @@ ${theme.fontsLink}
   .gd-nav{display:flex;gap:30px}
   .gd-nav a{color:rgba(255,255,255,.82);text-decoration:none;font-size:13px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap}
   .gd-nav a:hover{color:var(--y)}
-  .gd-icons{display:flex;gap:16px;align-items:center}
-  .gd-ic{color:#fff;font-size:18px;cursor:pointer;text-decoration:none}
+  .gd-head-cta{background:var(--y);color:#fff;font-weight:700;font-size:12px;letter-spacing:.5px;text-transform:uppercase;padding:10px 22px;border-radius:4px;text-decoration:none;white-space:nowrap}
+  .gd-head-cta:hover{filter:brightness(.94)}
   .gd-hero{display:grid;grid-template-columns:1.05fr .95fr;align-items:center;gap:30px;background:var(--g);max-width:100%;padding:0}
   .gd-hero-l{padding:64px 28px 64px 56px;max-width:620px;margin-left:auto}
   .gd-eyebrow{display:inline-block;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--y);margin-bottom:16px}
   .gd-hero-title{font-family:var(--fh);font-weight:700;font-size:clamp(34px,5vw,60px);line-height:1.05;letter-spacing:-1px;color:var(--d)}
   .gd-hero-sub{color:var(--m);font-size:15px;line-height:1.7;margin:20px 0 22px;max-width:440px}
   .gd-feats{display:flex;flex-wrap:wrap;gap:20px;margin-bottom:30px}
-  .gd-feat{font-size:13px;font-weight:600;color:var(--d)} .gd-feat::first-letter{color:var(--y)}
+  .gd-feat{font-size:13px;font-weight:600;color:var(--d);display:inline-flex;align-items:center;gap:8px} .gd-feat::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--y)}
   .gd-hero-cta{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
   .gd-btn{display:inline-block;background:var(--y);color:#fff;font-weight:700;font-size:14px;padding:15px 34px;border-radius:4px;text-decoration:none;text-transform:uppercase;letter-spacing:.5px}
   .gd-btn:hover{filter:brightness(.94)}
@@ -2021,8 +2071,7 @@ ${theme.fontsLink}
   .gd-hero-badge{position:absolute;left:24px;bottom:24px;background:#fff;color:var(--d);font-size:12px;font-weight:600;padding:8px 14px;border-radius:30px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
   .gd-perks{background:var(--d)}
   .gd-perks-in{max-width:1240px;margin:0 auto;padding:30px 28px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
-  .gd-perk{display:flex;align-items:center;gap:14px;color:#fff}
-  .gd-perk-ic{font-size:26px;line-height:1;opacity:.95}
+  .gd-perk{display:flex;align-items:center;gap:14px;color:#fff;padding-left:16px;border-left:2px solid var(--y)}
   .gd-perk b{display:block;font-size:14px;font-weight:600} .gd-perk small{color:rgba(255,255,255,.6);font-size:12px}
   .gd-shop{max-width:1240px;margin:0 auto;padding:60px 28px 20px}
   .gd-sec-head{text-align:center;margin-bottom:30px}
