@@ -1396,6 +1396,38 @@ function page(o: {
       </div>
       <div class="gd-copy">© 2026 ${esc(o.name)} · Propulsé par LASSİ</div>
     </footer>`;
+  // Bande « Parcourir par catégorie » (sombre) — vraies catégories + images galerie.
+  const gdCatCards = (groups.length >= 3 && gal.length >= 1) ? `
+    <section class="gd-cats-sec"><div class="gd-cats-wrap">
+      <div class="gd-sec-head light"><span class="gd-k light">Nos rayons</span><h2>Parcourir par catégorie</h2></div>
+      <div class="gd-cats-grid">
+        ${groups.slice(0, 3).map((g, i) => `<a class="gd-cat-card" href="#gd-shop" ${bg(pick(i))}><span class="gd-cat-ov"></span><span class="gd-cat-info"><small>${g.items.length} article${g.items.length > 1 ? 's' : ''}</small><b>${esc(g.title)}</b></span></a>`).join('')}
+      </div>
+    </div></section>` : '';
+  // Bloc éditorial « la maison » — boîte sombre sur grand visuel + signature = nom boutique.
+  const gdEditorial = gal.length >= 1 ? `
+    <section class="gd-edito" id="gd-about">
+      <div class="gd-edito-img" ${bg(pick(1))}></div>
+      <div class="gd-edito-box">
+        <span class="gd-k light">La maison</span>
+        <h2>Le style qui te ressemble</h2>
+        <p>${esc(clip(o.desc || `${o.name} sélectionne des pièces tendance et durables. Commande en ligne, paiement sécurisé Wave & Orange Money, retrait ou livraison à Dakar.`, 210))}</p>
+        <span class="gd-sign">${esc(o.name)}</span>
+      </div>
+    </section>` : '';
+  // Bande « offres » — 3 produits réels (cartes fonctionnelles) + panneau CTA.
+  const gdDealItems = o.products.slice(0, 3);
+  const gdDealTitle = o.promos.length ? clip(o.promos[0].titre, 40) : 'Nos pièces phares';
+  const gdDeals = (gdDealItems.length >= 3) ? `
+    <section class="gd-deals"><div class="gd-deals-wrap">
+      <div class="gd-deals-grid grid">${gdDealItems.map(productCard).join('')}</div>
+      <div class="gd-deals-panel">
+        <span class="gd-deals-k">Sélection</span>
+        <h3>${esc(gdDealTitle)}</h3>
+        <p>Nos coups de cœur du moment. Commande en ligne, paiement sécurisé Wave &amp; Orange Money, retrait ou livraison.</p>
+        <a class="gd-btn" href="#gd-shop">Voir tout</a>
+      </div>
+    </div></section>` : '';
   const garderobeBody = `
     <header class="gd-head" id="gd-top">
       <div class="gd-head-in">
@@ -1430,15 +1462,9 @@ function page(o: {
       ${svcSection}
       ${terrainSection}
     </section>
-    <section class="gd-about" id="gd-about"><div class="gd-about-in">
-      <div class="gd-about-img" ${bg(pick(1))}></div>
-      <div class="gd-about-txt">
-        <span class="gd-k">À propos</span>
-        <h2>Le style qui te ressemble</h2>
-        <p>${esc(clip(o.desc || `${o.name} sélectionne des pièces tendance et durables. Commande en ligne, paiement sécurisé Wave & Orange Money, retrait ou livraison à Dakar.`, 180))}</p>
-        <a class="gd-btn" href="#gd-shop">${cxHeadCta === 'Commander' ? 'Explorer la boutique' : cxHeadCta}</a>
-      </div>
-    </div></section>
+    ${gdCatCards}
+    ${gdEditorial}
+    ${gdDeals}
     ${gdFoot}
   `;
 
@@ -1453,7 +1479,11 @@ function page(o: {
     <section class="sc-types" id="sc-types"><div class="sc-types-in">
       <div class="sc-types-head"><h2>Nos catégories</h2><p>Trouvez le sac fait pour vous.</p></div>
       <div class="sc-types-grid">
-        ${scTypeItems.map((r, i) => `<a class="sc-type" href="#sc-shop" ${bg(pick(i))}><span class="sc-type-ov"><b>${esc(r.title)}</b></span></a>`).join('')}
+        ${scTypeItems.map((r, i) => {
+          const d = (r.items[0]?.description || '').trim();
+          const sub = d ? clip(d, 78) : `${r.items.length} modèle${r.items.length > 1 ? 's' : ''} disponible${r.items.length > 1 ? 's' : ''}`;
+          return `<a class="sc-type" href="#sc-shop" ${bg(pick(i))}><span class="sc-type-ov"><b>${esc(r.title)}</b><small>${esc(sub)}</small></span></a>`;
+        }).join('')}
       </div>
     </div></section>` : '';
   const scFoot = `
@@ -1502,14 +1532,15 @@ function page(o: {
     </section>
     <section class="sc-feature"><div class="sc-feature-in">
       <div class="sc-fcard">
-        <div class="sc-fcard-top"><img class="sc-avatar" src="${escAttr(o.logo || (o.slug === '__demo' ? `${base}/assets/demo/sac/avatar.jpg` : initialAvatar(o.name)))}" alt="${escAttr(o.name)}"><div><b>${esc(o.name)}</b><small>${esc(o.cat || o.zone || 'Maroquinerie')}</small></div></div>
+        <div class="sc-fcard-top"><img class="sc-avatar" src="${escAttr(o.logo || (o.slug === '__demo' ? `${o.base}/assets/demo/sac/avatar.jpg` : initialAvatar(o.name)))}" alt="${escAttr(o.name)}"><div><b>${esc(o.name)}</b><small>${esc(o.cat || o.zone || 'Maroquinerie')}</small></div></div>
         <h2>Le sac qui vous suit partout</h2>
         <p>${esc(clip(o.desc || `${o.name} sélectionne des pièces durables et bien finies. Commande en ligne, paiement sécurisé Wave & Orange Money, retrait ou livraison à Dakar.`, 170))}</p>
       </div>
       <div class="sc-promo" ${bg(pick(1))}><div class="sc-promo-ov">
         <span class="sc-promo-k">Boutique vérifiée</span>
         <h3>Paiement sécurisé Wave &amp; Orange Money</h3>
-        <a class="sc-btn sc-btn-y" href="#sc-shop">Découvrir &#8594;</a>
+        <p>Commande en ligne, retrait sur place ou livraison à ${esc(o.zone || 'Dakar')}. Paiement 100% sécurisé.</p>
+        <a class="sc-btn sc-btn-dark" href="#sc-shop">Découvrir &#8594;</a>
       </div></div>
     </div></section>
     ${scTypes}
@@ -2058,7 +2089,7 @@ ${theme.fontsLink}
   .gd-hero{display:grid;grid-template-columns:1.05fr .95fr;align-items:center;gap:30px;background:var(--g);max-width:100%;padding:0}
   .gd-hero-l{padding:64px 28px 64px 56px;max-width:620px;margin-left:auto}
   .gd-eyebrow{display:inline-block;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--y);margin-bottom:16px}
-  .gd-hero-title{font-family:var(--fh);font-weight:700;font-size:clamp(34px,5vw,60px);line-height:1.05;letter-spacing:-1px;color:var(--d)}
+  .gd-hero-title{font-family:var(--fh);font-weight:700;font-size:clamp(30px,3.8vw,46px);line-height:1.08;letter-spacing:-1px;color:var(--d)}
   .gd-hero-sub{color:var(--m);font-size:15px;line-height:1.7;margin:20px 0 22px;max-width:440px}
   .gd-feats{display:flex;flex-wrap:wrap;gap:20px;margin-bottom:30px}
   .gd-feat{font-size:13px;font-weight:600;color:var(--d);display:inline-flex;align-items:center;gap:8px} .gd-feat::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--y)}
@@ -2094,11 +2125,31 @@ ${theme.fontsLink}
   body[data-template="garderobe"] .cartbtn{background:var(--d);color:#fff;border-radius:4px} body[data-template="garderobe"] .cartbtn .cnt{background:var(--y);color:#fff}
   body[data-template="garderobe"] .abocard,body[data-template="garderobe"] .terrain-card{border:1px solid var(--b);border-radius:8px;box-shadow:none}
   body[data-template="garderobe"] .store,body[data-template="garderobe"] .btn,body[data-template="garderobe"] .payer{border-radius:4px}
-  .gd-about{max-width:1240px;margin:0 auto;padding:40px 28px 80px}
-  .gd-about-in{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
-  .gd-about-img{border-radius:12px;background-size:cover;background-position:center;aspect-ratio:4/3;background-color:var(--g)}
-  .gd-about-txt h2{font-family:var(--fh);font-weight:700;font-size:clamp(26px,3.4vw,40px);color:var(--d);margin:6px 0 14px}
-  .gd-about-txt p{color:var(--m);font-size:15px;line-height:1.7;margin-bottom:26px;max-width:440px}
+  .gd-sec-head.light .gd-k,.gd-sec-head.light h2{color:#fff} .gd-k.light{color:rgba(255,255,255,.55)}
+  /* Parcourir par catégorie (sombre) */
+  .gd-cats-sec{background:var(--d);margin-top:40px}
+  .gd-cats-wrap{max-width:1240px;margin:0 auto;padding:64px 28px}
+  .gd-cats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .gd-cat-card{position:relative;display:block;height:380px;border-radius:12px;overflow:hidden;background-size:cover;background-position:center;text-decoration:none}
+  .gd-cat-ov{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.65),rgba(0,0,0,.05) 60%)}
+  .gd-cat-info{position:absolute;left:22px;bottom:22px;z-index:2;color:#fff}
+  .gd-cat-info small{display:block;font-size:12px;color:var(--y);font-weight:600;letter-spacing:.5px;margin-bottom:4px}
+  .gd-cat-info b{font-family:var(--fh);font-size:24px;font-weight:700}
+  /* Bloc éditorial (boîte sombre sur visuel) */
+  .gd-edito{position:relative;max-width:1240px;margin:70px auto;padding:0 28px;display:flex;justify-content:flex-end;align-items:center;min-height:480px}
+  .gd-edito-img{position:absolute;right:28px;top:0;width:66%;height:100%;border-radius:12px;background-size:cover;background-position:center;background-color:var(--g)}
+  .gd-edito-box{position:relative;z-index:2;background:var(--d);color:#fff;max-width:420px;padding:44px;border-radius:12px;margin:40px 0}
+  .gd-edito-box h2{font-family:var(--fh);font-weight:700;font-size:clamp(26px,3.2vw,38px);margin:6px 0 16px}
+  .gd-edito-box p{color:rgba(255,255,255,.72);font-size:15px;line-height:1.75;margin-bottom:22px}
+  .gd-sign{font-family:var(--fh);font-size:26px;font-style:italic;color:var(--y)}
+  /* Bande offres (produits + panneau) */
+  .gd-deals{background:var(--g)}
+  .gd-deals-wrap{max-width:1240px;margin:0 auto;padding:64px 28px;display:grid;grid-template-columns:2fr 1fr;gap:30px;align-items:stretch}
+  .gd-deals-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .gd-deals-panel{background:var(--d);color:#fff;border-radius:12px;padding:40px;display:flex;flex-direction:column;justify-content:center}
+  .gd-deals-k{font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--y);margin-bottom:8px}
+  .gd-deals-panel h3{font-family:var(--fh);font-weight:700;font-size:clamp(24px,2.6vw,32px);margin-bottom:12px}
+  .gd-deals-panel p{color:rgba(255,255,255,.7);font-size:14px;line-height:1.7;margin-bottom:22px}
   .gd-foot{background:var(--d);color:rgba(255,255,255,.72)}
   .gd-foot-grid{max-width:1240px;margin:0 auto;padding:60px 28px 40px;display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:36px}
   .gd-foot-brand img{height:40px;margin-bottom:14px} .gd-foot-brand .gd-foot-logo{font-family:var(--fh);font-size:22px;color:#fff;margin-bottom:12px}
@@ -2113,7 +2164,9 @@ ${theme.fontsLink}
     .gd-hero{grid-template-columns:1fr} .gd-hero-l{padding:40px 24px 10px;margin:0;max-width:none} .gd-hero-r{min-height:300px;order:-1}
     .gd-hero-img{max-height:340px}
     .gd-perks-in{grid-template-columns:1fr 1fr;gap:18px}
-    .gd-about-in{grid-template-columns:1fr;gap:24px}
+    .gd-cats-grid{grid-template-columns:1fr;gap:16px} .gd-cat-card{height:260px}
+    .gd-edito{min-height:auto;display:block;padding:0 24px} .gd-edito-img{position:relative;width:100%;height:240px;right:auto} .gd-edito-box{max-width:none;margin:-40px 0 0;padding:28px}
+    .gd-deals-wrap{grid-template-columns:1fr;gap:20px} .gd-deals-grid{grid-template-columns:1fr 1fr;gap:12px} .gd-deals-panel{order:-1}
     .gd-foot-grid{grid-template-columns:1fr 1fr}
   }
   /* ── Template SAC (maroquinerie / bagagerie — « Modern Shop ») ── */
@@ -2157,7 +2210,7 @@ ${theme.fontsLink}
   .sc-promo{position:relative;border-radius:16px;overflow:hidden;min-height:260px;background-size:cover;background-position:center;background-color:var(--d)}
   .sc-promo-ov{position:absolute;inset:0;background:linear-gradient(90deg,rgba(26,26,26,.82),rgba(26,26,26,.35));display:flex;flex-direction:column;justify-content:center;padding:40px;color:#fff}
   .sc-promo-k{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--y);margin-bottom:12px}
-  .sc-promo h3{font-family:var(--fh);font-weight:700;font-size:clamp(22px,2.6vw,30px);line-height:1.15;margin-bottom:22px;max-width:340px}
+  .sc-promo h3{font-family:var(--fh);font-weight:700;font-size:clamp(17px,2vw,23px);line-height:1.2;margin-bottom:22px;max-width:400px}
   .sc-promo .sc-btn-y{align-self:flex-start}
   .sc-types{max-width:1240px;margin:0 auto;padding:48px 28px}
   .sc-types-head{text-align:center;margin-bottom:34px}
@@ -3617,4 +3670,6 @@ const TERRAIN_JS = `
     document.getElementById('t-wsub').textContent='Vérification de ton paiement en cours…';
     startPoll();
     checkResaOnce(resaId, null);
-  }
+  })();
+})();
+`;

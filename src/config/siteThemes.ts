@@ -17,6 +17,19 @@ export interface SiteSocial {
   instagram: string;
 }
 
+// Réglage de style d'un élément de texte (éditeur avancé).
+export interface TextStyle { size?: number; color?: string; font?: string }
+
+// Overrides de l'éditeur avancé (appliqués côté web par un script runtime,
+// template-agnostique). Tout est optionnel et borné/assaini avant rendu.
+export interface SiteOverrides {
+  text?: Record<string, string>;        // clé élément -> texte de remplacement
+  style?: Record<string, TextStyle>;    // clé élément -> taille/couleur/police
+  anim?: Record<string, string>;        // clé élément -> id d'animation d'entrée
+  menuHidden?: number[];                // index des entrées de menu masquées
+  menuStyle?: TextStyle;                // style global du menu
+}
+
 export interface SiteConfig {
   template: string;
   tokens: {
@@ -28,7 +41,20 @@ export interface SiteConfig {
   layout: SiteLayout;
   displayName?: string;
   social?: SiteSocial;
+  overrides?: SiteOverrides;
 }
+
+// Animations d'entrée disponibles (miroir côté preview.ts).
+export const SITE_ANIMATIONS: { id: string; label: string }[] = [
+  { id: '',         label: 'Aucune' },
+  { id: 'fade',     label: 'Fondu' },
+  { id: 'fade-up',  label: 'Fondu ↑' },
+  { id: 'fade-left',label: 'Glissé →' },
+  { id: 'zoom',     label: 'Zoom' },
+];
+
+// Tailles de texte proposées (px) dans l'éditeur.
+export const TEXT_SIZES = [12, 14, 16, 18, 22, 28, 34, 44];
 
 export const EMPTY_SOCIAL: SiteSocial = { facebook: '', tiktok: '', instagram: '' };
 
@@ -205,7 +231,59 @@ export function normalizeSiteConfig(raw: Partial<SiteConfig> | null | undefined)
   if (name) out.displayName = name;
   const social = normalizeSocial(raw?.social);
   if (hasAnySocial(social)) out.social = social;
+  const ov = normalizeOverrides((raw as any)?.overrides);
+  if (ov) out.overrides = ov;
   return out;
+}
+
+// Assainit les overrides : bornes strictes (texte 200c, couleur hex, police connue,
+// taille 10-60, anim connue, index menu entiers). Renvoie undefined si vide.
+const ANIM_IDS = SITE_ANIMATIONS.map(a => a.id).filter(Boolean);
+function cleanTextStyle(raw: any): TextStyle | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const out: TextStyle = {};
+  if (typeof raw.size === 'number' && raw.size >= 10 && raw.size <= 60) out.size = Math.round(raw.size);
+  if (typeof raw.color === 'string' && HEX6.test(raw.color)) out.color = raw.color;
+  if (typeof raw.font === 'string' && SITE_FONTS.some(f => f.id === raw.font)) out.font = raw.font;
+  return Object.keys(out).length ? out : undefined;
+}
+export function normalizeOverrides(raw: any): SiteOverrides | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const out: SiteOverrides = {};
+  if (raw.text && typeof raw.text === 'object') {
+    const t: Record<string, string> = {};
+    for (const k of Object.keys(raw.text).slice(0, 60)) {
+      const v = raw.text[k];
+      if (typeof k === 'string' && /^[a-z0-9]{1,16}$/.test(k) && typeof v === 'string' && v.length <= 200) t[k] = v;
+    }
+    if (Object.keys(t).length) out.text = t;
+  }
+  if (raw.style && typeof raw.style === 'object') {
+    const s: Record<string, TextStyle> = {};
+    for (const k of Object.keys(raw.style).slice(0, 60)) {
+      const cs = cleanTextStyle(raw.style[k]);
+      if (/^[a-z0-9]{1,16}$/.test(k) && cs) s[k] = cs;
+    }
+    if (Object.keys(s).length) out.style = s;
+  }
+  if (raw.anim && typeof raw.anim === 'object') {
+    const a: Record<string, string> = {};
+    for (const k of Object.keys(raw.anim).slice(0, 60)) {
+      const v = raw.anim[k];
+      if (/^[a-z0-9]{1,16}$/.test(k) && typeof v === 'string' && ANIM_IDS.includes(v)) a[k] = v;
+    }
+    if (Object.keys(a).length) out.anim = a;
+  }
+  if (Array.isArray(raw.menuHidden)) {
+    const h = Array.from(new Set(raw.menuHidden.filter((n: any) => Number.isInteger(n) && n >= 0 && n < 30))) as number[];
+    if (h.length) out.menuHidden = h;
+  }
+  const ms = cleanTextStyle(raw.menuStyle);
+  if (ms) out.menuStyle = ms;
+  return Object.keys(out).length ? out : undefined;
+}
+export function hasOverrides(o: SiteOverrides | undefined): boolean {
+  return !!o && Object.keys(o).length > 0;
 }
 
 // Valide le layout : order = permutation stricte des 3 blocs, sinon défaut.
@@ -238,7 +316,8 @@ export function isDefaultSiteConfig(c: SiteConfig): boolean {
     c.tokens.fontBody === d.tokens.fontBody &&
     layoutDefault &&
     !c.displayName &&
-    !hasAnySocial(c.social)
+    !hasAnySocial(c.social) &&
+    !hasOverrides(c.overrides)
   );
 }
 
