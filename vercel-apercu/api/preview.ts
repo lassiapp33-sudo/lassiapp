@@ -83,10 +83,11 @@ const SITE_PALETTES: Record<string, SitePalette> = {
   cosmetic: { d: '#171313', w: '#FFFFFF', g: '#f6f6f7', m: '#6e6e75', b: '#ececed' },
   pottery: { d: '#201d1d', w: '#FFFFFF', g: '#f4f4f5', m: '#696767', b: '#eaeaec' },
   furniture: { d: '#152420', w: '#FFFFFF', g: '#EEF4F5', m: '#6b7b78', b: '#e4ecec' },
+  garderobe: { d: '#1b1b1f', w: '#FFFFFF', g: '#f5f5f6', m: '#7c7c82', b: '#e8e8ea' },
 };
 const DEFAULT_PALETTE = 'classic';
 const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
-const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery', 'furniture']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat), #3 furniture (maison & mobilier)
+const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery', 'furniture', 'garderobe']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat), #3 furniture (maison & mobilier), #4 garderobe (mode / prêt-à-porter)
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
 // ── Layout (Phase 2) — agencement des conteneurs, présentation seule ─────────
@@ -677,6 +678,37 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
     return { shop, products };
   }
 
+  if (t === 'garderobe') {
+    const site_config = {
+      template: 'garderobe',
+      tokens: { palette: 'garderobe', accent: '#E4322B', fontHeading: 'poppins', fontBody: 'poppins' },
+      layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'shadow', hero: 'split' },
+      social: { facebook: 'https://facebook.com', tiktok: 'https://tiktok.com', instagram: 'https://instagram.com' },
+    };
+    const shop: Shop = {
+      id: 'demo-garderobe', name: 'Sañse — Mode & Prêt-à-porter', logo_url: null,
+      description: "Prêt-à-porter, streetwear & accessoires sélectionnés. Vêtements, sneakers et pièces tendance livrées à Dakar — commande en ligne, paiement sécurisé, retrait ou livraison.",
+      zone: 'Dakar · Sénégal', category: 'stores',
+      subcategories: ['homme', 'femme', 'sneakers', 'accessoires', 'nouveautes'],
+      slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
+      site_config, gallery_urls: [img('hero.png'), img('banner1.jpg'), img('p1.jpg'), img('p2.jpg')],
+      cover_url: null, phone: '76 189 00 03',
+    };
+    const P = (id: string, name: string, price: number, description: string, category: string, photo: string): Product =>
+      ({ id, name, description, emoji: null, photo_url: img(photo), price, category });
+    const products: Product[] = [
+      P('g1', 'Casquette Snapback', 8000, 'Casquette snapback ajustable, logo brodé. Finition premium, style streetwear.', 'accessoires', 'p1.jpg'),
+      P('g2', 'Sneakers Low', 35000, 'Baskets basses en cuir souple. Semelle confort, coloris sobre, parfaites au quotidien.', 'sneakers', 'p2.jpg'),
+      P('g3', 'T-shirt Graphique', 12000, 'T-shirt coton bio, impression graphique. Coupe droite, toucher doux et respirant.', 'homme', 'p3.jpg'),
+      P('g4', 'Lunettes Rétro', 9500, 'Lunettes de soleil rétro, verres UV400. Monture légère et intemporelle.', 'accessoires', 'p4.jpg'),
+      P('g5', 'Pull Oversize', 22000, 'Pull maille oversize, chaud et douillet. Idéal pour un look casual et cosy.', 'femme', 'p5.jpg'),
+      P('g6', 'Sweat à Capuche', 18000, 'Hoodie molletonné, poche kangourou. Confort maximal, style urbain.', 'homme', 'p6.jpg'),
+      P('g7', 'Chemise Lin', 16000, 'Chemise en lin léger, coupe régulière. Fraîcheur et élégance pour vos sorties.', 'femme', 'p7.jpg'),
+      P('g8', 'Ceinture Cuir', 7000, 'Ceinture cuir véritable, boucle métal. Accessoire durable qui habille toute tenue.', 'accessoires', 'p8.jpg'),
+    ];
+    return { shop, products };
+  }
+
   // Fallback générique (autres templates — démo minimale).
   const shop: Shop = {
     id: 'demo', name: 'Boutique Démo', logo_url: null, description: 'Aperçu du template.',
@@ -1234,8 +1266,87 @@ function page(o: {
     ${fnFoot}
   `;
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TEMPLATE PLEIN « GARDEROBE » — Mode & Prêt-à-porter (réf boutique fashion).
+  // Header sombre (logo / nav / icônes), hero clair avec visuel détouré + 3
+  // atouts, bande sombre 4 perks, catalogue réel réutilisé, footer + réseaux.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const gdCats = (groups.length ? groups : [{ id: '', title: hasServices ? 'Prestations' : 'Boutique' }]).slice(0, 6);
+  const gdFeats = ['Qualité garantie', 'Paiement sécurisé', 'Livraison rapide'];
+  const gdPerks = `
+    <section class="gd-perks"><div class="gd-perks-in">
+      <div class="gd-perk"><span class="gd-perk-ic">&#128179;</span><div><b>Paiement sécurisé</b><small>Wave &amp; Orange Money</small></div></div>
+      <div class="gd-perk"><span class="gd-perk-ic">&#8635;</span><div><b>Retrait / livraison</b><small>${esc(o.zone || 'À Dakar')}</small></div></div>
+      <div class="gd-perk"><span class="gd-perk-ic">&#9733;</span><div><b>Qualité garantie</b><small>pièces sélectionnées</small></div></div>
+      <div class="gd-perk"><span class="gd-perk-ic">&#128222;</span><div><b>Support client</b><small>rappel après commande</small></div></div>
+    </div></section>`;
+  const gdFoot = `
+    <footer id="gd-contact" class="gd-foot">
+      <div class="gd-foot-grid">
+        <div class="gd-foot-brand">
+          ${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<div class="gd-foot-logo">${esc(o.name)}</div>`}
+          <p>${esc(clip(o.desc || `${o.name} — mode & prêt-à-porter. Commande & paiement sécurisé sur LASSİ.`, 140))}</p>
+          ${socialHtml}
+        </div>
+        <div class="gd-foot-col"><h4>Boutique</h4>${gdCats.slice(0, 4).map(g => `<a href="#gd-shop">${esc(g.title)}</a>`).join('')}</div>
+        <div class="gd-foot-col"><h4>Infos</h4>${o.cat ? `<p>${esc(o.cat)}</p>` : ''}${o.zone ? `<p>📍 ${esc(o.zone)}</p>` : ''}${o.phone ? `<p>✆ ${esc(o.phone)}</p>` : ''}${hoursHtml ? `<div class="gd-foot-hours">${hoursHtml}</div>` : ''}</div>
+        <div class="gd-foot-col"><h4>Commander</h4><p>Wave · Orange Money</p><p>Retrait sur place ou livraison</p><a class="gd-foot-cta" href="#gd-shop">Voir la boutique →</a></div>
+      </div>
+      <div class="gd-copy">© 2026 ${esc(o.name)} · Propulsé par LASSİ</div>
+    </footer>`;
+  const garderobeBody = `
+    <header class="gd-head" id="gd-top">
+      <div class="gd-head-in">
+        <a class="gd-logo" href="#gd-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<span>${esc(o.name)}</span>`}</a>
+        <nav class="gd-nav">
+          <a href="#gd-top">Accueil</a>
+          <a href="#gd-shop">${hasProducts ? 'Boutique' : hasTerrains ? 'Terrains' : 'Prestations'}</a>
+          <a href="#gd-about">À propos</a>
+          <a href="#gd-contact">Contact</a>
+        </nav>
+        <div class="gd-icons">
+          <span class="gd-ic" title="Rechercher">&#9906;</span>
+          <span class="gd-ic" title="Favoris">&#9825;</span>
+          <a class="gd-ic gd-cart" href="#gd-shop" title="Panier">&#128722;</a>
+        </div>
+      </div>
+    </header>
+    <section class="gd-hero">
+      <div class="gd-hero-l">
+        <span class="gd-eyebrow">${o.cat ? esc(o.cat) : 'Nouvelle collection disponible'}</span>
+        <h1 class="gd-hero-title">${esc(o.name)}</h1>
+        <p class="gd-hero-sub">${esc(clip(o.desc || `Vêtements, sneakers et accessoires tendance. Commande en ligne, paiement sécurisé, retrait ou livraison.`, 160))}</p>
+        <div class="gd-feats">${gdFeats.map(f => `<span class="gd-feat">&#10003; ${esc(f)}</span>`).join('')}</div>
+        <div class="gd-hero-cta"><a class="gd-btn" href="#gd-shop">${cxHeadCta === 'Commander' ? 'Explorer la boutique' : cxHeadCta}</a>${hoursHtml ? `<div class="gd-hours">${hoursHtml}</div>` : ''}</div>
+      </div>
+      <div class="gd-hero-r">
+        ${heroImg ? `<img class="gd-hero-img" src="${escAttr(heroImg)}" alt="${escAttr(o.name)}">` : ''}
+        <div class="gd-hero-badge">✓ Boutique vérifiée · LASSİ</div>
+      </div>
+    </section>
+    ${gdPerks}
+    ${closedNotice}
+    <section id="gd-shop" class="gd-shop${catalogCls}" >
+      <div class="gd-sec-head"><span class="gd-k">Notre sélection</span><h2>${hasProducts ? 'Nouveautés' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2></div>
+      ${catnav}${dsSection}${grid}
+      ${svcSection}
+      ${terrainSection}
+    </section>
+    <section class="gd-about" id="gd-about"><div class="gd-about-in">
+      <div class="gd-about-img" ${bg(pick(1))}></div>
+      <div class="gd-about-txt">
+        <span class="gd-k">À propos</span>
+        <h2>Le style qui te ressemble</h2>
+        <p>${esc(clip(o.desc || `${o.name} sélectionne des pièces tendance et durables. Commande en ligne, paiement sécurisé Wave & Orange Money, retrait ou livraison à Dakar.`, 180))}</p>
+        <a class="gd-btn" href="#gd-shop">${cxHeadCta === 'Commander' ? 'Explorer la boutique' : cxHeadCta}</a>
+      </div>
+    </div></section>
+    ${gdFoot}
+  `;
+
   const body = theme.template === 'furniture' && hasCatalog ? furnitureBody
     : theme.template === 'cosmetic' && hasCatalog ? cosmeticBody
+    : theme.template === 'garderobe' && hasCatalog ? garderobeBody
     : classicBody;
 
   const cfg = JSON.stringify({
@@ -1744,6 +1855,78 @@ ${theme.fontsLink}
     .fn-room.big{grid-column:1/3;grid-row:1}.fn-room.wide{grid-column:1/3;grid-row:2}
     .fn-mat{grid-template-columns:1fr;gap:26px}
     .fn-foot-grid{grid-template-columns:1fr 1fr}
+  }
+  /* ── GARDEROBE (mode / prêt-à-porter) ───────────────────────────────── */
+  body[data-template="garderobe"]{background:#fff}
+  .gd-head{position:sticky;top:0;z-index:40;background:var(--d);color:#fff}
+  .gd-head-in{max-width:1240px;margin:0 auto;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;gap:24px}
+  .gd-logo img{height:34px;display:block} .gd-logo span{font-family:var(--fh);font-weight:700;font-size:21px;color:#fff;letter-spacing:.5px}
+  .gd-nav{display:flex;gap:30px}
+  .gd-nav a{color:rgba(255,255,255,.82);text-decoration:none;font-size:13px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap}
+  .gd-nav a:hover{color:var(--y)}
+  .gd-icons{display:flex;gap:16px;align-items:center}
+  .gd-ic{color:#fff;font-size:18px;cursor:pointer;text-decoration:none}
+  .gd-hero{display:grid;grid-template-columns:1.05fr .95fr;align-items:center;gap:30px;background:var(--g);max-width:100%;padding:0}
+  .gd-hero-l{padding:64px 28px 64px 56px;max-width:620px;margin-left:auto}
+  .gd-eyebrow{display:inline-block;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--y);margin-bottom:16px}
+  .gd-hero-title{font-family:var(--fh);font-weight:700;font-size:clamp(34px,5vw,60px);line-height:1.05;letter-spacing:-1px;color:var(--d)}
+  .gd-hero-sub{color:var(--m);font-size:15px;line-height:1.7;margin:20px 0 22px;max-width:440px}
+  .gd-feats{display:flex;flex-wrap:wrap;gap:20px;margin-bottom:30px}
+  .gd-feat{font-size:13px;font-weight:600;color:var(--d)} .gd-feat::first-letter{color:var(--y)}
+  .gd-hero-cta{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  .gd-btn{display:inline-block;background:var(--y);color:#fff;font-weight:700;font-size:14px;padding:15px 34px;border-radius:4px;text-decoration:none;text-transform:uppercase;letter-spacing:.5px}
+  .gd-btn:hover{filter:brightness(.94)}
+  .gd-hero-r{position:relative;align-self:stretch;min-height:460px;display:flex;align-items:flex-end;justify-content:center;padding:40px 40px 0}
+  .gd-hero-r::before{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-46%);width:min(430px,78%);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 50% 40%,#fff 0%,var(--y) 140%);opacity:.16}
+  .gd-hero-img{position:relative;max-height:520px;max-width:100%;object-fit:contain;display:block;filter:drop-shadow(0 26px 40px rgba(0,0,0,.14))}
+  .gd-hero-badge{position:absolute;left:24px;bottom:24px;background:#fff;color:var(--d);font-size:12px;font-weight:600;padding:8px 14px;border-radius:30px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+  .gd-perks{background:var(--d)}
+  .gd-perks-in{max-width:1240px;margin:0 auto;padding:30px 28px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+  .gd-perk{display:flex;align-items:center;gap:14px;color:#fff}
+  .gd-perk-ic{font-size:26px;line-height:1;opacity:.95}
+  .gd-perk b{display:block;font-size:14px;font-weight:600} .gd-perk small{color:rgba(255,255,255,.6);font-size:12px}
+  .gd-shop{max-width:1240px;margin:0 auto;padding:60px 28px 20px}
+  .gd-sec-head{text-align:center;margin-bottom:30px}
+  .gd-k{display:block;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--m);margin-bottom:6px}
+  .gd-sec-head h2{font-family:var(--fh);font-weight:700;font-size:clamp(26px,3.4vw,40px);color:var(--d)}
+  body[data-template="garderobe"] .catnav,body[data-template="garderobe"] .cathead{justify-content:center}
+  body[data-template="garderobe"] .grid{gap:22px}
+  body[data-template="garderobe"] .prod{border:1px solid var(--b);border-radius:8px;box-shadow:none;text-align:center;overflow:hidden;transition:box-shadow .2s}
+  body[data-template="garderobe"] .prod:hover{box-shadow:0 14px 34px rgba(0,0,0,.09)}
+  body[data-template="garderobe"] .prod.in{border-color:var(--y);box-shadow:0 14px 34px rgba(228,50,43,.18)}
+  body[data-template="garderobe"] .pimgzone{aspect-ratio:1/1;background:var(--g)}
+  body[data-template="garderobe"] .pbody{align-items:center;padding:16px}
+  body[data-template="garderobe"] .pname{font-weight:600;font-size:15px}
+  body[data-template="garderobe"] .pprice{color:var(--y);font-weight:700;font-size:16px}
+  body[data-template="garderobe"] .chip{border-radius:4px} body[data-template="garderobe"] .chip.sel{background:var(--d);border-color:var(--d);color:#fff}
+  body[data-template="garderobe"] .add{background:var(--y);color:#fff;border-radius:4px;text-transform:uppercase;font-weight:700;letter-spacing:.5px}
+  body[data-template="garderobe"] .svcbtn{border-color:var(--y);color:var(--y);border-radius:4px}
+  body[data-template="garderobe"] .bookbtn,body[data-template="garderobe"] .abo-btn,body[data-template="garderobe"] .ds-btn,body[data-template="garderobe"] .terrain-btn{background:var(--y);color:#fff;border-radius:4px}
+  body[data-template="garderobe"] .qtybox{background:var(--y);border-radius:4px} body[data-template="garderobe"] .qtybox button,body[data-template="garderobe"] .qtybox .q{color:#fff}
+  body[data-template="garderobe"] .cartbtn{background:var(--d);color:#fff;border-radius:4px} body[data-template="garderobe"] .cartbtn .cnt{background:var(--y);color:#fff}
+  body[data-template="garderobe"] .abocard,body[data-template="garderobe"] .terrain-card{border:1px solid var(--b);border-radius:8px;box-shadow:none}
+  body[data-template="garderobe"] .store,body[data-template="garderobe"] .btn,body[data-template="garderobe"] .payer{border-radius:4px}
+  .gd-about{max-width:1240px;margin:0 auto;padding:40px 28px 80px}
+  .gd-about-in{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+  .gd-about-img{border-radius:12px;background-size:cover;background-position:center;aspect-ratio:4/3;background-color:var(--g)}
+  .gd-about-txt h2{font-family:var(--fh);font-weight:700;font-size:clamp(26px,3.4vw,40px);color:var(--d);margin:6px 0 14px}
+  .gd-about-txt p{color:var(--m);font-size:15px;line-height:1.7;margin-bottom:26px;max-width:440px}
+  .gd-foot{background:var(--d);color:rgba(255,255,255,.72)}
+  .gd-foot-grid{max-width:1240px;margin:0 auto;padding:60px 28px 40px;display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:36px}
+  .gd-foot-brand img{height:40px;margin-bottom:14px} .gd-foot-brand .gd-foot-logo{font-family:var(--fh);font-size:22px;color:#fff;margin-bottom:12px}
+  .gd-foot-brand p{font-size:14px;max-width:290px;margin-bottom:16px}
+  .gd-foot-col h4{color:#fff;font-size:15px;font-weight:600;margin-bottom:14px}
+  .gd-foot-col a{display:block;font-size:14px;margin-bottom:9px;color:rgba(255,255,255,.72);text-decoration:none} .gd-foot-col a:hover{color:#fff}
+  .gd-foot-col p{font-size:14px;margin-bottom:8px}
+  .gd-foot-cta{color:var(--y);font-weight:600}
+  .gd-copy{border-top:1px solid rgba(255,255,255,.12);padding:20px;text-align:center;font-size:13px;color:rgba(255,255,255,.6)}
+  @media(max-width:860px){
+    .gd-nav{display:none}
+    .gd-hero{grid-template-columns:1fr} .gd-hero-l{padding:40px 24px 10px;margin:0;max-width:none} .gd-hero-r{min-height:300px;order:-1}
+    .gd-hero-img{max-height:340px}
+    .gd-perks-in{grid-template-columns:1fr 1fr;gap:18px}
+    .gd-about-in{grid-template-columns:1fr;gap:24px}
+    .gd-foot-grid{grid-template-columns:1fr 1fr}
   }
 </style>
 </head>

@@ -93,6 +93,7 @@ export const SITE_PALETTES: PaletteOption[] = [
   { id: 'cosmetic', label: 'Cosmetic', bg: '#FFFFFF', text: '#171313', soft: '#f6f6f7' },
   { id: 'pottery', label: 'Pottery', bg: '#FFFFFF', text: '#201d1d', soft: '#f4f4f5' },
   { id: 'furniture', label: 'Maison & Mobilier', bg: '#FFFFFF', text: '#152420', soft: '#EEF4F5' },
+  { id: 'garderobe', label: 'Garde-robe', bg: '#FFFFFF', text: '#1b1b1f', soft: '#f5f5f6' },
 ];
 
 // ── Accents (preset + custom validé) ─────────────────────────────────────────
@@ -112,6 +113,7 @@ export const SITE_TEMPLATES: { id: string; label: string }[] = [
   { id: 'cosmetic', label: 'Cosmetic' },
   { id: 'pottery', label: 'Pottery' },
   { id: 'furniture', label: 'Maison & Mobilier' },
+  { id: 'garderobe', label: 'Garde-robe' },
 ];
 
 // Preset appliqué quand on choisit un template : fixe palette/accent/polices/layout
@@ -132,6 +134,10 @@ export const TEMPLATE_PRESETS: Record<string, { tokens: SiteConfig['tokens']; la
   furniture: {
     tokens: { palette: 'furniture', accent: '#274C4F', fontHeading: 'jost', fontBody: 'jost' },
     layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'bordered', hero: 'split' },
+  },
+  garderobe: {
+    tokens: { palette: 'garderobe', accent: '#E4322B', fontHeading: 'poppins', fontBody: 'poppins' },
+    layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'shadow', hero: 'split' },
   },
 };
 
