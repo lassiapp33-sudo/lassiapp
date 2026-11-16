@@ -425,6 +425,28 @@ export async function upsertMyShop(params: UpsertShopParams): Promise<Shop> {
   }
 }
 
+/**
+ * Supprime définitivement une boutique du marchand connecté (RLS shops_delete_own).
+ * Les enfants (products, orders, promotions, stories…) sont supprimés en CASCADE.
+ * Un litige ouvert (disputes, FK NO ACTION) bloque la suppression → message clair.
+ */
+export async function deleteMyShop(shopId: string): Promise<void> {
+  const userId = useAuthStore.getState().user?.id;
+  if (!userId) throw new Error('Non connecté');
+  const { error } = await supabase
+    .from('shops')
+    .delete()
+    .eq('id', shopId)
+    .eq('merchant_id', userId);
+  if (error) {
+    if (error.code === '23503') {
+      throw new Error('Impossible : un litige est encore ouvert sur cette boutique.');
+    }
+    throw new Error(error.message);
+  }
+  clearShopsCache();
+}
+
 export async function updateShopStatus(shopId: string, isOpen: boolean): Promise<void> {
   const { error } = await supabase.from('shops').update({ is_open: isOpen }).eq('id', shopId);
   if (error) throw new Error(error.message);

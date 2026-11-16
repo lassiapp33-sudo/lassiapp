@@ -7,10 +7,12 @@ import {
   StyleSheet,
   ActivityIndicator,
   FlatList,
+  Alert,
 } from 'react-native';
 import { colors, fonts } from '../../theme';
 import useShopStore from '../../store/shopStore';
 import { CATEGORIES } from '../../config/categories';
+import { deleteMyShop } from '../../services/shops';
 import Avatar from '../../components/Avatar';
 
 interface Props {
@@ -31,6 +33,32 @@ export default function AccountSwitcherModal({
   const myShops = useShopStore(s => s.myShops);
   const loadMyShops = useShopStore(s => s.loadMyShops);
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const confirmDelete = (shopId: string, shopName: string) => {
+    Alert.alert(
+      'Supprimer cette boutique ?',
+      `« ${shopName} » et tout son contenu (produits, commandes, promos) seront supprimés définitivement. Cette action est irréversible.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingId(shopId);
+            try {
+              await deleteMyShop(shopId);
+              await loadMyShops();
+            } catch (e) {
+              Alert.alert('Erreur', e instanceof Error ? e.message : 'Suppression impossible.');
+            } finally {
+              setDeletingId(null);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   useEffect(() => {
     if (visible) {
@@ -89,11 +117,24 @@ export default function AccountSwitcherModal({
                         {getCatLabel(item.category)}
                       </Text>
                     </View>
-                    {isActive && (
+                    {isActive ? (
                       <View style={styles.activeBadge}>
                         <Text style={styles.activeBadgeText}>Actif</Text>
                       </View>
-                    )}
+                    ) : myShops.length > 1 ? (
+                      deletingId === item.id ? (
+                        <ActivityIndicator color={colors.muted} style={styles.deleteBtn} />
+                      ) : (
+                        <TouchableOpacity
+                          style={styles.deleteBtn}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          onPress={() => confirmDelete(item.id, item.name)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.deleteX}>✕</Text>
+                        </TouchableOpacity>
+                      )
+                    ) : null}
                   </TouchableOpacity>
                 );
               }}
@@ -170,6 +211,15 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   activeBadgeText: { fontFamily: fonts.title, fontSize: 11, color: colors.bg },
+  deleteBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,90,90,.1)',
+  },
+  deleteX: { fontSize: 15, color: '#ff5a5a', fontFamily: fonts.title },
   addBtn: {
     marginHorizontal: 20,
     marginTop: 16,

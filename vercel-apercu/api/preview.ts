@@ -198,6 +198,7 @@ function categoryLabel(category: string | null, subcategories: unknown): string 
 interface Shop {
   id: string; name: string | null; logo_url: string | null; description: string | null;
   zone: string | null; category: string | null; subcategories: unknown; slug: string;
+  shop_type: string | null;
   merchant_id: string | null; opening_hours: unknown; is_manually_closed: boolean | null;
   site_config: unknown;
   gallery_urls: unknown; cover_url: string | null;
@@ -403,7 +404,7 @@ export default async function handler(
   if (draftConfig && shop) shop.site_config = draftConfig;
 
   const [products, services, terrains] = shop
-    ? await Promise.all([fetchProducts(shop.id), fetchServices(shop.merchant_id), fetchTerrains(shop.merchant_id)])
+    ? await Promise.all([fetchProducts(shop.id), fetchServices(shop.merchant_id, shop.shop_type), fetchTerrains(shop.merchant_id, shop.shop_type)])
     : [[], [], []];
   const dailySpecial = shop ? await fetchDailySpecials(shop.id) : [];
   const promos = shop ? await fetchPromos(shop.id) : [];
@@ -462,7 +463,7 @@ async function fetchShop(slug: string): Promise<Shop | null> {
   try {
     const q =
       `${SUPABASE_URL}/rest/v1/shops?slug=eq.${encodeURIComponent(slug)}` +
-      `&select=id,name,logo_url,description,zone,category,subcategories,slug,merchant_id,opening_hours,is_manually_closed,site_config,gallery_urls,cover_url,phone&limit=1`;
+      `&select=id,name,logo_url,description,zone,category,subcategories,slug,shop_type,merchant_id,opening_hours,is_manually_closed,site_config,gallery_urls,cover_url,phone&limit=1`;
     const res = await fetch(q, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
     if (!res.ok) return null;
     const rows = (await res.json()) as Shop[];
@@ -484,16 +485,29 @@ async function fetchProducts(shopId: string): Promise<Product[]> {
 
 // Prestations/services d'un prestataire — beauté (réservable) + fitness (abonnements).
 // Clés = shops.merchant_id = prestataire_id. RLS lecture publique (actif=true).
-async function fetchServices(merchantId: string | null): Promise<ServiceItem[]> {
+// IMPORTANT : beauty_services / fitness_abonnement_offres n'ont PAS de shop_id,
+// seulement prestataire_id. Un prestataire multi-boutiques verrait donc les mêmes
+// services sur CHAQUE vitrine. On scope par le type de la boutique courante :
+//   - 'services'     (beauté) → beauty_services uniquement
+//   - 'memberships'  (sport)  → fitness_abonnement_offres uniquement
+//   - 'products' / autre      → aucun service (boutique produits)
+async function fetchServices(merchantId: string | null, shopType: string | null): Promise<ServiceItem[]> {
   if (!merchantId) return [];
+  const wantBeauty = shopType === 'services';
+  const wantFitness = shopType === 'memberships';
+  if (!wantBeauty && !wantFitness) return [];
   const H = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
   const mid = encodeURIComponent(merchantId);
   const out: ServiceItem[] = [];
   const [beauty, fitness] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/beauty_services?prestataire_id=eq.${mid}&actif=eq.true&order=created_at.asc&limit=48&select=id,nom,description,prix,duree_minutes,categorie,image_url`, { headers: H })
-      .then(r => r.ok ? r.json() : []).catch(() => []),
-    fetch(`${SUPABASE_URL}/rest/v1/fitness_abonnement_offres?prestataire_id=eq.${mid}&actif=eq.true&order=prix.asc&limit=48&select=id,nom,description,prix,duree_jours,categorie_tab`, { headers: H })
-      .then(r => r.ok ? r.json() : []).catch(() => []),
+    wantBeauty
+      ? fetch(`${SUPABASE_URL}/rest/v1/beauty_services?prestataire_id=eq.${mid}&actif=eq.true&order=created_at.asc&limit=48&select=id,nom,description,prix,duree_minutes,categorie,image_url`, { headers: H })
+          .then(r => r.ok ? r.json() : []).catch(() => [])
+      : Promise.resolve([]),
+    wantFitness
+      ? fetch(`${SUPABASE_URL}/rest/v1/fitness_abonnement_offres?prestataire_id=eq.${mid}&actif=eq.true&order=prix.asc&limit=48&select=id,nom,description,prix,duree_jours,categorie_tab`, { headers: H })
+          .then(r => r.ok ? r.json() : []).catch(() => [])
+      : Promise.resolve([]),
   ]) as [Array<Record<string, unknown>>, Array<Record<string, unknown>>];
 
   for (const r of beauty ?? []) {
@@ -523,8 +537,10 @@ async function fetchServices(merchantId: string | null): Promise<ServiceItem[]> 
   return out;
 }
 
-async function fetchTerrains(merchantId: string | null): Promise<Terrain[]> {
+async function fetchTerrains(merchantId: string | null, shopType: string | null): Promise<Terrain[]> {
   if (!merchantId) return [];
+  // Les terrains n'ont que prestataire_id : réservés aux boutiques sport (memberships).
+  if (shopType !== 'memberships') return [];
   try {
     const q = `${SUPABASE_URL}/rest/v1/terrains?prestataire_id=eq.${encodeURIComponent(merchantId)}&actif=eq.true&order=created_at.asc&limit=20&select=id,nom,description,prix_horaire,sport_type,adresse,images`;
     const res = await fetch(q, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
@@ -624,7 +640,7 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
     const shop: Shop = {
       id: 'demo-cosmetic', name: 'Yaram bu rafet', logo_url: null,
       description: "Soins naturels & cosmétiques bio à base de karité, curcuma et huiles végétales. Pour une peau éclatante, nourrie et unifiée — fabriqué à Dakar.",
-      zone: 'Dakar · Almadies', category: 'hair',
+      zone: 'Dakar · Almadies', category: 'hair', shop_type: 'services',
       subcategories: ['soins_bio', 'parfumerie', 'esthetique'],
       slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
       site_config, gallery_urls: [img('hero-model.png'), img('banner1.jpg'), img('banner2.jpg'), img('hero.jpg')],
@@ -657,7 +673,7 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
     const shop: Shop = {
       id: 'demo-furniture', name: 'An Ka Taa — Maison & Mobilier', logo_url: null,
       description: "Mobilier d'exception, matières nobles et savoir-faire local. Pièces choisies pour sublimer votre intérieur — commande en ligne, retrait ou livraison à Dakar.",
-      zone: 'Dakar · Sénégal', category: 'stores',
+      zone: 'Dakar · Sénégal', category: 'stores', shop_type: 'products',
       subcategories: ['salon', 'fauteuils', 'tables', 'rangement', 'deco'],
       slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
       site_config, gallery_urls: [img('hero.jpg'), img('banner1.jpg'), img('banner2.jpg')],
@@ -688,7 +704,7 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
     const shop: Shop = {
       id: 'demo-garderobe', name: 'Sañse — Mode & Prêt-à-porter', logo_url: null,
       description: "Prêt-à-porter, streetwear & accessoires sélectionnés. Vêtements, sneakers et pièces tendance livrées à Dakar — commande en ligne, paiement sécurisé, retrait ou livraison.",
-      zone: 'Dakar · Sénégal', category: 'stores',
+      zone: 'Dakar · Sénégal', category: 'stores', shop_type: 'products',
       subcategories: ['homme', 'femme', 'sneakers', 'accessoires', 'nouveautes'],
       slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
       site_config, gallery_urls: [img('hero.png'), img('banner1.jpg'), img('p1.jpg'), img('p2.jpg')],
@@ -712,7 +728,7 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
   // Fallback générique (autres templates — démo minimale).
   const shop: Shop = {
     id: 'demo', name: 'Boutique Démo', logo_url: null, description: 'Aperçu du template.',
-    zone: 'Dakar', category: 'stores', subcategories: [], slug: '__demo', merchant_id: 'demo',
+    zone: 'Dakar', category: 'stores', shop_type: 'products', subcategories: [], slug: '__demo', merchant_id: 'demo',
     opening_hours: null, is_manually_closed: false, site_config: { template: t },
     gallery_urls: [], cover_url: null, phone: '',
   };
