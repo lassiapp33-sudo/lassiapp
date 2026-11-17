@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView,
-  ActivityIndicator, Platform, Alert,
+  ActivityIndicator, Platform, Alert, KeyboardAvoidingView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
@@ -202,7 +202,7 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
         </TouchableOpacity>
       </View>
 
-      <View style={styles.canvas}>
+      <View style={[styles.canvas, preview && styles.canvasFull]}>
         {slug && uri ? (
           <WebView
             ref={webRef}
@@ -221,8 +221,10 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
         )}
       </View>
 
+      {!preview && (
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
       {tool ? (
-        <ScrollView style={styles.panel} contentContainerStyle={styles.panelIn} keyboardShouldPersistTaps="handled">
+        <ScrollView style={styles.panel} contentContainerStyle={styles.panelIn} keyboardShouldPersistTaps="handled" keyboardDismissMode="none">
           <Text style={styles.panelTitle}>{TOOLS.find(t => t.id === tool)?.label}</Text>
 
           {/* ── Conteneurs : réordonner ── */}
@@ -380,6 +382,8 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
           );
         })}
       </View>
+      </KeyboardAvoidingView>
+      )}
     </View>
   );
 }
@@ -400,6 +404,7 @@ const styles = StyleSheet.create({
   saveTxt: { color: colors.bg, fontFamily: fonts.title, fontSize: 12.5 },
 
   canvas: { flex: 1, backgroundColor: '#fff', margin: spacing.screen, borderRadius: radius.xl, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
+  canvasFull: { margin: 0, borderRadius: 0, borderWidth: 0 },
   webview: { flex: 1, backgroundColor: '#fff' },
   webLoading: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   noPreview: { color: '#888', fontSize: 13, textAlign: 'center', paddingHorizontal: 20 },
