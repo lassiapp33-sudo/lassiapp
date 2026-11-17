@@ -57,6 +57,11 @@ export const SITE_ANIMATIONS: { id: string; label: string }[] = [
   { id: 'rotate',   label: 'Rotation' },
   { id: 'blur',     label: 'Flou' },
   { id: 'flip',     label: 'Flip' },
+  { id: 'fade-down', label: 'Fondu ↓' },
+  { id: 'bounce',   label: 'Rebond' },
+  { id: 'pulse',    label: 'Pulsation' },
+  { id: 'swing',    label: 'Balancement' },
+  { id: 'reveal',   label: 'Dévoilé' },
 ];
 
 // Tailles de texte proposées (px) dans l'éditeur.

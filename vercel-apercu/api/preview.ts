@@ -484,6 +484,11 @@ const LED_CORE = `<style id="led-core-style">
 @keyframes ledRotate{from{opacity:0;transform:rotate(-8deg) scale(.9)}to{opacity:1;transform:none}}
 @keyframes ledBlur{from{opacity:0;filter:blur(10px)}to{opacity:1;filter:blur(0)}}
 @keyframes ledFlip{from{opacity:0;transform:perspective(600px) rotateX(70deg)}to{opacity:1;transform:none}}
+@keyframes ledDown{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:none}}
+@keyframes ledBounce{0%{opacity:0;transform:translateY(-24px)}60%{opacity:1;transform:translateY(8px)}80%{transform:translateY(-4px)}100%{transform:translateY(0)}}
+@keyframes ledPulse{0%{opacity:0;transform:scale(.9)}50%{opacity:1;transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes ledSwing{0%{opacity:0;transform:rotate(10deg)}40%{opacity:1;transform:rotate(-7deg)}70%{transform:rotate(4deg)}100%{transform:rotate(0)}}
+@keyframes ledReveal{from{opacity:0;clip-path:inset(0 100% 0 0)}to{opacity:1;clip-path:inset(0 0 0 0)}}
 .led-a-fade{animation:ledFade .6s ease both}
 .led-a-fade-up{animation:ledUp .6s ease both}
 .led-a-fade-left{animation:ledLeft .6s ease both}
@@ -493,10 +498,15 @@ const LED_CORE = `<style id="led-core-style">
 .led-a-rotate{animation:ledRotate .6s ease both}
 .led-a-blur{animation:ledBlur .7s ease both}
 .led-a-flip{animation:ledFlip .7s ease both}
+.led-a-fade-down{animation:ledDown .6s ease both}
+.led-a-bounce{animation:ledBounce .8s ease both}
+.led-a-pulse{animation:ledPulse .7s ease both}
+.led-a-swing{animation:ledSwing .8s ease both}
+.led-a-reveal{animation:ledReveal .7s ease both}
 </style>
 <script>(function(){
   var FONTS={cormorant:"'Cormorant Garamond',serif",playfair:"'Playfair Display',serif",lora:"Lora,serif",dmsans:"'DM Sans',sans-serif",inter:"Inter,sans-serif",poppins:"Poppins,sans-serif",montserrat:"Montserrat,sans-serif",spacegrotesk:"'Space Grotesk',sans-serif",rubik:"Rubik,sans-serif",unbounded:"Unbounded,cursive",plusjakarta:"'Plus Jakarta Sans',sans-serif",jost:"Jost,sans-serif",manrope:"Manrope,sans-serif",fraunces:"Fraunces,serif",bebas:"'Bebas Neue',sans-serif",outfit:"Outfit,sans-serif"};
-  var ANIM={fade:'led-a-fade','fade-up':'led-a-fade-up','fade-left':'led-a-fade-left',zoom:'led-a-zoom','fade-right':'led-a-fade-right',pop:'led-a-pop',rotate:'led-a-rotate',blur:'led-a-blur',flip:'led-a-flip'};
+  var ANIM={fade:'led-a-fade','fade-up':'led-a-fade-up','fade-left':'led-a-fade-left',zoom:'led-a-zoom','fade-right':'led-a-fade-right',pop:'led-a-pop',rotate:'led-a-rotate',blur:'led-a-blur',flip:'led-a-flip','fade-down':'led-a-fade-down',bounce:'led-a-bounce',pulse:'led-a-pulse',swing:'led-a-swing',reveal:'led-a-reveal'};
   function lum(hex){var m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return '#fff';var n=parseInt(m[1],16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (r*299+g*587+b*114)/1000>150?'#14152A':'#fff';}
   function leaves(){
     var out=[], w=document.createTreeWalker(document.body,NodeFilter.SHOW_ELEMENT,null);
