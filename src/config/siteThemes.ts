@@ -42,6 +42,7 @@ export interface SiteConfig {
   displayName?: string;
   social?: SiteSocial;
   overrides?: SiteOverrides;
+  heroVideo?: string; // URL vidéo de présentation (https), template Maroquinerie
 }
 
 // Animations d'entrée disponibles (miroir côté preview.ts).
@@ -104,6 +105,10 @@ export const SITE_FONTS: FontOption[] = [
   { id: 'unbounded', label: 'Unbounded', category: 'Display' },
   { id: 'plusjakarta', label: 'Plus Jakarta Sans', category: 'Sans' },
   { id: 'jost', label: 'Jost', category: 'Sans' },
+  { id: 'manrope', label: 'Manrope', category: 'Sans' },
+  { id: 'fraunces', label: 'Fraunces', category: 'Serif' },
+  { id: 'bebas', label: 'Bebas Neue', category: 'Display' },
+  { id: 'outfit', label: 'Outfit', category: 'Sans' },
 ];
 
 // ── Palettes (ids = clés SITE_PALETTES côté edge) ────────────────────────────
@@ -137,6 +142,14 @@ export const SITE_ACCENTS: { id: string; hex: string }[] = [
   { id: 'violet', hex: '#8B5CF6' },
   { id: 'rose', hex: '#EC6FA6' },
   { id: 'nuit', hex: '#14152A' },
+  { id: 'turquoise', hex: '#06B6D4' },
+  { id: 'orange', hex: '#F59E0B' },
+  { id: 'rouge', hex: '#EF4444' },
+  { id: 'indigo', hex: '#4F46E5' },
+  { id: 'lime', hex: '#65A30D' },
+  { id: 'magenta', hex: '#D946EF' },
+  { id: 'cacao', hex: '#7C4A21' },
+  { id: 'acier', hex: '#64748B' },
 ];
 
 // ── Templates (Phase 3) ──────────────────────────────────────────────────────
@@ -212,6 +225,16 @@ export const COLS_OPTIONS = [2, 3];
 
 export const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
+// Valide une URL de vidéo de présentation : https uniquement, bornée, sans espaces.
+export function cleanVideoUrl(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  const s = raw.trim();
+  if (!s || s.length > 500) return '';
+  if (!/^https:\/\//i.test(s)) return '';
+  if (/[\s"'<>]/.test(s)) return '';
+  return s;
+}
+
 export const DEFAULT_LAYOUT: SiteLayout = { order: ['products', 'services', 'terrains'], cols: 3, card: 'bordered', hero: 'split' };
 
 // Config par défaut = rendu historique (charte LASSİ + Cormorant/DM Sans).
@@ -238,6 +261,8 @@ export function normalizeSiteConfig(raw: Partial<SiteConfig> | null | undefined)
   if (hasAnySocial(social)) out.social = social;
   const ov = normalizeOverrides((raw as any)?.overrides);
   if (ov) out.overrides = ov;
+  const video = cleanVideoUrl((raw as any)?.heroVideo);
+  if (video) out.heroVideo = video;
   return out;
 }
 

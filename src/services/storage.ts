@@ -185,6 +185,49 @@ export async function uploadImage(
 }
 
 /**
+ * Uploade une vidéo courte (présentation vitrine) vers Supabase Storage.
+ * Pas de compression côté manipulator (c'est une vidéo) — la réduction de taille
+ * est faite en amont par le picker (preset bas + durée max courte). Retourne l'URL.
+ */
+export async function uploadVideo(localUri: string, path: string): Promise<string> {
+  const info = await FileSystem.getInfoAsync(localUri);
+  if (!info.exists || (info.size ?? 0) === 0) {
+    throw new Error('Vidéo introuvable sur l\'appareil. Réessaie.');
+  }
+  // Garde-fou taille : refuse > 30 Mo (la vidéo doit rester très compressée).
+  if ((info.size ?? 0) > 30 * 1024 * 1024) {
+    throw new Error('Vidéo trop lourde (max 30 Mo). Choisis une vidéo plus courte.');
+  }
+  let accessToken: string;
+  try {
+    accessToken = await getValidToken();
+  } catch {
+    throw new Error('Session expirée. Reconnecte-toi et réessaie.');
+  }
+  if (!accessToken) throw new Error('Non connecté');
+
+  const lower = localUri.toLowerCase();
+  const contentType = lower.endsWith('.mov') ? 'video/quicktime' : 'video/mp4';
+  const fnUrl = `${SUPABASE_URL}/functions/v1/upload-image`;
+  const uploadRes = await FileSystem.uploadAsync(fnUrl, localUri, {
+    httpMethod: 'POST',
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: SUPABASE_ANON,
+      'Content-Type': contentType,
+      'x-bucket': 'gallery',
+      'x-path': path,
+    },
+  });
+  const result = JSON.parse(uploadRes.body) as { url?: string; error?: string };
+  if (uploadRes.status < 200 || uploadRes.status >= 300 || !result.url) {
+    throw new Error(`Upload vidéo échoué : ${result.error ?? uploadRes.status}`);
+  }
+  return result.url;
+}
+
+/**
  * Supprime une image de Supabase Storage.
  */
 export async function deleteImage(

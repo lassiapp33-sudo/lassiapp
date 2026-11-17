@@ -67,6 +67,10 @@ const SITE_FONTS: Record<string, SiteFont> = {
   unbounded: { family: 'Unbounded', stack: "'Unbounded',system-ui,sans-serif", css2: 'Unbounded:wght@500;700' },
   plusjakarta: { family: 'Plus Jakarta Sans', stack: "'Plus Jakarta Sans',system-ui,sans-serif", css2: 'Plus+Jakarta+Sans:wght@400;500;600;700' },
   jost:      { family: 'Jost', stack: "'Jost',system-ui,sans-serif", css2: 'Jost:wght@400;500;600;700' },
+  manrope:   { family: 'Manrope', stack: "'Manrope',system-ui,sans-serif", css2: 'Manrope:wght@400;500;600;700' },
+  fraunces:  { family: 'Fraunces', stack: "'Fraunces',Georgia,serif", css2: 'Fraunces:wght@400;500;600;700' },
+  bebas:     { family: 'Bebas Neue', stack: "'Bebas Neue',Impact,sans-serif", css2: 'Bebas+Neue' },
+  outfit:    { family: 'Outfit', stack: "'Outfit',system-ui,sans-serif", css2: 'Outfit:wght@300;400;500;600;700' },
 };
 const DEFAULT_HEADING = 'cormorant';
 const DEFAULT_BODY = 'dmsans';
@@ -103,6 +107,17 @@ interface SiteSocial { facebook: string; tiktok: string; instagram: string }
 interface ResolvedTheme {
   template: string; y: string; d: string; w: string; g: string; m: string; b: string;
   fh: string; fb: string; fontsLink: string; displayName: string | null; layout: SiteLayout; social: SiteSocial;
+  video: string;
+}
+
+// Valide une URL de vidéo de présentation : https uniquement, bornée, extension média.
+function cleanVideoUrl(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  const s = raw.trim();
+  if (!s || s.length > 500) return '';
+  if (!/^https:\/\//i.test(s)) return '';
+  if (/[\s"'<>]/.test(s)) return '';
+  return s;
 }
 
 // Valide un lien réseau social : http(s) uniquement, longueur bornée. Sinon ''.
@@ -165,7 +180,9 @@ function resolveTheme(raw: unknown): ResolvedTheme {
   const layout = resolveLayout(sc.layout);
   const social = resolveSocial(sc.social);
 
-  return { template, y: accent, d: pal.d, w: pal.w, g: pal.g, m: pal.m, b: pal.b, fh: fh.stack, fb: fb.stack, fontsLink, displayName, layout, social };
+  const video = cleanVideoUrl(sc.heroVideo);
+
+  return { template, y: accent, d: pal.d, w: pal.w, g: pal.g, m: pal.m, b: pal.b, fh: fh.stack, fb: fb.stack, fontsLink, displayName, layout, social, video };
 }
 
 const CAT_LABELS: Record<string, string> = {
@@ -468,7 +485,7 @@ const LED_CORE = `<style id="led-core-style">
 .led-a-flip{animation:ledFlip .7s ease both}
 </style>
 <script>(function(){
-  var FONTS={cormorant:"'Cormorant Garamond',serif",playfair:"'Playfair Display',serif",lora:"Lora,serif",dmsans:"'DM Sans',sans-serif",inter:"Inter,sans-serif",poppins:"Poppins,sans-serif",montserrat:"Montserrat,sans-serif",spacegrotesk:"'Space Grotesk',sans-serif",rubik:"Rubik,sans-serif",unbounded:"Unbounded,cursive",plusjakarta:"'Plus Jakarta Sans',sans-serif",jost:"Jost,sans-serif"};
+  var FONTS={cormorant:"'Cormorant Garamond',serif",playfair:"'Playfair Display',serif",lora:"Lora,serif",dmsans:"'DM Sans',sans-serif",inter:"Inter,sans-serif",poppins:"Poppins,sans-serif",montserrat:"Montserrat,sans-serif",spacegrotesk:"'Space Grotesk',sans-serif",rubik:"Rubik,sans-serif",unbounded:"Unbounded,cursive",plusjakarta:"'Plus Jakarta Sans',sans-serif",jost:"Jost,sans-serif",manrope:"Manrope,sans-serif",fraunces:"Fraunces,serif",bebas:"'Bebas Neue',sans-serif",outfit:"Outfit,sans-serif"};
   var ANIM={fade:'led-a-fade','fade-up':'led-a-fade-up','fade-left':'led-a-fade-left',zoom:'led-a-zoom','fade-right':'led-a-fade-right',pop:'led-a-pop',rotate:'led-a-rotate',blur:'led-a-blur',flip:'led-a-flip'};
   function lum(hex){var m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return '#fff';var n=parseInt(m[1],16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (r*299+g*587+b*114)/1000>150?'#14152A':'#fff';}
   function leaves(){
@@ -936,7 +953,7 @@ promos: any[] = []): string {
   const logo = shop.logo_url?.trim() || '';
   const nb = products.length + services.length + terrains.length;
   const descRaw = shop.description?.trim() ||
-    `Boutique vérifiée sur LASSİ${zone ? ' · ' + zone : ''}${cat ? ' · ' + cat : ''}.` +
+    `${name}${zone ? ' · ' + zone : ''}${cat ? ' · ' + cat : ''}.` +
       (nb ? ` ${nb} offre${nb > 1 ? 's' : ''} — commandez ou réservez.` : '');
   const shopStatus = computeShopStatus(shop.opening_hours, shop.is_manually_closed);
   return page({
@@ -1153,7 +1170,6 @@ function page(o: {
       <div class="hero-img">
         ${o.zone ? `<div class="zone-badge">📍 ${esc(o.zone)}</div>` : ''}
         ${avatar}
-        <div class="verified-badge">✓ Boutique vérifiée sur LASSİ</div>
       </div>
     </section>
     <div class="divider"></div>
@@ -1450,7 +1466,7 @@ function page(o: {
       <div class="fn-collage">
         ${fnCard(0)}${fnCard(1)}
         <div class="fn-big" ${bg(pick(0))}></div>
-        <div class="fn-promo"><p>Boutique vérifiée · paiement sécurisé Wave &amp; OM.</p><a href="#cx-shop">Découvrir &#8594;</a></div>
+        <div class="fn-promo"><p>Paiement sécurisé Wave &amp; Orange Money.</p><a href="#cx-shop">Découvrir &#8594;</a></div>
       </div>
     </div></section>
     ${closedNotice}
@@ -1548,7 +1564,6 @@ function page(o: {
       </div>
       <div class="gd-hero-r">
         ${heroImg ? `<img class="gd-hero-img" src="${escAttr(heroImg)}" alt="${escAttr(o.name)}">` : ''}
-        <div class="gd-hero-badge">Boutique vérifiée · LASSİ</div>
       </div>
     </section>
     ${gdPerks}
@@ -1621,12 +1636,24 @@ function page(o: {
           <p>${esc(clip(o.desc || `Sacs, sacs à dos et bagagerie robustes et élégants. Commande en ligne, paiement sécurisé.`, 150))}</p>
           <div class="sc-hero-cta"><a class="sc-btn" href="#sc-shop">${cxHeadCta === 'Commander' ? 'Voir la collection' : cxHeadCta}</a>${hoursHtml ? `<div class="sc-hours">${hoursHtml}</div>` : ''}</div>
         </div>
-        <a class="sc-play" href="#sc-shop" aria-label="Lecture vidéo">
+        <button class="sc-play" type="button" data-video="${escAttr(theme.video)}" data-scroll="#sc-shop" aria-label="Lecture vidéo">
           <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        </a>
+        </button>
       </div>
-      <span class="sc-badge">✓ Boutique vérifiée · LASSİ</span>
     </section>
+    ${theme.video ? `<div class="sc-vlb" id="sc-vlb"><div class="sc-vlb-in"><button class="sc-vlb-x" type="button" aria-label="Fermer">&#10005;</button><video id="sc-vlb-video" src="${escAttr(theme.video)}" controls playsinline preload="metadata"></video></div></div>` : ''}
+    <script>(function(){
+      var pb=document.querySelector('.sc-play'); if(!pb) return;
+      pb.addEventListener('click',function(){
+        var v=pb.getAttribute('data-video');
+        if(v){ var lb=document.getElementById('sc-vlb'), vd=document.getElementById('sc-vlb-video'); if(lb){ lb.classList.add('on'); try{vd.currentTime=0;vd.play();}catch(e){} } }
+        else { var t=document.querySelector(pb.getAttribute('data-scroll')); if(t) t.scrollIntoView({behavior:'smooth'}); }
+      });
+      var lb=document.getElementById('sc-vlb');
+      if(lb){ function close(){ lb.classList.remove('on'); var vd=document.getElementById('sc-vlb-video'); try{vd.pause();}catch(e){} }
+        lb.addEventListener('click',function(e){ if(e.target===lb||e.target.className==='sc-vlb-x') close(); });
+      }
+    })();</script>
     <section class="sc-feature"><div class="sc-feature-in">
       <div class="sc-fcard">
         <div class="sc-fcard-top"><img class="sc-avatar" src="${escAttr(o.logo || (o.slug === '__demo' ? `${o.base}/assets/demo/sac/avatar.jpg` : initialAvatar(o.name)))}" alt="${escAttr(o.name)}"><div><b>${esc(o.name)}</b><small>${esc(o.cat || o.zone || 'Maroquinerie')}</small></div></div>
@@ -1634,7 +1661,7 @@ function page(o: {
         <p>${esc(clip(o.desc || `${o.name} sélectionne des pièces durables et bien finies. Commande en ligne, paiement sécurisé Wave & Orange Money, retrait ou livraison à Dakar.`, 170))}</p>
       </div>
       <div class="sc-promo" ${bg(pick(1))}><div class="sc-promo-ov">
-        <span class="sc-promo-k">Boutique vérifiée</span>
+        <span class="sc-promo-k">Paiement sécurisé</span>
         <h3>Paiement sécurisé Wave &amp; Orange Money</h3>
         <p>Commande en ligne, retrait sur place ou livraison à ${esc(o.zone || 'Dakar')}. Paiement 100% sécurisé.</p>
         <a class="sc-btn sc-btn-dark" href="#sc-shop">Découvrir &#8594;</a>
@@ -2292,9 +2319,14 @@ ${theme.fontsLink}
   .sc-btn:hover{opacity:.92}
   .sc-btn-y{background:var(--y);color:var(--d)}
   .sc-hours{font-size:13px;color:rgba(255,255,255,.75)}
-  .sc-play{flex:0 0 auto;width:84px;height:84px;border-radius:50%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.7);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;transition:.2s;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+  .sc-play{flex:0 0 auto;margin-left:auto;width:84px;height:84px;border-radius:50%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.7);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;transition:.2s;box-shadow:0 10px 40px rgba(0,0,0,.3);cursor:pointer;padding:0}
   .sc-play:hover{background:var(--y);border-color:var(--y);color:var(--d);transform:scale(1.06)}
   .sc-play svg{margin-left:4px}
+  .sc-vlb{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;padding:20px}
+  .sc-vlb.on{display:flex}
+  .sc-vlb-in{position:relative;width:100%;max-width:820px}
+  .sc-vlb-in video{width:100%;max-height:82vh;border-radius:12px;background:#000;display:block}
+  .sc-vlb-x{position:absolute;top:-44px;right:0;width:36px;height:36px;border-radius:50%;background:#fff;color:#111;border:none;font-size:16px;cursor:pointer;line-height:36px}
   .sc-badge{position:absolute;z-index:2;left:28px;bottom:24px;background:#fff;color:var(--d);font-size:12px;font-weight:600;padding:8px 14px;border-radius:30px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
   .sc-feature{max-width:1240px;margin:0 auto;padding:64px 28px 24px}
   .sc-feature-in{display:grid;grid-template-columns:1fr 1.1fr;gap:28px;align-items:stretch}
@@ -2356,7 +2388,7 @@ ${theme.fontsLink}
   .sc-copy{border-top:1px solid rgba(255,255,255,.12);padding:20px;text-align:center;font-size:13px;color:rgba(255,255,255,.6)}
   @media(max-width:860px){
     .sc-nav{gap:20px;overflow-x:auto;justify-content:flex-start}
-    .sc-hero{min-height:clamp(380px,62vh,520px)} .sc-hero-in{flex-direction:column;align-items:flex-start;gap:24px;padding:48px 24px} .sc-hero-l{max-width:none} .sc-play{width:68px;height:68px;align-self:flex-start}
+    .sc-hero{min-height:clamp(380px,62vh,520px)} .sc-hero-in{flex-direction:column;align-items:flex-start;gap:24px;padding:48px 24px} .sc-hero-l{max-width:none} .sc-play{width:68px;height:68px;align-self:flex-end;margin-left:auto}
     .sc-feature-in{grid-template-columns:1fr;gap:18px} .sc-promo{min-height:220px}
     .sc-types-grid{grid-template-columns:1fr 1fr;gap:14px}
     .sc-about-in{grid-template-columns:1fr;gap:24px}

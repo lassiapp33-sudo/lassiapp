@@ -1,9 +1,11 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView,
-  ActivityIndicator, Platform,
+  ActivityIndicator, Platform, Alert,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+import { uploadVideo } from '../../services/storage';
 import { colors, radius, spacing, fonts, TOP_INSET } from '../../theme';
 import {
   buildEditPreviewUrl, SITE_SECTIONS, SITE_FONTS, SITE_ACCENTS, SITE_ANIMATIONS,
@@ -37,6 +39,7 @@ interface MenuItem { i: number; label: string }
 export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange, onBack }: Props) {
   const [tool, setTool] = useState<Tool | null>(null);
   const [preview, setPreview] = useState(false);
+  const [vidBusy, setVidBusy] = useState(false);
   const [selText, setSelText] = useState<TextSel | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[] | null>(null);
   const webRef = useRef<WebView>(null);
@@ -46,8 +49,8 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
   // URL de l'aperçu : NE DÉPEND PAS des overrides (cosmétiques poussés en live via
   // injectJavaScript). Ne recharge que sur changements structurels (layout/thème).
   const structuralKey = useMemo(
-    () => JSON.stringify({ t: cfg.template, k: cfg.tokens, l: cfg.layout, n: cfg.displayName }),
-    [cfg.template, cfg.tokens, cfg.layout, cfg.displayName],
+    () => JSON.stringify({ t: cfg.template, k: cfg.tokens, l: cfg.layout, n: cfg.displayName, v: cfg.heroVideo }),
+    [cfg.template, cfg.tokens, cfg.layout, cfg.displayName, cfg.heroVideo],
   );
   const uri = useMemo(
     () => (slug ? buildEditPreviewUrl(slug, { ...cfg, overrides: undefined }) : null),
@@ -108,6 +111,37 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
   const patchMenuStyle = useCallback((p: Partial<TextStyle>) => {
     setOv({ ...ov, menuStyle: { ...(ov.menuStyle ?? {}), ...p } });
   }, [ov, setOv]);
+
+  // Vidéo de présentation : picker (durée courte + preset bas = très compressé) → upload.
+  const pickVideo = useCallback(async () => {
+    if (!slug || vidBusy) return;
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) { Alert.alert('Permission requise', 'Autorise l\'accès à la galerie pour choisir une vidéo.'); return; }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['videos'],
+        quality: 0,
+        videoMaxDuration: 15,
+        videoExportPreset: ImagePicker.VideoExportPreset.LowQuality,
+        allowsEditing: true,
+      });
+      if (res.canceled || !res.assets?.[0]?.uri) return;
+      setVidBusy(true);
+      const path = `sitevideo/${encodeURIComponent(slug)}/hero_${Date.now()}.mp4`;
+      const url = await uploadVideo(res.assets[0].uri, path);
+      onChange({ ...cfg, heroVideo: url });
+    } catch (e: any) {
+      Alert.alert('Erreur', e?.message || 'Upload vidéo impossible.');
+    } finally {
+      setVidBusy(false);
+    }
+  }, [slug, vidBusy, cfg, onChange]);
+
+  const removeVideo = useCallback(() => {
+    const next = { ...cfg };
+    delete next.heroVideo;
+    onChange(next);
+  }, [cfg, onChange]);
 
   const patchLayout = useCallback((p: Partial<SiteConfig['layout']>) => {
     onChange({ ...cfg, layout: { ...cfg.layout, ...p } });
@@ -284,7 +318,22 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
 
           {/* ── Médias ── */}
           {tool === 'medias' && (
-            <Text style={styles.hint}>Les images proviennent de ta galerie et de tes produits (app). Ajoute/retire-les depuis « Ma galerie » et tes fiches produits — elles apparaissent automatiquement ici.</Text>
+            <View>
+              <Text style={styles.hint}>Les images proviennent de ta galerie et de tes produits (app). Ajoute/retire-les depuis « Ma galerie » et tes fiches produits — elles apparaissent automatiquement ici.</Text>
+              <Text style={styles.lbl}>Vidéo de présentation (template Maroquinerie)</Text>
+              <Text style={styles.hint}>Courte (max 15 s), compressée automatiquement. Lecture au clic sur le bouton ▶ de l'en-tête.</Text>
+              <View style={styles.wrap}>
+                <TouchableOpacity onPress={pickVideo} disabled={vidBusy} style={[styles.pill, vidBusy && styles.off]}>
+                  {vidBusy ? <ActivityIndicator color={colors.bg} size="small" /> : <Text style={styles.pillTxt}>{cfg.heroVideo ? 'Remplacer la vidéo' : 'Ajouter une vidéo'}</Text>}
+                </TouchableOpacity>
+                {cfg.heroVideo ? (
+                  <TouchableOpacity onPress={removeVideo} style={[styles.pill, styles.pillOff]}>
+                    <Text style={[styles.pillTxt, { color: colors.white }]}>Retirer</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              {cfg.heroVideo ? <Text style={[styles.hint, { color: colors.accent, marginTop: 8 }]}>✓ Vidéo ajoutée</Text> : null}
+            </View>
           )}
 
           {/* ── Disposition : colonnes / cartes / en-tête ── */}
