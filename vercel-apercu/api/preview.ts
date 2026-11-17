@@ -452,14 +452,25 @@ const LED_CORE = `<style id="led-core-style">
 @keyframes ledUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @keyframes ledLeft{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:none}}
 @keyframes ledZoom{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+@keyframes ledRight{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+@keyframes ledPop{0%{opacity:0;transform:scale(.6)}60%{opacity:1;transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes ledRotate{from{opacity:0;transform:rotate(-8deg) scale(.9)}to{opacity:1;transform:none}}
+@keyframes ledBlur{from{opacity:0;filter:blur(10px)}to{opacity:1;filter:blur(0)}}
+@keyframes ledFlip{from{opacity:0;transform:perspective(600px) rotateX(70deg)}to{opacity:1;transform:none}}
 .led-a-fade{animation:ledFade .6s ease both}
 .led-a-fade-up{animation:ledUp .6s ease both}
 .led-a-fade-left{animation:ledLeft .6s ease both}
 .led-a-zoom{animation:ledZoom .6s ease both}
+.led-a-fade-right{animation:ledRight .6s ease both}
+.led-a-pop{animation:ledPop .6s cubic-bezier(.34,1.56,.64,1) both}
+.led-a-rotate{animation:ledRotate .6s ease both}
+.led-a-blur{animation:ledBlur .7s ease both}
+.led-a-flip{animation:ledFlip .7s ease both}
 </style>
 <script>(function(){
   var FONTS={cormorant:"'Cormorant Garamond',serif",playfair:"'Playfair Display',serif",lora:"Lora,serif",dmsans:"'DM Sans',sans-serif",inter:"Inter,sans-serif",poppins:"Poppins,sans-serif",montserrat:"Montserrat,sans-serif",spacegrotesk:"'Space Grotesk',sans-serif",rubik:"Rubik,sans-serif",unbounded:"Unbounded,cursive",plusjakarta:"'Plus Jakarta Sans',sans-serif",jost:"Jost,sans-serif"};
-  var ANIM={fade:'led-a-fade','fade-up':'led-a-fade-up','fade-left':'led-a-fade-left',zoom:'led-a-zoom'};
+  var ANIM={fade:'led-a-fade','fade-up':'led-a-fade-up','fade-left':'led-a-fade-left',zoom:'led-a-zoom','fade-right':'led-a-fade-right',pop:'led-a-pop',rotate:'led-a-rotate',blur:'led-a-blur',flip:'led-a-flip'};
+  function lum(hex){var m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return '#fff';var n=parseInt(m[1],16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (r*299+g*587+b*114)/1000>150?'#14152A':'#fff';}
   function leaves(){
     var out=[], w=document.createTreeWalker(document.body,NodeFilter.SHOW_ELEMENT,null);
     var el;
@@ -488,7 +499,15 @@ const LED_CORE = `<style id="led-core-style">
           if(!done) el.textContent=tx[k];
         }
         var s=st[k];
-        if(s){ if(s.size) el.style.fontSize=s.size+'px'; if(s.color) el.style.color=s.color; if(s.font&&FONTS[s.font]) el.style.fontFamily=FONTS[s.font]; }
+        if(s){
+          if(s.size) el.style.fontSize=s.size+'px';
+          if(s.font&&FONTS[s.font]) el.style.fontFamily=FONTS[s.font];
+          if(s.color){
+            var isBtn=/(^|\\s)(btn|cta)/i.test(el.className||'')||el.tagName==='BUTTON'||(el.tagName==='A'&&/btn|cta/i.test(el.className||''));
+            if(isBtn){ el.style.backgroundColor=s.color; el.style.borderColor=s.color; el.style.color=lum(s.color); }
+            else el.style.color=s.color;
+          }
+        }
         if(an[k]&&ANIM[an[k]]){ el.classList.add(ANIM[an[k]]); }
       });
       // Menu
@@ -511,9 +530,9 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
 .lassi-ed [data-k]{cursor:text}
 .lassi-ed [data-k].led-sel{outline:2px solid #3D8BFD;outline-offset:2px;border-radius:3px}
 .lassi-ed nav.led-sel{outline:2.5px solid #3D8BFD;outline-offset:-2px}
-#lassi-ed-badge{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#14152A;color:#FDCF34;font:600 11px -apple-system,sans-serif;padding:6px 14px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.lassi-ed.lassi-preview section,.lassi-ed.lassi-preview nav{outline:none!important}
+.lassi-ed.lassi-preview [data-k].led-sel{outline:none!important}
 </style>
-<div id="lassi-ed-badge">Mode édition — touche un texte ou le menu</div>
 <script>(function(){
   var doc=document, body=doc.body; body.classList.add('lassi-ed');
   function post(m){try{window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify(m));}catch(e){}}
@@ -534,6 +553,11 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
   // Texte éditable inline : édition directe dans la page, commit au blur.
   leaves.forEach(function(el){
     el.setAttribute('contenteditable','true'); el.style.outlineColor='transparent';
+    var isBtn=el.tagName==='BUTTON'||el.tagName==='A';
+    if(isBtn){
+      // Boutons/liens : empêche la navigation en mode édition, rend sélectionnable.
+      el.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); selectLeaf(el); el.focus(); },true);
+    }
     el.addEventListener('focus',function(){ selectLeaf(el); });
     el.addEventListener('input',function(){
       post({type:'led:textChange', key:el.getAttribute('data-k'), text:(el.textContent||'').slice(0,200)});

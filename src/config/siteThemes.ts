@@ -51,6 +51,11 @@ export const SITE_ANIMATIONS: { id: string; label: string }[] = [
   { id: 'fade-up',  label: 'Fondu ↑' },
   { id: 'fade-left',label: 'Glissé →' },
   { id: 'zoom',     label: 'Zoom' },
+  { id: 'fade-right', label: 'Glissé ←' },
+  { id: 'pop',      label: 'Pop' },
+  { id: 'rotate',   label: 'Rotation' },
+  { id: 'blur',     label: 'Flou' },
+  { id: 'flip',     label: 'Flip' },
 ];
 
 // Tailles de texte proposées (px) dans l'éditeur.

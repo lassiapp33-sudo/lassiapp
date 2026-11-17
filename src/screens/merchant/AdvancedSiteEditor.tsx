@@ -36,6 +36,7 @@ interface MenuItem { i: number; label: string }
 
 export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange, onBack }: Props) {
   const [tool, setTool] = useState<Tool | null>(null);
+  const [preview, setPreview] = useState(false);
   const [selText, setSelText] = useState<TextSel | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[] | null>(null);
   const webRef = useRef<WebView>(null);
@@ -58,6 +59,18 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
   const injectLive = useCallback((next: SiteOverrides) => {
     const js = `window.__ledApply && window.__ledApply(${JSON.stringify(next)}); true;`;
     webRef.current?.injectJavaScript(js);
+  }, []);
+
+  // Œil : bascule l'aperçu propre (cache les contours/surlignages d'édition).
+  const togglePreview = useCallback(() => {
+    setPreview(p => {
+      const next = !p;
+      webRef.current?.injectJavaScript(
+        `document.body && document.body.classList.toggle('lassi-preview', ${next}); true;`,
+      );
+      if (next) setTool(null);
+      return next;
+    });
   }, []);
 
   // Écrit les overrides (persistance locale) + applique en live.
@@ -143,6 +156,9 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
           <Text style={styles.iconTxt}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.title} numberOfLines={1}>Éditeur avancé</Text>
+        <TouchableOpacity style={[styles.eyeBtn, preview && styles.eyeBtnOn]} onPress={togglePreview} activeOpacity={0.7}>
+          <Text style={[styles.eyeTxt, preview && styles.eyeTxtOn]}>{preview ? '🙈' : '👁'}</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={[styles.saveBtn, saving && styles.saveBtnOff]} onPress={onSave} activeOpacity={0.85} disabled={saving}>
           {saving ? <ActivityIndicator color={colors.bg} size="small" /> : <Text style={styles.saveTxt}>Enregistrer</Text>}
         </TouchableOpacity>
@@ -321,6 +337,10 @@ const styles = StyleSheet.create({
   iconBtn: { width: 38, height: 38, borderRadius: radius.pill, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   iconTxt: { color: colors.white, fontSize: 26, lineHeight: 28, marginTop: -2 },
   title: { flex: 1, color: colors.white, fontFamily: fonts.title, fontSize: 18 },
+  eyeBtn: { width: 38, height: 38, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  eyeBtnOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  eyeTxt: { fontSize: 17 },
+  eyeTxtOn: { fontSize: 17 },
   saveBtn: { backgroundColor: colors.accent, borderRadius: radius.pill, paddingHorizontal: 18, paddingVertical: 9, minWidth: 96, alignItems: 'center' },
   saveBtnOff: { opacity: 0.6 },
   saveTxt: { color: colors.bg, fontFamily: fonts.title, fontSize: 14 },
