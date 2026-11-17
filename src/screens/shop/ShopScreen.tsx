@@ -341,9 +341,20 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
       } else {
         setBadges([]);
       }
+      // Qualité vitrine (client uniquement) : un produit sans photo ni emoji = carte texte "nue".
+      // On les masque côté client tant que < 30% du catalogue a une image.
+      // Dès qu'au moins 30% des produits ont une image, tout réapparaît.
+      // Le prestataire continue de TOUT voir dans StoreScreen (gestion) — ce filtre ne s'applique qu'ici.
+      // Exclu : vitrines beauté/coiffure (tresse, barber, esthétique & soin) — services sans photo normaux.
+      const isBeautyTypeShop = (shop?.subcategories ?? []).some(s => BEAUTY_SLOT_SUBCATS.includes(s));
+      const hasImg = (p: StoreProduct) => !!p.photoUrl || !!p.emoji;
+      const total = products.length;
+      const withImg = products.filter(hasImg).length;
+      const ratio = total > 0 ? withImg / total : 1;
+      const visibleProducts = isBeautyTypeShop || ratio >= 0.3 ? products : products.filter(hasImg);
       setRealProducts([
-        ...products.filter(p => p.stock === 'in'),
-        ...products.filter(p => p.stock === 'out'),
+        ...visibleProducts.filter(p => p.stock === 'in'),
+        ...visibleProducts.filter(p => p.stock === 'out'),
       ]);
       const isSlotCat = (shop?.subcategories ?? []).some(s => SLOT_SUBCATS.includes(s));
       if ((shop?.shopType === 'terrains' || isSlotCat) && shop?.merchantId) {
