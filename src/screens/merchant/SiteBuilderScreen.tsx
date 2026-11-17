@@ -17,6 +17,15 @@ import AdvancedSiteEditor from './AdvancedSiteEditor';
 
 interface Props { onBack: () => void }
 
+// Polices visibles : 3 premières + la police sélectionnée (si hors des 3). Repliable.
+function visibleFonts(selectedId: string, expanded: boolean) {
+  if (expanded) return SITE_FONTS;
+  const first = SITE_FONTS.slice(0, 3);
+  if (first.some(f => f.id === selectedId)) return first;
+  const sel = SITE_FONTS.find(f => f.id === selectedId);
+  return sel ? [...first, sel] : first;
+}
+
 type View3 = 'menu' | 'editor' | 'templates' | 'advanced';
 
 // Phrase de présentation par template (affichée dans la galerie).
@@ -44,6 +53,10 @@ export default function SiteBuilderScreen({ onBack }: Props) {
   // Galerie templates : id du template dont on regarde l'aperçu.
   const [tplPreview, setTplPreview] = useState<string | null>(null);
   const [applyingTpl, setApplyingTpl] = useState(false);
+
+  // Polices : afficher 3 puis déplier le reste via « Voir plus ».
+  const [showAllHeadFonts, setShowAllHeadFonts] = useState(false);
+  const [showAllBodyFonts, setShowAllBodyFonts] = useState(false);
 
   // Charge la config existante.
   useEffect(() => {
@@ -321,7 +334,7 @@ export default function SiteBuilderScreen({ onBack }: Props) {
           {/* Police titres */}
           <Text style={styles.secLbl}>Police des titres</Text>
           <View style={styles.wrapChips}>
-            {SITE_FONTS.map(f => {
+            {visibleFonts(cfg.tokens.fontHeading, showAllHeadFonts).map(f => {
               const on = cfg.tokens.fontHeading === f.id;
               return (
                 <TouchableOpacity key={f.id} activeOpacity={0.8} onPress={() => patchTokens({ fontHeading: f.id })}
@@ -330,12 +343,17 @@ export default function SiteBuilderScreen({ onBack }: Props) {
                 </TouchableOpacity>
               );
             })}
+            {SITE_FONTS.length > 3 && (
+              <TouchableOpacity activeOpacity={0.8} onPress={() => setShowAllHeadFonts(v => !v)} style={styles.moreChip}>
+                <Text style={styles.moreChipTxt}>{showAllHeadFonts ? 'Voir moins' : 'Voir plus'}</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Police texte */}
           <Text style={styles.secLbl}>Police du texte</Text>
           <View style={styles.wrapChips}>
-            {SITE_FONTS.map(f => {
+            {visibleFonts(cfg.tokens.fontBody, showAllBodyFonts).map(f => {
               const on = cfg.tokens.fontBody === f.id;
               return (
                 <TouchableOpacity key={f.id} activeOpacity={0.8} onPress={() => patchTokens({ fontBody: f.id })}
@@ -344,6 +362,11 @@ export default function SiteBuilderScreen({ onBack }: Props) {
                 </TouchableOpacity>
               );
             })}
+            {SITE_FONTS.length > 3 && (
+              <TouchableOpacity activeOpacity={0.8} onPress={() => setShowAllBodyFonts(v => !v)} style={styles.moreChip}>
+                <Text style={styles.moreChipTxt}>{showAllBodyFonts ? 'Voir moins' : 'Voir plus'}</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Agencement des sections */}
@@ -535,6 +558,8 @@ const styles = StyleSheet.create({
 
   wrapChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: spacing.screen },
   fontChip: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 10 },
+  moreChip: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.accent, borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 10 },
+  moreChipTxt: { color: colors.accent, fontFamily: fonts.label, fontSize: 12 },
 
   orderList: { marginHorizontal: spacing.screen, gap: 8 },
   orderRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: 14 },

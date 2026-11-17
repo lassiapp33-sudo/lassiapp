@@ -131,6 +131,16 @@ export const SITE_PALETTES: PaletteOption[] = [
   { id: 'furniture', label: 'Maison & Mobilier', bg: '#FFFFFF', text: '#152420', soft: '#EEF4F5' },
   { id: 'garderobe', label: 'Garde-robe', bg: '#FFFFFF', text: '#1b1b1f', soft: '#f5f5f6' },
   { id: 'sac', label: 'Maroquinerie', bg: '#FFFFFF', text: '#1a1a1a', soft: '#f4f3f1' },
+  // Palettes à fond coloré / sombre : changent le site dans son ensemble.
+  { id: 'encre', label: 'Encre (sombre)', bg: '#14152A', text: '#FFFFFF', soft: '#1e2036' },
+  { id: 'onyx', label: 'Onyx (noir)', bg: '#121212', text: '#FFFFFF', soft: '#1d1d1d' },
+  { id: 'emerauded', label: 'Émeraude', bg: '#0F2A22', text: '#FFFFFF', soft: '#163A2F' },
+  { id: 'bordeaux', label: 'Bordeaux', bg: '#2A1216', text: '#FFFFFF', soft: '#3A1A1F' },
+  { id: 'nuitbleue', label: 'Nuit bleue', bg: '#0E1B33', text: '#FFFFFF', soft: '#172644' },
+  { id: 'creme', label: 'Crème', bg: '#FDF6EC', text: '#3A2E22', soft: '#F6ECE0' },
+  { id: 'lavande', label: 'Lavande', bg: '#F4F1FB', text: '#241F33', soft: '#EBE6F6' },
+  { id: 'ocean', label: 'Océan', bg: '#EAF4F7', text: '#0F2F3A', soft: '#DCECF1' },
+  { id: 'rosepoudre', label: 'Rose poudré', bg: '#FDF0F3', text: '#3A1E27', soft: '#F8E1E8' },
 ];
 
 // ── Accents (preset + custom validé) ─────────────────────────────────────────

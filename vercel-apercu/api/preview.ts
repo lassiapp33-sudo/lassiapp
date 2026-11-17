@@ -89,6 +89,16 @@ const SITE_PALETTES: Record<string, SitePalette> = {
   furniture: { d: '#152420', w: '#FFFFFF', g: '#EEF4F5', m: '#6b7b78', b: '#e4ecec' },
   garderobe: { d: '#1b1b1f', w: '#FFFFFF', g: '#f5f5f6', m: '#7c7c82', b: '#e8e8ea' },
   sac:     { d: '#1a1a1a', w: '#FFFFFF', g: '#f4f3f1', m: '#86868b', b: '#e9e7e3' },
+  // Palettes à fond coloré / sombre : changent le site dans son ensemble.
+  encre:     { d: '#FFFFFF', w: '#14152A', g: '#1e2036', m: '#9a9cb5', b: '#2c2e48' },
+  onyx:      { d: '#FFFFFF', w: '#121212', g: '#1d1d1d', m: '#9a9a9a', b: '#2a2a2a' },
+  emerauded: { d: '#FFFFFF', w: '#0F2A22', g: '#163A2F', m: '#8fb5a8', b: '#245043' },
+  bordeaux:  { d: '#FFFFFF', w: '#2A1216', g: '#3A1A1F', m: '#c79aa0', b: '#4d2429' },
+  nuitbleue: { d: '#FFFFFF', w: '#0E1B33', g: '#172644', m: '#93a2c0', b: '#243a5e' },
+  creme:     { d: '#3A2E22', w: '#FDF6EC', g: '#F6ECE0', m: '#9a8d7a', b: '#ece0cf' },
+  lavande:   { d: '#241F33', w: '#F4F1FB', g: '#EBE6F6', m: '#8f87a3', b: '#e0d9f0' },
+  ocean:     { d: '#0F2F3A', w: '#EAF4F7', g: '#DCECF1', m: '#6f8d96', b: '#cfe2e8' },
+  rosepoudre:{ d: '#3A1E27', w: '#FDF0F3', g: '#F8E1E8', m: '#b48e98', b: '#f0d2dc' },
 };
 const DEFAULT_PALETTE = 'classic';
 const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
@@ -2107,10 +2117,10 @@ ${theme.fontsLink}
   @media(max-width:680px){ body[data-template="pottery"] .hero{grid-template-columns:1fr;} body[data-template="pottery"] .hero-left{padding:36px 24px 32px;} }
 
   /* ═══ RÉSEAUX SOCIAUX (toutes templates) — icônes cliquables sur pastille blanche ═══ */
-  .soc-row{display:flex;gap:10px;margin-top:14px}
-  .soc-row .soc{width:40px;height:40px;border-radius:50%;background:#fff;display:grid;place-items:center;transition:.2s;border:1px solid rgba(0,0,0,.06)}
+  .soc-row{display:flex;gap:14px;margin-top:16px;justify-content:center;flex-wrap:wrap}
+  .soc-row .soc{width:56px;height:56px;border-radius:50%;background:#fff;display:grid;place-items:center;transition:.2s;border:1px solid rgba(0,0,0,.06)}
   .soc-row .soc:hover{transform:translateY(-3px);box-shadow:0 8px 18px rgba(0,0,0,.2)}
-  .soc-row .soc img{width:21px;height:21px;object-fit:contain}
+  .soc-row .soc img{width:30px;height:30px;object-fit:contain}
 
   /* ═══ TEMPLATE FURNITURE — Maison & Mobilier (réf Furniture.html) : header 2 rangées, hero mint + collage, bandes sombres, cartes carrées ═══ */
   body[data-template="furniture"]{background:#fff}
