@@ -1388,9 +1388,9 @@ function page(o: {
           <a href="#cx-contact">Contact</a>
         </nav>
         <div class="cx-icons">
-          <span class="cx-ic" title="Rechercher">&#9906;</span>
-          <span class="cx-ic" title="Favoris">&#9825;</span>
-          <a class="cx-ic cx-cart" href="#cx-shop" title="Panier">&#128717;</a>
+          <span class="cx-ic" title="Rechercher"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+          <span class="cx-ic" title="Favoris"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
+          <a class="cx-ic cx-cart" href="#cx-shop" title="Panier"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></a>
         </div>
       </div>
     </header>
@@ -1474,14 +1474,14 @@ function page(o: {
     <header class="fn-head" id="fn-top">
       <div class="fn-h1">
         <a class="fn-logo" href="#fn-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<span>${esc(o.name)}</span>`}</a>
-        <div class="fn-search">&#9906; <span>Rechercher</span></div>
+        <div class="fn-search"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> <span>Rechercher</span></div>
         <nav class="fn-nav">
           <a href="#fn-top">Accueil</a>
           <a href="#cx-shop">${hasProducts ? 'Boutique' : hasTerrains ? 'Terrains' : 'Prestations'}</a>
           <a href="#fn-about">À propos</a>
           <a href="#fn-contact">Contact</a>
         </nav>
-        <a class="fn-cart" href="#cx-shop">&#128722; <span>Panier</span></a>
+        <a class="fn-cart" href="#cx-shop"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg> <span>Panier</span></a>
       </div>
       <div class="fn-h2">
         <div class="fn-cats">${fnCats.map(g => `<a href="#cx-shop">${esc(g.title)}</a>`).join('')}</div>
@@ -1646,9 +1646,9 @@ function page(o: {
   const sacBody = `
     <header class="sc-head" id="sc-top">
       <div class="sc-head-top">
-        <div class="sc-head-side sc-head-social">${socialHtml || '<span class="sc-ic">&#9906;</span>'}</div>
+        <div class="sc-head-side sc-head-social">${socialHtml || '<span class="sc-ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>'}</div>
         <a class="sc-logo" href="#sc-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<span>${esc(o.name)}</span>`}</a>
-        <div class="sc-head-side sc-head-tools"><span class="sc-ic" title="Rechercher">&#9906;</span><a class="sc-ic sc-cart" href="#sc-shop" title="Panier">&#128722;</a></div>
+        <div class="sc-head-side sc-head-tools"><span class="sc-ic" title="Rechercher"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span><a class="sc-ic sc-cart" href="#sc-shop" title="Panier"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></a></div>
       </div>
       <nav class="sc-nav">
         <a class="sc-nav-active" href="#sc-top">Accueil</a>
