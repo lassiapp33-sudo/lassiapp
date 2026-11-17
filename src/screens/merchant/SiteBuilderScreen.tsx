@@ -301,7 +301,7 @@ export default function SiteBuilderScreen({ onBack }: Props) {
           {/* Palette */}
           <Text style={styles.secLbl}>Palette de couleurs</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rowScroll}>
-            {SITE_PALETTES.map(p => {
+            {SITE_PALETTES.filter(p => !p.hidden || cfg.tokens.palette === p.id).map(p => {
               const on = cfg.tokens.palette === p.id;
               return (
                 <TouchableOpacity key={p.id} activeOpacity={0.8} onPress={() => patchTokens({ palette: p.id })}

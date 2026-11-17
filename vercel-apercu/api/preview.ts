@@ -1074,10 +1074,11 @@ function page(o: {
 }): string {
   const deep = `https://lassi.tech/p/${encodeURIComponent(o.slug)}`;
   const theme = resolveTheme(o.siteConfig);
-  const initial = (o.name.charAt(0) || '?').toUpperCase();
-  const avatar = o.logo
-    ? `<img class="shop-logo" src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">`
-    : `<div class="logo-initial">${esc(initial)}</div>`;
+  // Logo : vrai logo uploadé du prestataire si présent, sinon logo LASSİ (jamais
+  // d'emoji/initiale décorative). lassiLogo sert de repli partout dans les templates.
+  const lassiLogo = `${o.base}/assets/lassi-logo.png`;
+  const logoSrc = o.logo || lassiLogo;
+  const avatar = `<img class="shop-logo" src="${escAttr(logoSrc)}" alt="${escAttr(o.name)}">`;
   const hasProducts = o.products.length > 0;
   const hasServices = o.services.length > 0;
   const hasBeauty   = o.services.some(s => s.kind === 'beauty');
@@ -1350,7 +1351,7 @@ function page(o: {
   const cosmeticBody = `
     <header class="cx-head" id="cx-top">
       <div class="cx-top">
-        <div class="cx-logo"><span class="cx-logo-ic">&#10047;</span><span>${esc(o.name)}</span></div>
+        <div class="cx-logo"><img class="cx-logo-img" src="${escAttr(logoSrc)}" alt="${escAttr(o.name)}"><span>${esc(o.name)}</span></div>
         <label class="cx-cat">
           <select onchange="location.hash='#cx-shop'">
             <option>Toutes catégories</option>
@@ -1972,6 +1973,7 @@ ${theme.fontsLink}
   .cx-top { display:flex; align-items:center; justify-content:space-between; gap:24px; max-width:1280px; margin:0 auto; padding:18px 40px; }
   .cx-logo { display:flex; align-items:center; gap:9px; font-family:var(--fh); font-weight:700; font-size:23px; letter-spacing:.5px; text-transform:uppercase; color:var(--d); }
   .cx-logo-ic { color:var(--y); font-size:20px; }
+  .cx-logo-img { width:30px; height:30px; border-radius:7px; object-fit:cover; flex:0 0 auto; }
   .cx-cat { flex:0 1 300px; display:flex; align-items:center; border:1px solid var(--b); border-radius:9999px; padding:0 8px 0 18px; background:var(--w); }
   .cx-cat select { border:none; background:transparent; font-family:inherit; font-size:13.5px; color:var(--m); padding:11px 8px; width:100%; cursor:pointer; outline:none; -webkit-appearance:none; appearance:none; }
   .cx-call { display:flex; align-items:center; gap:11px; text-decoration:none; }
