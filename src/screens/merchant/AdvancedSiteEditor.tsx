@@ -42,7 +42,15 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
   const [vidBusy, setVidBusy] = useState(false);
   const [selText, setSelText] = useState<TextSel | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[] | null>(null);
+  // Sections réellement présentes pour cette boutique (reçu de la page via led:ready).
+  const [hasSec, setHasSec] = useState<{ products: boolean; services: boolean; terrains: boolean } | null>(null);
   const webRef = useRef<WebView>(null);
+
+  // Amène l'élément en cours d'édition bien visible dans l'aperçu (clavier ouvert).
+  const scrollToKey = useCallback((key: string) => {
+    const js = `window.__ledScrollTo && window.__ledScrollTo(${JSON.stringify(key)}); true;`;
+    setTimeout(() => webRef.current?.injectJavaScript(js), 350);
+  }, []);
 
   const ov: SiteOverrides = cfg.overrides ?? {};
 
@@ -150,13 +158,24 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
     onChange({ ...cfg, layout: { ...cfg.layout, ...p } });
   }, [cfg, onChange]);
 
-  const moveSection = useCallback((idx: number, dir: -1 | 1) => {
+  // Sections réellement affichées : filtre sur les conteneurs présents (si connu).
+  const visibleOrder = useMemo(
+    () => cfg.layout.order.filter(id => !hasSec || (hasSec as any)[id]),
+    [cfg.layout.order, hasSec],
+  );
+
+  // Déplace une section (par son id) devant/derrière la section visible adjacente.
+  const moveSection = useCallback((id: string, dir: -1 | 1) => {
+    const vis = cfg.layout.order.filter(x => !hasSec || (hasSec as any)[x]);
+    const vi = vis.indexOf(id);
+    const vj = vi + dir;
+    if (vi < 0 || vj < 0 || vj >= vis.length) return;
     const order = [...cfg.layout.order];
-    const j = idx + dir;
-    if (j < 0 || j >= order.length) return;
-    [order[idx], order[j]] = [order[j], order[idx]];
+    const a = order.indexOf(vis[vi]);
+    const b = order.indexOf(vis[vj]);
+    [order[a], order[b]] = [order[b], order[a]];
     onChange({ ...cfg, layout: { ...cfg.layout, order } });
-  }, [cfg, onChange]);
+  }, [cfg, onChange, hasSec]);
 
   // Réception des messages de la page.
   const onMessage = useCallback((e: WebViewMessageEvent) => {
@@ -167,6 +186,12 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
       case 'led:text':
         setSelText({ key: String(m.key), text: String(m.text ?? ''), size: Number(m.size ?? 16), color: String(m.color ?? '') });
         setTool('texte');
+        scrollToKey(String(m.key));
+        break;
+      case 'led:ready':
+        if (m.has && typeof m.has === 'object') {
+          setHasSec({ products: !!m.has.products, services: !!m.has.services, terrains: !!m.has.terrains });
+        }
         break;
       case 'led:textChange':
         // Édition inline dans la page → on stocke sans réinjecter (déjà visible).
@@ -181,7 +206,7 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
         setTool('menu');
         break;
     }
-  }, [cfg, onChange]);
+  }, [cfg, onChange, scrollToKey]);
 
   const selKey = selText?.key ?? null;
   const curAnim = selKey ? (ov.anim?.[selKey] ?? '') : '';
@@ -227,19 +252,21 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
         <ScrollView style={styles.panel} contentContainerStyle={styles.panelIn} keyboardShouldPersistTaps="handled" keyboardDismissMode="none">
           <Text style={styles.panelTitle}>{TOOLS.find(t => t.id === tool)?.label}</Text>
 
-          {/* ── Conteneurs : réordonner ── */}
+          {/* ── Conteneurs : réordonner (uniquement ceux réellement présents) ── */}
           {tool === 'sections' && (
             <View style={styles.orderList}>
               <Text style={styles.hint}>Déplace les conteneurs pour changer leur ordre sur le site.</Text>
-              {cfg.layout.order.map((id, i) => {
+              {visibleOrder.length === 0 ? (
+                <Text style={styles.hint}>Aucun conteneur à afficher pour l'instant.</Text>
+              ) : visibleOrder.map((id, i) => {
                 const sec = SITE_SECTIONS.find(s => s.id === id);
                 if (!sec) return null;
                 return (
                   <View key={id} style={styles.orderRow}>
                     <Text style={styles.orderPos}>{i + 1}</Text>
                     <Text style={styles.orderLbl}>{sec.label}</Text>
-                    <TouchableOpacity disabled={i === 0} onPress={() => moveSection(i, -1)} style={[styles.sqBtn, i === 0 && styles.off]}><Text style={styles.sqTxt}>↑</Text></TouchableOpacity>
-                    <TouchableOpacity disabled={i === cfg.layout.order.length - 1} onPress={() => moveSection(i, 1)} style={[styles.sqBtn, i === cfg.layout.order.length - 1 && styles.off]}><Text style={styles.sqTxt}>↓</Text></TouchableOpacity>
+                    <TouchableOpacity disabled={i === 0} onPress={() => moveSection(id, -1)} style={[styles.sqBtn, i === 0 && styles.off]}><Text style={styles.sqTxt}>↑</Text></TouchableOpacity>
+                    <TouchableOpacity disabled={i === visibleOrder.length - 1} onPress={() => moveSection(id, 1)} style={[styles.sqBtn, i === visibleOrder.length - 1 && styles.off]}><Text style={styles.sqTxt}>↓</Text></TouchableOpacity>
                   </View>
                 );
               })}
@@ -252,6 +279,7 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
               <Text style={styles.hint}>Modifie le texte directement dans l'aperçu, ou ici :</Text>
               <TextInput
                 style={styles.input} value={selText.text} multiline
+                onFocus={() => scrollToKey(selText.key)}
                 onChangeText={v => { setSelText({ ...selText, text: v }); setText(selText.key, v); }}
                 placeholder="Texte" placeholderTextColor={colors.muted} maxLength={200}
               />

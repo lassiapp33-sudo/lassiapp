@@ -455,7 +455,12 @@ export default async function handler(
   if (hasOv || editMode) {
     let inject = LED_CORE;
     if (hasOv) inject += `<script>window.__ledApply(${JSON.stringify(overrides)});</script>`;
-    if (editMode) inject += EDIT_OVERLAY;
+    if (editMode) {
+      // Conteneurs réels : indique à l'éditeur quelles sections existent vraiment
+      // pour cette boutique (ne pas proposer Prestations/Terrains si absents).
+      const has = { products: products.length > 0, services: services.length > 0, terrains: terrains.length > 0 };
+      inject += `<script>window.__lassiHas=${JSON.stringify(has)};</script>` + EDIT_OVERLAY;
+    }
     html = html.replace('</body>', inject + '</body>');
   }
 
@@ -587,6 +592,11 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
       color:rgbHex(cs.color), y:Math.round(r.top+window.scrollY)});
   }
   function rgbHex(c){var m=/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/.exec(c||'');if(!m)return '';function h(n){n=(+n).toString(16);return n.length<2?'0'+n:n;}return '#'+h(m[1])+h(m[2])+h(m[3]);}
+  // Appelé par l'app RN quand le clavier est ouvert : amène l'élément édité bien
+  // visible dans la zone d'aperçu restante (au-dessus du panneau/clavier).
+  window.__ledScrollTo=function(key){
+    try{ var el=doc.querySelector('[data-k="'+key+'"]'); if(el) el.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){}
+  };
   // Texte éditable inline : édition directe dans la page, commit au blur.
   leaves.forEach(function(el){
     el.setAttribute('contenteditable','true'); el.style.outlineColor='transparent';
@@ -610,7 +620,7 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
       post({type:'led:menu', items:links});
     },true);
   }
-  post({type:'led:ready'});
+  post({type:'led:ready', has:(window.__lassiHas||null)});
 })();</script>`;
 
 // Génère le sitemap XML de toutes les vitrines publiables (slug + has_content).
