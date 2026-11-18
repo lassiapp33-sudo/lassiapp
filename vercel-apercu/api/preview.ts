@@ -102,7 +102,7 @@ const SITE_PALETTES: Record<string, SitePalette> = {
 };
 const DEFAULT_PALETTE = 'classic';
 const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
-const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery', 'furniture', 'garderobe', 'sac']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat), #3 furniture (maison & mobilier), #4 garderobe (mode / prêt-à-porter), #5 sac (maroquinerie / bagagerie)
+const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery', 'furniture', 'garderobe', 'sac', 'tresse']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat), #3 furniture (maison & mobilier), #4 garderobe (mode / prêt-à-porter), #5 sac (maroquinerie / bagagerie)
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
 // ── Layout (Phase 2) — agencement des conteneurs, présentation seule ─────────
@@ -399,7 +399,7 @@ export default async function handler(
     const base = `${url.protocol}//${url.host}`;
     const demo = buildDemo(t, base);
     return new Response(
-      renderHtml(demo.shop, demo.products, [], [], demo.shop.slug, base, [], []),
+      renderHtml(demo.shop, demo.products, demo.services ?? [], [], demo.shop.slug, base, [], []),
       { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } },
     );
   }
@@ -947,9 +947,38 @@ function buildImagePool(shop: Shop, products: Product[]): string[] {
 // Cosmetic → « Yaram bu rafet », soins/cosmétiques naturels (Dakar). Images =
 // /assets/demo/cosmetic/* servies par Vercel. Aucune donnée réelle, aucun appel DB.
 // ─────────────────────────────────────────────────────────────────────────────
-function buildDemo(templateId: string, base: string): { shop: Shop; products: Product[] } {
+function buildDemo(templateId: string, base: string): { shop: Shop; products: Product[]; services?: ServiceItem[] } {
   const t = SITE_TEMPLATES.indexOf(templateId) >= 0 ? templateId : 'cosmetic';
   const img = (f: string) => `${base}/assets/demo/${t}/${f}`;
+
+  if (t === 'tresse') {
+    const site_config = {
+      template: 'tresse',
+      tokens: { palette: 'tresse', accent: '#E0785C', fontHeading: 'poppins', fontBody: 'inter' },
+      layout: { order: ['services', 'products', 'terrains'], cols: 2, card: 'shadow', hero: 'split' },
+      social: { facebook: 'https://facebook.com', tiktok: 'https://tiktok.com', instagram: 'https://instagram.com' },
+    };
+    const shop: Shop = {
+      id: 'demo-tresse', name: 'Awa Tresses', logo_url: null,
+      description: "Salon de tresses & coiffures protectrices. Nattes collées, tresses au fil, twists et tissages réalisés avec soin. Réservez votre créneau en ligne, paiement sécurisé.",
+      zone: 'Dakar · Grand Yoff', category: 'hair', shop_type: 'services',
+      subcategories: ['tresses', 'nattes', 'tissages'],
+      slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
+      site_config, gallery_urls: [img('hero.jpg'), img('p1.jpg'), img('p2.jpg')],
+      cover_url: null, phone: '77 123 45 67',
+    };
+    const S = (id: string, name: string, price: number, description: string, min: number, photo: string): ServiceItem =>
+      ({ id, name, description, price, category: 'Prestations', meta: `${min} min · réservable`, kind: 'beauty', image_url: img(photo) });
+    const services: ServiceItem[] = [
+      S('t1', 'Nattes collées', 8000, 'Nattes collées simples ou stylées, finitions nettes et durables.', 120, 'p1.jpg'),
+      S('t2', 'Tresses au fil', 10000, 'Tresses au fil traditionnelles, motifs au choix.', 150, 'p2.jpg'),
+      S('t3', 'Twists / Vanilles', 12000, 'Twists et vanilles soignés, idéal coiffure protectrice.', 180, 'p3.jpg'),
+      S('t4', 'Tissage pose', 15000, 'Pose de tissage nette avec fermeture discrète.', 150, 'p4.jpg'),
+      S('t5', 'Box braids', 18000, 'Box braids fines ou moyennes, longueur au choix.', 240, 'p5.jpg'),
+      S('t6', 'Soin & shampoing', 5000, 'Shampoing, soin profond et brushing avant coiffure.', 60, 'p6.jpg'),
+    ];
+    return { shop, products: [], services };
+  }
 
   if (t === 'cosmetic') {
     const site_config = {
@@ -1845,10 +1874,79 @@ function page(o: {
     ${scFoot}
   `;
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TEMPLATE PLEIN « TRESSE » — Salon de tresses / coiffure (réf Wix « Promeneur
+  // de chien »). Fond crème, immense titre manuscrit (Amatic SC), accent corail,
+  // décorations ligne-claire. Orienté SERVICES : « Mes services » est la section
+  // navigable (ancre #tr-services) où se trouvent les prestations réservables.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const trTagline = o.cat || 'Votre salon de tresses';
+  const trAboutImg = pick(0);
+  const trPaws = `<svg class="tr-paw" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="6" cy="9" r="2.1"/><circle cx="11.5" cy="6.5" r="2.1"/><circle cx="17" cy="9" r="2.1"/><path d="M12 11c-3 0-5 2.2-5 4.4C7 17.3 9 18 12 18s5-.7 5-2.6C17 13.2 15 11 12 11z"/></svg>`;
+  const tresseBody = `
+    <header class="tr-head" id="tr-top">
+      <a class="tr-brand" href="#tr-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<span>${esc(clip(o.name, 22))}</span>`}</a>
+      <nav class="tr-nav">
+        <a class="tr-nav-active" href="#tr-top">Accueil</a>
+        <a href="#tr-about">À propos</a>
+        <a href="#tr-services">Mes services</a>
+        <a href="#tr-contact">Contact</a>
+      </nav>
+      ${o.phone ? `<a class="tr-phone" href="tel:${escAttr(o.phone.replace(/\s+/g, ''))}">${esc(o.phone)}</a>` : `<span class="tr-phone">Sur rendez-vous</span>`}
+    </header>
+
+    <section class="tr-hero">
+      <span class="tr-deco tr-deco-1">${trPaws}</span>
+      <span class="tr-deco tr-deco-2">${trPaws}</span>
+      <span class="tr-deco tr-deco-3">✂</span>
+      <div class="tr-hero-in">
+        <h1 class="tr-hero-name">${esc(clip(o.name, 16))}</h1>
+        <div class="tr-hero-tag">${esc(clip(trTagline, 40))}</div>
+        <a class="tr-cta" href="#tr-services">Prendre rendez-vous</a>
+      </div>
+      <span class="tr-path" aria-hidden="true"></span>
+    </section>
+
+    <section class="tr-about" id="tr-about">
+      <div class="tr-about-txt">
+        <h2 class="tr-h2">À propos</h2>
+        <p>${esc(clip(o.desc || `${o.name}, votre salon de tresses. Prestations soignées, finitions nettes et conseils personnalisés. Réservez votre créneau en ligne et payez en toute sécurité.`, 240))}</p>
+        <p>${esc(clip(`Tresses, nattes, tissages et coiffures protectrices — chaque prestation est réalisée avec soin${o.zone ? ' à ' + o.zone : ''}. Choisissez votre service ci-dessous.`, 200))}</p>
+        ${hoursHtml ? `<div class="tr-hours">${hoursHtml}</div>` : ''}
+      </div>
+      <div class="tr-about-img">${trAboutImg ? `<img src="${escAttr(trAboutImg)}" alt="${escAttr(o.name)}" loading="lazy">` : ''}</div>
+    </section>
+
+    ${closedNotice}
+    <section class="tr-services${catalogCls}" id="tr-services">
+      <div class="tr-services-head">
+        <span class="tr-deco-sm">${trPaws}</span>
+        <h2 class="tr-h2">Mes services</h2>
+        <p>Réservez la prestation qui vous convient, paiement sécurisé Wave &amp; Orange Money.</p>
+      </div>
+      ${catnav}${dsSection}${grid}
+      ${svcSection}
+      ${terrainSection}
+    </section>
+
+    <footer class="tr-foot" id="tr-contact">
+      <div class="tr-foot-in">
+        <div class="tr-foot-name">${esc(o.name)}</div>
+        ${o.zone ? `<p>📍 ${esc(o.zone)}</p>` : ''}
+        ${o.phone ? `<p>✆ <a href="tel:${escAttr(o.phone.replace(/\s+/g, ''))}">${esc(o.phone)}</a></p>` : ''}
+        <p>Réservation &amp; paiement en ligne · Wave · Orange Money</p>
+        ${socialHtml}
+        <a class="tr-cta tr-cta-sm" href="#tr-services">Voir mes services</a>
+      </div>
+      <div class="tr-copy">© 2026 ${esc(o.name)} · Propulsé par LASSİ</div>
+    </footer>
+  `;
+
   const body = theme.template === 'furniture' && hasCatalog ? furnitureBody
     : theme.template === 'cosmetic' && hasCatalog ? cosmeticBody
     : theme.template === 'garderobe' && hasCatalog ? garderobeBody
     : theme.template === 'sac' && hasCatalog ? sacBody
+    : theme.template === 'tresse' && hasCatalog ? tresseBody
     : classicBody;
 
   const cfg = JSON.stringify({
@@ -1879,6 +1977,7 @@ function page(o: {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 ${theme.fontsLink}
+${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=Raleway:wght@300;400;500;600;700&display=swap" rel="stylesheet">' : ''}
 <style>
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
   [hidden] { display:none !important; }
@@ -2553,6 +2652,49 @@ ${theme.fontsLink}
     .sc-about-in{grid-template-columns:1fr;gap:24px}
     .sc-foot-grid{grid-template-columns:1fr 1fr}
   }
+
+  /* ───────────────── TEMPLATE TRESSE (crème + Amatic SC + corail) ───────────────── */
+  body[data-template="tresse"]{--tr-bg:#F3ECDF;--tr-band:#EFE6D5;--tr-ink:#2B2822;--tr-mut:#8a8172;--tr-coral:#E0785C;--tr-card:#EDE3D2;--tr-fh:'Amatic SC',cursive;--tr-fb:'Raleway',sans-serif;background:var(--tr-bg);color:var(--tr-ink);font-family:var(--tr-fb);}
+  .tr-head{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:18px;padding:16px clamp(18px,4vw,48px);background:var(--tr-bg);border-bottom:1px solid rgba(43,40,34,.08)}
+  .tr-brand{display:flex;align-items:center;text-decoration:none;color:var(--tr-ink)}
+  .tr-brand img{height:34px;display:block} .tr-brand span{font-family:var(--tr-fh);font-size:30px;font-weight:700;letter-spacing:1px;line-height:1}
+  .tr-nav{flex:1;display:flex;justify-content:center;gap:clamp(14px,2.4vw,34px);flex-wrap:wrap}
+  .tr-nav a{color:var(--tr-ink);text-decoration:none;font-size:12.5px;font-weight:500;letter-spacing:.5px}
+  .tr-nav a:hover,.tr-nav .tr-nav-active{color:var(--tr-coral)}
+  .tr-phone{background:var(--tr-ink);color:#fff;text-decoration:none;font-size:13px;font-weight:600;letter-spacing:.5px;padding:9px 16px;border-radius:999px;white-space:nowrap}
+  .tr-hero{position:relative;background:var(--tr-band);padding:clamp(40px,9vw,96px) 20px clamp(60px,10vw,110px);overflow:hidden;text-align:center}
+  .tr-hero-in{position:relative;z-index:2;max-width:900px;margin:0 auto;display:flex;flex-direction:column;align-items:center}
+  .tr-hero-name{font-family:var(--tr-fh);font-weight:700;font-size:clamp(84px,24vw,230px);line-height:.78;letter-spacing:2px;color:var(--tr-ink);text-transform:uppercase}
+  .tr-hero-tag{font-size:clamp(13px,1.6vw,17px);font-weight:500;letter-spacing:5px;text-transform:uppercase;color:var(--tr-ink);margin:18px 0 30px}
+  .tr-cta{display:inline-block;background:var(--tr-coral);color:#fff;text-decoration:none;font-size:14px;font-weight:600;letter-spacing:.5px;padding:14px 34px;border-radius:999px;box-shadow:0 10px 24px rgba(224,120,92,.32);transition:transform .15s}
+  .tr-cta:hover{transform:translateY(-2px)}
+  .tr-deco{position:absolute;color:var(--tr-ink);opacity:.5;z-index:1}
+  .tr-deco-1{top:14%;left:9%;transform:rotate(-12deg)} .tr-deco-2{top:40%;right:11%;transform:rotate(14deg)} .tr-deco-3{bottom:16%;left:14%;font-size:30px;opacity:.4}
+  .tr-path{position:absolute;right:16%;bottom:8%;width:160px;height:90px;border-bottom:2px dashed rgba(43,40,34,.3);border-right:2px dashed rgba(43,40,34,.3);border-bottom-right-radius:80px;z-index:1}
+  @media(max-width:680px){.tr-path,.tr-deco-2{display:none}}
+  .tr-h2{font-family:var(--tr-fh);font-weight:700;font-size:clamp(44px,8vw,78px);line-height:.95;letter-spacing:2px;color:var(--tr-ink);text-transform:uppercase}
+  .tr-about{max-width:1100px;margin:0 auto;padding:clamp(48px,8vw,90px) clamp(20px,4vw,40px);display:grid;grid-template-columns:1fr 1fr;gap:clamp(28px,5vw,64px);align-items:center}
+  .tr-about-txt p{font-size:15px;line-height:1.75;color:var(--tr-mut);font-weight:400;margin-top:18px;max-width:440px}
+  .tr-about-img img{width:100%;border-radius:14px;display:block;aspect-ratio:4/3;object-fit:cover;box-shadow:0 18px 40px rgba(43,40,34,.14)}
+  .tr-hours{margin-top:22px}
+  @media(max-width:720px){.tr-about{grid-template-columns:1fr}.tr-about-img{order:-1}}
+  .tr-services{max-width:1120px;margin:0 auto;padding:clamp(10px,3vw,30px) clamp(16px,4vw,40px) clamp(50px,8vw,90px)}
+  .tr-services-head{text-align:center;margin-bottom:30px;position:relative}
+  .tr-services-head p{color:var(--tr-mut);font-size:14px;margin-top:10px}
+  .tr-deco-sm{display:inline-block;color:var(--tr-coral);opacity:.8;margin-bottom:4px}
+  body[data-template="tresse"] .sectitle{display:none}
+  body[data-template="tresse"] .cathead{border:none;padding:0 4px 10px}
+  body[data-template="tresse"] .cathead-title{font-family:var(--tr-fh);font-size:34px;letter-spacing:1px;color:var(--tr-ink)}
+  body[data-template="tresse"] .prod{background:var(--tr-card);border:1px solid rgba(43,40,34,.08);border-radius:16px}
+  body[data-template="tresse"] .pname{color:var(--tr-ink)} body[data-template="tresse"] .pprice{color:var(--tr-coral)}
+  body[data-template="tresse"] .svcbtn,body[data-template="tresse"] .bookbtn{background:var(--tr-coral);color:#fff;border-radius:999px}
+  body[data-template="tresse"] .chip{border-radius:999px} body[data-template="tresse"] .chip.sel{background:var(--tr-coral);color:#fff;border-color:var(--tr-coral)}
+  .tr-foot{background:var(--tr-band);text-align:center;padding:clamp(40px,7vw,70px) 20px 30px;margin-top:20px}
+  .tr-foot-name{font-family:var(--tr-fh);font-size:clamp(40px,7vw,64px);letter-spacing:1px;color:var(--tr-ink)}
+  .tr-foot-in p{color:var(--tr-mut);font-size:14px;margin-top:8px} .tr-foot-in a{color:var(--tr-coral);text-decoration:none}
+  .tr-foot .soc-row{justify-content:center;margin-top:16px}
+  .tr-cta-sm{margin-top:22px;padding:12px 28px}
+  .tr-copy{margin-top:30px;font-size:12.5px;color:var(--tr-mut)}
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">

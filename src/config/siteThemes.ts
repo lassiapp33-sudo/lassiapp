@@ -183,6 +183,7 @@ export const SITE_TEMPLATES: { id: string; label: string }[] = [
   { id: 'furniture', label: 'Maison & Mobilier' },
   { id: 'garderobe', label: 'Garde-robe' },
   { id: 'sac', label: 'Maroquinerie & Bagagerie' },
+  { id: 'tresse', label: 'Tresses & Coiffure' },
 ];
 
 // Preset appliqué quand on choisit un template : fixe palette/accent/polices/layout
@@ -211,6 +212,10 @@ export const TEMPLATE_PRESETS: Record<string, { tokens: SiteConfig['tokens']; la
   sac: {
     tokens: { palette: 'sac', accent: '#FDCF34', fontHeading: 'poppins', fontBody: 'inter' },
     layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'shadow', hero: 'split' },
+  },
+  tresse: {
+    tokens: { palette: 'creme', accent: '#E0785C', fontHeading: 'poppins', fontBody: 'inter' },
+    layout: { order: ['services', 'products', 'terrains'], cols: 2, card: 'shadow', hero: 'split' },
   },
 };
 
