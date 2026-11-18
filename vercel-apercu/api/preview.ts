@@ -464,6 +464,13 @@ export default async function handler(
     html = html.replace('</body>', inject + '</body>');
   }
 
+  // Animations d'entrée au scroll — dosées, fluides, appliquées à TOUS les templates.
+  // Jamais en mode édition (le prestataire doit voir les blocs stables) ni si l'OS
+  // demande moins de mouvement. S'auto-désactive sur les éléments à animation manuelle.
+  if (!editMode) {
+    html = html.replace('</body>', REVEAL + '</body>');
+  }
+
   return new Response(html, {
     status: shop ? 200 : 404,
     headers: {
@@ -562,6 +569,50 @@ const LED_CORE = `<style id="led-core-style">
       }
     }catch(e){}
   };
+})();</script>`;
+
+// ─── Animations d'entrée au scroll (REVEAL) ──────────────────────────────────
+// Universel, template-agnostique : on cible des rôles clés (accroche, titres,
+// cartes, notes) et on les révèle en fondu+translation quand ils entrent dans le
+// viewport, avec une cascade légère entre frères. Dosé : pas tout l'écran, juste
+// les points focaux. Respecte prefers-reduced-motion et n'écrase jamais une
+// animation manuelle (led-a-*). Sans JS : tout reste visible (état masqué posé
+// par JS uniquement).
+const REVEAL = `<style id="lx-reveal-style">
+.lx-rv{opacity:0;transform:translateY(26px);transition:opacity .72s cubic-bezier(.22,.61,.36,1),transform .72s cubic-bezier(.22,.61,.36,1);will-change:opacity,transform}
+.lx-rv.lx-z{transform:scale(.96)}
+.lx-rv.lx-in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.lx-rv{opacity:1!important;transform:none!important;transition:none!important}}
+</style>
+<script>(function(){
+  try{
+    if(document.body&&document.body.classList.contains('lassi-ed'))return;
+    if(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+    if(!('IntersectionObserver'in window))return;
+    // Points focaux présents dans tous les templates (classic + pleins).
+    var SOFT='.shop-cat,.hero-title,.hero-desc,.hours-block,.promo-banner,.catalog-title,.sectitle,.cathead,.appnote,.foot,.about,.closed-notice';
+    var CARDS='.prod,.terrain-card';
+    function tag(sel,zoom){
+      [].slice.call(document.querySelectorAll(sel)).forEach(function(el){
+        if(el.__lxrv)return;
+        if(/led-a-/.test(''+(el.className||'')))return; // respecte l'anim manuelle
+        el.__lxrv=1; el.classList.add('lx-rv'); if(zoom)el.classList.add('lx-z');
+      });
+    }
+    tag(SOFT,false); tag(CARDS,true);
+    var io=new IntersectionObserver(function(ents){
+      ents.forEach(function(e){
+        if(!e.isIntersecting)return;
+        var el=e.target, sibs=[], p=el.parentNode;
+        if(p){ for(var i=0;i<p.children.length;i++){ if(p.children[i].classList&&p.children[i].classList.contains('lx-rv'))sibs.push(p.children[i]); } }
+        var idx=sibs.indexOf(el); if(idx<0)idx=0;
+        el.style.transitionDelay=(Math.min(idx,6)*70)+'ms';
+        el.classList.add('lx-in');
+        io.unobserve(el);
+      });
+    },{threshold:.12,rootMargin:'0px 0px -7% 0px'});
+    [].slice.call(document.querySelectorAll('.lx-rv')).forEach(function(el){io.observe(el);});
+  }catch(e){}
 })();</script>`;
 
 // ─── Overlay mode édition ────────────────────────────────────────────────────
