@@ -385,6 +385,37 @@ export default async function handler(
     });
   }
 
+  // Carte statique proxifiée : évite l'iframe cross-origin (openstreetmap.org) qui
+  // casse la WebView sur vieux Android (CA Let's Encrypt non reconnue → SSL error).
+  // L'image est servie depuis s.lassi.tech (certificat déjà accepté par l'appareil).
+  if (slug === 'staticmap') {
+    const lat = parseFloat(url.searchParams.get('lat') ?? '');
+    const lng = parseFloat(url.searchParams.get('lng') ?? '');
+    if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+      return new Response('bad coords', { status: 400 });
+    }
+    // Wikimedia Maps : rendu statique OSM fiable, centré sur le point (sans clé).
+    const src = `https://maps.wikimedia.org/img/osm-intl,15,${lat},${lng},640x360.png`;
+    const fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#e9e3d8"/><g fill="none" stroke="#cfc6b6" stroke-width="2"><path d="M0 120H640M0 240H640M213 0V360M426 0V360"/></g><g transform="translate(320 168)"><path d="M0 40C-22 10-22-16 0-16 22-16 22 10 0 40Z" fill="#FF7648"/><circle cx="0" cy="4" r="7" fill="#fff"/></g></svg>`;
+    try {
+      const r = await fetch(src, { headers: { 'User-Agent': 'LASSI-vitrine/1.0 (https://lassi.tech)' } });
+      if (!r.ok) throw new Error('map ' + r.status);
+      const buf = await r.arrayBuffer();
+      return new Response(buf, {
+        status: 200,
+        headers: {
+          'Content-Type': r.headers.get('content-type') || 'image/png',
+          'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+        },
+      });
+    } catch {
+      return new Response(fallbackSvg, {
+        status: 200,
+        headers: { 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'public, max-age=600' },
+      });
+    }
+  }
+
   // Page réservation terrain invité web.
   if (slug === 'terrain') {
     return new Response(renderTerrainPage(url), {
@@ -985,7 +1016,7 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
   if (t === 'ferme') {
     const site_config = {
       template: 'ferme',
-      tokens: { palette: 'creme', accent: '#35663E', fontHeading: 'oswald', fontBody: 'cormorant' },
+      tokens: { palette: 'creme', accent: '#35663E', fontHeading: 'cormorant', fontBody: 'cormorant' },
       layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'shadow', hero: 'split' },
       social: { facebook: 'https://facebook.com', tiktok: 'https://tiktok.com', instagram: 'https://instagram.com' },
     };
@@ -1932,7 +1963,7 @@ function page(o: {
   // bouton « Définir votre emplacement » visible UNIQUEMENT en mode édition (prestataire).
   const hasLoc = typeof o.lat === 'number' && typeof o.lng === 'number';
   const trMap = hasLoc
-    ? `<iframe class="tr-map" loading="lazy" title="Emplacement ${escAttr(o.name)}" src="https://www.openstreetmap.org/export/embed.html?bbox=${(o.lng! - 0.006)}%2C${(o.lat! - 0.004)}%2C${(o.lng! + 0.006)}%2C${(o.lat! + 0.004)}&amp;layer=mapnik&amp;marker=${o.lat}%2C${o.lng}"></iframe>`
+    ? `<a class="tr-map-link" href="https://www.google.com/maps/search/?api=1&query=${o.lat}%2C${o.lng}" target="_blank" rel="noopener"><img class="tr-map" loading="lazy" alt="Emplacement ${escAttr(o.name)}" src="/staticmap?lat=${o.lat}&amp;lng=${o.lng}"><span class="tr-map-pin"><svg viewBox="0 0 24 24" width="36" height="36" fill="#FF7648" stroke="#fff" stroke-width="1.5"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5" fill="#fff" stroke="none"/></svg></span><span class="tr-map-open">Voir l'itinéraire →</span></a>`
     : `<div class="tr-map tr-map-empty"><div class="tr-map-empty-in">
         <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
         <button class="tr-loc-btn" type="button" onclick="(function(){try{window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({type:'led:setLocation'}));}catch(e){}})()">Définir votre emplacement</button>
@@ -2087,26 +2118,26 @@ function page(o: {
   // bande 3 colonnes (histoire / produits frais / visite), boutique (catalogue réel),
   // témoignages, grille Instagram, footer à 3 colonnes + silhouette.
   // ═══════════════════════════════════════════════════════════════════════════
-  const fmHen = '<svg class="fm-hen" viewBox="0 0 64 64" width="56" height="56" fill="currentColor"><path d="M20 14c-2 0-3.6 1.6-3.6 3.6 0 .7.2 1.3.5 1.9-3.3 1.9-5.6 5.4-5.9 9.5l-2.7-1.2c-1-.5-2.2 0-2.6 1-.4 1 0 2.2 1 2.6l4.2 1.9c.4 4.2 3 7.8 6.7 9.7V48c0 .6-.5 1-1 1h-2v3h20v-3h-2c-.6 0-1-.4-1-1v-3.3c4.6-2 7.8-6.6 7.8-11.9 0-5-2.8-9.3-6.9-11.5.2-.5.3-1 .3-1.6 0-2-1.6-3.6-3.6-3.6-1.3 0-2.4.7-3.1 1.7A13 13 0 0 0 28 16c-1.2 0-2.3.2-3.4.5A3.6 3.6 0 0 0 20 14zm18 14a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>';
+  const fmHenIco = '<img class="fm-hen" src="/assets/ferme/hen.png" alt="">';
   const fmTags = ['100% Naturel', 'Libre parcours', 'Sans OGM'];
   const fmEggImg = (o.products.find(p => /uf/i.test(p.name))?.photo_url) || pick(1);
   const fmVisitImg = pick(2);
   // Bande 3 colonnes (sous le hero) — histoire / bloc produits frais / visite.
   const fmBand = `
     <section class="fm-band">
-      <a class="fm-band-img" href="#fm-about" ${bg(fmEggImg)}><span class="fm-band-card"><b>La Ferme</b><small>Notre histoire</small></span></a>
+      <a class="fm-band-img" href="#fm-about" data-fmnav="home" ${bg(fmEggImg)}><span class="fm-band-card"><b>La Ferme</b><small>Notre histoire</small></span></a>
       <div class="fm-band-mid">
         <span class="fm-seal">Produits frais de la ferme</span>
         <h3>Produits<br>frais</h3>
         <p>${esc(clip(o.desc || `Œufs, volaille et viande de notre élevage familial, nourris naturellement et récoltés chaque jour.`, 150))}</p>
-        <a class="fm-btn" href="#fm-shop">Commander</a>
+        <a class="fm-btn" href="#fm-shop" data-fmnav="shop">Commander</a>
       </div>
       <a class="fm-band-img" href="#fm-contact" ${bg(fmVisitImg)}><span class="fm-band-card"><b>Rendez-nous visite</b><small>Notre adresse</small></span></a>
     </section>`;
-  // Témoignages (statique, décor silhouette).
+  // Témoignages (statique, décor poulet).
   const fmTesti = `
-    <section class="fm-testi">
-      <span class="fm-testi-ic">${o.logo ? `<img src="${escAttr(o.logo)}" alt="">` : fmHen}</span>
+    <section class="fm-testi" id="fm-about">
+      <span class="fm-testi-ic">${fmHenIco}</span>
       <h2>Témoignages de nos clients</h2>
       <p class="fm-quote">« Des produits d'une fraîcheur exceptionnelle. Les œufs et la volaille de ${esc(clip(o.name, 30))} sont incomparables — on sent le vrai goût de la ferme. »</p>
       <p class="fm-testi-who">Arthur Perrier&nbsp; /&nbsp; ${esc(o.zone || 'Dakar')}</p>
@@ -2122,7 +2153,7 @@ function page(o: {
   const fmFoot = `
     <footer id="fm-contact" class="fm-foot">
       <div class="fm-foot-in">
-        <div class="fm-foot-logo">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : fmHen}</div>
+        <div class="fm-foot-logo">${fmHenIco}</div>
         <div class="fm-foot-col">
           <h4>Détails</h4>
           ${o.zone ? `<p>${esc(o.zone)}</p>` : ''}
@@ -2132,8 +2163,8 @@ function page(o: {
         </div>
         <div class="fm-foot-col">
           <h4>Boutique</h4>
-          <p><a href="#fm-shop">Acheter des produits</a></p>
-          <p><a href="#fm-about">À propos de la ferme</a></p>
+          <p><a href="#fm-shop" data-fmnav="shop">Acheter des produits</a></p>
+          <p><a href="#fm-about" data-fmnav="home">À propos de la ferme</a></p>
           <p>Paiement Wave · Orange Money</p>
           <p>Livraison ou retrait à la ferme</p>
         </div>
@@ -2142,18 +2173,20 @@ function page(o: {
     </footer>`;
   const fermeBody = `
     <header class="fm-head" id="fm-top">
-      <a class="fm-logo" href="#fm-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : ''}<span>${esc(clip(o.name, 26))}</span></a>
+      <a class="fm-logo" href="#fm-top" data-fmnav="home">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : ''}<span>${esc(clip(o.name, 26))}</span></a>
       <nav class="fm-nav">
-        <a href="#fm-about">À propos de la ferme</a>
-        <a href="#fm-shop">Acheter des produits</a>
-        <a href="#fm-insta">Galerie</a>
-        <a class="fm-nav-active" href="#fm-top">Bonjour</a>
+        <a href="#fm-about" data-fmnav="home">À propos de la ferme</a>
+        <a href="#fm-shop" data-fmnav="shop">Acheter des produits</a>
+        <a href="#fm-insta" data-fmnav="home">Galerie</a>
+        <a class="fm-nav-active" href="#fm-top" data-fmnav="home">Bonjour</a>
       </nav>
       <div class="fm-icons">
         <span class="fm-ic" title="Compte"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg></span>
-        <a class="fm-ic fm-cart" href="#fm-shop" title="Panier"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></a>
+        <a class="fm-ic fm-cart" href="#fm-shop" data-fmnav="shop" title="Panier"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></a>
       </div>
     </header>
+
+    <div class="fm-page fm-page-home">
     <section class="fm-hero" ${bg(heroImg)}>
       <div class="fm-hero-ov"></div>
       <div class="fm-hero-in">
@@ -2163,17 +2196,41 @@ function page(o: {
       </div>
     </section>
     ${fmBand}
-    ${closedNotice}
-    <section id="fm-shop" class="fm-shop${catalogCls}">
-      <div class="fm-sec-head"><span class="fm-k">Acheter des produits</span><h2>${hasProducts ? 'Nos produits de la ferme' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2><p>Commande en ligne — livraison ou retrait à la ferme.</p></div>
-      ${catnav}${dsSection}${grid}
-      ${svcSection}
-      ${terrainSection}
-    </section>
-    <span id="fm-about"></span>
     ${fmTesti}
     ${fmInsta}
+    </div>
+
+    <div class="fm-page fm-page-shop" hidden>
+      ${closedNotice}
+      <section id="fm-shop" class="fm-shop${catalogCls}">
+        <div class="fm-sec-head"><span class="fm-k">Acheter des produits</span><h2>${hasProducts ? 'Nos produits de la ferme' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2><p>Commande en ligne — livraison ou retrait à la ferme.</p></div>
+        ${catnav}${dsSection}${grid}
+        ${svcSection}
+        ${terrainSection}
+      </section>
+    </div>
+
     ${fmFoot}
+
+    <script>(function(){
+      var home=document.querySelector('.fm-page-home'), shop=document.querySelector('.fm-page-shop');
+      if(!home||!shop) return;
+      if(document.body.classList.contains('lassi-ed')){ shop.hidden=false; return; }
+      function show(which, anchor){
+        var toShop=which==='shop';
+        shop.hidden=!toShop; home.hidden=toShop;
+        document.querySelectorAll('.fm-nav a').forEach(function(a){ a.classList.toggle('fm-nav-active', a.getAttribute('href')===(toShop?'#fm-shop':'#fm-top')); });
+        if(anchor){ var t=document.querySelector(anchor); if(t){ setTimeout(function(){ t.scrollIntoView({behavior:'smooth'}); },60); return; } }
+        window.scrollTo({top:0,behavior:'smooth'});
+      }
+      document.querySelectorAll('[data-fmnav]').forEach(function(a){
+        a.addEventListener('click',function(e){
+          e.preventDefault();
+          var w=a.getAttribute('data-fmnav'); var h=a.getAttribute('href')||'';
+          show(w, (w==='home' && h.indexOf('#fm-')===0 && h!=='#fm-top') ? h : null);
+        });
+      });
+    })();</script>
   `;
 
   const body = theme.template === 'furniture' && hasCatalog ? furnitureBody
@@ -2961,7 +3018,10 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   .tr-bench-ic{position:absolute;right:5%;bottom:-4px;color:var(--tr-ink);opacity:.8}
   .tr-bench{width:clamp(120px,16vw,168px);height:auto}
   @media(max-width:680px){.tr-bench-ic{right:2%}}
-  .tr-map{width:100%;height:clamp(240px,34vw,360px);border:0;border-radius:16px;box-shadow:0 14px 34px rgba(29,30,33,.12);display:block}
+  .tr-map-link{position:relative;display:block}
+  .tr-map{width:100%;height:clamp(240px,34vw,360px);object-fit:cover;border:0;border-radius:16px;box-shadow:0 14px 34px rgba(29,30,33,.12);display:block}
+  .tr-map-open{position:absolute;right:12px;bottom:12px;background:var(--tr-coral);color:#fff;font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:999px;box-shadow:0 6px 16px rgba(255,118,72,.35)}
+  .tr-map-pin{position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);filter:drop-shadow(0 4px 5px rgba(0,0,0,.3));pointer-events:none;line-height:0}
   .tr-map-empty{display:flex;align-items:center;justify-content:center;background:var(--tr-card);color:var(--tr-mut)}
   .tr-map-empty-in{text-align:center;padding:24px}
   .tr-loc-btn{display:inline-block;margin-top:14px;background:var(--tr-coral);color:#fff;border:0;border-radius:999px;font-size:14px;font-weight:600;padding:13px 26px;cursor:pointer;box-shadow:0 8px 20px rgba(255,118,72,.3)}
