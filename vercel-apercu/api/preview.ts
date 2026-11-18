@@ -2317,9 +2317,7 @@ function page(o: {
   // cadre. Hero steak plein écran, « LE RESTAURANT » 3 colonnes, menu (catalogue
   // réel), galerie, bande viande, liste de diffusion, contact + carte.
   // ═══════════════════════════════════════════════════════════════════════════
-  const grUtensils = '<svg class="gr-ill" viewBox="0 0 120 230" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M34 14v46a15 15 0 0 1-30 0V14"/><line x1="12" y1="14" x2="12" y2="58"/><line x1="19" y1="14" x2="19" y2="60"/><line x1="26" y1="14" x2="26" y2="58"/><line x1="19" y1="75" x2="19" y2="216"/><path d="M104 14c11 18 11 56 0 78"/><line x1="104" y1="14" x2="104" y2="92"/><line x1="104" y1="92" x2="104" y2="216"/></svg>';
-  const grBeef = '<svg class="gr-ill" viewBox="0 0 260 150" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 74c2-9 9-14 18-13 4-9 11-15 20-17l-7-18 18 13c11-2 23-3 35-3h66c15 0 28 7 36 17l17-5-6 17c9 6 13 15 13 25 0 5-1 9-4 12l4 34h-21l-5-29c-10 4-21 6-32 6"/><path d="M74 86l-5 50H50l-3-40M152 88l3 48h-19l-3-34M198 72l6 32"/><circle cx="214" cy="54" r="2.4"/></svg>';
-  const grCocktail = '<svg class="gr-ill" viewBox="0 0 130 150" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 22h98L65 84z"/><line x1="65" y1="84" x2="65" y2="124"/><line x1="40" y1="124" x2="90" y2="124"/><line x1="78" y1="36" x2="106" y2="14"/><circle cx="108" cy="12" r="4.5"/></svg>';
+  const grCocktail ='<svg class="gr-ill" viewBox="0 0 130 150" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 22h98L65 84z"/><line x1="65" y1="84" x2="65" y2="124"/><line x1="40" y1="124" x2="90" y2="124"/><line x1="78" y1="36" x2="106" y2="14"/><circle cx="108" cy="12" r="4.5"/></svg>';
   const grCols = [
     { n: '01', t: 'Grill traditionnel,<br>touche moderne', p: 'Un feu de bois, des cuissons maîtrisées et une carte qui revisite les classiques avec audace et générosité.' },
     { n: '02', t: 'Servir les<br>meilleures viandes', p: 'Des pièces maturées et sélectionnées avec soin auprès de nos éleveurs, pour une tendreté et un goût incomparables.' },
@@ -2352,11 +2350,11 @@ function page(o: {
     </section>
     <section class="gr-about" id="gr-about">
       <h2 class="gr-h2 gr-gold">Le restaurant</h2>
-      <div class="gr-cols">${grCols.map(c => `<div class="gr-col"><span class="gr-num">${c.n}</span><h3>${c.t}</h3><p>${esc(c.p)}</p></div>`).join('')}</div>
+      <div class="gr-cols">${grCols.map(c => `<div class="gr-col"><span class="gr-num">${c.n}</span><span class="gr-trait"></span><h3>${c.t}</h3><p>${esc(c.p)}</p></div>`).join('')}</div>
     </section>
-    <div class="gr-ill-wrap">${grUtensils}</div>
+    <div class="gr-cutlery"><img src="/assets/grill/cutlery.jpg" alt=""></div>
     <section class="gr-feature">
-      <div class="gr-ill-wrap gr-ill-big">${grBeef}</div>
+      <div class="gr-beef"><img src="/assets/grill/beef.jpg" alt=""></div>
       <h2 class="gr-h2 gr-gold">Bifsteck + temps<br>= perfection</h2>
       <p class="gr-lead">${esc(clip(o.desc || `Le secret d'une viande d'exception : des pièces maturées avec patience, puis saisies au feu pour révéler toute leur saveur. Chez ${o.name}, le temps fait la perfection.`, 240))}</p>
     </section>
@@ -3334,16 +3332,19 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   /* LE RESTAURANT — 3 colonnes */
   .gr-about{background:var(--gr-bg);padding:clamp(50px,7vw,96px) clamp(20px,4vw,48px)}
   .gr-cols{max-width:1080px;margin:clamp(30px,5vw,56px) auto 0;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(24px,4vw,56px);text-align:center}
-  .gr-num{display:block;font-family:var(--gr-fe);font-size:34px;font-weight:600;color:var(--gr-gold);margin-bottom:12px}
+  .gr-num{display:block;font-family:var(--gr-fe);font-size:30px;font-weight:600;color:var(--gr-gold);margin-bottom:12px}
+  .gr-trait{display:block;width:46px;height:2px;background:var(--gr-gold);opacity:.8;margin:0 auto 18px}
   .gr-col h3{font-family:var(--gr-fh);font-size:clamp(18px,2vw,24px);line-height:1.1;letter-spacing:1px;text-transform:uppercase;color:#fff;margin:0 0 14px}
   .gr-col p{font-size:16px;line-height:1.6;color:var(--gr-mut)}
-  @media(max-width:760px){.gr-cols{grid-template-columns:1fr;gap:34px}}
-  /* Illustrations line-art or */
-  .gr-ill-wrap{display:flex;justify-content:center;color:var(--gr-gold);padding:clamp(30px,5vw,56px) 20px}
-  .gr-ill{height:clamp(120px,16vw,190px);width:auto;opacity:.92}
-  .gr-ill-big .gr-ill{height:clamp(90px,12vw,150px)}
+  .gr-col+.gr-col{border-left:1px solid rgba(201,162,75,.22)}
+  @media(max-width:760px){.gr-cols{grid-template-columns:1fr;gap:34px}.gr-col+.gr-col{border-left:0;border-top:1px solid rgba(201,162,75,.22);padding-top:30px}}
+  /* Illustrations gravées (couverts sur or, bœuf sur sombre) */
+  .gr-cutlery{background:#BCA86A;line-height:0} .gr-cutlery img{width:100%;max-height:360px;object-fit:cover;object-position:center;display:block}
+  .gr-beef{line-height:0} .gr-beef img{width:100%;max-height:300px;object-fit:cover;object-position:center;display:block}
+  .gr-ill-wrap{display:flex;justify-content:center;color:var(--gr-ink);padding:clamp(20px,4vw,40px) 20px}
+  .gr-ill{height:clamp(110px,14vw,170px);width:auto;opacity:.9}
   /* BIFSTECK */
-  .gr-feature{background:var(--gr-bg);padding:clamp(10px,2vw,20px) clamp(20px,4vw,48px) clamp(50px,7vw,90px);text-align:center}
+  .gr-feature{background:var(--gr-bg);padding:clamp(20px,3vw,40px) clamp(20px,4vw,48px) clamp(50px,7vw,90px);text-align:center}
   .gr-lead{max-width:640px;margin:22px auto 0;font-size:clamp(17px,1.9vw,21px);line-height:1.7;color:var(--gr-mut)}
   /* PRENEZ UN VERRE (fond or) */
   .gr-drink{background:var(--gr-gold);padding:clamp(50px,7vw,90px) clamp(20px,4vw,48px);text-align:center}
