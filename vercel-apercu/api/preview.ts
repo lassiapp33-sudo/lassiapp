@@ -989,12 +989,12 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
       social: { facebook: 'https://facebook.com', tiktok: 'https://tiktok.com', instagram: 'https://instagram.com' },
     };
     const shop: Shop = {
-      id: 'demo-ferme', name: 'Ferme Keur Mbaye', logo_url: null,
+      id: 'demo-ferme', name: 'Ferme Avicole Arno', logo_url: img('logo.png'),
       description: "Ferme familiale d'élevage à Dakar. Volaille, bétail et petit élevage nourris naturellement, sans hormones. Commande en ligne, livraison ou retrait à la ferme — paiement sécurisé.",
       zone: 'Dakar · Sangalkam', category: 'stores', shop_type: 'products',
       subcategories: ['volaille', 'betail', 'petit_elevage'],
       slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
-      site_config, gallery_urls: [img('hero.jpg'), img('g1.jpg'), img('g2.jpg'), img('g3.jpg'), img('g4.jpg'), img('g5.jpg'), img('g6.jpg')],
+      site_config, gallery_urls: [img('bg.jpg'), img('hero.jpg'), img('g1.jpg'), img('g2.jpg'), img('g3.jpg'), img('g4.jpg'), img('g5.jpg'), img('g6.jpg')],
       cover_url: null, phone: '77 123 45 67', latitude: 14.7845, longitude: -17.2258,
     };
     const P = (id: string, name: string, price: number, description: string, category: string, photo: string): Product =>
@@ -2023,9 +2023,10 @@ function page(o: {
       ${closedNotice}
       <section class="tr-services${catalogCls}">
         <div class="tr-services-head">
-          <span class="tr-deco-sm">${trPaws}</span>
+          <span class="tr-deco-sm">${trScissors}</span>
           <h2 class="tr-h2">Mes services</h2>
           <p>Réservez la prestation qui vous convient, paiement sécurisé Wave &amp; Orange Money.</p>
+          ${trSep}
         </div>
         ${catnav}${dsSection}${grid}
         ${svcSection}
@@ -2065,85 +2066,98 @@ function page(o: {
   `;
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // TEMPLATE PLEIN « FERME » — Ferme agricole / élevage (réf Wix « Ferme »).
-  // Fond crème lumineux, accent vert pâturage, serif chaleureux (Fraunces).
-  // Orienté PRODUITS : la boutique (#fm-shop) liste les animaux & produits de la
-  // ferme (œufs, volaille, bétail, petit élevage) avec prix — catalogue réel réutilisé.
+  // TEMPLATE PLEIN « FERME » — Ferme agricole / élevage (réf Wix « Ferme Arno »).
+  // Fond crème, titres Oswald condensés MAJ, texte serif (Cormorant), accent vert
+  // forêt + bloc orange. Disposition fidèle : hero plein écran image + overlay,
+  // bande 3 colonnes (histoire / produits frais / visite), boutique (catalogue réel),
+  // témoignages, grille Instagram, footer à 3 colonnes + silhouette.
   // ═══════════════════════════════════════════════════════════════════════════
-  const fmStats = [
-    { n: `${o.products.length || 10}+`, l: 'Animaux & produits' },
-    { n: '100%', l: 'Nourris naturellement' },
-    { n: '7j/7', l: 'Livraison & retrait' },
-  ];
-  const fmTrust = [
-    { t: 'Sans hormones', s: 'Élevage sain et naturel' },
-    { t: 'Bêtes en bonne santé', s: 'Suivi vétérinaire régulier' },
-    { t: 'Livraison à Dakar', s: 'Ou retrait à la ferme' },
-    { t: 'Paiement sécurisé', s: 'Wave & Orange Money' },
-  ];
-  const fmGallery = gal.length >= 3 ? `
-    <section class="fm-gallery" id="fm-gallery">
-      <div class="fm-sec-head"><span class="fm-k">En images</span><h2>La vie à la ferme</h2></div>
-      <div class="fm-gal-grid">${gal.slice(0, 6).map((u, i) => `<div class="fm-gtile${i === 0 ? ' big' : ''}" ${bg(u)}></div>`).join('')}</div>
-    </section>` : '';
-  const fmAbout = `
-    <section class="fm-about" id="fm-about"><div class="fm-about-in">
-      <div class="fm-about-img" ${bg(pick(1))}></div>
-      <div class="fm-about-txt">
-        <span class="fm-k">Notre ferme</span>
-        <h2>Un élevage familial, proche de la nature</h2>
-        <p>${esc(clip(o.desc || `${o.name} élève sa volaille et son bétail en plein air, nourris naturellement et suivis au quotidien. Commandez en ligne — livraison à ${o.zone || 'Dakar'} ou retrait sur place.`, 200))}</p>
-        <a class="fm-btn" href="#fm-shop">Voir la boutique</a>
+  const fmHen = '<svg class="fm-hen" viewBox="0 0 64 64" width="56" height="56" fill="currentColor"><path d="M20 14c-2 0-3.6 1.6-3.6 3.6 0 .7.2 1.3.5 1.9-3.3 1.9-5.6 5.4-5.9 9.5l-2.7-1.2c-1-.5-2.2 0-2.6 1-.4 1 0 2.2 1 2.6l4.2 1.9c.4 4.2 3 7.8 6.7 9.7V48c0 .6-.5 1-1 1h-2v3h20v-3h-2c-.6 0-1-.4-1-1v-3.3c4.6-2 7.8-6.6 7.8-11.9 0-5-2.8-9.3-6.9-11.5.2-.5.3-1 .3-1.6 0-2-1.6-3.6-3.6-3.6-1.3 0-2.4.7-3.1 1.7A13 13 0 0 0 28 16c-1.2 0-2.3.2-3.4.5A3.6 3.6 0 0 0 20 14zm18 14a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>';
+  const fmTags = ['100% Naturel', 'Libre parcours', 'Sans OGM'];
+  const fmEggImg = (o.products.find(p => /uf/i.test(p.name))?.photo_url) || pick(1);
+  const fmVisitImg = pick(2);
+  // Bande 3 colonnes (sous le hero) — histoire / bloc produits frais / visite.
+  const fmBand = `
+    <section class="fm-band">
+      <a class="fm-band-img" href="#fm-about" ${bg(fmEggImg)}><span class="fm-band-card"><b>La Ferme</b><small>Notre histoire</small></span></a>
+      <div class="fm-band-mid">
+        <span class="fm-seal">Produits frais de la ferme</span>
+        <h3>Produits<br>frais</h3>
+        <p>${esc(clip(o.desc || `Œufs, volaille et viande de notre élevage familial, nourris naturellement et récoltés chaque jour.`, 150))}</p>
+        <a class="fm-btn" href="#fm-shop">Commander</a>
       </div>
-    </div></section>`;
+      <a class="fm-band-img" href="#fm-contact" ${bg(fmVisitImg)}><span class="fm-band-card"><b>Rendez-nous visite</b><small>Notre adresse</small></span></a>
+    </section>`;
+  // Témoignages (statique, décor silhouette).
+  const fmTesti = `
+    <section class="fm-testi">
+      <span class="fm-testi-ic">${o.logo ? `<img src="${escAttr(o.logo)}" alt="">` : fmHen}</span>
+      <h2>Témoignages de nos clients</h2>
+      <p class="fm-quote">« Des produits d'une fraîcheur exceptionnelle. Les œufs et la volaille de ${esc(clip(o.name, 30))} sont incomparables — on sent le vrai goût de la ferme. »</p>
+      <p class="fm-testi-who">Arthur Perrier&nbsp; /&nbsp; ${esc(o.zone || 'Dakar')}</p>
+    </section>`;
+  // Grille Instagram (galerie + produits).
+  const fmInstaPool = [...gal.slice(1), ...o.products.map(p => p.photo_url || '').filter(Boolean)].filter(Boolean).slice(0, 8);
+  const fmInsta = fmInstaPool.length >= 4 ? `
+    <section class="fm-insta" id="fm-insta">
+      <h2>Suivez-nous sur Instagram</h2>
+      <p class="fm-insta-tag">#${esc((o.name || 'ferme').toLowerCase().replace(/[^a-z0-9]/g, ''))}</p>
+      <div class="fm-insta-grid">${fmInstaPool.map(u => `<div class="fm-insta-tile" ${bg(u)}></div>`).join('')}</div>
+    </section>` : '';
   const fmFoot = `
     <footer id="fm-contact" class="fm-foot">
-      <div class="fm-foot-grid">
-        <div class="fm-foot-brand">
-          ${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<div class="fm-foot-logo">${esc(o.name)}</div>`}
-          <p>${esc(clip(o.desc || `${o.name} — ferme & élevage. Commande et paiement sécurisé sur LASSİ.`, 140))}</p>
-          ${socialHtml}
+      <div class="fm-foot-in">
+        <div class="fm-foot-logo">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : fmHen}</div>
+        <div class="fm-foot-col">
+          <h4>Détails</h4>
+          ${o.zone ? `<p>${esc(o.zone)}</p>` : ''}
+          ${o.phone ? `<p>${esc(o.phone)}</p>` : ''}
+          ${o.cat ? `<p>${esc(o.cat)}</p>` : ''}
+          ${hoursHtml ? `<div class="fm-foot-hours">${hoursHtml}</div>` : ''}
         </div>
-        <div class="fm-foot-col"><h4>La ferme</h4>${o.cat ? `<p>${esc(o.cat)}</p>` : ''}${o.zone ? `<p>📍 ${esc(o.zone)}</p>` : ''}${o.phone ? `<p>✆ ${esc(o.phone)}</p>` : ''}${hoursHtml ? `<div class="fm-foot-hours">${hoursHtml}</div>` : ''}</div>
-        <div class="fm-foot-col"><h4>Commander</h4><p>Wave · Orange Money</p><p>Livraison ou retrait à la ferme</p><a class="fm-foot-cta" href="#fm-shop">Voir les animaux →</a></div>
+        <div class="fm-foot-col">
+          <h4>Boutique</h4>
+          <p><a href="#fm-shop">Acheter des produits</a></p>
+          <p><a href="#fm-about">À propos de la ferme</a></p>
+          <p>Paiement Wave · Orange Money</p>
+          <p>Livraison ou retrait à la ferme</p>
+        </div>
+        <div class="fm-foot-soc">${socialHtml}<p>© 2026 par ${esc(o.name)}</p><p>Propulsé par LASSİ</p></div>
       </div>
-      <div class="fm-copy">© 2026 ${esc(o.name)} · Propulsé par LASSİ</div>
     </footer>`;
   const fermeBody = `
     <header class="fm-head" id="fm-top">
-      <a class="fm-logo" href="#fm-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<span>${esc(clip(o.name, 26))}</span>`}</a>
+      <a class="fm-logo" href="#fm-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : ''}<span>${esc(clip(o.name, 26))}</span></a>
       <nav class="fm-nav">
-        <a class="fm-nav-active" href="#fm-top">Accueil</a>
-        <a href="#fm-shop">Boutique</a>
-        <a href="#fm-gallery">Galerie</a>
-        <a href="#fm-about">À propos</a>
-        <a href="#fm-contact">Contact</a>
+        <a href="#fm-about">À propos de la ferme</a>
+        <a href="#fm-shop">Acheter des produits</a>
+        <a href="#fm-insta">Galerie</a>
+        <a class="fm-nav-active" href="#fm-top">Bonjour</a>
       </nav>
-      ${o.phone ? `<a class="fm-head-cta" href="tel:${escAttr(o.phone.replace(/\s+/g, ''))}">${esc(o.phone)}</a>` : `<a class="fm-head-cta" href="#fm-shop">Commander</a>`}
-    </header>
-    <section class="fm-hero">
-      <div class="fm-hero-l">
-        <span class="fm-eyebrow">🌿 Ferme familiale${o.zone ? ` · ${esc(o.zone)}` : ''}</span>
-        <h1 class="fm-hero-title">${esc(o.name)}</h1>
-        <p class="fm-hero-sub">${esc(clip(o.desc || `Volaille, bétail et petit élevage nourris naturellement. Commande en ligne, livraison ou retrait à la ferme.`, 170))}</p>
-        <div class="fm-hero-cta"><a class="fm-btn" href="#fm-shop">Voir nos animaux</a><a class="fm-link" href="#fm-about">Notre ferme →</a></div>
-        <div class="fm-stats">${fmStats.map(s => `<div class="fm-stat"><b>${esc(s.n)}</b><small>${esc(s.l)}</small></div>`).join('')}</div>
+      <div class="fm-icons">
+        <span class="fm-ic" title="Compte"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg></span>
+        <a class="fm-ic fm-cart" href="#fm-shop" title="Panier"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></a>
       </div>
-      <div class="fm-hero-r">
-        ${heroImg ? `<img class="fm-hero-img" src="${escAttr(heroImg)}" alt="${escAttr(o.name)}">` : ''}
-        <div class="fm-hero-badge">Élevage naturel</div>
+    </header>
+    <section class="fm-hero" ${bg(heroImg)}>
+      <div class="fm-hero-ov"></div>
+      <div class="fm-hero-in">
+        <span class="fm-hero-year">— ${esc(o.zone || 'Ferme & terroir')} —</span>
+        <h1 class="fm-hero-title">${esc(o.name)}</h1>
+        <div class="fm-hero-tags">${fmTags.map(t => esc(t)).join(' &nbsp;/&nbsp; ')}</div>
       </div>
     </section>
-    <section class="fm-trust">${fmTrust.map(x => `<div class="fm-trust-i"><b>${esc(x.t)}</b><small>${esc(x.s)}</small></div>`).join('')}</section>
+    ${fmBand}
     ${closedNotice}
     <section id="fm-shop" class="fm-shop${catalogCls}">
-      <div class="fm-sec-head"><span class="fm-k">La boutique</span><h2>${hasProducts ? 'Nos animaux & produits' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2><p>Commande en ligne — livraison ou retrait à la ferme.</p></div>
+      <div class="fm-sec-head"><span class="fm-k">Acheter des produits</span><h2>${hasProducts ? 'Nos produits de la ferme' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2><p>Commande en ligne — livraison ou retrait à la ferme.</p></div>
       ${catnav}${dsSection}${grid}
       ${svcSection}
       ${terrainSection}
     </section>
-    ${fmGallery}
-    ${fmAbout}
+    <span id="fm-about"></span>
+    ${fmTesti}
+    ${fmInsta}
     ${fmFoot}
   `;
 
@@ -2894,8 +2908,20 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   body[data-template="tresse"] .cathead-title{font-family:var(--tr-fh);font-size:34px;letter-spacing:1px;color:var(--tr-ink)}
   body[data-template="tresse"] .prod{background:var(--tr-card);border:1px solid rgba(43,40,34,.08);border-radius:16px}
   body[data-template="tresse"] .pname{color:var(--tr-ink)} body[data-template="tresse"] .pprice{color:var(--tr-coral)}
-  body[data-template="tresse"] .svcbtn,body[data-template="tresse"] .bookbtn{background:var(--tr-coral);color:#fff;border-radius:999px}
   body[data-template="tresse"] .chip{border-radius:999px} body[data-template="tresse"] .chip.sel{background:var(--tr-coral);color:#fff;border-color:var(--tr-coral)}
+  /* Page « Mes services » : 3 colonnes, image paysage, texte centré (réf Wix) */
+  body[data-template="tresse"] .tr-services .grid{grid-template-columns:repeat(3,1fr);gap:26px}
+  body[data-template="tresse"] .prod.svc:not(.tr-feat){background:transparent;border:none;box-shadow:none;border-radius:0;text-align:center;padding:0;overflow:visible}
+  body[data-template="tresse"] .prod.svc:not(.tr-feat) .pimgzone,body[data-template="tresse"] .prod.svc:not(.tr-feat) .svc-imgzone{aspect-ratio:4/3;border-radius:12px;overflow:hidden;margin-bottom:14px;background:#e9e3d8}
+  body[data-template="tresse"] .prod.svc:not(.tr-feat) .pimg{width:100%;height:100%;object-fit:cover}
+  body[data-template="tresse"] .prod.svc:not(.tr-feat) .pbody{padding:0}
+  body[data-template="tresse"] .prod.svc:not(.tr-feat) .pname{font-family:var(--tr-fh);font-size:30px;letter-spacing:1px;text-transform:uppercase;line-height:1;color:var(--tr-ink)}
+  body[data-template="tresse"] .prod.svc:not(.tr-feat) .pdesc{color:var(--tr-mut);font-size:13.5px;line-height:1.5;margin:8px auto 10px;max-width:260px}
+  body[data-template="tresse"] .prod.svc:not(.tr-feat) .pprice{font-family:var(--tr-fh);font-size:28px;color:var(--tr-coral);margin:0 0 14px}
+  body[data-template="tresse"] .svcbtn,body[data-template="tresse"] .bookbtn{background:var(--tr-coral);color:#fff;border-radius:6px}
+  body[data-template="tresse"] .prod.svc:not(.tr-feat) .svcbtn{width:100%;max-width:220px;margin:0 auto;padding:12px 0}
+  @media(max-width:860px){body[data-template="tresse"] .tr-services .grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){body[data-template="tresse"] .tr-services .grid{grid-template-columns:1fr}}
   .tr-foot{background:var(--tr-band);text-align:center;padding:clamp(40px,7vw,70px) 20px 30px;margin-top:20px}
   .tr-foot-name{font-family:var(--tr-fh);font-size:clamp(40px,7vw,64px);letter-spacing:1px;color:var(--tr-ink)}
   .tr-foot-in p{color:var(--tr-mut);font-size:14px;margin-top:8px} .tr-foot-in a{color:var(--tr-coral);text-decoration:none}
