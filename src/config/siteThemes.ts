@@ -184,6 +184,7 @@ export const SITE_TEMPLATES: { id: string; label: string }[] = [
   { id: 'garderobe', label: 'Garde-robe' },
   { id: 'sac', label: 'Maroquinerie & Bagagerie' },
   { id: 'tresse', label: 'Tresses & Coiffure' },
+  { id: 'ferme', label: 'Ferme agricole' },
 ];
 
 // Preset appliqué quand on choisit un template : fixe palette/accent/polices/layout
@@ -216,6 +217,10 @@ export const TEMPLATE_PRESETS: Record<string, { tokens: SiteConfig['tokens']; la
   tresse: {
     tokens: { palette: 'creme', accent: '#E0785C', fontHeading: 'poppins', fontBody: 'inter' },
     layout: { order: ['services', 'products', 'terrains'], cols: 2, card: 'shadow', hero: 'split' },
+  },
+  ferme: {
+    tokens: { palette: 'creme', accent: '#4E7A3C', fontHeading: 'fraunces', fontBody: 'manrope' },
+    layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'shadow', hero: 'split' },
   },
 };
 
