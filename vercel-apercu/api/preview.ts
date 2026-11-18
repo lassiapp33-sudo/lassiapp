@@ -560,6 +560,23 @@ const LED_CORE = `<style id="led-core-style">
         var ms=ov.menuStyle;
         if(ms){ links.forEach(function(a){ if(ms.size)a.style.fontSize=ms.size+'px'; if(ms.color)a.style.color=ms.color; if(ms.font&&FONTS[ms.font])a.style.fontFamily=FONTS[ms.font]; }); }
       }
+      // Tuiles catégories (conteneurs carrés image/texte) : clé stable data-c
+      // (posée UNE fois, jamais réassignée → l'ordre peut changer), puis forme
+      // (carré/arrondi), animation d'entrée et réordonnancement dans la grille.
+      var conts=[].slice.call(document.querySelectorAll('.fn-room,.sc-type,.gd-cat-card,.cx-banner'));
+      conts.forEach(function(el,i){ if(!el.hasAttribute('data-c')) el.setAttribute('data-c','c'+i); });
+      var co=ov.cont||{};
+      conts.forEach(function(el){
+        var c=co[el.getAttribute('data-c')]; if(!c) return;
+        if(c.shape==='sq') el.style.borderRadius='0';
+        else if(c.shape==='rd') el.style.borderRadius='22px';
+        if(c.anim&&ANIM[c.anim]) el.classList.add(ANIM[c.anim]);
+      });
+      var order=ov.contOrder;
+      if(order&&order.length){
+        var map={}; conts.forEach(function(el){ map[el.getAttribute('data-c')]=el; });
+        order.forEach(function(k){ var el=map[k]; if(el&&el.parentNode) el.parentNode.appendChild(el); });
+      }
     }catch(e){}
   };
 })();</script>`;
@@ -575,7 +592,11 @@ const REVEAL = `<style id="lx-reveal-style">
 .lx-rv{opacity:0;transform:translateY(26px);transition:opacity .72s cubic-bezier(.22,.61,.36,1),transform .72s cubic-bezier(.22,.61,.36,1);will-change:opacity,transform}
 .lx-rv.lx-z{transform:scale(.96)}
 .lx-rv.lx-in{opacity:1;transform:none}
-@media(prefers-reduced-motion:reduce){.lx-rv{opacity:1!important;transform:none!important;transition:none!important}}
+/* Boutons d'action : respiration fluide continue — tous SAUF « Ajouter » (.add). */
+@keyframes lxCta{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+.cx-btn,.cx-btn-outline,.cx-play,.fn-btn,.gd-btn,.gd-head-cta,.sc-foot-cta,.svcbtn,.bookbtn,.btn{animation:lxCta 2.8s ease-in-out infinite;will-change:transform}
+.add{animation:none!important}
+@media(prefers-reduced-motion:reduce){.lx-rv{opacity:1!important;transform:none!important;transition:none!important}.cx-btn,.cx-btn-outline,.cx-play,.fn-btn,.gd-btn,.gd-head-cta,.sc-foot-cta,.svcbtn,.bookbtn,.btn{animation:none!important}}
 </style>
 <script>(function(){
   try{
@@ -636,13 +657,14 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
   // S'assure que les clés existent même sans overrides (applique un objet vide).
   if(window.__ledApply) window.__ledApply({});
   var leaves=(window.__ledLeaves?window.__ledLeaves():[]);
-  var sel=null;
+  var sel=null, selC=null;
   // Amène l'élément sélectionné tout en haut de la zone d'aperçu visible (sous
   // l'en-tête fixe), là où le prestataire voit ce qu'il écrit en temps réel.
-  function scrollSel(smooth){
-    if(!sel) return;
+  function scrollSel(smooth,target){
+    var t=target||sel;
+    if(!t) return;
     try{
-      var r=sel.getBoundingClientRect();
+      var r=t.getBoundingClientRect();
       // Marge = hauteur de l'en-tête collé (sticky/fixed). C'est le <header> qui est
       // sticky (il CONTIENT le <nav>), pas le <nav> lui-même → on mesure le header,
       // sinon l'élément édité se retrouve CACHÉ derrière la barre collée en haut.
@@ -659,6 +681,7 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
   }
   function selectLeaf(el){
     if(sel) sel.classList.remove('led-sel');
+    if(selC){ selC.classList.remove('led-sel'); selC=null; }
     sel=el; el.classList.add('led-sel');
     var cs=getComputedStyle(el), r=el.getBoundingClientRect();
     post({type:'led:text', key:el.getAttribute('data-k'),
@@ -697,6 +720,26 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
       var links=[].slice.call(nav.querySelectorAll('a')).map(function(a,i){return {i:i,label:(a.textContent||'').trim().slice(0,30)};});
       post({type:'led:menu', items:links});
     },true);
+  }
+  // Tuiles catégories (conteneurs carrés image/texte) : sélectionnables pour
+  // réordonner (flèches côté app), changer la forme (carré/arrondi) et animer.
+  var conts=[].slice.call(doc.querySelectorAll('.fn-room,.sc-type,.gd-cat-card,.cx-banner'));
+  conts.forEach(function(el,i){
+    if(!el.hasAttribute('data-c')) el.setAttribute('data-c','c'+i);
+    el.setAttribute('contenteditable','false');
+    el.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); selectCont(el); },true);
+  });
+  function selectCont(el){
+    if(sel){ sel.classList.remove('led-sel'); sel=null; }
+    if(selC) selC.classList.remove('led-sel');
+    selC=el; el.classList.add('led-sel');
+    var sibs=[].slice.call(el.parentNode.children).filter(function(x){return x.hasAttribute&&x.hasAttribute('data-c');});
+    var gtc=getComputedStyle(el.parentNode).gridTemplateColumns;
+    var cols=(gtc&&gtc!=='none')?gtc.split(' ').length:1;
+    post({type:'led:container', key:el.getAttribute('data-c'),
+      index:sibs.indexOf(el), count:sibs.length, cols:cols,
+      order:sibs.map(function(s){return s.getAttribute('data-c');})});
+    scrollSel(true, el);
   }
   post({type:'led:ready', has:(window.__lassiHas||null)});
 })();</script>`;

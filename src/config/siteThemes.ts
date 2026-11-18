@@ -28,7 +28,12 @@ export interface SiteOverrides {
   anim?: Record<string, string>;        // clé élément -> id d'animation d'entrée
   menuHidden?: number[];                // index des entrées de menu masquées
   menuStyle?: TextStyle;                // style global du menu
+  cont?: Record<string, ContStyle>;     // tuile catégorie (clé cN) -> forme/animation
+  contOrder?: string[];                 // ordre des tuiles catégories (clés cN)
 }
+
+// Forme + animation d'une tuile catégorie (conteneur image/texte sélectionnable).
+export interface ContStyle { shape?: 'sq' | 'rd'; anim?: string }
 
 export interface SiteConfig {
   template: string;
@@ -328,6 +333,24 @@ export function normalizeOverrides(raw: any): SiteOverrides | undefined {
   }
   const ms = cleanTextStyle(raw.menuStyle);
   if (ms) out.menuStyle = ms;
+  if (raw.cont && typeof raw.cont === 'object') {
+    const c: Record<string, ContStyle> = {};
+    for (const k of Object.keys(raw.cont).slice(0, 40)) {
+      if (!/^c[0-9]{1,3}$/.test(k)) continue;
+      const v = raw.cont[k]; if (!v || typeof v !== 'object') continue;
+      const cs: ContStyle = {};
+      if (v.shape === 'sq' || v.shape === 'rd') cs.shape = v.shape;
+      if (typeof v.anim === 'string' && ANIM_IDS.includes(v.anim)) cs.anim = v.anim;
+      if (cs.shape || cs.anim) c[k] = cs;
+    }
+    if (Object.keys(c).length) out.cont = c;
+  }
+  if (Array.isArray(raw.contOrder)) {
+    const seen = new Set<string>();
+    const o = raw.contOrder.filter((k: any) =>
+      typeof k === 'string' && /^c[0-9]{1,3}$/.test(k) && !seen.has(k) && (seen.add(k), true)).slice(0, 40);
+    if (o.length) out.contOrder = o;
+  }
   return Object.keys(out).length ? out : undefined;
 }
 export function hasOverrides(o: SiteOverrides | undefined): boolean {

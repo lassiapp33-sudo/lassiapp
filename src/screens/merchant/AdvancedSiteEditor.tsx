@@ -35,6 +35,8 @@ const TOOLS: { id: Tool; label: string; icon: string }[] = [
 // Élément de texte sélectionné dans la page (reçu par postMessage).
 interface TextSel { key: string; text: string; size: number; color: string }
 interface MenuItem { i: number; label: string }
+// Tuile catégorie sélectionnée (conteneur carré image/texte).
+interface ContSel { key: string; index: number; count: number; cols: number; order: string[] }
 
 export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange, onBack }: Props) {
   const [tool, setTool] = useState<Tool | null>(null);
@@ -42,6 +44,7 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
   const [kbOpen, setKbOpen] = useState(false);
   const [vidBusy, setVidBusy] = useState(false);
   const [selText, setSelText] = useState<TextSel | null>(null);
+  const [selCont, setSelCont] = useState<ContSel | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[] | null>(null);
   // Sections réellement présentes pour cette boutique (reçu de la page via led:ready).
   const [hasSec, setHasSec] = useState<{ products: boolean; services: boolean; terrains: boolean } | null>(null);
@@ -124,6 +127,36 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
     if (anim) a[key] = anim; else delete a[key];
     setOv({ ...ov, anim: a });
   }, [ov, setOv]);
+
+  // ── Tuiles catégories : réordonner (échange avec la tuile voisine), forme, animation.
+  const moveCont = useCallback((delta: number) => {
+    if (!selCont) return;
+    const order = [...selCont.order];
+    const from = order.indexOf(selCont.key);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= order.length) return;
+    [order[from], order[to]] = [order[to], order[from]];
+    setOv({ ...ov, contOrder: order });
+    setSelCont({ ...selCont, index: to, order });
+  }, [selCont, ov, setOv]);
+
+  const setContShape = useCallback((shape: 'sq' | 'rd') => {
+    if (!selCont) return;
+    const cont = { ...(ov.cont ?? {}) };
+    const cur = { ...(cont[selCont.key] ?? {}) };
+    if (cur.shape === shape) delete cur.shape; else cur.shape = shape;
+    if (cur.shape || cur.anim) cont[selCont.key] = cur; else delete cont[selCont.key];
+    setOv({ ...ov, cont });
+  }, [selCont, ov, setOv]);
+
+  const setContAnim = useCallback((anim: string) => {
+    if (!selCont) return;
+    const cont = { ...(ov.cont ?? {}) };
+    const cur = { ...(cont[selCont.key] ?? {}) };
+    if (anim) cur.anim = anim; else delete cur.anim;
+    if (cur.shape || cur.anim) cont[selCont.key] = cur; else delete cont[selCont.key];
+    setOv({ ...ov, cont });
+  }, [selCont, ov, setOv]);
 
   const toggleMenu = useCallback((i: number) => {
     const set = new Set(ov.menuHidden ?? []);
@@ -213,6 +246,15 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
           onChange({ ...cfg, overrides: { ...(cfg.overrides ?? {}), text: t } });
         }
         break;
+      case 'led:container':
+        setSelCont({
+          key: String(m.key), index: Number(m.index ?? 0), count: Number(m.count ?? 0),
+          cols: Math.max(1, Number(m.cols ?? 1)),
+          order: Array.isArray(m.order) ? m.order.map((x: any) => String(x)) : [],
+        });
+        setSelText(null);
+        setTool('sections');
+        break;
       case 'led:menu':
         setMenuItems(Array.isArray(m.items) ? m.items : []);
         setTool('menu');
@@ -227,6 +269,7 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
 
   const selKey = selText?.key ?? null;
   const curAnim = selKey ? (ov.anim?.[selKey] ?? '') : '';
+  const curCont = selCont ? (ov.cont?.[selCont.key] ?? {}) : null;
 
   return (
     <View style={styles.root}>
@@ -272,7 +315,33 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
           {/* ── Conteneurs : réordonner (uniquement ceux réellement présents) ── */}
           {tool === 'sections' && (
             <View style={styles.orderList}>
-              <Text style={styles.hint}>Déplace les conteneurs pour changer leur ordre sur le site.</Text>
+              {/* Tuile catégorie sélectionnée : déplacer (flèches), forme, animation. */}
+              {selCont && (
+                <View style={styles.contBox}>
+                  <Text style={styles.hint}>Tuile sélectionnée — déplace-la, change sa forme ou anime-la.</Text>
+                  <Text style={styles.lbl}>Déplacer</Text>
+                  <View style={styles.padRow}>
+                    <TouchableOpacity disabled={selCont.index % selCont.cols === 0} onPress={() => moveCont(-1)} style={[styles.sqBtn, (selCont.index % selCont.cols === 0) && styles.off]}><Text style={styles.sqTxt}>←</Text></TouchableOpacity>
+                    <TouchableOpacity disabled={selCont.index - selCont.cols < 0} onPress={() => moveCont(-selCont.cols)} style={[styles.sqBtn, (selCont.index - selCont.cols < 0) && styles.off]}><Text style={styles.sqTxt}>↑</Text></TouchableOpacity>
+                    <TouchableOpacity disabled={selCont.index + selCont.cols >= selCont.count} onPress={() => moveCont(selCont.cols)} style={[styles.sqBtn, (selCont.index + selCont.cols >= selCont.count) && styles.off]}><Text style={styles.sqTxt}>↓</Text></TouchableOpacity>
+                    <TouchableOpacity disabled={selCont.index % selCont.cols === selCont.cols - 1 || selCont.index === selCont.count - 1} onPress={() => moveCont(1)} style={[styles.sqBtn, (selCont.index % selCont.cols === selCont.cols - 1 || selCont.index === selCont.count - 1) && styles.off]}><Text style={styles.sqTxt}>→</Text></TouchableOpacity>
+                  </View>
+                  <Text style={styles.lbl}>Forme</Text>
+                  <View style={styles.wrap}>
+                    <TouchableOpacity onPress={() => setContShape('sq')} style={[styles.chip, curCont?.shape === 'sq' && styles.chipOn]}><Text style={[styles.chipTxt, curCont?.shape === 'sq' && styles.chipTxtOn]}>Carré</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => setContShape('rd')} style={[styles.chip, curCont?.shape === 'rd' && styles.chipOn]}><Text style={[styles.chipTxt, curCont?.shape === 'rd' && styles.chipTxtOn]}>Arrondi</Text></TouchableOpacity>
+                  </View>
+                  <Text style={styles.lbl}>Animation</Text>
+                  <View style={styles.wrap}>
+                    {SITE_ANIMATIONS.map(a => {
+                      const on = (curCont?.anim ?? '') === a.id;
+                      return <TouchableOpacity key={a.id || 'none'} onPress={() => setContAnim(a.id)} style={[styles.chip, on && styles.chipOn]}><Text style={[styles.chipTxt, on && styles.chipTxtOn]}>{a.label}</Text></TouchableOpacity>;
+                    })}
+                  </View>
+                  <View style={styles.contSep} />
+                </View>
+              )}
+              <Text style={styles.hint}>{selCont ? 'Ordre des grands conteneurs du site :' : 'Déplace les conteneurs pour changer leur ordre sur le site. Touche une tuile catégorie dans l\'aperçu pour la déplacer, l\'arrondir ou l\'animer.'}</Text>
               {visibleOrder.length === 0 ? (
                 <Text style={styles.hint}>Aucun conteneur à afficher pour l'instant.</Text>
               ) : visibleOrder.map((id, i) => {
@@ -475,6 +544,9 @@ const styles = StyleSheet.create({
   dotOn: { borderColor: colors.white },
 
   orderList: { gap: 7 },
+  contBox: { marginBottom: 4 },
+  padRow: { flexDirection: 'row', marginTop: 4, marginBottom: 2 },
+  contSep: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
   orderRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 8, paddingHorizontal: 12, marginBottom: 7 },
   orderPos: { color: colors.accent, fontFamily: fonts.title, fontSize: 13, width: 20 },
   orderLbl: { flex: 1, color: colors.white, fontFamily: fonts.ui, fontSize: 13.5 },
