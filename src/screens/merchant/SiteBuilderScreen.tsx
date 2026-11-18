@@ -206,7 +206,10 @@ export default function SiteBuilderScreen({ onBack }: Props) {
 
       ) : (
         /* ───────────────────────── ÉDITEUR COMPLET ───────────────────────── */
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+          keyboardDismissMode="interactive">
           {/* Accès éditeur avancé (contrôle total façon Wix) */}
           <TouchableOpacity style={styles.advBtn} activeOpacity={0.85} onPress={() => setView('advanced')}>
             <Text style={styles.advBtnIcon}>⚙️</Text>

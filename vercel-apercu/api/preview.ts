@@ -577,6 +577,14 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
 </style>
 <script>(function(){
   var doc=document, body=doc.body; body.classList.add('lassi-ed');
+  // Dézoom ~50% en mode édition : le prestataire voit une grande partie du site
+  // d'un coup. On double la largeur du viewport → tout le rendu passe à moitié taille.
+  // getBoundingClientRect/scrollTo restent cohérents (même repère CSS).
+  try{
+    var mv=doc.querySelector('meta[name="viewport"]');
+    if(!mv){ mv=doc.createElement('meta'); mv.setAttribute('name','viewport'); (doc.head||doc.documentElement).appendChild(mv); }
+    mv.setAttribute('content','width='+Math.round((window.innerWidth||375)*2)+', user-scalable=no');
+  }catch(e){}
   function post(m){try{window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify(m));}catch(e){}}
   // S'assure que les clés existent même sans overrides (applique un objet vide).
   if(window.__ledApply) window.__ledApply({});
@@ -588,10 +596,12 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
     if(!sel) return;
     try{
       var r=sel.getBoundingClientRect();
-      // Offset adaptatif : clavier ouvert → viewport minuscule, une marge fixe de 70px
-      // pousserait l'élément hors écran. On le place vers le haut de la zone visible.
-      var vh=window.innerHeight||600;
-      var margin=Math.min(70,Math.round(vh*0.12));
+      // Marge = hauteur de l'en-tête fixe/sticky (nav) + un peu d'air, sinon l'élément
+      // édité se retrouve CACHÉ derrière la barre de navigation collée en haut.
+      var navH=0;
+      var nav=doc.querySelector('nav');
+      if(nav){ var ns=getComputedStyle(nav); if(ns.position==='fixed'||ns.position==='sticky'){ navH=nav.getBoundingClientRect().height; } }
+      var margin=navH+20;
       var top=r.top+window.scrollY-margin;
       window.scrollTo({top:top<0?0:top, behavior:smooth?'smooth':'auto'});
     }catch(e){}
