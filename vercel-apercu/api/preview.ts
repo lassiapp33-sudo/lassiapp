@@ -102,7 +102,7 @@ const SITE_PALETTES: Record<string, SitePalette> = {
 };
 const DEFAULT_PALETTE = 'classic';
 const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
-const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery', 'furniture', 'garderobe', 'sac', 'tresse']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat), #3 furniture (maison & mobilier), #4 garderobe (mode / prêt-à-porter), #5 sac (maroquinerie / bagagerie)
+const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery', 'furniture', 'garderobe', 'sac', 'tresse', 'ferme']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat), #3 furniture (maison & mobilier), #4 garderobe (mode / prêt-à-porter), #5 sac (maroquinerie / bagagerie)
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
 // ── Layout (Phase 2) — agencement des conteneurs, présentation seule ─────────
@@ -979,6 +979,39 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
       S('t6', 'Soin & shampoing', 5000, 'Shampoing, soin profond et brushing avant coiffure.', 60, 'p6.jpg'),
     ];
     return { shop, products: [], services };
+  }
+
+  if (t === 'ferme') {
+    const site_config = {
+      template: 'ferme',
+      tokens: { palette: 'creme', accent: '#4E7A3C', fontHeading: 'fraunces', fontBody: 'manrope' },
+      layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'shadow', hero: 'split' },
+      social: { facebook: 'https://facebook.com', tiktok: 'https://tiktok.com', instagram: 'https://instagram.com' },
+    };
+    const shop: Shop = {
+      id: 'demo-ferme', name: 'Ferme Keur Mbaye', logo_url: null,
+      description: "Ferme familiale d'élevage à Dakar. Volaille, bétail et petit élevage nourris naturellement, sans hormones. Commande en ligne, livraison ou retrait à la ferme — paiement sécurisé.",
+      zone: 'Dakar · Sangalkam', category: 'stores', shop_type: 'products',
+      subcategories: ['volaille', 'betail', 'petit_elevage'],
+      slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
+      site_config, gallery_urls: [img('hero.jpg'), img('g1.jpg'), img('g2.jpg'), img('g3.jpg'), img('g4.jpg'), img('g5.jpg'), img('g6.jpg')],
+      cover_url: null, phone: '77 123 45 67', latitude: 14.7845, longitude: -17.2258,
+    };
+    const P = (id: string, name: string, price: number, description: string, category: string, photo: string): Product =>
+      ({ id, name, description, emoji: null, photo_url: img(photo), price, category });
+    const products: Product[] = [
+      P('fm1', 'Œufs fermiers (plateau de 30)', 2500, 'Œufs frais de poules élevées au sol, ramassés chaque matin. Jaune bien orangé.', 'volaille', 'oeufs.jpg'),
+      P('fm2', 'Poule pondeuse', 4000, 'Poule locale en pleine ponte, robuste et bien nourrie. Idéale basse-cour ou table.', 'volaille', 'poules.jpg'),
+      P('fm3', 'Coq fermier', 5500, 'Coq de ferme élevé en plein air, chair ferme et goût prononcé.', 'volaille', 'coq.jpg'),
+      P('fm4', 'Pintade', 6000, 'Pintade fermière élevée en liberté, chair fine et savoureuse.', 'volaille', 'pintade.jpg'),
+      P('fm5', 'Pigeons (la paire)', 5000, 'Pigeons de chair ou de reproduction, en bonne santé, prêts à l\'élevage.', 'petit_elevage', 'pigeons.jpg'),
+      P('fm6', 'Lapin fermier', 6000, 'Lapin élevé au grain et à la verdure. Viande maigre et tendre.', 'petit_elevage', 'lapins.jpg'),
+      P('fm7', 'Chèvre', 45000, 'Chèvre locale en bonne santé, idéale lait, reproduction ou cérémonie.', 'betail', 'chevre.jpg'),
+      P('fm8', 'Mouton', 75000, 'Mouton bien portant, bien nourri. Parfait pour Tabaski, baptême ou cérémonie.', 'betail', 'moutons.jpg'),
+      P('fm9', 'Bœuf', 450000, 'Bœuf de pâturage, robuste et bien engraissé. Pour cérémonie ou boucherie.', 'betail', 'boeuf.jpg'),
+      P('fm10', 'Autruche', 180000, 'Autruche d\'élevage, pièce rare. Sur commande, renseignements à la ferme.', 'petit_elevage', 'autruche.jpg'),
+    ];
+    return { shop, products };
   }
 
   if (t === 'cosmetic') {
@@ -1904,6 +1937,28 @@ function page(o: {
         <button class="tr-loc-btn" type="button" onclick="(function(){try{window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({type:'led:setLocation'}));}catch(e){}})()">Définir votre emplacement</button>
         <p class="tr-map-hint">Emplacement bientôt disponible.</p>
       </div></div>`;
+  // Ciseaux ligne-claire (remplace l'« os » du template de référence).
+  const trScissors = `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><line x1="8" y1="7.2" x2="20" y2="16.5"/><line x1="8" y1="16.8" x2="20" y2="7.5"/><line x1="7.6" y1="7.6" x2="16" y2="12"/></svg>`;
+  // Séparateur = trait courbe en pointillés + ciseau à côté (fidèle à la référence).
+  const trSep = `<div class="tr-sep" aria-hidden="true"><svg class="tr-sep-curve" viewBox="0 0 320 44" fill="none" preserveAspectRatio="none"><path d="M4 40 C 100 2, 220 2, 316 40" stroke="currentColor" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round"/></svg><span class="tr-sep-ic">${trScissors}</span></div>`;
+  // Conteneur « réservation » mis en avant (image + détails + Réserver), 1re prestation.
+  const fs = o.services[0];
+  const fsImg = fs && typeof fs.image_url === 'string' && fs.image_url.startsWith('http') ? fs.image_url : pick(1);
+  const trReserve = fs ? `
+    <section class="tr-reserve" id="tr-reserve">
+      <div class="tr-reserve-head"><h2 class="tr-h2">Réservez une prestation</h2>${trSep}</div>
+      <div class="tr-feat prod svc book" data-svc="${escAttr(fs.id)}" data-name="${escAttr(fs.name)}" data-price="${prixClient(fs.price)}" data-meta="${escAttr(fs.meta)}" data-min="${Math.max(0, Math.round(fs.price))}">
+        <div class="tr-feat-img" ${bg(fsImg)}></div>
+        <div class="tr-feat-body">
+          <h3 class="tr-feat-name">${esc(clip(fs.name, 40))}</h3>
+          ${fs.description ? `<p class="tr-feat-desc">${esc(clip(fs.description, 120))}</p>` : ''}
+          <div class="tr-feat-meta">${esc(fs.meta)}</div>
+          <div class="tr-feat-price">${fmtPrice(fs.price)}</div>
+          <button class="svcbtn bookbtn tr-feat-btn" type="button">Réserver</button>
+        </div>
+      </div>
+      <div class="tr-reserve-cta"><a class="tr-cta" href="#tr-services" data-trnav="services">En savoir plus</a></div>
+    </section>` : '';
   const trContact = `
     <section class="tr-contact" id="tr-contact">
       <span class="tr-deco tr-deco-c">${trPaws}</span>
@@ -1953,7 +2008,11 @@ function page(o: {
       <div class="tr-about-img">${trAboutImg ? `<img src="${escAttr(trAboutImg)}" alt="${escAttr(o.name)}" loading="lazy">` : ''}</div>
     </section>
 
+    ${trSep}
+    ${trReserve}
+    ${trSep}
     ${trGallery}
+    ${trSep}
     ${trContact}
     </div>
 
@@ -2002,11 +2061,95 @@ function page(o: {
     })();</script>
   `;
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TEMPLATE PLEIN « FERME » — Ferme agricole / élevage (réf Wix « Ferme »).
+  // Fond crème lumineux, accent vert pâturage, serif chaleureux (Fraunces).
+  // Orienté PRODUITS : la boutique (#fm-shop) liste les animaux & produits de la
+  // ferme (œufs, volaille, bétail, petit élevage) avec prix — catalogue réel réutilisé.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const fmStats = [
+    { n: `${o.products.length || 10}+`, l: 'Animaux & produits' },
+    { n: '100%', l: 'Nourris naturellement' },
+    { n: '7j/7', l: 'Livraison & retrait' },
+  ];
+  const fmTrust = [
+    { t: 'Sans hormones', s: 'Élevage sain et naturel' },
+    { t: 'Bêtes en bonne santé', s: 'Suivi vétérinaire régulier' },
+    { t: 'Livraison à Dakar', s: 'Ou retrait à la ferme' },
+    { t: 'Paiement sécurisé', s: 'Wave & Orange Money' },
+  ];
+  const fmGallery = gal.length >= 3 ? `
+    <section class="fm-gallery" id="fm-gallery">
+      <div class="fm-sec-head"><span class="fm-k">En images</span><h2>La vie à la ferme</h2></div>
+      <div class="fm-gal-grid">${gal.slice(0, 6).map((u, i) => `<div class="fm-gtile${i === 0 ? ' big' : ''}" ${bg(u)}></div>`).join('')}</div>
+    </section>` : '';
+  const fmAbout = `
+    <section class="fm-about" id="fm-about"><div class="fm-about-in">
+      <div class="fm-about-img" ${bg(pick(1))}></div>
+      <div class="fm-about-txt">
+        <span class="fm-k">Notre ferme</span>
+        <h2>Un élevage familial, proche de la nature</h2>
+        <p>${esc(clip(o.desc || `${o.name} élève sa volaille et son bétail en plein air, nourris naturellement et suivis au quotidien. Commandez en ligne — livraison à ${o.zone || 'Dakar'} ou retrait sur place.`, 200))}</p>
+        <a class="fm-btn" href="#fm-shop">Voir la boutique</a>
+      </div>
+    </div></section>`;
+  const fmFoot = `
+    <footer id="fm-contact" class="fm-foot">
+      <div class="fm-foot-grid">
+        <div class="fm-foot-brand">
+          ${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<div class="fm-foot-logo">${esc(o.name)}</div>`}
+          <p>${esc(clip(o.desc || `${o.name} — ferme & élevage. Commande et paiement sécurisé sur LASSİ.`, 140))}</p>
+          ${socialHtml}
+        </div>
+        <div class="fm-foot-col"><h4>La ferme</h4>${o.cat ? `<p>${esc(o.cat)}</p>` : ''}${o.zone ? `<p>📍 ${esc(o.zone)}</p>` : ''}${o.phone ? `<p>✆ ${esc(o.phone)}</p>` : ''}${hoursHtml ? `<div class="fm-foot-hours">${hoursHtml}</div>` : ''}</div>
+        <div class="fm-foot-col"><h4>Commander</h4><p>Wave · Orange Money</p><p>Livraison ou retrait à la ferme</p><a class="fm-foot-cta" href="#fm-shop">Voir les animaux →</a></div>
+      </div>
+      <div class="fm-copy">© 2026 ${esc(o.name)} · Propulsé par LASSİ</div>
+    </footer>`;
+  const fermeBody = `
+    <header class="fm-head" id="fm-top">
+      <a class="fm-logo" href="#fm-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<span>${esc(clip(o.name, 26))}</span>`}</a>
+      <nav class="fm-nav">
+        <a class="fm-nav-active" href="#fm-top">Accueil</a>
+        <a href="#fm-shop">Boutique</a>
+        <a href="#fm-gallery">Galerie</a>
+        <a href="#fm-about">À propos</a>
+        <a href="#fm-contact">Contact</a>
+      </nav>
+      ${o.phone ? `<a class="fm-head-cta" href="tel:${escAttr(o.phone.replace(/\s+/g, ''))}">${esc(o.phone)}</a>` : `<a class="fm-head-cta" href="#fm-shop">Commander</a>`}
+    </header>
+    <section class="fm-hero">
+      <div class="fm-hero-l">
+        <span class="fm-eyebrow">🌿 Ferme familiale${o.zone ? ` · ${esc(o.zone)}` : ''}</span>
+        <h1 class="fm-hero-title">${esc(o.name)}</h1>
+        <p class="fm-hero-sub">${esc(clip(o.desc || `Volaille, bétail et petit élevage nourris naturellement. Commande en ligne, livraison ou retrait à la ferme.`, 170))}</p>
+        <div class="fm-hero-cta"><a class="fm-btn" href="#fm-shop">Voir nos animaux</a><a class="fm-link" href="#fm-about">Notre ferme →</a></div>
+        <div class="fm-stats">${fmStats.map(s => `<div class="fm-stat"><b>${esc(s.n)}</b><small>${esc(s.l)}</small></div>`).join('')}</div>
+      </div>
+      <div class="fm-hero-r">
+        ${heroImg ? `<img class="fm-hero-img" src="${escAttr(heroImg)}" alt="${escAttr(o.name)}">` : ''}
+        <div class="fm-hero-badge">Élevage naturel</div>
+      </div>
+    </section>
+    <section class="fm-trust">${fmTrust.map(x => `<div class="fm-trust-i"><b>${esc(x.t)}</b><small>${esc(x.s)}</small></div>`).join('')}</section>
+    ${closedNotice}
+    <section id="fm-shop" class="fm-shop${catalogCls}">
+      <div class="fm-sec-head"><span class="fm-k">La boutique</span><h2>${hasProducts ? 'Nos animaux & produits' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2><p>Commande en ligne — livraison ou retrait à la ferme.</p></div>
+      ${catnav}${dsSection}${grid}
+      ${svcSection}
+      ${terrainSection}
+    </section>
+    ${fmGallery}
+    ${fmAbout}
+    ${fmFoot}
+  `;
+
   const body = theme.template === 'furniture' && hasCatalog ? furnitureBody
     : theme.template === 'cosmetic' && hasCatalog ? cosmeticBody
     : theme.template === 'garderobe' && hasCatalog ? garderobeBody
     : theme.template === 'sac' && hasCatalog ? sacBody
     : theme.template === 'tresse' && hasCatalog ? tresseBody
+    : theme.template === 'ferme' && hasCatalog ? fermeBody
     : classicBody;
 
   const cfg = JSON.stringify({
@@ -2775,6 +2918,23 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   body:not(.lassi-ed) .tr-loc-btn{display:none}
   .lassi-ed .tr-map-hint{display:none}
   @media(max-width:720px){.tr-contact-in{grid-template-columns:1fr}}
+  /* Séparateur courbe pointillé + ciseau */
+  .tr-sep{display:flex;align-items:center;justify-content:center;gap:10px;max-width:460px;margin:clamp(18px,4vw,40px) auto;color:var(--tr-ink);opacity:.55}
+  .tr-sep-curve{width:min(320px,70vw);height:30px}
+  .tr-sep-ic{flex:0 0 auto;color:var(--tr-coral);opacity:.9}
+  /* Conteneur réservation mis en avant */
+  .tr-reserve{max-width:1000px;margin:0 auto;padding:clamp(10px,3vw,20px) clamp(16px,4vw,40px) clamp(20px,4vw,40px)}
+  .tr-reserve-head{text-align:center;margin-bottom:18px}
+  .tr-feat{display:grid;grid-template-columns:1.1fr 1fr;gap:0;border-radius:18px;overflow:hidden;background:var(--tr-card);box-shadow:0 16px 40px rgba(29,30,33,.12)}
+  .tr-feat-img{min-height:260px;background-size:cover;background-position:center;background-color:#ddd}
+  .tr-feat-body{padding:clamp(22px,3vw,38px);display:flex;flex-direction:column;justify-content:center}
+  .tr-feat-name{font-family:var(--tr-fh);font-size:clamp(30px,4vw,46px);line-height:.95;color:var(--tr-ink);letter-spacing:1px}
+  .tr-feat-desc{color:var(--tr-mut);font-size:14px;line-height:1.6;margin:10px 0 14px}
+  .tr-feat-meta{font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--tr-mut)}
+  .tr-feat-price{font-family:var(--tr-fh);font-size:32px;color:var(--tr-coral);margin:6px 0 16px;line-height:1}
+  .tr-feat-btn{align-self:flex-start;padding:12px 30px}
+  .tr-reserve-cta{text-align:center;margin-top:26px}
+  @media(max-width:680px){.tr-feat{grid-template-columns:1fr}.tr-feat-img{min-height:220px}}
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">
