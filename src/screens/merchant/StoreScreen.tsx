@@ -14,7 +14,6 @@ import {
   Platform,
   Animated,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path } from 'react-native-svg';
 import { IcoPlus } from '../../components/icons';
@@ -48,6 +47,7 @@ import { BeautyService } from '../../types/beauty';
 import { getErrorMessage } from '../../utils/errorUtils';
 import { getStatsClics } from '../../services/statsPartageService';
 import SharePanel from '../../components/merchant/SharePanel';
+import SiteBuilderScreen from './SiteBuilderScreen';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { FITNESS_SUBSCRIPTION_CATS } from '../../config/fitnessConfig';
 
@@ -178,6 +178,7 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     (context.subcategories ?? []).some(s => BEAUTY_PRODUCT_SUBCATS.includes(s));
 
   // ── Catalogue ─────────────────────────────────────────────────────────────
+  const [showSiteBuilder, setShowSiteBuilder] = useState(false);
   const [activeCat, setActiveCat] = useState('petitdej');
   const [renameTarget, setRenameTarget] = useState<{ id: string; label: string } | null>(null);
   const [renameText, setRenameText] = useState('');
@@ -860,6 +861,8 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
     );
   }
 
+  if (showSiteBuilder) return <SiteBuilderScreen onBack={() => setShowSiteBuilder(false)} />;
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -912,12 +915,9 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                   <View style={styles.shareRow}>
                     <TouchableOpacity
                       style={[styles.shareBtn, styles.shareBtnGhost]}
-                      onPress={async () => {
-                        await Clipboard.setStringAsync(`https://s.lassi.tech/${profile.slug}`);
-                        Alert.alert('Copié', 'Lien copié dans le presse-papier.');
-                      }}
+                      onPress={() => setShowSiteBuilder(true)}
                     >
-                      <Text style={styles.shareBtnGhostText}>Copier</Text>
+                      <Text style={styles.shareBtnGhostText}>Personnaliser mon site web</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.shareBtn, styles.shareBtnSolid]}

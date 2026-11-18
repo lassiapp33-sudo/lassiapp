@@ -582,6 +582,20 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
   if(window.__ledApply) window.__ledApply({});
   var leaves=(window.__ledLeaves?window.__ledLeaves():[]);
   var sel=null;
+  // Amène l'élément sélectionné tout en haut de la zone d'aperçu visible (sous
+  // l'en-tête fixe), là où le prestataire voit ce qu'il écrit en temps réel.
+  function scrollSel(smooth){
+    if(!sel) return;
+    try{
+      var r=sel.getBoundingClientRect();
+      // Offset adaptatif : clavier ouvert → viewport minuscule, une marge fixe de 70px
+      // pousserait l'élément hors écran. On le place vers le haut de la zone visible.
+      var vh=window.innerHeight||600;
+      var margin=Math.min(70,Math.round(vh*0.12));
+      var top=r.top+window.scrollY-margin;
+      window.scrollTo({top:top<0?0:top, behavior:smooth?'smooth':'auto'});
+    }catch(e){}
+  }
   function selectLeaf(el){
     if(sel) sel.classList.remove('led-sel');
     sel=el; el.classList.add('led-sel');
@@ -590,13 +604,16 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
       text:(el.textContent||'').trim().slice(0,200),
       size:Math.round(parseFloat(cs.fontSize)||16),
       color:rgbHex(cs.color), y:Math.round(r.top+window.scrollY)});
+    scrollSel(true);
   }
   function rgbHex(c){var m=/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/.exec(c||'');if(!m)return '';function h(n){n=(+n).toString(16);return n.length<2?'0'+n:n;}return '#'+h(m[1])+h(m[2])+h(m[3]);}
-  // Appelé par l'app RN quand le clavier est ouvert : amène l'élément édité bien
-  // visible dans la zone d'aperçu restante (au-dessus du panneau/clavier).
+  // Appelé par l'app RN (focus champ / ouverture clavier) : repositionne l'élément
+  // édité en haut de l'aperçu visible. Le clavier change innerHeight → on re-scrolle.
   window.__ledScrollTo=function(key){
-    try{ var el=doc.querySelector('[data-k="'+key+'"]'); if(el) el.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){}
+    try{ var el=doc.querySelector('[data-k="'+key+'"]'); if(el){ sel=el; scrollSel(true); } }catch(e){}
   };
+  // Clavier ouvert/fermé (resize du viewport) → garder l'élément édité visible.
+  window.addEventListener('resize',function(){ scrollSel(false); setTimeout(function(){scrollSel(false);},120); });
   // Texte éditable inline : édition directe dans la page, commit au blur.
   leaves.forEach(function(el){
     el.setAttribute('contenteditable','true'); el.style.outlineColor='transparent';
@@ -1676,6 +1693,12 @@ function page(o: {
     <script>(function(){
       var pb=document.querySelector('.sc-play'); if(!pb) return;
       pb.addEventListener('click',function(){
+        // En mode édition (overlay actif) : ne JAMAIS lire la vidéo — ouvrir le
+        // panneau Médias dans l'app pour ajouter/retirer la vidéo. En aperçu/public : lecture.
+        if(document.body.classList.contains('lassi-ed')){
+          try{window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({type:'led:openMedia'}));}catch(e){}
+          return;
+        }
         var v=pb.getAttribute('data-video');
         if(v){ var lb=document.getElementById('sc-vlb'), vd=document.getElementById('sc-vlb-video'); if(lb){ lb.classList.add('on'); try{vd.currentTime=0;vd.play();}catch(e){} } }
         else { var t=document.querySelector(pb.getAttribute('data-scroll')); if(t) t.scrollIntoView({behavior:'smooth'}); }

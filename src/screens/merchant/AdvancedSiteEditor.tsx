@@ -49,7 +49,10 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
   // Amène l'élément en cours d'édition bien visible dans l'aperçu (clavier ouvert).
   const scrollToKey = useCallback((key: string) => {
     const js = `window.__ledScrollTo && window.__ledScrollTo(${JSON.stringify(key)}); true;`;
+    // Double déclenchement : une fois le clavier ouvert (viewport réduit), l'élément
+    // édité doit remonter dans la zone visible. iOS anime le clavier → 2e passe.
     setTimeout(() => webRef.current?.injectJavaScript(js), 350);
+    setTimeout(() => webRef.current?.injectJavaScript(js), 650);
   }, []);
 
   const ov: SiteOverrides = cfg.overrides ?? {};
@@ -204,6 +207,11 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
       case 'led:menu':
         setMenuItems(Array.isArray(m.items) ? m.items : []);
         setTool('menu');
+        break;
+      case 'led:openMedia':
+        // Clic sur le bouton play en mode édition → ouvre le panneau Médias (vidéo).
+        setPreview(false);
+        setTool('medias');
         break;
     }
   }, [cfg, onChange, scrollToKey]);
