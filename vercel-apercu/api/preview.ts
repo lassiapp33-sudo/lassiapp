@@ -1941,6 +1941,9 @@ function page(o: {
   const trScissors = `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><line x1="8" y1="7.2" x2="20" y2="16.5"/><line x1="8" y1="16.8" x2="20" y2="7.5"/><line x1="7.6" y1="7.6" x2="16" y2="12"/></svg>`;
   // Séparateur = trait courbe en pointillés + ciseau à côté (fidèle à la référence).
   const trSep = `<div class="tr-sep" aria-hidden="true"><svg class="tr-sep-curve" viewBox="0 0 320 44" fill="none" preserveAspectRatio="none"><path d="M4 40 C 100 2, 220 2, 316 40" stroke="currentColor" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round"/></svg><span class="tr-sep-ic">${trScissors}</span></div>`;
+  // Long séparateur pointillé qui TRAVERSE de l'« À propos » jusqu'à « Réserver »
+  // (grande courbe verticale, ciseau en bas), fidèle à la référence.
+  const trSepLong = `<div class="tr-sep-long" aria-hidden="true"><svg class="tr-sep-long-curve" viewBox="0 0 160 300" fill="none" preserveAspectRatio="none"><path d="M120 0 C 20 70, 150 150, 70 220 C 20 265, 90 285, 80 300" stroke="currentColor" stroke-width="2" stroke-dasharray="2 10" stroke-linecap="round"/></svg><span class="tr-sep-long-ic">${trScissors}</span></div>`;
   // Conteneur « réservation » mis en avant (image + détails + Réserver), 1re prestation.
   const fs = o.services[0];
   const fsImg = fs && typeof fs.image_url === 'string' && fs.image_url.startsWith('http') ? fs.image_url : pick(1);
@@ -2008,7 +2011,7 @@ function page(o: {
       <div class="tr-about-img">${trAboutImg ? `<img src="${escAttr(trAboutImg)}" alt="${escAttr(o.name)}" loading="lazy">` : ''}</div>
     </section>
 
-    ${trSep}
+    ${trSepLong}
     ${trReserve}
     ${trSep}
     ${trGallery}
@@ -2034,7 +2037,7 @@ function page(o: {
       <div class="tr-foot-in">
         <div class="tr-foot-name">${esc(o.name)}</div>
         <p>Réservation &amp; paiement en ligne · Wave · Orange Money</p>
-        <a class="tr-cta tr-cta-sm" href="#tr-services" data-trnav="services">Voir mes services</a>
+        <a class="tr-cta tr-cta-sm" href="https://lassi.tech" target="_blank" rel="noopener">Télécharger l'application</a>
       </div>
       <div class="tr-copy">© 2026 ${esc(o.name)} · Propulsé par LASSİ</div>
     </footer>
@@ -2896,6 +2899,7 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   .tr-foot{background:var(--tr-band);text-align:center;padding:clamp(40px,7vw,70px) 20px 30px;margin-top:20px}
   .tr-foot-name{font-family:var(--tr-fh);font-size:clamp(40px,7vw,64px);letter-spacing:1px;color:var(--tr-ink)}
   .tr-foot-in p{color:var(--tr-mut);font-size:14px;margin-top:8px} .tr-foot-in a{color:var(--tr-coral);text-decoration:none}
+  .tr-foot-in a.tr-cta{color:#fff}
   .tr-foot .soc-row{justify-content:center;margin-top:16px}
   .tr-cta-sm{margin-top:22px;padding:12px 28px}
   .tr-copy{margin-top:30px;font-size:12.5px;color:var(--tr-mut)}
@@ -2922,6 +2926,10 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   .tr-sep{display:flex;align-items:center;justify-content:center;gap:10px;max-width:460px;margin:clamp(18px,4vw,40px) auto;color:var(--tr-ink);opacity:.55}
   .tr-sep-curve{width:min(320px,70vw);height:30px}
   .tr-sep-ic{flex:0 0 auto;color:var(--tr-coral);opacity:.9}
+  /* Long séparateur traversant (À propos → Réserver) */
+  .tr-sep-long{position:relative;display:flex;justify-content:center;height:clamp(170px,26vw,290px);margin:4px auto;color:var(--tr-ink);opacity:.5}
+  .tr-sep-long-curve{height:100%;width:min(220px,46vw)}
+  .tr-sep-long-ic{position:absolute;bottom:-6px;left:50%;transform:translateX(16px);color:var(--tr-coral);opacity:.95}
   /* Conteneur réservation mis en avant */
   .tr-reserve{max-width:1000px;margin:0 auto;padding:clamp(10px,3vw,20px) clamp(16px,4vw,40px) clamp(20px,4vw,40px)}
   .tr-reserve-head{text-align:center;margin-bottom:18px}
