@@ -959,7 +959,7 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
       social: { facebook: 'https://facebook.com', tiktok: 'https://tiktok.com', instagram: 'https://instagram.com' },
     };
     const shop: Shop = {
-      id: 'demo-tresse', name: 'Awa Tresses', logo_url: null,
+      id: 'demo-tresse', name: 'Awa Tresses', logo_url: img('logo.png'),
       description: "Salon de tresses & coiffures protectrices. Nattes collées, tresses au fil, twists et tissages réalisés avec soin. Réservez votre créneau en ligne, paiement sécurisé.",
       zone: 'Dakar · Grand Yoff', category: 'hair', shop_type: 'services',
       subcategories: ['tresses', 'nattes', 'tissages'],
@@ -1882,7 +1882,8 @@ function page(o: {
   // ═══════════════════════════════════════════════════════════════════════════
   const trTagline = o.cat || 'Votre salon de tresses';
   const trAboutImg = pick(0);
-  const trPaws = `<svg class="tr-paw" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="6" cy="9" r="2.1"/><circle cx="11.5" cy="6.5" r="2.1"/><circle cx="17" cy="9" r="2.1"/><path d="M12 11c-3 0-5 2.2-5 4.4C7 17.3 9 18 12 18s5-.7 5-2.6C17 13.2 15 11 12 11z"/></svg>`;
+  // Icône patte en ligne-claire (contour), fidèle au style du template de référence.
+  const trPaws = `<svg class="tr-paw" viewBox="0 0 32 32" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="8.5" cy="12" rx="2.3" ry="3.1" transform="rotate(-18 8.5 12)"/><ellipse cx="14" cy="8.5" rx="2.2" ry="3" transform="rotate(-6 14 8.5)"/><ellipse cx="19.5" cy="9.5" rx="2.2" ry="3" transform="rotate(8 19.5 9.5)"/><ellipse cx="24" cy="13.5" rx="2.1" ry="2.8" transform="rotate(20 24 13.5)"/><path d="M16 16c-3.6 0-6.4 2.6-6.4 5.6 0 2.5 2.6 3.9 6.4 3.9s6.4-1.4 6.4-3.9c0-3-2.8-5.6-6.4-5.6z"/></svg>`;
   const tresseBody = `
     <header class="tr-head" id="tr-top">
       <a class="tr-brand" href="#tr-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<span>${esc(clip(o.name, 22))}</span>`}</a>
@@ -1898,8 +1899,9 @@ function page(o: {
     <section class="tr-hero">
       <span class="tr-deco tr-deco-1">${trPaws}</span>
       <span class="tr-deco tr-deco-2">${trPaws}</span>
-      <span class="tr-deco tr-deco-3">✂</span>
+      <span class="tr-deco tr-deco-3"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><line x1="8" y1="7.2" x2="20" y2="16.5"/><line x1="8" y1="16.8" x2="20" y2="7.5"/><line x1="7.6" y1="7.6" x2="16" y2="12"/></svg></span>
       <div class="tr-hero-in">
+        ${o.logo ? `<img class="tr-hero-logo" src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : ''}
         <h1 class="tr-hero-name">${esc(clip(o.name, 16))}</h1>
         <div class="tr-hero-tag">${esc(clip(trTagline, 40))}</div>
         <a class="tr-cta" href="#tr-services">Prendre rendez-vous</a>
@@ -2654,8 +2656,8 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   }
 
   /* ───────────────── TEMPLATE TRESSE (crème + Amatic SC + corail) ───────────────── */
-  body[data-template="tresse"]{--tr-bg:#F3ECDF;--tr-band:#EFE6D5;--tr-ink:#2B2822;--tr-mut:#8a8172;--tr-coral:#E0785C;--tr-card:#EDE3D2;--tr-fh:'Amatic SC',cursive;--tr-fb:'Raleway',sans-serif;background:var(--tr-bg);color:var(--tr-ink);font-family:var(--tr-fb);}
-  .tr-head{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:18px;padding:16px clamp(18px,4vw,48px);background:var(--tr-bg);border-bottom:1px solid rgba(43,40,34,.08)}
+  body[data-template="tresse"]{--tr-bg:#FFFFFF;--tr-band:#F4ECE1;--tr-ink:#1D1E21;--tr-mut:#646464;--tr-coral:#FF7648;--tr-card:#F4ECE1;--tr-fh:'Amatic SC',cursive;--tr-fb:'Raleway',sans-serif;background:var(--tr-bg);color:var(--tr-ink);font-family:var(--tr-fb);}
+  .tr-head{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:18px;padding:16px clamp(18px,4vw,48px);background:var(--tr-band);border-bottom:1px solid rgba(29,30,33,.06)}
   .tr-brand{display:flex;align-items:center;text-decoration:none;color:var(--tr-ink)}
   .tr-brand img{height:34px;display:block} .tr-brand span{font-family:var(--tr-fh);font-size:30px;font-weight:700;letter-spacing:1px;line-height:1}
   .tr-nav{flex:1;display:flex;justify-content:center;gap:clamp(14px,2.4vw,34px);flex-wrap:wrap}
@@ -2664,6 +2666,7 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   .tr-phone{background:var(--tr-ink);color:#fff;text-decoration:none;font-size:13px;font-weight:600;letter-spacing:.5px;padding:9px 16px;border-radius:999px;white-space:nowrap}
   .tr-hero{position:relative;background:var(--tr-band);padding:clamp(40px,9vw,96px) 20px clamp(60px,10vw,110px);overflow:hidden;text-align:center}
   .tr-hero-in{position:relative;z-index:2;max-width:900px;margin:0 auto;display:flex;flex-direction:column;align-items:center}
+  .tr-hero-logo{height:clamp(72px,11vw,120px);width:auto;display:block;margin:0 auto 6px;object-fit:contain}
   .tr-hero-name{font-family:var(--tr-fh);font-weight:700;font-size:clamp(84px,24vw,230px);line-height:.78;letter-spacing:2px;color:var(--tr-ink);text-transform:uppercase}
   .tr-hero-tag{font-size:clamp(13px,1.6vw,17px);font-weight:500;letter-spacing:5px;text-transform:uppercase;color:var(--tr-ink);margin:18px 0 30px}
   .tr-cta{display:inline-block;background:var(--tr-coral);color:#fff;text-decoration:none;font-size:14px;font-weight:600;letter-spacing:.5px;padding:14px 34px;border-radius:999px;box-shadow:0 10px 24px rgba(224,120,92,.32);transition:transform .15s}
