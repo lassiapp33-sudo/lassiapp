@@ -119,6 +119,7 @@ export const SITE_FONTS: FontOption[] = [
   { id: 'fraunces', label: 'Fraunces', category: 'Serif' },
   { id: 'bebas', label: 'Bebas Neue', category: 'Display' },
   { id: 'outfit', label: 'Outfit', category: 'Sans' },
+  { id: 'oswald', label: 'Oswald', category: 'Display' },
 ];
 
 // ── Palettes (ids = clés SITE_PALETTES côté edge) ────────────────────────────
@@ -219,7 +220,7 @@ export const TEMPLATE_PRESETS: Record<string, { tokens: SiteConfig['tokens']; la
     layout: { order: ['services', 'products', 'terrains'], cols: 2, card: 'shadow', hero: 'split' },
   },
   ferme: {
-    tokens: { palette: 'creme', accent: '#4E7A3C', fontHeading: 'fraunces', fontBody: 'manrope' },
+    tokens: { palette: 'creme', accent: '#35663E', fontHeading: 'oswald', fontBody: 'cormorant' },
     layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'shadow', hero: 'split' },
   },
 };
