@@ -133,6 +133,7 @@ export default function SiteBuilderScreen({ onBack }: Props) {
     return (
       <AdvancedSiteEditor
         slug={slug ?? null}
+        shopId={shopId ?? null}
         cfg={cfg}
         saving={saving}
         onSave={onSave}

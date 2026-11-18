@@ -231,6 +231,7 @@ interface Shop {
   site_config: unknown;
   gallery_urls: unknown; cover_url: string | null;
   phone: string | null;
+  latitude?: number | null; longitude?: number | null;
 }
 interface Product {
   id: string; name: string | null; description: string | null;
@@ -783,7 +784,7 @@ async function fetchShop(slug: string): Promise<Shop | null> {
   try {
     const q =
       `${SUPABASE_URL}/rest/v1/shops?slug=eq.${encodeURIComponent(slug)}` +
-      `&select=id,name,logo_url,description,zone,category,subcategories,slug,shop_type,merchant_id,opening_hours,is_manually_closed,site_config,gallery_urls,cover_url,phone&limit=1`;
+      `&select=id,name,logo_url,description,zone,category,subcategories,slug,shop_type,merchant_id,opening_hours,is_manually_closed,site_config,gallery_urls,cover_url,phone,latitude,longitude&limit=1`;
     const res = await fetch(q, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
     if (!res.ok) return null;
     const rows = (await res.json()) as Shop[];
@@ -964,8 +965,8 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
       zone: 'Dakar · Grand Yoff', category: 'hair', shop_type: 'services',
       subcategories: ['tresses', 'nattes', 'tissages'],
       slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
-      site_config, gallery_urls: [img('hero.jpg'), img('p1.jpg'), img('p2.jpg')],
-      cover_url: null, phone: '77 123 45 67',
+      site_config, gallery_urls: [img('hero.jpg'), img('p1.jpg'), img('p2.jpg'), img('p3.jpg'), img('p4.jpg'), img('p5.jpg')],
+      cover_url: null, phone: '77 123 45 67', latitude: 14.7419, longitude: -17.4692,
     };
     const S = (id: string, name: string, price: number, description: string, min: number, photo: string): ServiceItem =>
       ({ id, name, description, price, category: 'Prestations', meta: `${min} min · réservable`, kind: 'beauty', image_url: img(photo) });
@@ -1139,6 +1140,7 @@ promos: any[] = []): string {
   return page({
     title: `${name} — sur LASSİ`, desc: clip(descRaw.replace(/\s+/g, ' '), 180),
     ogImage: logo || initialAvatar(name), canonical, base, name, zone, cat, logo, slug, products, services, terrains, shopStatus, dailySpecial, promos, siteConfig: shop.site_config, gallery: buildImagePool(shop, products), phone: (shop.phone ?? '').trim(),
+    lat: typeof shop.latitude === 'number' ? shop.latitude : null, lng: typeof shop.longitude === 'number' ? shop.longitude : null, shopId: shop.id,
   });
 }
 
@@ -1241,6 +1243,7 @@ function page(o: {
   siteConfig: unknown;
   gallery: string[];
   phone: string;
+  lat?: number | null; lng?: number | null; shopId?: string;
 }): string {
   const deep = `https://lassi.tech/p/${encodeURIComponent(o.slug)}`;
   const theme = resolveTheme(o.siteConfig);
@@ -1884,18 +1887,50 @@ function page(o: {
   const trAboutImg = pick(0);
   // Icône patte en ligne-claire (contour), fidèle au style du template de référence.
   const trPaws = `<svg class="tr-paw" viewBox="0 0 32 32" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="8.5" cy="12" rx="2.3" ry="3.1" transform="rotate(-18 8.5 12)"/><ellipse cx="14" cy="8.5" rx="2.2" ry="3" transform="rotate(-6 14 8.5)"/><ellipse cx="19.5" cy="9.5" rx="2.2" ry="3" transform="rotate(8 19.5 9.5)"/><ellipse cx="24" cy="13.5" rx="2.1" ry="2.8" transform="rotate(20 24 13.5)"/><path d="M16 16c-3.6 0-6.4 2.6-6.4 5.6 0 2.5 2.6 3.9 6.4 3.9s6.4-1.4 6.4-3.9c0-3-2.8-5.6-6.4-5.6z"/></svg>`;
+  // Galerie « conteneurs » = images de la galerie du prestataire (jamais les services).
+  const trGal = o.gallery.slice(0, 6);
+  const trGallery = trGal.length ? `
+    <section class="tr-gallery" id="tr-gallery">
+      <div class="tr-gallery-head"><span class="tr-deco-sm">${trPaws}</span><h2 class="tr-h2">La galerie</h2></div>
+      <div class="tr-gallery-grid">${trGal.map(u => `<div class="tr-gtile" ${bg(u)}></div>`).join('')}</div>
+    </section>` : '';
+  // Carte emplacement : si lat/lng définis → carte OpenStreetMap + repère. Sinon →
+  // bouton « Définir votre emplacement » visible UNIQUEMENT en mode édition (prestataire).
+  const hasLoc = typeof o.lat === 'number' && typeof o.lng === 'number';
+  const trMap = hasLoc
+    ? `<iframe class="tr-map" loading="lazy" title="Emplacement ${escAttr(o.name)}" src="https://www.openstreetmap.org/export/embed.html?bbox=${(o.lng! - 0.006)}%2C${(o.lat! - 0.004)}%2C${(o.lng! + 0.006)}%2C${(o.lat! + 0.004)}&amp;layer=mapnik&amp;marker=${o.lat}%2C${o.lng}"></iframe>`
+    : `<div class="tr-map tr-map-empty"><div class="tr-map-empty-in">
+        <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <button class="tr-loc-btn" type="button" onclick="(function(){try{window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({type:'led:setLocation'}));}catch(e){}})()">Définir votre emplacement</button>
+        <p class="tr-map-hint">Emplacement bientôt disponible.</p>
+      </div></div>`;
+  const trContact = `
+    <section class="tr-contact" id="tr-contact">
+      <span class="tr-deco tr-deco-c">${trPaws}</span>
+      <div class="tr-contact-in">
+        <div class="tr-contact-txt">
+          <h2 class="tr-h2">Contact</h2>
+          ${o.phone ? `<p>✆ <a href="tel:${escAttr(o.phone.replace(/\s+/g, ''))}">${esc(o.phone)}</a></p>` : ''}
+          ${o.zone ? `<p>📍 ${esc(o.zone)}</p>` : ''}
+          ${hoursHtml ? `<div class="tr-hours">${hoursHtml}</div>` : ''}
+          ${socialHtml}
+        </div>
+        <div class="tr-contact-map">${trMap}</div>
+      </div>
+    </section>`;
   const tresseBody = `
     <header class="tr-head" id="tr-top">
-      <a class="tr-brand" href="#tr-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<span>${esc(clip(o.name, 22))}</span>`}</a>
+      <a class="tr-brand" href="#tr-top" data-trnav="home">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<span>${esc(clip(o.name, 22))}</span>`}</a>
       <nav class="tr-nav">
-        <a class="tr-nav-active" href="#tr-top">Accueil</a>
-        <a href="#tr-about">À propos</a>
-        <a href="#tr-services">Mes services</a>
-        <a href="#tr-contact">Contact</a>
+        <a class="tr-nav-active" href="#tr-top" data-trnav="home">Accueil</a>
+        <a href="#tr-about" data-trnav="home">À propos</a>
+        <a href="#tr-services" data-trnav="services">Mes services</a>
+        <a href="#tr-contact" data-trnav="home">Contact</a>
       </nav>
       ${o.phone ? `<a class="tr-phone" href="tel:${escAttr(o.phone.replace(/\s+/g, ''))}">${esc(o.phone)}</a>` : `<span class="tr-phone">Sur rendez-vous</span>`}
     </header>
 
+    <div class="tr-page tr-page-home">
     <section class="tr-hero">
       <span class="tr-deco tr-deco-1">${trPaws}</span>
       <span class="tr-deco tr-deco-2">${trPaws}</span>
@@ -1904,7 +1939,7 @@ function page(o: {
         ${o.logo ? `<img class="tr-hero-logo" src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : ''}
         <h1 class="tr-hero-name">${esc(clip(o.name, 16))}</h1>
         <div class="tr-hero-tag">${esc(clip(trTagline, 40))}</div>
-        <a class="tr-cta" href="#tr-services">Prendre rendez-vous</a>
+        <a class="tr-cta" href="#tr-services" data-trnav="services">Prendre rendez-vous</a>
       </div>
       <span class="tr-path" aria-hidden="true"></span>
     </section>
@@ -1913,35 +1948,58 @@ function page(o: {
       <div class="tr-about-txt">
         <h2 class="tr-h2">À propos</h2>
         <p>${esc(clip(o.desc || `${o.name}, votre salon de tresses. Prestations soignées, finitions nettes et conseils personnalisés. Réservez votre créneau en ligne et payez en toute sécurité.`, 240))}</p>
-        <p>${esc(clip(`Tresses, nattes, tissages et coiffures protectrices — chaque prestation est réalisée avec soin${o.zone ? ' à ' + o.zone : ''}. Choisissez votre service ci-dessous.`, 200))}</p>
-        ${hoursHtml ? `<div class="tr-hours">${hoursHtml}</div>` : ''}
+        <p>${esc(clip(`Tresses, nattes, tissages et coiffures protectrices — chaque prestation est réalisée avec soin${o.zone ? ' à ' + o.zone : ''}. Retrouvez toutes mes prestations dans l'onglet « Mes services ».`, 200))}</p>
       </div>
       <div class="tr-about-img">${trAboutImg ? `<img src="${escAttr(trAboutImg)}" alt="${escAttr(o.name)}" loading="lazy">` : ''}</div>
     </section>
 
-    ${closedNotice}
-    <section class="tr-services${catalogCls}" id="tr-services">
-      <div class="tr-services-head">
-        <span class="tr-deco-sm">${trPaws}</span>
-        <h2 class="tr-h2">Mes services</h2>
-        <p>Réservez la prestation qui vous convient, paiement sécurisé Wave &amp; Orange Money.</p>
-      </div>
-      ${catnav}${dsSection}${grid}
-      ${svcSection}
-      ${terrainSection}
-    </section>
+    ${trGallery}
+    ${trContact}
+    </div>
 
-    <footer class="tr-foot" id="tr-contact">
+    <div class="tr-page tr-page-services" hidden>
+      ${closedNotice}
+      <section class="tr-services${catalogCls}">
+        <div class="tr-services-head">
+          <span class="tr-deco-sm">${trPaws}</span>
+          <h2 class="tr-h2">Mes services</h2>
+          <p>Réservez la prestation qui vous convient, paiement sécurisé Wave &amp; Orange Money.</p>
+        </div>
+        ${catnav}${dsSection}${grid}
+        ${svcSection}
+        ${terrainSection}
+      </section>
+    </div>
+
+    <footer class="tr-foot">
       <div class="tr-foot-in">
         <div class="tr-foot-name">${esc(o.name)}</div>
-        ${o.zone ? `<p>📍 ${esc(o.zone)}</p>` : ''}
-        ${o.phone ? `<p>✆ <a href="tel:${escAttr(o.phone.replace(/\s+/g, ''))}">${esc(o.phone)}</a></p>` : ''}
         <p>Réservation &amp; paiement en ligne · Wave · Orange Money</p>
-        ${socialHtml}
-        <a class="tr-cta tr-cta-sm" href="#tr-services">Voir mes services</a>
+        <a class="tr-cta tr-cta-sm" href="#tr-services" data-trnav="services">Voir mes services</a>
       </div>
       <div class="tr-copy">© 2026 ${esc(o.name)} · Propulsé par LASSİ</div>
     </footer>
+
+    <script>(function(){
+      var home=document.querySelector('.tr-page-home'), svc=document.querySelector('.tr-page-services');
+      if(!home||!svc) return;
+      function show(which, anchor){
+        var toSvc = which==='services';
+        svc.hidden=!toSvc; home.hidden=toSvc;
+        document.querySelectorAll('.tr-nav a').forEach(function(a){ a.classList.toggle('tr-nav-active', a.getAttribute('data-trnav')===which); });
+        if(anchor){ var t=document.querySelector(anchor); if(t){ setTimeout(function(){ t.scrollIntoView({behavior:'smooth'}); }, 60); return; } }
+        window.scrollTo({top:0,behavior:'smooth'});
+      }
+      document.querySelectorAll('[data-trnav]').forEach(function(a){
+        a.addEventListener('click', function(e){
+          // En mode édition, laisser l'overlay gérer la sélection de texte sur les liens.
+          if(document.body.classList.contains('lassi-ed')) return;
+          e.preventDefault();
+          var w=a.getAttribute('data-trnav'); var h=a.getAttribute('href')||'';
+          show(w, (w==='home' && h.indexOf('#tr-')===0 && h!=='#tr-top') ? h : null);
+        });
+      });
+    })();</script>
   `;
 
   const body = theme.template === 'furniture' && hasCatalog ? furnitureBody
@@ -2698,6 +2756,25 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   .tr-foot .soc-row{justify-content:center;margin-top:16px}
   .tr-cta-sm{margin-top:22px;padding:12px 28px}
   .tr-copy{margin-top:30px;font-size:12.5px;color:var(--tr-mut)}
+  /* Galerie (conteneurs images) */
+  .tr-gallery{max-width:1120px;margin:0 auto;padding:clamp(20px,4vw,50px) clamp(16px,4vw,40px)}
+  .tr-gallery-head{text-align:center;margin-bottom:26px} .tr-gallery-head .tr-deco-sm{display:inline-block;color:var(--tr-coral);margin-bottom:2px}
+  .tr-gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .tr-gtile{aspect-ratio:1/1;border-radius:14px;background-size:cover;background-position:center;background-color:var(--tr-card)}
+  @media(max-width:720px){.tr-gallery-grid{grid-template-columns:1fr 1fr;gap:10px}}
+  /* Contact + carte */
+  .tr-contact{position:relative;max-width:1120px;margin:0 auto;padding:clamp(30px,6vw,70px) clamp(16px,4vw,40px)}
+  .tr-contact-in{display:grid;grid-template-columns:1fr 1.2fr;gap:clamp(24px,5vw,56px);align-items:center}
+  .tr-contact-txt p{color:var(--tr-mut);font-size:15px;margin-top:10px} .tr-contact-txt a{color:var(--tr-coral);text-decoration:none}
+  .tr-contact-txt .soc-row{margin-top:16px}
+  .tr-contact .tr-deco-c{position:absolute;top:8%;right:6%;color:var(--tr-ink);opacity:.4}
+  .tr-map{width:100%;height:clamp(240px,34vw,360px);border:0;border-radius:16px;box-shadow:0 14px 34px rgba(29,30,33,.12);display:block}
+  .tr-map-empty{display:flex;align-items:center;justify-content:center;background:var(--tr-card);color:var(--tr-mut)}
+  .tr-map-empty-in{text-align:center;padding:24px}
+  .tr-loc-btn{display:inline-block;margin-top:14px;background:var(--tr-coral);color:#fff;border:0;border-radius:999px;font-size:14px;font-weight:600;padding:13px 26px;cursor:pointer;box-shadow:0 8px 20px rgba(255,118,72,.3)}
+  body:not(.lassi-ed) .tr-loc-btn{display:none}
+  .lassi-ed .tr-map-hint{display:none}
+  @media(max-width:720px){.tr-contact-in{grid-template-columns:1fr}}
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">

@@ -4,8 +4,10 @@ import {
   ActivityIndicator, Platform, Alert, KeyboardAvoidingView, Keyboard,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { uploadVideo } from '../../services/storage';
+import { updateShopLocation } from '../../services/shops';
 import { colors, radius, spacing, fonts, TOP_INSET } from '../../theme';
 import {
   buildEditPreviewUrl, buildDraftPreviewUrl, SITE_SECTIONS, SITE_FONTS, SITE_ACCENTS, SITE_ANIMATIONS,
@@ -15,6 +17,7 @@ import {
 
 interface Props {
   slug: string | null;
+  shopId?: string | null;
   cfg: SiteConfig;
   saving: boolean;
   onSave: () => void;
@@ -38,7 +41,7 @@ interface MenuItem { i: number; label: string }
 // Tuile catégorie sélectionnée (conteneur carré image/texte).
 interface ContSel { key: string; index: number; count: number; cols: number; order: string[] }
 
-export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange, onBack }: Props) {
+export default function AdvancedSiteEditor({ slug, shopId, cfg, saving, onSave, onChange, onBack }: Props) {
   const [tool, setTool] = useState<Tool | null>(null);
   const [preview, setPreview] = useState(false);
   const [kbOpen, setKbOpen] = useState(false);
@@ -203,6 +206,27 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
     onChange({ ...cfg, layout: { ...cfg.layout, ...p } });
   }, [cfg, onChange]);
 
+  // « Définir votre emplacement » (carte du site) : récupère la position GPS,
+  // l'enregistre sur la boutique (shops.latitude/longitude → visible site + app),
+  // puis recharge l'aperçu pour afficher la carte.
+  const [locBusy, setLocBusy] = useState(false);
+  const defineLocation = useCallback(async () => {
+    if (!shopId || locBusy) return;
+    try {
+      setLocBusy(true);
+      const perm = await Location.requestForegroundPermissionsAsync();
+      if (!perm.granted) { Alert.alert('Permission requise', 'Autorise la localisation pour définir ton emplacement.'); return; }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      await updateShopLocation(shopId, pos.coords.latitude, pos.coords.longitude);
+      Alert.alert('Emplacement défini', 'Ta position est maintenant affichée sur ton site et dans l\'app.');
+      setTimeout(() => webRef.current?.reload(), 400);
+    } catch (e: any) {
+      Alert.alert('Erreur', e?.message || 'Impossible de définir l\'emplacement.');
+    } finally {
+      setLocBusy(false);
+    }
+  }, [shopId, locBusy]);
+
   // Sections réellement affichées : filtre sur les conteneurs présents (si connu).
   const visibleOrder = useMemo(
     () => cfg.layout.order.filter(id => !hasSec || (hasSec as any)[id]),
@@ -264,8 +288,12 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
         setPreview(false);
         setTool('medias');
         break;
+      case 'led:setLocation':
+        // Clic sur « Définir votre emplacement » (carte du site).
+        defineLocation();
+        break;
     }
-  }, [cfg, onChange, scrollToKey]);
+  }, [cfg, onChange, scrollToKey, defineLocation]);
 
   const selKey = selText?.key ?? null;
   const curAnim = selKey ? (ov.anim?.[selKey] ?? '') : '';
