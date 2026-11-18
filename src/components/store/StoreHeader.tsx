@@ -51,12 +51,6 @@ export default function StoreHeader({ onBack, onPreview, onPromos }: Props) {
           <Text style={styles.promosTxt}>Promos</Text>
         </TouchableOpacity>
       )}
-
-      {/* Aperçu — voit la vitrine telle que le client la voit */}
-      <TouchableOpacity style={styles.preview} onPress={onPreview} activeOpacity={0.8}>
-        <IcoEye />
-        <Text style={styles.previewTxt}>Aperçu</Text>
-      </TouchableOpacity>
     </View>
   );
 }

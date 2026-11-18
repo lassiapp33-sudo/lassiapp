@@ -1,7 +1,7 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView,
-  ActivityIndicator, Platform, Alert, KeyboardAvoidingView,
+  ActivityIndicator, Platform, Alert, KeyboardAvoidingView, Keyboard,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
@@ -39,12 +39,21 @@ interface MenuItem { i: number; label: string }
 export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange, onBack }: Props) {
   const [tool, setTool] = useState<Tool | null>(null);
   const [preview, setPreview] = useState(false);
+  const [kbOpen, setKbOpen] = useState(false);
   const [vidBusy, setVidBusy] = useState(false);
   const [selText, setSelText] = useState<TextSel | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[] | null>(null);
   // Sections réellement présentes pour cette boutique (reçu de la page via led:ready).
   const [hasSec, setHasSec] = useState<{ products: boolean; services: boolean; terrains: boolean } | null>(null);
   const webRef = useRef<WebView>(null);
+
+  // Clavier ouvert → on réduit le panneau au seul champ texte pour garder
+  // l'aperçu du site bien visible (on voit où on écrit en temps réel).
+  useEffect(() => {
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKbOpen(true));
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKbOpen(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   // Amène l'élément en cours d'édition bien visible dans l'aperçu (clavier ouvert).
   const scrollToKey = useCallback((key: string) => {
@@ -291,6 +300,7 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
                 onChangeText={v => { setSelText({ ...selText, text: v }); setText(selText.key, v); }}
                 placeholder="Texte" placeholderTextColor={colors.muted} maxLength={200}
               />
+              {kbOpen ? null : (<>
               <Text style={styles.lbl}>Taille</Text>
               <View style={styles.wrap}>
                 {TEXT_SIZES.map(s => {
@@ -312,6 +322,7 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
                   return <TouchableOpacity key={f.id} onPress={() => patchStyle(selText.key, { font: f.id })} style={[styles.chip, on && styles.chipOn]}><Text style={[styles.chipTxt, on && styles.chipTxtOn]}>{f.label}</Text></TouchableOpacity>;
                 })}
               </View>
+              </>)}
             </View>
           ) : <Text style={styles.hint}>Touche un texte dans l'aperçu pour l'éditer.</Text>)}
 
@@ -407,6 +418,7 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
         </ScrollView>
       ) : null}
 
+      {!kbOpen && (
       <View style={styles.toolbar}>
         {TOOLS.map(t => {
           const on = tool === t.id;
@@ -418,6 +430,7 @@ export default function AdvancedSiteEditor({ slug, cfg, saving, onSave, onChange
           );
         })}
       </View>
+      )}
       </KeyboardAvoidingView>
       )}
     </View>

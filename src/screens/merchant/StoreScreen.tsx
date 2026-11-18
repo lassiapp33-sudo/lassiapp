@@ -913,18 +913,22 @@ export default function StoreScreen({ onBack, onPreview, onPromos, onAbonnes, on
                     </Text>
                   ) : null}
                   <View style={styles.shareRow}>
-                    <TouchableOpacity
-                      style={[styles.shareBtn, styles.shareBtnGhost]}
-                      onPress={() => setShowSiteBuilder(true)}
-                    >
-                      <Text style={styles.shareBtnGhostText}>Personnaliser mon site web</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.shareBtn, styles.shareBtnSolid]}
-                      onPress={() => setSharePanelOpen(true)}
-                    >
-                      <Text style={styles.shareBtnSolidText}>Partager</Text>
-                    </TouchableOpacity>
+                    <Animated.View style={{ flex: 1, opacity: addBlink }}>
+                      <TouchableOpacity
+                        style={[styles.shareBtn, styles.shareBtnSolid]}
+                        onPress={() => setShowSiteBuilder(true)}
+                      >
+                        <Text style={styles.shareBtnSolidText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} allowFontScaling={false}>Personnaliser mon site web</Text>
+                      </TouchableOpacity>
+                    </Animated.View>
+                    <Animated.View style={{ flex: 1, opacity: addBlink }}>
+                      <TouchableOpacity
+                        style={[styles.shareBtn, styles.shareBtnSolid]}
+                        onPress={() => setSharePanelOpen(true)}
+                      >
+                        <Text style={styles.shareBtnSolidText} numberOfLines={1}>Partager</Text>
+                      </TouchableOpacity>
+                    </Animated.View>
                   </View>
                 </View>
               </View>
@@ -1779,8 +1783,9 @@ const styles = StyleSheet.create({
   shareBtnSolidText: {
     color: colors.bg,
     fontFamily: fonts.ui,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
+    paddingHorizontal: 4,
   },
   fieldLabel: {
     color: colors.muted,
