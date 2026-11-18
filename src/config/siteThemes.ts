@@ -120,6 +120,8 @@ export const SITE_FONTS: FontOption[] = [
   { id: 'bebas', label: 'Bebas Neue', category: 'Display' },
   { id: 'outfit', label: 'Outfit', category: 'Sans' },
   { id: 'oswald', label: 'Oswald', category: 'Display' },
+  { id: 'anton', label: 'Anton', category: 'Display' },
+  { id: 'cinzel', label: 'Cinzel', category: 'Serif' },
 ];
 
 // ── Palettes (ids = clés SITE_PALETTES côté edge) ────────────────────────────
@@ -186,6 +188,7 @@ export const SITE_TEMPLATES: { id: string; label: string }[] = [
   { id: 'sac', label: 'Maroquinerie & Bagagerie' },
   { id: 'tresse', label: 'Tresses & Coiffure' },
   { id: 'ferme', label: 'Ferme agricole' },
+  { id: 'grill', label: 'Grill / Steakhouse' },
 ];
 
 // Preset appliqué quand on choisit un template : fixe palette/accent/polices/layout
@@ -222,6 +225,10 @@ export const TEMPLATE_PRESETS: Record<string, { tokens: SiteConfig['tokens']; la
   ferme: {
     tokens: { palette: 'creme', accent: '#2F5E3C', fontHeading: 'cormorant', fontBody: 'cormorant' },
     layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'shadow', hero: 'split' },
+  },
+  grill: {
+    tokens: { palette: 'onyx', accent: '#C9A24B', fontHeading: 'anton', fontBody: 'cormorant' },
+    layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'flat', hero: 'split' },
   },
 };
 

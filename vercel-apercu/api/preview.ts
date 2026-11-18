@@ -72,6 +72,8 @@ const SITE_FONTS: Record<string, SiteFont> = {
   bebas:     { family: 'Bebas Neue', stack: "'Bebas Neue',Impact,sans-serif", css2: 'Bebas+Neue' },
   outfit:    { family: 'Outfit', stack: "'Outfit',system-ui,sans-serif", css2: 'Outfit:wght@300;400;500;600;700' },
   oswald:    { family: 'Oswald', stack: "'Oswald',Impact,system-ui,sans-serif", css2: 'Oswald:wght@400;500;600;700' },
+  anton:     { family: 'Anton', stack: "'Anton',Impact,system-ui,sans-serif", css2: 'Anton' },
+  cinzel:    { family: 'Cinzel', stack: "'Cinzel',Georgia,serif", css2: 'Cinzel:wght@400;500;600;700' },
 };
 const DEFAULT_HEADING = 'cormorant';
 const DEFAULT_BODY = 'dmsans';
@@ -103,7 +105,7 @@ const SITE_PALETTES: Record<string, SitePalette> = {
 };
 const DEFAULT_PALETTE = 'classic';
 const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
-const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery', 'furniture', 'garderobe', 'sac', 'tresse', 'ferme']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat), #3 furniture (maison & mobilier), #4 garderobe (mode / prêt-à-porter), #5 sac (maroquinerie / bagagerie)
+const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery', 'furniture', 'garderobe', 'sac', 'tresse', 'ferme', 'grill']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat), #3 furniture (maison & mobilier), #4 garderobe (mode / prêt-à-porter), #5 sac (maroquinerie / bagagerie)
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
 // ── Layout (Phase 2) — agencement des conteneurs, présentation seule ─────────
@@ -627,9 +629,9 @@ const REVEAL = `<style id="lx-reveal-style">
 .lx-rv.lx-in{opacity:1;transform:none}
 /* Boutons d'action : respiration fluide continue — tous SAUF « Ajouter » (.add). */
 @keyframes lxCta{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
-.cx-btn,.cx-btn-outline,.cx-play,.fn-btn,.gd-btn,.gd-head-cta,.sc-foot-cta,.svcbtn,.bookbtn,.btn,.fm-btn,.fm-btn-outline,.fm-head-cta{animation:lxCta 2.8s ease-in-out infinite;will-change:transform}
+.cx-btn,.cx-btn-outline,.cx-play,.fn-btn,.gd-btn,.gd-head-cta,.sc-foot-cta,.svcbtn,.bookbtn,.btn,.fm-btn,.fm-btn-outline,.fm-head-cta,.gr-btn{animation:lxCta 2.8s ease-in-out infinite;will-change:transform}
 .add{animation:none!important}
-@media(prefers-reduced-motion:reduce){.lx-rv{opacity:1!important;transform:none!important;transition:none!important}.cx-btn,.cx-btn-outline,.cx-play,.fn-btn,.gd-btn,.gd-head-cta,.sc-foot-cta,.svcbtn,.bookbtn,.btn,.fm-btn,.fm-btn-outline,.fm-head-cta{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.lx-rv{opacity:1!important;transform:none!important;transition:none!important}.cx-btn,.cx-btn-outline,.cx-play,.fn-btn,.gd-btn,.gd-head-cta,.sc-foot-cta,.svcbtn,.bookbtn,.btn,.fm-btn,.fm-btn-outline,.fm-head-cta,.gr-btn{animation:none!important}}
 </style>
 <script>(function(){
   try{
@@ -641,8 +643,9 @@ const REVEAL = `<style id="lx-reveal-style">
     // pour couvrir accroche, titres de héro et en-têtes de section quel que soit le préfixe.
     var SOFT='.shop-cat,.hero-title,.hero-desc,.hours-block,.promo-banner,.catalog-title,.sectitle,.cathead,.appnote,.foot,.about,.closed-notice,'
       +'[class*="-eyebrow"],[class*="-hero-title"],[class*="-hero-sub"],[class*="-sec-head"],[class*="-rooms-top"],[class*="-types-head"],[class*="-mat-l"],'
-      +'.fm-hero-in,.fm-testi,.fm-ab-hero-txt,.fm-ab-intro,.fm-ab-split-txt,.fm-insta h2,.fm-insta-tag';
-    var CARDS='.prod,.terrain-card,.fm-band-img,.fm-band-mid,.fm-gtile,.fm-insta-tile,.fm-ab-hero-img,.fm-ab-split-img';
+      +'.fm-hero-in,.fm-testi,.fm-ab-hero-txt,.fm-ab-intro,.fm-ab-split-txt,.fm-insta h2,.fm-insta-tag,'
+      +'.gr-hero-in,.gr-h2,.gr-lead,.gr-news,.gr-foot-info,.gr-ill-wrap';
+    var CARDS='.prod,.terrain-card,.fm-band-img,.fm-band-mid,.fm-gtile,.fm-insta-tile,.fm-ab-hero-img,.fm-ab-split-img,.gr-col,.gr-gtile';
     function tag(sel,zoom){
       [].slice.call(document.querySelectorAll(sel)).forEach(function(el){
         if(el.__lxrv)return;
@@ -1043,6 +1046,38 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
       P('fm8', 'Mouton', 75000, 'Mouton bien portant, bien nourri. Parfait pour Tabaski, baptême ou cérémonie.', 'betail', 'moutons.jpg'),
       P('fm9', 'Bœuf', 450000, 'Bœuf de pâturage, robuste et bien engraissé. Pour cérémonie ou boucherie.', 'betail', 'boeuf.jpg'),
       P('fm10', 'Autruche', 180000, 'Autruche d\'élevage, pièce rare. Sur commande, renseignements à la ferme.', 'petit_elevage', 'autruche.jpg'),
+    ];
+    return { shop, products };
+  }
+
+  if (t === 'grill') {
+    const site_config = {
+      template: 'grill',
+      tokens: { palette: 'onyx', accent: '#C9A24B', fontHeading: 'anton', fontBody: 'cormorant' },
+      layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'flat', hero: 'split' },
+      social: { facebook: 'https://facebook.com', tiktok: 'https://tiktok.com', instagram: 'https://instagram.com' },
+    };
+    const shop: Shop = {
+      id: 'demo-grill', name: 'Au Grill', logo_url: null,
+      description: "Grill traditionnel, touche moderne. Les meilleures viandes, grillées avec exigence, au cœur de la ville. Cuisine française généreuse, cave soignée et ambiance chaleureuse.",
+      zone: 'Dakar · Plateau', category: 'stores', shop_type: 'products',
+      subcategories: ['viandes', 'entrees', 'boissons'],
+      slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
+      site_config, gallery_urls: [img('hero.jpg'), img('g1.jpg'), img('g2.jpg'), img('g3.jpg'), img('g4.jpg'), img('g5.jpg'), img('g6.jpg'), img('g7.jpg'), img('g8.jpg'), img('band.jpg')],
+      cover_url: null, phone: '33 821 45 67', latitude: 14.6680, longitude: -17.4360,
+    };
+    const P = (id: string, name: string, price: number, description: string, category: string, photo: string): Product =>
+      ({ id, name, description, emoji: null, photo_url: img(photo), price, category });
+    const products: Product[] = [
+      P('gr1', 'Entrecôte grillée', 9000, 'Entrecôte maturée grillée au feu de bois, beurre maître d\'hôtel et frites maison.', 'viandes', 'g1.jpg'),
+      P('gr2', 'Côte de bœuf (500g)', 15000, 'Côte de bœuf à partager, grillée à la perfection, sel de Guérande et légumes de saison.', 'viandes', 'g4.jpg'),
+      P('gr3', 'Tartare de bœuf', 7500, 'Bœuf coupé au couteau, préparé minute, condiments et frites croustillantes.', 'viandes', 'g5.jpg'),
+      P('gr4', 'Magret de canard', 8500, 'Magret rôti, sauce au miel et épices, écrasé de pommes de terre.', 'viandes', 'g8.jpg'),
+      P('gr5', 'Planche de charcuterie', 6500, 'Sélection de charcuteries fines et fromages affinés, pain de campagne.', 'entrees', 'g2.jpg'),
+      P('gr6', 'Brochettes de bœuf', 5500, 'Brochettes marinées grillées, légumes croquants et sauce chimichurri.', 'entrees', 'g3.jpg'),
+      P('gr7', 'Cocktail maison', 4000, 'Création du barman, spiritueux premium et agrumes frais.', 'boissons', 'g2.jpg'),
+      P('gr8', 'Bière pression', 2500, 'Bière blonde artisanale servie bien fraîche à la pression.', 'boissons', 'g3.jpg'),
+      P('gr9', 'Whisky sélection', 5000, 'Sélection de whiskies d\'exception, servis sur mesure.', 'boissons', 'g7.jpg'),
     ];
     return { shop, products };
   }
@@ -2275,12 +2310,103 @@ function page(o: {
     })();</script>
   `;
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TEMPLATE PLEIN « GRILL » — Steakhouse / brasserie (réf Wix « Au Grill »).
+  // Fond charbon sombre, or brossé, display ultra-bold (Anton) + serif gravé or
+  // (Cinzel), illustrations line-art (couverts, bœuf, cocktail), galerie plein
+  // cadre. Hero steak plein écran, « LE RESTAURANT » 3 colonnes, menu (catalogue
+  // réel), galerie, bande viande, liste de diffusion, contact + carte.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const grUtensils = '<svg class="gr-ill" viewBox="0 0 120 230" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M34 14v46a15 15 0 0 1-30 0V14"/><line x1="12" y1="14" x2="12" y2="58"/><line x1="19" y1="14" x2="19" y2="60"/><line x1="26" y1="14" x2="26" y2="58"/><line x1="19" y1="75" x2="19" y2="216"/><path d="M104 14c11 18 11 56 0 78"/><line x1="104" y1="14" x2="104" y2="92"/><line x1="104" y1="92" x2="104" y2="216"/></svg>';
+  const grBeef = '<svg class="gr-ill" viewBox="0 0 260 150" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 74c2-9 9-14 18-13 4-9 11-15 20-17l-7-18 18 13c11-2 23-3 35-3h66c15 0 28 7 36 17l17-5-6 17c9 6 13 15 13 25 0 5-1 9-4 12l4 34h-21l-5-29c-10 4-21 6-32 6"/><path d="M74 86l-5 50H50l-3-40M152 88l3 48h-19l-3-34M198 72l6 32"/><circle cx="214" cy="54" r="2.4"/></svg>';
+  const grCocktail = '<svg class="gr-ill" viewBox="0 0 130 150" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 22h98L65 84z"/><line x1="65" y1="84" x2="65" y2="124"/><line x1="40" y1="124" x2="90" y2="124"/><line x1="78" y1="36" x2="106" y2="14"/><circle cx="108" cy="12" r="4.5"/></svg>';
+  const grCols = [
+    { n: '01', t: 'Grill traditionnel,<br>touche moderne', p: 'Un feu de bois, des cuissons maîtrisées et une carte qui revisite les classiques avec audace et générosité.' },
+    { n: '02', t: 'Servir les<br>meilleures viandes', p: 'Des pièces maturées et sélectionnées avec soin auprès de nos éleveurs, pour une tendreté et un goût incomparables.' },
+    { n: '03', t: 'Situé au cœur<br>de la ville', p: `${esc(o.zone || 'En plein centre')}, un cadre chaleureux pour vos dîners, vos tablées entre amis et vos grandes occasions.` },
+  ];
+  const grGalPool = [...gal.slice(1)].filter(Boolean).slice(0, 8);
+  const grBandImg = gal.length ? gal[gal.length - 1] : (gal[0] || '');
+  const grillBody = `
+    <header class="gr-head" id="gr-top">
+      <div class="gr-topbar">${o.zone ? `<span>${esc(o.zone)}</span>` : ''}${o.phone ? `<span>${esc(o.phone)}</span>` : ''}<span>Réservation &amp; commande en ligne</span></div>
+      <div class="gr-navbar">
+        <a class="gr-brand" href="#gr-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<span>${esc(clip(o.name, 22))}</span>`}</a>
+        <nav class="gr-nav">
+          <a class="gr-nav-active" href="#gr-top">Accueil</a>
+          <a href="#gr-about">Chez nous</a>
+          <a href="#gr-shop">Menu</a>
+          <a href="#gr-gallery">Galerie</a>
+          <a href="#gr-contact">Réservations</a>
+        </nav>
+        <a class="gr-ic gr-cart" href="#gr-shop" title="Commander"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></a>
+      </div>
+    </header>
+    <section class="gr-hero" ${bg(heroImg)}>
+      <div class="gr-hero-ov"></div>
+      <div class="gr-hero-in">
+        <h1 class="gr-hero-title">${esc(o.name)}</h1>
+        <div class="gr-hero-sub">Grande cuisine française</div>
+        <a class="gr-btn" href="#gr-shop">Menu</a>
+      </div>
+    </section>
+    <section class="gr-about" id="gr-about">
+      <h2 class="gr-h2 gr-gold">Le restaurant</h2>
+      <div class="gr-cols">${grCols.map(c => `<div class="gr-col"><span class="gr-num">${c.n}</span><h3>${c.t}</h3><p>${esc(c.p)}</p></div>`).join('')}</div>
+    </section>
+    <div class="gr-ill-wrap">${grUtensils}</div>
+    <section class="gr-feature">
+      <div class="gr-ill-wrap gr-ill-big">${grBeef}</div>
+      <h2 class="gr-h2 gr-gold">Bifsteck + temps<br>= perfection</h2>
+      <p class="gr-lead">${esc(clip(o.desc || `Le secret d'une viande d'exception : des pièces maturées avec patience, puis saisies au feu pour révéler toute leur saveur. Chez ${o.name}, le temps fait la perfection.`, 240))}</p>
+    </section>
+    <section class="gr-drink">
+      <h2 class="gr-h2 gr-light">Prenez un verre</h2>
+      <div class="gr-ill-wrap">${grCocktail}</div>
+      <p class="gr-lead gr-dark">Cocktails signature, grands crus et spiritueux rares : notre bar prolonge l'expérience, avant ou après le repas.</p>
+    </section>
+    ${closedNotice}
+    <section id="gr-shop" class="gr-shop${catalogCls}">
+      <h2 class="gr-h2 gr-gold">Notre menu</h2>
+      <p class="gr-sub-ctr">${hasProducts ? 'Commande en ligne · retrait ou livraison' : hasServices ? 'Réservez votre prestation' : 'Nos terrains'}</p>
+      ${catnav}${dsSection}${grid}
+      ${svcSection}
+      ${terrainSection}
+    </section>
+    ${grGalPool.length >= 4 ? `
+    <section class="gr-gallery" id="gr-gallery">
+      <h2 class="gr-h2 gr-gold">Galerie</h2>
+      <div class="gr-gal-grid">${grGalPool.map(u => `<div class="gr-gtile" ${bg(u)}></div>`).join('')}</div>
+    </section>` : ''}
+    ${grBandImg ? `<div class="gr-band" ${bg(grBandImg)}></div>` : ''}
+    <section class="gr-news">
+      <h2 class="gr-h2 gr-gold gr-sm">Liste de diffusion</h2>
+      <p class="gr-news-p">Recevez nos nouveautés, événements et suggestions du chef.</p>
+      <div class="gr-news-form">
+        <input class="gr-input" type="email" placeholder="Votre adresse e-mail" aria-label="E-mail">
+        <a class="gr-btn" href="#gr-shop">S'abonner</a>
+      </div>
+    </section>
+    <footer class="gr-foot" id="gr-contact">
+      <h2 class="gr-h2 gr-light">Contact &amp; lieu</h2>
+      <p class="gr-foot-sub">Réservez une table ou passez commande — nous vous accueillons avec plaisir.</p>
+      <div class="gr-foot-info">
+        ${o.zone ? `<div><b>Adresse</b><span>${esc(o.zone)}</span></div>` : ''}
+        ${o.phone ? `<div><b>Téléphone</b><span>${esc(o.phone)}</span></div>` : ''}
+        ${hoursHtml ? `<div class="gr-foot-hours"><b>Horaires</b>${hoursHtml}</div>` : ''}
+      </div>
+      <a class="gr-btn gr-foot-cta" href="#gr-shop">Voir le menu</a>
+      ${socialHtml}
+      <div class="gr-copy">© 2026 ${esc(o.name)} · Propulsé par LASSİ</div>
+    </footer>`;
+
   const body = theme.template === 'furniture' && hasCatalog ? furnitureBody
     : theme.template === 'cosmetic' && hasCatalog ? cosmeticBody
     : theme.template === 'garderobe' && hasCatalog ? garderobeBody
     : theme.template === 'sac' && hasCatalog ? sacBody
     : theme.template === 'tresse' && hasCatalog ? tresseBody
     : theme.template === 'ferme' && hasCatalog ? fermeBody
+    : theme.template === 'grill' && hasCatalog ? grillBody
     : classicBody;
 
   const cfg = JSON.stringify({
@@ -3182,6 +3308,86 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   .fm-ab-split-txt h3{font-family:var(--fm-fh);font-weight:600;font-size:clamp(26px,3.4vw,42px);line-height:1.08;text-transform:uppercase;letter-spacing:1px;color:var(--fm-ink);margin:0}
   .fm-ab-split-txt p{font-size:clamp(16px,1.6vw,18px);line-height:1.6;color:#3a3326;margin-top:14px;max-width:440px}
   @media(max-width:780px){.fm-ab-split{grid-template-columns:1fr}.fm-ab-split-img{min-height:260px;order:-1}.fm-ab-split.reverse .fm-ab-split-img{order:-1}}
+  /* ═══ TEMPLATE GRILL — steakhouse (réf Au Grill : charbon + or + Anton/Cinzel) ═══ */
+  body[data-template="grill"]{--gr-bg:#262523;--gr-bg2:#2E2C29;--gr-gold:#C9A24B;--gr-gold-d:#A9863A;--gr-ink:#1E1D1B;--gr-txt:#E6E1D6;--gr-mut:#A9A294;--gr-fh:'Anton',Impact,sans-serif;--gr-fe:'Cinzel',Georgia,serif;--gr-fb:'Cormorant Garamond',Georgia,serif;--gr-fs:'Helvetica Neue',system-ui,Arial,sans-serif;background:var(--gr-bg);color:var(--gr-txt);font-family:var(--gr-fb);font-size:18px}
+  .gr-head{position:sticky;top:0;z-index:40}
+  .gr-topbar{display:flex;justify-content:center;gap:28px;flex-wrap:wrap;background:var(--gr-gold);color:var(--gr-ink);font-family:var(--gr-fs);font-size:11.5px;letter-spacing:1px;text-transform:uppercase;padding:7px 20px;font-weight:600}
+  .gr-navbar{display:flex;align-items:center;gap:20px;background:var(--gr-gold);color:var(--gr-ink);padding:6px clamp(16px,4vw,48px) 12px;border-top:1px solid rgba(30,29,27,.14)}
+  .gr-brand{text-decoration:none;color:var(--gr-ink)} .gr-brand img{height:40px} .gr-brand span{font-family:var(--gr-fh);font-size:24px;letter-spacing:1px;text-transform:uppercase}
+  .gr-nav{flex:1;display:flex;justify-content:center;gap:clamp(14px,2.6vw,36px);flex-wrap:wrap}
+  .gr-nav a{font-family:var(--gr-fs);color:var(--gr-ink);text-decoration:none;font-size:12.5px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase}
+  .gr-nav a:hover,.gr-nav .gr-nav-active{color:#fff}
+  .gr-ic{color:var(--gr-ink);display:flex}
+  /* HERO */
+  .gr-hero{position:relative;min-height:min(86vh,680px);display:flex;align-items:center;justify-content:center;background-size:cover;background-position:center;background-color:#1b1a18;text-align:center}
+  .gr-hero-ov{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(20,19,17,.35),rgba(20,19,17,.72))}
+  .gr-hero-in{position:relative;z-index:2;padding:40px 20px}
+  .gr-hero-title{font-family:var(--gr-fh);font-size:clamp(64px,14vw,180px);line-height:.9;letter-spacing:2px;text-transform:uppercase;color:#fff;margin:0;text-shadow:0 6px 30px rgba(0,0,0,.5)}
+  .gr-hero-sub{font-family:var(--gr-fs);font-size:clamp(13px,2vw,22px);font-weight:600;letter-spacing:6px;text-transform:uppercase;color:#fff;margin:16px 0 30px}
+  .gr-btn{display:inline-block;background:var(--gr-gold);color:var(--gr-ink);text-decoration:none;font-family:var(--gr-fs);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:14px 40px;border:1px solid var(--gr-gold);transition:all .18s}
+  .gr-btn:hover{background:transparent;color:var(--gr-gold)}
+  /* Titres */
+  .gr-h2{text-align:center;line-height:1.04;margin:0}
+  .gr-gold{font-family:var(--gr-fe);font-weight:600;color:var(--gr-gold);font-size:clamp(28px,4.4vw,50px);letter-spacing:3px;text-transform:uppercase}
+  .gr-light{font-family:var(--gr-fh);color:#fff;font-size:clamp(32px,5vw,60px);letter-spacing:1px;text-transform:uppercase}
+  .gr-sm{font-size:clamp(22px,3vw,34px);letter-spacing:2px}
+  /* LE RESTAURANT — 3 colonnes */
+  .gr-about{background:var(--gr-bg);padding:clamp(50px,7vw,96px) clamp(20px,4vw,48px)}
+  .gr-cols{max-width:1080px;margin:clamp(30px,5vw,56px) auto 0;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(24px,4vw,56px);text-align:center}
+  .gr-num{display:block;font-family:var(--gr-fe);font-size:34px;font-weight:600;color:var(--gr-gold);margin-bottom:12px}
+  .gr-col h3{font-family:var(--gr-fh);font-size:clamp(18px,2vw,24px);line-height:1.1;letter-spacing:1px;text-transform:uppercase;color:#fff;margin:0 0 14px}
+  .gr-col p{font-size:16px;line-height:1.6;color:var(--gr-mut)}
+  @media(max-width:760px){.gr-cols{grid-template-columns:1fr;gap:34px}}
+  /* Illustrations line-art or */
+  .gr-ill-wrap{display:flex;justify-content:center;color:var(--gr-gold);padding:clamp(30px,5vw,56px) 20px}
+  .gr-ill{height:clamp(120px,16vw,190px);width:auto;opacity:.92}
+  .gr-ill-big .gr-ill{height:clamp(90px,12vw,150px)}
+  /* BIFSTECK */
+  .gr-feature{background:var(--gr-bg);padding:clamp(10px,2vw,20px) clamp(20px,4vw,48px) clamp(50px,7vw,90px);text-align:center}
+  .gr-lead{max-width:640px;margin:22px auto 0;font-size:clamp(17px,1.9vw,21px);line-height:1.7;color:var(--gr-mut)}
+  /* PRENEZ UN VERRE (fond or) */
+  .gr-drink{background:var(--gr-gold);padding:clamp(50px,7vw,90px) clamp(20px,4vw,48px);text-align:center}
+  .gr-drink .gr-ill-wrap{color:var(--gr-ink)}
+  .gr-lead.gr-dark{color:#3a3324}
+  /* MENU (catalogue réel) */
+  .gr-shop{background:var(--gr-bg);padding:clamp(50px,7vw,90px) clamp(16px,4vw,40px)}
+  .gr-sub-ctr{text-align:center;color:var(--gr-mut);font-size:17px;margin:12px 0 clamp(24px,4vw,40px)}
+  body[data-template="grill"] .sectitle{text-align:center;font-family:var(--gr-fe);font-weight:600;color:var(--gr-gold);text-transform:uppercase;letter-spacing:2px}
+  body[data-template="grill"] .catnav{justify-content:center}
+  body[data-template="grill"] .cathead{justify-content:center}
+  body[data-template="grill"] .cathead-title{font-family:var(--gr-fe);font-weight:600;color:var(--gr-gold);text-transform:uppercase;letter-spacing:1px}
+  body[data-template="grill"] .chip{font-family:var(--gr-fs);text-transform:uppercase;letter-spacing:.5px;font-size:12px;font-weight:600;background:transparent;color:var(--gr-txt);border-color:rgba(201,162,75,.4)}
+  body[data-template="grill"] .chip.sel{background:var(--gr-gold);color:var(--gr-ink);border-color:var(--gr-gold)}
+  body[data-template="grill"] .grid{gap:20px}
+  body[data-template="grill"] .prod{background:var(--gr-bg2);border:1px solid rgba(201,162,75,.18);border-radius:2px;overflow:hidden}
+  body[data-template="grill"] .prod.in{border-color:var(--gr-gold)}
+  body[data-template="grill"] .pname{font-family:var(--gr-fh);color:#fff;text-transform:uppercase;letter-spacing:.5px;font-size:18px;font-weight:400}
+  body[data-template="grill"] .pdesc{color:var(--gr-mut);font-size:15px;line-height:1.5}
+  body[data-template="grill"] .pprice{font-family:var(--gr-fe);font-weight:600;color:var(--gr-gold);font-size:20px}
+  body[data-template="grill"] .add{background:var(--gr-gold);color:var(--gr-ink);border-color:transparent;border-radius:2px;font-family:var(--gr-fs);text-transform:uppercase;letter-spacing:1px;font-weight:700}
+  /* GALERIE plein cadre */
+  .gr-gallery{background:var(--gr-bg);padding:clamp(40px,6vw,72px) 0 0}
+  .gr-gallery .gr-h2{margin-bottom:clamp(24px,4vw,40px)}
+  .gr-gal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+  .gr-gtile{aspect-ratio:1/1;background-size:cover;background-position:center;background-color:#1b1a18}
+  @media(max-width:760px){.gr-gal-grid{grid-template-columns:1fr 1fr}}
+  /* Bande viande plein écran */
+  .gr-band{height:clamp(240px,34vw,420px);background-size:cover;background-position:center;background-color:#1b1a18}
+  /* LISTE DE DIFFUSION */
+  .gr-news{background:var(--gr-bg);text-align:center;padding:clamp(46px,6vw,80px) clamp(20px,4vw,40px)}
+  .gr-news-p{color:var(--gr-mut);font-size:17px;margin:12px 0 26px}
+  .gr-news-form{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;max-width:560px;margin:0 auto}
+  .gr-input{flex:1;min-width:220px;background:transparent;border:1px solid rgba(201,162,75,.4);color:var(--gr-txt);font-family:var(--gr-fb);font-size:17px;padding:12px 16px;border-radius:2px}
+  .gr-input::placeholder{color:var(--gr-mut)}
+  /* CONTACT */
+  .gr-foot{background:var(--gr-ink);text-align:center;padding:clamp(50px,7vw,90px) clamp(20px,4vw,40px) 36px}
+  .gr-foot-sub{color:var(--gr-mut);font-size:17px;margin:12px 0 clamp(26px,4vw,40px)}
+  .gr-foot-info{display:flex;justify-content:center;gap:clamp(28px,5vw,64px);flex-wrap:wrap;margin-bottom:30px}
+  .gr-foot-info b{display:block;font-family:var(--gr-fs);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gr-gold);margin-bottom:6px}
+  .gr-foot-info span{color:var(--gr-txt);font-size:17px}
+  .gr-foot-hours{color:var(--gr-txt)}
+  .gr-foot .soc-row{justify-content:center;margin:26px 0 0}
+  .gr-copy{margin-top:26px;padding-top:22px;border-top:1px solid rgba(201,162,75,.15);font-family:var(--gr-fs);font-size:12px;letter-spacing:.5px;color:var(--gr-mut)}
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">
