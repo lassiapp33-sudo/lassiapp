@@ -2125,7 +2125,7 @@ function page(o: {
   // Bande 3 colonnes (sous le hero) — histoire / bloc produits frais / visite.
   const fmBand = `
     <section class="fm-band">
-      <a class="fm-band-img" href="#fm-about" data-fmnav="home" ${bg(fmEggImg)}><span class="fm-band-card"><b>La Ferme</b><small>Notre histoire</small></span></a>
+      <a class="fm-band-img" href="#fm-ab-top" data-fmnav="about" ${bg(fmEggImg)}><span class="fm-band-card"><b>La Ferme</b><small>Notre histoire</small></span></a>
       <div class="fm-band-mid">
         <span class="fm-seal">Produits frais de la ferme</span>
         <h3>Produits<br>frais</h3>
@@ -2164,18 +2164,53 @@ function page(o: {
         <div class="fm-foot-col">
           <h4>Boutique</h4>
           <p><a href="#fm-shop" data-fmnav="shop">Acheter des produits</a></p>
-          <p><a href="#fm-about" data-fmnav="home">À propos de la ferme</a></p>
+          <p><a href="#fm-ab-top" data-fmnav="about">À propos de la ferme</a></p>
           <p>Paiement Wave · Orange Money</p>
           <p>Livraison ou retrait à la ferme</p>
         </div>
         <div class="fm-foot-soc">${socialHtml}<p>© 2026 par ${esc(o.name)}</p><p>Propulsé par LASSİ</p></div>
       </div>
     </footer>`;
+  // Page « À propos » (séparée) — histoire (orange + photo), intro, bandes alternées.
+  const fmAboutPage = `
+    <div class="fm-page fm-page-about" hidden>
+      <section class="fm-ab-hero" id="fm-ab-top">
+        <div class="fm-ab-hero-txt">
+          <span class="fm-k">Notre histoire</span>
+          <h2>Une ferme familiale,<br>de génération en génération</h2>
+          <p>${esc(clip(o.desc || `Depuis ses débuts, ${o.name} perpétue un savoir-faire d'élevage transmis de génération en génération — des bêtes élevées avec soin, nourries naturellement, dans le respect du vivant.`, 230))}</p>
+        </div>
+        <div class="fm-ab-hero-img" ${bg(pick(3))}></div>
+      </section>
+      <section class="fm-ab-intro">
+        <span class="fm-testi-ic">${fmHenIco}</span>
+        <h2>À propos de ${esc(clip(o.name, 30))}</h2>
+        <div class="fm-ab-cols">
+          <p>Notre ferme, c'est avant tout une passion pour le vivant et la qualité. Chaque animal est élevé en plein air, nourri sans hormones ni OGM et suivi au quotidien pour garantir des produits sains et savoureux.</p>
+          <p>Œufs frais, volaille, bétail et petit élevage : nous sélectionnons le meilleur pour votre table. Commandez en ligne — nous livrons à ${esc(o.zone || 'Dakar')} ou vous accueillons directement à la ferme.</p>
+        </div>
+        <a class="fm-btn-outline" href="#fm-contact" data-fmnav="about">Visitez-nous</a>
+      </section>
+      <section class="fm-ab-split">
+        <div class="fm-ab-split-img" ${bg(pick(4))}></div>
+        <div class="fm-ab-split-txt">
+          <h3>100% biologique, libre parcours et sans OGM</h3>
+          <p>Nos bêtes vivent en plein air et se nourrissent naturellement. Pas d'hormones, pas d'OGM — juste un élevage respectueux qui donne des produits au vrai goût de la ferme.</p>
+        </div>
+      </section>
+      <section class="fm-ab-split reverse">
+        <div class="fm-ab-split-txt">
+          <h3>Un savoir-faire au service de la qualité</h3>
+          <p>De l'éclosion à la récolte, chaque étape est maîtrisée avec exigence. Fraîcheur, traçabilité et bien-être animal sont au cœur de notre démarche quotidienne.</p>
+        </div>
+        <div class="fm-ab-split-img" ${bg(pick(5))}></div>
+      </section>
+    </div>`;
   const fermeBody = `
     <header class="fm-head" id="fm-top">
       <a class="fm-logo" href="#fm-top" data-fmnav="home">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : ''}<span>${esc(clip(o.name, 26))}</span></a>
       <nav class="fm-nav">
-        <a href="#fm-about" data-fmnav="home">À propos de la ferme</a>
+        <a href="#fm-ab-top" data-fmnav="about">À propos de la ferme</a>
         <a href="#fm-shop" data-fmnav="shop">Acheter des produits</a>
         <a href="#fm-insta" data-fmnav="home">Galerie</a>
         <a class="fm-nav-active" href="#fm-top" data-fmnav="home">Bonjour</a>
@@ -2210,16 +2245,18 @@ function page(o: {
       </section>
     </div>
 
+    ${fmAboutPage}
+
     ${fmFoot}
 
     <script>(function(){
-      var home=document.querySelector('.fm-page-home'), shop=document.querySelector('.fm-page-shop');
-      if(!home||!shop) return;
-      if(document.body.classList.contains('lassi-ed')){ shop.hidden=false; return; }
+      var pages={home:document.querySelector('.fm-page-home'),shop:document.querySelector('.fm-page-shop'),about:document.querySelector('.fm-page-about')};
+      if(!pages.home) return;
+      if(document.body.classList.contains('lassi-ed')){ if(pages.shop)pages.shop.hidden=false; if(pages.about)pages.about.hidden=false; return; }
+      var active={home:'#fm-top',shop:'#fm-shop',about:'#fm-ab-top'};
       function show(which, anchor){
-        var toShop=which==='shop';
-        shop.hidden=!toShop; home.hidden=toShop;
-        document.querySelectorAll('.fm-nav a').forEach(function(a){ a.classList.toggle('fm-nav-active', a.getAttribute('href')===(toShop?'#fm-shop':'#fm-top')); });
+        Object.keys(pages).forEach(function(k){ if(pages[k]) pages[k].hidden=(k!==which); });
+        document.querySelectorAll('.fm-nav a').forEach(function(a){ a.classList.toggle('fm-nav-active', a.getAttribute('href')===active[which]); });
         if(anchor){ var t=document.querySelector(anchor); if(t){ setTimeout(function(){ t.scrollIntoView({behavior:'smooth'}); },60); return; } }
         window.scrollTo({top:0,behavior:'smooth'});
       }
@@ -2227,7 +2264,7 @@ function page(o: {
         a.addEventListener('click',function(e){
           e.preventDefault();
           var w=a.getAttribute('data-fmnav'); var h=a.getAttribute('href')||'';
-          show(w, (w==='home' && h.indexOf('#fm-')===0 && h!=='#fm-top') ? h : null);
+          show(w, (h.indexOf('#fm-')===0 && h!=='#fm-top' && h!=='#fm-ab-top' && h!=='#fm-shop') ? h : null);
         });
       });
     })();</script>
@@ -3120,6 +3157,26 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   .fm-foot-col p{font-size:16px;color:var(--fm-mut);margin:0 0 6px} .fm-foot-col a{color:var(--fm-mut);text-decoration:none} .fm-foot-col a:hover{color:var(--fm-green)}
   .fm-foot-soc{text-align:right} .fm-foot-soc .soc-row{justify-content:flex-end;margin-bottom:12px} .fm-foot-soc p{font-family:var(--fm-fs);font-size:12px;color:var(--fm-mut);margin:0 0 4px}
   @media(max-width:820px){.fm-foot-in{grid-template-columns:1fr 1fr}.fm-foot-logo{grid-column:1/-1}.fm-foot-soc{text-align:left}.fm-foot-soc .soc-row{justify-content:flex-start}}
+  /* PAGE À PROPOS */
+  .fm-ab-hero{display:grid;grid-template-columns:1fr 1fr;align-items:stretch;min-height:clamp(340px,42vw,520px)}
+  .fm-ab-hero-txt{background:var(--fm-orange);display:flex;flex-direction:column;justify-content:center;padding:clamp(32px,5vw,70px)}
+  .fm-ab-hero-txt h2{font-family:var(--fm-fh);font-weight:600;font-size:clamp(30px,4vw,50px);line-height:1.05;text-transform:uppercase;letter-spacing:1px;color:var(--fm-ink);margin:10px 0 0}
+  .fm-ab-hero-txt p{font-size:clamp(16px,1.7vw,19px);line-height:1.6;color:#3a3326;margin-top:16px;max-width:460px}
+  .fm-ab-hero-img{background-size:cover;background-position:center;background-color:#d8cdbb}
+  @media(max-width:780px){.fm-ab-hero{grid-template-columns:1fr}.fm-ab-hero-img{min-height:280px}}
+  .fm-ab-intro{text-align:center;max-width:860px;margin:0 auto;padding:clamp(40px,6vw,80px) clamp(20px,4vw,40px)}
+  .fm-ab-intro h2{font-family:var(--fm-fh);font-weight:600;font-size:clamp(28px,4vw,46px);text-transform:uppercase;letter-spacing:1.5px;color:var(--fm-ink);margin:8px 0 24px}
+  .fm-ab-cols{display:grid;grid-template-columns:1fr 1fr;gap:clamp(22px,4vw,48px);text-align:left}
+  .fm-ab-cols p{font-size:17px;line-height:1.7;color:var(--fm-mut)}
+  @media(max-width:680px){.fm-ab-cols{grid-template-columns:1fr;gap:16px}}
+  .fm-btn-outline{display:inline-block;margin-top:30px;font-family:var(--fm-fs);font-size:13px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--fm-ink);text-decoration:none;border:1.5px solid var(--fm-ink);padding:12px 30px;transition:all .15s}
+  .fm-btn-outline:hover{background:var(--fm-green);border-color:var(--fm-green);color:#fff}
+  .fm-ab-split{display:grid;grid-template-columns:1fr 1fr;align-items:stretch;min-height:clamp(300px,36vw,440px)}
+  .fm-ab-split-img{background-size:cover;background-position:center;background-color:#d8cdbb}
+  .fm-ab-split-txt{background:var(--fm-orange);display:flex;flex-direction:column;justify-content:center;padding:clamp(30px,5vw,64px)}
+  .fm-ab-split-txt h3{font-family:var(--fm-fh);font-weight:600;font-size:clamp(26px,3.4vw,42px);line-height:1.08;text-transform:uppercase;letter-spacing:1px;color:var(--fm-ink);margin:0}
+  .fm-ab-split-txt p{font-size:clamp(16px,1.6vw,18px);line-height:1.6;color:#3a3326;margin-top:14px;max-width:440px}
+  @media(max-width:780px){.fm-ab-split{grid-template-columns:1fr}.fm-ab-split-img{min-height:260px;order:-1}.fm-ab-split.reverse .fm-ab-split-img{order:-1}}
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">
