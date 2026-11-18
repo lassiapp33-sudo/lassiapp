@@ -220,7 +220,7 @@ export const TEMPLATE_PRESETS: Record<string, { tokens: SiteConfig['tokens']; la
     layout: { order: ['services', 'products', 'terrains'], cols: 2, card: 'shadow', hero: 'split' },
   },
   ferme: {
-    tokens: { palette: 'creme', accent: '#35663E', fontHeading: 'oswald', fontBody: 'cormorant' },
+    tokens: { palette: 'creme', accent: '#2F5E3C', fontHeading: 'cormorant', fontBody: 'cormorant' },
     layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'shadow', hero: 'split' },
   },
 };
