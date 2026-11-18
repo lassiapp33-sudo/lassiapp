@@ -627,9 +627,9 @@ const REVEAL = `<style id="lx-reveal-style">
 .lx-rv.lx-in{opacity:1;transform:none}
 /* Boutons d'action : respiration fluide continue — tous SAUF « Ajouter » (.add). */
 @keyframes lxCta{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
-.cx-btn,.cx-btn-outline,.cx-play,.fn-btn,.gd-btn,.gd-head-cta,.sc-foot-cta,.svcbtn,.bookbtn,.btn{animation:lxCta 2.8s ease-in-out infinite;will-change:transform}
+.cx-btn,.cx-btn-outline,.cx-play,.fn-btn,.gd-btn,.gd-head-cta,.sc-foot-cta,.svcbtn,.bookbtn,.btn,.fm-btn,.fm-btn-outline,.fm-head-cta{animation:lxCta 2.8s ease-in-out infinite;will-change:transform}
 .add{animation:none!important}
-@media(prefers-reduced-motion:reduce){.lx-rv{opacity:1!important;transform:none!important;transition:none!important}.cx-btn,.cx-btn-outline,.cx-play,.fn-btn,.gd-btn,.gd-head-cta,.sc-foot-cta,.svcbtn,.bookbtn,.btn{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.lx-rv{opacity:1!important;transform:none!important;transition:none!important}.cx-btn,.cx-btn-outline,.cx-play,.fn-btn,.gd-btn,.gd-head-cta,.sc-foot-cta,.svcbtn,.bookbtn,.btn,.fm-btn,.fm-btn-outline,.fm-head-cta{animation:none!important}}
 </style>
 <script>(function(){
   try{
@@ -640,8 +640,9 @@ const REVEAL = `<style id="lx-reveal-style">
     // templates pleins préfixent leurs classes (cx-/fn-/gd-/sc-) : motifs d'attribut
     // pour couvrir accroche, titres de héro et en-têtes de section quel que soit le préfixe.
     var SOFT='.shop-cat,.hero-title,.hero-desc,.hours-block,.promo-banner,.catalog-title,.sectitle,.cathead,.appnote,.foot,.about,.closed-notice,'
-      +'[class*="-eyebrow"],[class*="-hero-title"],[class*="-hero-sub"],[class*="-sec-head"],[class*="-rooms-top"],[class*="-types-head"],[class*="-mat-l"]';
-    var CARDS='.prod,.terrain-card';
+      +'[class*="-eyebrow"],[class*="-hero-title"],[class*="-hero-sub"],[class*="-sec-head"],[class*="-rooms-top"],[class*="-types-head"],[class*="-mat-l"],'
+      +'.fm-hero-in,.fm-testi,.fm-ab-hero-txt,.fm-ab-intro,.fm-ab-split-txt,.fm-insta h2,.fm-insta-tag';
+    var CARDS='.prod,.terrain-card,.fm-band-img,.fm-band-mid,.fm-gtile,.fm-insta-tile,.fm-ab-hero-img,.fm-ab-split-img';
     function tag(sel,zoom){
       [].slice.call(document.querySelectorAll(sel)).forEach(function(el){
         if(el.__lxrv)return;
@@ -2257,6 +2258,10 @@ function page(o: {
       function show(which, anchor){
         Object.keys(pages).forEach(function(k){ if(pages[k]) pages[k].hidden=(k!==which); });
         document.querySelectorAll('.fm-nav a').forEach(function(a){ a.classList.toggle('fm-nav-active', a.getAttribute('href')===active[which]); });
+        // Filet de sécurité : les animations d'entrée se déclenchent via IntersectionObserver
+        // quand la page devient visible ; on garantit l'affichage au cas où (450ms).
+        var pg=pages[which];
+        if(pg) setTimeout(function(){ [].forEach.call(pg.querySelectorAll('.lx-rv:not(.lx-in)'), function(el){ el.classList.add('lx-in'); }); }, 450);
         if(anchor){ var t=document.querySelector(anchor); if(t){ setTimeout(function(){ t.scrollIntoView({behavior:'smooth'}); },60); return; } }
         window.scrollTo({top:0,behavior:'smooth'});
       }
