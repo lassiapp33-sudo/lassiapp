@@ -464,13 +464,6 @@ export default async function handler(
     html = html.replace('</body>', inject + '</body>');
   }
 
-  // Animations d'entrée au scroll — dosées, fluides, appliquées à TOUS les templates.
-  // Jamais en mode édition (le prestataire doit voir les blocs stables) ni si l'OS
-  // demande moins de mouvement. S'auto-désactive sur les éléments à animation manuelle.
-  if (!editMode) {
-    html = html.replace('</body>', REVEAL + '</body>');
-  }
-
   return new Response(html, {
     status: shop ? 200 : 404,
     headers: {
@@ -589,8 +582,11 @@ const REVEAL = `<style id="lx-reveal-style">
     if(document.body&&document.body.classList.contains('lassi-ed'))return;
     if(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches)return;
     if(!('IntersectionObserver'in window))return;
-    // Points focaux présents dans tous les templates (classic + pleins).
-    var SOFT='.shop-cat,.hero-title,.hero-desc,.hours-block,.promo-banner,.catalog-title,.sectitle,.cathead,.appnote,.foot,.about,.closed-notice';
+    // Points focaux présents dans tous les templates (classic + pleins). Les
+    // templates pleins préfixent leurs classes (cx-/fn-/gd-/sc-) : motifs d'attribut
+    // pour couvrir accroche, titres de héro et en-têtes de section quel que soit le préfixe.
+    var SOFT='.shop-cat,.hero-title,.hero-desc,.hours-block,.promo-banner,.catalog-title,.sectitle,.cathead,.appnote,.foot,.about,.closed-notice,'
+      +'[class*="-eyebrow"],[class*="-hero-title"],[class*="-hero-sub"],[class*="-sec-head"],[class*="-rooms-top"],[class*="-types-head"],[class*="-mat-l"]';
     var CARDS='.prod,.terrain-card';
     function tag(sel,zoom){
       [].slice.call(document.querySelectorAll(sel)).forEach(function(el){
@@ -634,7 +630,7 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
   try{
     var mv=doc.querySelector('meta[name="viewport"]');
     if(!mv){ mv=doc.createElement('meta'); mv.setAttribute('name','viewport'); (doc.head||doc.documentElement).appendChild(mv); }
-    mv.setAttribute('content','width='+Math.round((window.innerWidth||375)*2)+', user-scalable=no');
+    mv.setAttribute('content','width='+Math.round((window.innerWidth||375)/0.75)+', user-scalable=no');
   }catch(e){}
   function post(m){try{window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify(m));}catch(e){}}
   // S'assure que les clés existent même sans overrides (applique un objet vide).
@@ -647,12 +643,16 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
     if(!sel) return;
     try{
       var r=sel.getBoundingClientRect();
-      // Marge = hauteur de l'en-tête fixe/sticky (nav) + un peu d'air, sinon l'élément
-      // édité se retrouve CACHÉ derrière la barre de navigation collée en haut.
-      var navH=0;
-      var nav=doc.querySelector('nav');
-      if(nav){ var ns=getComputedStyle(nav); if(ns.position==='fixed'||ns.position==='sticky'){ navH=nav.getBoundingClientRect().height; } }
-      var margin=navH+20;
+      // Marge = hauteur de l'en-tête collé (sticky/fixed). C'est le <header> qui est
+      // sticky (il CONTIENT le <nav>), pas le <nav> lui-même → on mesure le header,
+      // sinon l'élément édité se retrouve CACHÉ derrière la barre collée en haut.
+      var stickyH=0;
+      [doc.querySelector('header'), doc.querySelector('nav')].forEach(function(el){
+        if(!el) return;
+        var s=getComputedStyle(el);
+        if(s.position==='fixed'||s.position==='sticky'){ var h=el.getBoundingClientRect().height; if(h>stickyH) stickyH=h; }
+      });
+      var margin=stickyH+20;
       var top=r.top+window.scrollY-margin;
       window.scrollTo({top:top<0?0:top, behavior:smooth?'smooth':'auto'});
     }catch(e){}
@@ -2644,6 +2644,7 @@ ${theme.fontsLink}
   ${hasFitness ? `<script>${safeScript(SUBSCRIPTION_JS)}</script>` : ''}
   <div class="lbx" id="lbx"><button class="lbx-close" id="lbxClose">\xD7</button><img class="lbx-img" id="lbxImg" src="" alt=""></div>
   <script>${safeScript(LIGHTBOX_JS)}</script>
+  ${REVEAL}
 </body>
 </html>`;
 }
