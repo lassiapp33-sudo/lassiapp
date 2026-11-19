@@ -620,6 +620,7 @@ export async function getShopsInBounds(
     .select('*')
     .eq('is_admin_account', false)
     .eq('has_content', true)
+    .eq('has_enough_images', true)
     .gte('product_count', 2)
     .not('latitude', 'is', null)
     .not('longitude', 'is', null)
