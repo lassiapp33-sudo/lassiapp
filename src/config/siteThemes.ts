@@ -122,6 +122,7 @@ export const SITE_FONTS: FontOption[] = [
   { id: 'oswald', label: 'Oswald', category: 'Display' },
   { id: 'anton', label: 'Anton', category: 'Display' },
   { id: 'cinzel', label: 'Cinzel', category: 'Serif' },
+  { id: 'syne', label: 'Syne', category: 'Display' },
 ];
 
 // ── Palettes (ids = clés SITE_PALETTES côté edge) ────────────────────────────
@@ -230,6 +231,10 @@ export const TEMPLATE_PRESETS: Record<string, { tokens: SiteConfig['tokens']; la
   grill: {
     tokens: { palette: 'onyx', accent: '#C9A24B', fontHeading: 'anton', fontBody: 'cormorant' },
     layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'flat', hero: 'split' },
+  },
+  bar: {
+    tokens: { palette: 'onyx', accent: '#D68B1A', fontHeading: 'syne', fontBody: 'jost' },
+    layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'flat', hero: 'centered' },
   },
 };
 

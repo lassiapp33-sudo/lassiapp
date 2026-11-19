@@ -106,7 +106,7 @@ const SITE_PALETTES: Record<string, SitePalette> = {
 };
 const DEFAULT_PALETTE = 'classic';
 const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
-const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery', 'furniture', 'garderobe', 'sac', 'tresse', 'ferme', 'grill']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat), #3 furniture (maison & mobilier), #4 garderobe (mode / prêt-à-porter), #5 sac (maroquinerie / bagagerie)
+const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery', 'furniture', 'garderobe', 'sac', 'tresse', 'ferme', 'grill', 'bar']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat), #3 furniture (maison & mobilier), #4 garderobe (mode / prêt-à-porter), #5 sac (maroquinerie / bagagerie) ; bar = restaurant/lounge (BRAISE)
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
 // ── Layout (Phase 2) — agencement des conteneurs, présentation seule ─────────
@@ -650,7 +650,7 @@ const REVEAL = `<style id="lx-reveal-style">
     function tag(sel,zoom){
       [].slice.call(document.querySelectorAll(sel)).forEach(function(el){
         if(el.__lxrv)return;
-        if(el.closest&&(el.closest('.cx-bento')||el.closest('.lx-fx-bento')))return; // bento gère sa propre entrée
+        if(el.closest&&(el.closest('.cx-bento')||el.closest('.lx-fx-bento')||el.closest('.lx-fx-stagger')))return; // bento/stagger gèrent leur propre entrée
         if(/led-a-/.test(''+(el.className||'')))return; // respecte l'anim manuelle
         el.__lxrv=1; el.classList.add('lx-rv'); if(zoom)el.classList.add('lx-z');
       });
@@ -837,7 +837,10 @@ const SCROLLFX = `<style id="lx-fx-style">
 .lx-fx-mask-l>span{display:block;transform:translateY(115%);transition:transform .9s cubic-bezier(.16,1,.3,1);will-change:transform}
 .lx-fx-mask.lx-in .lx-fx-mask-l>span{transform:none}
 .lx-fx-draw{will-change:stroke-dashoffset}
-@media(prefers-reduced-motion:reduce){.lx-fx-piece{opacity:1!important;transform:none!important}.lx-fx-beam-rect{display:none}.lx-fx-zoom{transform:none!important}.lx-fx-curtain{clip-path:none!important}[data-pll]{transform:none!important}.lx-fx-mask-l>span{transform:none!important}}
+.lx-fx-hl{background-image:linear-gradient(90deg,var(--hl-on,#141414) var(--p,0%),var(--hl-off,rgba(20,20,20,.22)) var(--p,0%));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;will-change:background-image}
+.lx-fx-sitem{opacity:0;transform:translateY(38px) scale(.95);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1);will-change:opacity,transform}
+.lx-fx-stagger.lx-in .lx-fx-sitem{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.lx-fx-piece{opacity:1!important;transform:none!important}.lx-fx-beam-rect{display:none}.lx-fx-zoom{transform:none!important}.lx-fx-curtain{clip-path:none!important}[data-pll]{transform:none!important}.lx-fx-mask-l>span{transform:none!important}.lx-fx-sitem{opacity:1!important;transform:none!important}.lx-fx-hl{background:none!important;color:var(--hl-on,#141414)!important;-webkit-text-fill-color:var(--hl-on,#141414)!important}}
 </style>
 <script>(function(){
   try{
@@ -859,6 +862,12 @@ const SCROLLFX = `<style id="lx-fx-style">
       // Zoom-in d'entrée (one-shot) : scale .66 -> 1
       var ioZ=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('lx-in');ioZ.unobserve(e.target);}});},{threshold:.15});
       [].slice.call(document.querySelectorAll('.lx-fx-zoom,.lx-fx-zin,.lx-fx-mask')).forEach(function(el){ioZ.observe(el);});
+      // Staggered reveal (cascade)
+      [].slice.call(document.querySelectorAll('.lx-fx-stagger')).forEach(function(c){
+        [].slice.call(c.querySelectorAll('.prod')).forEach(function(el,i){el.classList.add('lx-fx-sitem');el.style.transitionDelay=(i*90)+'ms';});
+      });
+      var ioS=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('lx-in');ioS.unobserve(e.target);}});},{threshold:.12});
+      [].slice.call(document.querySelectorAll('.lx-fx-stagger')).forEach(function(c){ioS.observe(c);});
     }
     // Border beam (périmètre)
     var beams=[].slice.call(document.querySelectorAll('.lx-fx-beam')).map(function(w){return {w:w,r:w.querySelector('.lx-fx-beam-rect'),len:0};});
@@ -869,17 +878,19 @@ const SCROLLFX = `<style id="lx-fx-style">
     var curts=[].slice.call(document.querySelectorAll('.lx-fx-curtain'));
     var exps=[].slice.call(document.querySelectorAll('.lx-fx-expand'));
     var draws=[].slice.call(document.querySelectorAll('.lx-fx-draw')).map(function(p){var L=0;try{L=p.getTotalLength();}catch(e){}p.style.strokeDasharray=L;p.style.strokeDashoffset=L;return {p:p,len:L};});
+    var hls=[].slice.call(document.querySelectorAll('.lx-fx-hl'));
     var ticking=false;
     function frame(){
       ticking=false;var vh=window.innerHeight;
       draws.forEach(function(it){if(it.len<=0)return;var r=it.p.getBoundingClientRect(),s=vh*0.9,en=vh*0.3,pr=clamp((s-r.top)/(s-en),0,1);it.p.style.strokeDashoffset=(it.len*(1-pr)).toFixed(1);});
+      hls.forEach(function(el){var r=el.getBoundingClientRect(),s=vh*0.82,en=vh*0.4,pr=clamp((s-r.top)/(s-en),0,1);el.style.setProperty('--p',(pr*100).toFixed(1)+'%');});
       plls.forEach(function(el){var r=el.getBoundingClientRect();if(r.bottom>0&&r.top<vh){var sp=parseFloat(el.getAttribute('data-pll'))||0.1;var p=(r.top+r.height/2-vh/2);el.style.transform='translateY('+(p*-sp).toFixed(1)+'px)';}});
       curts.forEach(function(el){var r=el.getBoundingClientRect();var s=vh*0.92,en=vh*0.22,p=clamp((s-r.top)/(s-en),0,1);var iv=(14*(1-p)).toFixed(1),rd=(26-20*p).toFixed(0);el.style.clipPath='inset('+iv+'% '+iv+'% '+iv+'% '+iv+'% round '+rd+'px)';});
       beams.forEach(function(it){if(!it.r||it.len<=0)return;var r=it.w.getBoundingClientRect(),s=vh*0.9,en=vh*0.25,p=clamp((s-r.top)/(s-en),0,1);it.r.style.strokeDashoffset=(it.len*(1-p)).toFixed(1);});
       exps.forEach(function(el){var r=el.getBoundingClientRect();var s=vh*0.92,en=vh*0.22,p=clamp((s-r.top)/(s-en),0,1);el.style.width=(72+28*p).toFixed(2)+'%';el.style.borderRadius=(32*(1-p)).toFixed(1)+'px';});
     }
     function onS(){if(!ticking){ticking=true;requestAnimationFrame(frame);}}
-    if(plls.length||curts.length||beams.length||exps.length||draws.length){window.addEventListener('scroll',onS,{passive:true});window.addEventListener('resize',onS,{passive:true});frame();}
+    if(plls.length||curts.length||beams.length||exps.length||draws.length||hls.length){window.addEventListener('scroll',onS,{passive:true});window.addEventListener('resize',onS,{passive:true});frame();}
   }catch(e){}
 })();</script>`;
 
@@ -1417,6 +1428,38 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
       P('s6', 'Valise Cabine', 58000, 'Valise cabine rigide 4 roues. Format avion, serrure TSA, coque résistante.', 'bagages', 'p6.jpg'),
       P('s7', 'Pochette Cuir', 12000, 'Pochette en cuir à glissière. Range l\'essentiel avec style, finition soignée.', 'accessoires', 'p7.jpg'),
       P('s8', 'Sac Banane', 9500, 'Sac banane toile résistante. Port taille ou épaule, pratique et tendance.', 'accessoires', 'p8.jpg'),
+    ];
+    return { shop, products };
+  }
+
+  if (t === 'bar') {
+    const site_config = {
+      template: 'bar',
+      tokens: { palette: 'onyx', accent: '#D68B1A', fontHeading: 'syne', fontBody: 'jost' },
+      layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'flat', hero: 'centered' },
+      social: { facebook: 'https://facebook.com', tiktok: 'https://tiktok.com', instagram: 'https://instagram.com' },
+    };
+    const shop: Shop = {
+      id: 'demo-bar', name: 'BRAISE', logo_url: null,
+      description: "Une cuisine du feu, pensée comme un art. Pièces maturées, produits de saison et dressages précis dans une salle intime et chaleureuse. Chez BRAISE, chaque dîner est une cérémonie.",
+      zone: 'Dakar · Almadies', category: 'stores', shop_type: 'products',
+      subcategories: ['entrees', 'viandes', 'poissons', 'desserts', 'boissons'],
+      slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
+      site_config, gallery_urls: [img('hero.jpg'), img('g1.jpg'), img('g2.jpg'), img('g3.jpg'), img('g4.jpg'), img('g5.jpg'), img('g6.jpg'), img('g7.jpg'), img('g8.jpg'), img('band.jpg')],
+      cover_url: null, phone: '77 123 45 67', latitude: 14.7430, longitude: -17.5140,
+    };
+    const P = (id: string, name: string, price: number, description: string, category: string, photo: string): Product =>
+      ({ id, name, description, emoji: null, photo_url: img(photo), price, category });
+    const products: Product[] = [
+      P('ba1', 'Tartare de bœuf au couteau', 6500, 'Bœuf local, câpres, jaune d\'œuf fumé, pain grillé.', 'entrees', 'g1.jpg'),
+      P('ba2', 'Gambas flambées', 7000, 'Ail, piquillos, persil plat, citron confit.', 'entrees', 'g3.jpg'),
+      P('ba3', 'Côte de bœuf maturée (40j)', 24000, 'Pour deux · jus corsé, légumes grillés, os à moelle.', 'viandes', 'g1.jpg'),
+      P('ba4', 'Entrecôte grillée', 11000, 'Beurre maître d\'hôtel, frites maison.', 'viandes', 'g4.jpg'),
+      P('ba5', 'Agneau confit 7 heures', 12500, 'Épices douces, semoule parfumée, jus réduit.', 'viandes', 'g2.jpg'),
+      P('ba6', 'Thiof rôti sur l\'arête', 13000, 'Beurre blanc citronné, légumes de saison.', 'poissons', 'g5.jpg'),
+      P('ba7', 'Pavé de capitaine grillé', 10500, 'Émulsion de yassa, riz vapeur.', 'poissons', 'g6.jpg'),
+      P('ba8', 'Fondant chocolat & braise', 4000, 'Glace vanille, éclats de cacao torréfié.', 'desserts', 'g7.jpg'),
+      P('ba9', 'Cocktail signature « Braise »', 5000, 'Rhum ambré, fruits rouges, épices, fumée.', 'boissons', 'g2.jpg'),
     ];
     return { shop, products };
   }
@@ -2333,7 +2376,7 @@ function page(o: {
   const fsImg = fs && typeof fs.image_url === 'string' && fs.image_url.startsWith('http') ? fs.image_url : pick(1);
   const trReserve = fs ? `
     <section class="tr-reserve" id="tr-reserve">
-      <div class="tr-reserve-head"><h2 class="tr-h2">Réservez une prestation</h2>${trSep}</div>
+      <div class="tr-reserve-head"><h2 class="tr-h2 lx-fx-hl" style="--hl-on:var(--tr-ink);--hl-off:rgba(43,40,34,.22)">Réservez une prestation</h2>${trSep}</div>
       <div class="tr-feat prod svc book" data-svc="${escAttr(fs.id)}" data-name="${escAttr(fs.name)}" data-price="${prixClient(fs.price)}" data-meta="${escAttr(fs.meta)}" data-min="${Math.max(0, Math.round(fs.price))}">
         <div class="tr-feat-img" ${bg(fsImg)}></div>
         <div class="tr-feat-body">
@@ -2402,7 +2445,7 @@ function page(o: {
 
     <section class="tr-about" id="tr-about">
       <div class="tr-about-txt">
-        <h2 class="tr-h2">À propos</h2>
+        <h2 class="tr-h2 lx-fx-hl" style="--hl-on:var(--tr-ink);--hl-off:rgba(43,40,34,.22)">À propos</h2>
         <p>${esc(clip(o.desc || `${o.name}, votre salon de tresses. Prestations soignées, finitions nettes et conseils personnalisés. Réservez votre créneau en ligne et payez en toute sécurité.`, 240))}</p>
         <p>${esc(clip(`Tresses, nattes, tissages et coiffures protectrices — chaque prestation est réalisée avec soin${o.zone ? ' à ' + o.zone : ''}. Retrouvez toutes mes prestations dans l'onglet « Mes services ».`, 200))}</p>
       </div>
@@ -2422,12 +2465,12 @@ function page(o: {
       <section class="tr-services${catalogCls}">
         <div class="tr-services-head">
           <span class="tr-deco-sm">${trScissors}</span>
-          <h2 class="tr-h2">Mes services</h2>
+          <h2 class="tr-h2 lx-fx-hl" style="--hl-on:var(--tr-ink);--hl-off:rgba(43,40,34,.22)">Mes services</h2>
           <p>Réservez la prestation qui vous convient, paiement sécurisé Wave &amp; Orange Money.</p>
           ${trSep}
         </div>
-        ${catnav}${dsSection}${grid}
-        ${svcSection}
+        <div class="lx-fx-stagger">${catnav}${dsSection}${grid}
+        ${svcSection}</div>
         ${terrainSection}
       </section>
     </div>
@@ -2818,6 +2861,188 @@ function page(o: {
       if(location.hash==='#gr-menu'){ pages.home.hidden=true; pages.menu.hidden=false; } else if(location.hash==='#gr-resa-page'){ pages.home.hidden=true; if(pages.resa)pages.resa.hidden=false; }
     })();</script>`;
 
+  // ── Template BAR / Restaurant-Lounge (BRAISE) ───────────────────────────────
+  // Home bespoke (arche + à propos + signatures + galerie bento + carte),
+  // pages Menu & Réservation réutilisent VERBATIM les hooks grill (gr-page-*,
+  // data-grnav, gr-resa-cfg, GR_RESA_JS) → réservation web réellement câblée
+  // (EF create-guest-table-reservation : créneaux réels + acompte Wave/OM + notif).
+  const baMark = '<svg class="ba-mark" viewBox="0 0 48 48"><g stroke="currentColor" stroke-width="1" stroke-linecap="round" fill="none"><circle cx="24" cy="24" r="6"/><line x1="24" y1="2" x2="24" y2="9"/><line x1="24" y1="39" x2="24" y2="46"/><line x1="2" y1="24" x2="9" y2="24"/><line x1="39" y1="24" x2="46" y2="24"/><line x1="8.5" y1="8.5" x2="13.4" y2="13.4"/><line x1="34.6" y1="34.6" x2="39.5" y2="39.5"/><line x1="39.5" y1="8.5" x2="34.6" y2="13.4"/><line x1="13.4" y1="34.6" x2="8.5" y2="39.5"/></g></svg>';
+  const baSig1 = gal.length > 1 ? gal[1] : (gal[0] || '');
+  const baSig2 = gal.length > 2 ? gal[2] : (gal[1] || gal[0] || '');
+  const baBento = grGalPool.slice(0, 5);
+  const baLat = o.lat, baLng = o.lng;
+  const baMap = (typeof baLat === 'number' && typeof baLng === 'number')
+    ? `<section class="ba-map">
+        <iframe loading="lazy" title="${escAttr(o.name)}" src="https://www.openstreetmap.org/export/embed.html?bbox=${baLng - 0.012}%2C${baLat - 0.008}%2C${baLng + 0.012}%2C${baLat + 0.008}&layer=mapnik&marker=${baLat}%2C${baLng}"></iframe>
+        <div class="ba-map-card">
+          <svg class="ba-mc-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          <b>${esc(clip(o.name, 28))}</b>${o.zone ? `<span>${esc(o.zone)}</span>` : ''}
+          <a href="https://www.openstreetmap.org/?mlat=${baLat}&mlon=${baLng}#map=17/${baLat}/${baLng}" target="_blank" rel="noopener">Itinéraire →</a>
+        </div>
+      </section>` : '';
+
+  const barBody = `
+    <header class="ba-nav" id="ba-top">
+      <div class="ba-nav-in">
+        <a class="ba-brand" href="#ba-top" data-grnav="home">${baMark}${esc(clip(o.name, 20))}</a>
+        <nav class="ba-menu">
+          <a href="#gr-about" data-grnav="home">La maison</a>
+          <a href="#gr-menu" data-grnav="menu">La carte</a>
+          <a href="#gr-resa-page" data-grnav="resa">Réserver une table</a>
+          <a href="#ba-contact" data-grnav="home">Contact</a>
+        </nav>
+      </div>
+    </header>
+    <div class="gr-page gr-page-home">
+    <section class="ba-hero" ${bg(heroImg)}>
+      <div class="ba-hero-bg"></div>
+      <div class="ba-arch lx-rv">
+        ${baMark}
+        <div class="ba-hero-num">EST. ${new Date().getFullYear() - 2}</div>
+        <div class="ba-hero-word">${esc(clip(o.name, 16))}</div>
+        <div class="ba-hero-sub">${esc(clip(o.cat || 'Maison de feu & de saveurs', 60))}</div>
+        <button type="button" class="ba-btn ba-btn-o" data-grnav="resa" href="#gr-resa-page">Réserver une table</button>
+        ${o.zone ? `<div class="ba-hero-adr">${esc(o.zone)}</div>` : ''}
+      </div>
+    </section>
+    <section class="ba-about lx-rv" id="gr-about">
+      <div class="ba-about-l"><span class="ba-eyebrow">La maison</span><h2 class="ba-h24">Une table d'exception</h2></div>
+      <p class="ba-body">${esc(clip(o.desc || `Une cuisine pensée comme un art : produits de saison, dressages précis et accueil chaleureux. Chez ${o.name}, chaque repas est une cérémonie.`, 300))}</p>
+    </section>
+    <div class="ba-sep"></div>
+    <section class="ba-sechead lx-rv"><h2 class="ba-h2">Nos signatures</h2></section>
+    <section class="ba-split lx-rv">
+      <div class="ba-media" ${bg(baSig1)}></div>
+      <div class="ba-txt">
+        <span class="ba-eyebrow">Le plat signature</span>
+        <h2 class="ba-h2">Notre spécialité maison</h2>
+        <p class="ba-meta">Préparée avec soin, servie avec passion.</p>
+        <button type="button" class="ba-btn ba-btn-o" data-grnav="resa" href="#gr-resa-page">Réserver une table</button>
+      </div>
+    </section>
+    <section class="ba-split ba-split-rev lx-rv">
+      <div class="ba-txt">
+        <span class="ba-eyebrow">Les soirées</span>
+        <h2 class="ba-h2">Menu du Chef</h2>
+        <p class="ba-meta">Accords mets & vins · sur réservation.</p>
+        <button type="button" class="ba-btn ba-btn-o" data-grnav="menu" href="#gr-menu">Voir la carte</button>
+      </div>
+      <div class="ba-media" ${bg(baSig2)}></div>
+    </section>
+    ${baBento.length >= 4 ? `
+    <section class="ba-bento lx-rv">
+      <h2 class="ba-h2 ba-ctr">L'art de la table</h2>
+      <div class="ba-bento-grid">${baBento.map(u => `<div class="ba-tile" ${bg(u)}></div>`).join('')}</div>
+    </section>` : ''}
+    <section class="ba-news">
+      <h2 class="ba-h2 ba-ctr">Restons en contact</h2>
+      <p class="ba-body ba-ctr">Recevez nos menus de saison et événements.</p>
+      <div class="ba-news-form"><input class="ba-input" type="email" placeholder="Votre adresse e-mail" aria-label="E-mail"><button type="button" class="ba-btn" data-grnav="resa" href="#gr-resa-page">S'inscrire</button></div>
+    </section>
+    ${baMap}
+    <footer class="ba-foot" id="ba-contact">
+      <div class="ba-foot-info">
+        ${o.zone ? `<div><b>Adresse</b><span>${esc(o.zone)}</span></div>` : ''}
+        ${o.phone ? `<div><b>Téléphone</b><span>${esc(o.phone)}</span></div>` : ''}
+        ${hoursHtml ? `<div class="ba-foot-hours"><b>Horaires</b>${hoursHtml}</div>` : ''}
+      </div>
+      ${socialHtml}
+      <div class="ba-copy">© ${new Date().getFullYear()} ${esc(o.name)} · Propulsé par LASSİ</div>
+    </footer>
+    </div>
+    <div class="gr-page gr-page-menu" id="gr-menu" hidden>
+    ${closedNotice}
+    <section id="gr-shop" class="gr-shop${catalogCls}">
+      <div class="gr-crumb">Accueil › La carte</div>
+      <h2 class="gr-h2 gr-gold">La carte</h2>
+      <p class="gr-sub-ctr">${hasProducts ? 'Commande en ligne · retrait ou livraison' : hasServices ? 'Réservez votre prestation' : 'Nos terrains'}</p>
+      ${catnav}${dsSection}${grid}
+      ${svcSection}
+      ${terrainSection}
+    </section>
+    </div>
+    <div class="gr-page gr-page-resa" id="gr-resa-page" hidden>
+    <section class="gr-resa-sec">
+      <div class="gr-crumb">Accueil › Réservations</div>
+      <h2 class="gr-h2 gr-gold">Effectuer une réservation</h2>
+      <p class="gr-resa-sub2">Sélectionnez vos détails et nous ferons notre possible pour satisfaire votre demande.</p>
+      <div class="gr-resa-bar">
+        <div class="gr-resa-field">
+          <label>Nombre de personnes</label>
+          <select class="gr-resa-pick" id="grNb"></select>
+        </div>
+        <div class="gr-resa-field">
+          <label>Date</label>
+          <button type="button" class="gr-resa-pick gr-resa-trigger" id="grDateBtn"><span id="grDateLbl">Choisir une date</span><span class="gr-resa-ic">▾</span></button>
+          <div class="gr-resa-pop gr-resa-cal" id="grCal" hidden></div>
+        </div>
+        <div class="gr-resa-field">
+          <label>Heure</label>
+          <div class="gr-resa-pick gr-resa-heuredisp" id="grHourSel"><span>—</span><span class="gr-resa-ic">▾</span></div>
+        </div>
+      </div>
+      <div class="gr-resa-hr"></div>
+      <div class="gr-resa-gridwrap" id="grGridWrap" hidden>
+        <p class="gr-resa-gridlabel">Choisissez un créneau horaire :</p>
+        <div class="gr-hours-grid" id="grHours"></div>
+      </div>
+      <button type="button" class="gr-btn gr-btn-dark gr-resa-find" id="grFind">Réserver</button>
+      <p class="gr-resa-msg gr-resa-barmsg" id="grBarMsg"></p>
+    </section>
+    </div>
+    <div class="gr-resa-ov" id="grResaOv" hidden>
+      <div class="gr-resa-modal" role="dialog" aria-modal="true">
+        <button class="gr-resa-x" id="grResaX" type="button" aria-label="Fermer">×</button>
+        <div id="grResaStep1">
+          <h3 class="gr-resa-h">Finaliser la réservation</h3>
+          <div class="gr-resa-recap" id="grRecap"></div>
+          <p class="gr-resa-note">Acompte de 2000 F déduit de votre addition sur place · 100 F de frais de service.</p>
+          <label class="gr-resa-lb">Votre nom</label>
+          <input class="gr-resa-in" type="text" id="grName" maxlength="80" placeholder="Ex : Awa Diop">
+          <label class="gr-resa-lb">Téléphone</label>
+          <input class="gr-resa-in" type="tel" id="grPhone" inputmode="numeric" maxlength="14" placeholder="77 123 45 67">
+          <label class="gr-resa-lb">Paiement de l'acompte</label>
+          <div class="gr-resa-pays">
+            <button class="gr-resa-pay" type="button" data-m="wave"><img src="/assets/wave.jpg" alt="">Wave</button>
+            <button class="gr-resa-pay" type="button" data-m="orange_money"><img src="/assets/om.png" alt="">Orange Money</button>
+          </div>
+          <p class="gr-resa-msg" id="grMsg"></p>
+          <button class="gr-btn gr-resa-submit" id="grSubmit" type="button">Payer l'acompte · 2100 F</button>
+        </div>
+        <div id="grResaStep2" hidden>
+          <h3 class="gr-resa-h">En attente du paiement…</h3>
+          <p class="gr-resa-note" id="grWaitMsg">Validez le paiement, puis revenez sur cette page.</p>
+          <img id="grQr" alt="QR paiement" hidden style="display:block;margin:14px auto;max-width:220px">
+          <div class="gr-resa-spin"></div>
+          <button class="gr-btn gr-btn-dark gr-resa-submit" id="grCheck" type="button">J'ai payé — vérifier</button>
+        </div>
+        <div id="grResaDone" hidden>
+          <h3 class="gr-resa-h">Demande envoyée ✓</h3>
+          <p class="gr-resa-note">Votre acompte est payé. Le restaurant va confirmer votre table — vous serez notifié. Présentez-vous à l'heure choisie.</p>
+          <button class="gr-btn gr-resa-submit" id="grClose2" type="button">Fermer</button>
+        </div>
+      </div>
+    </div>
+    <script id="gr-resa-cfg" type="application/json">${JSON.stringify({ url: SUPABASE_URL, key: SUPABASE_ANON_KEY, slug: o.slug })}</script>
+    <script>${GR_RESA_JS}</script>
+    <script>(function(){
+      var pages={home:document.querySelector('.gr-page-home'),menu:document.querySelector('.gr-page-menu'),resa:document.querySelector('.gr-page-resa')};
+      if(!pages.home||!pages.menu) return;
+      if(document.body.classList.contains('lassi-ed')){ pages.menu.hidden=false; if(pages.resa)pages.resa.hidden=false; return; }
+      document.querySelectorAll('[data-grnav]').forEach(function(a){
+        a.addEventListener('click',function(e){
+          e.preventDefault();
+          var w=a.getAttribute('data-grnav'); var h=a.getAttribute('href')||'';
+          Object.keys(pages).forEach(function(k){ pages[k].hidden=(k!==w); });
+          var pg=pages[w]; setTimeout(function(){ [].forEach.call(pg.querySelectorAll('.lx-rv:not(.lx-in)'),function(el){el.classList.add('lx-in');}); },300);
+          var an=(w==='home'&&h.indexOf('#')===0&&h!=='#ba-top')?h:null;
+          if(an){ var t=document.querySelector(an); if(t){ setTimeout(function(){ t.scrollIntoView({behavior:'smooth'}); },60); return; } }
+          window.scrollTo({top:0,behavior:'smooth'});
+        });
+      });
+      if(location.hash==='#gr-menu'){ pages.home.hidden=true; pages.menu.hidden=false; } else if(location.hash==='#gr-resa-page'){ pages.home.hidden=true; if(pages.resa)pages.resa.hidden=false; }
+    })();</script>`;
+
   const body = theme.template === 'furniture' && hasCatalog ? furnitureBody
     : theme.template === 'cosmetic' && hasCatalog ? cosmeticBody
     : theme.template === 'garderobe' && hasCatalog ? garderobeBody
@@ -2825,6 +3050,7 @@ function page(o: {
     : theme.template === 'tresse' && hasCatalog ? tresseBody
     : theme.template === 'ferme' && hasCatalog ? fermeBody
     : theme.template === 'grill' && hasCatalog ? grillBody
+    : theme.template === 'bar' && hasCatalog ? barBody
     : classicBody;
 
   const cfg = JSON.stringify({
@@ -2857,6 +3083,7 @@ function page(o: {
 ${theme.fontsLink}
 ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=Raleway:wght@300;400;500;600;700&display=swap" rel="stylesheet">' : ''}
 ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Cinzel:wght@500;600&display=swap" rel="stylesheet">' : ''}
+${theme.template === 'bar' ? '<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">' : ''}
 <style>
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
   [hidden] { display:none !important; }
@@ -3931,6 +4158,99 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-foot-hours{color:var(--gr-txt)}
   .gr-foot .soc-row{justify-content:center;margin:26px 0 0}
   .gr-copy{margin-top:26px;padding-top:22px;border-top:1px solid rgba(201,162,75,.15);font-family:var(--gr-fs);font-size:12px;letter-spacing:.5px;color:var(--gr-mut)}
+
+  /* ===== TEMPLATE BAR / RESTAURANT-LOUNGE (BRAISE) ===== */
+  /* Redéfinit les variables --gr-* → tous les composants réutilisés (réservation, */
+  /* catalogue, boutons, modale) héritent du look BRAISE automatiquement.           */
+  body[data-template="bar"]{--gr-bg:#0D0C11;--gr-bg2:#141218;--gr-gold:#D68B1A;--gr-gold-d:#9c6413;--gr-ink:#0D0C11;--gr-txt:#E8E2DA;--gr-mut:#8A8580;--gr-fh:'Syne',system-ui,sans-serif;--gr-fe:'Syne',system-ui,sans-serif;--gr-fb:'Jost',system-ui,sans-serif;--gr-fs:'Syne',system-ui,sans-serif;background:var(--gr-bg);color:var(--gr-txt);font-family:var(--gr-fb);font-size:16px}
+  /* Catalogue (miroir des règles grill préfixées) */
+  body[data-template="bar"] .gr-shop{max-width:860px;margin:0 auto}
+  body[data-template="bar"] .gr-crumb{font-family:var(--gr-fs);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gr-mut);text-align:center;margin-bottom:10px}
+  body[data-template="bar"] .catnav{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:30px}
+  body[data-template="bar"] .chip{font-family:var(--gr-fs);text-transform:uppercase;letter-spacing:.5px;font-size:12px;font-weight:600;background:transparent;color:var(--gr-txt);border:1px solid rgba(214,139,26,.4);border-radius:40px;padding:9px 18px}
+  body[data-template="bar"] .chip.sel{background:var(--gr-gold);color:var(--gr-ink);border-color:var(--gr-gold)}
+  body[data-template="bar"] .cathead{justify-content:flex-start;border-bottom:1px solid rgba(214,139,26,.3);padding-bottom:10px;margin:36px 0 4px}
+  body[data-template="bar"] .cathead-title{font-family:var(--gr-fe);font-weight:700;color:var(--gr-gold);text-transform:uppercase;letter-spacing:1px;font-size:22px}
+  body[data-template="bar"] .cathead-count{display:none}
+  body[data-template="bar"] .grid,body[data-template="bar"] .catsec .grid{display:block;gap:0}
+  body[data-template="bar"] .prod{background:transparent;border:0;border-bottom:1px solid rgba(214,139,26,.14);border-radius:0;overflow:visible;padding:16px 2px}
+  body[data-template="bar"] .prod.in{border-bottom-color:var(--gr-gold)}
+  body[data-template="bar"] .pimgzone{display:none}
+  body[data-template="bar"] .pbody{display:grid;grid-template-columns:1fr auto;grid-template-areas:"name price" "desc add";column-gap:18px;row-gap:4px;align-items:baseline}
+  body[data-template="bar"] .pname{grid-area:name;font-family:var(--gr-fe);color:var(--gr-txt);font-weight:600;font-size:17px}
+  body[data-template="bar"] .pdesc{grid-area:desc;color:var(--gr-mut);font-size:14px;line-height:1.5;font-family:var(--gr-fb)}
+  body[data-template="bar"] .pprice{grid-area:price;font-family:var(--gr-fe);font-weight:700;color:var(--gr-gold);font-size:18px;text-align:right;white-space:nowrap}
+  body[data-template="bar"] .pstock{grid-area:desc;color:var(--gr-mut);font-size:12px}
+  body[data-template="bar"] .stepper{grid-area:add;justify-self:end;margin-top:2px}
+  body[data-template="bar"] .add{background:var(--gr-gold);color:var(--gr-ink);border:1px solid var(--gr-gold);border-radius:2px;font-family:var(--gr-fs);text-transform:uppercase;letter-spacing:1px;font-weight:700;font-size:11px;padding:7px 15px}
+  /* Header */
+  body[data-template="bar"] .ba-nav{position:sticky;top:0;z-index:40;background:rgba(13,12,17,.9);backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,.07)}
+  .ba-nav-in{max-width:1140px;margin:0 auto;padding:0 28px;display:flex;align-items:center;height:80px;gap:30px}
+  .ba-brand{display:flex;align-items:center;gap:10px;font-family:'Syne',sans-serif;font-weight:800;font-size:24px;letter-spacing:3px;color:#fff;text-decoration:none;text-transform:uppercase}
+  .ba-brand .ba-mark{width:22px;height:22px;color:#fff}
+  .ba-menu{display:flex;gap:26px;margin-left:auto;flex-wrap:wrap}
+  .ba-menu a{font-family:'Syne',sans-serif;font-size:14px;color:#fff;opacity:.85;text-decoration:none}
+  .ba-menu a:hover{color:var(--gr-gold);opacity:1}
+  @media(max-width:760px){.ba-menu{display:none}}
+  /* Hero arche */
+  .ba-hero{position:relative;min-height:92vh;background-size:cover;background-position:center;background-color:#1b1a18;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+  .ba-hero-bg{position:absolute;inset:0;background:rgba(13,12,17,.2)}
+  .ba-arch{position:relative;z-index:2;width:min(470px,90%);min-height:84vh;display:flex;flex-direction:column;align-items:center;background:var(--gr-bg);border-radius:235px 235px 0 0;padding:70px 46px 40px;text-align:center}
+  .ba-arch .ba-mark{width:42px;height:42px;color:#fff;margin-bottom:34px}
+  .ba-hero-num{font-family:'Syne';font-weight:500;font-size:20px;color:#fff;margin-bottom:12px}
+  .ba-hero-word{font-family:'Syne';font-weight:800;font-size:clamp(44px,8vw,72px);line-height:1;color:#fff;letter-spacing:2px;text-transform:uppercase}
+  .ba-hero-sub{font-family:'Jost';font-weight:300;font-size:17px;color:var(--gr-mut);margin:24px 0 28px}
+  .ba-hero-adr{margin-top:auto;padding-top:50px;color:#fff;font-size:15px}
+  .ba-btn{display:inline-block;font-family:'Syne';font-weight:600;font-size:14px;padding:15px 36px;background:var(--gr-gold);color:var(--gr-ink);border:1px solid var(--gr-gold);cursor:pointer;text-decoration:none}
+  .ba-btn:hover{background:transparent;color:var(--gr-gold)}
+  .ba-btn-o{background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
+  .ba-btn-o:hover{border-color:var(--gr-gold);color:var(--gr-gold)}
+  /* Titres */
+  .ba-h2{font-family:'Syne';font-weight:700;font-size:clamp(30px,5vw,54px);line-height:1.2;color:#fff;margin:0}
+  .ba-h24{font-family:'Syne';font-weight:400;font-size:24px;color:var(--gr-mut);margin:0}
+  .ba-eyebrow{font-family:'Syne';font-weight:600;color:var(--gr-gold);font-size:18px}
+  .ba-body{font-family:'Jost';font-weight:300;font-size:16px;line-height:1.8;color:var(--gr-mut)}
+  .ba-ctr{text-align:center}
+  /* À propos */
+  .ba-about{max-width:1140px;margin:0 auto;padding:clamp(70px,10vw,130px) 28px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+  @media(max-width:760px){.ba-about{grid-template-columns:1fr;gap:28px}}
+  .ba-sep{height:1px;background:rgba(255,255,255,.1);max-width:1140px;margin:0 auto}
+  .ba-sechead{max-width:1140px;margin:0 auto;padding:80px 28px 30px}
+  /* Splits signatures */
+  .ba-split{display:grid;grid-template-columns:1fr 1fr;align-items:stretch;min-height:clamp(380px,50vw,560px)}
+  .ba-media{background-size:cover;background-position:center;background-color:#1b1a18;min-height:300px}
+  .ba-txt{display:flex;flex-direction:column;justify-content:center;gap:12px;padding:clamp(40px,6vw,70px)}
+  .ba-meta{color:var(--gr-mut);font-family:'Jost'}
+  @media(max-width:760px){.ba-split{grid-template-columns:1fr}.ba-split-rev .ba-media{order:-1}}
+  /* Galerie bento */
+  .ba-bento{max-width:1140px;margin:0 auto;padding:clamp(60px,8vw,110px) 28px}
+  .ba-bento .ba-h2{margin-bottom:40px}
+  .ba-bento-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:200px;gap:12px}
+  .ba-tile{background-size:cover;background-position:center;background-color:#1b1a18;border-radius:4px}
+  .ba-tile:nth-child(1){grid-column:span 2;grid-row:span 2}
+  .ba-tile:nth-child(2){grid-column:span 2}
+  .ba-tile:nth-child(5){grid-column:span 2}
+  @media(max-width:760px){.ba-bento-grid{grid-template-columns:1fr 1fr;grid-auto-rows:150px}.ba-tile:nth-child(1){grid-column:span 2;grid-row:auto}}
+  /* Newsletter */
+  .ba-news{text-align:center;padding:clamp(60px,8vw,110px) 28px}
+  .ba-news .ba-body{margin:14px auto 26px;max-width:44ch}
+  .ba-news-form{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;max-width:500px;margin:0 auto}
+  .ba-input{flex:1;min-width:220px;background:transparent;border:1px solid rgba(214,139,26,.4);color:#fff;font-family:'Jost';font-size:15px;padding:14px 18px}
+  .ba-input::placeholder{color:var(--gr-mut)}
+  /* Carte */
+  .ba-map{position:relative;margin-top:30px}
+  .ba-map iframe{display:block;width:100%;height:420px;border:0;filter:grayscale(.3) contrast(1.05)}
+  .ba-map-card{position:absolute;z-index:3;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--gr-bg);border:1px solid rgba(255,255,255,.14);padding:20px 26px;text-align:center;min-width:230px}
+  .ba-mc-pin{width:28px;height:28px;color:var(--gr-gold);margin-bottom:8px}
+  .ba-map-card b{display:block;font-family:'Syne';font-weight:700;color:#fff;font-size:16px;margin-bottom:4px}
+  .ba-map-card span{color:var(--gr-mut);font-size:14px}
+  .ba-map-card a{display:inline-block;margin-top:10px;font-family:'Syne';font-size:13px;color:var(--gr-gold);border-bottom:1px solid var(--gr-gold);text-decoration:none}
+  /* Footer */
+  .ba-foot{background:var(--gr-bg2);border-top:1px solid rgba(255,255,255,.08);text-align:center;padding:clamp(50px,7vw,80px) 28px 36px}
+  .ba-foot-info{display:flex;justify-content:center;gap:clamp(28px,5vw,60px);flex-wrap:wrap;margin-bottom:24px}
+  .ba-foot-info b{display:block;font-family:'Syne';font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gr-gold);margin-bottom:6px}
+  .ba-foot-info span{color:var(--gr-txt);font-size:15px}
+  .ba-copy{margin-top:22px;padding-top:20px;border-top:1px solid rgba(255,255,255,.1);font-family:'Syne';font-size:12px;color:var(--gr-mut)}
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">
