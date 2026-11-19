@@ -2323,9 +2323,8 @@ function page(o: {
     { n: '02', t: 'Servir les<br>meilleures viandes', p: 'Des pièces maturées et sélectionnées avec soin auprès de nos éleveurs, pour une tendreté et un goût incomparables.' },
     { n: '03', t: 'Situé au cœur<br>de la ville', p: `${esc(o.zone || 'En plein centre')}, un cadre chaleureux pour vos dîners, vos tablées entre amis et vos grandes occasions.` },
   ];
-  const grGalPool = [...gal.slice(1)].filter(Boolean).slice(0, 3);
+  const grGalPool = [...gal.slice(1)].filter(Boolean).slice(0, 8);
   const grBandImg = gal.length ? gal[gal.length - 1] : (gal[0] || '');
-  const grAboutBg = pick(2); // photo cuisine/ambiance derrière « LE RESTAURANT »
   const grillBody = `
     <header class="gr-head" id="gr-top">
       <div class="gr-topbar">${o.zone ? `<span>${esc(o.zone)}</span>` : ''}${o.phone ? `<span>${esc(o.phone)}</span>` : ''}<span>Réservation &amp; commande en ligne</span></div>
@@ -2341,29 +2340,19 @@ function page(o: {
         <a class="gr-ic gr-cart" href="#gr-shop" title="Commander"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></a>
       </div>
     </header>
-    <section class="gr-hero">
+    <section class="gr-hero" ${bg(heroImg)}>
+      <div class="gr-hero-ov"></div>
       <div class="gr-hero-in">
-        <div class="gr-hero-txt">
-          <h1 class="gr-hero-title">${esc(o.name)}</h1>
-          <div class="gr-hero-sub">Grande cuisine française</div>
-          <a class="gr-btn" href="#gr-shop">Menu</a>
-        </div>
-        <div class="gr-hero-img" ${bg(heroImg)}></div>
+        <h1 class="gr-hero-title">${esc(o.name)}</h1>
+        <div class="gr-hero-sub">Grande cuisine française</div>
+        <a class="gr-btn" href="#gr-shop">Menu</a>
       </div>
     </section>
-    <section class="gr-about" id="gr-about" ${bg(grAboutBg)}>
-      <div class="gr-about-ov"></div>
-      <div class="gr-about-in">
-        <h2 class="gr-h2 gr-gold">Le restaurant</h2>
-        <div class="gr-cols">${grCols.map(c => `<div class="gr-col"><span class="gr-num">${c.n}</span><span class="gr-trait"></span><h3>${c.t}</h3><p>${esc(c.p)}</p></div>`).join('')}</div>
-      </div>
+    <section class="gr-about" id="gr-about">
+      <h2 class="gr-h2 gr-gold">Le restaurant</h2>
+      <div class="gr-cols">${grCols.map(c => `<div class="gr-col"><span class="gr-num">${c.n}</span><span class="gr-trait"></span><h3>${c.t}</h3><p>${esc(c.p)}</p></div>`).join('')}</div>
     </section>
-    <section class="gr-reserve">
-      <div class="gr-cutlery"><img src="/assets/grill/cutlery.jpg" alt=""></div>
-      <h2 class="gr-h2 gr-light">Réserver une table</h2>
-      <p class="gr-lead gr-dark">Sélectionnez vos détails et nous ferons notre possible pour satisfaire votre demande.</p>
-      <a class="gr-btn gr-btn-dark" href="#gr-shop">Trouver une table</a>
-    </section>
+    <div class="gr-cutlery"><img src="/assets/grill/cutlery.jpg" alt=""></div>
     <section class="gr-feature">
       <div class="gr-beef"><img src="/assets/grill/beef.jpg" alt=""></div>
       <h2 class="gr-h2 gr-gold">Bifsteck + temps<br>= perfection</h2>
@@ -2382,7 +2371,7 @@ function page(o: {
       ${svcSection}
       ${terrainSection}
     </section>
-    ${grGalPool.length >= 3 ? `
+    ${grGalPool.length >= 4 ? `
     <section class="gr-gallery" id="gr-gallery">
       <h2 class="gr-h2 gr-gold">Galerie</h2>
       <div class="gr-gal-grid">${grGalPool.map(u => `<div class="gr-gtile" ${bg(u)}></div>`).join('')}</div>
@@ -3327,27 +3316,21 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   .gr-nav a{font-family:var(--gr-fs);color:var(--gr-ink);text-decoration:none;font-size:12.5px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase}
   .gr-nav a:hover,.gr-nav .gr-nav-active{color:#fff}
   .gr-ic{color:var(--gr-ink);display:flex}
-  /* HERO — texte à gauche, viande à droite (réf Au Grill) */
-  .gr-hero{background:#1b1a18;background-image:radial-gradient(circle at 20% 30%,rgba(60,55,48,.6),transparent 60%),linear-gradient(180deg,#201f1c,#1a1917)}
-  .gr-hero-in{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;align-items:center;min-height:min(80vh,640px)}
-  .gr-hero-txt{padding:40px clamp(20px,4vw,56px);z-index:2}
-  .gr-hero-title{font-family:var(--gr-fh);font-size:clamp(56px,10vw,150px);line-height:.88;letter-spacing:2px;text-transform:uppercase;color:#fff;margin:0;text-shadow:0 6px 30px rgba(0,0,0,.5)}
-  .gr-hero-sub{font-family:var(--gr-fs);font-size:clamp(12px,1.6vw,18px);font-weight:600;letter-spacing:5px;text-transform:uppercase;color:var(--gr-gold);margin:18px 0 30px}
-  .gr-hero-img{align-self:stretch;min-height:320px;margin:24px clamp(10px,3vw,40px) 24px 0;background-size:cover;background-position:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
-  @media(max-width:760px){.gr-hero-in{grid-template-columns:1fr}.gr-hero-txt{text-align:center;order:2;padding-top:0}.gr-hero-img{order:1;margin:0;min-height:300px}}
+  /* HERO */
+  .gr-hero{position:relative;min-height:min(86vh,680px);display:flex;align-items:center;justify-content:center;background-size:cover;background-position:center;background-color:#1b1a18;text-align:center}
+  .gr-hero-ov{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(20,19,17,.35),rgba(20,19,17,.72))}
+  .gr-hero-in{position:relative;z-index:2;padding:40px 20px}
+  .gr-hero-title{font-family:var(--gr-fh);font-size:clamp(64px,14vw,180px);line-height:.9;letter-spacing:2px;text-transform:uppercase;color:#fff;margin:0;text-shadow:0 6px 30px rgba(0,0,0,.5)}
+  .gr-hero-sub{font-family:var(--gr-fs);font-size:clamp(13px,2vw,22px);font-weight:600;letter-spacing:6px;text-transform:uppercase;color:#fff;margin:16px 0 30px}
   .gr-btn{display:inline-block;background:var(--gr-gold);color:var(--gr-ink);text-decoration:none;font-family:var(--gr-fs);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:14px 40px;border:1px solid var(--gr-gold);transition:all .18s}
   .gr-btn:hover{background:transparent;color:var(--gr-gold)}
-  .gr-btn-dark{background:var(--gr-ink);color:var(--gr-gold);border-color:var(--gr-ink)}
-  .gr-btn-dark:hover{background:transparent;color:var(--gr-ink)}
   /* Titres */
   .gr-h2{text-align:center;line-height:1.04;margin:0}
   .gr-gold{font-family:var(--gr-fe);font-weight:600;color:var(--gr-gold);font-size:clamp(28px,4.4vw,50px);letter-spacing:3px;text-transform:uppercase}
   .gr-light{font-family:var(--gr-fh);color:#fff;font-size:clamp(32px,5vw,60px);letter-spacing:1px;text-transform:uppercase}
   .gr-sm{font-size:clamp(22px,3vw,34px);letter-spacing:2px}
-  /* LE RESTAURANT — 3 colonnes sur photo d'ambiance assombrie */
-  .gr-about{position:relative;background:var(--gr-bg);background-size:cover;background-position:center;padding:clamp(50px,7vw,96px) clamp(20px,4vw,48px)}
-  .gr-about-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(26,25,23,.82),rgba(26,25,23,.9))}
-  .gr-about-in{position:relative;z-index:2}
+  /* LE RESTAURANT — 3 colonnes */
+  .gr-about{background:var(--gr-bg);padding:clamp(50px,7vw,96px) clamp(20px,4vw,48px)}
   .gr-cols{max-width:1080px;margin:clamp(30px,5vw,56px) auto 0;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(24px,4vw,56px);text-align:center}
   .gr-num{display:block;font-family:var(--gr-fe);font-size:30px;font-weight:600;color:var(--gr-gold);margin-bottom:12px}
   .gr-trait{display:block;width:46px;height:2px;background:var(--gr-gold);opacity:.8;margin:0 auto 18px}
@@ -3355,12 +3338,8 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   .gr-col p{font-size:16px;line-height:1.6;color:var(--gr-mut)}
   .gr-col+.gr-col{border-left:1px solid rgba(201,162,75,.22)}
   @media(max-width:760px){.gr-cols{grid-template-columns:1fr;gap:34px}.gr-col+.gr-col{border-left:0;border-top:1px solid rgba(201,162,75,.22);padding-top:30px}}
-  /* RÉSERVER UNE TABLE — section or + couverts gravés (réf Au Grill) */
-  .gr-reserve{background:var(--gr-gold);text-align:center;padding:0 clamp(20px,4vw,48px) clamp(50px,7vw,90px)}
-  .gr-reserve .gr-h2{color:var(--gr-ink)!important;font-family:var(--gr-fh)}
-  .gr-reserve .gr-btn{margin-top:26px}
   /* Illustrations gravées (couverts sur or, bœuf sur sombre) */
-  .gr-cutlery{background:var(--gr-gold);line-height:0} .gr-cutlery img{width:auto;max-width:min(92%,520px);max-height:300px;object-fit:contain;object-position:center;display:block;margin:0 auto;mix-blend-mode:multiply}
+  .gr-cutlery{background:#BCA86A;line-height:0} .gr-cutlery img{width:100%;max-height:360px;object-fit:cover;object-position:center;display:block}
   .gr-beef{line-height:0} .gr-beef img{width:100%;max-height:300px;object-fit:cover;object-position:center;display:block}
   .gr-ill-wrap{display:flex;justify-content:center;color:var(--gr-ink);padding:clamp(20px,4vw,40px) 20px}
   .gr-ill{height:clamp(110px,14vw,170px);width:auto;opacity:.9}
@@ -3390,7 +3369,7 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   /* GALERIE plein cadre */
   .gr-gallery{background:var(--gr-bg);padding:clamp(40px,6vw,72px) 0 0}
   .gr-gallery .gr-h2{margin-bottom:clamp(24px,4vw,40px)}
-  .gr-gal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+  .gr-gal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
   .gr-gtile{aspect-ratio:1/1;background-size:cover;background-position:center;background-color:#1b1a18}
   @media(max-width:760px){.gr-gal-grid{grid-template-columns:1fr 1fr}}
   /* Bande viande plein écran */
