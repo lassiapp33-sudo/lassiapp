@@ -2162,11 +2162,11 @@ function page(o: {
   const scTypes = (gal.length >= 2 && scTypeItems.length >= 3) ? `
     <section class="sc-types" id="sc-types"><div class="sc-types-in">
       <div class="sc-types-head"><h2>Nos catégories</h2><p>Trouvez le sac fait pour vous.</p></div>
-      <div class="sc-types-grid">
+      <div class="sc-types-grid lx-fx-bento">
         ${scTypeItems.map((r, i) => {
           const d = (r.items[0]?.description || '').trim();
           const sub = d ? clip(d, 78) : `${r.items.length} modèle${r.items.length > 1 ? 's' : ''} disponible${r.items.length > 1 ? 's' : ''}`;
-          return `<a class="sc-type" href="#sc-shop" ${bg(pick(i))}><span class="sc-type-ov"><b>${esc(r.title)}</b><small>${esc(sub)}</small></span></a>`;
+          return `<a class="sc-type lx-fx-piece" href="#sc-shop" ${bg(pick(i))}><span class="sc-type-ov"><b>${esc(r.title)}</b><small>${esc(sub)}</small></span></a>`;
         }).join('')}
       </div>
     </div></section>` : '';
@@ -2199,7 +2199,7 @@ function page(o: {
         <a href="#sc-contact">Contact</a>
       </nav>
     </header>
-    <section class="sc-hero" ${bg(pick(0))}>
+    <section class="sc-hero sc-hero-kb" ${bg(pick(0))}>
       <div class="sc-hero-ov"></div>
       <div class="sc-hero-in">
         <div class="sc-hero-l">
@@ -2233,12 +2233,13 @@ function page(o: {
       }
     })();</script>
     <section class="sc-feature"><div class="sc-feature-in">
-      <div class="sc-fcard">
+      <div class="sc-fcard lx-fx-beam">
+        <svg class="lx-fx-beam-svg" preserveAspectRatio="none"><defs><linearGradient id="scBeam" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#22D3EE"/><stop offset="50%" stop-color="#ffffff"/><stop offset="100%" stop-color="#2563EB"/></linearGradient></defs><rect class="lx-fx-beam-rect" x="1.5" y="1.5" rx="16" ry="16" stroke="url(#scBeam)" style="filter:drop-shadow(0 0 6px rgba(34,211,238,.9))"/></svg>
         <div class="sc-fcard-top"><img class="sc-avatar" src="${escAttr(o.logo || (o.slug === '__demo' ? `${o.base}/assets/demo/sac/avatar.jpg` : initialAvatar(o.name)))}" alt="${escAttr(o.name)}"><div><b>${esc(o.name)}</b><small>${esc(o.cat || o.zone || 'Maroquinerie')}</small></div></div>
         <h2>Le sac qui vous suit partout</h2>
         <p>${esc(clip(o.desc || `${o.name} sélectionne des pièces durables et bien finies. Commande en ligne, paiement sécurisé Wave & Orange Money, retrait ou livraison à Dakar.`, 170))}</p>
       </div>
-      <div class="sc-promo" ${bg(pick(1))}><div class="sc-promo-ov">
+      <div class="sc-promo lx-fx-curtain" ${bg(pick(1))}><div class="sc-promo-ov">
         <span class="sc-promo-k">Paiement sécurisé</span>
         <h3>Paiement sécurisé Wave &amp; Orange Money</h3>
         <p>Commande en ligne, retrait sur place ou livraison à ${esc(o.zone || 'Dakar')}. Paiement 100% sécurisé.</p>
@@ -2676,7 +2677,7 @@ function page(o: {
     </section>
     <section class="gr-drink gr-slide">
       <h2 class="gr-h2 gr-light">Prenez un verre</h2>
-      <div class="gr-ill-wrap">${grCocktail}</div>
+      <div class="gr-ill-wrap"><img class="gr-ill-img" src="/assets/grill/cocktail.png" alt="Cocktail"></div>
       <p class="gr-lead gr-dark">Cocktails signature, grands crus et spiritueux rares : notre bar prolonge l'expérience, avant ou après le repas.</p>
     </section>
     </div>
@@ -3384,6 +3385,9 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .sc-nav a:hover{color:var(--d)}
   .sc-nav .sc-nav-active{color:var(--d);border-bottom:2px solid var(--y)}
   .sc-hero{position:relative;min-height:clamp(440px,72vh,640px);background-size:cover;background-position:center;background-color:var(--d);display:flex;align-items:center}
+  .sc-hero-kb{background-size:112%;animation:scKen 22s ease-in-out infinite alternate}
+  @keyframes scKen{from{background-size:112%;background-position:50% 50%}to{background-size:128%;background-position:52% 48%}}
+  @media(prefers-reduced-motion:reduce){.sc-hero-kb{animation:none;background-size:cover}}
   .sc-hero-ov{position:absolute;inset:0;background:linear-gradient(90deg,rgba(18,18,18,.78),rgba(18,18,18,.35) 60%,rgba(18,18,18,.15))}
   .sc-hero-in{position:relative;z-index:2;width:100%;max-width:1240px;margin:0 auto;padding:0 28px;display:flex;align-items:center;justify-content:space-between;gap:30px}
   .sc-hero-l{max-width:560px}
@@ -3770,6 +3774,7 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-beef{line-height:0;width:min(900px,100%)} .gr-beef img{width:100%;max-height:300px;object-fit:cover;object-position:center;display:block}
   .gr-ill-wrap{display:flex;justify-content:center;color:var(--gr-ink);padding:clamp(20px,4vw,40px) 20px}
   .gr-ill{height:clamp(110px,14vw,170px);width:auto;opacity:.9}
+  .gr-ill-img{width:min(420px,78%);height:auto;display:block;margin:0 auto}
   /* BIFSTECK — gravure boeuf plein cadre en fond + titre or par-dessus */
   .gr-feature{position:relative;background-color:#2b2b2b;background-size:cover;background-position:center;text-align:center;padding:clamp(40px,6vw,80px) clamp(20px,4vw,48px)}
   .gr-feature-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(28,27,25,.32),rgba(28,27,25,.72))}
