@@ -2712,6 +2712,7 @@ function page(o: {
     <div class="gr-page gr-page-menu" id="gr-menu" hidden>
     ${closedNotice}
     <section id="gr-shop" class="gr-shop${catalogCls}">
+      <div class="gr-crumb">Accueil › Menu</div>
       <h2 class="gr-h2 gr-gold">Notre menu</h2>
       <p class="gr-sub-ctr">${hasProducts ? 'Commande en ligne · retrait ou livraison' : hasServices ? 'Réservez votre prestation' : 'Nos terrains'}</p>
       ${catnav}${dsSection}${grid}
@@ -2770,6 +2771,7 @@ function page(o: {
           window.scrollTo({top:0,behavior:'smooth'});
         });
       });
+      if(location.hash==='#gr-menu'){ pages.home.hidden=true; pages.menu.hidden=false; }
     })();</script>`;
 
   const body = theme.template === 'furniture' && hasCatalog ? furnitureBody
@@ -3809,19 +3811,26 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   /* MENU (catalogue réel) */
   .gr-shop{background:var(--gr-bg);padding:clamp(50px,7vw,90px) clamp(16px,4vw,40px)}
   .gr-sub-ctr{text-align:center;color:var(--gr-mut);font-size:17px;margin:12px 0 clamp(24px,4vw,40px)}
-  body[data-template="grill"] .sectitle{text-align:center;font-family:var(--gr-fe);font-weight:600;color:var(--gr-gold);text-transform:uppercase;letter-spacing:2px}
-  body[data-template="grill"] .catnav{justify-content:center}
-  body[data-template="grill"] .cathead{justify-content:center}
-  body[data-template="grill"] .cathead-title{font-family:var(--gr-fe);font-weight:600;color:var(--gr-gold);text-transform:uppercase;letter-spacing:1px}
-  body[data-template="grill"] .chip{font-family:var(--gr-fs);text-transform:uppercase;letter-spacing:.5px;font-size:12px;font-weight:600;background:transparent;color:var(--gr-txt);border-color:rgba(201,162,75,.4)}
-  body[data-template="grill"] .chip.sel{background:var(--gr-gold);color:var(--gr-ink);border-color:var(--gr-gold)}
-  body[data-template="grill"] .grid{gap:20px}
-  body[data-template="grill"] .prod{background:var(--gr-bg2);border:1px solid rgba(201,162,75,.18);border-radius:2px;overflow:hidden}
-  body[data-template="grill"] .prod.in{border-color:var(--gr-gold)}
-  body[data-template="grill"] .pname{font-family:var(--gr-fe);color:#fff;text-transform:uppercase;letter-spacing:.5px;font-size:18px;font-weight:700}
-  body[data-template="grill"] .pdesc{color:var(--gr-mut);font-size:15px;line-height:1.5}
-  body[data-template="grill"] .pprice{font-family:var(--gr-fe);font-weight:600;color:var(--gr-gold);font-size:20px}
-  body[data-template="grill"] .add{background:var(--gr-gold);color:var(--gr-ink);border-color:transparent;border-radius:2px;font-family:var(--gr-fs);text-transform:uppercase;letter-spacing:1px;font-weight:700}
+  /* MENU resto en liste (réf « MENU DÎNER ») — garde les .prod pour le panier */
+  body[data-template="grill"] .gr-shop{max-width:860px;margin:0 auto}
+  body[data-template="grill"] .gr-crumb{font-family:var(--gr-fs);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gr-mut);text-align:center;margin-bottom:10px}
+  body[data-template="grill"] .sectitle{text-align:left;font-family:var(--gr-fe);font-weight:700;color:var(--gr-gold);text-transform:uppercase;letter-spacing:2px}
+  body[data-template="grill"] .catnav{display:none}
+  body[data-template="grill"] .cathead{justify-content:flex-start;border-bottom:1px solid rgba(174,154,100,.3);padding-bottom:10px;margin:clamp(28px,4vw,48px) 0 4px}
+  body[data-template="grill"] .cathead-title{font-family:var(--gr-fe);font-weight:700;color:var(--gr-gold);text-transform:uppercase;letter-spacing:2px;font-size:clamp(18px,2.4vw,26px)}
+  body[data-template="grill"] .cathead-count{display:none}
+  body[data-template="grill"] .grid,body[data-template="grill"] .catsec .grid{display:block;gap:0}
+  body[data-template="grill"] .prod{background:transparent;border:0;border-bottom:1px solid rgba(174,154,100,.14);border-radius:0;overflow:visible;padding:16px 2px}
+  body[data-template="grill"] .prod.in{border-bottom-color:var(--gr-gold)}
+  body[data-template="grill"] .pimgzone{display:none}
+  body[data-template="grill"] .pbody{display:grid;grid-template-columns:1fr auto;grid-template-areas:"name price" "desc add";column-gap:18px;row-gap:4px;align-items:baseline}
+  body[data-template="grill"] .pname{grid-area:name;font-family:var(--gr-fe);color:var(--gr-txt);text-transform:uppercase;letter-spacing:.5px;font-size:16px;font-weight:700}
+  body[data-template="grill"] .pdesc{grid-area:desc;color:var(--gr-mut);font-size:14px;line-height:1.5;font-family:var(--gr-fb)}
+  body[data-template="grill"] .pprice{grid-area:price;font-family:var(--gr-fe);font-weight:700;color:var(--gr-gold);font-size:17px;text-align:right;white-space:nowrap}
+  body[data-template="grill"] .pstock{grid-area:desc;color:var(--gr-mut);font-size:12px}
+  body[data-template="grill"] .stepper{grid-area:add;justify-self:end;margin-top:2px}
+  body[data-template="grill"] .add{background:transparent;color:var(--gr-gold);border:1px solid var(--gr-gold);border-radius:2px;font-family:var(--gr-fs);text-transform:uppercase;letter-spacing:1px;font-weight:700;font-size:11px;padding:7px 15px}
+  body[data-template="grill"] .add:hover{background:var(--gr-gold);color:var(--gr-ink)}
   /* GALERIE plein cadre */
   .gr-gallery{background:var(--gr-bg);padding:clamp(40px,6vw,72px) 0 0}
   .gr-gallery .gr-h2{margin-bottom:clamp(24px,4vw,40px)}
