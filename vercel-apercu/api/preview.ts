@@ -2440,6 +2440,7 @@ function page(o: {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 ${theme.fontsLink}
 ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=Raleway:wght@300;400;500;600;700&display=swap" rel="stylesheet">' : ''}
+${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Cinzel:wght@500;600&display=swap" rel="stylesheet">' : ''}
 <style>
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
   [hidden] { display:none !important; }
@@ -3311,7 +3312,7 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   .fm-ab-split-txt p{font-size:clamp(16px,1.6vw,18px);line-height:1.6;color:#3a3326;margin-top:14px;max-width:440px}
   @media(max-width:780px){.fm-ab-split{grid-template-columns:1fr}.fm-ab-split-img{min-height:260px;order:-1}.fm-ab-split.reverse .fm-ab-split-img{order:-1}}
   /* ═══ TEMPLATE GRILL — steakhouse (réf Au Grill : charbon + or + Anton/Cinzel) ═══ */
-  body[data-template="grill"]{--gr-bg:#262523;--gr-bg2:#2E2C29;--gr-gold:#C9A24B;--gr-gold-d:#A9863A;--gr-ink:#1E1D1B;--gr-txt:#E6E1D6;--gr-mut:#A9A294;--gr-fh:'Anton',Impact,sans-serif;--gr-fe:'Cinzel',Georgia,serif;--gr-fb:'Cormorant Garamond',Georgia,serif;--gr-fs:'Helvetica Neue',system-ui,Arial,sans-serif;background:var(--gr-bg);color:var(--gr-txt);font-family:var(--gr-fb);font-size:18px}
+  body[data-template="grill"]{--gr-bg:#212023;--gr-bg2:#2A292C;--gr-gold:#AE9A64;--gr-gold-d:#746743;--gr-ink:#191819;--gr-txt:#E4DBC4;--gr-mut:#9F9EA2;--gr-fh:'Montserrat',Impact,sans-serif;--gr-fe:'Cinzel',Georgia,serif;--gr-fb:'Cormorant Garamond',Georgia,serif;--gr-fs:'Helvetica Neue',system-ui,Arial,sans-serif;background:var(--gr-bg);color:var(--gr-txt);font-family:var(--gr-fb);font-size:18px}
   .gr-head{position:sticky;top:0;z-index:40}
   .gr-topbar{display:flex;justify-content:center;gap:28px;flex-wrap:wrap;background:var(--gr-gold);color:var(--gr-ink);font-family:var(--gr-fs);font-size:11.5px;letter-spacing:1px;text-transform:uppercase;padding:7px 20px;font-weight:600}
   .gr-navbar{display:flex;align-items:center;gap:20px;background:var(--gr-gold);color:var(--gr-ink);padding:6px clamp(16px,4vw,48px) 12px;border-top:1px solid rgba(30,29,27,.14)}
@@ -3324,8 +3325,10 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   .gr-hero{position:relative;min-height:min(86vh,680px);display:flex;align-items:center;justify-content:center;background-size:cover;background-position:center;background-color:#1b1a18;text-align:center}
   .gr-hero-ov{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(20,19,17,.35),rgba(20,19,17,.72))}
   .gr-hero-in{position:relative;z-index:2;padding:40px 20px}
-  .gr-hero-title{font-family:var(--gr-fh);font-size:clamp(64px,14vw,180px);line-height:.9;letter-spacing:2px;text-transform:uppercase;color:#fff;margin:0;text-shadow:0 6px 30px rgba(0,0,0,.5)}
-  .gr-hero-sub{font-family:var(--gr-fs);font-size:clamp(13px,2vw,22px);font-weight:600;letter-spacing:6px;text-transform:uppercase;color:#fff;margin:16px 0 30px}
+  /* Titres géométriques (Montserrat 800 ≈ Lulo Clean) */
+  body[data-template="grill"] .gr-hero-title,body[data-template="grill"] .gr-light,body[data-template="grill"] .gr-col h3,body[data-template="grill"] .gr-brand span,body[data-template="grill"] .pname{font-weight:800}
+  .gr-hero-title{font-family:var(--gr-fh);font-weight:800;font-size:clamp(52px,11vw,140px);line-height:.98;letter-spacing:4px;text-transform:uppercase;color:#fff;margin:0;text-shadow:0 6px 30px rgba(0,0,0,.5)}
+  .gr-hero-sub{font-family:var(--gr-fe);font-size:clamp(13px,2vw,22px);font-weight:600;letter-spacing:5px;text-transform:uppercase;color:var(--gr-gold);margin:16px 0 30px}
   .gr-btn{display:inline-block;background:var(--gr-gold);color:var(--gr-ink);text-decoration:none;font-family:var(--gr-fs);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:14px 40px;border:1px solid var(--gr-gold);transition:all .18s}
   .gr-btn:hover{background:transparent;color:var(--gr-gold)}
   /* Titres */
