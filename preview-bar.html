@@ -23,6 +23,22 @@
   }
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--white);font-family:var(--fb);font-weight:300;font-size:16px;line-height:1.8}
+
+  /* ===== SCROLL ANIMATIONS (technique IntersectionObserver, easing conservé) ===== */
+  .reveal{opacity:0;transform:translateY(45px);
+    transition:opacity .85s cubic-bezier(.16,1,.3,1),transform .85s cubic-bezier(.16,1,.3,1)}
+  .reveal.is-visible{opacity:1;transform:translateY(0)}
+  .reveal-sc{opacity:0;transform:translateY(35px) scale(.96);
+    transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}
+  .reveal-sc.is-visible{opacity:1;transform:translateY(0) scale(1)}
+  /* stagger : enfants qui montent en cascade */
+  .stagger>*{opacity:0;transform:translateY(40px);
+    transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}
+  .stagger.is-visible>*{opacity:1;transform:translateY(0)}
+  .stagger.is-visible>*:nth-child(2){transition-delay:.12s}
+  .stagger.is-visible>*:nth-child(3){transition-delay:.24s}
+  .stagger.is-visible>*:nth-child(4){transition-delay:.36s}
+  @media(prefers-reduced-motion:reduce){.reveal,.reveal-sc,.stagger>*{opacity:1!important;transform:none!important;transition:none!important}}
   img{display:block;max-width:100%}
   a{color:inherit;text-decoration:none}
   .wrap{max-width:1140px;margin:0 auto;padding:0 28px}
@@ -52,13 +68,14 @@
   .menu a{color:var(--white);opacity:.85;transition:.2s}.menu a:hover{color:var(--gold);opacity:1}
 
   /* ===== HERO : image + panneau arche sombre centré ===== */
-  .hero{position:relative;min-height:880px;height:94vh;max-height:1100px;
-    background:url('preview-bar-assets/hero.jpg') center/cover;
+  .hero{position:relative;min-height:1040px;height:100vh;max-height:1200px;overflow:hidden;
     display:flex;flex-direction:column;align-items:center}
-  .hero::after{content:"";position:absolute;inset:0;background:rgba(13,12,17,.18)}
+  .hero-bg{position:absolute;inset:-12% 0;background:url('preview-bar-assets/hero.jpg') center/cover;will-change:transform;z-index:0}
+  .hero::after{content:"";position:absolute;inset:0;background:rgba(13,12,17,.18);z-index:1}
   /* panneau arche unique : plus large + plus haut, coins hauts en dôme */
   .hero-arch{position:relative;z-index:2;width:min(620px,92%);
-    background:var(--bg);border-radius:310px 310px 0 0;padding:84px 56px 70px;text-align:center}
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    background:var(--bg);border-radius:310px 310px 0 0;padding:90px 56px 60px;text-align:center}
   .hero-mark{width:36px;height:36px;border:1.5px solid var(--white);border-radius:50%;margin:0 auto 40px;
     display:grid;place-items:center}
   .hero-mark::after{content:"";width:9px;height:9px;border:1.5px solid var(--white);border-radius:50%}
@@ -68,14 +85,14 @@
   .hero-adr{position:relative;z-index:2;color:var(--white);margin-top:34px;font-size:15px;text-align:center}
 
   /* ===== À PROPOS : 2 colonnes (titre gauche / paragraphe droite) ===== */
-  .about{padding:120px 0}
+  .about{padding:170px 0}
   .about .wrap{display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center}
   .about .eyebrow{display:block;font-size:48px;font-weight:700;color:var(--gold);margin-bottom:10px;font-family:var(--fh)}
   .about .h-24{color:var(--grey);font-weight:400}
   .about .body{color:var(--grey)}
 
   /* ===== APÉRITIF / ÉVÉNEMENT : image + texte, min-height 480 ===== */
-  .split{display:grid;grid-template-columns:1fr 1fr;align-items:stretch;min-height:480px}
+  .split{display:grid;grid-template-columns:1fr 1fr;align-items:stretch;min-height:600px}
   .split.rev .media{order:2}
   .split .media{background-size:cover;background-position:center}
   .split .txt{display:flex;flex-direction:column;justify-content:center;padding:70px 64px}
@@ -86,7 +103,7 @@
   .split .meta .small{color:var(--mut);font-family:var(--fb)}
 
   /* ===== VENEZ BOIRE UNE BIÈRE : réservation sur overlay sombre ===== */
-  .resa{position:relative;padding:120px 0;text-align:center;
+  .resa{position:relative;padding:180px 0;text-align:center;
     background:url('preview-bar-assets/beer1.jpg') center/cover fixed}
   .resa::after{content:"";position:absolute;inset:0;background:rgba(13,12,17,.6)}
   .resa .wrap{position:relative;z-index:2}
@@ -99,7 +116,7 @@
   .resa-form .btn{align-self:stretch;display:flex;align-items:center;border:none}
 
   /* ===== NEWSLETTER + CONTACT ===== */
-  .news{padding:110px 0;text-align:center}
+  .news{padding:160px 0;text-align:center}
   .news .body{max-width:44ch;margin:16px auto 32px;color:var(--grey)}
   .news-form{display:flex;max-width:520px;margin:0 auto;border:1px solid rgba(255,255,255,.18)}
   .news-form input{flex:1;background:transparent;border:none;color:var(--white);padding:16px 20px;font-family:var(--fb);font-size:15px}
@@ -143,18 +160,19 @@
 
   <!-- HERO -->
   <section class="hero" id="top">
-    <div class="hero-arch">
+    <div class="hero-bg" data-parallax-speed="0.15"></div>
+    <div class="hero-arch reveal-sc">
       <div class="hero-mark"></div>
       <div class="hero-num">221</div>
       <div class="hero-word">BAR</div>
       <div class="hero-sub">Bar local avec musique en direct</div>
       <a class="btn btn-o" href="#resa">Réserver une table</a>
     </div>
-    <div class="hero-adr">Route des Almadies, Dakar, Sénégal</div>
+    <div class="hero-adr reveal">Route des Almadies, Dakar, Sénégal</div>
   </section>
 
   <!-- À PROPOS -->
-  <section class="about" id="about"><div class="wrap">
+  <section class="about" id="about"><div class="wrap stagger">
     <div>
       <span class="eyebrow">À propos</span>
       <h2 class="h-24">Votre institution de proximité</h2>
@@ -164,8 +182,8 @@
 
   <!-- APÉRITIF -->
   <section class="split">
-    <div class="media" style="background-image:url('preview-bar-assets/aperitif.jpg')"></div>
-    <div class="txt">
+    <div class="media reveal-sc" style="background-image:url('preview-bar-assets/aperitif.jpg')"></div>
+    <div class="txt stagger">
       <span class="eyebrow">Apéritif</span>
       <h2 class="h-sec">50 % sur tous les cocktails</h2>
       <div class="meta">
@@ -177,8 +195,8 @@
 
   <!-- VENDREDI SOIR EN DIRECT -->
   <section class="split rev">
-    <div class="media" style="background-image:url('preview-bar-assets/event.jpg')"></div>
-    <div class="txt">
+    <div class="media reveal-sc" style="background-image:url('preview-bar-assets/event.jpg')"></div>
+    <div class="txt stagger">
       <span class="eyebrow">Vendredi soir en direct</span>
       <h2 class="h-36">Tristan Rieur</h2>
       <div class="meta">
@@ -189,7 +207,7 @@
   </section>
 
   <!-- VENEZ BOIRE UNE BIÈRE : réservation -->
-  <section class="resa" id="resa"><div class="wrap">
+  <section class="resa" id="resa"><div class="wrap stagger">
     <h2 class="h-sec">Venez boire une bière</h2>
     <p class="body">Réservez votre table en quelques secondes et profitez de l'ambiance.</p>
     <div class="resa-form">
@@ -201,7 +219,7 @@
   </div></section>
 
   <!-- NEWSLETTER + CONTACT -->
-  <section class="news" id="news"><div class="wrap">
+  <section class="news" id="news"><div class="wrap stagger">
     <h2 class="h-sec">Soyez à jour</h2>
     <p class="body">Rejoignez le club et soyez à jour sur les événements.</p>
     <div class="news-form">
@@ -220,7 +238,7 @@
   </div></section>
 
   <!-- FOOTER -->
-  <footer class="foot"><div class="wrap">
+  <footer class="foot reveal"><div class="wrap">
     <div class="foot-links">
       <a href="#">Termes et conditions</a>
       <a href="#">Politique de cookies</a>
@@ -229,6 +247,29 @@
     </div>
     <div class="small">© 2026 par Bar · Propulsé par LASSİ</div>
   </div></footer>
+
+  <script>
+    /* IntersectionObserver — ajoute .is-visible au scroll (threshold .18) */
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('is-visible'); io.unobserve(e.target); } });
+    }, { threshold:0.18, rootMargin:'0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal,.reveal-sc,.stagger').forEach(function(el){ io.observe(el); });
+
+    /* Parallaxe hero (translate3d via requestAnimationFrame, sans saccade) */
+    var plx = document.querySelectorAll('[data-parallax-speed]'), ticking=false;
+    function onScroll(){
+      if(ticking) return; ticking=true;
+      requestAnimationFrame(function(){
+        var y = window.pageYOffset;
+        plx.forEach(function(el){
+          var s = parseFloat(el.getAttribute('data-parallax-speed'));
+          el.style.transform = 'translate3d(0,'+(y*s)+'px,0)';
+        });
+        ticking=false;
+      });
+    }
+    window.addEventListener('scroll', onScroll, {passive:true});
+  </script>
 
 </body>
 </html>

@@ -1578,7 +1578,7 @@ function page(o: {
         </div>
         <div class="cx-feature-seal"><span class="cx-seal-star">&#10038;</span><span class="cx-seal-txt">Produit<br>naturel</span></div>
       </div>
-      <div class="cx-feature-hero"><img src="/assets/demo/cosmetic/feature.jpg" alt="Nos produits" loading="lazy"></div>
+      <div class="cx-feature-hero cx-zoom"><img src="/assets/demo/cosmetic/feature.jpg" alt="Nos produits" loading="lazy"></div>
       <div class="cx-feature-icons">
         <div class="cx-fico"><span class="cx-fico-ic">${icoDrop}</span><b>Hydratation</b><small>Nourrit et hydrate la peau en profondeur, pour une sensation de confort durable.</small></div>
         <div class="cx-fico"><span class="cx-fico-ic">${icoShield}</span><b>Protection</b><small>Protège ta peau des agressions extérieures et préserve son éclat naturel.</small></div>
@@ -1679,6 +1679,50 @@ function page(o: {
     ${gal.length >= 1 ? cxFeature : ''}
     ${cxPerks}
     ${cxFoot}
+    <style>
+      .cx-zoom{will-change:transform,border-radius;transform:scale(.88);border-radius:34px;overflow:hidden;transition:box-shadow .4s ease}
+      .cx-zoom img{border-radius:0!important}
+      .cx-hero-model,.cx-hero-badge{will-change:transform}
+      @media(prefers-reduced-motion:reduce){.cx-zoom{transform:none!important;border-radius:14px!important}}
+    </style>
+    <script>(function(){
+      try{
+        if(document.body&&document.body.classList.contains('lassi-ed'))return;
+        if(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+        var model=document.querySelector('.cx-hero-model');
+        var badge=document.querySelector('.cx-hero-badge');
+        var zoom=document.querySelector('.cx-zoom');
+        var ticking=false;
+        function clamp(v,a,b){return v<a?a:v>b?b:v;}
+        function frame(){
+          ticking=false;
+          var vh=window.innerHeight;
+          // Parallax hero : dérive douce, calques à vitesses opposées
+          if(model){
+            var r=model.getBoundingClientRect();
+            if(r.bottom>0&&r.top<vh){ var p=(r.top+r.height/2-vh/2); model.style.transform='translateY('+(p*-0.07).toFixed(1)+'px)'; }
+          }
+          if(badge){
+            var rb=badge.getBoundingClientRect();
+            if(rb.bottom>0&&rb.top<vh){ var pb=(rb.top+rb.height/2-vh/2); badge.style.transform='translateY('+(pb*0.12).toFixed(1)+'px)'; }
+          }
+          // Zoom Apple : scale .88->1 + coins qui s'arrondissent en se centrant
+          if(zoom){
+            var rz=zoom.getBoundingClientRect();
+            if(rz.bottom>0&&rz.top<vh){
+              var dist=Math.abs((rz.top+rz.height/2)-vh/2)/(vh/2);
+              var t=clamp(1-dist,0,1); // 1 = centré
+              zoom.style.transform='scale('+(0.88+0.12*t).toFixed(3)+')';
+              zoom.style.borderRadius=(34-20*t).toFixed(0)+'px';
+            }
+          }
+        }
+        function onScroll(){ if(!ticking){ ticking=true; requestAnimationFrame(frame); } }
+        window.addEventListener('scroll',onScroll,{passive:true});
+        window.addEventListener('resize',onScroll,{passive:true});
+        frame();
+      }catch(e){}
+    })();</script>
   `;
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2341,8 +2385,8 @@ function page(o: {
         <a class="gr-ic gr-cart" href="#gr-shop" title="Commander"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></a>
       </div>
     </header>
-    <div class="gr-pinwrap">
-    <section class="gr-hero" ${bg(heroImg)}>
+    <div class="gr-stack">
+    <section class="gr-hero gr-slide" ${bg(heroImg)}>
       <div class="gr-hero-ov"></div>
       <div class="gr-hero-in">
         <h1 class="gr-hero-title">${esc(o.name)}</h1>
@@ -2350,25 +2394,27 @@ function page(o: {
         <a class="gr-btn" href="#gr-shop">Menu</a>
       </div>
     </section>
-    <section class="gr-about" id="gr-about" ${bg(grAboutBg)}>
+    <section class="gr-about gr-slide" id="gr-about" ${bg(grAboutBg)}>
       <div class="gr-about-ov"></div>
       <div class="gr-about-in">
         <h2 class="gr-h2 gr-gold">Le restaurant</h2>
         <div class="gr-cols">${grCols.map(c => `<div class="gr-col"><span class="gr-num">${c.n}</span><h3>${c.t}</h3><p>${esc(c.p)}</p></div>`).join('')}</div>
       </div>
     </section>
-    </div>
-    <div class="gr-cutlery"><img src="/assets/grill/cutlery.jpg" alt=""></div>
-    <section class="gr-feature">
+    <section class="gr-cutlery gr-slide">
+      <div class="gr-cutlery-in"><img src="/assets/grill/cutlery.jpg" alt=""></div>
+    </section>
+    <section class="gr-feature gr-slide">
       <div class="gr-beef"><img src="/assets/grill/beef.jpg" alt=""></div>
       <h2 class="gr-h2 gr-gold">Bifsteck + temps<br>= perfection</h2>
       <p class="gr-lead">${esc(clip(o.desc || `Le secret d'une viande d'exception : des pièces maturées avec patience, puis saisies au feu pour révéler toute leur saveur. Chez ${o.name}, le temps fait la perfection.`, 240))}</p>
     </section>
-    <section class="gr-drink">
+    <section class="gr-drink gr-slide">
       <h2 class="gr-h2 gr-light">Prenez un verre</h2>
       <div class="gr-ill-wrap">${grCocktail}</div>
       <p class="gr-lead gr-dark">Cocktails signature, grands crus et spiritueux rares : notre bar prolonge l'expérience, avant ou après le repas.</p>
     </section>
+    </div>
     ${closedNotice}
     <section id="gr-shop" class="gr-shop${catalogCls}">
       <h2 class="gr-h2 gr-gold">Notre menu</h2>
@@ -3323,14 +3369,16 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-nav a{font-family:var(--gr-fs);color:var(--gr-ink);text-decoration:none;font-size:12.5px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase}
   .gr-nav a:hover,.gr-nav .gr-nav-active{color:#fff}
   .gr-ic{color:var(--gr-ink);display:flex}
-  /* HERO — défilement overlap : le hero reste figé (sticky), LE RESTAURANT glisse par-dessus */
-  .gr-pinwrap{position:relative}
-  .gr-hero{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;background-size:cover;background-position:center;background-color:#1b1a18;text-align:center;z-index:0}
+  /* DÉFILEMENT OVERLAP — empilement de slides : chaque section se fige (sticky top:0)
+     et la suivante glisse par-dessus en la recouvrant jusqu'en haut (réf Au Grill). */
+  .gr-stack{position:relative}
+  .gr-slide{position:sticky;top:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 -30px 70px rgba(0,0,0,.5)}
+  .gr-slide:first-child{box-shadow:none}
+  /* HERO (slide 1) */
+  .gr-hero{background-size:cover;background-position:center;background-color:#1b1a18;text-align:center}
   .gr-hero-ov{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(20,19,17,.35),rgba(20,19,17,.72))}
   .gr-hero-in{position:relative;z-index:2;padding:40px 20px}
-  /* LE RESTAURANT recouvre le hero pendant le scroll */
-  .gr-pinwrap .gr-about{position:relative;z-index:1;box-shadow:0 -40px 80px rgba(0,0,0,.45)}
-  @media(max-width:760px){.gr-hero{height:88vh}}
+  @media(max-width:760px){.gr-slide{min-height:92vh}}
   /* Titres sections = Lulo Clean (→ Montserrat 700, capitales larges) */
   body[data-template="grill"] .gr-light,body[data-template="grill"] .gr-col h3,body[data-template="grill"] .gr-brand span,body[data-template="grill"] .pname{font-weight:700}
   /* Hero « AU GRILL » = Anton 200px (font_3 Wix) */
@@ -3344,17 +3392,20 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-light{font-family:var(--gr-fe);font-weight:700;color:#fff;font-size:clamp(26px,4vw,40px);letter-spacing:2px;text-transform:uppercase}
   .gr-sm{font-size:clamp(22px,3vw,34px);letter-spacing:2px}
   /* LE RESTAURANT — 3 colonnes sur photo cuisine assombrie (réf Au Grill) */
-  .gr-about{position:relative;background:var(--gr-bg);background-size:cover;background-position:center;padding:clamp(60px,8vw,110px) clamp(20px,4vw,48px)}
-  .gr-about-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,21,19,.78),rgba(22,21,19,.88))}
-  .gr-about-in{position:relative;z-index:2}
+  .gr-about{background:var(--gr-bg);background-size:cover;background-position:center;padding:clamp(60px,8vw,110px) clamp(20px,4vw,48px)}
+  .gr-about-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,21,19,.86),rgba(22,21,19,.93))}
+  .gr-about-in{position:relative;z-index:2;width:100%}
   .gr-cols{max-width:1080px;margin:clamp(34px,5vw,64px) auto 0;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(24px,4vw,56px);text-align:center}
   .gr-num{display:block;font-family:var(--gr-fe);font-size:28px;font-weight:600;color:var(--gr-gold);margin-bottom:16px;letter-spacing:1px}
   .gr-col h3{font-family:var(--gr-fe);font-weight:700;font-size:clamp(17px,2vw,25px);line-height:1.2;letter-spacing:1px;text-transform:uppercase;color:var(--gr-gold);margin:0 0 14px}
   .gr-col p{font-size:15px;line-height:1.65;color:var(--gr-mut)}
   @media(max-width:760px){.gr-cols{grid-template-columns:1fr;gap:38px}}
-  /* Illustrations gravées (couverts sur or, bœuf sur sombre) */
-  .gr-cutlery{background:#BCA86A;line-height:0} .gr-cutlery img{width:100%;max-height:360px;object-fit:cover;object-position:center;display:block}
-  .gr-beef{line-height:0} .gr-beef img{width:100%;max-height:300px;object-fit:cover;object-position:center;display:block}
+  /* Couverts gravés (slide plein écran sur or) */
+  .gr-cutlery{background:var(--gr-gold)}
+  .gr-cutlery-in{line-height:0;padding:40px 20px;width:100%;text-align:center}
+  .gr-cutlery-in img{max-height:62vh;width:auto;max-width:88%;object-fit:contain;display:inline-block;mix-blend-mode:multiply}
+  /* Bœuf gravé (slide sombre bifsteck) */
+  .gr-beef{line-height:0;width:min(900px,100%)} .gr-beef img{width:100%;max-height:300px;object-fit:cover;object-position:center;display:block}
   .gr-ill-wrap{display:flex;justify-content:center;color:var(--gr-ink);padding:clamp(20px,4vw,40px) 20px}
   .gr-ill{height:clamp(110px,14vw,170px);width:auto;opacity:.9}
   /* BIFSTECK */
