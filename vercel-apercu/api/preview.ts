@@ -3312,7 +3312,7 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .fm-ab-split-txt p{font-size:clamp(16px,1.6vw,18px);line-height:1.6;color:#3a3326;margin-top:14px;max-width:440px}
   @media(max-width:780px){.fm-ab-split{grid-template-columns:1fr}.fm-ab-split-img{min-height:260px;order:-1}.fm-ab-split.reverse .fm-ab-split-img{order:-1}}
   /* ═══ TEMPLATE GRILL — steakhouse (réf Au Grill : charbon + or + Anton/Cinzel) ═══ */
-  body[data-template="grill"]{--gr-bg:#212023;--gr-bg2:#2A292C;--gr-gold:#AE9A64;--gr-gold-d:#746743;--gr-ink:#191819;--gr-txt:#E4DBC4;--gr-mut:#9F9EA2;--gr-fh:'Montserrat',Impact,sans-serif;--gr-fe:'Cinzel',Georgia,serif;--gr-fb:'Cormorant Garamond',Georgia,serif;--gr-fs:'Helvetica Neue',system-ui,Arial,sans-serif;background:var(--gr-bg);color:var(--gr-txt);font-family:var(--gr-fb);font-size:18px}
+  body[data-template="grill"]{--gr-bg:#212023;--gr-bg2:#2A292C;--gr-gold:#AE9A64;--gr-gold-d:#746743;--gr-ink:#191819;--gr-txt:#E4DBC4;--gr-mut:#B0B0B0;--gr-fh:'Anton',Impact,sans-serif;--gr-fe:'Montserrat',Arial,sans-serif;--gr-fb:georgia,palatino,'book antiqua','palatino linotype',serif;--gr-fs:'Montserrat',system-ui,Arial,sans-serif;background:var(--gr-bg);color:var(--gr-txt);font-family:var(--gr-fb);font-size:16px}
   .gr-head{position:sticky;top:0;z-index:40}
   .gr-topbar{display:flex;justify-content:center;gap:28px;flex-wrap:wrap;background:var(--gr-gold);color:var(--gr-ink);font-family:var(--gr-fs);font-size:11.5px;letter-spacing:1px;text-transform:uppercase;padding:7px 20px;font-weight:600}
   .gr-navbar{display:flex;align-items:center;gap:20px;background:var(--gr-gold);color:var(--gr-ink);padding:6px clamp(16px,4vw,48px) 12px;border-top:1px solid rgba(30,29,27,.14)}
@@ -3325,16 +3325,17 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-hero{position:relative;min-height:min(86vh,680px);display:flex;align-items:center;justify-content:center;background-size:cover;background-position:center;background-color:#1b1a18;text-align:center}
   .gr-hero-ov{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(20,19,17,.35),rgba(20,19,17,.72))}
   .gr-hero-in{position:relative;z-index:2;padding:40px 20px}
-  /* Titres géométriques (Montserrat 800 ≈ Lulo Clean) */
-  body[data-template="grill"] .gr-hero-title,body[data-template="grill"] .gr-light,body[data-template="grill"] .gr-col h3,body[data-template="grill"] .gr-brand span,body[data-template="grill"] .pname{font-weight:800}
-  .gr-hero-title{font-family:var(--gr-fh);font-weight:800;font-size:clamp(52px,11vw,140px);line-height:.98;letter-spacing:4px;text-transform:uppercase;color:#fff;margin:0;text-shadow:0 6px 30px rgba(0,0,0,.5)}
-  .gr-hero-sub{font-family:var(--gr-fe);font-size:clamp(13px,2vw,22px);font-weight:600;letter-spacing:5px;text-transform:uppercase;color:var(--gr-gold);margin:16px 0 30px}
+  /* Titres sections = Lulo Clean (→ Montserrat 700, capitales larges) */
+  body[data-template="grill"] .gr-light,body[data-template="grill"] .gr-col h3,body[data-template="grill"] .gr-brand span,body[data-template="grill"] .pname{font-weight:700}
+  /* Hero « AU GRILL » = Anton 200px (font_3 Wix) */
+  .gr-hero-title{font-family:var(--gr-fh);font-size:clamp(66px,16vw,200px);line-height:1;letter-spacing:1px;text-transform:uppercase;color:#fff;margin:0;text-shadow:0 6px 30px rgba(0,0,0,.5)}
+  .gr-hero-sub{font-family:var(--gr-fs);font-size:clamp(15px,2.6vw,30px);font-weight:500;letter-spacing:4px;text-transform:uppercase;color:#fff;margin:16px 0 30px}
   .gr-btn{display:inline-block;background:var(--gr-gold);color:var(--gr-ink);text-decoration:none;font-family:var(--gr-fs);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:14px 40px;border:1px solid var(--gr-gold);transition:all .18s}
   .gr-btn:hover{background:transparent;color:var(--gr-gold)}
   /* Titres */
   .gr-h2{text-align:center;line-height:1.04;margin:0}
-  .gr-gold{font-family:var(--gr-fe);font-weight:600;color:var(--gr-gold);font-size:clamp(28px,4.4vw,50px);letter-spacing:3px;text-transform:uppercase}
-  .gr-light{font-family:var(--gr-fh);color:#fff;font-size:clamp(32px,5vw,60px);letter-spacing:1px;text-transform:uppercase}
+  .gr-gold{font-family:var(--gr-fe);font-weight:700;color:var(--gr-gold);font-size:clamp(26px,4vw,40px);letter-spacing:2px;text-transform:uppercase}
+  .gr-light{font-family:var(--gr-fe);font-weight:700;color:#fff;font-size:clamp(26px,4vw,40px);letter-spacing:2px;text-transform:uppercase}
   .gr-sm{font-size:clamp(22px,3vw,34px);letter-spacing:2px}
   /* LE RESTAURANT — 3 colonnes sur photo cuisine assombrie (réf Au Grill) */
   .gr-about{position:relative;background:var(--gr-bg);background-size:cover;background-position:center;padding:clamp(60px,8vw,110px) clamp(20px,4vw,48px)}
@@ -3342,7 +3343,7 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-about-in{position:relative;z-index:2}
   .gr-cols{max-width:1080px;margin:clamp(34px,5vw,64px) auto 0;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(24px,4vw,56px);text-align:center}
   .gr-num{display:block;font-family:var(--gr-fe);font-size:28px;font-weight:600;color:var(--gr-gold);margin-bottom:16px;letter-spacing:1px}
-  .gr-col h3{font-family:var(--gr-fh);font-size:clamp(18px,2vw,24px);line-height:1.12;letter-spacing:1px;text-transform:uppercase;color:var(--gr-gold);margin:0 0 14px}
+  .gr-col h3{font-family:var(--gr-fe);font-weight:700;font-size:clamp(17px,2vw,25px);line-height:1.2;letter-spacing:1px;text-transform:uppercase;color:var(--gr-gold);margin:0 0 14px}
   .gr-col p{font-size:15px;line-height:1.65;color:var(--gr-mut)}
   @media(max-width:760px){.gr-cols{grid-template-columns:1fr;gap:38px}}
   /* Illustrations gravées (couverts sur or, bœuf sur sombre) */
@@ -3369,7 +3370,7 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   body[data-template="grill"] .grid{gap:20px}
   body[data-template="grill"] .prod{background:var(--gr-bg2);border:1px solid rgba(201,162,75,.18);border-radius:2px;overflow:hidden}
   body[data-template="grill"] .prod.in{border-color:var(--gr-gold)}
-  body[data-template="grill"] .pname{font-family:var(--gr-fh);color:#fff;text-transform:uppercase;letter-spacing:.5px;font-size:18px;font-weight:400}
+  body[data-template="grill"] .pname{font-family:var(--gr-fe);color:#fff;text-transform:uppercase;letter-spacing:.5px;font-size:18px;font-weight:700}
   body[data-template="grill"] .pdesc{color:var(--gr-mut);font-size:15px;line-height:1.5}
   body[data-template="grill"] .pprice{font-family:var(--gr-fe);font-weight:600;color:var(--gr-gold);font-size:20px}
   body[data-template="grill"] .add{background:var(--gr-gold);color:var(--gr-ink);border-color:transparent;border-radius:2px;font-family:var(--gr-fs);text-transform:uppercase;letter-spacing:1px;font-weight:700}
