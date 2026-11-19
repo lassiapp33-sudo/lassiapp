@@ -25,7 +25,7 @@ interface Props {
   onBack: () => void;
 }
 
-type Tool = 'sections' | 'texte' | 'menu' | 'medias' | 'animations' | 'dispo';
+type Tool = 'sections' | 'texte' | 'menu' | 'medias' | 'animations' | 'dispo' | 'icone';
 const TOOLS: { id: Tool; label: string; icon: string }[] = [
   { id: 'sections',   label: 'Conteneurs', icon: '▦' },
   { id: 'texte',      label: 'Texte',      icon: 'T' },
@@ -49,6 +49,7 @@ export default function AdvancedSiteEditor({ slug, shopId, cfg, saving, onSave, 
   const [selText, setSelText] = useState<TextSel | null>(null);
   const [selCont, setSelCont] = useState<ContSel | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[] | null>(null);
+  const [selIcon, setSelIcon] = useState<string | null>(null);
   // Sections réellement présentes pour cette boutique (reçu de la page via led:ready).
   const [hasSec, setHasSec] = useState<{ products: boolean; services: boolean; terrains: boolean } | null>(null);
   const webRef = useRef<WebView>(null);
@@ -167,6 +168,14 @@ export default function AdvancedSiteEditor({ slug, shopId, cfg, saving, onSave, 
     setOv({ ...ov, menuHidden: Array.from(set).sort((a, b) => a - b) });
   }, [ov, setOv]);
 
+  // Icône décorative : supprimer / rétablir (clé iN).
+  const toggleIcon = useCallback((key: string) => {
+    const set = new Set(ov.iconHidden ?? []);
+    if (set.has(key)) set.delete(key); else set.add(key);
+    const arr = Array.from(set).sort();
+    setOv({ ...ov, iconHidden: arr.length ? arr : undefined });
+  }, [ov, setOv]);
+
   const patchMenuStyle = useCallback((p: Partial<TextStyle>) => {
     setOv({ ...ov, menuStyle: { ...(ov.menuStyle ?? {}), ...p } });
   }, [ov, setOv]);
@@ -283,6 +292,11 @@ export default function AdvancedSiteEditor({ slug, shopId, cfg, saving, onSave, 
         setMenuItems(Array.isArray(m.items) ? m.items : []);
         setTool('menu');
         break;
+      case 'led:icon':
+        setSelIcon(String(m.key));
+        setSelText(null);
+        setTool('icone');
+        break;
       case 'led:openMedia':
         // Clic sur le bouton play en mode édition → ouvre le panneau Médias (vidéo).
         setPreview(false);
@@ -338,7 +352,22 @@ export default function AdvancedSiteEditor({ slug, shopId, cfg, saving, onSave, 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
       {tool ? (
         <ScrollView style={styles.panel} contentContainerStyle={styles.panelIn} keyboardShouldPersistTaps="handled" keyboardDismissMode="none">
-          <Text style={styles.panelTitle}>{TOOLS.find(t => t.id === tool)?.label}</Text>
+          <Text style={styles.panelTitle}>{TOOLS.find(t => t.id === tool)?.label ?? (tool === 'icone' ? 'Icône' : '')}</Text>
+
+          {/* ── Icône décorative : supprimer / rétablir ── */}
+          {tool === 'icone' && (selIcon ? (
+            <View>
+              {(() => {
+                const hidden = (ov.iconHidden ?? []).includes(selIcon);
+                return (<>
+                  <Text style={styles.hint}>{hidden ? 'Cette icône est masquée sur votre site.' : 'Supprime cette icône décorative de votre site.'}</Text>
+                  <TouchableOpacity onPress={() => toggleIcon(selIcon)} style={[styles.pill, !hidden && styles.pillOff, { alignSelf: 'flex-start', marginTop: 10 }]}>
+                    <Text style={styles.pillTxt}>{hidden ? 'Rétablir l\'icône' : 'Supprimer l\'icône'}</Text>
+                  </TouchableOpacity>
+                </>);
+              })()}
+            </View>
+          ) : <Text style={styles.hint}>Touche une icône dans l'aperçu pour la gérer.</Text>)}
 
           {/* ── Conteneurs : réordonner (uniquement ceux réellement présents) ── */}
           {tool === 'sections' && (

@@ -30,6 +30,7 @@ export interface SiteOverrides {
   menuStyle?: TextStyle;                // style global du menu
   cont?: Record<string, ContStyle>;     // tuile catégorie (clé cN) -> forme/animation
   contOrder?: string[];                 // ordre des tuiles catégories (clés cN)
+  iconHidden?: string[];                // clés (iN) des icônes décoratives supprimées
 }
 
 // Forme + animation d'une tuile catégorie (conteneur image/texte sélectionnable).
@@ -374,6 +375,10 @@ export function normalizeOverrides(raw: any): SiteOverrides | undefined {
     const o = raw.contOrder.filter((k: any) =>
       typeof k === 'string' && /^c[0-9]{1,3}$/.test(k) && !seen.has(k) && (seen.add(k), true)).slice(0, 40);
     if (o.length) out.contOrder = o;
+  }
+  if (Array.isArray(raw.iconHidden)) {
+    const h = Array.from(new Set(raw.iconHidden.filter((k: any) => typeof k === 'string' && /^i[0-9]{1,3}$/.test(k)))) as string[];
+    if (h.length) out.iconHidden = h.slice(0, 40);
   }
   return Object.keys(out).length ? out : undefined;
 }

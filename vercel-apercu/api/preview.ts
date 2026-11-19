@@ -596,6 +596,11 @@ const LED_CORE = `<style id="led-core-style">
         var ms=ov.menuStyle;
         if(ms){ links.forEach(function(a){ if(ms.size)a.style.fontSize=ms.size+'px'; if(ms.color)a.style.color=ms.color; if(ms.font&&FONTS[ms.font])a.style.fontFamily=FONTS[ms.font]; }); }
       }
+      // Icônes décoratives supprimables (.led-ic) : clé stable data-ic, masquées si listées.
+      var icons=[].slice.call(document.querySelectorAll('.led-ic'));
+      icons.forEach(function(el,i){ if(!el.hasAttribute('data-ic')) el.setAttribute('data-ic','i'+i); });
+      var ih=ov.iconHidden||[];
+      icons.forEach(function(el){ el.style.display = ih.indexOf(el.getAttribute('data-ic'))>=0 ? 'none' : ''; });
       // Tuiles catégories (conteneurs carrés image/texte) : clé stable data-c
       // (posée UNE fois, jamais réassignée → l'ordre peut changer), puis forme
       // (carré/arrondi), animation d'entrée et réordonnancement dans la grille.
@@ -651,6 +656,7 @@ const REVEAL = `<style id="lx-reveal-style">
       [].slice.call(document.querySelectorAll(sel)).forEach(function(el){
         if(el.__lxrv)return;
         if(el.closest&&(el.closest('.cx-bento')||el.closest('.lx-fx-bento')||el.closest('.lx-fx-stagger')))return; // bento/stagger gèrent leur propre entrée
+        if(/lx-fx-/.test(''+(el.className||'')))return; // élément piloté par un effet SCROLLFX dédié
         if(/led-a-/.test(''+(el.className||'')))return; // respecte l'anim manuelle
         el.__lxrv=1; el.classList.add('lx-rv'); if(zoom)el.classList.add('lx-z');
       });
@@ -840,7 +846,9 @@ const SCROLLFX = `<style id="lx-fx-style">
 .lx-fx-hl{background-image:linear-gradient(90deg,var(--hl-on,#141414) var(--p,0%),var(--hl-off,rgba(20,20,20,.22)) var(--p,0%));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;will-change:background-image}
 .lx-fx-sitem{opacity:0;transform:translateY(38px) scale(.95);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1);will-change:opacity,transform}
 .lx-fx-stagger.lx-in .lx-fx-sitem{opacity:1;transform:none}
-@media(prefers-reduced-motion:reduce){.lx-fx-piece{opacity:1!important;transform:none!important}.lx-fx-beam-rect{display:none}.lx-fx-zoom{transform:none!important}.lx-fx-curtain{clip-path:none!important}[data-pll]{transform:none!important}.lx-fx-mask-l>span{transform:none!important}.lx-fx-sitem{opacity:1!important;transform:none!important}.lx-fx-hl{background:none!important;color:var(--hl-on,#141414)!important;-webkit-text-fill-color:var(--hl-on,#141414)!important}}
+.lx-fx-kb{background-size:112%!important;animation:lxKen 22s ease-in-out infinite alternate}
+@keyframes lxKen{from{background-size:112%;background-position:50% 50%}to{background-size:130%;background-position:52% 47%}}
+@media(prefers-reduced-motion:reduce){.lx-fx-piece{opacity:1!important;transform:none!important}.lx-fx-beam-rect{display:none}.lx-fx-zoom{transform:none!important}.lx-fx-curtain{clip-path:none!important}[data-pll]{transform:none!important}.lx-fx-mask-l>span{transform:none!important}.lx-fx-sitem{opacity:1!important;transform:none!important}.lx-fx-hl{background:none!important;color:var(--hl-on,#141414)!important;-webkit-text-fill-color:var(--hl-on,#141414)!important}.lx-fx-kb{animation:none!important;background-size:cover!important}}
 </style>
 <script>(function(){
   try{
@@ -902,6 +910,8 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
 .lassi-ed [data-k]{cursor:text}
 .lassi-ed [data-k].led-sel{outline:2px solid #3D8BFD;outline-offset:2px;border-radius:3px}
 .lassi-ed nav.led-sel{outline:2.5px solid #3D8BFD;outline-offset:-2px}
+.lassi-ed .led-ic{cursor:pointer}
+.lassi-ed .led-ic.led-sel{outline:2px solid #3D8BFD;outline-offset:3px;border-radius:4px}
 .lassi-ed.lassi-preview section,.lassi-ed.lassi-preview nav{outline:none!important}
 .lassi-ed.lassi-preview [data-k].led-sel{outline:none!important}
 </style>
@@ -1001,6 +1011,20 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
     post({type:'led:container', key:el.getAttribute('data-c'),
       index:sibs.indexOf(el), count:sibs.length, cols:cols,
       order:sibs.map(function(s){return s.getAttribute('data-c');})});
+    scrollSel(true, el);
+  }
+  // Icônes décoratives supprimables (.led-ic) : sélectionnables pour suppression.
+  var edIcons=[].slice.call(doc.querySelectorAll('.led-ic'));
+  edIcons.forEach(function(el,i){
+    if(!el.hasAttribute('data-ic')) el.setAttribute('data-ic','i'+i);
+    el.style.cursor='pointer'; el.setAttribute('contenteditable','false');
+    el.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); selectIcon(el); },true);
+  });
+  function selectIcon(el){
+    if(sel){ sel.classList.remove('led-sel'); sel=null; }
+    if(selC){ selC.classList.remove('led-sel'); selC=null; }
+    el.classList.add('led-sel');
+    post({type:'led:icon', key:el.getAttribute('data-ic')});
     scrollSel(true, el);
   }
   post({type:'led:ready', has:(window.__lassiHas||null)});
@@ -1605,6 +1629,9 @@ function page(o: {
 }): string {
   const deep = `https://lassi.tech/p/${encodeURIComponent(o.slug)}`;
   const theme = resolveTheme(o.siteConfig);
+  // Template EXCLUSIF verrouillé par slug (jamais sélectionnable ailleurs) :
+  // Les Délices de Fa reçoit le template « cafefa » quoi qu'il y ait en base.
+  if (o.slug === 'les-delices-de-fa') (theme as { template: string }).template = 'cafefa';
   // Logo : vrai logo uploadé du prestataire si présent, sinon logo LASSİ (jamais
   // d'emoji/initiale décorative). lassiLogo sert de repli partout dans les templates.
   const lassiLogo = `${o.base}/assets/lassi-logo.png`;
@@ -2519,22 +2546,22 @@ function page(o: {
   const fmVisitImg = pick(2);
   // Bande 3 colonnes (sous le hero) — histoire / bloc produits frais / visite.
   const fmBand = `
-    <section class="fm-band">
-      <a class="fm-band-img" href="#fm-ab-top" data-fmnav="about" ${bg(fmEggImg)}><span class="fm-band-card"><b>La Ferme</b><small>Notre histoire</small></span></a>
+    <section class="fm-band lx-fx-expand">
+      <a class="fm-band-img" href="#fm-ab-top" data-fmnav="about" ${bg(fmEggImg)}><span class="fm-band-card lx-fx-zin"><b>La Ferme</b><small>Notre histoire</small></span></a>
       <div class="fm-band-mid">
         <span class="fm-seal">Produits frais de la ferme</span>
         <h3>Produits<br>frais</h3>
         <p>${esc(clip(o.desc || `Œufs, volaille et viande de notre élevage familial, nourris naturellement et récoltés chaque jour.`, 150))}</p>
-        <a class="fm-btn" href="#fm-shop" data-fmnav="shop">Commander</a>
+        <span class="lx-fx-zin"><a class="fm-btn" href="#fm-shop" data-fmnav="shop">Commander</a></span>
       </div>
-      <a class="fm-band-img" href="#fm-contact" ${bg(fmVisitImg)}><span class="fm-band-card"><b>Rendez-nous visite</b><small>Notre adresse</small></span></a>
+      <a class="fm-band-img" href="#fm-contact" ${bg(fmVisitImg)}><span class="fm-band-card lx-fx-zin"><b>Rendez-nous visite</b><small>Notre adresse</small></span></a>
     </section>`;
   // Témoignages (statique, décor poulet).
   const fmTesti = `
     <section class="fm-testi" id="fm-about">
       <span class="fm-testi-ic">${fmHenIco}</span>
       <h2>Témoignages de nos clients</h2>
-      <p class="fm-quote">« Des produits d'une fraîcheur exceptionnelle. Les œufs et la volaille de ${esc(clip(o.name, 30))} sont incomparables — on sent le vrai goût de la ferme. »</p>
+      <p class="fm-quote lx-fx-hl" style="--hl-on:var(--fm-ink);--hl-off:rgba(46,69,55,.2)">« Des produits d'une fraîcheur exceptionnelle. Les œufs et la volaille de ${esc(clip(o.name, 30))} sont incomparables — on sent le vrai goût de la ferme. »</p>
       <p class="fm-testi-who">Arthur Perrier&nbsp; /&nbsp; ${esc(o.zone || 'Dakar')}</p>
     </section>`;
   // Grille Instagram (galerie + produits).
@@ -2543,7 +2570,7 @@ function page(o: {
     <section class="fm-insta" id="fm-insta">
       <h2>Suivez-nous sur Instagram</h2>
       <p class="fm-insta-tag">#${esc((o.name || 'ferme').toLowerCase().replace(/[^a-z0-9]/g, ''))}</p>
-      <div class="fm-insta-grid">${fmInstaPool.map(u => `<div class="fm-insta-tile" ${bg(u)}></div>`).join('')}</div>
+      <div class="fm-insta-grid lx-fx-bento">${fmInstaPool.map(u => `<div class="fm-insta-tile lx-fx-piece" ${bg(u)}></div>`).join('')}</div>
     </section>` : '';
   const fmFoot = `
     <footer id="fm-contact" class="fm-foot">
@@ -2587,7 +2614,7 @@ function page(o: {
         <a class="fm-btn-outline" href="#fm-contact" data-fmnav="about">Visitez-nous</a>
       </section>
       <section class="fm-ab-split">
-        <div class="fm-ab-split-img" ${bg(pick(4))}></div>
+        <div class="fm-ab-split-img lx-fx-curtain" ${bg(pick(4))}></div>
         <div class="fm-ab-split-txt">
           <h3>100% biologique, libre parcours et sans OGM</h3>
           <p>Nos bêtes vivent en plein air et se nourrissent naturellement. Pas d'hormones, pas d'OGM — juste un élevage respectueux qui donne des produits au vrai goût de la ferme.</p>
@@ -2598,7 +2625,7 @@ function page(o: {
           <h3>Un savoir-faire au service de la qualité</h3>
           <p>De l'éclosion à la récolte, chaque étape est maîtrisée avec exigence. Fraîcheur, traçabilité et bien-être animal sont au cœur de notre démarche quotidienne.</p>
         </div>
-        <div class="fm-ab-split-img" ${bg(pick(5))}></div>
+        <div class="fm-ab-split-img lx-fx-curtain" ${bg(pick(5))}></div>
       </section>
     </div>`;
   const fermeBody = `
@@ -2617,7 +2644,7 @@ function page(o: {
     </header>
 
     <div class="fm-page fm-page-home">
-    <section class="fm-hero" ${bg(heroImg)}>
+    <section class="fm-hero lx-fx-kb" ${bg(heroImg)}>
       <div class="fm-hero-ov"></div>
       <div class="fm-hero-in">
         <span class="fm-hero-year">— ${esc(o.zone || 'Ferme & terroir')} —</span>
@@ -2897,7 +2924,7 @@ function page(o: {
     <section class="ba-hero" ${bg(heroImg)}>
       <div class="ba-hero-bg"></div>
       <div class="ba-arch lx-rv">
-        ${baMark}
+        ${baMark.replace('class="ba-mark"','class="ba-mark led-ic"')}
         <div class="ba-hero-num">EST. ${new Date().getFullYear() - 2}</div>
         <div class="ba-hero-word">${esc(clip(o.name, 16))}</div>
         <div class="ba-hero-sub">${esc(clip(o.cat || 'Maison de feu & de saveurs', 60))}</div>
@@ -3043,7 +3070,95 @@ function page(o: {
       if(location.hash==='#gr-menu'){ pages.home.hidden=true; pages.menu.hidden=false; } else if(location.hash==='#gr-resa-page'){ pages.home.hidden=true; if(pages.resa)pages.resa.hidden=false; }
     })();</script>`;
 
-  const body = theme.template === 'furniture' && hasCatalog ? furnitureBody
+  // ── Template EXCLUSIF « CAFEFA » (Les Délices de Fa) ────────────────────────
+  // Réf : Wix « Cafe (Grunge) » — fond brun foncé, accent vert acide #C3FF5B,
+  // titres Anton condensés, kickers IBM Plex Mono, corps IBM Plex Sans.
+  // Verrouillé au slug les-delices-de-fa (voir force theme.template plus haut).
+  // Images : /assets/fa/{bg1,bg2}.avif (textures) + {top1,top2}.jpg (collage haut).
+  const faKicker = (o.cat ? o.cat.split('·')[0].trim() : 'Fast-food & Jus').toUpperCase();
+  const faMarquee = ['FAIT MAISON', 'FRAÎCHEUR DU JOUR', 'JUS PRESSÉS', 'DIBITERIE', 'LIVRAISON EXPRESS', 'SUR PLACE OU À EMPORTER'];
+  const faMark = '<svg class="fa-mark" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg>';
+  const faWords = esc(o.name).trim().split(/\s+/);
+  const faMid = Math.ceil(faWords.length / 2);
+  const faTitleHtml = faWords.slice(0, faMid).join(' ') + ' ' + faMark + ' ' + faWords.slice(faMid).join(' ');
+  const faBody = `
+    <div class="fa-masthead" id="fa-top">
+      <h1 class="fa-mast-title lx-rv">${faTitleHtml}</h1>
+    </div>
+    <nav class="fa-topnav">
+      <a class="fa-on" href="#fa-top">Accueil</a>
+      <a href="#fa-about">Notre histoire</a>
+      <a href="#fa-menu">Menu</a>
+      <a href="#fa-contact">Contact</a>
+    </nav>
+
+    <section class="fa-hero">
+      <div class="fa-hero-img fa-hero-l lx-rv">
+        <img src="/assets/fa/top1.jpg" alt="${escAttr(o.name)}">
+        <span class="fa-hero-stamp">${esc(clip(o.name, 18))}</span>
+      </div>
+      <div class="fa-hero-mid lx-rv">
+        <span class="fa-kick">${esc(faKicker)}${o.zone ? ' · ' + esc(o.zone.toUpperCase()) : ''}</span>
+        <h2 class="fa-hero-h">Fait avec amour</h2>
+        <p class="fa-hero-p">Chaque plat préparé minute, avec des produits frais et beaucoup de cœur. Ici, on cuisine comme à la maison — en plus gourmand.</p>
+        <a class="fa-btn-out" href="#fa-menu">Voir le menu →</a>
+        ${hoursHtml ? `<div class="fa-hero-hours">${hoursHtml}</div>` : ''}
+      </div>
+      <div class="fa-hero-img fa-hero-r lx-rv">
+        <img src="/assets/fa/top2.jpg" alt="${escAttr(o.name)}">
+      </div>
+    </section>
+
+    <div class="fa-marquee" aria-hidden="true"><div class="fa-marquee-row">${(faMarquee.concat(faMarquee)).map(t => `<span>${esc(t)}</span><span class="fa-dot">✦</span>`).join('')}</div></div>
+
+    <section class="fa-statement" id="fa-about">
+      <div class="fa-about-ov"></div>
+      <div class="fa-statement-in">
+        <span class="fa-sm fa-sm-l">${faMark}</span>
+        <span class="fa-sm fa-sm-r">${faMark}</span>
+        <h2 class="fa-statement-h lx-rv">Plus qu'un fast-food,<br><span>un art de se régaler</span></h2>
+        <p class="fa-statement-p lx-rv">${esc(clip(o.desc || `Nous croyons que les meilleures choses sont simples et sincères. Des produits choisis avec soin à la générosité de chaque assiette, ${o.name} célèbre le vrai goût — un endroit pour se régaler, partager et savourer l'instant.`, 300))}</p>
+        <div class="fa-stats lx-rv">
+          <div class="fa-stat"><b>100%</b><span>Fait maison</span></div>
+          <div class="fa-stat"><b>Frais</b><span>Produits du jour</span></div>
+          <div class="fa-stat"><b>Express</b><span>Commande en ligne</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="fa-menu" id="fa-menu">
+      <div class="fa-menu-head">
+        <span class="fa-kick lx-rv">From the street</span>
+        <h2 class="fa-h2 fa-h2-c lx-rv">${hasProducts ? 'La carte' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2>
+        <p class="fa-menu-sub lx-rv">${hasProducts ? 'Commande en ligne · retrait sur place ou livraison · paiement Wave / Orange Money' : hasServices ? 'Réserve ta prestation en ligne' : 'Réserve ton créneau'}</p>
+      </div>
+      ${closedNotice}
+      <div class="fa-menu-body${catalogCls}">
+        ${catnav}${dsSection}${grid}
+        ${svcSection}
+        ${terrainSection}
+      </div>
+    </section>
+
+    <footer class="fa-foot" id="fa-contact">
+      <div class="fa-foot-in">
+        <div class="fa-foot-brand">
+          <h3 class="fa-foot-name">${esc(o.name)}</h3>
+          <p>Street food · jus pressés · dibiterie</p>
+          ${socialHtml}
+        </div>
+        <div class="fa-foot-col">
+          ${o.zone ? `<b>Adresse</b><span>${esc(o.zone)}</span>` : ''}
+          ${o.phone ? `<b>Téléphone</b><a href="tel:${escAttr(o.phone.replace(/[^0-9+]/g, ''))}">${esc(o.phone)}</a>` : ''}
+        </div>
+        ${hoursHtml ? `<div class="fa-foot-col"><b>Horaires</b>${hoursHtml}</div>` : ''}
+      </div>
+      <a class="fa-btn fa-foot-cta" href="#fa-menu">Commander maintenant →</a>
+      <div class="fa-copy">© 2026 ${esc(o.name)} · Propulsé &amp; sécurisé par LASSİ</div>
+    </footer>`;
+
+  const body = theme.template === 'cafefa' && hasCatalog ? faBody
+    : theme.template === 'furniture' && hasCatalog ? furnitureBody
     : theme.template === 'cosmetic' && hasCatalog ? cosmeticBody
     : theme.template === 'garderobe' && hasCatalog ? garderobeBody
     : theme.template === 'sac' && hasCatalog ? sacBody
@@ -3084,6 +3199,7 @@ ${theme.fontsLink}
 ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=Raleway:wght@300;400;500;600;700&display=swap" rel="stylesheet">' : ''}
 ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Cinzel:wght@500;600&display=swap" rel="stylesheet">' : ''}
 ${theme.template === 'bar' ? '<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">' : ''}
+${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">' : ''}
 <style>
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
   [hidden] { display:none !important; }
@@ -4186,8 +4302,8 @@ ${theme.template === 'bar' ? '<link href="https://fonts.googleapis.com/css2?fami
   /* Header */
   body[data-template="bar"] .ba-nav{position:sticky;top:0;z-index:40;background:rgba(13,12,17,.9);backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,.07)}
   .ba-nav-in{max-width:1140px;margin:0 auto;padding:0 28px;display:flex;align-items:center;height:80px;gap:30px}
-  .ba-brand{display:flex;align-items:center;gap:10px;font-family:'Syne',sans-serif;font-weight:800;font-size:24px;letter-spacing:3px;color:#fff;text-decoration:none;text-transform:uppercase}
-  .ba-brand .ba-mark{width:22px;height:22px;color:#fff}
+  .ba-brand{display:flex;align-items:center;gap:9px;font-family:'Syne',sans-serif;font-weight:800;font-size:18px;letter-spacing:2px;color:#fff;text-decoration:none;text-transform:uppercase;white-space:nowrap}
+  .ba-brand .ba-mark{width:20px;height:20px;color:#fff;flex:none}
   .ba-menu{display:flex;gap:26px;margin-left:auto;flex-wrap:wrap}
   .ba-menu a{font-family:'Syne',sans-serif;font-size:14px;color:#fff;opacity:.85;text-decoration:none}
   .ba-menu a:hover{color:var(--gr-gold);opacity:1}
@@ -4197,8 +4313,8 @@ ${theme.template === 'bar' ? '<link href="https://fonts.googleapis.com/css2?fami
   .ba-hero-bg{position:absolute;inset:0;background:rgba(13,12,17,.2)}
   .ba-arch{position:relative;z-index:2;width:min(470px,90%);min-height:84vh;display:flex;flex-direction:column;align-items:center;background:var(--gr-bg);border-radius:235px 235px 0 0;padding:70px 46px 40px;text-align:center}
   .ba-arch .ba-mark{width:42px;height:42px;color:#fff;margin-bottom:34px}
-  .ba-hero-num{font-family:'Syne';font-weight:500;font-size:20px;color:#fff;margin-bottom:12px}
-  .ba-hero-word{font-family:'Syne';font-weight:800;font-size:clamp(44px,8vw,72px);line-height:1;color:#fff;letter-spacing:2px;text-transform:uppercase}
+  .ba-hero-num{font-family:'Syne';font-weight:500;font-size:16px;letter-spacing:1px;color:var(--gr-mut);margin-bottom:12px}
+  .ba-hero-word{font-family:'Syne';font-weight:800;font-size:clamp(30px,6vw,52px);line-height:1.05;color:#fff;letter-spacing:1px;text-transform:uppercase;max-width:100%;word-break:break-word}
   .ba-hero-sub{font-family:'Jost';font-weight:300;font-size:17px;color:var(--gr-mut);margin:24px 0 28px}
   .ba-hero-adr{margin-top:auto;padding-top:50px;color:#fff;font-size:15px}
   .ba-btn{display:inline-block;font-family:'Syne';font-weight:600;font-size:14px;padding:15px 36px;background:var(--gr-gold);color:var(--gr-ink);border:1px solid var(--gr-gold);cursor:pointer;text-decoration:none}
@@ -4251,6 +4367,110 @@ ${theme.template === 'bar' ? '<link href="https://fonts.googleapis.com/css2?fami
   .ba-foot-info b{display:block;font-family:'Syne';font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gr-gold);margin-bottom:6px}
   .ba-foot-info span{color:var(--gr-txt);font-size:15px}
   .ba-copy{margin-top:22px;padding-top:20px;border-top:1px solid rgba(255,255,255,.1);font-family:'Syne';font-size:12px;color:var(--gr-mut)}
+
+  /* ═══ TEMPLATE EXCLUSIF CAFEFA — Les Délices de Fa (réf Wix « Asphalt Bloom Cafe ») ═══ */
+  body[data-template="cafefa"]{ --fa-bg:#141210; --fa-ink:#ece7e0; --fa-lime:#FE7F24; --fa-brown:#1d1a17; --fa-mut:#9b938a; --fa-line:rgba(236,231,224,.13);
+    background:#0f0d0b url('/assets/fa/herobg.jpg') center/cover fixed; color:var(--fa-ink); font-family:'IBM Plex Sans',system-ui,sans-serif; }
+  body[data-template="cafefa"] ::selection{ background:var(--fa-lime); color:#141210; }
+  .fa-kick{ display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--fa-mut); margin-bottom:16px; }
+  .fa-h2{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(34px,5.5vw,70px); line-height:.98; letter-spacing:.5px; text-transform:uppercase; }
+  .fa-btn{ display:inline-block; background:var(--fa-lime); color:#141210; font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:14px; letter-spacing:1px; text-transform:uppercase; padding:15px 28px; border-radius:2px; text-decoration:none; border:none; cursor:pointer; transition:transform .18s ease, filter .18s ease; }
+  .fa-btn:hover{ transform:translateY(-2px); filter:brightness(1.08); }
+  .fa-btn-out{ display:inline-block; border:1.5px solid rgba(236,231,224,.4); color:var(--fa-ink); font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13px; letter-spacing:2px; text-transform:uppercase; padding:14px 30px; border-radius:2px; text-decoration:none; transition:background .2s ease,color .2s ease,border-color .2s ease; }
+  .fa-btn-out:hover{ background:var(--fa-lime); border-color:var(--fa-lime); color:#141210; }
+  /* MASTHEAD — titre géant plein cadre + marque florale */
+  .fa-masthead{ padding:30px clamp(16px,3vw,40px) 10px; }
+  .fa-mast-title{ display:flex; align-items:center; justify-content:center; flex-wrap:nowrap; gap:.18em; font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(40px,12.5vw,170px); line-height:.86; letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; color:var(--fa-ink); }
+  .fa-mark{ width:.72em; height:.72em; color:var(--fa-lime); flex:0 0 auto; animation:fa-spin 14s linear infinite; }
+  @keyframes fa-spin{ to{ transform:rotate(360deg); } }
+  /* TOP NAV — rangée pleine largeur espacée */
+  .fa-topnav{ position:sticky; top:0; z-index:40; display:flex; justify-content:space-between; gap:12px; max-width:1180px; margin:0 auto; padding:16px clamp(16px,3vw,40px); border-top:1px solid var(--fa-line); border-bottom:1px solid var(--fa-line); background:rgba(20,18,16,.92); backdrop-filter:blur(8px); }
+  .fa-topnav a{ font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:2.5px; text-transform:uppercase; color:var(--fa-ink); text-decoration:none; transition:color .2s ease; }
+  .fa-topnav a:hover{ color:var(--fa-lime); }
+  .fa-topnav a.fa-on{ color:var(--fa-lime); position:relative; }
+  .fa-topnav a.fa-on::after{ content:''; position:absolute; left:0; right:0; bottom:-17px; height:2px; background:var(--fa-lime); }
+  @media(max-width:620px){ .fa-topnav{ gap:8px; overflow-x:auto; justify-content:flex-start; } .fa-topnav a{ font-size:11px; letter-spacing:1.5px; flex:0 0 auto; } }
+  /* HERO — 3 colonnes sur fond photo : image gauche · texte centré · image droite */
+  .fa-hero{ position:relative; display:grid; grid-template-columns:0.82fr 1.36fr 0.82fr; min-height:clamp(360px,52vh,500px); }
+  .fa-hero::before{ content:''; position:absolute; inset:0; background:rgba(15,13,11,.3); }
+  .fa-hero > *{ position:relative; z-index:1; }
+  .fa-hero-img{ position:relative; display:flex; align-items:center; justify-content:center; padding:24px; background:transparent; }
+  .fa-hero-img img{ width:97%; max-width:487px; height:auto; aspect-ratio:3/4; object-fit:cover; border-radius:3px; display:block; transition:transform .9s cubic-bezier(.2,.7,.2,1); }
+  .fa-hero-img:hover img{ transform:scale(1.04); }
+  .fa-hero-stamp{ position:absolute; left:14px; bottom:14px; color:var(--fa-lime); font-family:'Anton',Impact,sans-serif; font-size:13px; letter-spacing:1px; text-transform:lowercase; transform:rotate(-90deg); transform-origin:left bottom; }
+  .fa-hero-mid{ display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:clamp(28px,4vw,54px) clamp(22px,3vw,42px); background:transparent; }
+  .fa-hero-mid .fa-kick{ font-size:15px; letter-spacing:4px; color:var(--fa-lime); }
+  .fa-hero-h{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(40px,5vw,66px); line-height:1; letter-spacing:.5px; text-transform:uppercase; margin-bottom:20px; }
+  .fa-hero-p{ font-size:clamp(17px,1.6vw,21px); line-height:1.75; color:var(--fa-ink); max-width:440px; margin-bottom:32px; }
+  .fa-hero-mid .fa-btn-out{ font-size:17px; letter-spacing:2px; padding:18px 40px; }
+  .fa-hero-hours{ margin-top:22px; }
+  @media(max-width:820px){ .fa-hero{ grid-template-columns:1fr; } .fa-hero-img{ min-height:260px; } .fa-hero-mid{ order:-1; padding:44px 24px; } }
+  /* MARQUEE */
+  .fa-marquee{ overflow:hidden; background:var(--fa-lime); color:#13260a; padding:12px 0; white-space:nowrap; }
+  .fa-marquee-row{ display:inline-flex; align-items:center; gap:22px; animation:fa-scroll 26s linear infinite; }
+  .fa-marquee-row span{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13px; letter-spacing:3px; text-transform:uppercase; }
+  .fa-marquee-row .fa-dot{ font-size:10px; }
+  @keyframes fa-scroll{ from{ transform:translateX(0);} to{ transform:translateX(-50%);} }
+  /* ABOUT */
+  /* STATEMENT — bandeau manifeste centré (réf « More than a cafe ») */
+  .fa-statement{ position:relative; background-size:cover; background-position:center; border-top:1px solid var(--fa-line); border-bottom:1px solid var(--fa-line); }
+  .fa-about-ov{ position:absolute; inset:0; background:rgba(15,13,11,.45); }
+  .fa-statement-in{ position:relative; max-width:900px; margin:0 auto; padding:clamp(60px,9vw,130px) 28px; text-align:center; }
+  .fa-sm{ position:absolute; width:clamp(26px,3vw,44px); color:var(--fa-lime); opacity:.9; }
+  .fa-sm svg{ width:100%; height:100%; animation:fa-spin 16s linear infinite; }
+  .fa-sm-l{ left:clamp(8px,6vw,80px); top:clamp(54px,8vw,120px); }
+  .fa-sm-r{ right:clamp(8px,6vw,80px); top:clamp(90px,11vw,170px); }
+  .fa-statement-h{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(34px,6.5vw,86px); line-height:.98; letter-spacing:.5px; text-transform:uppercase; }
+  .fa-statement-h span{ color:var(--fa-lime); }
+  .fa-statement-p{ font-size:clamp(14px,1.5vw,17px); line-height:1.8; color:var(--fa-mut); max-width:580px; margin:26px auto 0; }
+  .fa-stats{ display:flex; gap:38px; flex-wrap:wrap; justify-content:center; margin-top:40px; }
+  .fa-stat b{ display:block; font-family:'Anton',Impact,sans-serif; font-size:34px; color:var(--fa-lime); line-height:1; }
+  .fa-stat span{ font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--fa-mut); }
+  /* MENU (catalogue réutilisé, restylé sombre+lime) */
+  .fa-menu{ max-width:1240px; margin:0 auto; padding:clamp(56px,8vw,100px) 28px 40px; }
+  .fa-menu-head{ text-align:center; margin-bottom:46px; }
+  .fa-h2-c{ margin:0 auto; }
+  .fa-menu-sub{ font-family:'IBM Plex Mono',monospace; font-size:13px; letter-spacing:1px; color:var(--fa-mut); margin-top:18px; max-width:560px; margin-left:auto; margin-right:auto; }
+  .fa-menu-body.closed-overlay{ opacity:.55; pointer-events:none; filter:grayscale(.4); }
+  body[data-template="cafefa"] .catnav{ justify-content:center; margin-bottom:40px; }
+  body[data-template="cafefa"] .chip{ border:1.5px solid var(--fa-line); color:var(--fa-ink); background:transparent; font-family:'IBM Plex Mono',monospace; letter-spacing:1px; text-transform:uppercase; font-size:12px; border-radius:2px; }
+  body[data-template="cafefa"] .chip.sel{ background:var(--fa-lime); border-color:var(--fa-lime); color:#13260a; }
+  body[data-template="cafefa"] .cathead-title{ font-family:'Anton',Impact,sans-serif; text-transform:uppercase; letter-spacing:.5px; color:var(--fa-ink); }
+  body[data-template="cafefa"] .cathead-count{ background:rgba(195,255,91,.14); color:var(--fa-lime); }
+  body[data-template="cafefa"] .sectitle{ font-family:'Anton',Impact,sans-serif; text-transform:uppercase; color:var(--fa-ink); }
+  body[data-template="cafefa"] .prod{ background:var(--fa-brown); border:1.5px solid var(--fa-line); border-radius:6px; }
+  body[data-template="cafefa"] .prod.in{ border-color:var(--fa-lime); }
+  body[data-template="cafefa"] .pimgzone,body[data-template="cafefa"] .svc-imgzone{ background:#24140a; }
+  body[data-template="cafefa"] .pname{ font-family:'Anton',Impact,sans-serif; font-weight:400; letter-spacing:.3px; color:var(--fa-ink); text-transform:uppercase; }
+  body[data-template="cafefa"] .pdesc{ color:var(--fa-mut); }
+  body[data-template="cafefa"] .pprice{ color:var(--fa-lime); font-family:'IBM Plex Mono',monospace; font-weight:600; }
+  body[data-template="cafefa"] .pstock{ color:var(--fa-mut); font-size:11px; }
+  body[data-template="cafefa"] .add,body[data-template="cafefa"] .bookbtn,body[data-template="cafefa"] .ds-btn,body[data-template="cafefa"] .abo-btn{ background:var(--fa-lime); color:#13260a; border-color:var(--fa-lime); border-radius:3px; font-family:'IBM Plex Mono',monospace; letter-spacing:.5px; }
+  body[data-template="cafefa"] .svcbtn{ border-color:var(--fa-line); color:var(--fa-ink); border-radius:3px; }
+  body[data-template="cafefa"] .qtybox{ background:var(--fa-lime); border-radius:3px; }
+  body[data-template="cafefa"] .qtybox button,body[data-template="cafefa"] .qtybox .q{ color:#13260a; }
+  body[data-template="cafefa"] .ds-card,body[data-template="cafefa"] .abocard{ background:var(--fa-brown); border:1.5px solid var(--fa-line); border-radius:6px; }
+  body[data-template="cafefa"] .ds-name,body[data-template="cafefa"] .abonom{ font-family:'Anton',Impact,sans-serif; text-transform:uppercase; color:var(--fa-ink); }
+  body[data-template="cafefa"] .ds-price,body[data-template="cafefa"] .aboprix{ color:var(--fa-lime); }
+  body[data-template="cafefa"] .closed-notice{ background:var(--fa-brown); border:1px solid var(--fa-line); color:var(--fa-ink); }
+  body[data-template="cafefa"] .hours-status{ background:rgba(195,255,91,.12); color:var(--fa-lime); }
+  body[data-template="cafefa"] .hours-status::before{ background:var(--fa-lime); }
+  body[data-template="cafefa"] .h-closed{ background:rgba(255,255,255,.06); color:var(--fa-mut); }
+  body[data-template="cafefa"] .h-closed::before{ background:var(--fa-mut); }
+  body[data-template="cafefa"] .hours-time{ color:var(--fa-mut); }
+  /* CART BAR — accent lime */
+  body[data-template="cafefa"] .cartbtn{ background:var(--fa-lime); color:#13260a; }
+  body[data-template="cafefa"] #cartTotal{ color:#13260a!important; }
+  /* FOOT */
+  .fa-foot{ background:var(--fa-brown); border-top:1px solid var(--fa-line); padding:clamp(48px,7vw,84px) 28px 34px; text-align:center; }
+  .fa-foot-in{ max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:40px; text-align:left; }
+  .fa-foot-name{ font-family:'Anton',Impact,sans-serif; font-size:32px; text-transform:uppercase; margin-bottom:8px; }
+  .fa-foot-brand p{ color:var(--fa-mut); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:1px; text-transform:uppercase; margin-bottom:16px; }
+  .fa-foot-col b{ display:block; font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--fa-lime); margin:10px 0 4px; }
+  .fa-foot-col span,.fa-foot-col a{ color:var(--fa-ink); text-decoration:none; font-size:15px; }
+  .fa-foot-cta{ margin:40px 0 24px; }
+  .fa-copy{ color:var(--fa-mut); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:1px; padding-top:22px; border-top:1px solid var(--fa-line); }
+  @media(max-width:760px){ .fa-foot-in{ grid-template-columns:1fr; gap:24px; } }
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">
