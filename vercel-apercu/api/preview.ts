@@ -2341,6 +2341,7 @@ function page(o: {
         <a class="gr-ic gr-cart" href="#gr-shop" title="Commander"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></a>
       </div>
     </header>
+    <div class="gr-pinwrap">
     <section class="gr-hero" ${bg(heroImg)}>
       <div class="gr-hero-ov"></div>
       <div class="gr-hero-in">
@@ -2356,6 +2357,7 @@ function page(o: {
         <div class="gr-cols">${grCols.map(c => `<div class="gr-col"><span class="gr-num">${c.n}</span><h3>${c.t}</h3><p>${esc(c.p)}</p></div>`).join('')}</div>
       </div>
     </section>
+    </div>
     <div class="gr-cutlery"><img src="/assets/grill/cutlery.jpg" alt=""></div>
     <section class="gr-feature">
       <div class="gr-beef"><img src="/assets/grill/beef.jpg" alt=""></div>
@@ -3321,10 +3323,14 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-nav a{font-family:var(--gr-fs);color:var(--gr-ink);text-decoration:none;font-size:12.5px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase}
   .gr-nav a:hover,.gr-nav .gr-nav-active{color:#fff}
   .gr-ic{color:var(--gr-ink);display:flex}
-  /* HERO */
-  .gr-hero{position:relative;min-height:min(86vh,680px);display:flex;align-items:center;justify-content:center;background-size:cover;background-position:center;background-color:#1b1a18;text-align:center}
+  /* HERO — défilement overlap : le hero reste figé (sticky), LE RESTAURANT glisse par-dessus */
+  .gr-pinwrap{position:relative}
+  .gr-hero{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;background-size:cover;background-position:center;background-color:#1b1a18;text-align:center;z-index:0}
   .gr-hero-ov{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(20,19,17,.35),rgba(20,19,17,.72))}
   .gr-hero-in{position:relative;z-index:2;padding:40px 20px}
+  /* LE RESTAURANT recouvre le hero pendant le scroll */
+  .gr-pinwrap .gr-about{position:relative;z-index:1;box-shadow:0 -40px 80px rgba(0,0,0,.45)}
+  @media(max-width:760px){.gr-hero{height:88vh}}
   /* Titres sections = Lulo Clean (→ Montserrat 700, capitales larges) */
   body[data-template="grill"] .gr-light,body[data-template="grill"] .gr-col h3,body[data-template="grill"] .gr-brand span,body[data-template="grill"] .pname{font-weight:700}
   /* Hero « AU GRILL » = Anton 200px (font_3 Wix) */
