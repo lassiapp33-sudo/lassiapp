@@ -189,6 +189,7 @@ export const SITE_TEMPLATES: { id: string; label: string }[] = [
   { id: 'tresse', label: 'Tresses & Coiffure' },
   { id: 'ferme', label: 'Ferme agricole' },
   { id: 'grill', label: 'Grill / Steakhouse' },
+  { id: 'bar', label: 'Restaurant / Lounge' },
 ];
 
 // Preset appliqué quand on choisit un template : fixe palette/accent/polices/layout

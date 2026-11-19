@@ -74,6 +74,7 @@ const SITE_FONTS: Record<string, SiteFont> = {
   oswald:    { family: 'Oswald', stack: "'Oswald',Impact,system-ui,sans-serif", css2: 'Oswald:wght@400;500;600;700' },
   anton:     { family: 'Anton', stack: "'Anton',Impact,system-ui,sans-serif", css2: 'Anton' },
   cinzel:    { family: 'Cinzel', stack: "'Cinzel',Georgia,serif", css2: 'Cinzel:wght@400;500;600;700' },
+  syne:      { family: 'Syne', stack: "'Syne',system-ui,sans-serif", css2: 'Syne:wght@400;500;600;700;800' },
 };
 const DEFAULT_HEADING = 'cormorant';
 const DEFAULT_BODY = 'dmsans';
