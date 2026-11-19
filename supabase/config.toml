@@ -11,6 +11,9 @@ verify_jwt = false
 [functions.create-guest-reservation]
 verify_jwt = false
 
+[functions.create-guest-table-reservation]
+verify_jwt = false
+
 [functions.create-guest-terrain-reservation]
 verify_jwt = false
 

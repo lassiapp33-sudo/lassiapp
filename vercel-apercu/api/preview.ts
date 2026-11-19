@@ -649,6 +649,7 @@ const REVEAL = `<style id="lx-reveal-style">
     function tag(sel,zoom){
       [].slice.call(document.querySelectorAll(sel)).forEach(function(el){
         if(el.__lxrv)return;
+        if(el.closest&&(el.closest('.cx-bento')||el.closest('.lx-fx-bento')))return; // bento gère sa propre entrée
         if(/led-a-/.test(''+(el.className||'')))return; // respecte l'anim manuelle
         el.__lxrv=1; el.classList.add('lx-rv'); if(zoom)el.classList.add('lx-z');
       });
@@ -666,6 +667,128 @@ const REVEAL = `<style id="lx-reveal-style">
       });
     },{threshold:.12,rootMargin:'0px 0px -7% 0px'});
     [].slice.call(document.querySelectorAll('.lx-rv')).forEach(function(el){io.observe(el);});
+  }catch(e){}
+})();</script>`;
+
+// Script client de la réservation de table (template grill) — autonome, lit #gr-resa-cfg.
+// Appelle l'EF create-guest-table-reservation (créneaux → acompte Wave/OM → polling).
+const GR_RESA_JS = `(function(){
+  var ov=document.getElementById('grResaOv'); if(!ov) return;
+  var cfgEl=document.getElementById('gr-resa-cfg'); if(!cfgEl) return;
+  var CFG; try{CFG=JSON.parse(cfgEl.textContent);}catch(e){return;}
+  var EP=CFG.url+'/functions/v1/create-guest-table-reservation';
+  var H={apikey:CFG.key,Authorization:'Bearer '+CFG.key};
+  var st={slot:null,moyen:null,piId:null,poll:null};
+  var $=function(id){return document.getElementById(id);};
+  var nb=$('grNb'); for(var i=1;i<=12;i++){var o=document.createElement('option');o.value=i;o.textContent=i+(i>1?" personnes":" personne");nb.appendChild(o);} nb.value=2;
+  var d=$('grDate'); d.min=new Date().toISOString().slice(0,10);
+  function open(){ov.hidden=false;document.body.style.overflow="hidden";}
+  function close(){ov.hidden=true;document.body.style.overflow="";if(st.poll){clearInterval(st.poll);st.poll=null;}}
+  $('grResaOpen').addEventListener('click',open);
+  $('grResaX').addEventListener('click',close);
+  ov.addEventListener('click',function(e){if(e.target===ov)close();});
+  var c2=$('grClose2'); if(c2)c2.addEventListener('click',close);
+  document.querySelectorAll('.gr-resa-pay').forEach(function(b){b.addEventListener('click',function(){st.moyen=b.getAttribute('data-m');document.querySelectorAll('.gr-resa-pay').forEach(function(x){x.classList.remove('on');});b.classList.add('on');});});
+  d.addEventListener('change',loadSlots);
+  function loadSlots(){
+    var box=$('grSlots'); st.slot=null;
+    if(!d.value){box.innerHTML='<span class="gr-resa-hint">Choisissez une date</span>';return;}
+    box.innerHTML='<span class="gr-resa-hint">Chargement…</span>';
+    fetch(EP+'?slug='+encodeURIComponent(CFG.slug)+'&date='+encodeURIComponent(d.value),{headers:H})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        if(j.reservation_enabled===false){box.innerHTML='<span class="gr-resa-hint">Réservation non disponible pour ce restaurant.</span>';return;}
+        if(j.closed){box.innerHTML='<span class="gr-resa-hint">Fermé ce jour.</span>';return;}
+        var s=j.slots||[]; if(!s.length){box.innerHTML='<span class="gr-resa-hint">Aucun créneau libre ce jour.</span>';return;}
+        box.innerHTML='';
+        s.forEach(function(x){var b=document.createElement('button');b.type='button';b.className='gr-resa-slot';b.textContent=x.heure_debut;b.addEventListener('click',function(){st.slot=x;document.querySelectorAll('.gr-resa-slot').forEach(function(y){y.classList.remove('on');});b.classList.add('on');});box.appendChild(b);});
+      }).catch(function(){box.innerHTML='<span class="gr-resa-hint">Erreur de chargement.</span>';});
+  }
+  function digitsOk(p){return /^7[015678][0-9]{7}$/.test(p.replace(/[^0-9]/g,'').replace(/^221/,''));}
+  $('grSubmit').addEventListener('click',function(){
+    var msg=$('grMsg'); msg.textContent='';
+    if(!d.value){msg.textContent="Choisissez une date.";return;}
+    if(!st.slot){msg.textContent="Choisissez une heure.";return;}
+    var name=$('grName').value.trim(); if(name.length<2){msg.textContent="Entrez votre nom.";return;}
+    var phone=$('grPhone').value; if(!digitsOk(phone)){msg.textContent="Numéro invalide (77 xxx xx xx).";return;}
+    if(!st.moyen){msg.textContent="Choisissez un moyen de paiement.";return;}
+    var btn=this; btn.disabled=true; btn.textContent="Création…";
+    fetch(EP,{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({slug:CFG.slug,date:d.value,timeSlotId:st.slot.slot_id||null,heureDebut:st.slot.heure_debut,nbPersonnes:parseInt(nb.value,10),name:name,phone:phone,moyenPaiement:st.moyen,idempotencyKey:'web-'+Date.now()})})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        btn.disabled=false; btn.textContent="Payer l'acompte · 2100 F";
+        if(!j.success){msg.textContent=j.error||"Erreur. Réessayez.";return;}
+        st.piId=j.piId;
+        $('grResaStep1').hidden=true; $('grResaStep2').hidden=false;
+        if(j.qrCode){var q=$('grQr');q.src=j.qrCode;q.hidden=false;}
+        if(j.redirectUrl){ try{window.open(j.redirectUrl,'_blank');}catch(e){} }
+        if(j.mode==='simulation'){showDone();return;}
+        startPoll();
+      }).catch(function(){btn.disabled=false;btn.textContent="Payer l'acompte · 2100 F";msg.textContent="Erreur réseau.";});
+  });
+  function startPoll(){ if(st.poll)clearInterval(st.poll); st.poll=setInterval(check,3500); }
+  function check(){ if(!st.piId)return; fetch(EP+'?status='+encodeURIComponent(st.piId),{headers:H}).then(function(r){return r.json();}).then(function(j){if(j.paid)showDone();}).catch(function(){}); }
+  var chk=$('grCheck'); if(chk)chk.addEventListener('click',check);
+  function showDone(){ if(st.poll){clearInterval(st.poll);st.poll=null;} $('grResaStep2').hidden=true; $('grResaStep1').hidden=true; $('grResaDone').hidden=false; }
+})();`;
+
+// ─── Moteur d'animations conteneur réutilisable (SCROLLFX) ───────────────────
+// Bibliothèque générique pilotée par classes/attributs, injectée une fois pour
+// TOUS les templates. Chaque template active l'effet voulu en posant la classe :
+//   .lx-fx-bento / .lx-fx-piece      → Bento Grid Magnetic Assembly
+//   .lx-fx-beam (contient rect.lx-fx-beam-rect) → Border Beam / Perimeter Trace
+//   [data-pll="0.12"]                → Parallax (dérive translateY)
+//   .lx-fx-curtain                   → Clip-path Curtain Reveal
+//   .lx-fx-zoom                      → Zoom Apple (scale .88→1 + radius)
+//   .lx-fx-count[data-target][data-suffix] → Counter-Up
+// Respecte prefers-reduced-motion et le mode édition.
+const SCROLLFX = `<style id="lx-fx-style">
+.lx-fx-piece{opacity:0;transform:translate3d(var(--tx,0),var(--ty,0),0) rotate(var(--rot,0)) scale(.92);transition:transform .95s cubic-bezier(.16,1,.3,1),opacity .75s ease;transition-delay:calc(var(--bd,0)*80ms);will-change:transform,opacity}
+.lx-fx-bento.lx-in .lx-fx-piece{opacity:1;transform:none}
+.lx-fx-beam{position:relative}
+.lx-fx-beam>.lx-fx-beam-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;overflow:visible}
+.lx-fx-beam-rect{fill:none;stroke-width:3;stroke-linecap:round;width:calc(100% - 3px);height:calc(100% - 3px);will-change:stroke-dashoffset}
+[data-pll]{will-change:transform}
+.lx-fx-zoom{will-change:transform,border-radius;transform:scale(.88);overflow:hidden}
+.lx-fx-curtain{clip-path:inset(14% 14% 14% 14% round 26px);will-change:clip-path}
+@media(prefers-reduced-motion:reduce){.lx-fx-piece{opacity:1!important;transform:none!important}.lx-fx-beam-rect{display:none}.lx-fx-zoom{transform:none!important}.lx-fx-curtain{clip-path:none!important}[data-pll]{transform:none!important}}
+</style>
+<script>(function(){
+  try{
+    if(document.body&&document.body.classList.contains('lassi-ed'))return;
+    if(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+    var clamp=function(v,a,b){return v<a?a:v>b?b:v;};
+    // Bento magnétique
+    if('IntersectionObserver'in window){
+      var dirs=[[-70,0,-3],[0,-65,4],[70,0,3.5],[0,65,-4],[55,45,2.5],[-55,45,-2.5],[45,-55,3],[-45,-55,-3]];
+      [].slice.call(document.querySelectorAll('.lx-fx-bento')).forEach(function(b){
+        [].slice.call(b.querySelectorAll('.lx-fx-piece')).forEach(function(p,i){var d=dirs[i%dirs.length];p.style.setProperty('--tx',d[0]+'px');p.style.setProperty('--ty',d[1]+'px');p.style.setProperty('--rot',d[2]+'deg');p.style.setProperty('--bd',i);});
+      });
+      var ioF=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('lx-in');ioF.unobserve(e.target);}});},{threshold:.18});
+      [].slice.call(document.querySelectorAll('.lx-fx-bento')).forEach(function(b){ioF.observe(b);});
+      // Counter-up
+      function cnt(el){var tg=parseFloat(el.getAttribute('data-target'))||0,sf=el.getAttribute('data-suffix')||'',st=null;function s(ts){if(st===null)st=ts;var p=Math.min((ts-st)/1400,1),e=1-Math.pow(1-p,3);el.textContent=Math.round(tg*e)+sf;if(p<1)requestAnimationFrame(s);}requestAnimationFrame(s);}
+      var ioC=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){cnt(e.target);ioC.unobserve(e.target);}});},{threshold:.4});
+      [].slice.call(document.querySelectorAll('.lx-fx-count')).forEach(function(el){ioC.observe(el);});
+    }
+    // Border beam (périmètre)
+    var beams=[].slice.call(document.querySelectorAll('.lx-fx-beam')).map(function(w){return {w:w,r:w.querySelector('.lx-fx-beam-rect'),len:0};});
+    function meas(){beams.forEach(function(it){if(!it.r)return;var bx=it.w.getBoundingClientRect(),ww=Math.max(0,bx.width-3),hh=Math.max(0,bx.height-3),rr=16,per=2*(ww+hh-4*rr)+2*Math.PI*rr;it.len=per;it.r.style.strokeDasharray=per;it.r.style.strokeDashoffset=per;});}
+    meas();window.addEventListener('resize',meas,{passive:true});
+    // Parallax + zoom + curtain + beam : boucle scroll unique
+    var plls=[].slice.call(document.querySelectorAll('[data-pll]'));
+    var zooms=[].slice.call(document.querySelectorAll('.lx-fx-zoom'));
+    var curts=[].slice.call(document.querySelectorAll('.lx-fx-curtain'));
+    var ticking=false;
+    function frame(){
+      ticking=false;var vh=window.innerHeight;
+      plls.forEach(function(el){var r=el.getBoundingClientRect();if(r.bottom>0&&r.top<vh){var sp=parseFloat(el.getAttribute('data-pll'))||0.1;var p=(r.top+r.height/2-vh/2);el.style.transform='translateY('+(p*-sp).toFixed(1)+'px)';}});
+      zooms.forEach(function(el){var r=el.getBoundingClientRect();if(r.bottom>0&&r.top<vh){var d=Math.abs((r.top+r.height/2)-vh/2)/(vh/2),t=clamp(1-d,0,1);el.style.transform='scale('+(0.88+0.12*t).toFixed(3)+')';el.style.borderRadius=(30-18*t).toFixed(0)+'px';}});
+      curts.forEach(function(el){var r=el.getBoundingClientRect();var s=vh*0.92,en=vh*0.22,p=clamp((s-r.top)/(s-en),0,1);var iv=(14*(1-p)).toFixed(1),rd=(26-20*p).toFixed(0);el.style.clipPath='inset('+iv+'% '+iv+'% '+iv+'% '+iv+'% round '+rd+'px)';});
+      beams.forEach(function(it){if(!it.r||it.len<=0)return;var r=it.w.getBoundingClientRect(),s=vh*0.9,en=vh*0.25,p=clamp((s-r.top)/(s-en),0,1);it.r.style.strokeDashoffset=(it.len*(1-p)).toFixed(1);});
+    }
+    function onS(){if(!ticking){ticking=true;requestAnimationFrame(frame);}}
+    if(plls.length||zooms.length||curts.length||beams.length){window.addEventListener('scroll',onS,{passive:true});window.addEventListener('resize',onS,{passive:true});frame();}
   }catch(e){}
 })();</script>`;
 
@@ -1525,16 +1648,19 @@ function page(o: {
       <div class="cx-stat"><b><span class="cx-count" data-target="100" data-suffix="%">0</span></b><span>Naturel &amp; bio</span></div>
       <div class="cx-stat"><b><span class="cx-count" data-target="24" data-suffix="/7">0</span></b><span>Commande en ligne</span></div>
     </div>`;
+  const cxBeam = (grad: string) => `<svg class="cx-beam" preserveAspectRatio="none"><defs><linearGradient id="${grad}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#22D3EE"/><stop offset="50%" stop-color="#ffffff"/><stop offset="100%" stop-color="#2563EB"/></linearGradient></defs><rect class="cx-beam-rect" x="1.5" y="1.5" rx="16" ry="16" stroke="url(#${grad})"/></svg>`;
   const cxBanners = `
     <section class="cx-banners">
-      <a class="cx-banner" href="#cx-shop" ${bg(pick(1))}>
+      <a class="cx-banner cx-beam-card" href="#cx-shop" ${bg(pick(1))}>
+        ${cxBeam('cxBeamA')}
         <div class="cx-banner-in">
           <span class="cx-banner-k">Peau éclatante</span>
           <h3>Chacune mérite de se sentir belle et confiante</h3>
           <span class="cx-banner-cta">Acheter</span>
         </div>
       </a>
-      <a class="cx-banner" href="#cx-shop" ${bg(pick(2))}>
+      <a class="cx-banner cx-beam-card" href="#cx-shop" ${bg(pick(2))}>
+        ${cxBeam('cxBeamB')}
         <div class="cx-banner-in">
           <span class="cx-banner-k">Rituel éclat</span>
           <h3>La beauté est l'éternité qui se contemple</h3>
@@ -1551,8 +1677,8 @@ function page(o: {
         <h2 class="cx-sec-title">Nos Meilleures Ventes</h2>
         <p class="cx-sec-sub">Les favoris de nos clientes, sélectionnés rien que pour toi.</p>
       </div>
-      <div class="cx-best-grid">
-        <div class="cx-best-feature" ${bg(pick(3))}>
+      <div class="cx-best-grid cx-bento">
+        <div class="cx-best-feature cx-bento-piece" ${bg(pick(3))}>
           <div class="cx-best-feature-ov"></div>
           <div class="cx-best-feature-in">
             <span class="cx-eyebrow light">Soins naturels</span>
@@ -1561,7 +1687,7 @@ function page(o: {
           </div>
         </div>
         <div class="cx-best-products grid">
-          ${o.products.slice(0, 6).map(productCard).join('')}
+          ${o.products.slice(0, 6).map((p) => productCard(p).replace('class="prod', 'class="prod cx-bento-piece')).join('')}
         </div>
       </div>
     </section>` : '';
@@ -1687,7 +1813,14 @@ function page(o: {
       .cx-mask-l>span{display:block;transform:translateY(115%);transition:transform .9s cubic-bezier(.16,1,.3,1);will-change:transform}
       .cx-mask-l:nth-child(2)>span{transition-delay:.14s}
       .cx-mask.cx-in .cx-mask-l>span{transform:translateY(0)}
-      @media(prefers-reduced-motion:reduce){.cx-zoom{transform:none!important;border-radius:14px!important}.cx-mask-l>span{transform:none!important}}
+      /* Border Beam — tracé lumineux du périmètre */
+      .cx-beam-card{position:relative}
+      .cx-beam{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;overflow:visible}
+      .cx-beam-rect{fill:none;stroke-width:3;stroke-linecap:round;width:calc(100% - 3px);height:calc(100% - 3px);will-change:stroke-dashoffset;filter:drop-shadow(0 0 6px rgba(34,211,238,.9))}
+      /* Bento — assemblage magnétique */
+      .cx-bento-piece{opacity:0;transform:translate3d(var(--tx,0),var(--ty,0),0) rotate(var(--rot,0)) scale(.92);transition:transform .95s cubic-bezier(.16,1,.3,1),opacity .75s ease;transition-delay:calc(var(--bd,0) * 80ms);will-change:transform,opacity}
+      .cx-bento.cx-in .cx-bento-piece{opacity:1;transform:translate3d(0,0,0) rotate(0) scale(1)}
+      @media(prefers-reduced-motion:reduce){.cx-zoom{transform:none!important;border-radius:14px!important}.cx-mask-l>span{transform:none!important}.cx-bento-piece{opacity:1!important;transform:none!important}.cx-beam-rect{display:none}}
     </style>
     <script>(function(){
       try{
@@ -1750,7 +1883,22 @@ function page(o: {
             });
           },{threshold:.4});
           [].slice.call(document.querySelectorAll('.cx-count,.cx-mask')).forEach(function(el){io2.observe(el);});
+          // Bento : assemblage magnétique — directions N/S/E/O + inclinaison + délai
+          var bentos=[].slice.call(document.querySelectorAll('.cx-bento'));
+          bentos.forEach(function(b){
+            var pieces=[].slice.call(b.querySelectorAll('.cx-bento-piece'));
+            var dirs=[[-70,0,-3],[0,-65,4],[70,0,3.5],[0,65,-4],[55,45,2.5],[-55,45,-2.5],[45,-55,3]];
+            pieces.forEach(function(p,i){var d=dirs[i%dirs.length];p.style.setProperty('--tx',d[0]+'px');p.style.setProperty('--ty',d[1]+'px');p.style.setProperty('--rot',d[2]+'deg');p.style.setProperty('--bd',i);});
+          });
+          var ioB=new IntersectionObserver(function(ents){ents.forEach(function(e){if(e.isIntersecting){e.target.classList.add('cx-in');ioB.unobserve(e.target);}});},{threshold:.18});
+          bentos.forEach(function(b){ioB.observe(b);});
         }
+        // Border Beam — tracé du périmètre lié au scroll
+        var beams=[].slice.call(document.querySelectorAll('.cx-beam-card')).map(function(w){return {w:w,r:w.querySelector('.cx-beam-rect'),len:0};});
+        function measureBeams(){beams.forEach(function(it){if(!it.r)return;var bx=it.w.getBoundingClientRect();var ww=Math.max(0,bx.width-3),hh=Math.max(0,bx.height-3),rr=16;var per=2*(ww+hh-4*rr)+2*Math.PI*rr;it.len=per;it.r.style.strokeDasharray=per;it.r.style.strokeDashoffset=per;});}
+        measureBeams();window.addEventListener('resize',measureBeams,{passive:true});
+        function beamFrame(){var vh=window.innerHeight;beams.forEach(function(it){if(!it.r||it.len<=0)return;var r=it.w.getBoundingClientRect();var s=vh*0.9,en=vh*0.25;var p=Math.min(Math.max((s-r.top)/(s-en),0),1);it.r.style.strokeDashoffset=(it.len*(1-p)).toFixed(1);});}
+        if(beams.length){window.addEventListener('scroll',function(){requestAnimationFrame(beamFrame);},{passive:true});beamFrame();}
       }catch(e){}
     })();</script>
   `;
@@ -1772,8 +1920,8 @@ function page(o: {
   const fnRooms = (gal.length >= 2 && fnRoomItems.length >= 3) ? `
     <section class="fn-rooms"><div class="fn-rooms-in">
       <div class="fn-rooms-top"><h2>Parcourir par catégorie</h2><p>Trouvez l'inspiration pour chaque espace de votre maison.</p></div>
-      <div class="fn-rooms-grid">
-        ${fnRoomItems.map((r, i) => `<a class="fn-room ${i === 0 ? 'big' : ''}" href="#cx-shop" ${bg(pick(i))}><span class="fn-chip"><b>${esc(r.title)}</b></span></a>`).join('')}
+      <div class="fn-rooms-grid lx-fx-bento">
+        ${fnRoomItems.map((r, i) => `<a class="fn-room lx-fx-piece ${i === 0 ? 'big' : ''}" href="#cx-shop" ${bg(pick(i))}><span class="fn-chip"><b>${esc(r.title)}</b></span></a>`).join('')}
       </div>
     </div></section>` : '';
   const fnMaterials = gal.length >= 1 ? `
@@ -1783,7 +1931,7 @@ function page(o: {
         <p>${esc(clip(o.desc || `Matières nobles et finitions soignées. Chaque pièce de ${o.name} est pensée pour durer et traverser les années avec élégance.`, 170))}</p>
         <a class="fn-btn" href="#cx-shop">${cxHeadCta}</a>
       </div>
-      <div class="fn-mat-gal"><div class="fn-mg" ${bg(pick(0))}></div><div class="fn-mg" ${bg(pick(1))}></div><div class="fn-mg" ${bg(pick(2))}></div></div>
+      <div class="fn-mat-gal"><div class="fn-mg lx-fx-curtain" ${bg(pick(0))}></div><div class="fn-mg lx-fx-curtain" ${bg(pick(1))}></div><div class="fn-mg lx-fx-curtain" ${bg(pick(2))}></div></div>
     </div></section>` : '';
   const fnFoot = `
     <footer id="fn-contact" class="fn-foot">
@@ -1824,8 +1972,8 @@ function page(o: {
       </div>
       <div class="fn-collage">
         ${fnCard(0)}${fnCard(1)}
-        <div class="fn-big" ${bg(pick(0))}></div>
-        <div class="fn-promo"><p>Paiement sécurisé Wave &amp; Orange Money.</p><a href="#cx-shop">Découvrir &#8594;</a></div>
+        <div class="fn-big" data-pll="0.06" ${bg(pick(0))}></div>
+        <div class="fn-promo" data-pll="-0.05"><p>Paiement sécurisé Wave &amp; Orange Money.</p><a href="#cx-shop">Découvrir &#8594;</a></div>
       </div>
     </div></section>
     ${closedNotice}
@@ -2431,8 +2579,11 @@ function page(o: {
         <div class="gr-cols">${grCols.map(c => `<div class="gr-col"><span class="gr-num">${c.n}</span><h3>${c.t}</h3><p>${esc(c.p)}</p></div>`).join('')}</div>
       </div>
     </section>
-    <section class="gr-cutlery gr-slide">
+    <section class="gr-cutlery gr-slide" id="gr-reserve">
       <div class="gr-cutlery-in"><img src="/assets/grill/cutlery.jpg" alt=""></div>
+      <h2 class="gr-h2 gr-light gr-resa-title">Réserver une table</h2>
+      <p class="gr-resa-sub">Sélectionnez vos détails et nous ferons notre possible pour satisfaire votre demande.</p>
+      <button class="gr-btn gr-btn-dark" id="grResaOpen" type="button">Trouver une table</button>
     </section>
     <section class="gr-feature gr-slide">
       <div class="gr-beef"><img src="/assets/grill/beef.jpg" alt=""></div>
@@ -2478,7 +2629,47 @@ function page(o: {
       <a class="gr-btn gr-foot-cta" href="#gr-shop">Voir le menu</a>
       ${socialHtml}
       <div class="gr-copy">© 2026 ${esc(o.name)} · Propulsé par LASSİ</div>
-    </footer>`;
+    </footer>
+    <div class="gr-resa-ov" id="grResaOv" hidden>
+      <div class="gr-resa-modal" role="dialog" aria-modal="true">
+        <button class="gr-resa-x" id="grResaX" type="button" aria-label="Fermer">×</button>
+        <div id="grResaStep1">
+          <h3 class="gr-resa-h">Réserver une table</h3>
+          <p class="gr-resa-note">Acompte de 2000 F déduit de votre addition sur place · 100 F de frais de service.</p>
+          <label class="gr-resa-lb">Nombre de personnes</label>
+          <select class="gr-resa-in" id="grNb"></select>
+          <label class="gr-resa-lb">Date</label>
+          <input class="gr-resa-in" type="date" id="grDate">
+          <label class="gr-resa-lb">Heure</label>
+          <div class="gr-resa-slots" id="grSlots"><span class="gr-resa-hint">Choisissez une date</span></div>
+          <label class="gr-resa-lb">Votre nom</label>
+          <input class="gr-resa-in" type="text" id="grName" maxlength="80" placeholder="Ex : Awa Diop">
+          <label class="gr-resa-lb">Téléphone</label>
+          <input class="gr-resa-in" type="tel" id="grPhone" inputmode="numeric" maxlength="14" placeholder="77 123 45 67">
+          <label class="gr-resa-lb">Paiement de l'acompte</label>
+          <div class="gr-resa-pays">
+            <button class="gr-resa-pay" type="button" data-m="wave"><img src="/assets/wave.jpg" alt="">Wave</button>
+            <button class="gr-resa-pay" type="button" data-m="orange_money"><img src="/assets/om.png" alt="">Orange Money</button>
+          </div>
+          <p class="gr-resa-msg" id="grMsg"></p>
+          <button class="gr-btn gr-resa-submit" id="grSubmit" type="button">Payer l'acompte · 2100 F</button>
+        </div>
+        <div id="grResaStep2" hidden>
+          <h3 class="gr-resa-h">En attente du paiement…</h3>
+          <p class="gr-resa-note" id="grWaitMsg">Validez le paiement, puis revenez sur cette page.</p>
+          <img id="grQr" alt="QR paiement" hidden style="display:block;margin:14px auto;max-width:220px">
+          <div class="gr-resa-spin"></div>
+          <button class="gr-btn gr-btn-dark gr-resa-submit" id="grCheck" type="button">J'ai payé — vérifier</button>
+        </div>
+        <div id="grResaDone" hidden>
+          <h3 class="gr-resa-h">Demande envoyée ✓</h3>
+          <p class="gr-resa-note">Votre acompte est payé. Le restaurant va confirmer votre table — vous serez notifié. Présentez-vous à l'heure choisie.</p>
+          <button class="gr-btn gr-resa-submit" id="grClose2" type="button">Fermer</button>
+        </div>
+      </div>
+    </div>
+    <script id="gr-resa-cfg" type="application/json">${JSON.stringify({ url: SUPABASE_URL, key: SUPABASE_ANON_KEY, slug: o.slug })}</script>
+    <script>${GR_RESA_JS}</script>`;
 
   const body = theme.template === 'furniture' && hasCatalog ? furnitureBody
     : theme.template === 'cosmetic' && hasCatalog ? cosmeticBody
@@ -3431,10 +3622,35 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-col h3{font-family:var(--gr-fe);font-weight:700;font-size:clamp(17px,2vw,25px);line-height:1.2;letter-spacing:1px;text-transform:uppercase;color:var(--gr-gold);margin:0 0 14px}
   .gr-col p{font-size:15px;line-height:1.65;color:var(--gr-mut)}
   @media(max-width:760px){.gr-cols{grid-template-columns:1fr;gap:38px}}
-  /* Couverts gravés (slide plein écran sur or) */
-  .gr-cutlery{background:var(--gr-gold)}
-  .gr-cutlery-in{line-height:0;padding:40px 20px;width:100%;text-align:center}
-  .gr-cutlery-in img{max-height:62vh;width:auto;max-width:88%;object-fit:contain;display:inline-block}
+  /* Couverts gravés + RÉSERVER UNE TABLE (slide plein écran sur or) */
+  .gr-cutlery{background:var(--gr-gold);text-align:center;padding:clamp(24px,4vw,48px) clamp(20px,4vw,40px)}
+  .gr-cutlery-in{line-height:0;width:100%;text-align:center}
+  .gr-cutlery-in img{max-height:34vh;width:auto;max-width:72%;object-fit:contain;display:inline-block}
+  .gr-resa-title{margin-top:10px!important;color:var(--gr-ink)!important}
+  .gr-resa-sub{max-width:560px;margin:14px auto 22px;color:#3a3420;font-size:clamp(15px,1.7vw,18px);line-height:1.55}
+  .gr-btn-dark{background:var(--gr-ink);color:var(--gr-gold);border-color:var(--gr-ink)}
+  .gr-btn-dark:hover{background:transparent;color:var(--gr-ink)}
+  /* Modale réservation */
+  .gr-resa-ov{position:fixed;inset:0;z-index:120;background:rgba(10,9,8,.72);display:flex;align-items:center;justify-content:center;padding:18px}
+  .gr-resa-ov[hidden]{display:none}
+  .gr-resa-modal{position:relative;width:100%;max-width:440px;max-height:92vh;overflow-y:auto;background:var(--gr-bg2);border:1px solid rgba(174,154,100,.35);border-radius:4px;padding:26px clamp(18px,4vw,30px);color:var(--gr-txt)}
+  .gr-resa-x{position:absolute;top:10px;right:14px;background:none;border:0;color:var(--gr-mut);font-size:26px;line-height:1;cursor:pointer}
+  .gr-resa-h{font-family:var(--gr-fe);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--gr-gold);font-size:20px;text-align:center;margin:0 0 6px}
+  .gr-resa-note{text-align:center;color:var(--gr-mut);font-size:13px;line-height:1.5;margin:0 0 16px}
+  .gr-resa-lb{display:block;font-family:var(--gr-fs);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gr-gold);margin:14px 0 6px}
+  .gr-resa-in{width:100%;background:#1b1a18;border:1px solid rgba(174,154,100,.3);color:#fff;font-family:var(--gr-fb);font-size:16px;padding:11px 13px;border-radius:3px}
+  .gr-resa-slots{display:flex;flex-wrap:wrap;gap:8px;min-height:22px}
+  .gr-resa-hint{color:var(--gr-mut);font-size:13px}
+  .gr-resa-slot{background:transparent;border:1px solid rgba(174,154,100,.4);color:var(--gr-txt);font-family:var(--gr-fs);font-size:13px;font-weight:600;padding:8px 13px;border-radius:3px;cursor:pointer}
+  .gr-resa-slot.on{background:var(--gr-gold);color:var(--gr-ink);border-color:var(--gr-gold)}
+  .gr-resa-pays{display:flex;gap:10px}
+  .gr-resa-pay{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:#1b1a18;border:1px solid rgba(174,154,100,.3);color:var(--gr-txt);font-family:var(--gr-fs);font-size:13px;font-weight:600;padding:10px;border-radius:3px;cursor:pointer}
+  .gr-resa-pay img{height:18px;width:auto}
+  .gr-resa-pay.on{border-color:var(--gr-gold);background:#242220}
+  .gr-resa-msg{color:#e6a07a;font-size:13px;text-align:center;min-height:16px;margin:10px 0 0}
+  .gr-resa-submit{width:100%;margin-top:16px;animation:none!important}
+  .gr-resa-spin{width:34px;height:34px;margin:18px auto;border:3px solid rgba(174,154,100,.25);border-top-color:var(--gr-gold);border-radius:50%;animation:grspin 1s linear infinite}
+  @keyframes grspin{to{transform:rotate(360deg)}}
   /* Bœuf gravé (slide sombre bifsteck) */
   .gr-beef{line-height:0;width:min(900px,100%)} .gr-beef img{width:100%;max-height:300px;object-fit:cover;object-position:center;display:block}
   .gr-ill-wrap{display:flex;justify-content:center;color:var(--gr-ink);padding:clamp(20px,4vw,40px) 20px}
@@ -3620,6 +3836,7 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   <div class="lbx" id="lbx"><button class="lbx-close" id="lbxClose">\xD7</button><img class="lbx-img" id="lbxImg" src="" alt=""></div>
   <script>${safeScript(LIGHTBOX_JS)}</script>
   ${REVEAL}
+  ${SCROLLFX}
 </body>
 </html>`;
 }
