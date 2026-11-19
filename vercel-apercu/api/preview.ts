@@ -2065,7 +2065,7 @@ function page(o: {
     ['Support client', 'rappel après commande'],
   ].map(([b, s]) => `<div class="gd-perk"><div><b>${b}</b><small>${s}</small></div></div>`).join('');
   const gdPerks = `
-    <section class="gd-perks"><div class="gd-marq"><div class="gd-marq-track">${gdPerkItems}${gdPerkItems}</div></div></section>`;
+    <section class="gd-perks"><div class="gd-marq"><div class="gd-marq-track">${gdPerkItems}${gdPerkItems}${gdPerkItems}</div></div></section>`;
   const gdFoot = `
     <footer id="gd-contact" class="gd-foot">
       <div class="gd-foot-grid">
@@ -2667,10 +2667,12 @@ function page(o: {
       </div>
       <p class="gr-resa-msg gr-resa-barmsg" id="grBarMsg"></p>
     </section>
-    <section class="gr-feature gr-slide">
-      <div class="gr-beef"><img src="/assets/grill/beef.jpg" alt=""></div>
+    <section class="gr-feature gr-slide" style="background-image:url('/assets/grill/beef.jpg')">
+      <div class="gr-feature-ov"></div>
+      <div class="gr-feature-in">
       <h2 class="gr-h2 gr-gold">Bifsteck + temps<br>= perfection</h2>
       <p class="gr-lead">${esc(clip(o.desc || `Le secret d'une viande d'exception : des pièces maturées avec patience, puis saisies au feu pour révéler toute leur saveur. Chez ${o.name}, le temps fait la perfection.`, 240))}</p>
+      </div>
     </section>
     <section class="gr-drink gr-slide">
       <h2 class="gr-h2 gr-light">Prenez un verre</h2>
@@ -3294,9 +3296,9 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gd-hero-badge{position:absolute;left:24px;bottom:24px;background:#fff;color:var(--d);font-size:12px;font-weight:600;padding:8px 14px;border-radius:30px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
   .gd-perks{background:var(--d);overflow:hidden}
   .gd-marq{overflow:hidden}
-  .gd-marq-track{display:flex;width:max-content;animation:gdMarq 26s linear infinite}
+  .gd-marq-track{display:flex;width:max-content;animation:gdMarq 9s linear infinite}
   .gd-marq:hover .gd-marq-track{animation-play-state:paused}
-  @keyframes gdMarq{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+  @keyframes gdMarq{from{transform:translateX(-33.333%)}to{transform:translateX(0)}}
   @media(prefers-reduced-motion:reduce){.gd-marq-track{animation:none;transform:none}}
   .gd-perks-in{max-width:1240px;margin:0 auto;padding:30px 28px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
   .gd-marq-track .gd-perk{flex:0 0 auto;margin:28px 34px;padding-left:16px}
@@ -3768,8 +3770,10 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-beef{line-height:0;width:min(900px,100%)} .gr-beef img{width:100%;max-height:300px;object-fit:cover;object-position:center;display:block}
   .gr-ill-wrap{display:flex;justify-content:center;color:var(--gr-ink);padding:clamp(20px,4vw,40px) 20px}
   .gr-ill{height:clamp(110px,14vw,170px);width:auto;opacity:.9}
-  /* BIFSTECK */
-  .gr-feature{background:var(--gr-bg);padding:clamp(20px,3vw,40px) clamp(20px,4vw,48px) clamp(50px,7vw,90px);text-align:center}
+  /* BIFSTECK — gravure boeuf plein cadre en fond + titre or par-dessus */
+  .gr-feature{position:relative;background-color:#2b2b2b;background-size:cover;background-position:center;text-align:center;padding:clamp(40px,6vw,80px) clamp(20px,4vw,48px)}
+  .gr-feature-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(28,27,25,.32),rgba(28,27,25,.72))}
+  .gr-feature-in{position:relative;z-index:2;max-width:760px}
   .gr-lead{max-width:640px;margin:22px auto 0;font-size:clamp(17px,1.9vw,21px);line-height:1.7;color:var(--gr-mut)}
   /* PRENEZ UN VERRE (fond or) */
   .gr-drink{background:var(--gr-gold);padding:clamp(50px,7vw,90px) clamp(20px,4vw,48px);text-align:center}
