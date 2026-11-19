@@ -111,8 +111,25 @@ Deno.serve(async (req) => {
     return jsonR({ paid, reservationId });
   }
 
-  // ── GET ?slug=&date= → créneaux disponibles ──────────────────────────────────
   const slugParam = url.searchParams.get('slug');
+
+  // ── GET ?slug=&weekdays=1 → jours de la semaine ouverts à la réservation ──────
+  //    (calendrier : vert = jour avec créneaux actifs, rouge = jour sans)
+  if (req.method === 'GET' && slugParam && url.searchParams.get('weekdays')) {
+    const shop = await resolveShop(admin, slugParam);
+    if (!shop) return jsonR({ success: false });
+    if (!shop.reservation_enabled) return jsonR({ success: true, reservation_enabled: false, available_weekdays: [] });
+    const { data: ts } = await admin
+      .from('restaurant_time_slots')
+      .select('jours_semaine')
+      .eq('prestataire_id', shop.merchant_id)
+      .eq('actif', true);
+    const set = new Set<number>();
+    (ts ?? []).forEach((r: { jours_semaine: number[] }) => (r.jours_semaine ?? []).forEach(d => set.add(Number(d))));
+    return jsonR({ success: true, reservation_enabled: true, available_weekdays: Array.from(set).sort() });
+  }
+
+  // ── GET ?slug=&date= → créneaux du jour avec flag libre/pris ──────────────────
   const dateParam = url.searchParams.get('date');
   if (req.method === 'GET' && slugParam && dateParam) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return err('date invalide');
@@ -122,19 +139,42 @@ Deno.serve(async (req) => {
     if (!shop.reservation_enabled) return jsonR({ success: true, reservation_enabled: false, slots: [] });
     if (shop.is_manually_closed)   return jsonR({ success: true, reservation_enabled: true, payment_methods, closed: true, slots: [] });
 
-    const { data: rows, error: slotErr } = await admin
-      .rpc('get_reservation_slots_std', { p_prestataire_id: shop.merchant_id, p_date: dateParam });
+    const weekday = new Date(dateParam + 'T12:00:00').getDay(); // 0=dim … 6=sam (= EXTRACT DOW)
+
+    // Tous les créneaux actifs de ce jour (y compris ceux qui seront rouges)
+    const { data: allSlots, error: slotErr } = await admin
+      .from('restaurant_time_slots')
+      .select('id, label, heure_debut, heure_fin, jours_semaine, position')
+      .eq('prestataire_id', shop.merchant_id)
+      .eq('actif', true)
+      .contains('jours_semaine', [weekday])
+      .order('position').order('heure_debut');
     if (slotErr) return err('Créneaux indisponibles', 500);
 
-    // Filtrer les créneaux passés si la date est aujourd'hui
+    // Créneaux déjà réservés ce jour (non annulés/refusés)
+    const { data: taken } = await admin
+      .from('table_reservations')
+      .select('heure_debut, statut')
+      .eq('prestataire_id', shop.merchant_id)
+      .eq('date_reservation', dateParam);
+    const takenSet = new Set(
+      (taken ?? [])
+        .filter((r: { statut: string }) => !['annulee', 'refusee'].includes(String(r.statut)))
+        .map((r: { heure_debut: string }) => String(r.heure_debut).slice(0, 5)),
+    );
+
     const todayStr = new Date().toISOString().slice(0, 10);
     const nowMin = todayStr === dateParam ? new Date().getHours() * 60 + new Date().getMinutes() : -1;
-    const slots = (Array.isArray(rows) ? rows : [])
-      .filter((r: { heure_debut: string }) => nowMin < 0 || toMin(String(r.heure_debut).slice(0, 5)) > nowMin)
-      .map((r: { slot_id: string; label: string; heure_debut: string; heure_fin: string }) => ({
-        slot_id: r.slot_id, label: r.label,
-        heure_debut: String(r.heure_debut).slice(0, 5), heure_fin: String(r.heure_fin).slice(0, 5),
-      }));
+    const slots = (Array.isArray(allSlots) ? allSlots : []).map((r: {
+      id: string; label: string; heure_debut: string; heure_fin: string;
+    }) => {
+      const hd = String(r.heure_debut).slice(0, 5);
+      const past = nowMin >= 0 && toMin(hd) <= nowMin;
+      return {
+        slot_id: r.id, label: r.label, heure_debut: hd, heure_fin: String(r.heure_fin).slice(0, 5),
+        available: !past && !takenSet.has(hd),
+      };
+    });
     return jsonR({ success: true, reservation_enabled: true, payment_methods, closed: false, slots });
   }
 

@@ -673,47 +673,106 @@ const REVEAL = `<style id="lx-reveal-style">
 // Script client de la réservation de table (template grill) — autonome, lit #gr-resa-cfg.
 // Appelle l'EF create-guest-table-reservation (créneaux → acompte Wave/OM → polling).
 const GR_RESA_JS = `(function(){
-  var ov=document.getElementById('grResaOv'); if(!ov) return;
   var cfgEl=document.getElementById('gr-resa-cfg'); if(!cfgEl) return;
   var CFG; try{CFG=JSON.parse(cfgEl.textContent);}catch(e){return;}
   var EP=CFG.url+'/functions/v1/create-guest-table-reservation';
   var H={apikey:CFG.key,Authorization:'Bearer '+CFG.key};
-  var st={slot:null,moyen:null,piId:null,poll:null};
   var $=function(id){return document.getElementById(id);};
+  var MOIS=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+  var JOURS=["lun","mar","mer","jeu","ven","sam","dim"];
+  var st={date:null,slot:null,moyen:null,piId:null,poll:null,weekdays:null,calY:0,calM:0};
+
+  // Nombre de personnes
   var nb=$('grNb'); for(var i=1;i<=12;i++){var o=document.createElement('option');o.value=i;o.textContent=i+(i>1?" personnes":" personne");nb.appendChild(o);} nb.value=2;
-  var d=$('grDate'); d.min=new Date().toISOString().slice(0,10);
-  function open(){ov.hidden=false;document.body.style.overflow="hidden";}
-  function close(){ov.hidden=true;document.body.style.overflow="";if(st.poll){clearInterval(st.poll);st.poll=null;}}
-  $('grResaOpen').addEventListener('click',open);
-  $('grResaX').addEventListener('click',close);
-  ov.addEventListener('click',function(e){if(e.target===ov)close();});
-  var c2=$('grClose2'); if(c2)c2.addEventListener('click',close);
-  document.querySelectorAll('.gr-resa-pay').forEach(function(b){b.addEventListener('click',function(){st.moyen=b.getAttribute('data-m');document.querySelectorAll('.gr-resa-pay').forEach(function(x){x.classList.remove('on');});b.classList.add('on');});});
-  d.addEventListener('change',loadSlots);
-  function loadSlots(){
-    var box=$('grSlots'); st.slot=null;
-    if(!d.value){box.innerHTML='<span class="gr-resa-hint">Choisissez une date</span>';return;}
-    box.innerHTML='<span class="gr-resa-hint">Chargement…</span>';
-    fetch(EP+'?slug='+encodeURIComponent(CFG.slug)+'&date='+encodeURIComponent(d.value),{headers:H})
-      .then(function(r){return r.json();})
-      .then(function(j){
-        if(j.reservation_enabled===false){box.innerHTML='<span class="gr-resa-hint">Réservation non disponible pour ce restaurant.</span>';return;}
+
+  // Jours ouverts (vert/rouge calendrier) — chargé une fois
+  fetch(EP+'?slug='+encodeURIComponent(CFG.slug)+'&weekdays=1',{headers:H})
+    .then(function(r){return r.json();}).then(function(j){
+      if(j && j.success){ st.weekdays = j.reservation_enabled===false ? [] : (j.available_weekdays||[]); }
+      else st.weekdays=[];
+    }).catch(function(){st.weekdays=[];});
+
+  var now=new Date(); st.calY=now.getFullYear(); st.calM=now.getMonth();
+  function iso(y,m,day){return y+"-"+String(m+1).padStart(2,"0")+"-"+String(day).padStart(2,"0");}
+
+  function closePops(){ $('grCal').hidden=true; $('grHours').hidden=true; }
+  document.addEventListener('click',function(e){ if(!e.target.closest('.gr-resa-field')) closePops(); });
+
+  // ── Calendrier ──
+  $('grDateBtn').addEventListener('click',function(e){e.stopPropagation(); var c=$('grCal'); var show=c.hidden; closePops(); if(show){renderCal(); c.hidden=false;}});
+  function renderCal(){
+    var c=$('grCal'); var first=new Date(st.calY,st.calM,1); var start=(first.getDay()+6)%7; // lundi=0
+    var days=new Date(st.calY,st.calM+1,0).getDate();
+    var t=new Date(); t.setHours(0,0,0,0);
+    var html='<div class="gr-cal-head"><button type="button" class="gr-cal-nav" data-nav="-1">‹</button><span>'+MOIS[st.calM]+' '+st.calY+'</span><button type="button" class="gr-cal-nav" data-nav="1">›</button></div>';
+    html+='<div class="gr-cal-grid">'; JOURS.forEach(function(j){html+='<span class="gr-cal-dow">'+j+'</span>';});
+    for(var k=0;k<start;k++) html+='<span></span>';
+    for(var dnum=1;dnum<=days;dnum++){
+      var dt=new Date(st.calY,st.calM,dnum); dt.setHours(0,0,0,0);
+      var dow=dt.getDay(); // 0=dim..6=sam (comme EXTRACT DOW serveur)
+      var futur = dt.getTime()>=t.getTime();
+      var ok = futur && st.weekdays && st.weekdays.indexOf(dow)>=0;
+      var cls = ok ? "gr-cal-d on-ok" : "gr-cal-d on-no";
+      html+='<button type="button" class="'+cls+'" '+(ok?('data-d="'+iso(st.calY,st.calM,dnum)+'"'):'disabled')+'>'+dnum+'</button>';
+    }
+    html+='</div>'; c.innerHTML=html;
+    [].forEach.call(c.querySelectorAll('.gr-cal-nav'),function(b){b.addEventListener('click',function(e){e.stopPropagation(); st.calM+=parseInt(b.getAttribute('data-nav'),10); if(st.calM<0){st.calM=11;st.calY--;} if(st.calM>11){st.calM=0;st.calY++;} renderCal();});});
+    [].forEach.call(c.querySelectorAll('.gr-cal-d.on-ok'),function(b){b.addEventListener('click',function(e){e.stopPropagation(); selectDate(b.getAttribute('data-d'));});});
+  }
+  function fmtDate(s){var p=s.split("-");return p[2]+"/"+p[1]+"/"+p[0];}
+  function selectDate(dstr){
+    st.date=dstr; st.slot=null; $('grDateLbl').textContent=fmtDate(dstr);
+    $('grHourLbl').textContent="—"; $('grHourBtn').disabled=false; closePops();
+    loadHours();
+  }
+
+  // ── Heures (vert libre / rouge pris) ──
+  $('grHourBtn').addEventListener('click',function(e){e.stopPropagation(); if($('grHourBtn').disabled)return; var h=$('grHours'); var show=h.hidden; closePops(); if(show)h.hidden=false;});
+  function loadHours(){
+    var box=$('grHours'); box.innerHTML='<span class="gr-resa-hint">Chargement…</span>';
+    fetch(EP+'?slug='+encodeURIComponent(CFG.slug)+'&date='+encodeURIComponent(st.date),{headers:H})
+      .then(function(r){return r.json();}).then(function(j){
+        if(j.reservation_enabled===false){box.innerHTML='<span class="gr-resa-hint">Réservation non disponible.</span>';return;}
         if(j.closed){box.innerHTML='<span class="gr-resa-hint">Fermé ce jour.</span>';return;}
-        var s=j.slots||[]; if(!s.length){box.innerHTML='<span class="gr-resa-hint">Aucun créneau libre ce jour.</span>';return;}
+        var s=j.slots||[]; if(!s.length){box.innerHTML='<span class="gr-resa-hint">Aucun créneau ce jour.</span>';return;}
         box.innerHTML='';
-        s.forEach(function(x){var b=document.createElement('button');b.type='button';b.className='gr-resa-slot';b.textContent=x.heure_debut;b.addEventListener('click',function(){st.slot=x;document.querySelectorAll('.gr-resa-slot').forEach(function(y){y.classList.remove('on');});b.classList.add('on');});box.appendChild(b);});
+        s.forEach(function(x){
+          var b=document.createElement('button'); b.type='button';
+          b.className='gr-hour '+(x.available?'on-ok':'on-no'); b.textContent=x.heure_debut;
+          if(x.available){ b.addEventListener('click',function(e){e.stopPropagation(); st.slot=x; $('grHourLbl').textContent=x.heure_debut; closePops(); }); }
+          else { b.disabled=true; }
+          box.appendChild(b);
+        });
       }).catch(function(){box.innerHTML='<span class="gr-resa-hint">Erreur de chargement.</span>';});
   }
+
+  // ── Modale finale (nom/tél/paiement) ──
+  var ov=$('grResaOv');
+  function openModal(){ov.hidden=false;document.body.style.overflow="hidden";}
+  function closeModal(){ov.hidden=true;document.body.style.overflow="";if(st.poll){clearInterval(st.poll);st.poll=null;}}
+  $('grResaX').addEventListener('click',closeModal);
+  ov.addEventListener('click',function(e){if(e.target===ov)closeModal();});
+  var c2=$('grClose2'); if(c2)c2.addEventListener('click',closeModal);
+  document.querySelectorAll('.gr-resa-pay').forEach(function(b){b.addEventListener('click',function(){st.moyen=b.getAttribute('data-m');document.querySelectorAll('.gr-resa-pay').forEach(function(x){x.classList.remove('on');});b.classList.add('on');});});
+
+  $('grFind').addEventListener('click',function(){
+    var m=$('grBarMsg'); m.textContent="";
+    if(st.weekdays && st.weekdays.length===0){ m.textContent="La réservation n'est pas encore disponible pour ce restaurant."; return; }
+    if(!st.date){ m.textContent="Choisissez une date."; return; }
+    if(!st.slot){ m.textContent="Choisissez une heure."; return; }
+    $('grRecap').innerHTML='<b>'+nb.options[nb.selectedIndex].text+'</b> · <b>'+fmtDate(st.date)+'</b> · <b>'+st.slot.heure_debut+'</b>';
+    $('grResaStep1').hidden=false; $('grResaStep2').hidden=true; $('grResaDone').hidden=true;
+    openModal();
+  });
+
   function digitsOk(p){return /^7[015678][0-9]{7}$/.test(p.replace(/[^0-9]/g,'').replace(/^221/,''));}
   $('grSubmit').addEventListener('click',function(){
     var msg=$('grMsg'); msg.textContent='';
-    if(!d.value){msg.textContent="Choisissez une date.";return;}
-    if(!st.slot){msg.textContent="Choisissez une heure.";return;}
     var name=$('grName').value.trim(); if(name.length<2){msg.textContent="Entrez votre nom.";return;}
     var phone=$('grPhone').value; if(!digitsOk(phone)){msg.textContent="Numéro invalide (77 xxx xx xx).";return;}
     if(!st.moyen){msg.textContent="Choisissez un moyen de paiement.";return;}
     var btn=this; btn.disabled=true; btn.textContent="Création…";
-    fetch(EP,{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({slug:CFG.slug,date:d.value,timeSlotId:st.slot.slot_id||null,heureDebut:st.slot.heure_debut,nbPersonnes:parseInt(nb.value,10),name:name,phone:phone,moyenPaiement:st.moyen,idempotencyKey:'web-'+Date.now()})})
+    fetch(EP,{method:'POST',headers:Object.assign({'Content-Type':'application/json'},H),body:JSON.stringify({slug:CFG.slug,date:st.date,timeSlotId:st.slot.slot_id||null,heureDebut:st.slot.heure_debut,nbPersonnes:parseInt(nb.value,10),name:name,phone:phone,moyenPaiement:st.moyen,idempotencyKey:'web-'+Date.now()})})
       .then(function(r){return r.json();})
       .then(function(j){
         btn.disabled=false; btn.textContent="Payer l'acompte · 2100 F";
@@ -749,7 +808,10 @@ const SCROLLFX = `<style id="lx-fx-style">
 .lx-fx-beam>.lx-fx-beam-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;overflow:visible}
 .lx-fx-beam-rect{fill:none;stroke-width:3;stroke-linecap:round;width:calc(100% - 3px);height:calc(100% - 3px);will-change:stroke-dashoffset}
 [data-pll]{will-change:transform}
-.lx-fx-zoom{will-change:transform,border-radius;transform:scale(.88);overflow:hidden}
+.lx-fx-zoom{will-change:transform,border-radius;transform:scale(.66);border-radius:30px;overflow:hidden;transition:transform 1.05s cubic-bezier(.16,1,.3,1),border-radius 1.05s cubic-bezier(.16,1,.3,1)}
+.lx-fx-zoom.lx-in{transform:none;border-radius:16px}
+.lx-fx-zin{display:inline-block;transform:scale(.6);opacity:0;transition:transform .9s cubic-bezier(.16,1,.3,1),opacity .55s ease}
+.lx-fx-zin.lx-in{transform:none;opacity:1}
 .lx-fx-curtain{clip-path:inset(14% 14% 14% 14% round 26px);will-change:clip-path}
 @media(prefers-reduced-motion:reduce){.lx-fx-piece{opacity:1!important;transform:none!important}.lx-fx-beam-rect{display:none}.lx-fx-zoom{transform:none!important}.lx-fx-curtain{clip-path:none!important}[data-pll]{transform:none!important}}
 </style>
@@ -770,6 +832,9 @@ const SCROLLFX = `<style id="lx-fx-style">
       function cnt(el){var tg=parseFloat(el.getAttribute('data-target'))||0,sf=el.getAttribute('data-suffix')||'',st=null;function s(ts){if(st===null)st=ts;var p=Math.min((ts-st)/1400,1),e=1-Math.pow(1-p,3);el.textContent=Math.round(tg*e)+sf;if(p<1)requestAnimationFrame(s);}requestAnimationFrame(s);}
       var ioC=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){cnt(e.target);ioC.unobserve(e.target);}});},{threshold:.4});
       [].slice.call(document.querySelectorAll('.lx-fx-count')).forEach(function(el){ioC.observe(el);});
+      // Zoom-in d'entrée (one-shot) : scale .66 -> 1
+      var ioZ=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('lx-in');ioZ.unobserve(e.target);}});},{threshold:.15});
+      [].slice.call(document.querySelectorAll('.lx-fx-zoom,.lx-fx-zin')).forEach(function(el){ioZ.observe(el);});
     }
     // Border beam (périmètre)
     var beams=[].slice.call(document.querySelectorAll('.lx-fx-beam')).map(function(w){return {w:w,r:w.querySelector('.lx-fx-beam-rect'),len:0};});
@@ -777,18 +842,16 @@ const SCROLLFX = `<style id="lx-fx-style">
     meas();window.addEventListener('resize',meas,{passive:true});
     // Parallax + zoom + curtain + beam : boucle scroll unique
     var plls=[].slice.call(document.querySelectorAll('[data-pll]'));
-    var zooms=[].slice.call(document.querySelectorAll('.lx-fx-zoom'));
     var curts=[].slice.call(document.querySelectorAll('.lx-fx-curtain'));
     var ticking=false;
     function frame(){
       ticking=false;var vh=window.innerHeight;
       plls.forEach(function(el){var r=el.getBoundingClientRect();if(r.bottom>0&&r.top<vh){var sp=parseFloat(el.getAttribute('data-pll'))||0.1;var p=(r.top+r.height/2-vh/2);el.style.transform='translateY('+(p*-sp).toFixed(1)+'px)';}});
-      zooms.forEach(function(el){var r=el.getBoundingClientRect();if(r.bottom>0&&r.top<vh){var d=Math.abs((r.top+r.height/2)-vh/2)/(vh/2),t=clamp(1-d,0,1);el.style.transform='scale('+(0.88+0.12*t).toFixed(3)+')';el.style.borderRadius=(30-18*t).toFixed(0)+'px';}});
       curts.forEach(function(el){var r=el.getBoundingClientRect();var s=vh*0.92,en=vh*0.22,p=clamp((s-r.top)/(s-en),0,1);var iv=(14*(1-p)).toFixed(1),rd=(26-20*p).toFixed(0);el.style.clipPath='inset('+iv+'% '+iv+'% '+iv+'% '+iv+'% round '+rd+'px)';});
       beams.forEach(function(it){if(!it.r||it.len<=0)return;var r=it.w.getBoundingClientRect(),s=vh*0.9,en=vh*0.25,p=clamp((s-r.top)/(s-en),0,1);it.r.style.strokeDashoffset=(it.len*(1-p)).toFixed(1);});
     }
     function onS(){if(!ticking){ticking=true;requestAnimationFrame(frame);}}
-    if(plls.length||zooms.length||curts.length||beams.length){window.addEventListener('scroll',onS,{passive:true});window.addEventListener('resize',onS,{passive:true});frame();}
+    if(plls.length||curts.length||beams.length){window.addEventListener('scroll',onS,{passive:true});window.addEventListener('resize',onS,{passive:true});frame();}
   }catch(e){}
 })();</script>`;
 
@@ -1964,7 +2027,7 @@ function page(o: {
         <div class="fn-info">${o.zone ? `<div>Adresse<b>${esc(o.zone)}</b></div>` : ''}${o.phone ? `<div>Téléphone<b>${esc(o.phone)}</b></div>` : ''}</div>
       </div>
     </header>
-    <section class="fn-hero-sec"><div class="fn-hero lx-fx-zoom">
+    <section class="fn-hero-sec"><div class="fn-hero">
       <div class="fn-hero-l">
         <h1>${esc(o.name)}</h1>
         <p>${esc(clip(o.desc || `Pièces d'exception et savoir-faire local. Commandez en ligne, paiement sécurisé.`, 115))}</p>
@@ -1995,13 +2058,14 @@ function page(o: {
   // ═══════════════════════════════════════════════════════════════════════════
   const gdCats = (groups.length ? groups : [{ id: '', title: hasServices ? 'Prestations' : 'Boutique' }]).slice(0, 6);
   const gdFeats = ['Qualité garantie', 'Paiement sécurisé', 'Livraison rapide'];
+  const gdPerkItems = [
+    ['Paiement sécurisé', 'Wave &amp; Orange Money'],
+    ['Retrait / livraison', esc(o.zone || 'À Dakar')],
+    ['Qualité garantie', 'pièces sélectionnées'],
+    ['Support client', 'rappel après commande'],
+  ].map(([b, s]) => `<div class="gd-perk"><div><b>${b}</b><small>${s}</small></div></div>`).join('');
   const gdPerks = `
-    <section class="gd-perks"><div class="gd-perks-in">
-      <div class="gd-perk"><div><b>Paiement sécurisé</b><small>Wave &amp; Orange Money</small></div></div>
-      <div class="gd-perk"><div><b>Retrait / livraison</b><small>${esc(o.zone || 'À Dakar')}</small></div></div>
-      <div class="gd-perk"><div><b>Qualité garantie</b><small>pièces sélectionnées</small></div></div>
-      <div class="gd-perk"><div><b>Support client</b><small>rappel après commande</small></div></div>
-    </div></section>`;
+    <section class="gd-perks"><div class="gd-marq"><div class="gd-marq-track">${gdPerkItems}${gdPerkItems}</div></div></section>`;
   const gdFoot = `
     <footer id="gd-contact" class="gd-foot">
       <div class="gd-foot-grid">
@@ -2020,14 +2084,14 @@ function page(o: {
   const gdCatCards = (groups.length >= 3 && gal.length >= 1) ? `
     <section class="gd-cats-sec"><div class="gd-cats-wrap">
       <div class="gd-sec-head light"><span class="gd-k light">Nos rayons</span><h2>Parcourir par catégorie</h2></div>
-      <div class="gd-cats-grid">
-        ${groups.slice(0, 3).map((g, i) => `<a class="gd-cat-card" href="#gd-shop" ${bg(pick(i))}><span class="gd-cat-ov"></span><span class="gd-cat-info"><small>${g.items.length} article${g.items.length > 1 ? 's' : ''}</small><b>${esc(g.title)}</b></span></a>`).join('')}
+      <div class="gd-cats-grid lx-fx-bento">
+        ${groups.slice(0, 3).map((g, i) => `<a class="gd-cat-card lx-fx-piece" href="#gd-shop" ${bg(pick(i))}><span class="gd-cat-ov"></span><span class="gd-cat-info"><small>${g.items.length} article${g.items.length > 1 ? 's' : ''}</small><b>${esc(g.title)}</b></span></a>`).join('')}
       </div>
     </div></section>` : '';
   // Bloc éditorial « la maison » — boîte sombre sur grand visuel + signature = nom boutique.
   const gdEditorial = gal.length >= 1 ? `
     <section class="gd-edito" id="gd-about">
-      <div class="gd-edito-img" ${bg(pick(1))}></div>
+      <div class="gd-edito-img lx-fx-curtain" ${bg(pick(1))}></div>
       <div class="gd-edito-box">
         <span class="gd-k light">La maison</span>
         <h2>Le style qui te ressemble</h2>
@@ -2041,7 +2105,8 @@ function page(o: {
   const gdDeals = (gdDealItems.length >= 3) ? `
     <section class="gd-deals"><div class="gd-deals-wrap">
       <div class="gd-deals-grid grid">${gdDealItems.map(productCard).join('')}</div>
-      <div class="gd-deals-panel">
+      <div class="gd-deals-panel lx-fx-beam">
+        <svg class="lx-fx-beam-svg" preserveAspectRatio="none"><defs><linearGradient id="gdBeam" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#22D3EE"/><stop offset="50%" stop-color="#ffffff"/><stop offset="100%" stop-color="#2563EB"/></linearGradient></defs><rect class="lx-fx-beam-rect" x="1.5" y="1.5" rx="16" ry="16" stroke="url(#gdBeam)" style="filter:drop-shadow(0 0 6px rgba(34,211,238,.9))"/></svg>
         <span class="gd-deals-k">Sélection</span>
         <h3>${esc(gdDealTitle)}</h3>
         <p>Nos coups de cœur du moment. Commande en ligne, paiement sécurisé Wave &amp; Orange Money, retrait ou livraison.</p>
@@ -2067,10 +2132,10 @@ function page(o: {
         <h1 class="gd-hero-title">La nouvelle collection<br>est arrivée</h1>
         <p class="gd-hero-sub">${esc(clip(o.desc || `Vêtements, sneakers et accessoires tendance. Commande en ligne, paiement sécurisé, retrait ou livraison.`, 160))}</p>
         <div class="gd-feats">${gdFeats.map(f => `<span class="gd-feat">${esc(f)}</span>`).join('')}</div>
-        <div class="gd-hero-cta"><a class="gd-btn" href="#gd-shop">${cxHeadCta === 'Commander' ? 'Explorer la boutique' : cxHeadCta}</a>${hoursHtml ? `<div class="gd-hours">${hoursHtml}</div>` : ''}</div>
+        <div class="gd-hero-cta"><span class="lx-fx-zin"><a class="gd-btn" href="#gd-shop">${cxHeadCta === 'Commander' ? 'Explorer la boutique' : cxHeadCta}</a></span>${hoursHtml ? `<div class="gd-hours">${hoursHtml}</div>` : ''}</div>
       </div>
       <div class="gd-hero-r">
-        ${heroImg ? `<img class="gd-hero-img" src="${escAttr(heroImg)}" alt="${escAttr(o.name)}">` : ''}
+        ${heroImg ? `<img class="gd-hero-img" data-pll="0.07" src="${escAttr(heroImg)}" alt="${escAttr(o.name)}">` : ''}
       </div>
     </section>
     ${gdPerks}
@@ -2583,7 +2648,24 @@ function page(o: {
       <div class="gr-cutlery-in"><img src="/assets/grill/cutlery.jpg" alt=""></div>
       <h2 class="gr-h2 gr-light gr-resa-title">Réserver une table</h2>
       <p class="gr-resa-sub">Sélectionnez vos détails et nous ferons notre possible pour satisfaire votre demande.</p>
-      <button class="gr-btn gr-btn-dark" id="grResaOpen" type="button">Trouver une table</button>
+      <div class="gr-resa-bar">
+        <div class="gr-resa-field">
+          <label>Nombre de personnes</label>
+          <select class="gr-resa-pick" id="grNb"></select>
+        </div>
+        <div class="gr-resa-field">
+          <label>Date</label>
+          <button type="button" class="gr-resa-pick gr-resa-trigger" id="grDateBtn"><span id="grDateLbl">Choisir une date</span><span class="gr-resa-ic">▾</span></button>
+          <div class="gr-resa-pop gr-resa-cal" id="grCal" hidden></div>
+        </div>
+        <div class="gr-resa-field">
+          <label>Heure</label>
+          <button type="button" class="gr-resa-pick gr-resa-trigger" id="grHourBtn" disabled><span id="grHourLbl">—</span><span class="gr-resa-ic">▾</span></button>
+          <div class="gr-resa-pop gr-resa-hours" id="grHours" hidden></div>
+        </div>
+        <button type="button" class="gr-btn gr-btn-dark gr-resa-find" id="grFind">Trouver une table</button>
+      </div>
+      <p class="gr-resa-msg gr-resa-barmsg" id="grBarMsg"></p>
     </section>
     <section class="gr-feature gr-slide">
       <div class="gr-beef"><img src="/assets/grill/beef.jpg" alt=""></div>
@@ -2634,14 +2716,9 @@ function page(o: {
       <div class="gr-resa-modal" role="dialog" aria-modal="true">
         <button class="gr-resa-x" id="grResaX" type="button" aria-label="Fermer">×</button>
         <div id="grResaStep1">
-          <h3 class="gr-resa-h">Réserver une table</h3>
+          <h3 class="gr-resa-h">Finaliser la réservation</h3>
+          <div class="gr-resa-recap" id="grRecap"></div>
           <p class="gr-resa-note">Acompte de 2000 F déduit de votre addition sur place · 100 F de frais de service.</p>
-          <label class="gr-resa-lb">Nombre de personnes</label>
-          <select class="gr-resa-in" id="grNb"></select>
-          <label class="gr-resa-lb">Date</label>
-          <input class="gr-resa-in" type="date" id="grDate">
-          <label class="gr-resa-lb">Heure</label>
-          <div class="gr-resa-slots" id="grSlots"><span class="gr-resa-hint">Choisissez une date</span></div>
           <label class="gr-resa-lb">Votre nom</label>
           <input class="gr-resa-in" type="text" id="grName" maxlength="80" placeholder="Ex : Awa Diop">
           <label class="gr-resa-lb">Téléphone</label>
@@ -3215,8 +3292,14 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gd-hero-r::before{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-46%);width:min(430px,78%);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 50% 40%,#fff 0%,var(--y) 140%);opacity:.16}
   .gd-hero-img{position:relative;max-height:520px;max-width:100%;object-fit:contain;display:block;filter:drop-shadow(0 26px 40px rgba(0,0,0,.14))}
   .gd-hero-badge{position:absolute;left:24px;bottom:24px;background:#fff;color:var(--d);font-size:12px;font-weight:600;padding:8px 14px;border-radius:30px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
-  .gd-perks{background:var(--d)}
+  .gd-perks{background:var(--d);overflow:hidden}
+  .gd-marq{overflow:hidden}
+  .gd-marq-track{display:flex;width:max-content;animation:gdMarq 26s linear infinite}
+  .gd-marq:hover .gd-marq-track{animation-play-state:paused}
+  @keyframes gdMarq{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+  @media(prefers-reduced-motion:reduce){.gd-marq-track{animation:none;transform:none}}
   .gd-perks-in{max-width:1240px;margin:0 auto;padding:30px 28px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+  .gd-marq-track .gd-perk{flex:0 0 auto;margin:28px 34px;padding-left:16px}
   .gd-perk{display:flex;align-items:center;gap:14px;color:#fff;padding-left:16px;border-left:2px solid var(--y)}
   .gd-perk b{display:block;font-size:14px;font-weight:600} .gd-perk small{color:rgba(255,255,255,.6);font-size:12px}
   .gd-shop{max-width:1240px;margin:0 auto;padding:60px 28px 20px}
@@ -3623,7 +3706,7 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-col p{font-size:15px;line-height:1.65;color:var(--gr-mut)}
   @media(max-width:760px){.gr-cols{grid-template-columns:1fr;gap:38px}}
   /* Couverts gravés + RÉSERVER UNE TABLE (slide plein écran sur or) */
-  .gr-cutlery{background:var(--gr-gold);text-align:center;padding:clamp(24px,4vw,48px) clamp(20px,4vw,40px)}
+  .gr-cutlery{background:var(--gr-gold);text-align:center;padding:clamp(24px,4vw,48px) clamp(20px,4vw,40px);overflow:visible}
   .gr-cutlery-in{line-height:0;width:100%;text-align:center}
   .gr-cutlery-in img{max-height:34vh;width:auto;max-width:72%;object-fit:contain;display:inline-block}
   .gr-resa-title{margin-top:10px!important;color:var(--gr-ink)!important}
@@ -3651,6 +3734,36 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-resa-submit{width:100%;margin-top:16px;animation:none!important}
   .gr-resa-spin{width:34px;height:34px;margin:18px auto;border:3px solid rgba(174,154,100,.25);border-top-color:var(--gr-gold);border-radius:50%;animation:grspin 1s linear infinite}
   @keyframes grspin{to{transform:rotate(360deg)}}
+  /* Barre réservation inline (réf Au Grill : personnes / date / heure / bouton) */
+  .gr-resa-bar{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:center;gap:12px;max-width:900px;margin:8px auto 0}
+  .gr-resa-field{position:relative;display:flex;flex-direction:column;text-align:left;min-width:150px}
+  .gr-resa-field>label{font-family:var(--gr-fs);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gr-ink);margin:0 0 6px 2px;opacity:.85}
+  .gr-resa-pick{appearance:none;-webkit-appearance:none;background:#fff;border:1px solid rgba(25,24,25,.25);color:var(--gr-ink);font-family:var(--gr-fb);font-size:15px;padding:11px 14px;border-radius:2px;min-width:150px;cursor:pointer;text-align:left}
+  .gr-resa-trigger{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .gr-resa-trigger:disabled{opacity:.5;cursor:not-allowed}
+  .gr-resa-ic{color:var(--gr-gold-d);font-size:12px}
+  .gr-resa-find{align-self:flex-end;height:44px;animation:none!important}
+  .gr-resa-barmsg{text-align:center;color:#5a2b1b;font-weight:600}
+  /* Popovers (calendrier / heures) */
+  .gr-resa-pop{position:absolute;top:calc(100% + 6px);left:0;z-index:30;background:#fff;border:1px solid rgba(25,24,25,.2);border-radius:4px;box-shadow:0 18px 40px rgba(0,0,0,.28);padding:12px;min-width:260px}
+  .gr-resa-pop[hidden]{display:none}
+  .gr-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-family:var(--gr-fe);font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:13px;color:var(--gr-ink)}
+  .gr-cal-nav{background:none;border:0;font-size:20px;line-height:1;color:var(--gr-ink);cursor:pointer;padding:0 6px}
+  .gr-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .gr-cal-dow{font-family:var(--gr-fs);font-size:10px;font-weight:700;text-transform:uppercase;color:#999;text-align:center;padding:4px 0}
+  .gr-cal-d{border:0;border-radius:3px;padding:8px 0;font-size:13px;font-family:var(--gr-fb);cursor:pointer}
+  .gr-cal-d.on-ok{background:#e4f3e6;color:#1f6b2a;font-weight:700}
+  .gr-cal-d.on-ok:hover{background:#2e7d32;color:#fff}
+  .gr-cal-d.on-no{background:#f6e4e4;color:#c06a6a;cursor:not-allowed}
+  /* Liste des heures */
+  .gr-resa-hours{display:flex;flex-wrap:wrap;gap:7px;max-width:300px}
+  .gr-hour{border:0;border-radius:3px;padding:8px 13px;font-size:13px;font-weight:600;font-family:var(--gr-fs);cursor:pointer}
+  .gr-hour.on-ok{background:#e4f3e6;color:#1f6b2a}
+  .gr-hour.on-ok:hover{background:#2e7d32;color:#fff}
+  .gr-hour.on-no{background:#f6e4e4;color:#c06a6a;cursor:not-allowed;text-decoration:line-through}
+  .gr-resa-recap{text-align:center;background:#1b1a18;border:1px solid rgba(174,154,100,.3);border-radius:3px;padding:10px;color:var(--gr-txt);font-size:15px;margin-bottom:12px}
+  .gr-resa-recap b{color:var(--gr-gold)}
+  @media(max-width:720px){.gr-resa-bar{flex-direction:column;align-items:stretch}.gr-resa-field,.gr-resa-pick{min-width:0;width:100%}.gr-resa-pop{min-width:240px}}
   /* Bœuf gravé (slide sombre bifsteck) */
   .gr-beef{line-height:0;width:min(900px,100%)} .gr-beef img{width:100%;max-height:300px;object-fit:cover;object-position:center;display:block}
   .gr-ill-wrap{display:flex;justify-content:center;color:var(--gr-ink);padding:clamp(20px,4vw,40px) 20px}
