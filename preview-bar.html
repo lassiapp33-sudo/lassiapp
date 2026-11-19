@@ -73,16 +73,14 @@
   .hero-bg{position:absolute;inset:-12% 0;background:url('preview-bar-assets/hero.jpg') center/cover;will-change:transform;z-index:0}
   .hero::after{content:"";position:absolute;inset:0;background:rgba(13,12,17,.18);z-index:1}
   /* panneau arche unique : plus large + plus haut, coins hauts en dôme */
-  .hero-arch{position:relative;z-index:2;width:min(620px,92%);
-    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
-    background:var(--bg);border-radius:310px 310px 0 0;padding:90px 56px 60px;text-align:center}
-  .hero-mark{width:36px;height:36px;border:1.5px solid var(--white);border-radius:50%;margin:0 auto 40px;
-    display:grid;place-items:center}
-  .hero-mark::after{content:"";width:9px;height:9px;border:1.5px solid var(--white);border-radius:50%}
-  .hero-num{font-family:var(--fh);font-weight:500;font-size:22px;color:var(--white);margin-bottom:12px}
-  .hero-word{font-family:var(--fh);font-weight:800;font-size:clamp(70px,11vw,120px);line-height:1;color:var(--white);letter-spacing:3px}
-  .hero-sub{font-family:var(--fb);font-weight:300;font-size:19px;color:var(--grey);margin:28px 0 32px}
-  .hero-adr{position:relative;z-index:2;color:var(--white);margin-top:34px;font-size:15px;text-align:center}
+  .hero-arch{position:relative;z-index:2;width:min(470px,90%);
+    flex:0 0 auto;min-height:86vh;display:flex;flex-direction:column;align-items:center;
+    background:var(--bg);border-radius:235px 235px 0 0;padding:74px 48px 40px;text-align:center}
+  .mark{width:44px;height:44px;margin:0 auto 36px;color:var(--white)}
+  .hero-num{font-family:var(--fh);font-weight:500;font-size:22px;color:var(--white);margin-bottom:14px}
+  .hero-word{font-family:var(--fh);font-weight:800;font-size:clamp(66px,12vw,104px);line-height:1;color:var(--white);letter-spacing:3px}
+  .hero-sub{font-family:var(--fb);font-weight:300;font-size:18px;color:var(--grey);margin:26px 0 30px}
+  .hero-adr{margin-top:auto;padding-top:60px;color:var(--white);font-size:15px}
 
   /* ===== À PROPOS : 2 colonnes (titre gauche / paragraphe droite) ===== */
   .about{padding:170px 0}
@@ -148,7 +146,7 @@
 
   <!-- HEADER -->
   <header class="nav"><div class="wrap">
-    <a class="brand" href="#top">BAR</a>
+    <a class="brand" href="#top"><svg class="mark" style="width:24px;height:24px;margin:0 10px 0 0;display:inline-block;vertical-align:middle" viewBox="0 0 48 48"><g stroke="currentColor" stroke-width="1" stroke-linecap="round"><circle cx="24" cy="24" r="6" fill="none"/><line x1="24" y1="2" x2="24" y2="9"/><line x1="24" y1="39" x2="24" y2="46"/><line x1="2" y1="24" x2="9" y2="24"/><line x1="39" y1="24" x2="46" y2="24"/><line x1="8.5" y1="8.5" x2="13.4" y2="13.4"/><line x1="34.6" y1="34.6" x2="39.5" y2="39.5"/><line x1="39.5" y1="8.5" x2="34.6" y2="13.4"/><line x1="13.4" y1="34.6" x2="8.5" y2="39.5"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(22.5 24 24)"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(67.5 24 24)"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(112.5 24 24)"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(157.5 24 24)"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(202.5 24 24)"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(247.5 24 24)"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(292.5 24 24)"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(337.5 24 24)"/></g></svg>BAR</a>
     <nav class="menu">
       <a href="#about">Actualité</a>
       <a href="#resa">Menu</a>
@@ -162,13 +160,13 @@
   <section class="hero" id="top">
     <div class="hero-bg" data-parallax-speed="0.15"></div>
     <div class="hero-arch reveal-sc">
-      <div class="hero-mark"></div>
+      <svg class="mark" viewBox="0 0 48 48"><g stroke="currentColor" stroke-width="1" stroke-linecap="round"><circle cx="24" cy="24" r="6" fill="none"/><line x1="24" y1="2" x2="24" y2="9"/><line x1="24" y1="39" x2="24" y2="46"/><line x1="2" y1="24" x2="9" y2="24"/><line x1="39" y1="24" x2="46" y2="24"/><line x1="8.5" y1="8.5" x2="13.4" y2="13.4"/><line x1="34.6" y1="34.6" x2="39.5" y2="39.5"/><line x1="39.5" y1="8.5" x2="34.6" y2="13.4"/><line x1="13.4" y1="34.6" x2="8.5" y2="39.5"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(22.5 24 24)"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(67.5 24 24)"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(112.5 24 24)"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(157.5 24 24)"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(202.5 24 24)"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(247.5 24 24)"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(292.5 24 24)"/><line x1="24" y1="5" x2="24" y2="7.5" transform="rotate(337.5 24 24)"/></g></svg>
       <div class="hero-num">221</div>
       <div class="hero-word">BAR</div>
       <div class="hero-sub">Bar local avec musique en direct</div>
       <a class="btn btn-o" href="#resa">Réserver une table</a>
+      <div class="hero-adr">Route des Almadies, Dakar, Sénégal</div>
     </div>
-    <div class="hero-adr reveal">Route des Almadies, Dakar, Sénégal</div>
   </section>
 
   <!-- À PROPOS -->

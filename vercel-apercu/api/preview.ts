@@ -1521,9 +1521,9 @@ function page(o: {
   const cxStatCount = hasProducts ? o.products.length : hasServices ? o.services.length : o.terrains.length;
   const cxStats = `
     <div class="cx-stats">
-      <div class="cx-stat"><b>${cxStatCount}+</b><span>${hasProducts ? 'Produits' : hasServices ? 'Prestations' : 'Terrains'}</span></div>
-      <div class="cx-stat"><b>100%</b><span>Naturel &amp; bio</span></div>
-      <div class="cx-stat"><b>24/7</b><span>Commande en ligne</span></div>
+      <div class="cx-stat"><b><span class="cx-count" data-target="${cxStatCount}" data-suffix="+">0</span></b><span>${hasProducts ? 'Produits' : hasServices ? 'Prestations' : 'Terrains'}</span></div>
+      <div class="cx-stat"><b><span class="cx-count" data-target="100" data-suffix="%">0</span></b><span>Naturel &amp; bio</span></div>
+      <div class="cx-stat"><b><span class="cx-count" data-target="24" data-suffix="/7">0</span></b><span>Commande en ligne</span></div>
     </div>`;
   const cxBanners = `
     <section class="cx-banners">
@@ -1572,7 +1572,7 @@ function page(o: {
     <section id="cx-about" class="cx-feature">
       <div class="cx-feature-top">
         <div class="cx-feature-head">
-          <h2>Une peau éclatante<br>au quotidien</h2>
+          <h2 class="cx-mask"><span class="cx-mask-l"><span>Une peau éclatante</span></span><span class="cx-mask-l"><span>au quotidien</span></span></h2>
           <p>Des soins naturels, pensés pour révéler l'éclat de ta peau jour après jour.</p>
           <a class="cx-btn-outline" href="#cx-shop">En savoir plus</a>
         </div>
@@ -1683,7 +1683,11 @@ function page(o: {
       .cx-zoom{will-change:transform,border-radius;transform:scale(.88);border-radius:34px;overflow:hidden;transition:box-shadow .4s ease}
       .cx-zoom img{border-radius:0!important}
       .cx-hero-model,.cx-hero-badge{will-change:transform}
-      @media(prefers-reduced-motion:reduce){.cx-zoom{transform:none!important;border-radius:14px!important}}
+      .cx-mask-l{display:block;overflow:hidden}
+      .cx-mask-l>span{display:block;transform:translateY(115%);transition:transform .9s cubic-bezier(.16,1,.3,1);will-change:transform}
+      .cx-mask-l:nth-child(2)>span{transition-delay:.14s}
+      .cx-mask.cx-in .cx-mask-l>span{transform:translateY(0)}
+      @media(prefers-reduced-motion:reduce){.cx-zoom{transform:none!important;border-radius:14px!important}.cx-mask-l>span{transform:none!important}}
     </style>
     <script>(function(){
       try{
@@ -1721,6 +1725,32 @@ function page(o: {
         window.addEventListener('scroll',onScroll,{passive:true});
         window.addEventListener('resize',onScroll,{passive:true});
         frame();
+        // Counter-up sur les stats + Text reveal (mask) du titre feature
+        if('IntersectionObserver'in window){
+          function count(el){
+            var target=parseFloat(el.getAttribute('data-target'))||0;
+            var suf=el.getAttribute('data-suffix')||'';
+            var start=null,dur=1400;
+            function step(ts){
+              if(start===null)start=ts;
+              var p=Math.min((ts-start)/dur,1);
+              var e=1-Math.pow(1-p,3); // easeOutCubic
+              el.textContent=Math.round(target*e)+suf;
+              if(p<1)requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+          }
+          var io2=new IntersectionObserver(function(ents){
+            ents.forEach(function(e){
+              if(!e.isIntersecting)return;
+              var t=e.target;
+              if(t.classList.contains('cx-count'))count(t);
+              else t.classList.add('cx-in');
+              io2.unobserve(t);
+            });
+          },{threshold:.4});
+          [].slice.call(document.querySelectorAll('.cx-count,.cx-mask')).forEach(function(el){io2.observe(el);});
+        }
       }catch(e){}
     })();</script>
   `;
@@ -2759,7 +2789,8 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .cx-hero-hours .hours-status { margin:0; }
   .cx-stats { display:flex; gap:34px; border-top:1px solid var(--b); padding-top:24px; flex-wrap:wrap; }
   .cx-stat { display:flex; flex-direction:column; gap:2px; }
-  .cx-stat b { font-family:var(--fh); font-size:24px; font-weight:600; }
+  .cx-stat b { font-family:var(--fh); font-size:28px; font-weight:700; }
+  .cx-stat b .cx-count { font-weight:700; font-size:inherit; }
   .cx-stat span { font-size:12px; color:var(--m); }
   .cx-hero-img { position:relative; background:var(--g); display:flex; align-items:flex-end; justify-content:center; overflow:hidden; }
   .cx-hero-model { width:100%; height:100%; object-fit:contain; object-position:bottom center; display:block; }
@@ -3403,7 +3434,7 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   /* Couverts gravés (slide plein écran sur or) */
   .gr-cutlery{background:var(--gr-gold)}
   .gr-cutlery-in{line-height:0;padding:40px 20px;width:100%;text-align:center}
-  .gr-cutlery-in img{max-height:62vh;width:auto;max-width:88%;object-fit:contain;display:inline-block;mix-blend-mode:multiply}
+  .gr-cutlery-in img{max-height:62vh;width:auto;max-width:88%;object-fit:contain;display:inline-block}
   /* Bœuf gravé (slide sombre bifsteck) */
   .gr-beef{line-height:0;width:min(900px,100%)} .gr-beef img{width:100%;max-height:300px;object-fit:cover;object-position:center;display:block}
   .gr-ill-wrap{display:flex;justify-content:center;color:var(--gr-ink);padding:clamp(20px,4vw,40px) 20px}
