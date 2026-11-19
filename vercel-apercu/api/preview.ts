@@ -832,7 +832,11 @@ const SCROLLFX = `<style id="lx-fx-style">
 .lx-fx-zin.lx-in{transform:none;opacity:1}
 .lx-fx-curtain{clip-path:inset(14% 14% 14% 14% round 26px);will-change:clip-path}
 .lx-fx-expand{width:72%;margin-left:auto;margin-right:auto;border-radius:32px;overflow:hidden;will-change:width,border-radius}
-@media(prefers-reduced-motion:reduce){.lx-fx-piece{opacity:1!important;transform:none!important}.lx-fx-beam-rect{display:none}.lx-fx-zoom{transform:none!important}.lx-fx-curtain{clip-path:none!important}[data-pll]{transform:none!important}}
+.lx-fx-mask-l{display:block;overflow:hidden}
+.lx-fx-mask-l>span{display:block;transform:translateY(115%);transition:transform .9s cubic-bezier(.16,1,.3,1);will-change:transform}
+.lx-fx-mask.lx-in .lx-fx-mask-l>span{transform:none}
+.lx-fx-draw{will-change:stroke-dashoffset}
+@media(prefers-reduced-motion:reduce){.lx-fx-piece{opacity:1!important;transform:none!important}.lx-fx-beam-rect{display:none}.lx-fx-zoom{transform:none!important}.lx-fx-curtain{clip-path:none!important}[data-pll]{transform:none!important}.lx-fx-mask-l>span{transform:none!important}}
 </style>
 <script>(function(){
   try{
@@ -853,7 +857,7 @@ const SCROLLFX = `<style id="lx-fx-style">
       [].slice.call(document.querySelectorAll('.lx-fx-count')).forEach(function(el){ioC.observe(el);});
       // Zoom-in d'entrée (one-shot) : scale .66 -> 1
       var ioZ=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('lx-in');ioZ.unobserve(e.target);}});},{threshold:.15});
-      [].slice.call(document.querySelectorAll('.lx-fx-zoom,.lx-fx-zin')).forEach(function(el){ioZ.observe(el);});
+      [].slice.call(document.querySelectorAll('.lx-fx-zoom,.lx-fx-zin,.lx-fx-mask')).forEach(function(el){ioZ.observe(el);});
     }
     // Border beam (périmètre)
     var beams=[].slice.call(document.querySelectorAll('.lx-fx-beam')).map(function(w){return {w:w,r:w.querySelector('.lx-fx-beam-rect'),len:0};});
@@ -863,16 +867,18 @@ const SCROLLFX = `<style id="lx-fx-style">
     var plls=[].slice.call(document.querySelectorAll('[data-pll]'));
     var curts=[].slice.call(document.querySelectorAll('.lx-fx-curtain'));
     var exps=[].slice.call(document.querySelectorAll('.lx-fx-expand'));
+    var draws=[].slice.call(document.querySelectorAll('.lx-fx-draw')).map(function(p){var L=0;try{L=p.getTotalLength();}catch(e){}p.style.strokeDasharray=L;p.style.strokeDashoffset=L;return {p:p,len:L};});
     var ticking=false;
     function frame(){
       ticking=false;var vh=window.innerHeight;
+      draws.forEach(function(it){if(it.len<=0)return;var r=it.p.getBoundingClientRect(),s=vh*0.9,en=vh*0.3,pr=clamp((s-r.top)/(s-en),0,1);it.p.style.strokeDashoffset=(it.len*(1-pr)).toFixed(1);});
       plls.forEach(function(el){var r=el.getBoundingClientRect();if(r.bottom>0&&r.top<vh){var sp=parseFloat(el.getAttribute('data-pll'))||0.1;var p=(r.top+r.height/2-vh/2);el.style.transform='translateY('+(p*-sp).toFixed(1)+'px)';}});
       curts.forEach(function(el){var r=el.getBoundingClientRect();var s=vh*0.92,en=vh*0.22,p=clamp((s-r.top)/(s-en),0,1);var iv=(14*(1-p)).toFixed(1),rd=(26-20*p).toFixed(0);el.style.clipPath='inset('+iv+'% '+iv+'% '+iv+'% '+iv+'% round '+rd+'px)';});
       beams.forEach(function(it){if(!it.r||it.len<=0)return;var r=it.w.getBoundingClientRect(),s=vh*0.9,en=vh*0.25,p=clamp((s-r.top)/(s-en),0,1);it.r.style.strokeDashoffset=(it.len*(1-p)).toFixed(1);});
       exps.forEach(function(el){var r=el.getBoundingClientRect();var s=vh*0.92,en=vh*0.22,p=clamp((s-r.top)/(s-en),0,1);el.style.width=(72+28*p).toFixed(2)+'%';el.style.borderRadius=(32*(1-p)).toFixed(1)+'px';});
     }
     function onS(){if(!ticking){ticking=true;requestAnimationFrame(frame);}}
-    if(plls.length||curts.length||beams.length||exps.length){window.addEventListener('scroll',onS,{passive:true});window.addEventListener('resize',onS,{passive:true});frame();}
+    if(plls.length||curts.length||beams.length||exps.length||draws.length){window.addEventListener('scroll',onS,{passive:true});window.addEventListener('resize',onS,{passive:true});frame();}
   }catch(e){}
 })();</script>`;
 
@@ -2302,7 +2308,7 @@ function page(o: {
   const trGallery = trGal.length ? `
     <section class="tr-gallery" id="tr-gallery">
       <div class="tr-gallery-head"><span class="tr-deco-sm">${trPaws}</span><h2 class="tr-h2">La galerie</h2></div>
-      <div class="tr-gallery-grid">${trGal.map(u => `<div class="tr-gtile" ${bg(u)}></div>`).join('')}</div>
+      <div class="tr-gallery-grid lx-fx-bento">${trGal.map(u => `<div class="tr-gtile lx-fx-piece" ${bg(u)}></div>`).join('')}</div>
     </section>` : '';
   // Carte emplacement : si lat/lng définis → carte OpenStreetMap + repère. Sinon →
   // bouton « Définir votre emplacement » visible UNIQUEMENT en mode édition (prestataire).
@@ -2317,10 +2323,10 @@ function page(o: {
   // Ciseaux ligne-claire (remplace l'« os » du template de référence).
   const trScissors = `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><line x1="8" y1="7.2" x2="20" y2="16.5"/><line x1="8" y1="16.8" x2="20" y2="7.5"/><line x1="7.6" y1="7.6" x2="16" y2="12"/></svg>`;
   // Séparateur = trait courbe en pointillés + ciseau à côté (fidèle à la référence).
-  const trSep = `<div class="tr-sep" aria-hidden="true"><svg class="tr-sep-curve" viewBox="0 0 320 44" fill="none" preserveAspectRatio="none"><path d="M4 40 C 100 2, 220 2, 316 40" stroke="currentColor" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round"/></svg><span class="tr-sep-ic">${trScissors}</span></div>`;
+  const trSep = `<div class="tr-sep" aria-hidden="true"><svg class="tr-sep-curve" viewBox="0 0 320 44" fill="none" preserveAspectRatio="none"><path d="M4 40 C 100 2, 220 2, 316 40" stroke="currentColor" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round"/><path class="lx-fx-draw" d="M4 40 C 100 2, 220 2, 316 40" stroke="var(--tr-coral)" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg><span class="tr-sep-ic">${trScissors}</span></div>`;
   // Long séparateur pointillé qui TRAVERSE de l'« À propos » jusqu'à « Réserver »
   // (grande courbe verticale, ciseau en bas), fidèle à la référence.
-  const trSepLong = `<div class="tr-sep-long" aria-hidden="true"><svg class="tr-sep-long-curve" viewBox="0 0 160 300" fill="none" preserveAspectRatio="none"><path d="M120 0 C 20 70, 150 150, 70 220 C 20 265, 90 285, 80 300" stroke="currentColor" stroke-width="2" stroke-dasharray="2 10" stroke-linecap="round"/></svg><span class="tr-sep-long-ic">${trScissors}</span></div>`;
+  const trSepLong = `<div class="tr-sep-long" aria-hidden="true"><svg class="tr-sep-long-curve" viewBox="0 0 160 300" fill="none" preserveAspectRatio="none"><path d="M120 0 C 20 70, 150 150, 70 220 C 20 265, 90 285, 80 300" stroke="currentColor" stroke-width="2" stroke-dasharray="2 10" stroke-linecap="round"/><path class="lx-fx-draw" d="M120 0 C 20 70, 150 150, 70 220 C 20 265, 90 285, 80 300" stroke="var(--tr-coral)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span class="tr-sep-long-ic">${trScissors}</span></div>`;
   // Conteneur « réservation » mis en avant (image + détails + Réserver), 1re prestation.
   const fs = o.services[0];
   const fsImg = fs && typeof fs.image_url === 'string' && fs.image_url.startsWith('http') ? fs.image_url : pick(1);
@@ -2386,7 +2392,7 @@ function page(o: {
       <span class="tr-deco tr-deco-3"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><line x1="8" y1="7.2" x2="20" y2="16.5"/><line x1="8" y1="16.8" x2="20" y2="7.5"/><line x1="7.6" y1="7.6" x2="16" y2="12"/></svg></span>
       <div class="tr-hero-in">
         ${o.logo ? `<img class="tr-hero-logo" src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : ''}
-        <h1 class="tr-hero-name">${esc(clip(o.name, 16))}</h1>
+        <h1 class="tr-hero-name lx-fx-mask"><span class="lx-fx-mask-l"><span>${esc(clip(o.name, 16))}</span></span></h1>
         <div class="tr-hero-tag">${esc(clip(trTagline, 40))}</div>
         <a class="tr-cta" href="#tr-services" data-trnav="services">Prendre rendez-vous</a>
       </div>
@@ -2399,7 +2405,7 @@ function page(o: {
         <p>${esc(clip(o.desc || `${o.name}, votre salon de tresses. Prestations soignées, finitions nettes et conseils personnalisés. Réservez votre créneau en ligne et payez en toute sécurité.`, 240))}</p>
         <p>${esc(clip(`Tresses, nattes, tissages et coiffures protectrices — chaque prestation est réalisée avec soin${o.zone ? ' à ' + o.zone : ''}. Retrouvez toutes mes prestations dans l'onglet « Mes services ».`, 200))}</p>
       </div>
-      <div class="tr-about-img">${trAboutImg ? `<img src="${escAttr(trAboutImg)}" alt="${escAttr(o.name)}" loading="lazy">` : ''}</div>
+      <div class="tr-about-img lx-fx-curtain">${trAboutImg ? `<img src="${escAttr(trAboutImg)}" alt="${escAttr(o.name)}" loading="lazy">` : ''}</div>
     </section>
 
     ${trSepLong}
@@ -3829,10 +3835,10 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-cal-d.on-no{background:#f6e4e4;color:#c06a6a;cursor:not-allowed}
   /* Liste des heures */
   .gr-resa-hours{display:flex;flex-wrap:wrap;gap:7px;max-width:300px}
-  .gr-hour{background:#2a2825;border:1px solid rgba(174,154,100,.45);border-radius:2px;padding:14px 8px;font-size:14px;font-family:var(--gr-fb);color:var(--gr-txt);cursor:pointer;text-align:center}
-  .gr-hour.on-ok:hover{border-color:var(--gr-gold);background:#34312c}
-  .gr-hour.on-no{cursor:not-allowed;color:var(--gr-mut);background-image:linear-gradient(to top right,transparent calc(50% - 0.5px),rgba(174,154,100,.5) 50%,transparent calc(50% + 0.5px))}
-  .gr-hour.sel{background:#45413a;border-color:var(--gr-gold);color:#fff}
+  .gr-hour{background:transparent;border:1px solid rgba(255,255,255,.55);border-radius:1px;padding:14px 8px;font-size:14px;font-family:var(--gr-fb);color:#fff;cursor:pointer;text-align:center}
+  .gr-hour.on-ok:hover{background:rgba(255,255,255,.08)}
+  .gr-hour.on-no{cursor:not-allowed;color:rgba(255,255,255,.55);background-image:linear-gradient(to top right,transparent calc(50% - 0.5px),rgba(255,255,255,.55) 50%,transparent calc(50% + 0.5px))}
+  .gr-hour.sel{background:rgba(255,255,255,.12);border-color:#fff;color:#fff}
   .gr-resa-recap{text-align:center;background:#1b1a18;border:1px solid rgba(174,154,100,.3);border-radius:3px;padding:10px;color:var(--gr-txt);font-size:15px;margin-bottom:12px}
   .gr-resa-recap b{color:var(--gr-gold)}
   /* Page réservation dédiée (réf « EFFECTUER UNE RÉSERVATION ») */
@@ -3844,15 +3850,15 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-resa-gridwrap{max-width:760px;margin:26px auto 0;text-align:left}
   .gr-resa-gridlabel{font-family:var(--gr-fs);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gr-gold);margin:0 0 12px}
   .gr-hours-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px}
-  .gr-resa-heuredisp{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--gr-txt);font-family:var(--gr-fb);min-height:50px}
+  .gr-resa-heuredisp{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#fff;font-family:var(--gr-fb);min-height:50px}
   .gr-page-resa .gr-resa-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(14px,2.5vw,28px);max-width:1000px;margin:30px auto 0;align-items:end}
   .gr-page-resa .gr-resa-field{min-width:0}
-  .gr-page-resa .gr-resa-field>label{font-family:var(--gr-fb);font-size:15px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--gr-txt);opacity:1;margin:0 0 8px 2px}
-  .gr-page-resa .gr-resa-pick{width:100%;min-width:0;background:#201e1b;border:1px solid rgba(174,154,100,.45);color:var(--gr-txt);font-family:var(--gr-fb);font-size:16px;padding:14px 16px}
-  .gr-page-resa .gr-resa-ic{color:var(--gr-mut)}
+  .gr-page-resa .gr-resa-field>label{font-family:var(--gr-fb);font-size:15px;font-weight:400;letter-spacing:0;text-transform:none;color:#fff;opacity:1;margin:0 0 8px 2px}
+  .gr-page-resa .gr-resa-pick{width:100%;min-width:0;background:transparent;border:1px solid rgba(255,255,255,.55);color:#fff;font-family:var(--gr-fb);font-size:16px;padding:14px 16px}
+  .gr-page-resa .gr-resa-ic{color:rgba(255,255,255,.7)}
   .gr-resa-hr{max-width:1000px;margin:28px auto 0;border-top:1px solid rgba(174,154,100,.4)}
   .gr-resa-gridwrap{max-width:1000px;margin:26px auto 0;text-align:left}
-  .gr-resa-gridlabel{font-family:var(--gr-fb);font-size:16px;letter-spacing:0;text-transform:none;color:var(--gr-txt);margin:0 0 14px}
+  .gr-resa-gridlabel{font-family:var(--gr-fb);font-size:16px;letter-spacing:0;text-transform:none;color:#fff;margin:0 0 14px}
   .gr-hours-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
   @media(max-width:720px){.gr-hours-grid{grid-template-columns:repeat(3,1fr)}}
   .gr-page-resa .gr-resa-find{background:var(--gr-gold);color:var(--gr-ink);border-color:var(--gr-gold);margin-top:28px}
