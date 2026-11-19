@@ -872,7 +872,7 @@ const SCROLLFX = `<style id="lx-fx-style">
       [].slice.call(document.querySelectorAll('.lx-fx-zoom,.lx-fx-zin,.lx-fx-mask')).forEach(function(el){ioZ.observe(el);});
       // Staggered reveal (cascade)
       [].slice.call(document.querySelectorAll('.lx-fx-stagger')).forEach(function(c){
-        [].slice.call(c.querySelectorAll('.prod')).forEach(function(el,i){el.classList.add('lx-fx-sitem');el.style.transitionDelay=(i*90)+'ms';});
+        [].slice.call(c.querySelectorAll('.prod,.cathead,.ds-card,.sectitle')).forEach(function(el,i){el.classList.add('lx-fx-sitem');el.style.transitionDelay=(i*80)+'ms';});
       });
       var ioS=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('lx-in');ioS.unobserve(e.target);}});},{threshold:.12});
       [].slice.call(document.querySelectorAll('.lx-fx-stagger')).forEach(function(c){ioS.observe(c);});
@@ -2660,9 +2660,9 @@ function page(o: {
     <div class="fm-page fm-page-shop" hidden>
       ${closedNotice}
       <section id="fm-shop" class="fm-shop${catalogCls}">
-        <div class="fm-sec-head"><span class="fm-k">Acheter des produits</span><h2>${hasProducts ? 'Nos produits de la ferme' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2><p>Commande en ligne — livraison ou retrait à la ferme.</p></div>
-        ${catnav}${dsSection}${grid}
-        ${svcSection}
+        <div class="fm-sec-head"><span class="fm-k">Acheter des produits</span><h2 class="lx-fx-mask"><span class="lx-fx-mask-l"><span>${hasProducts ? 'Nos produits de la ferme' : hasServices ? 'Nos prestations' : 'Nos terrains'}</span></span></h2><p>Commande en ligne — livraison ou retrait à la ferme.</p></div>
+        <div class="lx-fx-stagger">${catnav}${dsSection}${grid}
+        ${svcSection}</div>
         ${terrainSection}
       </section>
     </div>
@@ -2682,7 +2682,7 @@ function page(o: {
         // Filet de sécurité : les animations d'entrée se déclenchent via IntersectionObserver
         // quand la page devient visible ; on garantit l'affichage au cas où (450ms).
         var pg=pages[which];
-        if(pg) setTimeout(function(){ [].forEach.call(pg.querySelectorAll('.lx-rv:not(.lx-in)'), function(el){ el.classList.add('lx-in'); }); }, 450);
+        if(pg) setTimeout(function(){ [].forEach.call(pg.querySelectorAll('.lx-rv:not(.lx-in),.lx-fx-stagger:not(.lx-in),.lx-fx-bento:not(.lx-in)'), function(el){ el.classList.add('lx-in'); }); }, 450);
         if(anchor){ var t=document.querySelector(anchor); if(t){ setTimeout(function(){ t.scrollIntoView({behavior:'smooth'}); },60); return; } }
         window.scrollTo({top:0,behavior:'smooth'});
       }
