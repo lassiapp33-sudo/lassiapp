@@ -13,7 +13,7 @@
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { waveRequestPayout } from '../_shared/waveProxy.ts';
+import { waveRequestRefund } from '../_shared/waveProxy.ts';
 import { sendPushToUser } from '../_shared/push.ts';
 
 const CORS = {
@@ -134,7 +134,7 @@ serve(async (req) => {
   // — payment_intent lié à cet order
   const { data: pi } = await supabase
     .from('payment_intents')
-    .select('id, commission_lassi, moyen_paiement')
+    .select('id, commission_lassi, moyen_paiement, external_ref, montant_total')
     .eq('order_id', orderId)
     .maybeSingle();
 
@@ -142,9 +142,10 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'payment_intent_not_found' }), { status: 400, headers: CORS });
   }
 
-  const commissionLassi: number = pi.commission_lassi ?? Math.round(order.total * 0.01);
+  // — Montant réellement payé par le client = montant_total (prix_base + commission LASSI)
+  const montantRemboursement = pi.montant_total ?? order.total;
 
-  // — Numéro de téléphone du client
+  // — Numéro client : requis uniquement pour OM (le refund Wave reverse la session d'origine)
   let clientPhone: string | null = order.client_phone ?? null;
   if (!clientPhone && order.client_id) {
     const { data: profile } = await supabase
@@ -154,22 +155,19 @@ serve(async (req) => {
       .maybeSingle();
     clientPhone = profile?.phone ?? null;
   }
-
-  // Nettoie le numéro (retire +221 ou 221)
   if (clientPhone) clientPhone = clientPhone.replace(/^\+?221/, '').trim();
-
-  // Fallback : commandes web invité stockent le tél dans la note (« 📞 7XXXXXXXX »)
   if (!clientPhone || !PHONE_RE.test(clientPhone)) {
     const fromNote = phoneFromNote(order.note);
     if (fromNote) clientPhone = fromNote;
   }
 
-  if (!clientPhone || !PHONE_RE.test(clientPhone)) {
+  // OM a besoin du numéro ; Wave rembourse via la session checkout (pas de numéro requis)
+  if (order.pay_method === 'om' && (!clientPhone || !PHONE_RE.test(clientPhone))) {
     return new Response(JSON.stringify({ error: 'client_phone_invalid' }), { status: 400, headers: CORS });
   }
-
-  // — Montant total à rembourser au client (LASSI avance tout)
-  const montantRemboursement = order.total;
+  if (order.pay_method === 'wave' && !pi.external_ref) {
+    return new Response(JSON.stringify({ error: 'wave_session_missing' }), { status: 400, headers: CORS });
+  }
 
   if (montantRemboursement <= 0) {
     await supabase
@@ -194,9 +192,9 @@ serve(async (req) => {
 
   try {
     if (order.pay_method === 'wave') {
-      payoutRef = await sendWaveRefund({ refundId, montant: montantRemboursement, phone: clientPhone });
+      payoutRef = await sendWaveRefund({ refundId, sessionId: pi.external_ref!, montant: montantRemboursement });
     } else {
-      payoutRef = await sendOmRefund({ refundId, montant: montantRemboursement, phone: clientPhone });
+      payoutRef = await sendOmRefund({ refundId, montant: montantRemboursement, phone: clientPhone! });
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erreur payout';
@@ -213,10 +211,11 @@ serve(async (req) => {
   }
 
   // — Marque la commande remboursée
-  await supabase
+  const { error: updErr } = await supabase
     .from('orders')
     .update({ status: 'refunded', refunded_at: new Date().toISOString() })
     .eq('id', orderId);
+  if (updErr) console.error('[process-refund] maj statut refunded échouée:', updErr.message);
 
   // — Notification client
   if (order.client_id) {
@@ -239,20 +238,18 @@ serve(async (req) => {
 });
 
 // ── Wave refund ────────────────────────────────────────────────────────────────
-async function sendWaveRefund(p: { refundId: string; montant: number; phone: string }): Promise<string> {
-  const body = JSON.stringify({
-    currency:         'XOF',
-    receive_amount:   String(p.montant),
-    mobile:           `+221${p.phone}`,
-    client_reference: p.refundId,
-  });
-  const res = await waveRequestPayout(body, p.refundId);
-  const data = await res.json();
-  if (!res.ok) throw new Error(`Wave ${data.code ?? data.error}: ${data.message ?? JSON.stringify(data)}`);
-  if (data.status === 'failed' || data.payout_error) {
-    throw new Error(`Wave payout failed: ${data.payout_error?.error_code ?? 'unknown'}`);
+// Rembourse la session checkout d'origine (reverse le paiement exact du client).
+// Fiable : pas besoin de solde payout ni de numéro, le client est recrédité sur
+// le moyen qu'il a utilisé pour payer.
+async function sendWaveRefund(p: { refundId: string; sessionId: string; montant: number }): Promise<string> {
+  const res = await waveRequestRefund(p.sessionId, '', p.refundId);
+  const text = await res.text();
+  if (!res.ok) {
+    let detail = text;
+    try { const j = JSON.parse(text); detail = j.message ?? j.code ?? text; } catch { /* texte brut */ }
+    throw new Error(`Wave refund ${res.status}: ${detail}`);
   }
-  return data.id;
+  return p.sessionId;
 }
 
 // ── Orange Money refund ────────────────────────────────────────────────────────

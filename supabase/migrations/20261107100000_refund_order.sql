@@ -4,7 +4,7 @@
 -- 1. Mise à jour contrainte status
 ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check;
 ALTER TABLE orders ADD CONSTRAINT orders_status_check
-  CHECK (status IN ('new','preparing','ready','done','refused','refunded'));
+  CHECK (status IN ('pending','new','preparing','ready','done','refused','refunded'));
 
 -- 2. Colonne timestamp remboursement
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMPTZ;
