@@ -738,7 +738,7 @@ const GR_RESA_JS = `(function(){
         s.forEach(function(x){
           var b=document.createElement('button'); b.type='button';
           b.className='gr-hour '+(x.available?'on-ok':'on-no'); b.textContent=x.heure_debut;
-          if(x.available){ b.addEventListener('click',function(e){e.stopPropagation(); st.slot=x; [].forEach.call(box.querySelectorAll('.gr-hour'),function(y){y.classList.remove('sel');}); b.classList.add('sel'); }); }
+          if(x.available){ b.addEventListener('click',function(e){e.stopPropagation(); st.slot=x; [].forEach.call(box.querySelectorAll('.gr-hour'),function(y){y.classList.remove('sel');}); b.classList.add('sel'); var hs=$('grHourSel'); if(hs)hs.textContent=x.heure_debut; }); }
           else { b.disabled=true; }
           box.appendChild(b);
         });
@@ -2720,6 +2720,10 @@ function page(o: {
           <button type="button" class="gr-resa-pick gr-resa-trigger" id="grDateBtn"><span id="grDateLbl">Choisir une date</span><span class="gr-resa-ic">▾</span></button>
           <div class="gr-resa-pop gr-resa-cal" id="grCal" hidden></div>
         </div>
+        <div class="gr-resa-field">
+          <label>Heure</label>
+          <div class="gr-resa-pick gr-resa-heuredisp" id="grHourSel">—</div>
+        </div>
       </div>
       <div class="gr-resa-gridwrap" id="grGridWrap" hidden>
         <p class="gr-resa-gridlabel">Choisissez un créneau horaire :</p>
@@ -2728,6 +2732,10 @@ function page(o: {
       <button type="button" class="gr-btn gr-btn-dark gr-resa-find" id="grFind">Réserver</button>
       <p class="gr-resa-msg gr-resa-barmsg" id="grBarMsg"></p>
     </section>
+    </div>
+    <div class="gr-legal">
+      <div class="gr-legal-links"><a href="#gr-reserve">Réservations</a><a href="#gr-menu" data-grnav="menu">Menu</a><a href="#gr-about" data-grnav="home">À propos</a></div>
+      <div class="gr-legal-copy">© 2026 ${esc(o.name)} · Propulsé et sécurisé par LASSİ</div>
     </div>
     <div class="gr-resa-ov" id="grResaOv" hidden>
       <div class="gr-resa-modal" role="dialog" aria-modal="true">
@@ -3816,6 +3824,13 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-hours-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px}
   .gr-hours-grid .gr-hour{padding:12px 8px;border-radius:2px;font-size:14px}
   .gr-hour.sel{outline:2px solid var(--gr-gold);outline-offset:1px}
+  .gr-resa-heuredisp{display:flex;align-items:center;color:var(--gr-gold);font-family:var(--gr-fe);font-weight:700;min-height:44px}
+  /* Barre légale globale (toutes pages, réf footer Au Grill) */
+  .gr-legal{background:var(--gr-ink);text-align:center;padding:22px 20px;border-top:1px solid rgba(174,154,100,.12)}
+  .gr-legal-links{display:flex;justify-content:center;gap:clamp(14px,3vw,30px);flex-wrap:wrap;margin-bottom:10px}
+  .gr-legal-links a{font-family:var(--gr-fs);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--gr-gold);text-decoration:none}
+  .gr-legal-links a:hover{color:#fff}
+  .gr-legal-copy{font-family:var(--gr-fs);font-size:11px;letter-spacing:.5px;color:var(--gr-mut)}
   @media(max-width:720px){.gr-resa-bar{flex-direction:column;align-items:stretch}.gr-resa-field,.gr-resa-pick{min-width:0;width:100%}.gr-resa-pop{min-width:240px}}
   /* Bœuf gravé (slide sombre bifsteck) */
   .gr-beef{line-height:0;width:min(900px,100%)} .gr-beef img{width:100%;max-height:300px;object-fit:cover;object-position:center;display:block}
