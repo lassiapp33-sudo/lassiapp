@@ -721,13 +721,12 @@ const GR_RESA_JS = `(function(){
   }
   function fmtDate(s){var p=s.split("-");return p[2]+"/"+p[1]+"/"+p[0];}
   function selectDate(dstr){
-    st.date=dstr; st.slot=null; $('grDateLbl').textContent=fmtDate(dstr);
-    $('grHourLbl').textContent="—"; $('grHourBtn').disabled=false; closePops();
+    st.date=dstr; st.slot=null; $('grDateLbl').textContent=fmtDate(dstr); closePops();
+    var gw=$('grGridWrap'); if(gw) gw.hidden=false;
     loadHours();
   }
 
-  // ── Heures (vert libre / rouge pris) ──
-  $('grHourBtn').addEventListener('click',function(e){e.stopPropagation(); if($('grHourBtn').disabled)return; var h=$('grHours'); var show=h.hidden; closePops(); if(show)h.hidden=false;});
+  // ── Heures (grille vert libre / rouge pris) ──
   function loadHours(){
     var box=$('grHours'); box.innerHTML='<span class="gr-resa-hint">Chargement…</span>';
     fetch(EP+'?slug='+encodeURIComponent(CFG.slug)+'&date='+encodeURIComponent(st.date),{headers:H})
@@ -739,7 +738,7 @@ const GR_RESA_JS = `(function(){
         s.forEach(function(x){
           var b=document.createElement('button'); b.type='button';
           b.className='gr-hour '+(x.available?'on-ok':'on-no'); b.textContent=x.heure_debut;
-          if(x.available){ b.addEventListener('click',function(e){e.stopPropagation(); st.slot=x; $('grHourLbl').textContent=x.heure_debut; closePops(); }); }
+          if(x.available){ b.addEventListener('click',function(e){e.stopPropagation(); st.slot=x; [].forEach.call(box.querySelectorAll('.gr-hour'),function(y){y.classList.remove('sel');}); b.classList.add('sel'); }); }
           else { b.disabled=true; }
           box.appendChild(b);
         });
@@ -813,6 +812,7 @@ const SCROLLFX = `<style id="lx-fx-style">
 .lx-fx-zin{display:inline-block;transform:scale(.6);opacity:0;transition:transform .9s cubic-bezier(.16,1,.3,1),opacity .55s ease}
 .lx-fx-zin.lx-in{transform:none;opacity:1}
 .lx-fx-curtain{clip-path:inset(14% 14% 14% 14% round 26px);will-change:clip-path}
+.lx-fx-expand{width:72%;margin-left:auto;margin-right:auto;border-radius:32px;overflow:hidden;will-change:width,border-radius}
 @media(prefers-reduced-motion:reduce){.lx-fx-piece{opacity:1!important;transform:none!important}.lx-fx-beam-rect{display:none}.lx-fx-zoom{transform:none!important}.lx-fx-curtain{clip-path:none!important}[data-pll]{transform:none!important}}
 </style>
 <script>(function(){
@@ -843,15 +843,17 @@ const SCROLLFX = `<style id="lx-fx-style">
     // Parallax + zoom + curtain + beam : boucle scroll unique
     var plls=[].slice.call(document.querySelectorAll('[data-pll]'));
     var curts=[].slice.call(document.querySelectorAll('.lx-fx-curtain'));
+    var exps=[].slice.call(document.querySelectorAll('.lx-fx-expand'));
     var ticking=false;
     function frame(){
       ticking=false;var vh=window.innerHeight;
       plls.forEach(function(el){var r=el.getBoundingClientRect();if(r.bottom>0&&r.top<vh){var sp=parseFloat(el.getAttribute('data-pll'))||0.1;var p=(r.top+r.height/2-vh/2);el.style.transform='translateY('+(p*-sp).toFixed(1)+'px)';}});
       curts.forEach(function(el){var r=el.getBoundingClientRect();var s=vh*0.92,en=vh*0.22,p=clamp((s-r.top)/(s-en),0,1);var iv=(14*(1-p)).toFixed(1),rd=(26-20*p).toFixed(0);el.style.clipPath='inset('+iv+'% '+iv+'% '+iv+'% '+iv+'% round '+rd+'px)';});
       beams.forEach(function(it){if(!it.r||it.len<=0)return;var r=it.w.getBoundingClientRect(),s=vh*0.9,en=vh*0.25,p=clamp((s-r.top)/(s-en),0,1);it.r.style.strokeDashoffset=(it.len*(1-p)).toFixed(1);});
+      exps.forEach(function(el){var r=el.getBoundingClientRect();var s=vh*0.92,en=vh*0.22,p=clamp((s-r.top)/(s-en),0,1);el.style.width=(72+28*p).toFixed(2)+'%';el.style.borderRadius=(32*(1-p)).toFixed(1)+'px';});
     }
     function onS(){if(!ticking){ticking=true;requestAnimationFrame(frame);}}
-    if(plls.length||curts.length||beams.length){window.addEventListener('scroll',onS,{passive:true});window.addEventListener('resize',onS,{passive:true});frame();}
+    if(plls.length||curts.length||beams.length||exps.length){window.addEventListener('scroll',onS,{passive:true});window.addEventListener('resize',onS,{passive:true});frame();}
   }catch(e){}
 })();</script>`;
 
@@ -2232,7 +2234,7 @@ function page(o: {
         lb.addEventListener('click',function(e){ if(e.target===lb||e.target.className==='sc-vlb-x') close(); });
       }
     })();</script>
-    <section class="sc-feature"><div class="sc-feature-in">
+    <section class="sc-feature"><div class="sc-feature-in lx-fx-expand">
       <div class="sc-fcard lx-fx-beam">
         <svg class="lx-fx-beam-svg" preserveAspectRatio="none"><defs><linearGradient id="scBeam" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#22D3EE"/><stop offset="50%" stop-color="#ffffff"/><stop offset="100%" stop-color="#2563EB"/></linearGradient></defs><rect class="lx-fx-beam-rect" x="1.5" y="1.5" rx="16" ry="16" stroke="url(#scBeam)" style="filter:drop-shadow(0 0 6px rgba(34,211,238,.9))"/></svg>
         <div class="sc-fcard-top"><img class="sc-avatar" src="${escAttr(o.logo || (o.slug === '__demo' ? `${o.base}/assets/demo/sac/avatar.jpg` : initialAvatar(o.name)))}" alt="${escAttr(o.name)}"><div><b>${esc(o.name)}</b><small>${esc(o.cat || o.zone || 'Maroquinerie')}</small></div></div>
@@ -2624,7 +2626,7 @@ function page(o: {
           <a href="#gr-about" data-grnav="home">Chez nous</a>
           <a href="#gr-menu" data-grnav="menu">Menu</a>
           <a href="#gr-gallery" data-grnav="home">Galerie</a>
-          <a href="#gr-contact" data-grnav="home">Réservations</a>
+          <a href="#gr-resa-page" data-grnav="resa">Réservations</a>
         </nav>
         <a class="gr-ic gr-cart" href="#gr-menu" data-grnav="menu" title="Commander"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></a>
       </div>
@@ -2650,24 +2652,7 @@ function page(o: {
       <div class="gr-cutlery-in"><img src="/assets/grill/cutlery.jpg" alt=""></div>
       <h2 class="gr-h2 gr-light gr-resa-title">Réserver une table</h2>
       <p class="gr-resa-sub">Sélectionnez vos détails et nous ferons notre possible pour satisfaire votre demande.</p>
-      <div class="gr-resa-bar">
-        <div class="gr-resa-field">
-          <label>Nombre de personnes</label>
-          <select class="gr-resa-pick" id="grNb"></select>
-        </div>
-        <div class="gr-resa-field">
-          <label>Date</label>
-          <button type="button" class="gr-resa-pick gr-resa-trigger" id="grDateBtn"><span id="grDateLbl">Choisir une date</span><span class="gr-resa-ic">▾</span></button>
-          <div class="gr-resa-pop gr-resa-cal" id="grCal" hidden></div>
-        </div>
-        <div class="gr-resa-field">
-          <label>Heure</label>
-          <button type="button" class="gr-resa-pick gr-resa-trigger" id="grHourBtn" disabled><span id="grHourLbl">—</span><span class="gr-resa-ic">▾</span></button>
-          <div class="gr-resa-pop gr-resa-hours" id="grHours" hidden></div>
-        </div>
-        <button type="button" class="gr-btn gr-btn-dark gr-resa-find" id="grFind">Trouver une table</button>
-      </div>
-      <p class="gr-resa-msg gr-resa-barmsg" id="grBarMsg"></p>
+      <button type="button" class="gr-btn gr-btn-dark" data-grnav="resa" href="#gr-resa-page">Réserver une table</button>
     </section>
     <section class="gr-feature gr-slide" style="background-image:url('/assets/grill/beef.jpg')">
       <div class="gr-feature-ov"></div>
@@ -2720,6 +2705,30 @@ function page(o: {
       ${terrainSection}
     </section>
     </div>
+    <div class="gr-page gr-page-resa" id="gr-resa-page" hidden>
+    <section class="gr-resa-sec">
+      <div class="gr-crumb">Accueil › Réservations</div>
+      <h2 class="gr-h2 gr-gold">Effectuer une réservation</h2>
+      <p class="gr-resa-sub2">Sélectionnez vos détails et nous ferons notre possible pour satisfaire votre demande.</p>
+      <div class="gr-resa-bar">
+        <div class="gr-resa-field">
+          <label>Nombre de personnes</label>
+          <select class="gr-resa-pick" id="grNb"></select>
+        </div>
+        <div class="gr-resa-field">
+          <label>Date</label>
+          <button type="button" class="gr-resa-pick gr-resa-trigger" id="grDateBtn"><span id="grDateLbl">Choisir une date</span><span class="gr-resa-ic">▾</span></button>
+          <div class="gr-resa-pop gr-resa-cal" id="grCal" hidden></div>
+        </div>
+      </div>
+      <div class="gr-resa-gridwrap" id="grGridWrap" hidden>
+        <p class="gr-resa-gridlabel">Choisissez un créneau horaire :</p>
+        <div class="gr-hours-grid" id="grHours"></div>
+      </div>
+      <button type="button" class="gr-btn gr-btn-dark gr-resa-find" id="grFind">Réserver</button>
+      <p class="gr-resa-msg gr-resa-barmsg" id="grBarMsg"></p>
+    </section>
+    </div>
     <div class="gr-resa-ov" id="grResaOv" hidden>
       <div class="gr-resa-modal" role="dialog" aria-modal="true">
         <button class="gr-resa-x" id="grResaX" type="button" aria-label="Fermer">×</button>
@@ -2756,9 +2765,9 @@ function page(o: {
     <script id="gr-resa-cfg" type="application/json">${JSON.stringify({ url: SUPABASE_URL, key: SUPABASE_ANON_KEY, slug: o.slug })}</script>
     <script>${GR_RESA_JS}</script>
     <script>(function(){
-      var pages={home:document.querySelector('.gr-page-home'),menu:document.querySelector('.gr-page-menu')};
+      var pages={home:document.querySelector('.gr-page-home'),menu:document.querySelector('.gr-page-menu'),resa:document.querySelector('.gr-page-resa')};
       if(!pages.home||!pages.menu) return;
-      if(document.body.classList.contains('lassi-ed')){ pages.menu.hidden=false; return; }
+      if(document.body.classList.contains('lassi-ed')){ pages.menu.hidden=false; if(pages.resa)pages.resa.hidden=false; return; }
       document.querySelectorAll('[data-grnav]').forEach(function(a){
         a.addEventListener('click',function(e){
           e.preventDefault();
@@ -2771,7 +2780,7 @@ function page(o: {
           window.scrollTo({top:0,behavior:'smooth'});
         });
       });
-      if(location.hash==='#gr-menu'){ pages.home.hidden=true; pages.menu.hidden=false; }
+      if(location.hash==='#gr-menu'){ pages.home.hidden=true; pages.menu.hidden=false; } else if(location.hash==='#gr-resa-page'){ pages.home.hidden=true; if(pages.resa)pages.resa.hidden=false; }
     })();</script>`;
 
   const body = theme.template === 'furniture' && hasCatalog ? furnitureBody
@@ -3431,8 +3440,11 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .sc-vlb-in video{width:100%;max-height:82vh;border-radius:12px;background:#000;display:block}
   .sc-vlb-x{position:absolute;top:-44px;right:0;width:36px;height:36px;border-radius:50%;background:#fff;color:#111;border:none;font-size:16px;cursor:pointer;line-height:36px}
   .sc-badge{position:absolute;z-index:2;left:28px;bottom:24px;background:#fff;color:var(--d);font-size:12px;font-weight:600;padding:8px 14px;border-radius:30px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
-  .sc-feature{max-width:1240px;margin:0 auto;padding:64px 28px 24px}
-  .sc-feature-in{display:grid;grid-template-columns:1fr 1.1fr;gap:28px;align-items:stretch}
+  .sc-feature{margin:0 auto;padding:64px 0 24px}
+  .sc-feature-in{display:grid;grid-template-columns:1fr 1.1fr;gap:28px;align-items:stretch;background:var(--d);padding:40px;box-sizing:border-box}
+  .sc-feature-in .sc-fcard{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12)}
+  .sc-feature-in .sc-fcard h2,.sc-feature-in .sc-fcard-top b{color:#fff}
+  .sc-feature-in .sc-fcard p,.sc-feature-in .sc-fcard-top small{color:rgba(255,255,255,.7)}
   .sc-fcard{background:#fff;border:1px solid var(--b);border-radius:16px;padding:34px;display:flex;flex-direction:column;justify-content:center;box-shadow:0 16px 40px rgba(0,0,0,.05)}
   .sc-fcard-top{display:flex;align-items:center;gap:14px;margin-bottom:18px}
   .sc-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;background:var(--g)}
@@ -3793,6 +3805,17 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-hour.on-no{background:#f6e4e4;color:#c06a6a;cursor:not-allowed;text-decoration:line-through}
   .gr-resa-recap{text-align:center;background:#1b1a18;border:1px solid rgba(174,154,100,.3);border-radius:3px;padding:10px;color:var(--gr-txt);font-size:15px;margin-bottom:12px}
   .gr-resa-recap b{color:var(--gr-gold)}
+  /* Page réservation dédiée (réf « EFFECTUER UNE RÉSERVATION ») */
+  .gr-resa-sec{max-width:900px;margin:0 auto;padding:clamp(60px,8vw,110px) clamp(20px,4vw,40px);text-align:center}
+  .gr-resa-sub2{color:var(--gr-mut);font-size:clamp(15px,1.7vw,18px);max-width:560px;margin:14px auto 26px;line-height:1.55}
+  .gr-page-resa .gr-resa-bar{justify-content:center}
+  .gr-page-resa .gr-resa-field>label{color:var(--gr-gold)}
+  .gr-page-resa .gr-resa-pick{background:#1b1a18;border-color:rgba(174,154,100,.3);color:#fff}
+  .gr-resa-gridwrap{max-width:760px;margin:26px auto 0;text-align:left}
+  .gr-resa-gridlabel{font-family:var(--gr-fs);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gr-gold);margin:0 0 12px}
+  .gr-hours-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px}
+  .gr-hours-grid .gr-hour{padding:12px 8px;border-radius:2px;font-size:14px}
+  .gr-hour.sel{outline:2px solid var(--gr-gold);outline-offset:1px}
   @media(max-width:720px){.gr-resa-bar{flex-direction:column;align-items:stretch}.gr-resa-field,.gr-resa-pick{min-width:0;width:100%}.gr-resa-pop{min-width:240px}}
   /* Bœuf gravé (slide sombre bifsteck) */
   .gr-beef{line-height:0;width:min(900px,100%)} .gr-beef img{width:100%;max-height:300px;object-fit:cover;object-position:center;display:block}
