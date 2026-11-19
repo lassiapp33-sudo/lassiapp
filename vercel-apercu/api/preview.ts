@@ -685,8 +685,10 @@ const GR_RESA_JS = `(function(){
   // Nombre de personnes
   var nb=$('grNb'); for(var i=1;i<=12;i++){var o=document.createElement('option');o.value=i;o.textContent=i+(i>1?" personnes":" personne");nb.appendChild(o);} nb.value=2;
 
-  // Jours ouverts (vert/rouge calendrier) — chargé une fois
-  fetch(EP+'?slug='+encodeURIComponent(CFG.slug)+'&weekdays=1',{headers:H})
+  var DEMO = CFG.slug==='__demo';
+  // Jours ouverts (calendrier) — chargé une fois
+  if(DEMO){ st.weekdays=[0,1,2,3,4,5,6]; }
+  else fetch(EP+'?slug='+encodeURIComponent(CFG.slug)+'&weekdays=1',{headers:H})
     .then(function(r){return r.json();}).then(function(j){
       if(j && j.success){ st.weekdays = j.reservation_enabled===false ? [] : (j.available_weekdays||[]); }
       else st.weekdays=[];
@@ -727,8 +729,24 @@ const GR_RESA_JS = `(function(){
   }
 
   // ── Heures (grille vert libre / rouge pris) ──
+  function renderSlots(box,s){
+    box.innerHTML='';
+    s.forEach(function(x){
+      var b=document.createElement('button'); b.type='button';
+      b.className='gr-hour '+(x.available?'on-ok':'on-no'); b.textContent=x.heure_debut;
+      if(x.available){ b.addEventListener('click',function(e){e.stopPropagation(); st.slot=x; [].forEach.call(box.querySelectorAll('.gr-hour'),function(y){y.classList.remove('sel');}); b.classList.add('sel'); var hs=$('grHourSel'); if(hs){var sp=hs.querySelector('span'); if(sp)sp.textContent=x.heure_debut; else hs.textContent=x.heure_debut;} }); }
+      else { b.disabled=true; }
+      box.appendChild(b);
+    });
+  }
   function loadHours(){
-    var box=$('grHours'); box.innerHTML='<span class="gr-resa-hint">Chargement…</span>';
+    var box=$('grHours');
+    if(DEMO){
+      var times=["09:30","09:45","10:00","10:15","10:30","10:45","11:00","11:15","11:30","11:45","12:00","12:15","12:30","12:45","13:00"];
+      renderSlots(box, times.map(function(t,i){return {heure_debut:t,slot_id:null,available:i>=7};}));
+      return;
+    }
+    box.innerHTML='<span class="gr-resa-hint">Chargement…</span>';
     fetch(EP+'?slug='+encodeURIComponent(CFG.slug)+'&date='+encodeURIComponent(st.date),{headers:H})
       .then(function(r){return r.json();}).then(function(j){
         if(j.reservation_enabled===false){box.innerHTML='<span class="gr-resa-hint">Réservation non disponible.</span>';return;}
@@ -788,6 +806,7 @@ const GR_RESA_JS = `(function(){
   function check(){ if(!st.piId)return; fetch(EP+'?status='+encodeURIComponent(st.piId),{headers:H}).then(function(r){return r.json();}).then(function(j){if(j.paid)showDone();}).catch(function(){}); }
   var chk=$('grCheck'); if(chk)chk.addEventListener('click',check);
   function showDone(){ if(st.poll){clearInterval(st.poll);st.poll=null;} $('grResaStep2').hidden=true; $('grResaStep1').hidden=true; $('grResaDone').hidden=false; }
+  if(DEMO){ var gw0=$('grGridWrap'); if(gw0){ var dl=$('grDateLbl'); if(dl)dl.textContent="18/11/2026"; gw0.hidden=false; loadHours(); } }
 })();`;
 
 // ─── Moteur d'animations conteneur réutilisable (SCROLLFX) ───────────────────
@@ -2256,7 +2275,7 @@ function page(o: {
       ${svcSection}
       ${terrainSection}
     </section>
-    <section class="sc-about" id="sc-about"><div class="sc-about-in">
+    <section class="sc-about" id="sc-about"><div class="sc-about-in lx-fx-expand">
       <div class="sc-about-img" ${bg(pick(2))}></div>
       <div class="sc-about-txt">
         <span class="sc-k">À propos</span>
@@ -2722,9 +2741,10 @@ function page(o: {
         </div>
         <div class="gr-resa-field">
           <label>Heure</label>
-          <div class="gr-resa-pick gr-resa-heuredisp" id="grHourSel">—</div>
+          <div class="gr-resa-pick gr-resa-heuredisp" id="grHourSel"><span>—</span><span class="gr-resa-ic">▾</span></div>
         </div>
       </div>
+      <div class="gr-resa-hr"></div>
       <div class="gr-resa-gridwrap" id="grGridWrap" hidden>
         <p class="gr-resa-gridlabel">Choisissez un créneau horaire :</p>
         <div class="gr-hours-grid" id="grHours"></div>
@@ -3495,8 +3515,10 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   body[data-template="sac"] .cartbtn{background:var(--d);color:#fff;border-radius:6px} body[data-template="sac"] .cartbtn .cnt{background:var(--y);color:var(--d)}
   body[data-template="sac"] .abocard,body[data-template="sac"] .terrain-card{border:1px solid var(--b);border-radius:12px;box-shadow:none}
   body[data-template="sac"] .store,body[data-template="sac"] .btn,body[data-template="sac"] .payer{border-radius:6px}
-  .sc-about{max-width:1240px;margin:0 auto;padding:40px 28px 80px}
-  .sc-about-in{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+  .sc-about{margin:0 auto;padding:40px 0 80px}
+  .sc-about-in{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;background:var(--d);padding:48px;box-sizing:border-box}
+  .sc-about-in .sc-k,.sc-about-in .sc-about-txt h2{color:#fff}
+  .sc-about-in .sc-about-txt p{color:rgba(255,255,255,.7)}
   .sc-about-img{border-radius:14px;background-size:cover;background-position:center;aspect-ratio:4/3;background-color:var(--g)}
   .sc-about-txt h2{font-family:var(--fh);font-weight:700;font-size:clamp(26px,3.4vw,40px);color:var(--d);margin:6px 0 14px}
   .sc-about-txt p{color:var(--m);font-size:15px;line-height:1.7;margin-bottom:26px;max-width:440px}
@@ -3807,10 +3829,10 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-cal-d.on-no{background:#f6e4e4;color:#c06a6a;cursor:not-allowed}
   /* Liste des heures */
   .gr-resa-hours{display:flex;flex-wrap:wrap;gap:7px;max-width:300px}
-  .gr-hour{border:0;border-radius:3px;padding:8px 13px;font-size:13px;font-weight:600;font-family:var(--gr-fs);cursor:pointer}
-  .gr-hour.on-ok{background:#e4f3e6;color:#1f6b2a}
-  .gr-hour.on-ok:hover{background:#2e7d32;color:#fff}
-  .gr-hour.on-no{background:#f6e4e4;color:#c06a6a;cursor:not-allowed;text-decoration:line-through}
+  .gr-hour{background:#2a2825;border:1px solid rgba(174,154,100,.45);border-radius:2px;padding:14px 8px;font-size:14px;font-family:var(--gr-fb);color:var(--gr-txt);cursor:pointer;text-align:center}
+  .gr-hour.on-ok:hover{border-color:var(--gr-gold);background:#34312c}
+  .gr-hour.on-no{cursor:not-allowed;color:var(--gr-mut);background-image:linear-gradient(to top right,transparent calc(50% - 0.5px),rgba(174,154,100,.5) 50%,transparent calc(50% + 0.5px))}
+  .gr-hour.sel{background:#45413a;border-color:var(--gr-gold);color:#fff}
   .gr-resa-recap{text-align:center;background:#1b1a18;border:1px solid rgba(174,154,100,.3);border-radius:3px;padding:10px;color:var(--gr-txt);font-size:15px;margin-bottom:12px}
   .gr-resa-recap b{color:var(--gr-gold)}
   /* Page réservation dédiée (réf « EFFECTUER UNE RÉSERVATION ») */
@@ -3822,9 +3844,19 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   .gr-resa-gridwrap{max-width:760px;margin:26px auto 0;text-align:left}
   .gr-resa-gridlabel{font-family:var(--gr-fs);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gr-gold);margin:0 0 12px}
   .gr-hours-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px}
-  .gr-hours-grid .gr-hour{padding:12px 8px;border-radius:2px;font-size:14px}
-  .gr-hour.sel{outline:2px solid var(--gr-gold);outline-offset:1px}
-  .gr-resa-heuredisp{display:flex;align-items:center;color:var(--gr-gold);font-family:var(--gr-fe);font-weight:700;min-height:44px}
+  .gr-resa-heuredisp{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--gr-txt);font-family:var(--gr-fb);min-height:50px}
+  .gr-page-resa .gr-resa-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(14px,2.5vw,28px);max-width:1000px;margin:30px auto 0;align-items:end}
+  .gr-page-resa .gr-resa-field{min-width:0}
+  .gr-page-resa .gr-resa-field>label{font-family:var(--gr-fb);font-size:15px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--gr-txt);opacity:1;margin:0 0 8px 2px}
+  .gr-page-resa .gr-resa-pick{width:100%;min-width:0;background:#201e1b;border:1px solid rgba(174,154,100,.45);color:var(--gr-txt);font-family:var(--gr-fb);font-size:16px;padding:14px 16px}
+  .gr-page-resa .gr-resa-ic{color:var(--gr-mut)}
+  .gr-resa-hr{max-width:1000px;margin:28px auto 0;border-top:1px solid rgba(174,154,100,.4)}
+  .gr-resa-gridwrap{max-width:1000px;margin:26px auto 0;text-align:left}
+  .gr-resa-gridlabel{font-family:var(--gr-fb);font-size:16px;letter-spacing:0;text-transform:none;color:var(--gr-txt);margin:0 0 14px}
+  .gr-hours-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  @media(max-width:720px){.gr-hours-grid{grid-template-columns:repeat(3,1fr)}}
+  .gr-page-resa .gr-resa-find{background:var(--gr-gold);color:var(--gr-ink);border-color:var(--gr-gold);margin-top:28px}
+  .gr-page-resa .gr-resa-find:hover{background:transparent;color:var(--gr-gold)}
   /* Barre légale globale (toutes pages, réf footer Au Grill) */
   .gr-legal{background:var(--gr-ink);text-align:center;padding:22px 20px;border-top:1px solid rgba(174,154,100,.12)}
   .gr-legal-links{display:flex;justify-content:center;gap:clamp(14px,3vw,30px);flex-wrap:wrap;margin-bottom:10px}
