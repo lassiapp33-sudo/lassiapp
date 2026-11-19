@@ -81,12 +81,19 @@ serve(async (req) => {
       .eq('id', refundId).eq('status', 'awaiting_payment');
   }
 
-  // 2. LASSI reverse le net au client via Wave payout
+  // Commission LASSI que le client avait payée → LASSI la lui rend aussi.
+  // Le client récupère donc la TOTALITÉ : net (payé par la prestataire) + commission (rendue par LASSI).
+  const { data: pi } = await supabase
+    .from('payment_intents').select('id, commission_lassi').eq('order_id', refund.order_id).maybeSingle();
+  const commission = Math.max(0, pi?.commission_lassi ?? 0);
+  const montantClient = refund.amount + commission;
+
+  // 2. LASSI reverse la totalité au client via Wave payout
   let payoutRef: string;
   try {
     const payoutBody = JSON.stringify({
       currency:         'XOF',
-      receive_amount:   String(refund.amount),
+      receive_amount:   String(montantClient),
       mobile:           `+221${refund.client_phone}`,
       client_reference: `refundpay_${refundId}`,
     });
@@ -115,8 +122,6 @@ serve(async (req) => {
   if (updErr) console.error('[finalize-refund] maj statut refunded:', updErr.message);
 
   // Annule tout reste de payout_queue (le prestataire a remboursé)
-  const { data: pi } = await supabase
-    .from('payment_intents').select('id').eq('order_id', refund.order_id).maybeSingle();
   if (pi?.id) {
     await supabase.from('payout_queue')
       .update({ statut: 'cancelled', updated_at: new Date().toISOString() })
@@ -129,7 +134,7 @@ serve(async (req) => {
     try {
       await sendPushToUser(supabase, refund.client_id, {
         title: 'Commande remboursée 💸',
-        body:  `Tu as été remboursé(e) de ${refund.amount} F via Wave.`,
+        body:  `Tu as été remboursé(e) de ${montantClient} F via Wave.`,
         data:  { type: 'refund', order_id: refund.order_id },
         channelId: 'commandes-v2',
       });
@@ -139,7 +144,7 @@ serve(async (req) => {
   }
 
   return new Response(
-    JSON.stringify({ success: true, payout_ref: payoutRef, montant_rembourse: refund.amount }),
+    JSON.stringify({ success: true, payout_ref: payoutRef, montant_rembourse: montantClient }),
     { headers: { ...CORS, 'Content-Type': 'application/json' } },
   );
 });
