@@ -262,7 +262,7 @@ Deno.serve(async (req) => {
     return err('Moyen de paiement indisponible', 502);
   } catch (e) {
     console.error('[create-guest-table-reservation] payment', e instanceof Error ? e.message : e);
-    await admin.from('payment_intents').update({ statut: 'cancelled' }).eq('id', piId);
+    await admin.from('payment_intents').update({ statut: 'failed' }).eq('id', piId);
     return err('Le paiement n\'a pas pu être initié. Réessaie.', 502);
   }
 });
