@@ -2325,6 +2325,7 @@ function page(o: {
   ];
   const grGalPool = [...gal.slice(1)].filter(Boolean).slice(0, 8);
   const grBandImg = gal.length ? gal[gal.length - 1] : (gal[0] || '');
+  const grAboutBg = gal.length > 2 ? gal[2] : (gal[1] || gal[0] || ''); // photo cuisine derrière « LE RESTAURANT »
   const grillBody = `
     <header class="gr-head" id="gr-top">
       <div class="gr-topbar">${o.zone ? `<span>${esc(o.zone)}</span>` : ''}${o.phone ? `<span>${esc(o.phone)}</span>` : ''}<span>Réservation &amp; commande en ligne</span></div>
@@ -2348,9 +2349,12 @@ function page(o: {
         <a class="gr-btn" href="#gr-shop">Menu</a>
       </div>
     </section>
-    <section class="gr-about" id="gr-about">
-      <h2 class="gr-h2 gr-gold">Le restaurant</h2>
-      <div class="gr-cols">${grCols.map(c => `<div class="gr-col"><span class="gr-num">${c.n}</span><span class="gr-trait"></span><h3>${c.t}</h3><p>${esc(c.p)}</p></div>`).join('')}</div>
+    <section class="gr-about" id="gr-about" ${bg(grAboutBg)}>
+      <div class="gr-about-ov"></div>
+      <div class="gr-about-in">
+        <h2 class="gr-h2 gr-gold">Le restaurant</h2>
+        <div class="gr-cols">${grCols.map(c => `<div class="gr-col"><span class="gr-num">${c.n}</span><h3>${c.t}</h3><p>${esc(c.p)}</p></div>`).join('')}</div>
+      </div>
     </section>
     <div class="gr-cutlery"><img src="/assets/grill/cutlery.jpg" alt=""></div>
     <section class="gr-feature">
@@ -3329,15 +3333,15 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
   .gr-gold{font-family:var(--gr-fe);font-weight:600;color:var(--gr-gold);font-size:clamp(28px,4.4vw,50px);letter-spacing:3px;text-transform:uppercase}
   .gr-light{font-family:var(--gr-fh);color:#fff;font-size:clamp(32px,5vw,60px);letter-spacing:1px;text-transform:uppercase}
   .gr-sm{font-size:clamp(22px,3vw,34px);letter-spacing:2px}
-  /* LE RESTAURANT — 3 colonnes */
-  .gr-about{background:var(--gr-bg);padding:clamp(50px,7vw,96px) clamp(20px,4vw,48px)}
-  .gr-cols{max-width:1080px;margin:clamp(30px,5vw,56px) auto 0;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(24px,4vw,56px);text-align:center}
-  .gr-num{display:block;font-family:var(--gr-fe);font-size:30px;font-weight:600;color:var(--gr-gold);margin-bottom:12px}
-  .gr-trait{display:block;width:46px;height:2px;background:var(--gr-gold);opacity:.8;margin:0 auto 18px}
-  .gr-col h3{font-family:var(--gr-fh);font-size:clamp(18px,2vw,24px);line-height:1.1;letter-spacing:1px;text-transform:uppercase;color:#fff;margin:0 0 14px}
-  .gr-col p{font-size:16px;line-height:1.6;color:var(--gr-mut)}
-  .gr-col+.gr-col{border-left:1px solid rgba(201,162,75,.22)}
-  @media(max-width:760px){.gr-cols{grid-template-columns:1fr;gap:34px}.gr-col+.gr-col{border-left:0;border-top:1px solid rgba(201,162,75,.22);padding-top:30px}}
+  /* LE RESTAURANT — 3 colonnes sur photo cuisine assombrie (réf Au Grill) */
+  .gr-about{position:relative;background:var(--gr-bg);background-size:cover;background-position:center;padding:clamp(60px,8vw,110px) clamp(20px,4vw,48px)}
+  .gr-about-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,21,19,.78),rgba(22,21,19,.88))}
+  .gr-about-in{position:relative;z-index:2}
+  .gr-cols{max-width:1080px;margin:clamp(34px,5vw,64px) auto 0;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(24px,4vw,56px);text-align:center}
+  .gr-num{display:block;font-family:var(--gr-fe);font-size:28px;font-weight:600;color:var(--gr-gold);margin-bottom:16px;letter-spacing:1px}
+  .gr-col h3{font-family:var(--gr-fh);font-size:clamp(18px,2vw,24px);line-height:1.12;letter-spacing:1px;text-transform:uppercase;color:var(--gr-gold);margin:0 0 14px}
+  .gr-col p{font-size:15px;line-height:1.65;color:var(--gr-mut)}
+  @media(max-width:760px){.gr-cols{grid-template-columns:1fr;gap:38px}}
   /* Illustrations gravées (couverts sur or, bœuf sur sombre) */
   .gr-cutlery{background:#BCA86A;line-height:0} .gr-cutlery img{width:100%;max-height:360px;object-fit:cover;object-position:center;display:block}
   .gr-beef{line-height:0} .gr-beef img{width:100%;max-height:300px;object-fit:cover;object-position:center;display:block}
