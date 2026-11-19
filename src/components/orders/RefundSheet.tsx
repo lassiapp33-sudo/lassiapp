@@ -9,11 +9,12 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Linking,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts } from '../../theme';
 import { formatPrice } from '../../utils/format';
-import { getRefundInfo, processRefund, RefundInfo } from '../../services/orders';
+import { getRefundInfo, processRefund, finalizeRefund, RefundInfo } from '../../services/orders';
 
 interface Props {
   visible: boolean;
@@ -22,7 +23,7 @@ interface Props {
   onSuccess: () => void;
 }
 
-type Step = 'loading' | 'info' | 'confirming' | 'done' | 'error';
+type Step = 'loading' | 'info' | 'confirming' | 'awaiting' | 'verifying' | 'done' | 'error';
 
 const IcoClose = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
@@ -40,6 +41,7 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
   const [step, setStep]     = useState<Step>('loading');
   const [info, setInfo]     = useState<RefundInfo | null>(null);
   const [errMsg, setErrMsg] = useState('');
+  const [refundId, setRefundId] = useState('');
 
   useEffect(() => {
     if (!visible) return;
@@ -59,15 +61,35 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
       .catch(e => { setErrMsg(e.message); setStep('error'); });
   }, [visible, orderId]);
 
+  // Étape 1 : crée la session Wave et l'ouvre pour que la prestataire paie
   const handleConfirm = async () => {
     setStep('confirming');
     try {
-      await processRefund(orderId);
-      setStep('done');
-      setTimeout(onSuccess, 1200);
+      const { waveUrl, refundId: rid } = await processRefund(orderId);
+      setRefundId(rid);
+      await Linking.openURL(waveUrl);
+      setStep('awaiting');
     } catch (e: unknown) {
       setErrMsg(e instanceof Error ? e.message : 'Erreur inconnue');
       setStep('error');
+    }
+  };
+
+  // Étape 2 : vérifie le paiement puis LASSI reverse au client
+  const handleVerify = async () => {
+    setStep('verifying');
+    try {
+      const { paid } = await finalizeRefund(refundId);
+      if (paid) {
+        setStep('done');
+        setTimeout(onSuccess, 1200);
+      } else {
+        setErrMsg('Paiement pas encore reçu. Confirme-le dans Wave puis réessaie.');
+        setStep('awaiting');
+      }
+    } catch (e: unknown) {
+      setErrMsg(e instanceof Error ? e.message : 'Erreur inconnue');
+      setStep('awaiting');
     }
   };
 
@@ -103,28 +125,52 @@ export default function RefundSheet({ visible, orderId, onClose, onSuccess }: Pr
           {step === 'info' && info && (
             <>
               <View style={s.infoBox}>
-                <Text style={s.infoLabel}>Remboursement client</Text>
-                <Text style={s.infoAmount}>{formatPrice(info.montantPrestataire + info.commissionLassi)}</Text>
-                <Text style={s.infoSub}>à rembourser à</Text>
+                <Text style={s.infoLabel}>Montant à rembourser</Text>
+                <Text style={s.infoAmount}>{formatPrice(info.montantPrestataire)}</Text>
+                <Text style={s.infoSub}>au client</Text>
                 <Text style={s.infoPhone}>{info.clientPhone}</Text>
               </View>
 
               <Text style={s.hint}>
-                LASSI envoie le remboursement complet automatiquement via {info.payMethod === 'wave' ? 'Wave' : 'Orange Money'}.
+                Ton Wave va s'ouvrir pour payer ce montant à LASSI. Une fois confirmé,
+                LASSI le reverse automatiquement au client.
               </Text>
 
               <TouchableOpacity style={s.confirmBtn} onPress={handleConfirm} activeOpacity={0.85}>
                 <IcoCheck />
-                <Text style={s.confirmTxt}>Confirmer le remboursement</Text>
+                <Text style={s.confirmTxt}>Rembourser via mon Wave</Text>
               </TouchableOpacity>
             </>
           )}
 
-          {/* Confirming */}
+          {/* Confirming — ouverture de Wave */}
           {step === 'confirming' && (
             <View style={s.center}>
               <ActivityIndicator color={colors.accent} size="large" />
-              <Text style={s.pendingTxt}>LASSI envoie la commission au client…</Text>
+              <Text style={s.pendingTxt}>Ouverture de Wave…</Text>
+            </View>
+          )}
+
+          {/* Awaiting — la prestataire doit payer dans Wave puis vérifier */}
+          {step === 'awaiting' && (
+            <>
+              <Text style={s.hint}>
+                Paie le montant dans Wave, puis reviens ici et appuie sur Vérifier.
+                Le client sera remboursé aussitôt.
+              </Text>
+              {!!errMsg && <Text style={s.errSub}>{errMsg}</Text>}
+              <TouchableOpacity style={s.confirmBtn} onPress={handleVerify} activeOpacity={0.85}>
+                <IcoCheck />
+                <Text style={s.confirmTxt}>J'ai payé — Vérifier</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* Verifying */}
+          {step === 'verifying' && (
+            <View style={s.center}>
+              <ActivityIndicator color={colors.accent} size="large" />
+              <Text style={s.pendingTxt}>Vérification du paiement…</Text>
             </View>
           )}
 

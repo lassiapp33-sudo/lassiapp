@@ -1,29 +1,24 @@
-// process-refund — Remboursement manuel prestataire
+// process-refund — Remboursement prestataire en 2 temps (Wave)
 //
-// POST /functions/v1/process-refund
-// Body: { order_id: string }
-// Auth: JWT du prestataire (authenticated)
+// POST /functions/v1/process-refund  Body: { order_id }
+// → crée une Wave Checkout où la PRESTATAIRE paie LASSI le montant net perçu,
+//   renvoie { wave_url, refund_id }. Le reversement au client est fait ensuite
+//   par finalize-refund (après confirmation du paiement par la prestataire).
 //
-// Flux :
-//   1. Vérifie que la commande appartient au prestataire courant
-//   2. Vérifie statut 'done' + moyen paiement wave/om
-//   3. Récupère commission_lassi depuis payment_intents
-//   4. Envoie la commission_lassi au client via Wave/OM payout
-//   5. Marque l'ordre 'refunded' + insère notification client
+// GET  /functions/v1/process-refund?order_id=…  → infos pour le modal.
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { waveRequestRefund } from '../_shared/waveProxy.ts';
-import { sendPushToUser } from '../_shared/push.ts';
+import { callWaveCheckout } from '../_shared/waveProxy.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
   'Access-Control-Allow-Headers': 'authorization, content-type',
 };
 
-const OM_RETAILER_MSISDN        = Deno.env.get('OM_RETAILER_MSISDN')        ?? '';
-const OM_RETAILER_PIN_ENCRYPTED = Deno.env.get('OM_RETAILER_PIN_ENCRYPTED') ?? '';
 const PHONE_RE = /^7[015678][0-9]{7}$/;
+// Wave EXIGE https:// — les URLs de retour passent par lassi.tech (deep link derrière)
+const LASSI_PAY_BASE = 'https://lassi.tech/paiement';
 
 // Extrait un numéro sénégalais depuis la note de commande (commandes web invité : « 📞 7XXXXXXXX »)
 function phoneFromNote(note: string | null | undefined): string {
@@ -127,14 +122,15 @@ serve(async (req) => {
   if (['done', 'refused', 'refunded'].includes(order.status)) {
     return new Response(JSON.stringify({ error: 'order_not_refundable' }), { status: 400, headers: CORS });
   }
-  if (!['wave', 'om'].includes(order.pay_method)) {
-    return new Response(JSON.stringify({ error: 'cash_not_refundable' }), { status: 400, headers: CORS });
+  if (order.pay_method !== 'wave') {
+    // OM : flux 2-temps non encore implémenté (checkout marchand OM différent).
+    return new Response(JSON.stringify({ error: 'om_refund_unsupported' }), { status: 400, headers: CORS });
   }
 
-  // — payment_intent lié à cet order
+  // — payment_intent + montant NET perçu par le prestataire (= ce qu'elle rembourse)
   const { data: pi } = await supabase
     .from('payment_intents')
-    .select('id, commission_lassi, moyen_paiement, external_ref, montant_total')
+    .select('id, commission_lassi, montant_total')
     .eq('order_id', orderId)
     .maybeSingle();
 
@@ -142,17 +138,23 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'payment_intent_not_found' }), { status: 400, headers: CORS });
   }
 
-  // — Montant réellement payé par le client = montant_total (prix_base + commission LASSI)
-  const montantRemboursement = pi.montant_total ?? order.total;
+  // Net reçu = montant du payout_queue (ce qui a été viré au prestataire)
+  let net = 0;
+  if (pi.id) {
+    const { data: pq } = await supabase
+      .from('payout_queue').select('montant').eq('payment_intent_id', pi.id).maybeSingle();
+    net = pq?.montant ?? 0;
+  }
+  if (net <= 0) net = (pi.montant_total ?? order.total) - (pi.commission_lassi ?? 0);
+  if (net <= 0) {
+    return new Response(JSON.stringify({ error: 'montant_invalide' }), { status: 400, headers: CORS });
+  }
 
-  // — Numéro client : requis uniquement pour OM (le refund Wave reverse la session d'origine)
+  // — Numéro client (pour le reversement final par LASSI)
   let clientPhone: string | null = order.client_phone ?? null;
   if (!clientPhone && order.client_id) {
     const { data: profile } = await supabase
-      .from('profiles')
-      .select('phone')
-      .eq('id', order.client_id)
-      .maybeSingle();
+      .from('profiles').select('phone').eq('id', order.client_id).maybeSingle();
     clientPhone = profile?.phone ?? null;
   }
   if (clientPhone) clientPhone = clientPhone.replace(/^\+?221/, '').trim();
@@ -160,119 +162,66 @@ serve(async (req) => {
     const fromNote = phoneFromNote(order.note);
     if (fromNote) clientPhone = fromNote;
   }
-
-  // OM a besoin du numéro ; Wave rembourse via la session checkout (pas de numéro requis)
-  if (order.pay_method === 'om' && (!clientPhone || !PHONE_RE.test(clientPhone))) {
+  if (!clientPhone || !PHONE_RE.test(clientPhone)) {
     return new Response(JSON.stringify({ error: 'client_phone_invalid' }), { status: 400, headers: CORS });
   }
-  if (order.pay_method === 'wave' && !pi.external_ref) {
-    return new Response(JSON.stringify({ error: 'wave_session_missing' }), { status: 400, headers: CORS });
-  }
 
-  if (montantRemboursement <= 0) {
-    await supabase
-      .from('orders')
-      .update({ status: 'refunded', refunded_at: new Date().toISOString() })
-      .eq('id', orderId);
-    return new Response(JSON.stringify({ success: true, payout_ref: null }), { headers: CORS });
-  }
+  // — Réutilise un remboursement en cours pour cette commande (évite les doublons)
+  const { data: existing } = await supabase
+    .from('merchant_refunds')
+    .select('id, status, checkout_id')
+    .eq('order_id', orderId)
+    .in('status', ['awaiting_payment', 'merchant_paid'])
+    .maybeSingle();
 
-  // — Annule le payout_queue du prestataire (LASSI rembourse le client directement)
-  if (pi.id) {
-    await supabase
-      .from('payout_queue')
-      .update({ statut: 'cancelled', updated_at: new Date().toISOString() })
-      .eq('payment_intent_id', pi.id)
-      .not('statut', 'in', '("paid","processing")');
-  }
+  const refundRowId = existing?.id ?? crypto.randomUUID();
 
-  // — Envoie le remboursement complet au client via Wave/OM payout
-  const refundId = `refund_${orderId}`;
-  let payoutRef: string;
-
+  // — Crée la session Wave Checkout : la prestataire paie LASSI le montant net
+  let waveUrl: string;
+  let checkoutId: string;
   try {
-    if (order.pay_method === 'wave') {
-      payoutRef = await sendWaveRefund({ refundId, sessionId: pi.external_ref!, montant: montantRemboursement });
-    } else {
-      payoutRef = await sendOmRefund({ refundId, montant: montantRemboursement, phone: clientPhone! });
-    }
+    const r = await createMerchantCheckout({ reference: refundRowId, amount: net });
+    waveUrl = r.launchUrl;
+    checkoutId = r.checkoutId;
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Erreur payout';
-    console.error('[process-refund] payout error:', msg);
-    // Restaure le payout_queue si le payout échoue
-    if (pi.id) {
-      await supabase
-        .from('payout_queue')
-        .update({ statut: 'queued', updated_at: new Date().toISOString() })
-        .eq('payment_intent_id', pi.id)
-        .eq('statut', 'cancelled');
-    }
-    return new Response(JSON.stringify({ error: 'payout_failed', detail: msg }), { status: 500, headers: CORS });
+    const msg = err instanceof Error ? err.message : 'wave_checkout_failed';
+    console.error('[process-refund] checkout error:', msg);
+    return new Response(JSON.stringify({ error: 'wave_checkout_failed', detail: msg }), { status: 500, headers: CORS });
   }
 
-  // — Marque la commande remboursée
-  const { error: updErr } = await supabase
-    .from('orders')
-    .update({ status: 'refunded', refunded_at: new Date().toISOString() })
-    .eq('id', orderId);
-  if (updErr) console.error('[process-refund] maj statut refunded échouée:', updErr.message);
-
-  // — Notification client
-  if (order.client_id) {
-    try {
-      const methodLabel = order.pay_method === 'wave' ? 'Wave' : 'Orange Money';
-      await sendPushToUser(supabase, order.client_id, {
-        title: 'Commande remboursée 💸',
-        body:  `Ta commande a été remboursée. ${montantRemboursement} F virés par LASSI via ${methodLabel}.`,
-        data:  { type: 'refund', order_id: orderId },
-      });
-    } catch (e) {
-      console.warn('[process-refund] push notif failed (non-bloquant):', e);
-    }
+  if (existing?.id) {
+    await supabase.from('merchant_refunds')
+      .update({ checkout_id: checkoutId, amount: net, client_phone: clientPhone, updated_at: new Date().toISOString() })
+      .eq('id', existing.id);
+  } else {
+    await supabase.from('merchant_refunds').insert({
+      id: refundRowId, order_id: orderId, merchant_id: user.id, client_id: order.client_id,
+      client_phone: clientPhone, amount: net, pay_method: 'wave',
+      checkout_id: checkoutId, checkout_ref: refundRowId, status: 'awaiting_payment',
+    });
   }
 
   return new Response(
-    JSON.stringify({ success: true, payout_ref: payoutRef, montant_rembourse: montantRemboursement }),
+    JSON.stringify({ success: true, wave_url: waveUrl, refund_id: refundRowId, amount: net }),
     { headers: { ...CORS, 'Content-Type': 'application/json' } },
   );
 });
 
-// ── Wave refund ────────────────────────────────────────────────────────────────
-// Rembourse la session checkout d'origine (reverse le paiement exact du client).
-// Fiable : pas besoin de solde payout ni de numéro, le client est recrédité sur
-// le moyen qu'il a utilisé pour payer.
-async function sendWaveRefund(p: { refundId: string; sessionId: string; montant: number }): Promise<string> {
-  const res = await waveRequestRefund(p.sessionId, '', p.refundId);
-  const text = await res.text();
-  if (!res.ok) {
-    let detail = text;
-    try { const j = JSON.parse(text); detail = j.message ?? j.code ?? text; } catch { /* texte brut */ }
-    throw new Error(`Wave refund ${res.status}: ${detail}`);
-  }
-  return p.sessionId;
-}
-
-// ── Orange Money refund ────────────────────────────────────────────────────────
-async function sendOmRefund(p: { refundId: string; montant: number; phone: string }): Promise<string> {
-  const { getOmToken, OM_BASE_URL } = await import('../_shared/omAuth.ts');
-  const omToken = await getOmToken();
-  const res = await fetch(`${OM_BASE_URL}/api/eWallet/v1/cashins`, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${omToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      partner: {
-        idType: 'MSISDN', id: OM_RETAILER_MSISDN, encryptedPinCode: OM_RETAILER_PIN_ENCRYPTED,
-      },
-      customer: { idType: 'MSISDN', id: p.phone },
-      amount:   { value: p.montant, unit: 'XOF' },
-      reference: p.refundId,
-      receiveNotification: false,
-    }),
+// ── Wave Checkout marchand ──────────────────────────────────────────────────────
+// Crée une session où la PRESTATAIRE paie LASSI le montant net qu'elle a perçu.
+// À la fin (son Wave s'ouvre, elle confirme), finalize-refund reverse au client.
+async function createMerchantCheckout(p: { reference: string; amount: number }): Promise<{ launchUrl: string; checkoutId: string }> {
+  const waveBody = JSON.stringify({
+    amount:           p.amount,
+    currency:         'XOF',
+    client_reference: p.reference,
+    success_url:      `${LASSI_PAY_BASE}/succes?refund=${p.reference}`,
+    error_url:        `${LASSI_PAY_BASE}/echec?refund=${p.reference}`,
   });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(`OM refund error (${res.status}): ${err.detail ?? JSON.stringify(err)}`);
-  }
+  const res  = await callWaveCheckout(waveBody, `refund_${p.reference}`);
   const data = await res.json();
-  return data.transactionId ?? data.requestId ?? p.refundId;
+  if (!res.ok || !data.wave_launch_url) {
+    throw new Error(`Wave checkout: ${data.message ?? data.code ?? JSON.stringify(data)}`);
+  }
+  return { launchUrl: data.wave_launch_url, checkoutId: data.id };
 }

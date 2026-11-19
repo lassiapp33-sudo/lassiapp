@@ -307,7 +307,9 @@ export async function getRefundInfo(orderId: string): Promise<RefundInfo> {
   };
 }
 
-export async function processRefund(orderId: string): Promise<{ payoutRef: string | null; commissionLassi: number }> {
+// Étape 1 — crée la session Wave : la prestataire paie LASSI le montant net.
+// Renvoie l'URL Wave à ouvrir + l'id de remboursement pour la finalisation.
+export async function processRefund(orderId: string): Promise<{ waveUrl: string; refundId: string; amount: number }> {
   const token = await getValidToken();
   const res = await fetch(`${SUPABASE_URL}/functions/v1/process-refund`, {
     method: 'POST',
@@ -320,7 +322,25 @@ export async function processRefund(orderId: string): Promise<{ payoutRef: strin
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Erreur remboursement');
-  return { payoutRef: json.payout_ref, commissionLassi: json.commission_lassi };
+  return { waveUrl: json.wave_url, refundId: json.refund_id, amount: json.amount };
+}
+
+// Étape 2 — après paiement de la prestataire dans Wave, LASSI reverse au client.
+// paid=false tant que la prestataire n'a pas confirmé le paiement.
+export async function finalizeRefund(refundId: string): Promise<{ success: boolean; paid: boolean }> {
+  const token = await getValidToken();
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/finalize-refund`, {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${token}`,
+      'apikey':        ANON_KEY,
+    },
+    body: JSON.stringify({ refund_id: refundId }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? 'Erreur finalisation');
+  return { success: !!json.success, paid: json.paid !== false };
 }
 
 // ─── Commande directe (legacy — sans Edge Function) ───────────────────────────
