@@ -2620,22 +2620,23 @@ function page(o: {
       <div class="gr-navbar">
         <a class="gr-brand" href="#gr-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<span>${esc(clip(o.name, 22))}</span>`}</a>
         <nav class="gr-nav">
-          <a class="gr-nav-active" href="#gr-top">Accueil</a>
-          <a href="#gr-about">Chez nous</a>
-          <a href="#gr-shop">Menu</a>
-          <a href="#gr-gallery">Galerie</a>
-          <a href="#gr-contact">Réservations</a>
+          <a class="gr-nav-active" href="#gr-top" data-grnav="home">Accueil</a>
+          <a href="#gr-about" data-grnav="home">Chez nous</a>
+          <a href="#gr-menu" data-grnav="menu">Menu</a>
+          <a href="#gr-gallery" data-grnav="home">Galerie</a>
+          <a href="#gr-contact" data-grnav="home">Réservations</a>
         </nav>
-        <a class="gr-ic gr-cart" href="#gr-shop" title="Commander"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></a>
+        <a class="gr-ic gr-cart" href="#gr-menu" data-grnav="menu" title="Commander"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></a>
       </div>
     </header>
+    <div class="gr-page gr-page-home">
     <div class="gr-stack">
     <section class="gr-hero gr-slide" ${bg(heroImg)}>
       <div class="gr-hero-ov"></div>
       <div class="gr-hero-in">
         <h1 class="gr-hero-title">${esc(o.name)}</h1>
         <div class="gr-hero-sub">Grande cuisine française</div>
-        <a class="gr-btn" href="#gr-shop">Menu</a>
+        <a class="gr-btn" href="#gr-menu" data-grnav="menu">Menu</a>
       </div>
     </section>
     <section class="gr-about gr-slide" id="gr-about" ${bg(grAboutBg)}>
@@ -2681,14 +2682,6 @@ function page(o: {
       <p class="gr-lead gr-dark">Cocktails signature, grands crus et spiritueux rares : notre bar prolonge l'expérience, avant ou après le repas.</p>
     </section>
     </div>
-    ${closedNotice}
-    <section id="gr-shop" class="gr-shop${catalogCls}">
-      <h2 class="gr-h2 gr-gold">Notre menu</h2>
-      <p class="gr-sub-ctr">${hasProducts ? 'Commande en ligne · retrait ou livraison' : hasServices ? 'Réservez votre prestation' : 'Nos terrains'}</p>
-      ${catnav}${dsSection}${grid}
-      ${svcSection}
-      ${terrainSection}
-    </section>
     ${grGalPool.length >= 4 ? `
     <section class="gr-gallery" id="gr-gallery">
       <h2 class="gr-h2 gr-gold">Galerie</h2>
@@ -2711,10 +2704,21 @@ function page(o: {
         ${o.phone ? `<div><b>Téléphone</b><span>${esc(o.phone)}</span></div>` : ''}
         ${hoursHtml ? `<div class="gr-foot-hours"><b>Horaires</b>${hoursHtml}</div>` : ''}
       </div>
-      <a class="gr-btn gr-foot-cta" href="#gr-shop">Voir le menu</a>
+      <a class="gr-btn gr-foot-cta" href="#gr-menu" data-grnav="menu">Voir le menu</a>
       ${socialHtml}
       <div class="gr-copy">© 2026 ${esc(o.name)} · Propulsé par LASSİ</div>
     </footer>
+    </div>
+    <div class="gr-page gr-page-menu" id="gr-menu" hidden>
+    ${closedNotice}
+    <section id="gr-shop" class="gr-shop${catalogCls}">
+      <h2 class="gr-h2 gr-gold">Notre menu</h2>
+      <p class="gr-sub-ctr">${hasProducts ? 'Commande en ligne · retrait ou livraison' : hasServices ? 'Réservez votre prestation' : 'Nos terrains'}</p>
+      ${catnav}${dsSection}${grid}
+      ${svcSection}
+      ${terrainSection}
+    </section>
+    </div>
     <div class="gr-resa-ov" id="grResaOv" hidden>
       <div class="gr-resa-modal" role="dialog" aria-modal="true">
         <button class="gr-resa-x" id="grResaX" type="button" aria-label="Fermer">×</button>
@@ -2749,7 +2753,24 @@ function page(o: {
       </div>
     </div>
     <script id="gr-resa-cfg" type="application/json">${JSON.stringify({ url: SUPABASE_URL, key: SUPABASE_ANON_KEY, slug: o.slug })}</script>
-    <script>${GR_RESA_JS}</script>`;
+    <script>${GR_RESA_JS}</script>
+    <script>(function(){
+      var pages={home:document.querySelector('.gr-page-home'),menu:document.querySelector('.gr-page-menu')};
+      if(!pages.home||!pages.menu) return;
+      if(document.body.classList.contains('lassi-ed')){ pages.menu.hidden=false; return; }
+      document.querySelectorAll('[data-grnav]').forEach(function(a){
+        a.addEventListener('click',function(e){
+          e.preventDefault();
+          var w=a.getAttribute('data-grnav'); var h=a.getAttribute('href')||'';
+          Object.keys(pages).forEach(function(k){ pages[k].hidden=(k!==w); });
+          document.querySelectorAll('.gr-nav a').forEach(function(x){ x.classList.toggle('gr-nav-active', x.getAttribute('data-grnav')===w && (w!=='home'||x.getAttribute('href')==='#gr-top')); });
+          var pg=pages[w]; setTimeout(function(){ [].forEach.call(pg.querySelectorAll('.lx-rv:not(.lx-in)'),function(el){el.classList.add('lx-in');}); },450);
+          var an=(w==='home'&&h.indexOf('#gr-')===0&&h!=='#gr-top')?h:null;
+          if(an){ var t=document.querySelector(an); if(t){ setTimeout(function(){ t.scrollIntoView({behavior:'smooth'}); },60); return; } }
+          window.scrollTo({top:0,behavior:'smooth'});
+        });
+      });
+    })();</script>`;
 
   const body = theme.template === 'furniture' && hasCatalog ? furnitureBody
     : theme.template === 'cosmetic' && hasCatalog ? cosmeticBody
@@ -3672,6 +3693,7 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
   @media(max-width:780px){.fm-ab-split{grid-template-columns:1fr}.fm-ab-split-img{min-height:260px;order:-1}.fm-ab-split.reverse .fm-ab-split-img{order:-1}}
   /* ═══ TEMPLATE GRILL — steakhouse (réf Au Grill : charbon + or + Anton/Cinzel) ═══ */
   body[data-template="grill"]{--gr-bg:#212023;--gr-bg2:#2A292C;--gr-gold:#AE9A64;--gr-gold-d:#746743;--gr-ink:#191819;--gr-txt:#E4DBC4;--gr-mut:#B0B0B0;--gr-fh:'Anton',Impact,sans-serif;--gr-fe:'Montserrat',Arial,sans-serif;--gr-fb:georgia,palatino,'book antiqua','palatino linotype',serif;--gr-fs:'Montserrat',system-ui,Arial,sans-serif;background:var(--gr-bg);color:var(--gr-txt);font-family:var(--gr-fb);font-size:16px}
+  .gr-page[hidden]{display:none}
   .gr-head{position:sticky;top:0;z-index:40}
   .gr-topbar{display:flex;justify-content:center;gap:28px;flex-wrap:wrap;background:var(--gr-gold);color:var(--gr-ink);font-family:var(--gr-fs);font-size:11.5px;letter-spacing:1px;text-transform:uppercase;padding:7px 20px;font-weight:600}
   .gr-navbar{display:flex;align-items:center;gap:20px;background:var(--gr-gold);color:var(--gr-ink);padding:6px clamp(16px,4vw,48px) 12px;border-top:1px solid rgba(30,29,27,.14)}
