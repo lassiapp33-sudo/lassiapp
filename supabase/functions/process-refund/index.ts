@@ -54,8 +54,8 @@ serve(async (req) => {
 
     // Vérification légère : prestataire = owner du shop OU client de la commande
     if (order.shop_id) {
-      const { data: shop } = await supabase.from('shops').select('owner_id').eq('id', order.shop_id).maybeSingle();
-      if (shop && shop.owner_id !== user.id && order.client_id !== user.id) {
+      const { data: shop } = await supabase.from('shops').select('merchant_id').eq('id', order.shop_id).maybeSingle();
+      if (shop && shop.merchant_id !== user.id && order.client_id !== user.id) {
         return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: CORS });
       }
     }
@@ -107,11 +107,11 @@ serve(async (req) => {
   // — Vérifie que le prestataire est bien le propriétaire de la commande
   const { data: shop } = await supabase
     .from('shops')
-    .select('owner_id')
+    .select('merchant_id')
     .eq('id', order.shop_id)
     .maybeSingle();
 
-  if (!shop || shop.owner_id !== user.id) {
+  if (!shop || shop.merchant_id !== user.id) {
     return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: CORS });
   }
 
