@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L'Art du Scroll — Catalogue Interactif des Animations Web</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Configuration Tailwind & Styles Personnalisés -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        obsidian: '#09090b',
+                        surface: '#121216',
+                        accent: '#6366f1',
+                        accentGlow: '#818cf8',
+                        cyanGlow: '#22d3ee',
+                        roseGlow: '#fb7185'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-dark: #09090b;
+            --card-bg: rgba(24, 24, 27, 0.55);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(99, 102, 241, 0.4);
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #f4f4f5;
+            overflow-x: hidden;
+            selection-background-color: rgba(99, 102, 241, 0.3);
+        }
+
+        /* Arrière-plan grille subtile */
+        .bg-grid-pattern {
+            background-size: 48px 48px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+        }
+
+        /* Cartes Glassmorphism */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.16);
+        }
+
+        /* =========================================================
+           1. FADE IN & SLIDE UP
+           ========================================================= */
+        .anim-fade-up {
+            opacity: 0;
+            transform: translateY(45px);
+            transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: opacity, transform;
+        }
+        .anim-fade-up.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* =========================================================
+           2. STAGGERED REVEAL (EN CASCADE)
+           ========================================================= */
+        .stagger-item {
+            opacity: 0;
+            transform: translateY(35px) scale(0.96);
+            transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+            transition-delay: calc(var(--stagger-index, 0) * 110ms);
+            will-change: opacity, transform;
+        }
+        .stagger-grid.is-visible .stagger-item {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        /* =========================================================
+           5. SCALE & ZOOM REVEAL
+           ========================================================= */
+        .scale-reveal-box {
+            transform: scale(0.78);
+            border-radius: 2.5rem;
+            opacity: 0.4;
+            will-change: transform, border-radius, opacity;
+            transition: box-shadow 0.4s ease;
+        }
+
+        /* =========================================================
+           6A. TEXT REVEAL / MASKING
+           ========================================================= */
+        .mask-line {
+            overflow: hidden;
+            display: block;
+        }
+        .mask-line-inner {
+            display: block;
+            transform: translateY(115%);
+            transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+            transition-delay: calc(var(--line-idx, 0) * 140ms);
+            will-change: transform;
+        }
+        .mask-container.is-visible .mask-line-inner {
+            transform: translateY(0%);
+        }
+
+        /* =========================================================
+           6B. SCROLL-LINKED TEXT HIGHLIGHT (REMPLISSAGE PROGRESSIF)
+           ========================================================= */
+        .scroll-highlight-text {
+            background-image: linear-gradient(90deg, #ffffff var(--highlight-pct, 0%), rgba(255, 255, 255, 0.16) var(--highlight-pct, 0%));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            will-change: background-image;
+        }
+
+        /* =========================================================
+           7. 3D TILT / PERSPECTIVE SCROLL
+           ========================================================= */
+        .perspective-stage {
+            perspective: 1200px;
+        }
+        .tilt-3d-card {
+            transform-style: preserve-3d;
+            transform: rotateX(28deg) scale(0.92);
+            will-change: transform;
+        }
+
+        /* =========================================================
+           INDICATEUR DE SCROLL HERO
+           ========================================================= */
+        @keyframes scrollWheel {
+            0% { transform: translateY(0); opacity: 1; }
+            75% { transform: translateY(10px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 0; }
+        }
+        .animate-wheel {
+            animation: scrollWheel 1.8s cubic-bezier(0.15, 0.41, 0.69, 0.94) infinite;
+        }
+
+        /* Masquer scrollbar horizontale proprement */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-grid-pattern antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
+
+    <!-- =====================================================================
+         BARRE DE PROGRESSION DE LECTURE (SCROLL PROGRESS BAR)
+         ===================================================================== -->
+    <div class="fixed top-0 left-0 right-0 h-1 z-50 bg-zinc-900/80 backdrop-blur-sm">
+        <div id="scroll-progress-bar" class="h-full w-0 bg-gradient-to-r from-indigo-500 via-cyan-400 to-rose-500 shadow-[0_0_12px_rgba(99,102,241,0.8)] transition-[width] duration-75 ease-out"></div>
+    </div>
+
+    <!-- =====================================================================
+         NAVIGATION FLOTTANTE & ACCÈS RAPIDE
+         ===================================================================== -->
+    <header class="fixed top-4 left-1/2 -translate-x-1/2 z-40 w-[94%] max-w-5xl">
+        <nav class="glass-card rounded-2xl px-4 py-2.5 flex items-center justify-between gap-4">
+            <a href="#top" class="flex items-center gap-2.5 font-bold text-sm sm:text-base tracking-tight text-white">
+                <span class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center text-zinc-950 font-mono text-xs font-extrabold shadow-lg shadow-indigo-500/30">
+                    S/A
+                </span>
+                <span>Scroll<span class="text-indigo-400">Lab</span></span>
+            </a>
+
+            <div class="hidden md:flex items-center gap-1 text-xs font-medium text-zinc-400">
+                <a href="#sec-1" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition">01. Fade</a>
+                <a href="#sec-2" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition">02. Stagger</a>
+                <a href="#sec-3" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition">03. Parallax</a>
+                <a href="#sec-4" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition">04. Horizontal</a>
+                <a href="#sec-6" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition">06. Text Mask</a>
+                <a href="#sec-8" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition">08. Sticky</a>
+                <a href="#sec-10" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-white/5 transition">10. SVG Path</a>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span id="scroll-percent-badge" class="font-mono text-xs px-2.5 py-1 rounded-lg bg-zinc-900/90 border border-zinc-800 text-cyan-400">
+                    0%
+                </span>
+            </div>
+        </nav>
+    </header>
+
+    <!-- =====================================================================
+         HERO HEADER
+         ===================================================================== -->
+    <section id="top" class="relative min-h-screen flex flex-col items-center justify-center px-4 pt-24 pb-16 overflow-hidden">
+        <!-- Halos lumineux d'arrière-plan -->
+        <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-indigo-600/20 rounded-full blur-[130px] pointer-events-none"></div>
+        <div class="absolute bottom-10 right-10 w-[340px] h-[340px] bg-cyan-500/10 rounded-full blur-[110px] pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-4xl mx-auto text-center">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-mono text-xs mb-8">
+                <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
+                <span>10 TECHNIQUES INTERACTIVES • 60 FPS NATIF</span>
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.08] mb-6">
+                L’encyclopédie visuelle des
+                <span class="block mt-2 bg-gradient-to-r from-indigo-400 via-cyan-300 to-rose-400 bg-clip-text text-transparent">
+                    Animations au Défilement
+                </span>
+            </h1>
+
+            <p class="text-zinc-400 text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed mb-10">
+                Faites défiler cette page pour expérimenter en direct les mécaniques de motion design web les plus utilisées sur les sites modernes, accompagnées de leur nom technique exact.
+            </p>
+
+            <!-- Indicateur de défilement (Scroll Down Indicator) -->
+            <a href="#sec-1" class="inline-flex flex-col items-center gap-3 group cursor-pointer">
+                <span class="font-mono text-xs uppercase tracking-widest text-zinc-400 group-hover:text-white transition">
+                    Défiler pour explorer
+                </span>
+                <div class="w-7 h-11 rounded-full border-2 border-zinc-700 group-hover:border-indigo-400 flex justify-center pt-2 transition-colors">
+                    <div class="w-1.5 h-2.5 rounded-full bg-indigo-400 animate-wheel"></div>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <!-- =====================================================================
+         CONTENU PRINCIPAL : LES 10 ANIMATIONS AU DÉFILEMENT
+         ===================================================================== -->
+    <main class="space-y-32 sm:space-y-44 pb-32">
+
+        <!-- =================================================================
+             01. FADE IN & SLIDE UP
+             ================================================================= -->
+        <section id="sec-1" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2.5 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                            01 / ENTRÉE CLASSIQUE
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            IntersectionObserver + CSS Transform
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Fade In & Slide Up <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Apparition en fondu et glissement)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    L'animation fondamentale du web moderne : l'élément passe d'une opacité nulle et d'un léger décalage vertical (<code class="font-mono text-indigo-300 text-xs">translateY(45px)</code>) à sa position finale dès qu'il entre dans le viewport.
+                </p>
+            </div>
+
+            <!-- Zone de démonstration -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="anim-fade-up glass-card rounded-3xl p-8 relative overflow-hidden group">
+                    <div class="absolute -right-8 -top-8 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition"></div>
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 mb-6">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Élévation fluide (Ease-Out Expo)</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed mb-6">
+                        Cette carte utilise une courbe de Bézier cubique (<code class="font-mono text-xs text-cyan-300">cubic-bezier(0.16, 1, 0.3, 1)</code>) qui démarre rapidement et ralentit tout en douceur à l'arrivée.
+                    </p>
+                    <div class="bg-zinc-950/80 border border-zinc-800/90 rounded-xl p-3.5 font-mono text-xs text-zinc-300 overflow-x-auto">
+                        <span class="text-indigo-400">.reveal</span> { opacity: <span class="text-cyan-300">0</span>; transform: <span class="text-rose-300">translateY(45px)</span>; }
+                    </div>
+                </div>
+
+                <div class="anim-fade-up glass-card rounded-3xl p-8 relative overflow-hidden group" style="transition-delay: 140ms;">
+                    <div class="absolute -right-8 -top-8 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition"></div>
+                    <div class="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center text-cyan-300 mb-6">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Accélération matérielle GPU</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed mb-6">
+                        En animant uniquement <code class="font-mono text-xs text-cyan-300">opacity</code> et <code class="font-mono text-xs text-cyan-300">transform</code>, le navigateur évite le recalcul de mise en page (Reflow) et garantit 60 images par seconde.
+                    </p>
+                    <div class="bg-zinc-950/80 border border-zinc-800/90 rounded-xl p-3.5 font-mono text-xs text-zinc-300 overflow-x-auto">
+                        <span class="text-indigo-400">.reveal.is-visible</span> { opacity: <span class="text-cyan-300">1</span>; transform: <span class="text-rose-300">translateY(0)</span>; }
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             02. STAGGERED REVEAL (APPARITION EN CASCADE)
+             ================================================================= -->
+        <section id="sec-2" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2.5 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                            02 / CHORÉGRAPHIE DE GRILLE
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            transition-delay: calc(var(--i) * 110ms)
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Staggered Reveal <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Apparition en cascade)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Au lieu d'afficher toute une grille simultanément, chaque élément reçoit un délai incrémental (<code class="font-mono text-cyan-300 text-xs">110ms</code>) créant une vague visuelle rythmée et organique.
+                </p>
+            </div>
+
+            <!-- Grille en cascade -->
+            <div class="stagger-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div class="stagger-item glass-card rounded-2xl p-6" style="--stagger-index: 0;">
+                    <span class="font-mono text-xs text-indigo-400 block mb-3">Étape 01 • +0ms</span>
+                    <div class="h-24 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/10 border border-indigo-500/20 mb-4 flex items-center justify-center">
+                        <span class="font-mono text-lg font-bold text-indigo-300">01</span>
+                    </div>
+                    <h4 class="font-semibold text-white mb-1">Détection</h4>
+                    <p class="text-xs text-zinc-400">Le conteneur parent franchit le seuil de visibilité de 20%.</p>
+                </div>
+
+                <div class="stagger-item glass-card rounded-2xl p-6" style="--stagger-index: 1;">
+                    <span class="font-mono text-xs text-cyan-400 block mb-3">Étape 02 • +110ms</span>
+                    <div class="h-24 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/10 border border-cyan-500/20 mb-4 flex items-center justify-center">
+                        <span class="font-mono text-lg font-bold text-cyan-300">02</span>
+                    </div>
+                    <h4 class="font-semibold text-white mb-1">Propagation</h4>
+                    <p class="text-xs text-zinc-400">La classe active déclenche la transition sur tous les enfants.</p>
+                </div>
+
+                <div class="stagger-item glass-card rounded-2xl p-6" style="--stagger-index: 2;">
+                    <span class="font-mono text-xs text-emerald-400 block mb-3">Étape 03 • +220ms</span>
+                    <div class="h-24 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/20 mb-4 flex items-center justify-center">
+                        <span class="font-mono text-lg font-bold text-emerald-300">03</span>
+                    </div>
+                    <h4 class="font-semibold text-white mb-1">Décalage CSS</h4>
+                    <p class="text-xs text-zinc-400">La variable CSS <code class="font-mono">--stagger-index</code> décale chaque carte.</p>
+                </div>
+
+                <div class="stagger-item glass-card rounded-2xl p-6" style="--stagger-index: 3;">
+                    <span class="font-mono text-xs text-rose-400 block mb-3">Étape 04 • +330ms</span>
+                    <div class="h-24 rounded-xl bg-gradient-to-br from-rose-500/20 to-orange-500/10 border border-rose-500/20 mb-4 flex items-center justify-center">
+                        <span class="font-mono text-lg font-bold text-rose-300">04</span>
+                    </div>
+                    <h4 class="font-semibold text-white mb-1">Harmonie</h4>
+                    <p class="text-xs text-zinc-400">L'œil humain suit naturellement le mouvement de gauche à droite.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             03. PARALLAX SCROLLING (EFFET PARALLAXE)
+             ================================================================= -->
+        <section id="sec-3" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2.5 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                            03 / PROFONDEUR DE CHAMP
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            Multi-Layer Speed Offset
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Parallax Scrolling <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Effet Parallaxe)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Plusieurs calques superposés se déplacent à des vitesses différentes par rapport au défilement de la page, simulant une véritable profondeur 3D.
+                </p>
+            </div>
+
+            <!-- Scène Parallaxe Interactive -->
+            <div id="parallax-stage" class="glass-card rounded-3xl h-[440px] sm:h-[500px] relative overflow-hidden flex items-center justify-center">
+                <!-- Calque 1 : Arrière-plan lent -->
+                <div data-parallax-speed="-0.18" class="parallax-layer absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div class="w-[460px] h-[460px] rounded-full border border-indigo-500/20 bg-gradient-to-tr from-indigo-600/10 to-cyan-500/10 blur-sm"></div>
+                </div>
+
+                <!-- Calque 2 : Formes flottantes vitesse moyenne -->
+                <div data-parallax-speed="0.22" class="parallax-layer absolute top-12 left-8 sm:left-20 pointer-events-none">
+                    <div class="px-4 py-2.5 rounded-2xl bg-zinc-900/90 border border-zinc-700/80 shadow-xl backdrop-blur-md">
+                        <span class="font-mono text-xs text-cyan-400">Calque Avant • Vitesse +0.22x</span>
+                    </div>
+                </div>
+
+                <div data-parallax-speed="-0.28" class="parallax-layer absolute bottom-12 right-8 sm:right-20 pointer-events-none">
+                    <div class="px-4 py-2.5 rounded-2xl bg-zinc-900/90 border border-zinc-700/80 shadow-xl backdrop-blur-md">
+                        <span class="font-mono text-xs text-rose-400">Calque Fond • Vitesse -0.28x</span>
+                    </div>
+                </div>
+
+                <!-- Calque 3 : Orbe décoratif rapide -->
+                <div data-parallax-speed="0.38" class="parallax-layer absolute top-20 right-12 sm:right-32 w-20 h-20 rounded-2xl rotate-12 bg-gradient-to-br from-rose-500/30 to-amber-500/20 border border-rose-400/30 backdrop-blur-md pointer-events-none"></div>
+
+                <div data-parallax-speed="-0.35" class="parallax-layer absolute bottom-16 left-12 sm:left-32 w-24 h-24 rounded-full bg-gradient-to-tr from-cyan-500/30 to-indigo-500/20 border border-cyan-400/30 backdrop-blur-md pointer-events-none"></div>
+
+                <!-- Calque Central Fixe / Référence -->
+                <div class="relative z-10 text-center max-w-md px-6">
+                    <span class="font-mono text-xs uppercase tracking-widest text-indigo-300 bg-indigo-500/15 px-3 py-1 rounded-full border border-indigo-500/30">
+                        Plan Focal (0.0x)
+                    </span>
+                    <h3 class="text-2xl sm:text-3xl font-bold text-white mt-4 mb-2">
+                        Continuez à scroller
+                    </h3>
+                    <p class="text-sm text-zinc-400">
+                        Observez comment les badges et formes géométriques autour de cette carte se croisent à des vitesses opposées.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             04. HORIZONTAL SCROLL ON VERTICAL SCROLL (DÉFILEMENT HORIZONTAL)
+             ================================================================= -->
+        <section id="sec-4" class="scroll-mt-24">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 mb-8">
+                <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2.5 mb-3">
+                            <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                04 / CONVERSION D'AXE
+                            </span>
+                            <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                                position: sticky + translateX()
+                            </span>
+                        </div>
+                        <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                            Horizontal Scroll on Vertical Scroll <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Défilement Horizontal)</span>
+                        </h2>
+                    </div>
+                    <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                        Le défilement vertical de la molette est converti en translation horizontale fluide tant que la section reste épinglée à l'écran.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Conteneur haut (260vh) pour piloter le défilement horizontal -->
+            <div id="horizontal-scroll-wrapper" class="relative h-[240vh]">
+                <div class="sticky top-0 h-screen flex flex-col justify-center overflow-hidden">
+                    <div class="max-w-6xl mx-auto w-full px-4 sm:px-6 mb-4 flex items-center justify-between">
+                        <span class="font-mono text-xs text-amber-400">GALERIE HORIZONTALE PILOTÉE AU SCROLL</span>
+                        <span id="horizontal-progress-text" class="font-mono text-xs text-zinc-400">0%</span>
+                    </div>
+
+                    <!-- Rail horizontal -->
+                    <div id="horizontal-track" class="flex gap-6 px-4 sm:px-[max(1.5rem,calc((100vw-72rem)/2))] will-change-transform">
+                        <!-- Carte H1 -->
+                        <div class="shrink-0 w-[82vw] sm:w-[420px] glass-card rounded-3xl p-8 flex flex-col justify-between h-[360px] border-t-2 border-t-indigo-500/50">
+                            <div>
+                                <span class="font-mono text-xs text-indigo-400">SLIDE 01 / 05</span>
+                                <h3 class="text-2xl font-bold text-white mt-3">Architecture Sticky</h3>
+                                <p class="text-sm text-zinc-400 mt-3 leading-relaxed">
+                                    Un conteneur parent de grande hauteur (<code class="font-mono text-xs text-zinc-200">240vh</code>) sert de piste temporelle pendant que la fenêtre interne reste collée avec <code class="font-mono text-xs text-zinc-200">sticky top-0</code>.
+                                </p>
+                            </div>
+                            <div class="font-mono text-xs text-zinc-500">Axe Y → Axe X</div>
+                        </div>
+
+                        <!-- Carte H2 -->
+                        <div class="shrink-0 w-[82vw] sm:w-[420px] glass-card rounded-3xl p-8 flex flex-col justify-between h-[360px] border-t-2 border-t-cyan-500/50">
+                            <div>
+                                <span class="font-mono text-xs text-cyan-400">SLIDE 02 / 05</span>
+                                <h3 class="text-2xl font-bold text-white mt-3">Portfolios & Showcases</h3>
+                                <p class="text-sm text-zinc-400 mt-3 leading-relaxed">
+                                    Idéal pour présenter des études de cas, des frises chronologiques ou des galeries produits sans casser l'ergonomie naturelle de la molette de souris.
+                                </p>
+                            </div>
+                            <div class="font-mono text-xs text-zinc-500">UX Naturelle</div>
+                        </div>
+
+                        <!-- Carte H3 -->
+                        <div class="shrink-0 w-[82vw] sm:w-[420px] glass-card rounded-3xl p-8 flex flex-col justify-between h-[360px] border-t-2 border-t-rose-500/50">
+                            <div>
+                                <span class="font-mono text-xs text-rose-400">SLIDE 03 / 05</span>
+                                <h3 class="text-2xl font-bold text-white mt-3">Calcul Dynamique</h3>
+                                <p class="text-sm text-zinc-400 mt-3 leading-relaxed">
+                                    La distance maximale de translation est calculée via <code class="font-mono text-xs text-zinc-200">track.scrollWidth - window.innerWidth</code> pour s'adapter à tous les écrans.
+                                </p>
+                            </div>
+                            <div class="font-mono text-xs text-zinc-500">Responsive Auto</div>
+                        </div>
+
+                        <!-- Carte H4 -->
+                        <div class="shrink-0 w-[82vw] sm:w-[420px] glass-card rounded-3xl p-8 flex flex-col justify-between h-[360px] border-t-2 border-t-amber-500/50">
+                            <div>
+                                <span class="font-mono text-xs text-amber-400">SLIDE 04 / 05</span>
+                                <h3 class="text-2xl font-bold text-white mt-3">Fluidité 60 FPS</h3>
+                                <p class="text-sm text-zinc-400 mt-3 leading-relaxed">
+                                    L'utilisation exclusive de <code class="font-mono text-xs text-zinc-200">transform: translate3d()</code> assure un défilement sans aucune saccade même sur mobile.
+                                </p>
+                            </div>
+                            <div class="font-mono text-xs text-zinc-500">GPU Compositing</div>
+                        </div>
+
+                        <!-- Carte H5 -->
+                        <div class="shrink-0 w-[82vw] sm:w-[420px] glass-card rounded-3xl p-8 flex flex-col justify-between h-[360px] border-t-2 border-t-emerald-500/50">
+                            <div>
+                                <span class="font-mono text-xs text-emerald-400">SLIDE 05 / 05</span>
+                                <h3 class="text-2xl font-bold text-white mt-3">Reprise Verticale</h3>
+                                <p class="text-sm text-zinc-400 mt-3 leading-relaxed">
+                                    Dès que la dernière carte atteint le bord de l'écran, la page reprend naturellement son défilement vertical vers la suite.
+                                </p>
+                            </div>
+                            <div class="font-mono text-xs text-emerald-400">Fin de piste →</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             05. SCALE & ZOOM REVEAL (ZOOM PROGRESSIF)
+             ================================================================= -->
+        <section id="sec-5" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2.5 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            05 / EXPANSION IMMERSIVE
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            Scroll-Linked Scale (0.78 → 1.0)
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Scale & Zoom Reveal <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Zoom progressif)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Popularisé par Apple, cet effet fait grandir un conteneur visuel tout en réduisant l'arrondi de ses bordures à mesure qu'il se centre dans l'écran.
+                </p>
+            </div>
+
+            <!-- Conteneur Zoom Progressif -->
+            <div id="scale-reveal-container" class="py-4">
+                <div id="scale-reveal-target" class="scale-reveal-box relative h-[380px] sm:h-[460px] w-full overflow-hidden border border-white/15 bg-gradient-to-br from-indigo-950 via-zinc-900 to-cyan-950 flex flex-col items-center justify-center text-center p-8 shadow-2xl">
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.28),transparent_70%)]"></div>
+                    <div class="relative z-10 max-w-xl">
+                        <span id="scale-value-badge" class="font-mono text-xs px-3 py-1 rounded-full bg-black/50 border border-white/15 text-cyan-300">
+                            scale(0.78)
+                        </span>
+                        <h3 class="text-3xl sm:text-5xl font-extrabold text-white mt-5 mb-4 tracking-tight">
+                            Ouverture Cinématique
+                        </h3>
+                        <p class="text-zinc-300 text-sm sm:text-base">
+                            L'échelle et le rayon des coins s'interpolent en temps réel selon la distance entre le centre de la carte et le centre de votre fenêtre.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             06. TEXT REVEAL / MASKING & SCROLL-LINKED TEXT HIGHLIGHT
+             ================================================================= -->
+        <section id="sec-6" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2.5 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                            06 / TYPOGRAPHIE CINÉTIQUE
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            Overflow Mask + Gradient Scrub
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Text Reveal & Highlight <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Révélation & Remplissage de texte)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Deux animations typographiques phares : l'émergence depuis un masque invisible (<code class="font-mono text-purple-300 text-xs">overflow: hidden</code>) et le remplissage lumineux lié au scroll.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 6A: Text Masking -->
+                <div class="mask-container glass-card rounded-3xl p-8 sm:p-10 flex flex-col justify-between">
+                    <div>
+                        <span class="font-mono text-xs text-purple-400 block mb-6">6A • TEXT REVEAL / MASKING</span>
+                        <div class="text-3xl sm:text-4xl font-extrabold text-white leading-tight space-y-1">
+                            <span class="mask-line"><span class="mask-line-inner" style="--line-idx: 0;">Chaque ligne émerge</span></span>
+                            <span class="mask-line"><span class="mask-line-inner" style="--line-idx: 1;">d’un masque invisible</span></span>
+                            <span class="mask-line"><span class="mask-line-inner text-indigo-400" style="--line-idx: 2;">avec une précision éditoriale.</span></span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-zinc-400 mt-8 pt-4 border-t border-zinc-800/80 font-mono">
+                        Technique : conteneur <span class="text-zinc-200">overflow: hidden</span> + enfant <span class="text-zinc-200">translateY(115% → 0%)</span>
+                    </p>
+                </div>
+
+                <!-- 6B: Scroll-linked Text Highlight -->
+                <div id="text-highlight-box" class="glass-card rounded-3xl p-8 sm:p-10 flex flex-col justify-between">
+                    <div>
+                        <span class="font-mono text-xs text-cyan-400 block mb-6">6B • SCROLL-LINKED TEXT HIGHLIGHT</span>
+                        <p id="scroll-highlight-target" class="scroll-highlight-text text-2xl sm:text-3xl font-bold leading-snug">
+                            Au fur et à mesure que vous descendez dans la page, la lumière balaie progressivement chaque mot pour guider votre lecture.
+                        </p>
+                    </div>
+                    <p class="text-xs text-zinc-400 mt-8 pt-4 border-t border-zinc-800/80 font-mono">
+                        Technique : <span class="text-zinc-200">background-clip: text</span> piloté par le pourcentage de scroll
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             07. 3D TILT / PERSPECTIVE SCROLL
+             ================================================================= -->
+        <section id="sec-7" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2.5 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                            07 / PERSPECTIVE SPATIALE
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            perspective(1200px) + rotateX()
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        3D Tilt / Perspective Scroll <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Inclinaison 3D au défilement)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Très prisée pour les aperçus de tableaux de bord SaaS, cette carte s'incline dans l'espace 3D (<code class="font-mono text-sky-300 text-xs">rotateX</code>) et se redresse face à l'utilisateur au centre de l'écran.
+                </p>
+            </div>
+
+            <div id="tilt-3d-wrapper" class="perspective-stage py-4">
+                <div id="tilt-3d-card" class="tilt-3d-card glass-card rounded-3xl p-6 sm:p-10 border border-sky-400/25 bg-gradient-to-b from-zinc-900/90 to-zinc-950/95 shadow-[0_30px_90px_rgba(14,165,233,0.15)]">
+                    <!-- Fausse interface SaaS élégante -->
+                    <div class="flex items-center justify-between border-b border-zinc-800 pb-4 mb-6">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-rose-500/80"></span>
+                            <span class="w-3 h-3 rounded-full bg-amber-500/80"></span>
+                            <span class="w-3 h-3 rounded-full bg-emerald-500/80"></span>
+                            <span class="font-mono text-xs text-zinc-400 ml-2">dashboard.preview — 3D Viewport</span>
+                        </div>
+                        <span id="tilt-angle-badge" class="font-mono text-xs px-2.5 py-1 rounded-md bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                            rotateX(28deg)
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="rounded-2xl bg-zinc-900/90 border border-zinc-800 p-5">
+                            <span class="text-xs text-zinc-400">Performance Rendu</span>
+                            <div class="text-2xl font-bold text-white mt-1">60.0 FPS</div>
+                            <div class="mt-3 h-2 rounded-full bg-zinc-800 overflow-hidden">
+                                <div class="h-full w-[96%] bg-gradient-to-r from-sky-400 to-indigo-500"></div>
+                            </div>
+                        </div>
+                        <div class="rounded-2xl bg-zinc-900/90 border border-zinc-800 p-5">
+                            <span class="text-xs text-zinc-400">Profondeur Z</span>
+                            <div class="text-2xl font-bold text-cyan-300 mt-1">1200 px</div>
+                            <div class="mt-3 h-2 rounded-full bg-zinc-800 overflow-hidden">
+                                <div class="h-full w-[82%] bg-gradient-to-r from-cyan-400 to-emerald-400"></div>
+                            </div>
+                        </div>
+                        <div class="rounded-2xl bg-zinc-900/90 border border-zinc-800 p-5">
+                            <span class="text-xs text-zinc-400">Inclinaison Actuelle</span>
+                            <div id="tilt-angle-readout" class="text-2xl font-bold text-rose-300 mt-1">28.0°</div>
+                            <div class="mt-3 h-2 rounded-full bg-zinc-800 overflow-hidden">
+                                <div class="h-full w-[70%] bg-gradient-to-r from-rose-400 to-amber-400"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             08. PINNED / STICKY STORYTELLING (ÉPINGLAGE NARRATIF)
+             ================================================================= -->
+        <section id="sec-8" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-12">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2.5 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                            08 / SCÉNARISATION INTERACTIVE
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            Sticky Visual + Step Observer
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Pinned / Sticky Storytelling <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Épinglage narratif)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Un panneau visuel reste épinglé à droite pendant que les chapitres narratifs défilent à gauche, mettant à jour l'illustration en fonction de l'étape active.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <!-- Colonne gauche : Étapes narratives qui défilent -->
+                <div class="lg:col-span-6 space-y-12 lg:space-y-28 py-4">
+                    <div class="story-step glass-card rounded-2xl p-7 border-l-4 border-l-indigo-500 transition-opacity duration-300" data-story-step="0">
+                        <span class="font-mono text-xs text-indigo-400">CHAPITRE 01</span>
+                        <h3 class="text-xl font-bold text-white mt-2 mb-3">Observation des sections</h3>
+                        <p class="text-zinc-400 text-sm leading-relaxed">
+                            Chaque bloc narratif à gauche est surveillé par un <code class="font-mono text-xs text-indigo-300">IntersectionObserver</code> centré sur le milieu de l'écran. Lorsqu'un chapitre entre dans cette zone focale, il devient actif.
+                        </p>
+                    </div>
+
+                    <div class="story-step glass-card rounded-2xl p-7 border-l-4 border-l-cyan-500 opacity-50 transition-opacity duration-300" data-story-step="1">
+                        <span class="font-mono text-xs text-cyan-400">CHAPITRE 02</span>
+                        <h3 class="text-xl font-bold text-white mt-2 mb-3">Synchronisation d'état</h3>
+                        <p class="text-zinc-400 text-sm leading-relaxed">
+                            Le visuel épinglé à droite reçoit l'identifiant du chapitre actif et opère une transition fluide de couleur, d'icône et de métriques sans recharger la mise en page.
+                        </p>
+                    </div>
+
+                    <div class="story-step glass-card rounded-2xl p-7 border-l-4 border-l-rose-500 opacity-50 transition-opacity duration-300" data-story-step="2">
+                        <span class="font-mono text-xs text-rose-400">CHAPITRE 03</span>
+                        <h3 class="text-xl font-bold text-white mt-2 mb-3">Rétention maximale</h3>
+                        <p class="text-zinc-400 text-sm leading-relaxed">
+                            Ce format est la référence absolue pour expliquer un produit complexe, une architecture logicielle ou raconter une histoire immersive étape par étape.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Colonne droite : Panneau visuel épinglé (Sticky) -->
+                <div class="lg:col-span-6 lg:sticky lg:top-28">
+                    <div id="sticky-story-visual" class="glass-card rounded-3xl p-8 sm:p-10 h-[360px] flex flex-col justify-between relative overflow-hidden transition-all duration-500 border-indigo-500/40">
+                        <div id="story-glow" class="absolute -right-12 -bottom-12 w-64 h-64 rounded-full bg-indigo-500/25 blur-3xl transition-colors duration-500"></div>
+                        
+                        <div class="flex items-center justify-between relative z-10">
+                            <span id="story-badge" class="font-mono text-xs px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                ÉTAT ACTIF : 01 / 03
+                            </span>
+                            <div class="flex gap-1.5">
+                                <span id="dot-0" class="w-2.5 h-2.5 rounded-full bg-indigo-400 transition-all"></span>
+                                <span id="dot-1" class="w-2.5 h-2.5 rounded-full bg-zinc-700 transition-all"></span>
+                                <span id="dot-2" class="w-2.5 h-2.5 rounded-full bg-zinc-700 transition-all"></span>
+                            </div>
+                        </div>
+
+                        <div class="relative z-10 my-auto">
+                            <div id="story-icon-box" class="w-16 h-16 rounded-2xl bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-300 mb-5 transition-all duration-500">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            </div>
+                            <h4 id="story-visual-title" class="text-2xl font-bold text-white mb-2">
+                                Détection du Viewport
+                            </h4>
+                            <p id="story-visual-desc" class="text-sm text-zinc-300">
+                                L'observateur détecte précisément quel paragraphe se trouve au centre de votre attention.
+                            </p>
+                        </div>
+
+                        <div class="relative z-10 font-mono text-xs text-zinc-400">
+                            position: sticky; top: 7rem;
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             09. COUNTER UP ON SCROLL (COMPTEUR ANIMÉ)
+             ================================================================= -->
+        <section id="sec-9" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2.5 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                            09 / DONNÉES DYNAMIQUES
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            requestAnimationFrame + EaseOut
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Counter Up on Scroll <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Compteur animé)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Les indicateurs clés (KPI) s'incrémentent de zéro jusqu'à leur valeur cible avec une décélération naturelle dès leur entrée dans le champ de vision.
+                </p>
+            </div>
+
+            <div id="counters-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div class="glass-card rounded-3xl p-7 text-center">
+                    <div class="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-2">
+                        <span class="counter-value" data-target="60" data-suffix=" FPS">0</span>
+                    </div>
+                    <span class="font-mono text-xs text-indigo-400 uppercase tracking-wider">Fluidité Native</span>
+                </div>
+
+                <div class="glass-card rounded-3xl p-7 text-center">
+                    <div class="text-4xl sm:text-5xl font-extrabold text-cyan-300 tracking-tight mb-2">
+                        <span class="counter-value" data-target="98.4" data-decimals="1" data-suffix="%">0</span>
+                    </div>
+                    <span class="font-mono text-xs text-cyan-400 uppercase tracking-wider">Score Lighthouse</span>
+                </div>
+
+                <div class="glass-card rounded-3xl p-7 text-center">
+                    <div class="text-4xl sm:text-5xl font-extrabold text-rose-300 tracking-tight mb-2">
+                        <span class="counter-value" data-target="1250" data-prefix="+">0</span>
+                    </div>
+                    <span class="font-mono text-xs text-rose-400 uppercase tracking-wider">Composants Animés</span>
+                </div>
+
+                <div class="glass-card rounded-3xl p-7 text-center">
+                    <div class="text-4xl sm:text-5xl font-extrabold text-emerald-300 tracking-tight mb-2">
+                        <span class="counter-value" data-target="0" data-suffix=" KB">0</span>
+                    </div>
+                    <span class="font-mono text-xs text-emerald-400 uppercase tracking-wider">Dépendance Externe</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             10. SVG PATH DRAWING (TRACÉ SVG AU SCROLL)
+             ================================================================= -->
+        <section id="sec-10" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2.5 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-pink-500/15 text-pink-300 border border-pink-500/30">
+                            10 / ILLUSTRATION VECTORIELLE
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            stroke-dasharray + stroke-dashoffset
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        SVG Path Drawing <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Tracé SVG au scroll)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    En manipulant la propriété <code class="font-mono text-pink-300 text-xs">stroke-dashoffset</code> proportionnellement au défilement, une courbe vectorielle se dessine en direct sous vos yeux.
+                </p>
+            </div>
+
+            <div id="svg-draw-wrapper" class="glass-card rounded-3xl p-6 sm:p-10 relative overflow-hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <span class="font-mono text-xs text-pink-400">TRACÉ VECTORIEL SYNCHRONISÉ AU SCROLL</span>
+                    <span id="svg-draw-pct" class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-pink-300">
+                        Tracé : 0%
+                    </span>
+                </div>
+
+                <div class="w-full h-56 sm:h-72 flex items-center justify-center">
+                    <svg viewBox="0 0 900 240" class="w-full h-full overflow-visible">
+                        <defs>
+                            <linearGradient id="svgNeonGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#6366f1"/>
+                                <stop offset="50%" stop-color="#22d3ee"/>
+                                <stop offset="100%" stop-color="#fb7185"/>
+                            </linearGradient>
+                            <filter id="glowFilter" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="5" result="blur" />
+                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                            </filter>
+                        </defs>
+
+                        <!-- Tracé fantôme d'arrière-plan -->
+                        <path d="M 30 180 C 150 180, 160 40, 290 40 C 420 40, 410 200, 540 200 C 670 200, 660 50, 780 50 C 830 50, 850 110, 870 110"
+                              fill="none"
+                              stroke="rgba(255,255,255,0.07)"
+                              stroke-width="6"
+                              stroke-linecap="round" />
+
+                        <!-- Tracé animé lumineux -->
+                        <path id="animated-svg-path"
+                              d="M 30 180 C 150 180, 160 40, 290 40 C 420 40, 410 200, 540 200 C 670 200, 660 50, 780 50 C 830 50, 850 110, 870 110"
+                              fill="none"
+                              stroke="url(#svgNeonGrad)"
+                              stroke-width="6"
+                              stroke-linecap="round"
+                              filter="url(#glowFilter)" />
+
+                        <!-- Points étapes sur la courbe -->
+                        <circle cx="30" cy="180" r="7" fill="#6366f1" />
+                        <circle cx="290" cy="40" r="7" fill="#38bdf8" />
+                        <circle cx="540" cy="200" r="7" fill="#22d3ee" />
+                        <circle cx="780" cy="50" r="7" fill="#f43f5e" />
+                        <circle cx="870" cy="110" r="8" fill="#fb7185" />
+                    </svg>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- =====================================================================
+         FOOTER
+         ===================================================================== -->
+    <footer class="border-t border-zinc-900 py-12 px-4 text-center text-zinc-500 text-sm">
+        <p class="font-mono text-xs text-zinc-400 mb-2">
+            ScrollLab — Vitrine Interactive des Animations au Défilement
+        </p>
+        <p>Conçu en HTML5, Tailwind CSS & Vanilla JavaScript (IntersectionObserver + RequestAnimationFrame).</p>
+    </footer>
+
+    <!-- =====================================================================
+         BOUTON FLOTTANT : REJOUER LES ANIMATIONS (RESET)
+         ===================================================================== -->
+    <button id="reset-animations-btn"
+            type="button"
+            title="Remonter en haut et réinitialiser toutes les animations"
+            class="fixed bottom-6 right-6 z-50 group flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-semibold text-sm shadow-[0_10px_30px_rgba(99,102,241,0.45)] border border-indigo-400/40 transition-all cursor-pointer">
+        <svg class="w-4 h-4 transition-transform duration-500 group-hover:-rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        <span>Rejouer les animations</span>
+    </button>
+
+    <!-- Toast de notification discret lors du Reset -->
+    <div id="reset-toast" class="fixed bottom-20 right-6 z-50 pointer-events-none opacity-0 translate-y-2 transition-all duration-300 px-3.5 py-2 rounded-xl bg-zinc-900/95 border border-zinc-700 text-xs font-mono text-cyan-300 shadow-xl">
+        ✓ Animations réinitialisées
+    </div>
+
+    <!-- =====================================================================
+         MOTEUR JAVASCRIPT DES ANIMATIONS AU SCROLL (60 FPS)
+         ===================================================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            /* ---------------------------------------------------------------
+               1. RÉFÉRENCES DOM
+               --------------------------------------------------------------- */
+            const progressBar = document.getElementById('scroll-progress-bar');
+            const percentBadge = document.getElementById('scroll-percent-badge');
+
+            // Parallax
+            const parallaxStage = document.getElementById('parallax-stage');
+            const parallaxLayers = document.querySelectorAll('.parallax-layer');
+
+            // Horizontal Scroll
+            const horizWrapper = document.getElementById('horizontal-scroll-wrapper');
+            const horizTrack = document.getElementById('horizontal-track');
+            const horizProgressText = document.getElementById('horizontal-progress-text');
+
+            // Scale Reveal
+            const scaleContainer = document.getElementById('scale-reveal-container');
+            const scaleTarget = document.getElementById('scale-reveal-target');
+            const scaleBadge = document.getElementById('scale-value-badge');
+
+            // Text Highlight
+            const textHighlightBox = document.getElementById('text-highlight-box');
+            const textHighlightTarget = document.getElementById('scroll-highlight-target');
+
+            // 3D Tilt
+            const tiltWrapper = document.getElementById('tilt-3d-wrapper');
+            const tiltCard = document.getElementById('tilt-3d-card');
+            const tiltAngleBadge = document.getElementById('tilt-angle-badge');
+            const tiltAngleReadout = document.getElementById('tilt-angle-readout');
+
+            // SVG Path Drawing
+            const svgWrapper = document.getElementById('svg-draw-wrapper');
+            const svgPath = document.getElementById('animated-svg-path');
+            const svgDrawPct = document.getElementById('svg-draw-pct');
+            const svgPathLength = svgPath ? svgPath.getTotalLength() : 0;
+
+            if (svgPath) {
+                svgPath.style.strokeDasharray = svgPathLength;
+                svgPath.style.strokeDashoffset = svgPathLength;
+            }
+
+            /* ---------------------------------------------------------------
+               2. INTERSECTION OBSERVERS (DÉCLENCHEMENTS AU SCROLL)
+               --------------------------------------------------------------- */
+            const revealObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                    }
+                });
+            }, {
+                threshold: 0.18,
+                rootMargin: '0px 0px -40px 0px'
+            });
+
+            function bindRevealObservers() {
+                document.querySelectorAll('.anim-fade-up, .stagger-grid, .mask-container').forEach(el => {
+                    revealObserver.observe(el);
+                });
+            }
+            bindRevealObservers();
+
+            /* ---------------------------------------------------------------
+               3. COMPTEURS ANIMÉS (COUNTER UP ON SCROLL)
+               --------------------------------------------------------------- */
+            let countersAnimated = false;
+            const countersGrid = document.getElementById('counters-grid');
+
+            function animateCounter(el) {
+                const target = parseFloat(el.dataset.target);
+                const decimals = parseInt(el.dataset.decimals || '0', 10);
+                const prefix = el.dataset.prefix || '';
+                const suffix = el.dataset.suffix || '';
+                const duration = 1600;
+                const startTime = performance.now();
+
+                function update(now) {
+                    const elapsed = now - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    // Ease-out quart
+                    const eased = 1 - Math.pow(1 - progress, 4);
+                    const current = target * eased;
+
+                    el.textContent = `${prefix}${current.toFixed(decimals)}${suffix}`;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(update);
+                    } else {
+                        el.textContent = `${prefix}${target.toFixed(decimals)}${suffix}`;
+                    }
+                }
+                requestAnimationFrame(update);
+            }
+
+            const counterObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !countersAnimated) {
+                        countersAnimated = true;
+                        document.querySelectorAll('.counter-value').forEach(animateCounter);
+                    }
+                });
+            }, { threshold: 0.35 });
+
+            if (countersGrid) {
+                counterObserver.observe(countersGrid);
+            }
+
+            /* ---------------------------------------------------------------
+               4. STICKY STORYTELLING (CHAPITRES NARRATIFS)
+               --------------------------------------------------------------- */
+            const storySteps = document.querySelectorAll('.story-step');
+            const storyVisual = document.getElementById('sticky-story-visual');
+            const storyGlow = document.getElementById('story-glow');
+            const storyBadge = document.getElementById('story-badge');
+            const storyIconBox = document.getElementById('story-icon-box');
+            const storyTitle = document.getElementById('story-visual-title');
+            const storyDesc = document.getElementById('story-visual-desc');
+
+            const storyData = [
+                {
+                    badge: 'ÉTAT ACTIF : 01 / 03',
+                    title: 'Détection du Viewport',
+                    desc: 'L’observateur détecte précisément quel paragraphe se trouve au centre de votre attention.',
+                    borderColor: 'rgba(99, 102, 241, 0.45)',
+                    glowClass: 'bg-indigo-500/25',
+                    badgeClass: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+                    iconClass: 'bg-indigo-500/20 border-indigo-400/40 text-indigo-300',
+                    icon: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>`
+                },
+                {
+                    badge: 'ÉTAT ACTIF : 02 / 03',
+                    title: 'Synchronisation Réactive',
+                    desc: 'La carte épinglée mute instantanément pour illustrer la nouvelle étape sans perte de contexte.',
+                    borderColor: 'rgba(34, 211, 238, 0.45)',
+                    glowClass: 'bg-cyan-500/25',
+                    badgeClass: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+                    iconClass: 'bg-cyan-500/20 border-cyan-400/40 text-cyan-300',
+                    icon: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>`
+                },
+                {
+                    badge: 'ÉTAT ACTIF : 03 / 03',
+                    title: 'Clarté & Rétention',
+                    desc: 'La combinaison texte mobile + visuel fixe maximise la compréhension utilisateur.',
+                    borderColor: 'rgba(251, 113, 133, 0.45)',
+                    glowClass: 'bg-rose-500/25',
+                    badgeClass: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+                    iconClass: 'bg-rose-500/20 border-rose-400/40 text-rose-300',
+                    icon: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
+                }
+            ];
+
+            function setStoryState(index) {
+                const data = storyData[index];
+                if (!data || !storyVisual) return;
+
+                storySteps.forEach((step, idx) => {
+                    step.style.opacity = idx === index ? '1' : '0.45';
+                    const dot = document.getElementById(`dot-${idx}`);
+                    if (dot) {
+                        dot.className = idx === index
+                            ? 'w-5 h-2.5 rounded-full bg-white transition-all'
+                            : 'w-2.5 h-2.5 rounded-full bg-zinc-700 transition-all';
+                    }
+                });
+
+                storyVisual.style.borderColor = data.borderColor;
+                storyGlow.className = `absolute -right-12 -bottom-12 w-64 h-64 rounded-full blur-3xl transition-colors duration-500 ${data.glowClass}`;
+                storyBadge.className = `font-mono text-xs px-3 py-1 rounded-full border transition-colors ${data.badgeClass}`;
+                storyBadge.textContent = data.badge;
+                storyIconBox.className = `w-16 h-16 rounded-2xl border flex items-center justify-center mb-5 transition-all duration-500 ${data.iconClass}`;
+                storyIconBox.innerHTML = data.icon;
+                storyTitle.textContent = data.title;
+                storyDesc.textContent = data.desc;
+            }
+
+            const storyObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const idx = parseInt(entry.target.dataset.storyStep, 10);
+                        setStoryState(idx);
+                    }
+                });
+            }, {
+                rootMargin: '-35% 0px -35% 0px',
+                threshold: 0.1
+            });
+
+            storySteps.forEach(step => storyObserver.observe(step));
+
+            /* ---------------------------------------------------------------
+               5. BOUCLE DE CALCUL CONTINU AU SCROLL (SCRUBBED ANIMATIONS)
+               --------------------------------------------------------------- */
+            let ticking = false;
+
+            function updateScrollAnimations() {
+                const scrollTop = window.scrollY;
+                const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                const winHeight = window.innerHeight;
+                const winWidth = window.innerWidth;
+
+                // A. Barre de progression globale
+                const globalProgress = docHeight > 0 ? Math.min(Math.max(scrollTop / docHeight, 0), 1) : 0;
+                const pctInt = Math.round(globalProgress * 100);
+                if (progressBar) progressBar.style.width = `${globalProgress * 100}%`;
+                if (percentBadge) percentBadge.textContent = `${pctInt}%`;
+
+                // B. Parallax Multi-Calques
+                if (parallaxStage) {
+                    const rect = parallaxStage.getBoundingClientRect();
+                    if (rect.top < winHeight && rect.bottom > 0) {
+                        const centerOffset = (rect.top + rect.height / 2) - (winHeight / 2);
+                        parallaxLayers.forEach(layer => {
+                            const speed = parseFloat(layer.dataset.parallaxSpeed || '0');
+                            const yShift = centerOffset * speed;
+                            layer.style.transform = `translate3d(0, ${yShift.toFixed(1)}px, 0)`;
+                        });
+                    }
+                }
+
+                // C. Horizontal Scroll on Vertical Scroll
+                if (horizWrapper && horizTrack) {
+                    const rect = horizWrapper.getBoundingClientRect();
+                    const scrollableDistance = rect.height - winHeight;
+                    if (scrollableDistance > 0) {
+                        const rawProgress = -rect.top / scrollableDistance;
+                        const clamped = Math.min(Math.max(rawProgress, 0), 1);
+                        const maxTranslate = Math.max(0, horizTrack.scrollWidth - winWidth + 48);
+                        const translateX = -clamped * maxTranslate;
+
+                        horizTrack.style.transform = `translate3d(${translateX.toFixed(1)}px, 0, 0)`;
+                        if (horizProgressText) {
+                            horizProgressText.textContent = `${Math.round(clamped * 100)}%`;
+                        }
+                    }
+                }
+
+                // D. Scale & Zoom Reveal
+                if (scaleContainer && scaleTarget) {
+                    const rect = scaleContainer.getBoundingClientRect();
+                    // Progression de 0 (bas de l'écran) à 1 (centre de l'écran)
+                    const start = winHeight * 0.95;
+                    const end = winHeight * 0.25;
+                    const p = Math.min(Math.max((start - rect.top) / (start - end), 0), 1);
+
+                    const currentScale = 0.78 + (0.22 * p);
+                    const currentOpacity = 0.4 + (0.6 * p);
+                    const currentRadius = 2.5 - (1.0 * p); // rem
+
+                    scaleTarget.style.transform = `scale(${currentScale.toFixed(3)})`;
+                    scaleTarget.style.opacity = currentOpacity.toFixed(2);
+                    scaleTarget.style.borderRadius = `${currentRadius.toFixed(2)}rem`;
+                    if (scaleBadge) {
+                        scaleBadge.textContent = `scale(${currentScale.toFixed(2)})`;
+                    }
+                }
+
+                // E. Scroll-linked Text Highlight
+                if (textHighlightBox && textHighlightTarget) {
+                    const rect = textHighlightBox.getBoundingClientRect();
+                    const start = winHeight * 0.85;
+                    const end = winHeight * 0.30;
+                    const p = Math.min(Math.max((start - rect.top) / (start - end), 0), 1);
+                    textHighlightTarget.style.setProperty('--highlight-pct', `${(p * 100).toFixed(1)}%`);
+                }
+
+                // F. 3D Tilt / Perspective Scroll
+                if (tiltWrapper && tiltCard) {
+                    const rect = tiltWrapper.getBoundingClientRect();
+                    const start = winHeight * 0.95;
+                    const end = winHeight * 0.28;
+                    const p = Math.min(Math.max((start - rect.top) / (start - end), 0), 1);
+
+                    const angle = 28 * (1 - p);
+                    const scale = 0.92 + (0.08 * p);
+
+                    tiltCard.style.transform = `rotateX(${angle.toFixed(1)}deg) scale(${scale.toFixed(3)})`;
+                    if (tiltAngleBadge) tiltAngleBadge.textContent = `rotateX(${angle.toFixed(1)}deg)`;
+                    if (tiltAngleReadout) tiltAngleReadout.textContent = `${angle.toFixed(1)}°`;
+                }
+
+                // G. SVG Path Drawing
+                if (svgWrapper && svgPath && svgPathLength > 0) {
+                    const rect = svgWrapper.getBoundingClientRect();
+                    const start = winHeight * 0.88;
+                    const end = winHeight * 0.25;
+                    const p = Math.min(Math.max((start - rect.top) / (start - end), 0), 1);
+
+                    const offset = svgPathLength * (1 - p);
+                    svgPath.style.strokeDashoffset = offset.toFixed(1);
+                    if (svgDrawPct) {
+                        svgDrawPct.textContent = `Tracé : ${Math.round(p * 100)}%`;
+                    }
+                }
+
+                ticking = false;
+            }
+
+            window.addEventListener('scroll', () => {
+                if (!ticking) {
+                    requestAnimationFrame(updateScrollAnimations);
+                    ticking = true;
+                }
+            }, { passive: true });
+
+            window.addEventListener('resize', () => {
+                requestAnimationFrame(updateScrollAnimations);
+            }, { passive: true });
+
+            // Appel initial
+            updateScrollAnimations();
+
+            /* ---------------------------------------------------------------
+               6. BOUTON "REJOUER LES ANIMATIONS" (RESET COMPLET)
+               --------------------------------------------------------------- */
+            const resetBtn = document.getElementById('reset-animations-btn');
+            const resetToast = document.getElementById('reset-toast');
+
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    // Remonter tout en haut de la page en douceur
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                    // Attendre légèrement que le défilement remonte avant de retirer les classes
+                    setTimeout(() => {
+                        document.querySelectorAll('.anim-fade-up, .stagger-grid, .mask-container').forEach(el => {
+                            revealObserver.unobserve(el);
+                            el.classList.remove('is-visible');
+                        });
+
+                        // Réinitialiser les compteurs
+                        countersAnimated = false;
+                        document.querySelectorAll('.counter-value').forEach(el => {
+                            const prefix = el.dataset.prefix || '';
+                            const suffix = el.dataset.suffix || '';
+                            el.textContent = `${prefix}0${suffix}`;
+                        });
+
+                        // Réinitialiser le chapitre storytelling
+                        setStoryState(0);
+
+                        // Ré-attacher les observateurs après un court délai
+                        setTimeout(() => {
+                            bindRevealObservers();
+                            updateScrollAnimations();
+                        }, 150);
+
+                        // Afficher le toast de confirmation
+                        if (resetToast) {
+                            resetToast.classList.remove('opacity-0', 'translate-y-2');
+                            setTimeout(() => {
+                                resetToast.classList.add('opacity-0', 'translate-y-2');
+                            }, 2400);
+                        }
+                    }, 450);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

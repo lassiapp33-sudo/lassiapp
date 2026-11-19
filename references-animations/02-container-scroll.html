@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScrollBox — Animations de Conteneurs au Défilement</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        obsidian: '#09090b',
+                        surface: '#121216',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-dark: #09090b;
+            --card-surface: #121216;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #f4f4f5;
+            overflow-x: hidden;
+        }
+
+        /* Grille architecturale subtile */
+        .bg-architect-grid {
+            background-size: 44px 44px;
+            background-image:
+                linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+        }
+
+        /* Surface de carte standard */
+        .box-card {
+            background-color: rgba(18, 18, 22, 0.78);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.65);
+        }
+
+        /* =========================================================
+           1. CLIP-PATH CURTAIN REVEAL
+           ========================================================= */
+        .curtain-box {
+            clip-path: inset(28% 28% 28% 28% round 28px);
+            will-change: clip-path;
+        }
+
+        /* =========================================================
+           2. 3D CARD FLIP & UNFOLD (ORIGAMI / VOLET)
+           ========================================================= */
+        .perspective-container {
+            perspective: 1400px;
+        }
+        .unfold-card {
+            transform-origin: top center;
+            transform: rotateX(-88deg);
+            opacity: 0;
+            transition: transform 0.95s cubic-bezier(0.16, 1, 0.3, 1),
+                        opacity 0.65s ease;
+            transition-delay: calc(var(--unfold-idx, 0) * 140ms);
+            will-change: transform, opacity;
+            backface-visibility: hidden;
+        }
+        .unfold-group.is-visible .unfold-card {
+            transform: rotateX(0deg);
+            opacity: 1;
+        }
+
+        /* =========================================================
+           3. STICKY STACKING CARDS
+           ========================================================= */
+        .stack-card {
+            position: sticky;
+            transform-origin: top center;
+            will-change: transform;
+            transition: box-shadow 0.3s ease;
+        }
+
+        /* =========================================================
+           4. BLUR-TO-FOCUS GLASS REVEAL
+           ========================================================= */
+        .blur-focus-card {
+            filter: blur(22px) brightness(0.65);
+            transform: scale(1.08);
+            opacity: 0.25;
+            will-change: filter, transform, opacity;
+        }
+
+        /* =========================================================
+           5. BORDER BEAM & PERIMETER TRACE
+           ========================================================= */
+        .beam-rect {
+            fill: none;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            will-change: stroke-dashoffset;
+        }
+
+        /* =========================================================
+           6. SPLIT-SCREEN EXPANDING CONTAINER
+           ========================================================= */
+        .expanding-box {
+            width: 72%;
+            border-radius: 32px;
+            will-change: width, border-radius;
+        }
+
+        /* =========================================================
+           7. SKEW & VELOCITY DISTORTION
+           ========================================================= */
+        .velocity-card {
+            will-change: transform;
+            transform: skewY(0deg);
+        }
+
+        /* =========================================================
+           8. BENTO GRID MAGNETIC ASSEMBLY
+           ========================================================= */
+        .bento-piece {
+            opacity: 0;
+            transform: translate3d(var(--tx, 0px), var(--ty, 0px), 0) rotate(var(--rot, 0deg)) scale(0.92);
+            transition: transform 0.95s cubic-bezier(0.16, 1, 0.3, 1),
+                        opacity 0.75s ease;
+            transition-delay: calc(var(--bento-delay, 0) * 90ms);
+            will-change: transform, opacity;
+        }
+        .bento-assembly.is-visible .bento-piece {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+        }
+
+        /* =========================================================
+           9. ACCORDION / SHUTTER EXPAND
+           ========================================================= */
+        .shutter-panel {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+                        padding 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+                        border-color 0.5s ease;
+            transition-delay: calc(var(--shutter-idx, 0) * 160ms);
+        }
+        .shutter-panel-inner {
+            overflow: hidden;
+        }
+        .shutter-stack.is-visible .shutter-panel {
+            grid-template-rows: 1fr;
+        }
+
+        /* =========================================================
+           10. MORPHING BLOB / BORDER-RADIUS CONTAINER
+           ========================================================= */
+        .morph-container {
+            border-radius: 38% 62% 54% 46% / 44% 38% 62% 56%;
+            will-change: border-radius, transform;
+        }
+
+        /* Animation indicateur souris */
+        @keyframes pulseDot {
+            0%, 100% { transform: translateY(0); opacity: 1; }
+            50% { transform: translateY(8px); opacity: 0.3; }
+        }
+        .scroll-dot {
+            animation: pulseDot 1.6s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-architect-grid antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
+
+    <!-- =====================================================================
+         BARRE DE PROGRESSION DU SCROLL
+         ===================================================================== -->
+    <div class="fixed top-0 left-0 right-0 h-1 z-50 bg-zinc-950/90">
+        <div id="global-progress-bar" class="h-full w-0 bg-gradient-to-r from-indigo-500 via-cyan-400 to-emerald-400 shadow-[0_0_14px_rgba(34,211,238,0.75)]"></div>
+    </div>
+
+    <!-- =====================================================================
+         NAVIGATION RAPIDE FLOTTANTE
+         ===================================================================== -->
+    <header class="fixed top-4 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-6xl">
+        <nav class="box-card rounded-2xl px-4 py-2.5 flex items-center justify-between gap-3">
+            <a href="#hero" class="flex items-center gap-2.5 font-bold text-sm sm:text-base tracking-tight text-white shrink-0">
+                <span class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 via-cyan-400 to-emerald-400 flex items-center justify-center text-zinc-950 font-mono text-xs font-extrabold">
+                    [ ]
+                </span>
+                <span>Scroll<span class="text-cyan-400">Box</span></span>
+            </a>
+
+            <div class="hidden xl:flex items-center gap-1 text-[11px] font-mono text-zinc-400">
+                <a href="#box-1" class="px-2 py-1 rounded-md hover:text-white hover:bg-white/5 transition">01.Clip</a>
+                <a href="#box-2" class="px-2 py-1 rounded-md hover:text-white hover:bg-white/5 transition">02.Flip3D</a>
+                <a href="#box-3" class="px-2 py-1 rounded-md hover:text-white hover:bg-white/5 transition">03.Stack</a>
+                <a href="#box-4" class="px-2 py-1 rounded-md hover:text-white hover:bg-white/5 transition">04.Blur</a>
+                <a href="#box-5" class="px-2 py-1 rounded-md hover:text-white hover:bg-white/5 transition">05.Border</a>
+                <a href="#box-6" class="px-2 py-1 rounded-md hover:text-white hover:bg-white/5 transition">06.Expand</a>
+                <a href="#box-7" class="px-2 py-1 rounded-md hover:text-white hover:bg-white/5 transition">07.Skew</a>
+                <a href="#box-8" class="px-2 py-1 rounded-md hover:text-white hover:bg-white/5 transition">08.Bento</a>
+                <a href="#box-9" class="px-2 py-1 rounded-md hover:text-white hover:bg-white/5 transition">09.Shutter</a>
+                <a href="#box-10" class="px-2 py-1 rounded-md hover:text-white hover:bg-white/5 transition">10.Morph</a>
+            </div>
+
+            <div class="flex items-center gap-2 font-mono text-xs">
+                <span class="hidden sm:inline-block px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400">
+                    Vel: <strong id="nav-velocity-badge" class="text-amber-400">0.0</strong>
+                </span>
+                <span id="nav-percent-badge" class="px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-cyan-400 font-semibold">
+                    0%
+                </span>
+            </div>
+        </nav>
+    </header>
+
+    <!-- =====================================================================
+         HERO SECTION
+         ===================================================================== -->
+    <section id="hero" class="relative min-h-screen flex flex-col items-center justify-center px-4 pt-24 pb-16 overflow-hidden">
+        <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[540px] h-[540px] bg-indigo-600/15 rounded-full blur-[130px] pointer-events-none"></div>
+        <div class="absolute bottom-12 left-16 w-[320px] h-[320px] bg-emerald-500/10 rounded-full blur-[110px] pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-4xl mx-auto text-center">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-mono text-xs mb-7">
+                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                <span>ÉDITION CONTENEURS • CARTES, GRILLES & PANNEAUX</span>
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.07] mb-6 text-white">
+                Animations de Conteneurs
+                <span class="block mt-2 bg-gradient-to-r from-indigo-400 via-cyan-300 to-emerald-400 bg-clip-text text-transparent">
+                    au Défilement
+                </span>
+            </h1>
+
+            <p class="text-zinc-400 text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed mb-10">
+                Découvrez <strong class="text-zinc-200">10 nouvelles chorégraphies spatiales</strong> conçues spécifiquement pour vos cartes, grilles Bento, panneaux collants et modales, avec mesures télémétriques en temps réel.
+            </p>
+
+            <a href="#box-1" class="inline-flex flex-col items-center gap-3 group">
+                <span class="font-mono text-xs uppercase tracking-widest text-zinc-400 group-hover:text-white transition">
+                    Explorer les 10 conteneurs
+                </span>
+                <div class="w-7 h-11 rounded-full border-2 border-zinc-700 group-hover:border-cyan-400 flex justify-center pt-2 transition-colors">
+                    <div class="w-1.5 h-2.5 rounded-full bg-cyan-400 scroll-dot"></div>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <!-- =====================================================================
+         LES 10 ANIMATIONS DE CONTENEURS AU DÉFILEMENT
+         ===================================================================== -->
+    <main class="space-y-32 sm:space-y-44 pb-32">
+
+        <!-- =================================================================
+             01. CLIP-PATH CURTAIN REVEAL (RÉVÉLATION PAR RIDEAU GÉOMÉTRIQUE)
+             ================================================================= -->
+        <section id="box-1" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                            01 / MASQUE GÉOMÉTRIQUE
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            clip-path: inset(28% → 0%)
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Clip-Path Curtain Reveal <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Révélation par rideau géométrique)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Le conteneur est initialement rogné de l'intérieur via <code class="font-mono text-xs text-indigo-300">clip-path: inset(...)</code> puis ses bordures s'ouvrent comme un diaphragme d'appareil photo au fil du défilement.
+                </p>
+            </div>
+
+            <div id="curtain-wrapper" class="py-2">
+                <div id="curtain-target" class="curtain-box relative h-[380px] sm:h-[440px] w-full bg-gradient-to-br from-indigo-950 via-[#121216] to-cyan-950 border border-indigo-400/30 p-8 sm:p-12 flex flex-col justify-between overflow-hidden shadow-2xl">
+                    <!-- Motif décoratif interne -->
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.3),transparent_60%)] pointer-events-none"></div>
+                    <div class="relative z-10 flex items-center justify-between">
+                        <span class="font-mono text-xs px-3 py-1 rounded-full bg-black/50 border border-white/10 text-indigo-300">
+                            DIAPHRAGME OPTIQUE
+                        </span>
+                        <span id="curtain-telemetry" class="font-mono text-xs px-3 py-1 rounded-lg bg-zinc-950/90 border border-indigo-500/30 text-cyan-300">
+                            inset(28.0%)
+                        </span>
+                    </div>
+
+                    <div class="relative z-10 max-w-2xl">
+                        <h3 class="text-2xl sm:text-4xl font-extrabold text-white mb-3">
+                            Ouverture sans déformation du contenu
+                        </h3>
+                        <p class="text-zinc-300 text-sm sm:text-base leading-relaxed">
+                            Contrairement à <code class="font-mono text-xs text-cyan-300">transform: scale()</code> qui étire la typographie, <code class="font-mono text-xs text-cyan-300">clip-path</code> révèle le conteneur à taille réelle en dévoilant progressivement ses bords.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             02. 3D CARD FLIP & UNFOLD (RETOURNEMENT ET DÉPLIAGE 3D)
+             ================================================================= -->
+        <section id="box-2" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                            02 / ORIGAMI ARCHITECTURAL
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            transform-origin: top + rotateX(-88deg → 0deg)
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        3D Card Flip & Unfold <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Retournement et dépliage 3D)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Ancrés par leur arête supérieure (<code class="font-mono text-xs text-cyan-300">transform-origin: top</code>) dans une scène à perspective profonde, ces conteneurs se déplient comme des volets mécaniques.
+                </p>
+            </div>
+
+            <div class="unfold-group perspective-container grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="unfold-card box-card rounded-3xl p-8 border-t-2 border-t-indigo-500" style="--unfold-idx: 0;">
+                    <div class="flex items-center justify-between mb-6">
+                        <span class="font-mono text-xs text-indigo-400">VOLET 01 • 0ms</span>
+                        <span class="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-400/30 flex items-center justify-center font-mono text-xs text-indigo-300">X°</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Charnière Supérieure</h3>
+                    <p class="text-sm text-zinc-400 leading-relaxed mb-5">
+                        Le pivot est fixé tout en haut de la carte (<code class="font-mono text-xs text-zinc-200">50% 0%</code>), créant un effet de panneau suspendu qui bascule vers l'avant.
+                    </p>
+                    <div class="font-mono text-xs text-indigo-300 bg-zinc-950/80 px-3 py-2 rounded-xl border border-zinc-800">
+                        perspective: 1400px
+                    </div>
+                </div>
+
+                <div class="unfold-card box-card rounded-3xl p-8 border-t-2 border-t-cyan-500" style="--unfold-idx: 1;">
+                    <div class="flex items-center justify-between mb-6">
+                        <span class="font-mono text-xs text-cyan-400">VOLET 02 • +140ms</span>
+                        <span class="w-8 h-8 rounded-lg bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center font-mono text-xs text-cyan-300">X°</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Inertie Amortie</h3>
+                    <p class="text-sm text-zinc-400 leading-relaxed mb-5">
+                        La courbe exponentielle élimine tout rebond brusque : la carte ralentit avec grâce juste avant d'atteindre <code class="font-mono text-xs text-zinc-200">rotateX(0deg)</code>.
+                    </p>
+                    <div class="font-mono text-xs text-cyan-300 bg-zinc-950/80 px-3 py-2 rounded-xl border border-zinc-800">
+                        rotateX(-88deg → 0deg)
+                    </div>
+                </div>
+
+                <div class="unfold-card box-card rounded-3xl p-8 border-t-2 border-t-emerald-500" style="--unfold-idx: 2;">
+                    <div class="flex items-center justify-between mb-6">
+                        <span class="font-mono text-xs text-emerald-400">VOLET 03 • +280ms</span>
+                        <span class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center font-mono text-xs text-emerald-300">X°</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Cadence Séquentielle</h3>
+                    <p class="text-sm text-zinc-400 leading-relaxed mb-5">
+                        Chaque panneau reçoit un délai de <code class="font-mono text-xs text-zinc-200">140ms</code>, produisant une vague tridimensionnelle de gauche à droite.
+                    </p>
+                    <div class="font-mono text-xs text-emerald-300 bg-zinc-950/80 px-3 py-2 rounded-xl border border-zinc-800">
+                        backface-visibility: hidden
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             03. STICKY STACKING CARDS (EMPILEMENT COLLANT DE CARTES)
+             ================================================================= -->
+        <section id="box-3" class="max-w-5xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-12">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            03 / JEU DE CARTES ÉPINGLÉ
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            position: sticky + Dynamic Scale
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Sticky Stacking Cards <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Empilement collant de cartes)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Chaque conteneur possède un <code class="font-mono text-xs text-emerald-300">top</code> légèrement décalé. À mesure que la carte suivante glisse par-dessus, la carte inférieure recule en perspective (<code class="font-mono text-xs text-emerald-300">scale</code>).
+                </p>
+            </div>
+
+            <!-- Pile de 4 cartes collantes -->
+            <div id="stacking-wrapper" class="space-y-8 pb-8">
+                <!-- Carte 1 -->
+                <div class="stack-card rounded-3xl p-8 sm:p-10 bg-gradient-to-br from-[#161622] to-[#121216] border border-indigo-500/30 shadow-2xl" style="top: 6.5rem;" data-stack-index="0">
+                    <div class="flex items-center justify-between mb-6">
+                        <span class="font-mono text-xs px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                            CARTE 01 / 04 • top: 6.5rem
+                        </span>
+                        <span class="stack-scale-readout font-mono text-xs text-zinc-400">scale(1.00)</span>
+                    </div>
+                    <h3 class="text-2xl sm:text-3xl font-bold text-white mb-3">Fondation du Deck</h3>
+                    <p class="text-zinc-300 text-sm sm:text-base max-w-2xl leading-relaxed">
+                        Cette première carte s'ancre en haut de la fenêtre. Continuez de défiler : vous la verrez rétrécir légèrement et s'assombrir pendant que la Carte 02 vient la recouvrir.
+                    </p>
+                </div>
+
+                <!-- Carte 2 -->
+                <div class="stack-card rounded-3xl p-8 sm:p-10 bg-gradient-to-br from-[#122026] to-[#121216] border border-cyan-500/30 shadow-2xl" style="top: 7.75rem;" data-stack-index="1">
+                    <div class="flex items-center justify-between mb-6">
+                        <span class="font-mono text-xs px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                            CARTE 02 / 04 • top: 7.75rem
+                        </span>
+                        <span class="stack-scale-readout font-mono text-xs text-zinc-400">scale(1.00)</span>
+                    </div>
+                    <h3 class="text-2xl sm:text-3xl font-bold text-white mb-3">Décalage Vertical (+20px)</h3>
+                    <p class="text-zinc-300 text-sm sm:text-base max-w-2xl leading-relaxed">
+                        L'incrément de <code class="font-mono text-xs text-cyan-300">1.25rem</code> laisse apparaître l'en-tête coloré de la carte précédente, créant l'illusion d'un classeur physique empilé.
+                    </p>
+                </div>
+
+                <!-- Carte 3 -->
+                <div class="stack-card rounded-3xl p-8 sm:p-10 bg-gradient-to-br from-[#12241e] to-[#121216] border border-emerald-500/30 shadow-2xl" style="top: 9rem;" data-stack-index="2">
+                    <div class="flex items-center justify-between mb-6">
+                        <span class="font-mono text-xs px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            CARTE 03 / 04 • top: 9.0rem
+                        </span>
+                        <span class="stack-scale-readout font-mono text-xs text-zinc-400">scale(1.00)</span>
+                    </div>
+                    <h3 class="text-2xl sm:text-3xl font-bold text-white mb-3">Profondeur Z Calculée</h3>
+                    <p class="text-zinc-300 text-sm sm:text-base max-w-2xl leading-relaxed">
+                        JavaScript mesure la distance entre chaque carte et sa voisine suivante pour appliquer une réduction d'échelle proportionnelle (<code class="font-mono text-xs text-emerald-300">scale(0.92)</code>).
+                    </p>
+                </div>
+
+                <!-- Carte 4 -->
+                <div class="stack-card rounded-3xl p-8 sm:p-10 bg-gradient-to-br from-[#261d12] to-[#121216] border border-amber-500/30 shadow-2xl" style="top: 10.25rem;" data-stack-index="3">
+                    <div class="flex items-center justify-between mb-6">
+                        <span class="font-mono text-xs px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            CARTE 04 / 04 • top: 10.25rem
+                        </span>
+                        <span class="stack-scale-readout font-mono text-xs text-amber-300">Sommet de pile</span>
+                    </div>
+                    <h3 class="text-2xl sm:text-3xl font-bold text-white mb-3">Couronnement de la Pile</h3>
+                    <p class="text-zinc-300 text-sm sm:text-base max-w-2xl leading-relaxed">
+                        Une fois les 4 conteneurs empilés, l'ensemble du paquet quitte harmonieusement l'écran vers le haut lorsque vous poursuivez votre lecture.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             04. BLUR-TO-FOCUS GLASS REVEAL (MISE AU POINT ET VERRE DÉPOLI)
+             ================================================================= -->
+        <section id="box-4" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            04 / PROFONDEUR FOCALE
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            filter: blur(22px → 0px) + scale(1.08 → 1)
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Blur-to-Focus Glass Reveal <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Mise au point et verre dépoli)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Inspiré des objectifs photographiques, le conteneur passe progressivement d'un état vaporeux et légèrement agrandi à une netteté chirurgicale au centre de l'écran.
+                </p>
+            </div>
+
+            <div id="blur-focus-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="blur-focus-card box-card rounded-3xl p-8 sm:p-10 relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-6">
+                        <span class="font-mono text-xs text-amber-400">LENTILLE A</span>
+                        <span class="blur-readout font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-950 border border-zinc-800 text-amber-300">
+                            blur(22.0px)
+                        </span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-3">Convergence Optique</h3>
+                    <p class="text-sm text-zinc-300 leading-relaxed">
+                        En combinant la diminution du flou gaussien (<code class="font-mono text-xs text-amber-300">filter: blur()</code>) avec une contraction douce de <code class="font-mono text-xs text-amber-300">scale(1.08)</code> à <code class="font-mono text-xs text-amber-300">1.0</code>, le conteneur donne l'impression de se poser sur la vitre.
+                    </p>
+                </div>
+
+                <div class="blur-focus-card box-card rounded-3xl p-8 sm:p-10 relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-6">
+                        <span class="font-mono text-xs text-cyan-400">LENTILLE B</span>
+                        <span class="blur-readout font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-950 border border-zinc-800 text-cyan-300">
+                            blur(22.0px)
+                        </span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-3">Contraste & Luminance</h3>
+                    <p class="text-sm text-zinc-300 leading-relaxed">
+                        La propriété <code class="font-mono text-xs text-cyan-300">brightness(0.65 → 1)</code> accompagne la mise au point pour illuminer le contenu uniquement lorsqu'il devient parfaitement lisible.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             05. BORDER BEAM & PERIMETER TRACE (TRACÉ LUMINEUX DE BORDURE)
+             ================================================================= -->
+        <section id="box-5" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                            05 / CONTOUR VECTORIEL
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            SVG &lt;rect&gt; stroke-dashoffset
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Border Beam & Perimeter Trace <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Tracé lumineux de bordure)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Un rectangle SVG superposé épouse exactement les coins arrondis du conteneur et dessine un faisceau lumineux tout autour de son périmètre en fonction du défilement.
+                </p>
+            </div>
+
+            <div id="border-beam-grid" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Conteneur Border Beam 1 -->
+                <div class="beam-card-wrapper relative rounded-3xl bg-[#121216] p-8 sm:p-10">
+                    <!-- Bordure SVG dynamique -->
+                    <svg class="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                        <defs>
+                            <linearGradient id="beamGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#6366f1"/>
+                                <stop offset="50%" stop-color="#22d3ee"/>
+                                <stop offset="100%" stop-color="#10b981"/>
+                            </linearGradient>
+                        </defs>
+                        <rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="23" ry="23" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+                        <rect class="beam-rect" x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="23" ry="23" stroke="url(#beamGrad1)"/>
+                    </svg>
+
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="font-mono text-xs text-cyan-400">CIRCUIT PÉRIMÉTRIQUE A</span>
+                            <span class="beam-pct-badge font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-950 border border-cyan-500/30 text-cyan-300">
+                                0%
+                            </span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Faisceau Synchrone</h3>
+                        <p class="text-sm text-zinc-400 leading-relaxed">
+                            La longueur totale du périmètre (<code class="font-mono text-xs text-zinc-200">getTotalLength()</code>) est recalculée dynamiquement au redimensionnement pour garantir une fermeture exacte à 100%.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Conteneur Border Beam 2 -->
+                <div class="beam-card-wrapper relative rounded-3xl bg-[#121216] p-8 sm:p-10">
+                    <svg class="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                        <defs>
+                            <linearGradient id="beamGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#f59e0b"/>
+                                <stop offset="50%" stop-color="#ec4899"/>
+                                <stop offset="100%" stop-color="#6366f1"/>
+                            </linearGradient>
+                        </defs>
+                        <rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="23" ry="23" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+                        <rect class="beam-rect" x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="23" ry="23" stroke="url(#beamGrad2)"/>
+                    </svg>
+
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between mb-6">
+                            <span class="font-mono text-xs text-amber-400">CIRCUIT PÉRIMÉTRIQUE B</span>
+                            <span class="beam-pct-badge font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-950 border border-amber-500/30 text-amber-300">
+                                0%
+                            </span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Mise en Valeur Premium</h3>
+                        <p class="text-sm text-zinc-400 leading-relaxed">
+                            Idéal pour attirer l'attention sur une offre phare, un plan tarifaire recommandé ou un appel à l'action sans surcharger l'interface.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             06. SPLIT-SCREEN EXPANDING CONTAINER (CONTENEUR EXTENSIBLE PLEIN ÉCRAN)
+             ================================================================= -->
+        <section id="box-6" class="scroll-mt-28">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 mb-10">
+                <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2 mb-3">
+                            <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                                06 / IMMERSION PLEINE LARGEUR
+                            </span>
+                            <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                                width: 72% → 100% • radius: 32px → 0px
+                            </span>
+                        </div>
+                        <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                            Split-Screen Expanding Container <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Conteneur extensible plein écran)</span>
+                        </h2>
+                    </div>
+                    <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                        D'abord présenté comme une carte flottante aux coins arrondis, ce conteneur s'étire jusqu'aux bords de l'écran et perd ses arrondis pour devenir une section immersive bord à bord.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Conteneur extensible centré -->
+            <div id="expanding-wrapper" class="w-full flex justify-center">
+                <div id="expanding-target" class="expanding-box relative min-h-[420px] sm:min-h-[480px] bg-gradient-to-r from-[#131524] via-[#101c24] to-[#11221d] border-y border-x border-cyan-400/25 p-8 sm:p-14 flex flex-col justify-between overflow-hidden shadow-2xl">
+                    <!-- Grille interne Split-Screen -->
+                    <div class="relative z-10 flex items-center justify-between mb-8">
+                        <span class="font-mono text-xs px-3 py-1 rounded-full bg-black/50 border border-white/10 text-emerald-300">
+                            TRANSITION CARTE → PLEIN ÉCRAN
+                        </span>
+                        <span id="expanding-telemetry" class="font-mono text-xs px-3 py-1 rounded-lg bg-zinc-950/90 border border-cyan-500/30 text-cyan-300">
+                            w: 72% • r: 32px
+                        </span>
+                    </div>
+
+                    <div class="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center my-auto">
+                        <div>
+                            <h3 class="text-3xl sm:text-4xl font-extrabold text-white mb-4 leading-tight">
+                                Briser les limites de la grille centrale
+                            </h3>
+                            <p class="text-zinc-300 text-sm sm:text-base leading-relaxed">
+                                Lorsque le conteneur atteint <code class="font-mono text-xs text-cyan-300">100%</code> de la largeur du viewport et <code class="font-mono text-xs text-cyan-300">border-radius: 0px</code>, il fusionne avec les bords de l'écran pour offrir une respiration visuelle totale.
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="rounded-2xl bg-black/40 border border-white/10 p-5 backdrop-blur-md">
+                                <span class="font-mono text-xs text-indigo-400 block mb-1">ÉTAT INITIAL</span>
+                                <div class="text-xl font-bold text-white">72% Largeur</div>
+                                <span class="text-xs text-zinc-400">Coins arrondis 32px</span>
+                            </div>
+                            <div class="rounded-2xl bg-black/40 border border-white/10 p-5 backdrop-blur-md">
+                                <span class="font-mono text-xs text-emerald-400 block mb-1">ÉTAT DÉPLOYÉ</span>
+                                <div class="text-xl font-bold text-white">100% Viewport</div>
+                                <span class="text-xs text-zinc-400">Bord à bord 0px</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             07. SKEW & VELOCITY DISTORTION (DISTORSION DYNAMIQUE À LA VITESSE)
+             ================================================================= -->
+        <section id="box-7" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                            07 / PHYSIQUE & INERTIE
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            Scroll Velocity → transform: skewY()
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Skew & Velocity Distortion <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Distorsion dynamique à la vitesse)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Donnez un coup de molette rapide vers le haut ou vers le bas ! Ces conteneurs calculent la dérivée de votre vitesse de défilement et s'inclinent sous l'effet de l'inertie avant de revenir à <code class="font-mono text-xs text-rose-300">0deg</code>.
+                </p>
+            </div>
+
+            <div class="mb-6 flex items-center justify-between box-card rounded-2xl px-5 py-3">
+                <span class="font-mono text-xs text-zinc-400">CAPTEUR D'INERTIE EN DIRECT (SCROLLEZ VITE POUR TESTER)</span>
+                <span id="skew-telemetry-badge" class="font-mono text-xs px-3 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 font-semibold">
+                    skewY(0.00deg)
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="velocity-card box-card rounded-3xl p-7 border-b-2 border-b-rose-500/50">
+                    <span class="font-mono text-xs text-rose-400 block mb-3">MODULE INERTIEL 01</span>
+                    <h3 class="text-lg font-bold text-white mb-2">Calcul de Delta Y</h3>
+                    <p class="text-sm text-zinc-400">
+                        À chaque frame d'animation, l'écart <code class="font-mono text-xs text-zinc-200">scrollY - lastScrollY</code> mesure la vélocité instantanée en pixels par image.
+                    </p>
+                </div>
+
+                <div class="velocity-card box-card rounded-3xl p-7 border-b-2 border-b-amber-500/50">
+                    <span class="font-mono text-xs text-amber-400 block mb-3">MODULE INERTIEL 02</span>
+                    <h3 class="text-lg font-bold text-white mb-2">Interpolation LERP</h3>
+                    <p class="text-sm text-zinc-400">
+                        Une interpolation linéaire amortie (<code class="font-mono text-xs text-zinc-200">lerp 0.12</code>) lisse l'inclinaison et ramène élastiquement les cartes à l'horizontale dès l'arrêt.
+                    </p>
+                </div>
+
+                <div class="velocity-card box-card rounded-3xl p-7 border-b-2 border-b-indigo-500/50">
+                    <span class="font-mono text-xs text-indigo-400 block mb-3">MODULE INERTIEL 03</span>
+                    <h3 class="text-lg font-bold text-white mb-2">Plafonnement Sécurisé</h3>
+                    <p class="text-sm text-zinc-400">
+                        L'angle est borné entre <code class="font-mono text-xs text-zinc-200">-7deg</code> et <code class="font-mono text-xs text-zinc-200">+7deg</code> afin de préserver la lisibilité parfaite du texte.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             08. BENTO GRID MAGNETIC ASSEMBLY (ASSEMBLAGE MAGNÉTIQUE BENTO)
+             ================================================================= -->
+        <section id="box-8" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            08 / CONVERGENCE CARDINALE
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            4-Direction Vectors + Rotation Snap
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Bento Grid Magnetic Assembly <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Assemblage magnétique Bento)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Les tuiles d'une grille Bento arrivent simultanément depuis le Nord, le Sud, l'Ouest et l'Est avec une légère inclinaison avant de s'aimanter avec une précision millimétrée.
+                </p>
+            </div>
+
+            <!-- Grille Bento asymétrique -->
+            <div class="bento-assembly grid grid-cols-1 md:grid-cols-4 gap-5">
+                <!-- Tuile 1 : Arrive de la GAUCHE -->
+                <div class="bento-piece md:col-span-2 box-card rounded-3xl p-7 bg-gradient-to-br from-indigo-950/60 to-[#121216] border-indigo-500/25"
+                     style="--tx: -70px; --ty: 0px; --rot: -3deg; --bento-delay: 0;">
+                    <span class="font-mono text-xs text-indigo-400 block mb-2">← VECTEUR OUEST (-70px, -3°)</span>
+                    <h3 class="text-xl font-bold text-white mb-2">Tuile Principale Double</h3>
+                    <p class="text-sm text-zinc-400 leading-relaxed">
+                        Glisse latéralement depuis la gauche et redresse sa rotation pour s'aligner sur la colonne principale.
+                    </p>
+                </div>
+
+                <!-- Tuile 2 : Arrive du HAUT -->
+                <div class="bento-piece box-card rounded-3xl p-7 border-cyan-500/25"
+                     style="--tx: 0px; --ty: -65px; --rot: 4deg; --bento-delay: 1;">
+                    <span class="font-mono text-xs text-cyan-400 block mb-2">↓ VECTEUR NORD (-65px, +4°)</span>
+                    <h3 class="text-lg font-bold text-white mb-2">Module Haut</h3>
+                    <p class="text-xs text-zinc-400 leading-relaxed">
+                        Descend du plafond pour verrouiller la rangée supérieure.
+                    </p>
+                </div>
+
+                <!-- Tuile 3 : Arrive de la DROITE -->
+                <div class="bento-piece md:row-span-2 box-card rounded-3xl p-7 bg-gradient-to-b from-emerald-950/50 to-[#121216] border-emerald-500/25 flex flex-col justify-between"
+                     style="--tx: 70px; --ty: 0px; --rot: 3.5deg; --bento-delay: 2;">
+                    <div>
+                        <span class="font-mono text-xs text-emerald-400 block mb-2">→ VECTEUR EST (+70px, +3.5°)</span>
+                        <h3 class="text-xl font-bold text-white mb-3">Colonne Verticale</h3>
+                        <p class="text-sm text-zinc-400 leading-relaxed">
+                            S'emboîte sur toute la hauteur droite de la grille Bento pour fermer la structure.
+                        </p>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-white/10 font-mono text-xs text-emerald-300">
+                        Magnet Snap: 100%
+                    </div>
+                </div>
+
+                <!-- Tuile 4 : Arrive du BAS -->
+                <div class="bento-piece box-card rounded-3xl p-7 border-amber-500/25"
+                     style="--tx: 0px; --ty: 65px; --rot: -4deg; --bento-delay: 3;">
+                    <span class="font-mono text-xs text-amber-400 block mb-2">↑ VECTEUR SUD (+65px, -4°)</span>
+                    <h3 class="text-lg font-bold text-white mb-2">Base Gauche</h3>
+                    <p class="text-xs text-zinc-400 leading-relaxed">
+                        Remonte depuis le bas pour combler l'espace inférieur.
+                    </p>
+                </div>
+
+                <!-- Tuile 5 : Arrive du BAS-DROITE -->
+                <div class="bento-piece md:col-span-2 box-card rounded-3xl p-7 border-rose-500/25"
+                     style="--tx: 45px; --ty: 55px; --rot: 2.5deg; --bento-delay: 4;">
+                    <span class="font-mono text-xs text-rose-400 block mb-2">↖ VECTEUR SUD-EST (+45px, +55px)</span>
+                    <h3 class="text-xl font-bold text-white mb-2">Verrouillage Central</h3>
+                    <p class="text-sm text-zinc-400 leading-relaxed">
+                        La dernière pièce complète le puzzle géométrique avec un décalage de <code class="font-mono text-xs text-zinc-200">360ms</code>.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             09. ACCORDION / SHUTTER EXPAND (OUVERTURE EN ACCORDÉON VERTICAL)
+             ================================================================= -->
+        <section id="box-9" class="max-w-5xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                            09 / DÉPLOIEMENT DE TIROIRS
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            grid-template-rows: 0fr → 1fr
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Accordion / Shutter Expand <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Ouverture en accordéon vertical)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Initialement repliés comme des stores vénitiens (<code class="font-mono text-xs text-indigo-300">0fr</code>), ces panneaux d'information se déploient verticalement les uns après les autres sans connaître leur hauteur à l'avance.
+                </p>
+            </div>
+
+            <div class="shutter-stack space-y-4">
+                <!-- Panneau 1 -->
+                <div class="box-card rounded-2xl p-6 border-l-4 border-l-indigo-500">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-white">01. Architecture CSS Grid Fractionnaire (0fr → 1fr)</h3>
+                        <span class="font-mono text-xs text-indigo-400">Délai : 0ms</span>
+                    </div>
+                    <div class="shutter-panel" style="--shutter-idx: 0;">
+                        <div class="shutter-panel-inner">
+                            <p class="pt-4 text-sm text-zinc-300 leading-relaxed border-t border-white/10 mt-4">
+                                Contrairement à l'ancienne astuce <code class="font-mono text-xs text-indigo-300">max-height: 500px</code> qui faussait la courbe d'accélération, animer <code class="font-mono text-xs text-indigo-300">grid-template-rows</code> permet au navigateur d'interpoler la hauteur réelle exacte du conteneur à 60 FPS.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panneau 2 -->
+                <div class="box-card rounded-2xl p-6 border-l-4 border-l-cyan-500">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-white">02. Révélation Séquentielle des Détails</h3>
+                        <span class="font-mono text-xs text-cyan-400">Délai : +160ms</span>
+                    </div>
+                    <div class="shutter-panel" style="--shutter-idx: 1;">
+                        <div class="shutter-panel-inner">
+                            <p class="pt-4 text-sm text-zinc-300 leading-relaxed border-t border-white/10 mt-4">
+                                Parfait pour les listes de fonctionnalités, les programmes d'événements ou les spécifications techniques : seuls les titres sont visibles avant le déclenchement, puis chaque tiroir s'ouvre en cascade.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panneau 3 -->
+                <div class="box-card rounded-2xl p-6 border-l-4 border-l-emerald-500">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-white">03. Flux Documentaire Naturel</h3>
+                        <span class="font-mono text-xs text-emerald-400">Délai : +320ms</span>
+                    </div>
+                    <div class="shutter-panel" style="--shutter-idx: 2;">
+                        <div class="shutter-panel-inner">
+                            <p class="pt-4 text-sm text-zinc-300 leading-relaxed border-t border-white/10 mt-4">
+                                Chaque panneau repousse en douceur le panneau suivant au fur et à mesure de son expansion, offrant une sensation mécanique très tactile et ordonnée.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             10. MORPHING BLOB / BORDER-RADIUS CONTAINER (CONTENEUR MÉTAMORPHE)
+             ================================================================= -->
+        <section id="box-10" class="max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-28">
+            <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            10 / GÉOMÉTRIE ORGANIQUE
+                        </span>
+                        <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800">
+                            8-Value Asymmetric Border-Radius
+                        </span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+                        Morphing Blob Container <span class="text-zinc-500 font-normal text-xl sm:text-2xl block sm:inline">(Conteneur organique métamorphe)</span>
+                    </h2>
+                </div>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-md">
+                    Un conteneur sculptural dont les 8 rayons de courbure (<code class="font-mono text-xs text-amber-300">border-radius: X / Y</code>) et la teinte interne évoluent continuellement au fil du défilement pour passer d'une forme fluide à un cadre structuré.
+                </p>
+            </div>
+
+            <div id="morph-wrapper" class="flex justify-center py-6">
+                <div id="morph-target" class="morph-container w-full max-w-3xl min-h-[360px] p-10 sm:p-14 bg-gradient-to-br from-indigo-900/50 via-[#14141c] to-emerald-900/40 border border-white/15 shadow-[0_30px_80px_rgba(99,102,241,0.22)] flex flex-col items-center justify-center text-center relative overflow-hidden">
+                    <span id="morph-telemetry" class="font-mono text-xs px-3.5 py-1.5 rounded-full bg-black/50 border border-white/15 text-amber-300 mb-5">
+                        38% 62% 54% 46% / 44% 38% 62% 56%
+                    </span>
+                    <h3 class="text-2xl sm:text-4xl font-extrabold text-white mb-3">
+                        Métamorphose Continue
+                    </h3>
+                    <p class="text-zinc-300 text-sm sm:text-base max-w-lg leading-relaxed">
+                        Scrollez de haut en bas autour de cette section : les 8 axes horizontaux et verticaux des coins s'interpolent en temps réel pour sculpter la silhouette du conteneur.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- =====================================================================
+         FOOTER
+         ===================================================================== -->
+    <footer class="border-t border-zinc-900 py-12 px-4 text-center text-zinc-500 text-sm">
+        <p class="font-mono text-xs text-zinc-400 mb-2">
+            ScrollBox — Catalogue Spécialisé des Animations de Conteneurs
+        </p>
+        <p>Architecture HTML5, Tailwind CSS & Vanilla JS (60 FPS natif sans dépendances externes).</p>
+    </footer>
+
+    <!-- =====================================================================
+         BOUTON FLOTTANT : REJOUER LES ANIMATIONS
+         ===================================================================== -->
+    <button id="replay-all-btn"
+            type="button"
+            class="fixed bottom-6 right-6 z-50 group flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 active:scale-95 text-white font-semibold text-sm shadow-[0_12px_32px_rgba(6,182,212,0.35)] border border-white/20 transition-all cursor-pointer">
+        <svg class="w-4 h-4 transition-transform duration-500 group-hover:-rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        <span>Rejouer les animations</span>
+    </button>
+
+    <div id="replay-toast" class="fixed bottom-20 right-6 z-50 pointer-events-none opacity-0 translate-y-2 transition-all duration-300 px-3.5 py-2 rounded-xl bg-zinc-900/95 border border-cyan-500/40 text-xs font-mono text-cyan-300 shadow-xl">
+        ✓ Conteneurs réinitialisés
+    </div>
+
+    <!-- =====================================================================
+         MOTEUR JAVASCRIPT DES 10 ANIMATIONS DE CONTENEURS
+         ===================================================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            /* ---------------------------------------------------------------
+               RÉFÉRENCES DOM
+               --------------------------------------------------------------- */
+            const globalProgressBar = document.getElementById('global-progress-bar');
+            const navPercentBadge = document.getElementById('nav-percent-badge');
+            const navVelocityBadge = document.getElementById('nav-velocity-badge');
+
+            // 01. Clip-Path Curtain
+            const curtainWrapper = document.getElementById('curtain-wrapper');
+            const curtainTarget = document.getElementById('curtain-target');
+            const curtainTelemetry = document.getElementById('curtain-telemetry');
+
+            // 03. Sticky Stacking Cards
+            const stackCards = Array.from(document.querySelectorAll('.stack-card'));
+
+            // 04. Blur-to-Focus
+            const blurFocusCards = Array.from(document.querySelectorAll('.blur-focus-card'));
+
+            // 05. Border Beam SVG
+            const beamWrappers = Array.from(document.querySelectorAll('.beam-card-wrapper'));
+
+            // 06. Split-Screen Expanding
+            const expandingWrapper = document.getElementById('expanding-wrapper');
+            const expandingTarget = document.getElementById('expanding-target');
+            const expandingTelemetry = document.getElementById('expanding-telemetry');
+
+            // 07. Skew & Velocity Distortion
+            const velocityCards = Array.from(document.querySelectorAll('.velocity-card'));
+            const skewTelemetryBadge = document.getElementById('skew-telemetry-badge');
+
+            // 10. Morphing Blob Container
+            const morphWrapper = document.getElementById('morph-wrapper');
+            const morphTarget = document.getElementById('morph-target');
+            const morphTelemetry = document.getElementById('morph-telemetry');
+
+            /* ---------------------------------------------------------------
+               INTERSECTION OBSERVER (02. 3D UNFOLD, 08. BENTO, 09. SHUTTER)
+               --------------------------------------------------------------- */
+            const triggerObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                    }
+                });
+            }, {
+                threshold: 0.2,
+                rootMargin: '0px 0px -40px 0px'
+            });
+
+            function bindTriggeredContainers() {
+                document.querySelectorAll('.unfold-group, .bento-assembly, .shutter-stack').forEach(el => {
+                    triggerObserver.observe(el);
+                });
+            }
+            bindTriggeredContainers();
+
+            /* ---------------------------------------------------------------
+               INITIALISATION DES PÉRIMÈTRES SVG (05. BORDER BEAM)
+               --------------------------------------------------------------- */
+            const beamItems = beamWrappers.map(wrapper => {
+                const rect = wrapper.querySelector('.beam-rect');
+                const badge = wrapper.querySelector('.beam-pct-badge');
+                return { wrapper, rect, badge, length: 0 };
+            });
+
+            function measureBeamPerimeters() {
+                beamItems.forEach(item => {
+                    if (!item.rect) return;
+                    const box = item.wrapper.getBoundingClientRect();
+                    // Périmètre exact d'un rectangle à coins arrondis rx=23
+                    const w = Math.max(0, box.width - 2);
+                    const h = Math.max(0, box.height - 2);
+                    const r = 23;
+                    const perimeter = 2 * (w + h - 4 * r) + 2 * Math.PI * r;
+                    item.length = perimeter;
+                    item.rect.style.strokeDasharray = `${perimeter}`;
+                    item.rect.style.strokeDashoffset = `${perimeter}`;
+                });
+            }
+            measureBeamPerimeters();
+            window.addEventListener('resize', measureBeamPerimeters, { passive: true });
+
+            /* ---------------------------------------------------------------
+               BOUCLE D'ANIMATION CONTINUE (60 FPS) + VÉLOCITÉ
+               --------------------------------------------------------------- */
+            let lastScrollY = window.scrollY;
+            let currentSkew = 0;
+
+            function renderLoop() {
+                const scrollY = window.scrollY;
+                const winHeight = window.innerHeight;
+                const docHeight = document.documentElement.scrollHeight - winHeight;
+
+                // 0. Barre globale & pourcentage
+                const globalPct = docHeight > 0 ? Math.min(Math.max(scrollY / docHeight, 0), 1) : 0;
+                if (globalProgressBar) globalProgressBar.style.width = `${(globalPct * 100).toFixed(2)}%`;
+                if (navPercentBadge) navPercentBadge.textContent = `${Math.round(globalPct * 100)}%`;
+
+                // 1. Clip-Path Curtain Reveal
+                if (curtainWrapper && curtainTarget) {
+                    const rect = curtainWrapper.getBoundingClientRect();
+                    const start = winHeight * 0.92;
+                    const end = winHeight * 0.22;
+                    const p = Math.min(Math.max((start - rect.top) / (start - end), 0), 1);
+
+                    const insetVal = 28 * (1 - p);
+                    const radiusVal = 28 - (4 * p);
+                    curtainTarget.style.clipPath = `inset(${insetVal.toFixed(1)}% ${insetVal.toFixed(1)}% ${insetVal.toFixed(1)}% ${insetVal.toFixed(1)}% round ${radiusVal.toFixed(0)}px)`;
+                    if (curtainTelemetry) {
+                        curtainTelemetry.textContent = `inset(${insetVal.toFixed(1)}%)`;
+                    }
+                }
+
+                // 3. Sticky Stacking Cards (échelle dynamique selon la carte suivante)
+                stackCards.forEach((card, idx) => {
+                    const readout = card.querySelector('.stack-scale-readout');
+                    if (idx < stackCards.length - 1) {
+                        const nextCard = stackCards[idx + 1];
+                        const cardRect = card.getBoundingClientRect();
+                        const nextRect = nextCard.getBoundingClientRect();
+                        const distance = nextRect.top - cardRect.top;
+                        const maxDist = cardRect.height || 320;
+                        const overlapProgress = Math.min(Math.max(1 - (distance / maxDist), 0), 1);
+                        const scaleVal = 1 - (overlapProgress * 0.075);
+                        const brightnessVal = 1 - (overlapProgress * 0.25);
+
+                        card.style.transform = `scale(${scaleVal.toFixed(3)})`;
+                        card.style.filter = `brightness(${brightnessVal.toFixed(2)})`;
+                        if (readout) readout.textContent = `scale(${scaleVal.toFixed(2)})`;
+                    } else {
+                        card.style.transform = 'scale(1)';
+                    }
+                });
+
+                // 4. Blur-to-Focus Glass Reveal
+                blurFocusCards.forEach(card => {
+                    const rect = card.getBoundingClientRect();
+                    const start = winHeight * 0.95;
+                    const end = winHeight * 0.35;
+                    const p = Math.min(Math.max((start - rect.top) / (start - end), 0), 1);
+
+                    const blurPx = 22 * (1 - p);
+                    const scaleVal = 1.08 - (0.08 * p);
+                    const brightnessVal = 0.65 + (0.35 * p);
+                    const opacityVal = 0.25 + (0.75 * p);
+
+                    card.style.filter = `blur(${blurPx.toFixed(1)}px) brightness(${brightnessVal.toFixed(2)})`;
+                    card.style.transform = `scale(${scaleVal.toFixed(3)})`;
+                    card.style.opacity = opacityVal.toFixed(2);
+
+                    const readout = card.querySelector('.blur-readout');
+                    if (readout) readout.textContent = `blur(${blurPx.toFixed(1)}px)`;
+                });
+
+                // 5. Border Beam & Perimeter Trace
+                beamItems.forEach(item => {
+                    if (!item.rect || item.length <= 0) return;
+                    const rect = item.wrapper.getBoundingClientRect();
+                    const start = winHeight * 0.9;
+                    const end = winHeight * 0.25;
+                    const p = Math.min(Math.max((start - rect.top) / (start - end), 0), 1);
+
+                    const dashOffset = item.length * (1 - p);
+                    item.rect.style.strokeDashoffset = `${dashOffset.toFixed(1)}`;
+                    if (item.badge) item.badge.textContent = `${Math.round(p * 100)}%`;
+                });
+
+                // 6. Split-Screen Expanding Container
+                if (expandingWrapper && expandingTarget) {
+                    const rect = expandingWrapper.getBoundingClientRect();
+                    const start = winHeight * 0.92;
+                    const end = winHeight * 0.22;
+                    const p = Math.min(Math.max((start - rect.top) / (start - end), 0), 1);
+
+                    const widthPct = 72 + (28 * p);
+                    const radiusPx = 32 * (1 - p);
+
+                    expandingTarget.style.width = `${widthPct.toFixed(2)}%`;
+                    expandingTarget.style.borderRadius = `${radiusPx.toFixed(1)}px`;
+                    if (expandingTelemetry) {
+                        expandingTelemetry.textContent = `w: ${Math.round(widthPct)}% • r: ${Math.round(radiusPx)}px`;
+                    }
+                }
+
+                // 7. Skew & Velocity Distortion (Vélocité réelle + amortissement LERP)
+                const rawDelta = scrollY - lastScrollY;
+                lastScrollY = scrollY;
+                const clampedVelocity = Math.max(-65, Math.min(65, rawDelta));
+                const targetSkew = (clampedVelocity / 65) * 6.5; // Max ±6.5deg
+
+                currentSkew += (targetSkew - currentSkew) * 0.14;
+                if (Math.abs(currentSkew) < 0.01) currentSkew = 0;
+
+                velocityCards.forEach(card => {
+                    card.style.transform = `skewY(${currentSkew.toFixed(2)}deg)`;
+                });
+                if (skewTelemetryBadge) {
+                    skewTelemetryBadge.textContent = `skewY(${currentSkew.toFixed(2)}deg)`;
+                }
+                if (navVelocityBadge) {
+                    navVelocityBadge.textContent = `${Math.abs(rawDelta).toFixed(0)}`;
+                }
+
+                // 10. Morphing Blob / Border-Radius Container
+                if (morphWrapper && morphTarget) {
+                    const rect = morphWrapper.getBoundingClientRect();
+                    const p = Math.min(Math.max((winHeight - rect.top) / (winHeight + rect.height), 0), 1);
+
+                    // Interpolation fluide entre deux formes organiques asymétriques à 8 valeurs
+                    const r1 = Math.round(38 + Math.sin(p * Math.PI) * 26);
+                    const r2 = Math.round(62 - Math.sin(p * Math.PI) * 24);
+                    const r3 = Math.round(54 - Math.cos(p * Math.PI) * 20);
+                    const r4 = Math.round(46 + Math.cos(p * Math.PI) * 22);
+
+                    const v1 = Math.round(44 + Math.cos(p * Math.PI) * 24);
+                    const v2 = Math.round(38 + Math.sin(p * Math.PI) * 28);
+                    const v3 = Math.round(62 - Math.sin(p * Math.PI) * 22);
+                    const v4 = Math.round(56 - Math.cos(p * Math.PI) * 24);
+
+                    const radiusStr = `${r1}% ${r2}% ${r3}% ${r4}% / ${v1}% ${v2}% ${v3}% ${v4}%`;
+                    morphTarget.style.borderRadius = radiusStr;
+                    if (morphTelemetry) morphTelemetry.textContent = radiusStr;
+                }
+
+                requestAnimationFrame(renderLoop);
+            }
+
+            requestAnimationFrame(renderLoop);
+
+            /* ---------------------------------------------------------------
+               BOUTON FLOTTANT : REJOUER LES ANIMATIONS
+               --------------------------------------------------------------- */
+            const replayBtn = document.getElementById('replay-all-btn');
+            const replayToast = document.getElementById('replay-toast');
+
+            if (replayBtn) {
+                replayBtn.addEventListener('click', () => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                    setTimeout(() => {
+                        document.querySelectorAll('.unfold-group, .bento-assembly, .shutter-stack').forEach(el => {
+                            triggerObserver.unobserve(el);
+                            el.classList.remove('is-visible');
+                        });
+
+                        setTimeout(() => {
+                            bindTriggeredContainers();
+                        }, 180);
+
+                        if (replayToast) {
+                            replayToast.classList.remove('opacity-0', 'translate-y-2');
+                            setTimeout(() => {
+                                replayToast.classList.add('opacity-0', 'translate-y-2');
+                            }, 2400);
+                        }
+                    }, 480);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

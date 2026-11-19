@@ -1964,7 +1964,7 @@ function page(o: {
         <div class="fn-info">${o.zone ? `<div>Adresse<b>${esc(o.zone)}</b></div>` : ''}${o.phone ? `<div>Téléphone<b>${esc(o.phone)}</b></div>` : ''}</div>
       </div>
     </header>
-    <section class="fn-hero-sec"><div class="fn-hero">
+    <section class="fn-hero-sec"><div class="fn-hero lx-fx-zoom">
       <div class="fn-hero-l">
         <h1>${esc(o.name)}</h1>
         <p>${esc(clip(o.desc || `Pièces d'exception et savoir-faire local. Commandez en ligne, paiement sécurisé.`, 115))}</p>
@@ -1972,8 +1972,8 @@ function page(o: {
       </div>
       <div class="fn-collage">
         ${fnCard(0)}${fnCard(1)}
-        <div class="fn-big" data-pll="0.06" ${bg(pick(0))}></div>
-        <div class="fn-promo" data-pll="-0.05"><p>Paiement sécurisé Wave &amp; Orange Money.</p><a href="#cx-shop">Découvrir &#8594;</a></div>
+        <div class="fn-big" ${bg(pick(0))}></div>
+        <div class="fn-promo"><p>Paiement sécurisé Wave &amp; Orange Money.</p><a href="#cx-shop">Découvrir &#8594;</a></div>
       </div>
     </div></section>
     ${closedNotice}

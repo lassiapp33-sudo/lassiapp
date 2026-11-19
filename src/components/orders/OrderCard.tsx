@@ -294,7 +294,7 @@ function OrderCard({ order, onAccept, onRefuse, onChat, onReady, onDone, onRefun
           {isSpeaking ? <IcoStop /> : <IcoPlay />}
         </TouchableOpacity>
 
-        {order.status !== 'refused' && order.status !== 'refunded' && order.payMethod !== 'cash' && (
+        {order.status !== 'done' && order.status !== 'refused' && order.status !== 'refunded' && order.payMethod !== 'cash' && (
           <TouchableOpacity
             style={styles.btnRefund}
             onPress={onRefund}

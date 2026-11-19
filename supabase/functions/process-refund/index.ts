@@ -25,6 +25,13 @@ const OM_RETAILER_MSISDN        = Deno.env.get('OM_RETAILER_MSISDN')        ?? '
 const OM_RETAILER_PIN_ENCRYPTED = Deno.env.get('OM_RETAILER_PIN_ENCRYPTED') ?? '';
 const PHONE_RE = /^7[015678][0-9]{7}$/;
 
+// Extrait un numéro sénégalais depuis la note de commande (commandes web invité : « 📞 7XXXXXXXX »)
+function phoneFromNote(note: string | null | undefined): string {
+  if (!note) return '';
+  const m = note.match(/7[015678][0-9]{7}/);
+  return m ? m[0] : '';
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
@@ -48,7 +55,7 @@ serve(async (req) => {
     if (!orderId) return new Response(JSON.stringify({ error: 'order_id required' }), { status: 400, headers: CORS });
 
     const { data: order } = await supabase
-      .from('orders').select('id, status, pay_method, total, client_id, client_phone, shop_id')
+      .from('orders').select('id, status, pay_method, total, client_id, client_phone, shop_id, note')
       .eq('id', orderId).maybeSingle();
     if (!order) return new Response(JSON.stringify({ error: 'order_not_found' }), { status: 404, headers: CORS });
 
@@ -69,6 +76,7 @@ serve(async (req) => {
       clientPhone = profile?.phone ?? '';
     }
     if (clientPhone) clientPhone = clientPhone.replace(/^\+?221/, '').trim();
+    if (!PHONE_RE.test(clientPhone)) clientPhone = phoneFromNote(order.note);
 
     let montantPrestataire: number = order.total - commissionLassi;
     if (pi?.id) {
@@ -96,7 +104,7 @@ serve(async (req) => {
   // — Récupère la commande
   const { data: order, error: orderErr } = await supabase
     .from('orders')
-    .select('id, status, pay_method, total, client_id, client_phone, shop_id')
+    .select('id, status, pay_method, total, client_id, client_phone, shop_id, note')
     .eq('id', orderId)
     .maybeSingle();
 
@@ -115,7 +123,8 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: CORS });
   }
 
-  if (['refused', 'refunded'].includes(order.status)) {
+  // Commande terminée = déjà reversée au prestataire → remboursement auto impossible
+  if (['done', 'refused', 'refunded'].includes(order.status)) {
     return new Response(JSON.stringify({ error: 'order_not_refundable' }), { status: 400, headers: CORS });
   }
   if (!['wave', 'om'].includes(order.pay_method)) {
@@ -148,6 +157,12 @@ serve(async (req) => {
 
   // Nettoie le numéro (retire +221 ou 221)
   if (clientPhone) clientPhone = clientPhone.replace(/^\+?221/, '').trim();
+
+  // Fallback : commandes web invité stockent le tél dans la note (« 📞 7XXXXXXXX »)
+  if (!clientPhone || !PHONE_RE.test(clientPhone)) {
+    const fromNote = phoneFromNote(order.note);
+    if (fromNote) clientPhone = fromNote;
+  }
 
   if (!clientPhone || !PHONE_RE.test(clientPhone)) {
     return new Response(JSON.stringify({ error: 'client_phone_invalid' }), { status: 400, headers: CORS });
