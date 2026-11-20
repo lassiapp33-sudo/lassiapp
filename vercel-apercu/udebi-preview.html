@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ûdebi Atelier — Aperçu template MODE ÉPURÉ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  img{max-width:100%;display:block}
+  :root{ --ud-bg:#f4f1ea; --ud-ink:#2a2420; --ud-wine:#5a1420; --ud-mut:#8c8276; --ud-line:rgba(42,36,32,.14); --ud-card:#ece7dc; }
+  body{ background:var(--ud-bg); color:var(--ud-ink); font-family:'Jost',system-ui,sans-serif; font-weight:300; font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased; }
+  ::selection{ background:var(--ud-wine); color:var(--ud-bg); }
+  .ud-serif{ font-family:'Playfair Display',Georgia,serif; }
+  a{ color:inherit; }
+  /* NAV */
+  .ud-nav{ position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; padding:20px clamp(18px,4vw,56px); background:rgba(244,241,234,.86); backdrop-filter:blur(10px); border-bottom:1px solid var(--ud-line); }
+  .ud-brand{ font-family:'Playfair Display',serif; font-style:italic; font-weight:600; font-size:clamp(22px,2.4vw,30px); letter-spacing:.5px; text-decoration:none; color:var(--ud-ink); }
+  .ud-links{ display:flex; gap:clamp(16px,2.6vw,40px); }
+  .ud-links a{ text-decoration:none; font-size:13px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ud-ink); transition:color .2s; }
+  .ud-links a:hover,.ud-links a.on{ color:var(--ud-wine); }
+  @media(max-width:640px){ .ud-links{ gap:14px; } .ud-links a{ font-size:11px; letter-spacing:1px; } .ud-brand{ font-size:20px; } }
+  /* HERO */
+  .ud-hero{ position:relative; min-height:clamp(540px,88vh,860px); display:flex; align-items:flex-end; overflow:hidden; }
+  .ud-hero-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .ud-hero::after{ content:''; position:absolute; inset:0; background:linear-gradient(90deg,rgba(244,241,234,.55),rgba(244,241,234,0) 45%); }
+  .ud-hero-in{ position:relative; z-index:2; padding:clamp(32px,6vw,86px); max-width:560px; }
+  .ud-hero-h{ font-style:italic; font-weight:500; font-size:clamp(40px,6vw,76px); line-height:1.02; color:#1c1712; }
+  .ud-hero-p{ margin-top:18px; font-size:clamp(15px,1.5vw,18px); color:#2a2420; max-width:380px; }
+  .ud-btn{ display:inline-block; margin-top:28px; background:var(--ud-ink); color:var(--ud-bg); font-size:13px; letter-spacing:2px; text-transform:uppercase; padding:15px 34px; text-decoration:none; transition:background .25s; }
+  .ud-btn:hover{ background:var(--ud-wine); }
+  .ud-hero-card{ position:absolute; right:clamp(16px,3vw,54px); bottom:clamp(16px,3vw,54px); z-index:3; display:flex; align-items:center; gap:16px; background:rgba(244,241,234,.82); backdrop-filter:blur(8px); padding:14px; max-width:340px; border:1px solid var(--ud-line); }
+  .ud-hero-card img{ width:88px; height:104px; object-fit:cover; flex:0 0 auto; }
+  .ud-hero-card .t{ font-family:'Playfair Display',serif; font-style:italic; font-size:17px; color:var(--ud-wine); }
+  .ud-hero-card .s{ font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--ud-mut); margin-top:4px; }
+  .ud-hero-card a{ font-family:'Playfair Display',serif; font-style:italic; font-size:14px; color:var(--ud-wine); text-decoration:underline; text-underline-offset:3px; margin-top:6px; display:inline-block; }
+  @media(max-width:720px){ .ud-hero-card{ display:none; } .ud-hero::after{ background:linear-gradient(0deg,rgba(244,241,234,.8),rgba(244,241,234,.1) 55%); } }
+  /* SECTION HEAD */
+  .ud-head{ text-align:center; max-width:560px; margin:0 auto; padding:clamp(60px,9vw,120px) 24px clamp(30px,4vw,48px); }
+  .ud-head h2{ font-style:italic; font-weight:500; font-size:clamp(30px,4vw,48px); color:var(--ud-wine); }
+  .ud-head p{ margin-top:14px; color:var(--ud-ink); font-size:clamp(15px,1.6vw,18px); }
+  /* COLLECTION GRID */
+  .ud-coll{ max-width:1320px; margin:0 auto; padding:0 clamp(14px,2vw,28px) clamp(40px,6vw,80px); display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(10px,1.4vw,20px); }
+  .ud-cell{ position:relative; overflow:hidden; background:var(--ud-card); }
+  .ud-cell-img{ width:100%; aspect-ratio:3/4; object-fit:cover; transition:transform 1s cubic-bezier(.2,.7,.2,1); }
+  .ud-cell:hover .ud-cell-img{ transform:scale(1.05); }
+  .ud-cell-cap{ position:absolute; left:0; right:0; bottom:0; padding:22px 20px; background:linear-gradient(0deg,rgba(28,23,18,.72),rgba(28,23,18,0)); color:#f4f1ea; }
+  .ud-cell-name{ font-family:'Playfair Display',serif; font-style:italic; font-size:clamp(18px,2vw,24px); }
+  .ud-cell-row{ display:flex; justify-content:space-between; align-items:center; margin-top:6px; gap:10px; }
+  .ud-cell-price{ letter-spacing:1px; font-size:14px; }
+  .ud-cell-link{ font-size:12px; letter-spacing:1.5px; text-transform:uppercase; text-decoration:underline; text-underline-offset:3px; }
+  @media(max-width:860px){ .ud-coll{ grid-template-columns:repeat(2,1fr); } }
+  @media(max-width:520px){ .ud-coll{ grid-template-columns:1fr; } }
+  /* BANNER */
+  .ud-banner{ position:relative; min-height:clamp(380px,60vh,620px); display:flex; align-items:center; overflow:hidden; }
+  .ud-banner-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .ud-banner-card{ position:relative; z-index:2; margin:0 clamp(18px,6vw,100px); background:rgba(244,241,234,.78); backdrop-filter:blur(6px); padding:clamp(28px,4vw,48px); max-width:420px; border:1px solid var(--ud-line); }
+  .ud-banner-card h3{ font-family:'Playfair Display',serif; font-style:italic; font-size:clamp(24px,3vw,36px); color:var(--ud-wine); }
+  .ud-banner-card p{ margin-top:12px; color:var(--ud-ink); font-size:15px; }
+  .ud-banner-card a{ display:inline-block; margin-top:18px; font-family:'Playfair Display',serif; font-style:italic; font-size:16px; color:var(--ud-wine); text-decoration:underline; text-underline-offset:4px; }
+  /* FOOTER */
+  .ud-foot{ border-top:1px solid var(--ud-line); padding:clamp(48px,7vw,90px) clamp(18px,4vw,56px) 0; }
+  .ud-foot-grid{ max-width:1200px; margin:0 auto; display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:clamp(24px,3vw,48px); }
+  .ud-foot h4{ font-family:'Playfair Display',serif; font-style:italic; font-weight:500; font-size:22px; color:var(--ud-wine); margin-bottom:18px; }
+  .ud-foot p{ color:var(--ud-mut); font-size:14px; max-width:320px; }
+  .ud-foot-news{ margin-top:18px; display:flex; border-bottom:1px solid var(--ud-ink); max-width:320px; }
+  .ud-foot-news input{ flex:1; background:none; border:none; padding:10px 0; font-family:inherit; font-size:14px; color:var(--ud-ink); outline:none; }
+  .ud-foot-news button{ background:none; border:none; cursor:pointer; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ud-wine); }
+  .ud-foot-col a{ display:block; text-decoration:none; color:var(--ud-ink); font-size:14px; margin-bottom:12px; transition:color .2s; }
+  .ud-foot-col a:hover{ color:var(--ud-wine); }
+  .ud-foot-word{ text-align:center; font-family:'Playfair Display',serif; font-style:italic; font-weight:600; font-size:clamp(70px,22vw,320px); line-height:.82; color:var(--ud-wine); opacity:.14; margin-top:clamp(20px,3vw,30px); overflow:hidden; white-space:nowrap; }
+  .ud-foot-legal{ max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:22px 0 30px; border-top:1px solid var(--ud-line); font-size:12px; letter-spacing:.5px; color:var(--ud-mut); }
+  @media(max-width:760px){ .ud-foot-grid{ grid-template-columns:1fr 1fr; } }
+  @media(max-width:460px){ .ud-foot-grid{ grid-template-columns:1fr; } }
+  /* REVEAL */
+  .rv{ opacity:0; transform:translateY(38px); transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1); }
+  .rv.in{ opacity:1; transform:none; }
+  .rv-stag.in>*{ transition-delay:calc(var(--i,0)*90ms); }
+  @media(prefers-reduced-motion:reduce){ .rv,.rv-stag>*{ opacity:1!important; transform:none!important; } }
+</style>
+</head>
+<body>
+  <nav class="ud-nav">
+    <a class="ud-brand" href="#top">Ûdebi <span style="font-style:normal;font-weight:400;font-size:.6em;letter-spacing:3px;text-transform:uppercase">Atelier</span></a>
+    <div class="ud-links">
+      <a class="on" href="#top">Accueil</a>
+      <a href="#collection">Boutique</a>
+      <a href="#histoire">Histoire</a>
+      <a href="#contact">Contact</a>
+    </div>
+  </nav>
+
+  <header class="ud-hero" id="top">
+    <img class="ud-hero-img" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/new_1794919625703_1794919625703.jpg" alt="Ûdebi Atelier">
+    <div class="ud-hero-in">
+      <h1 class="ud-hero-h ud-serif">L'élégance,<br>perle après perle</h1>
+      <p class="ud-hero-p">Sacs en perles 100 % faits main à Mbao. Des pièces uniques, pensées pour sublimer chacune de vos tenues.</p>
+      <a class="ud-btn" href="#collection">Découvrir la collection</a>
+    </div>
+    <div class="ud-hero-card">
+      <img src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/new_1794917840443_1794917840443.jpg" alt="Latew by Ûdebi">
+      <div>
+        <div class="t ud-serif">« Latew » by Ûdebi</div>
+        <div class="s">Édition perles · 24 000 F</div>
+        <a href="#collection">Voir la pièce</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="ud-head rv" id="collection">
+    <h2 class="ud-serif">La Collection</h2>
+    <p>Chaque sac est façonné à la main, perle après perle — un accessoire rare, à votre image.</p>
+  </section>
+
+  <div class="ud-coll rv-stag rv">
+    <article class="ud-cell">
+      <img class="ud-cell-img" loading="lazy" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/new_1794919625703_1794919625703.jpg" alt="Bloom">
+      <div class="ud-cell-cap"><div class="ud-cell-name ud-serif">« Bloom »</div><div class="ud-cell-row"><span class="ud-cell-price">25 000 F</span><a class="ud-cell-link" href="#">Commander</a></div></div>
+    </article>
+    <article class="ud-cell">
+      <img class="ud-cell-img" loading="lazy" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/new_1794917840443_1794917840443.jpg" alt="Latew">
+      <div class="ud-cell-cap"><div class="ud-cell-name ud-serif">« Latew » by Ûdebi</div><div class="ud-cell-row"><span class="ud-cell-price">24 000 F</span><a class="ud-cell-link" href="#">Commander</a></div></div>
+    </article>
+    <article class="ud-cell">
+      <img class="ud-cell-img" loading="lazy" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/new_1794950689329_1794950689329.jpg" alt="Liguère bag">
+      <div class="ud-cell-cap"><div class="ud-cell-name ud-serif">« Liguère bag »</div><div class="ud-cell-row"><span class="ud-cell-price">20 000 F</span><a class="ud-cell-link" href="#">Commander</a></div></div>
+    </article>
+    <article class="ud-cell">
+      <img class="ud-cell-img" loading="lazy" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/new_1794920112868_1794920112868.jpg" alt="Mbecté bag">
+      <div class="ud-cell-cap"><div class="ud-cell-name ud-serif">« Mbecté bag »</div><div class="ud-cell-row"><span class="ud-cell-price">15 000 F</span><a class="ud-cell-link" href="#">Commander</a></div></div>
+    </article>
+    <article class="ud-cell">
+      <img class="ud-cell-img" loading="lazy" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/97c0dba1-6fc5-44bd-a1b5-f0a83a824738_1795013795384.jpg" alt="CoCo mini">
+      <div class="ud-cell-cap"><div class="ud-cell-name ud-serif">CoCo mini</div><div class="ud-cell-row"><span class="ud-cell-price">13 000 F</span><a class="ud-cell-link" href="#">Commander</a></div></div>
+    </article>
+  </div>
+
+  <section class="ud-banner" id="histoire">
+    <img class="ud-banner-img" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/new_1794950689329_1794950689329.jpg" alt="Ûdebi Atelier">
+    <div class="ud-banner-card rv">
+      <h3 class="ud-serif">100 % fait main</h3>
+      <p>Perles, bois, acrylique, cuir — assemblés patiemment à Mbao. Derrière chaque sac, un savoir-faire et une histoire. Ûdebi, c'est l'artisanat sénégalais qui s'habille d'élégance.</p>
+      <a href="#collection">Explorer l'atelier →</a>
+    </div>
+  </section>
+
+  <footer class="ud-foot" id="contact">
+    <div class="ud-foot-grid">
+      <div>
+        <h4 class="ud-serif">Rejoignez-nous</h4>
+        <p>Nouveautés, éditions limitées et coulisses de l'atelier — directement chez vous.</p>
+        <div class="ud-foot-news"><input placeholder="Votre e-mail"><button>S'inscrire</button></div>
+      </div>
+      <div class="ud-foot-col">
+        <h4 class="ud-serif">Boutique</h4>
+        <a href="#collection">Tous les sacs</a>
+        <a href="#collection">Éditions perles</a>
+        <a href="#collection">Mini sacs</a>
+      </div>
+      <div class="ud-foot-col">
+        <h4 class="ud-serif">Atelier</h4>
+        <a href="#histoire">Notre histoire</a>
+        <a href="#contact">Nous contacter</a>
+        <a href="https://www.google.com/maps/search/?api=1&query=14.7315854476224%2C-17.3284112238114" target="_blank" rel="noopener">Commune de Mbao</a>
+      </div>
+      <div class="ud-foot-col">
+        <h4 class="ud-serif">Légal</h4>
+        <a href="#">Conditions</a>
+        <a href="#">Confidentialité</a>
+        <a href="#">Livraison & retours</a>
+      </div>
+    </div>
+    <div class="ud-foot-word ud-serif">Ûdebi</div>
+    <div class="ud-foot-legal">
+      <span>© 2026 Ûdebi Atelier — Commune de Mbao</span>
+      <span>Propulsé &amp; sécurisé par LASSİ</span>
+    </div>
+  </footer>
+
+  <script>
+  (function(){
+    var els=document.querySelectorAll('.rv:not(.in)');
+    if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('in');});return;}
+    var io=new IntersectionObserver(function(en){en.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.14,rootMargin:'0px 0px -7% 0px'});
+    els.forEach(function(el){ if(el.classList.contains('rv-stag')){Array.prototype.forEach.call(el.children,function(c,i){c.style.setProperty('--i',i);});} io.observe(el); });
+  })();
+  </script>
+</body>
+</html>

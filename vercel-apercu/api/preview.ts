@@ -106,7 +106,7 @@ const SITE_PALETTES: Record<string, SitePalette> = {
 };
 const DEFAULT_PALETTE = 'classic';
 const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
-const SITE_TEMPLATES = ['classic', 'cosmetic', 'pottery', 'furniture', 'garderobe', 'sac', 'tresse', 'ferme', 'grill', 'bar']; // Phase 3 — #1 cosmetic (beauté), #2 pottery (artisanat), #3 furniture (maison & mobilier), #4 garderobe (mode / prêt-à-porter), #5 sac (maroquinerie / bagagerie) ; bar = restaurant/lounge (BRAISE)
+const SITE_TEMPLATES = ['classic', 'cosmetic', 'furniture', 'garderobe', 'sac', 'tresse', 'ferme', 'grill', 'bar']; // Phase 3 — #1 cosmetic (beauté), #2 furniture (maison & mobilier), #3 garderobe (mode / prêt-à-porter), #4 sac (maroquinerie / bagagerie) ; bar = restaurant/lounge (BRAISE)
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
 // ── Layout (Phase 2) — agencement des conteneurs, présentation seule ─────────
@@ -2750,7 +2750,6 @@ function page(o: {
   const grAboutBg = gal.length > 2 ? gal[2] : (gal[1] || gal[0] || ''); // photo cuisine derrière « LE RESTAURANT »
   const grillBody = `
     <header class="gr-head" id="gr-top">
-      <div class="gr-topbar">${o.zone ? `<span>${esc(o.zone)}</span>` : ''}${o.phone ? `<span>${esc(o.phone)}</span>` : ''}<span>Réservation &amp; commande en ligne</span></div>
       <div class="gr-navbar">
         <a class="gr-brand" href="#gr-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<span>${esc(clip(o.name, 22))}</span>`}</a>
         <nav class="gr-nav">
@@ -3182,7 +3181,7 @@ ${faSigSection}
 
     <div class="fa-page fa-page-histoire" id="fa-story" hidden>
       <div class="fa-story-wrap">
-        ${o.gallery && o.gallery[0] ? `<img class="fa-story-photo lx-rv" loading="lazy" src="${escAttr(o.gallery[0])}" alt="${escAttr(o.name)}">` : ''}
+        <img class="fa-story-photo lx-rv" loading="lazy" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/gallery/463c5f18-d5dd-4b6a-955a-0bd33a9ba524/photo_1790213348769.jpg" alt="${escAttr(o.name)}">
         <p class="fa-story-sub lx-rv">L'histoire d'une battante qui a choisi le combat plutôt que la facilité.</p>
         <h2 class="fa-story-title lx-rv">Forgée dans <em>l'effort</em></h2>
         <div class="fa-story-body">
@@ -3197,7 +3196,6 @@ ${faSigSection}
 
     <div class="fa-page fa-page-menu" id="fa-menu" hidden>
       <div class="fa-menu-head">
-        <span class="fa-kick lx-rv">From the street</span>
         <h2 class="fa-h2 fa-h2-c lx-rv">${hasProducts ? 'La carte' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2>
         <p class="fa-menu-sub lx-rv">${hasProducts ? 'Commande en ligne · retrait sur place ou livraison · paiement Wave / Orange Money' : hasServices ? 'Réserve ta prestation en ligne' : 'Réserve ton créneau'}</p>
       </div>
@@ -4095,9 +4093,9 @@ ${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?f
   .fm-head{position:sticky;top:0;z-index:40;display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px clamp(18px,4vw,48px);background:rgba(251,246,240,.95);backdrop-filter:blur(8px);border-bottom:1px solid rgba(44,58,44,.08)}
   .fm-head-row{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%}
   .fm-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--fm-ink)}
-  .fm-logo img{height:34px;width:auto;display:block} .fm-logo span{font-family:var(--fm-fs);font-size:15px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;line-height:1}
-  .fm-nav{display:flex;justify-content:center;align-items:center;gap:clamp(10px,2vw,26px);flex-wrap:wrap;width:100%;order:-1;padding-bottom:4px;border-bottom:1px solid rgba(44,58,44,.07)}
-  .fm-nav a{font-family:var(--fm-fs);color:var(--fm-ink);text-decoration:none;font-size:10.5px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap}
+  .fm-logo img{height:26px;width:auto;display:block} .fm-logo span{font-family:var(--fm-fs);font-size:13px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;line-height:1}
+  .fm-nav{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;width:100%;order:-1;padding-bottom:8px;border-bottom:1px solid rgba(44,58,44,.07)}
+  .fm-nav a{font-family:var(--fm-fs);color:var(--fm-ink);text-decoration:none;font-size:9px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap}
   .fm-nav a:hover,.fm-nav .fm-nav-active{color:var(--fm-green)}
   .fm-icons{display:flex;align-items:center;gap:14px} .fm-ic{color:var(--fm-ink);display:flex}
   /* HERO plein écran image + overlay, texte centré blanc */
@@ -4188,7 +4186,7 @@ ${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?f
   .gr-navbar{display:flex;align-items:center;gap:20px;background:var(--gr-gold);color:var(--gr-ink);padding:6px clamp(16px,4vw,48px) 12px;border-top:1px solid rgba(30,29,27,.14)}
   .gr-brand{text-decoration:none;color:var(--gr-ink)} .gr-brand img{height:40px} .gr-brand span{font-family:var(--gr-fh);font-size:24px;letter-spacing:1px;text-transform:uppercase}
   .gr-nav{flex:1;display:flex;justify-content:center;gap:clamp(14px,2.6vw,36px);flex-wrap:wrap}
-  .gr-nav a{font-family:var(--gr-fs);color:var(--gr-ink);text-decoration:none;font-size:12.5px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase}
+  .gr-nav a{font-family:var(--gr-fs);color:var(--gr-ink);text-decoration:none;font-size:10.5px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase}
   .gr-nav a:hover,.gr-nav .gr-nav-active{color:#fff}
   .gr-ic{color:var(--gr-ink);display:flex}
   /* DÉFILEMENT OVERLAP — empilement de slides : chaque section se fige (sticky top:0)
@@ -4499,7 +4497,7 @@ ${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?f
   .fa-hero-p{ font-size:clamp(19px,1.9vw,24px); line-height:1.7; color:var(--fa-ink); max-width:500px; margin-bottom:34px; }
   .fa-hero-mid .fa-btn-out{ font-size:19px; letter-spacing:2px; padding:20px 46px; }
   .fa-hero-hours{ margin-top:22px; }
-  @media(max-width:820px){ .fa-hero{ grid-template-columns:1fr; } .fa-hero-img{ min-height:260px; } .fa-hero-mid{ order:-1; padding:44px 24px; } }
+  @media(max-width:820px){ .fa-hero{ grid-template-columns:1fr; } .fa-hero-img{ min-height:260px; } .fa-hero-mid{ order:-1; padding:28px 22px 30px; } .fa-hero-mid .fa-kick{ font-size:13px; letter-spacing:2.5px; } .fa-hero-h{ font-size:36px; margin-bottom:14px; } .fa-hero-p{ font-size:15.5px; line-height:1.55; margin-bottom:22px; } .fa-hero-mid .fa-btn-out{ font-size:15px; letter-spacing:1.5px; padding:14px 30px; } }
   /* MARQUEE */
   .fa-marquee{ overflow:hidden; background:var(--fa-lime); color:#13260a; padding:12px 0; white-space:nowrap; }
   .fa-marquee-row{ display:inline-flex; align-items:center; gap:22px; animation:fa-scroll 26s linear infinite; }
@@ -4545,7 +4543,7 @@ ${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?f
   .fa-card-name{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(18px,2.4vw,28px); text-transform:uppercase; line-height:1; color:var(--fa-ink); }
   .fa-card-price{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:14px; color:var(--fa-lime); white-space:nowrap; }
   .fa-card-desc{ margin-top:10px; color:var(--fa-mut); font-size:13px; line-height:1.55; }
-  @media(max-width:760px){ .fa-sig-grid{ grid-template-columns:1fr; } .fa-sig-grid .fa-card:nth-child(2){ margin-top:0; } }
+  @media(max-width:760px){ .fa-sig{ padding:clamp(40px,10vw,70px) 10px 10px; } .fa-sig-grid{ grid-template-columns:repeat(3,1fr); gap:6px; } .fa-sig-grid .fa-card:nth-child(2){ margin-top:22px; } .fa-card-body{ padding:7px 7px 10px; } .fa-card-top{ flex-direction:column; align-items:flex-start; gap:2px; } .fa-card-name{ font-size:11px; line-height:1.05; } .fa-card-price{ font-size:10.5px; } .fa-card-desc{ display:none; } }
   /* NOTRE MAISON */
   .fa-house{ border-top:1px solid var(--fa-line); text-align:center; padding:clamp(56px,8vw,110px) 28px; }
   .fa-house-h{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(34px,6vw,76px); text-transform:uppercase; line-height:1; margin-bottom:clamp(30px,4vw,52px); color:var(--fa-ink); }

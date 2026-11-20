@@ -184,7 +184,6 @@ export const SITE_ACCENTS: { id: string; hex: string }[] = [
 export const SITE_TEMPLATES: { id: string; label: string }[] = [
   { id: 'classic', label: 'Classique' },
   { id: 'cosmetic', label: 'Cosmetic' },
-  { id: 'pottery', label: 'Pottery' },
   { id: 'furniture', label: 'Maison & Mobilier' },
   { id: 'garderobe', label: 'Garde-robe' },
   { id: 'sac', label: 'Maroquinerie & Bagagerie' },
@@ -204,10 +203,6 @@ export const TEMPLATE_PRESETS: Record<string, { tokens: SiteConfig['tokens']; la
   cosmetic: {
     tokens: { palette: 'cosmetic', accent: '#D98664', fontHeading: 'rubik', fontBody: 'rubik' },
     layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'shadow', hero: 'split' },
-  },
-  pottery: {
-    tokens: { palette: 'pottery', accent: '#B55D38', fontHeading: 'unbounded', fontBody: 'plusjakarta' },
-    layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'flat', hero: 'split' },
   },
   furniture: {
     tokens: { palette: 'furniture', accent: '#274C4F', fontHeading: 'jost', fontBody: 'jost' },

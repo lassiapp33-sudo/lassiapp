@@ -29,7 +29,7 @@ const CORS = {
 // ── Schéma blanc (MIROIR de src/config/siteThemes.ts + preview.ts) ───────────
 const FONT_IDS = ['cormorant', 'dmsans', 'playfair', 'lora', 'inter', 'poppins', 'montserrat', 'spacegrotesk', 'rubik', 'unbounded', 'plusjakarta', 'jost'];
 const PALETTE_IDS = ['classic', 'noir', 'sable', 'foret', 'ardoise', 'cosmetic', 'pottery', 'furniture', 'garderobe', 'sac'];
-const TEMPLATE_IDS = ['classic', 'cosmetic', 'pottery', 'furniture', 'garderobe', 'sac'];
+const TEMPLATE_IDS = ['classic', 'cosmetic', 'furniture', 'garderobe', 'sac'];
 const SECTION_IDS = ['products', 'services', 'terrains'];
 const CARD_STYLES = ['bordered', 'shadow', 'flat'];
 const HERO_STYLES = ['split', 'centered', 'minimal'];
