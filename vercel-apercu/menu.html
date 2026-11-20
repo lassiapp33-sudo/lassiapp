@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Les Délices de Fa — Menu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  img{max-width:100%}
+  body{ --fa-bg:#141210; --fa-ink:#ece7e0; --fa-lime:#FE7F24; --fa-brown:#1d1a17; --fa-mut:#9b938a; --fa-line:rgba(236,231,224,.13);
+    background:#0f0d0b url('assets/fa/herobg.jpg') center/cover fixed; color:var(--fa-ink); font-family:'IBM Plex Sans',system-ui,sans-serif; font-size:15px; line-height:1.55; }
+  ::selection{ background:var(--fa-lime); color:#141210; }
+  .fa-mark{ width:.72em; height:.72em; color:var(--fa-lime); flex:0 0 auto; animation:fa-spin 14s linear infinite; }
+  @keyframes fa-spin{ to{ transform:rotate(360deg); } }
+  .fa-masthead{ padding:30px clamp(16px,3vw,40px) 10px; }
+  .fa-mast-title{ display:flex; align-items:center; justify-content:center; flex-wrap:nowrap; gap:.18em; font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(40px,12.5vw,170px); line-height:.86; letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; color:var(--fa-ink); text-decoration:none; }
+  .fa-topnav{ position:sticky; top:0; z-index:40; display:flex; justify-content:space-between; gap:12px; max-width:1180px; margin:0 auto; padding:16px clamp(16px,3vw,40px); border-top:1px solid var(--fa-line); border-bottom:1px solid var(--fa-line); background:rgba(20,18,16,.92); backdrop-filter:blur(8px); }
+  .fa-topnav a{ font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:2.5px; text-transform:uppercase; color:var(--fa-ink); text-decoration:none; transition:color .2s ease; }
+  .fa-topnav a:hover{ color:var(--fa-lime); }
+  .fa-topnav a.fa-on{ color:var(--fa-lime); position:relative; }
+  .fa-topnav a.fa-on::after{ content:''; position:absolute; left:0; right:0; bottom:-17px; height:2px; background:var(--fa-lime); }
+  @media(max-width:620px){ .fa-topnav{ gap:8px; overflow-x:auto; justify-content:flex-start; } .fa-topnav a{ font-size:11px; letter-spacing:1.5px; flex:0 0 auto; } }
+  /* --- Menu --- */
+  .mn-hero{ text-align:center; padding:clamp(40px,6vw,86px) 28px clamp(24px,4vw,40px); }
+  .mn-hero h1{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(44px,8vw,104px); line-height:.95; letter-spacing:.5px; text-transform:uppercase; }
+  .mn-hero p{ max-width:560px; margin:18px auto 0; color:var(--fa-mut); font-size:clamp(15px,1.8vw,19px); line-height:1.6; }
+  .mn-wrap{ max-width:1240px; margin:0 auto; padding:clamp(20px,3vw,40px) clamp(16px,3vw,40px) clamp(50px,7vw,90px); }
+  .mn-cat-head{ display:flex; align-items:center; gap:18px; margin:clamp(34px,5vw,60px) 0 26px; }
+  .mn-cat-head h2{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(24px,3.4vw,42px); text-transform:uppercase; letter-spacing:.5px; white-space:nowrap; }
+  .mn-cat-head .ln{ flex:1; height:1px; background:var(--fa-line); }
+  .mn-cat-head .ct{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--fa-lime); background:rgba(254,127,36,.14); padding:3px 11px; border-radius:999px; white-space:nowrap; }
+  .mn-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(14px,2vw,24px); }
+  @media(max-width:860px){ .mn-grid{ grid-template-columns:repeat(2,1fr); } }
+  @media(max-width:540px){ .mn-grid{ grid-template-columns:1fr; } }
+  .mn-card{ display:flex; flex-direction:column; background:var(--fa-brown); border:1px solid var(--fa-line); border-radius:6px; overflow:hidden; transition:transform .2s ease,border-color .2s ease; }
+  .mn-card:hover{ transform:translateY(-3px); border-color:rgba(254,127,36,.4); }
+  .mn-img{ aspect-ratio:4/3; width:100%; object-fit:cover; display:block; background:#24201c; }
+  .mn-img-ph{ aspect-ratio:4/3; display:flex; align-items:center; justify-content:center; font-size:46px; background:#24201c; }
+  .mn-body{ padding:14px 16px 18px; display:flex; flex-direction:column; gap:6px; flex:1; }
+  .mn-top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .mn-name{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(16px,2vw,20px); text-transform:uppercase; line-height:1.05; }
+  .mn-price{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:14px; color:var(--fa-lime); white-space:nowrap; }
+  .mn-desc{ font-size:12.5px; color:var(--fa-mut); line-height:1.55; }
+  .mn-add{ margin-top:auto; width:100%; background:var(--fa-lime); color:#141210; border:none; border-radius:3px; padding:10px; font-family:'IBM Plex Mono',monospace; font-weight:600; letter-spacing:.5px; text-transform:uppercase; cursor:pointer; margin-top:12px; }
+  .mn-loading{ text-align:center; color:var(--fa-mut); font-family:'IBM Plex Mono',monospace; padding:60px 0; }
+  /* --- Footer v2 --- */
+  .fa-foot2{ background:var(--fa-brown); border-top:1px solid var(--fa-line); padding:clamp(40px,6vw,72px) clamp(16px,4vw,52px) 26px; }
+  .fa-foot2-top{ max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; align-items:flex-start; gap:30px; flex-wrap:wrap; }
+  .fa-foot2-info{ display:flex; flex-direction:column; gap:6px; }
+  .fa-foot2-info a,.fa-foot2-info span{ color:var(--fa-ink); text-decoration:none; font-family:'IBM Plex Mono',monospace; font-size:13px; line-height:1.7; letter-spacing:.5px; }
+  .fa-foot2-info a:hover{ color:var(--fa-lime); }
+  .fa-foot2-social{ display:flex; gap:26px; }
+  .fa-foot2-social a{ color:var(--fa-ink); text-decoration:none; font-family:'IBM Plex Mono',monospace; font-size:13px; letter-spacing:2px; text-transform:uppercase; }
+  .fa-foot2-social a:hover{ color:var(--fa-lime); }
+  .fa-foot2-map{ width:100%; max-width:1200px; margin:clamp(26px,4vw,40px) auto 0; height:clamp(180px,26vw,300px); border:1px solid var(--fa-line); border-radius:4px; filter:grayscale(.35) contrast(1.05); display:block; }
+  .fa-foot2-big{ max-width:1300px; margin:clamp(26px,4vw,40px) auto 0; display:flex; align-items:center; justify-content:center; gap:.22em; font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(34px,9.2vw,128px); line-height:.9; letter-spacing:.5px; text-transform:uppercase; color:var(--fa-ink); white-space:nowrap; overflow:hidden; }
+  .fa-foot2-big .fa-mark{ width:.7em; height:.7em; color:var(--fa-lime); flex:0 0 auto; }
+  .fa-foot2-logo{ width:clamp(54px,9vw,110px); height:clamp(54px,9vw,110px); border-radius:50%; object-fit:cover; flex:0 0 auto; margin-right:.3em; border:2px solid var(--fa-lime); background:#fff; }
+  .fa-foot2-legal{ max-width:1200px; margin:clamp(22px,3vw,32px) auto 0; padding-top:20px; border-top:1px solid var(--fa-line); display:flex; align-items:center; gap:26px; flex-wrap:wrap; }
+  .fa-foot2-legal a{ color:var(--fa-mut); text-decoration:none; font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:1px; }
+  .fa-foot2-legal a:hover{ color:var(--fa-lime); }
+  .fa-foot2-credit{ margin-left:auto; color:var(--fa-mut); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.5px; }
+  @media(max-width:620px){ .fa-foot2-legal{ gap:16px; } .fa-foot2-credit{ margin-left:0; width:100%; } }
+</style>
+</head>
+<body>
+  <div class="fa-masthead" id="fa-top">
+    <a class="fa-mast-title" href="fa-preview.html">Les Délices <svg class="fa-mark" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg> de Fa</a>
+  </div>
+  <nav class="fa-topnav">
+    <a href="fa-preview.html">Accueil</a><a href="histoire.html">Notre histoire</a><a class="fa-on" href="menu.html">Menu</a><a href="fa-preview.html#fa-contact">Contact</a>
+  </nav>
+
+  <section class="mn-hero">
+    <h1>Tout le menu</h1>
+    <p>Du croustillant au fondant, des boxes à partager aux crêpes sucrées — préparé à la commande, servi chaud.</p>
+  </section>
+
+  <main class="mn-wrap" id="mn-root">
+    <div class="mn-loading">Chargement du menu…</div>
+  </main>
+
+  <footer class="fa-foot2" id="fa-contact">
+    <div class="fa-foot2-top">
+      <div class="fa-foot2-info">
+        <a href="tel:772737998">77 273 79 98</a>
+        <span>Parcelles unité 13, en face la clinique Ya-cin</span>
+        <span>Mar – Ven · 10h – 00h · Sam – Dim jusqu'à 01h · Lun fermé</span>
+      </div>
+      <div class="fa-foot2-social">
+        <a href="#">Facebook</a><a href="#">Instagram</a>
+      </div>
+    </div>
+    <iframe class="fa-foot2-map" title="Emplacement Les Délices de Fa" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=-17.4442%2C14.7533%2C-17.4342%2C14.7593&layer=mapnik&marker=14.7563%2C-17.4392"></iframe>
+    <div class="fa-foot2-big"><img class="fa-foot2-logo" src="assets/fa/logo.png" alt="Logo Les Délices de Fa"><span>Les Délices</span><svg class="fa-mark" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg><span>de Fa</span></div>
+    <div class="fa-foot2-legal">
+      <a href="#">Conditions</a><a href="#">Confidentialité</a>
+      <span class="fa-foot2-credit">© 2026 Les Délices de Fa · Propulsé &amp; sécurisé par LASSİ</span>
+    </div>
+  </footer>
+
+  <script>
+  (function(){
+    var SB='https://tsdemraszwtbzgtyjzum.supabase.co';
+    var KEY='sb_publishable_9FRdHj_cJjIA1kKbF1imqQ_cL2VvOKn';
+    var SHOP='463c5f18-d5dd-4b6a-955a-0bd33a9ba524';
+    var LABELS={boxes:'Boxes à partager',plats:'Plats & Fast-food',pate:'Pâtes',pizza:'Pizzas',crepes:'Crêpes',desserts:'Desserts',boisson:'Boissons'};
+    var ORDER=['boxes','plats','pizza','pate','crepes','desserts','boisson'];
+    var EMOJI={boxes:'🍱',plats:'🍔',pate:'🍝',pizza:'🍕',crepes:'🥞',desserts:'🍮',boisson:'🥤'};
+    function esc(s){return (s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+    function fmt(p){return (p||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,' ')+' F';}
+    var url=SB+'/rest/v1/products?select=name,price,category,description,photo_url&shop_id=eq.'+SHOP+'&order=category.asc,price.desc';
+    fetch(url,{headers:{apikey:KEY,Authorization:'Bearer '+KEY}})
+      .then(function(r){return r.json();})
+      .then(function(rows){
+        var root=document.getElementById('mn-root');
+        if(!rows||!rows.length){root.innerHTML='<div class="mn-loading">Menu indisponible.</div>';return;}
+        var groups={};
+        rows.forEach(function(p){(groups[p.category]||(groups[p.category]=[])).push(p);});
+        var cats=ORDER.filter(function(c){return groups[c];})
+          .concat(Object.keys(groups).filter(function(c){return ORDER.indexOf(c)<0;}));
+        var html='';
+        cats.forEach(function(cat){
+          var items=groups[cat];
+          var label=LABELS[cat]||cat;
+          html+='<div class="mn-cat-head"><h2>'+esc(label)+'</h2><span class="ln"></span><span class="ct">'+items.length+'</span></div>';
+          html+='<div class="mn-grid">';
+          items.forEach(function(p){
+            var img=p.photo_url?('<img class="mn-img" loading="lazy" src="'+esc(p.photo_url)+'" alt="'+esc(p.name)+'">'):('<div class="mn-img-ph">'+(EMOJI[cat]||'🍽️')+'</div>');
+            html+='<article class="mn-card">'+img+'<div class="mn-body"><div class="mn-top"><h3 class="mn-name">'+esc(p.name)+'</h3><span class="mn-price">'+fmt(p.price)+'</span></div>'+(p.description?('<p class="mn-desc">'+esc(p.description)+'</p>'):'')+'<button class="mn-add">Ajouter +</button></div></article>';
+          });
+          html+='</div>';
+        });
+        root.innerHTML=html;
+      })
+      .catch(function(){document.getElementById('mn-root').innerHTML='<div class="mn-loading">Erreur de chargement du menu.</div>';});
+  })();
+  </script>
+</body>
+</html>

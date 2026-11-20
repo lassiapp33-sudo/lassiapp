@@ -362,29 +362,6 @@ const IcoPatisserie: React.FC<{ color: string }> = () =>
 
 // ─── Tangana extras ───────────────────────────────────────────────────────────
 
-const IcoCafeWass: React.FC<{ color: string }> = () =>
-  React.createElement(Svg, { width: 36, height: 36, viewBox: '0 0 56 56' },
-    // Saucer
-    React.createElement(Ellipse, { cx: 28, cy: 50, rx: 20, ry: 4, fill: '#8D6E63' }),
-    React.createElement(Ellipse, { cx: 28, cy: 48, rx: 18, ry: 3.5, fill: '#BCAAA4' }),
-    // Corps de la tasse (trapèze)
-    React.createElement(Path, { d: 'M 12 26 L 15 46 L 41 46 L 44 26 Z', fill: '#6D4C41' }),
-    React.createElement(Path, { d: 'M 14 28 L 17 44 L 39 44 L 42 28 Z', fill: '#4E342E' }),
-    // Rebord de tasse
-    React.createElement(Ellipse, { cx: 28, cy: 26, rx: 16, ry: 4.5, fill: '#5D4037' }),
-    // Surface café
-    React.createElement(Ellipse, { cx: 28, cy: 25, rx: 14, ry: 3.5, fill: '#3E2723' }),
-    // Crema
-    React.createElement(Ellipse, { cx: 24, cy: 24, rx: 5, ry: 1.5, fill: '#8D6E63', opacity: 0.5 }),
-    // Anse (extérieur + intérieur)
-    React.createElement(Path, { d: 'M 44 30 C 56 30 56 44 44 44', stroke: '#6D4C41', strokeWidth: 5, fill: 'none', strokeLinecap: 'round' }),
-    React.createElement(Path, { d: 'M 44 30 C 54 30 54 44 44 44', stroke: '#8D6E63', strokeWidth: 2, fill: 'none', strokeLinecap: 'round' }),
-    // Vapeur × 3
-    React.createElement(Path, { d: 'M 20 20 C 22 16 18 14 20 10', stroke: '#BDBDBD', strokeWidth: 2.5, fill: 'none', strokeLinecap: 'round' }),
-    React.createElement(Path, { d: 'M 28 18 C 30 14 26 12 28 8',  stroke: '#BDBDBD', strokeWidth: 2.5, fill: 'none', strokeLinecap: 'round' }),
-    React.createElement(Path, { d: 'M 36 20 C 38 16 34 14 36 10', stroke: '#BDBDBD', strokeWidth: 2.5, fill: 'none', strokeLinecap: 'round' }),
-  );
-
 const IcoBeignetFataya: React.FC<{ color: string }> = () =>
   React.createElement(Svg, { width: 36, height: 36, viewBox: '0 0 56 56' },
     // Assiette
@@ -647,7 +624,7 @@ const IcoFruitsMarines: React.FC<{ color: string }> = () =>
   );
 
 
-export type CatId = 'stores' | 'tangana' | 'food' | 'hair' | 'sport' | 'bakery' | 'fruiterie';
+export type CatId = 'stores' | 'tangana' | 'food' | 'hair' | 'sport' | 'bakery' | 'fruiterie' | 'cosmetique';
 
 export type ShopType = 'products' | 'services' | 'memberships' | 'terrains';
 
@@ -696,11 +673,10 @@ const ALL_CATEGORIES: CatConfig[] = [
         desc: 'Épicerie, mini-marché',
       },
       {
-        id: 'cafe_wass',
-        emoji: '☕',
-        label: 'Café ak Thé',
-        desc: 'Café, thé, jus, boissons chaudes et fraîches',
-        SvgIcon: IcoCafeWass,
+        id: 'maison_electromenager',
+        emoji: '🏠',
+        label: 'Maison & Électroménager',
+        desc: 'Électroménager, ustensiles, articles maison',
       },
       {
         id: 'habillement',
@@ -946,6 +922,57 @@ const ALL_CATEGORIES: CatConfig[] = [
         imageSize: 44,
       },
       {
+        id: 'esthetique',
+        emoji: '💅',
+        label: 'Esthétique & Ongles',
+        desc: 'Manucure, pose, soins beauté',
+        SvgIcon: (({ color }: { color: string }) =>
+          React.createElement(
+            Svg,
+            { width: 28, height: 28, viewBox: '0 0 24 24', fill: 'none', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' },
+            // Corps du flacon de vernis
+            React.createElement(Rect, { x: 8, y: 10, width: 8, height: 11, rx: 2, stroke: color }),
+            // Col
+            React.createElement(Rect, { x: 9.5, y: 7, width: 5, height: 3.5, rx: 0.5, stroke: color }),
+            // Bouchon
+            React.createElement(Rect, { x: 9, y: 4, width: 6, height: 3.5, rx: 1, stroke: color, fill: color + '33' }),
+            // Pinceau diagonal
+            React.createElement(Path, { d: 'M9.5 4.5L6 1.5', stroke: color, strokeWidth: 1.4 }),
+            React.createElement(Path, { d: 'M6 1.5L4.5 3.5', stroke: color, strokeWidth: 1.4 }),
+            // Reflet flacon
+            React.createElement(Path, { d: 'M10 13v4', stroke: color, strokeOpacity: '0.35', strokeWidth: 1 }),
+          )
+        ) as React.FC<{ color: string }>,
+      },
+    ],
+    renderIcon: (color, size = 24) =>
+      React.createElement(
+        Svg,
+        {
+          width: size,
+          height: size,
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          strokeWidth: 1.7,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+        },
+        React.createElement(Circle, { cx: 6, cy: 6, r: 2.5, stroke: color }),
+        React.createElement(Circle, { cx: 6, cy: 18, r: 2.5, stroke: color }),
+        React.createElement(Path, { d: 'M20 4L8.12 15.88', stroke: color }),
+        React.createElement(Path, { d: 'M14.47 14.48L20 20', stroke: color }),
+        React.createElement(Path, { d: 'M8.12 8.12L12 12', stroke: color }),
+      ),
+  },
+  {
+    id: 'cosmetique',
+    label: 'Cosmétique',
+    subLabel: 'Cosmétique',
+    emoji: '💄',
+    shopType: 'products',
+    subcatMode: 'multiple',
+    subcats: [
+      {
         id: 'parfumerie',
         emoji: '🌸',
         label: 'Parfumerie',
@@ -967,29 +994,6 @@ const ALL_CATEGORIES: CatConfig[] = [
             React.createElement(Path, { d: 'M20.5 4v4', stroke: color }),
             // Reflet sur le flacon
             React.createElement(Path, { d: 'M8 13h2', stroke: color, strokeOpacity: '0.45', strokeWidth: 1.2 }),
-          )
-        ) as React.FC<{ color: string }>,
-      },
-      {
-        id: 'esthetique',
-        emoji: '💅',
-        label: 'Esthétique & Ongles',
-        desc: 'Manucure, pose, soins beauté',
-        SvgIcon: (({ color }: { color: string }) =>
-          React.createElement(
-            Svg,
-            { width: 28, height: 28, viewBox: '0 0 24 24', fill: 'none', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' },
-            // Corps du flacon de vernis
-            React.createElement(Rect, { x: 8, y: 10, width: 8, height: 11, rx: 2, stroke: color }),
-            // Col
-            React.createElement(Rect, { x: 9.5, y: 7, width: 5, height: 3.5, rx: 0.5, stroke: color }),
-            // Bouchon
-            React.createElement(Rect, { x: 9, y: 4, width: 6, height: 3.5, rx: 1, stroke: color, fill: color + '33' }),
-            // Pinceau diagonal
-            React.createElement(Path, { d: 'M9.5 4.5L6 1.5', stroke: color, strokeWidth: 1.4 }),
-            React.createElement(Path, { d: 'M6 1.5L4.5 3.5', stroke: color, strokeWidth: 1.4 }),
-            // Reflet flacon
-            React.createElement(Path, { d: 'M10 13v4', stroke: color, strokeOpacity: '0.35', strokeWidth: 1 }),
           )
         ) as React.FC<{ color: string }>,
       },
@@ -1028,11 +1032,11 @@ const ALL_CATEGORIES: CatConfig[] = [
           strokeLinecap: 'round',
           strokeLinejoin: 'round',
         },
-        React.createElement(Circle, { cx: 6, cy: 6, r: 2.5, stroke: color }),
-        React.createElement(Circle, { cx: 6, cy: 18, r: 2.5, stroke: color }),
-        React.createElement(Path, { d: 'M20 4L8.12 15.88', stroke: color }),
-        React.createElement(Path, { d: 'M14.47 14.48L20 20', stroke: color }),
-        React.createElement(Path, { d: 'M8.12 8.12L12 12', stroke: color }),
+        // Flacon de parfum stylisé
+        React.createElement(Rect, { x: 7, y: 9, width: 10, height: 12, rx: 2, stroke: color }),
+        React.createElement(Path, { d: 'M9 9V7h6v2', stroke: color }),
+        React.createElement(Rect, { x: 10, y: 3, width: 4, height: 4, rx: 1, stroke: color }),
+        React.createElement(Path, { d: 'M9 14h6', stroke: color }),
       ),
   },
   {
@@ -1088,7 +1092,7 @@ const ALL_CATEGORIES: CatConfig[] = [
   },
 ];
 
-const CAT_ORDER: CatId[] = ['food', 'tangana', 'bakery', 'hair', 'sport', 'stores', 'fruiterie'];
+const CAT_ORDER: CatId[] = ['food', 'tangana', 'bakery', 'hair', 'cosmetique', 'sport', 'stores', 'fruiterie'];
 const ALL_ORDERED: CatConfig[] = CAT_ORDER
   .map(id => ALL_CATEGORIES.find(c => c.id === id))
   .filter((c): c is CatConfig => !!c);

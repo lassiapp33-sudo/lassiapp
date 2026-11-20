@@ -206,7 +206,7 @@ const CAT_LABELS: Record<string, string> = {
 const SUBCAT_LABELS: Record<string, string> = {
   nexx_sow: 'Nexx sow', sombi_ak_thiere: 'Sombi ak Thiéré', alimentation: 'Alimentation / Boutique',
   quincaillerie: 'Quincaillerie', tangana: 'Tangana', ndeki: 'Ndéki (Mama)', soupe: 'Soupe',
-  cafe_wass: 'Café ak Thé', beignet_fataya: 'Beignet ak Fataya', boulangerie: 'Boulangerie',
+  cafe_wass: 'Café ak Thé', maison_electromenager: 'Maison & Électroménager', beignet_fataya: 'Beignet ak Fataya', boulangerie: 'Boulangerie',
   patisserie: 'Pâtisserie', restaurant: 'Restaurant', fastfood: 'Fast-food', malibu: 'Malibu',
   dibiterie: 'Dibiterie', seras: 'Séraas', jus: 'Jus & Boissons', snack: 'Snack & Gourmandise',
   fruits: 'Fruits frais', fruits_marines: 'Fruits marinés', hommes: 'Barber', femmes: 'Tresses',
@@ -1488,6 +1488,40 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
     return { shop, products };
   }
 
+  if (t === 'classic') {
+    // Démo du template classique (par défaut) — boutique « Déco & Mode » avec un
+    // vrai catalogue réparti en catégories. Réutilise les images démo garderobe.
+    const gimg = (f: string) => `${base}/assets/demo/garderobe/${f}`;
+    const site_config = {
+      template: 'classic',
+      tokens: { palette: 'classic', accent: '#14152A', fontHeading: 'poppins', fontBody: 'inter' },
+      layout: { order: ['products', 'services', 'terrains'], cols: 2, card: 'shadow', hero: 'split' },
+      social: { facebook: 'https://facebook.com', tiktok: 'https://tiktok.com', instagram: 'https://instagram.com' },
+    };
+    const shop: Shop = {
+      id: 'demo-classic', name: 'Déco & Mode', logo_url: gimg('hero.png'),
+      description: "Vêtements, accessoires et objets déco sélectionnés avec soin. Commande en ligne, paiement sécurisé Wave & Orange Money, retrait ou livraison à Dakar.",
+      zone: 'Dakar · Médina', category: 'stores', shop_type: 'products',
+      subcategories: ['vêtements', 'accessoires', 'déco'],
+      slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
+      site_config, gallery_urls: [gimg('hero.png'), gimg('p1.jpg'), gimg('p2.jpg'), gimg('p3.jpg'), gimg('p4.jpg'), gimg('p5.jpg')],
+      cover_url: null, phone: '77 123 45 67', latitude: 14.6937, longitude: -17.4441,
+    };
+    const P = (id: string, name: string, price: number, description: string, category: string, photo: string): Product =>
+      ({ id, name, description, emoji: null, photo_url: gimg(photo), price, category, sizes: null, colors: null, stock_quantity: null });
+    const products: Product[] = [
+      P('c1', 'Robe wax élégante', 18000, 'Robe en wax, coupe ajustée, finitions soignées.', 'Vêtements', 'p1.jpg'),
+      P('c2', 'Chemise lin homme', 14000, 'Chemise en lin respirante, idéale climat chaud.', 'Vêtements', 'p2.jpg'),
+      P('c3', 'Ensemble bogolan', 22000, 'Ensemble bogolan artisanal, pièce unique.', 'Vêtements', 'p3.jpg'),
+      P('c4', 'Sac à main cuir', 25000, 'Sac en cuir véritable, anse renforcée.', 'Accessoires', 'p4.jpg'),
+      P('c5', 'Foulard soie imprimé', 8000, 'Foulard en soie, motifs colorés exclusifs.', 'Accessoires', 'p5.jpg'),
+      P('c6', 'Montre classique', 30000, 'Montre élégante bracelet cuir, étanche.', 'Accessoires', 'p6.jpg'),
+      P('c7', 'Vase céramique', 12000, 'Vase décoratif en céramique émaillée.', 'Déco', 'p7.jpg'),
+      P('c8', 'Coussin brodé main', 9000, 'Coussin brodé à la main, motifs traditionnels.', 'Déco', 'p8.jpg'),
+    ];
+    return { shop, products };
+  }
+
   // Fallback générique (autres templates — démo minimale).
   const shop: Shop = {
     id: 'demo', name: 'Boutique Démo', logo_url: null, description: 'Aperçu du template.',
@@ -1731,14 +1765,14 @@ function page(o: {
     <section class="hero">
       <div class="hero-left">
         ${o.cat ? `<div class="shop-cat">${esc(o.cat)}</div>` : ''}
-        <h1 class="hero-title">${esc(o.name)}</h1>
+        <h1 class="hero-title lx-fx-mask"><span class="lx-fx-mask-l"><span>${esc(o.name)}</span></span></h1>
         ${o.desc ? `<p class="hero-desc">${esc(clip(o.desc, 200))}</p>` : ''}
         ${hoursHtml ? `<div class="hours-block"><div class="hours-label">Horaires aujourd'hui</div>${hoursHtml}</div>` : ''}
         ${promosHtml}
       </div>
       <div class="hero-img">
         ${o.zone ? `<div class="zone-badge">📍 ${esc(o.zone)}</div>` : ''}
-        ${avatar}
+        <span class="lx-fx-zin">${avatar}</span>
       </div>
     </section>
     <div class="divider"></div>
@@ -1768,8 +1802,8 @@ function page(o: {
     ${shopHeader}
     ${closedNotice}
     <div class="catalog${catalogCls}">
-      <h2 class="catalog-title">Faites-vous plaisir</h2>
-      ${orderedSections}
+      <h2 class="catalog-title lx-fx-mask"><span class="lx-fx-mask-l"><span>Faites-vous plaisir</span></span></h2>
+      <div class="lx-fx-stagger">${orderedSections}</div>
     </div>
     <div class="appnote">Découvrez tous les commerçants autour de vous sur l'application LASSİ</div>
     ${storeButtons}
@@ -2630,16 +2664,18 @@ function page(o: {
     </div>`;
   const fermeBody = `
     <header class="fm-head" id="fm-top">
-      <a class="fm-logo" href="#fm-top" data-fmnav="home">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : ''}<span>${esc(clip(o.name, 26))}</span></a>
       <nav class="fm-nav">
         <a href="#fm-ab-top" data-fmnav="about">À propos de la ferme</a>
         <a href="#fm-shop" data-fmnav="shop">Acheter des produits</a>
         <a href="#fm-insta" data-fmnav="home">Galerie</a>
         <a class="fm-nav-active" href="#fm-top" data-fmnav="home">Bonjour</a>
       </nav>
+      <div class="fm-head-row">
+      <a class="fm-logo" href="#fm-top" data-fmnav="home">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : ''}<span>${esc(clip(o.name, 26))}</span></a>
       <div class="fm-icons">
         <span class="fm-ic" title="Compte"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg></span>
         <a class="fm-ic fm-cart" href="#fm-shop" data-fmnav="shop" title="Panier"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></a>
+      </div>
       </div>
     </header>
 
@@ -3076,7 +3112,7 @@ function page(o: {
   // Verrouillé au slug les-delices-de-fa (voir force theme.template plus haut).
   // Images : /assets/fa/{bg1,bg2}.avif (textures) + {top1,top2}.jpg (collage haut).
   const faKicker = (o.cat ? o.cat.split('·')[0].trim() : 'Fast-food & Jus').toUpperCase();
-  const faMarquee = ['FAIT MAISON', 'FRAÎCHEUR DU JOUR', 'JUS PRESSÉS', 'DIBITERIE', 'LIVRAISON EXPRESS', 'SUR PLACE OU À EMPORTER'];
+  const faMarquee = ['FAIT AVEC AMOUR', 'CROUSTILLANT & FONDANT', 'PLATS & GOURMANDISE', 'BOX À PARTAGER', 'SERVI CHAUD', 'PRÊT EN QUELQUES MINUTES'];
   const faMark = '<svg class="fa-mark" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg>';
   const faWords = esc(o.name).trim().split(/\s+/);
   const faMid = Math.ceil(faWords.length / 2);
@@ -3086,12 +3122,13 @@ function page(o: {
       <h1 class="fa-mast-title lx-rv">${faTitleHtml}</h1>
     </div>
     <nav class="fa-topnav">
-      <a class="fa-on" href="#fa-top">Accueil</a>
-      <a href="#fa-about">Notre histoire</a>
-      <a href="#fa-menu">Menu</a>
-      <a href="#fa-contact">Contact</a>
+      <a class="fa-on" href="#fa-top" data-fanav="home">Accueil</a>
+      <a href="#fa-about" data-fanav="home">Notre histoire</a>
+      <a href="#fa-menu" data-fanav="menu">Menu</a>
+      <a href="#fa-contact" data-fanav="home">Contact</a>
     </nav>
 
+    <div class="fa-page fa-page-home">
     <section class="fa-hero">
       <div class="fa-hero-img fa-hero-l lx-rv">
         <img src="/assets/fa/top1.jpg" alt="${escAttr(o.name)}">
@@ -3100,8 +3137,8 @@ function page(o: {
       <div class="fa-hero-mid lx-rv">
         <span class="fa-kick">${esc(faKicker)}${o.zone ? ' · ' + esc(o.zone.toUpperCase()) : ''}</span>
         <h2 class="fa-hero-h">Fait avec amour</h2>
-        <p class="fa-hero-p">Chaque plat préparé minute, avec des produits frais et beaucoup de cœur. Ici, on cuisine comme à la maison — en plus gourmand.</p>
-        <a class="fa-btn-out" href="#fa-menu">Voir le menu →</a>
+        <p class="fa-hero-p">On a gardé tout ce qu'on aime : le croustillant, le fondant, l'envie qui monte — et on y a mis tout notre cœur. Pas de plats déjà préparés ni de plats qui attendent : ici, chaque commande est faite comme pour un proche.</p>
+        <a class="fa-btn-out" href="#fa-menu" data-fanav="menu">Voir le menu →</a>
         ${hoursHtml ? `<div class="fa-hero-hours">${hoursHtml}</div>` : ''}
       </div>
       <div class="fa-hero-img fa-hero-r lx-rv">
@@ -3114,19 +3151,24 @@ function page(o: {
     <section class="fa-statement" id="fa-about">
       <div class="fa-about-ov"></div>
       <div class="fa-statement-in">
-        <span class="fa-sm fa-sm-l">${faMark}</span>
-        <span class="fa-sm fa-sm-r">${faMark}</span>
-        <h2 class="fa-statement-h lx-rv">Plus qu'un fast-food,<br><span>un art de se régaler</span></h2>
-        <p class="fa-statement-p lx-rv">${esc(clip(o.desc || `Nous croyons que les meilleures choses sont simples et sincères. Des produits choisis avec soin à la générosité de chaque assiette, ${o.name} célèbre le vrai goût — un endroit pour se régaler, partager et savourer l'instant.`, 300))}</p>
-        <div class="fa-stats lx-rv">
-          <div class="fa-stat"><b>100%</b><span>Fait maison</span></div>
-          <div class="fa-stat"><b>Frais</b><span>Produits du jour</span></div>
-          <div class="fa-stat"><b>Express</b><span>Commande en ligne</span></div>
-        </div>
+        <span class="fa-sm fa-sm-l"><svg viewBox="0 0 48 48" fill="currentColor"><path d="M24 7c-9 0-16 4.3-16 9.5h32C40 11.3 33 7 24 7z"/><rect x="7" y="20" width="34" height="5" rx="2.5"/><path d="M8 29h32c0 6.1-7.2 10.5-16 10.5S8 35.1 8 29z"/></svg></span>
+        <span class="fa-sm fa-sm-r"><svg viewBox="0 0 48 48" fill="currentColor"><path d="M14 15h20l-2.1 24.8A3.3 3.3 0 0 1 28.6 43H19.4a3.3 3.3 0 0 1-3.3-3.2L14 15z"/><rect x="12" y="10" width="24" height="5" rx="2.5"/><rect x="22.6" y="2" width="2.8" height="8" rx="1.4"/></svg></span>
+        <h2 class="fa-statement-h lx-rv">Plus qu'un fast-food,<br>un art de se régaler</h2>
+        <p class="fa-statement-p lx-rv">Nous croyons que les meilleures choses sont simples et sincères. Des produits choisis avec soin à la générosité de chaque assiette, ${esc(o.name)} célèbre le vrai goût — un endroit pour se régaler, partager et savourer l'instant.</p>
       </div>
     </section>
 
-    <section class="fa-menu" id="fa-menu">
+    <section class="fa-reveal" id="fa-showcase">
+      <div class="fa-reveal-sticky">
+        <div class="fa-reveal-frame">
+          <img src="/assets/fa/reveal.jpg" alt="${escAttr(o.name)}">
+          <div class="fa-reveal-cap"><span class="fa-kick">Pour nous</span><h2 class="fa-h2">${esc(o.name)}</h2></div>
+        </div>
+      </div>
+    </section>
+    </div>
+
+    <div class="fa-page fa-page-menu" id="fa-menu" hidden>
       <div class="fa-menu-head">
         <span class="fa-kick lx-rv">From the street</span>
         <h2 class="fa-h2 fa-h2-c lx-rv">${hasProducts ? 'La carte' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2>
@@ -3138,7 +3180,7 @@ function page(o: {
         ${svcSection}
         ${terrainSection}
       </div>
-    </section>
+    </div>
 
     <footer class="fa-foot" id="fa-contact">
       <div class="fa-foot-in">
@@ -3153,9 +3195,33 @@ function page(o: {
         </div>
         ${hoursHtml ? `<div class="fa-foot-col"><b>Horaires</b>${hoursHtml}</div>` : ''}
       </div>
-      <a class="fa-btn fa-foot-cta" href="#fa-menu">Commander maintenant →</a>
+      <a class="fa-btn fa-foot-cta" href="#fa-menu" data-fanav="menu">Commander maintenant →</a>
       <div class="fa-copy">© 2026 ${esc(o.name)} · Propulsé &amp; sécurisé par LASSİ</div>
-    </footer>`;
+    </footer>
+
+    <script>(function(){
+      var pages={home:document.querySelector('.fa-page-home'),menu:document.querySelector('.fa-page-menu')};
+      if(!pages.home||!pages.menu) return;
+      var reveal=function(pg){ setTimeout(function(){ [].forEach.call(pg.querySelectorAll('.lx-rv:not(.lx-in)'),function(el){el.classList.add('lx-in');}); },300); };
+      // Effet image qui grandit au scroll (page Accueil).
+      var sec=document.querySelector('.fa-reveal'), frame=sec&&sec.querySelector('.fa-reveal-frame');
+      if(frame){ var upd=function(){ var r=sec.getBoundingClientRect(),vh=window.innerHeight,total=sec.offsetHeight-vh; var p=Math.min(1,Math.max(0,(-r.top)/(total||1))); frame.style.width=(60+40*p)+'%'; frame.style.height=(58+42*p)+'%'; frame.style.borderRadius=(22*(1-p))+'px'; };
+        upd(); window.addEventListener('scroll',upd,{passive:true}); window.addEventListener('resize',upd); }
+      if(document.body.classList.contains('lassi-ed')){ pages.menu.hidden=false; if(frame){frame.style.width='94%';frame.style.height='80%';frame.style.borderRadius='8px';} return; }
+      document.querySelectorAll('[data-fanav]').forEach(function(a){
+        a.addEventListener('click',function(e){
+          e.preventDefault();
+          var w=a.getAttribute('data-fanav'), h=a.getAttribute('href')||'';
+          pages.home.hidden=(w!=='home'); pages.menu.hidden=(w!=='menu');
+          document.querySelectorAll('.fa-topnav a').forEach(function(x){ x.classList.toggle('fa-on', x.getAttribute('data-fanav')===w && (w!=='home'||x.getAttribute('href')==='#fa-top')); });
+          reveal(pages[w]);
+          var an=(w==='home'&&h.indexOf('#')===0&&h!=='#fa-top')?h:null;
+          if(an){ var t=document.querySelector(an); if(t){ setTimeout(function(){ t.scrollIntoView({behavior:'smooth'}); },60); return; } }
+          window.scrollTo({top:0,behavior:'smooth'});
+        });
+      });
+      if(location.hash==='#fa-menu'){ pages.home.hidden=true; pages.menu.hidden=false; }
+    })();</script>`;
 
   const body = theme.template === 'cafefa' && hasCatalog ? faBody
     : theme.template === 'furniture' && hasCatalog ? furnitureBody
@@ -3998,11 +4064,12 @@ ${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?f
   body[data-template="ferme"]{--fm-bg:#FBF6F0;--fm-ink:#2E4537;--fm-mut:#5E7360;--fm-green:#2F5E3C;--fm-green-d:#244A30;--fm-orange:#EFA838;--fm-card:#FFFFFF;--fm-fh:'Cormorant Garamond',Georgia,serif;--fm-fb:'Cormorant Garamond',Georgia,serif;--fm-fs:'Helvetica Neue',system-ui,Arial,sans-serif;background:var(--fm-bg);color:var(--fm-ink);font-family:var(--fm-fb);font-size:17px}
   .fm-page[hidden]{display:none}
   .fm-hen{height:72px;width:auto;display:inline-block}
-  .fm-head{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:20px;padding:12px clamp(18px,4vw,48px);background:rgba(251,246,240,.95);backdrop-filter:blur(8px);border-bottom:1px solid rgba(44,58,44,.08)}
-  .fm-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--fm-ink)}
-  .fm-logo img{height:40px;width:auto;display:block} .fm-logo span{font-family:var(--fm-fs);font-size:18px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;line-height:1}
-  .fm-nav{flex:1;display:flex;justify-content:center;gap:clamp(14px,2.6vw,38px);flex-wrap:wrap}
-  .fm-nav a{font-family:var(--fm-fs);color:var(--fm-ink);text-decoration:none;font-size:12.5px;font-weight:500;letter-spacing:.8px;text-transform:uppercase}
+  .fm-head{position:sticky;top:0;z-index:40;display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px clamp(18px,4vw,48px);background:rgba(251,246,240,.95);backdrop-filter:blur(8px);border-bottom:1px solid rgba(44,58,44,.08)}
+  .fm-head-row{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%}
+  .fm-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--fm-ink)}
+  .fm-logo img{height:34px;width:auto;display:block} .fm-logo span{font-family:var(--fm-fs);font-size:15px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;line-height:1}
+  .fm-nav{display:flex;justify-content:center;align-items:center;gap:clamp(10px,2vw,26px);flex-wrap:wrap;width:100%;order:-1;padding-bottom:4px;border-bottom:1px solid rgba(44,58,44,.07)}
+  .fm-nav a{font-family:var(--fm-fs);color:var(--fm-ink);text-decoration:none;font-size:10.5px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap}
   .fm-nav a:hover,.fm-nav .fm-nav-active{color:var(--fm-green)}
   .fm-icons{display:flex;align-items:center;gap:14px} .fm-ic{color:var(--fm-ink);display:flex}
   /* HERO plein écran image + overlay, texte centré blanc */
@@ -4395,14 +4462,14 @@ ${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?f
   .fa-hero::before{ content:''; position:absolute; inset:0; background:rgba(15,13,11,.3); }
   .fa-hero > *{ position:relative; z-index:1; }
   .fa-hero-img{ position:relative; display:flex; align-items:center; justify-content:center; padding:24px; background:transparent; }
-  .fa-hero-img img{ width:97%; max-width:487px; height:auto; aspect-ratio:3/4; object-fit:cover; border-radius:3px; display:block; transition:transform .9s cubic-bezier(.2,.7,.2,1); }
+  .fa-hero-img img{ width:100%; max-width:584px; height:auto; aspect-ratio:3/4; object-fit:cover; border-radius:3px; display:block; transition:transform .9s cubic-bezier(.2,.7,.2,1); }
   .fa-hero-img:hover img{ transform:scale(1.04); }
   .fa-hero-stamp{ position:absolute; left:14px; bottom:14px; color:var(--fa-lime); font-family:'Anton',Impact,sans-serif; font-size:13px; letter-spacing:1px; text-transform:lowercase; transform:rotate(-90deg); transform-origin:left bottom; }
   .fa-hero-mid{ display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:clamp(28px,4vw,54px) clamp(22px,3vw,42px); background:transparent; }
-  .fa-hero-mid .fa-kick{ font-size:15px; letter-spacing:4px; color:var(--fa-lime); }
-  .fa-hero-h{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(40px,5vw,66px); line-height:1; letter-spacing:.5px; text-transform:uppercase; margin-bottom:20px; }
-  .fa-hero-p{ font-size:clamp(17px,1.6vw,21px); line-height:1.75; color:var(--fa-ink); max-width:440px; margin-bottom:32px; }
-  .fa-hero-mid .fa-btn-out{ font-size:17px; letter-spacing:2px; padding:18px 40px; }
+  .fa-hero-mid .fa-kick{ font-size:17px; letter-spacing:4px; color:var(--fa-lime); }
+  .fa-hero-h{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(46px,5.8vw,78px); line-height:1; letter-spacing:.5px; text-transform:uppercase; margin-bottom:22px; }
+  .fa-hero-p{ font-size:clamp(19px,1.9vw,24px); line-height:1.7; color:var(--fa-ink); max-width:500px; margin-bottom:34px; }
+  .fa-hero-mid .fa-btn-out{ font-size:19px; letter-spacing:2px; padding:20px 46px; }
   .fa-hero-hours{ margin-top:22px; }
   @media(max-width:820px){ .fa-hero{ grid-template-columns:1fr; } .fa-hero-img{ min-height:260px; } .fa-hero-mid{ order:-1; padding:44px 24px; } }
   /* MARQUEE */
@@ -4417,15 +4484,24 @@ ${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?f
   .fa-about-ov{ position:absolute; inset:0; background:rgba(15,13,11,.45); }
   .fa-statement-in{ position:relative; max-width:900px; margin:0 auto; padding:clamp(60px,9vw,130px) 28px; text-align:center; }
   .fa-sm{ position:absolute; width:clamp(26px,3vw,44px); color:var(--fa-lime); opacity:.9; }
-  .fa-sm svg{ width:100%; height:100%; animation:fa-spin 16s linear infinite; }
-  .fa-sm-l{ left:clamp(8px,6vw,80px); top:clamp(54px,8vw,120px); }
-  .fa-sm-r{ right:clamp(8px,6vw,80px); top:clamp(90px,11vw,170px); }
-  .fa-statement-h{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(34px,6.5vw,86px); line-height:.98; letter-spacing:.5px; text-transform:uppercase; }
-  .fa-statement-h span{ color:var(--fa-lime); }
-  .fa-statement-p{ font-size:clamp(14px,1.5vw,17px); line-height:1.8; color:var(--fa-mut); max-width:580px; margin:26px auto 0; }
+  .fa-sm svg{ width:100%; height:100%; transform:rotate(-12deg); }
+  .fa-sm-r svg{ transform:rotate(14deg); }
+  .fa-sm-l{ left:clamp(10px,9vw,150px); top:clamp(96px,13vw,205px); }
+  .fa-sm-r{ right:clamp(10px,9vw,150px); top:clamp(50px,7vw,110px); }
+  .fa-statement-h{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(34px,6.5vw,86px); line-height:.98; letter-spacing:.5px; text-transform:uppercase; color:var(--fa-ink); }
+  .fa-statement-p{ font-size:clamp(17px,2vw,23px); line-height:1.8; color:var(--fa-mut); max-width:660px; margin:52px auto 0; }
   .fa-stats{ display:flex; gap:38px; flex-wrap:wrap; justify-content:center; margin-top:40px; }
   .fa-stat b{ display:block; font-family:'Anton',Impact,sans-serif; font-size:34px; color:var(--fa-lime); line-height:1; }
   .fa-stat span{ font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--fa-mut); }
+  /* REVEAL — image plein écran qui grandit au scroll (section épinglée) */
+  .fa-reveal{ position:relative; height:200vh; }
+  .fa-reveal-sticky{ position:sticky; top:0; height:100vh; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .fa-reveal-frame{ position:relative; width:60%; height:58%; overflow:hidden; border-radius:22px; box-shadow:0 40px 110px rgba(0,0,0,.6); will-change:width,height; }
+  .fa-reveal-frame img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .fa-reveal-cap{ position:absolute; left:0; right:0; bottom:clamp(24px,5vh,56px); text-align:center; color:#fff; text-shadow:0 2px 24px rgba(0,0,0,.7); }
+  .fa-reveal-cap .fa-kick{ color:var(--fa-lime); margin-bottom:8px; }
+  .fa-reveal-cap .fa-h2{ color:#fff; }
+  @media(max-width:620px){ .fa-reveal{ height:160vh; } }
   /* MENU (catalogue réutilisé, restylé sombre+lime) */
   .fa-menu{ max-width:1240px; margin:0 auto; padding:clamp(56px,8vw,100px) 28px 40px; }
   .fa-menu-head{ text-align:center; margin-bottom:46px; }

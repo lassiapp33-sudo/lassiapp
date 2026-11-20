@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Les Délices de Fa — Notre histoire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  img{max-width:100%}
+  body{ --fa-bg:#141210; --fa-ink:#ece7e0; --fa-lime:#FE7F24; --fa-brown:#1d1a17; --fa-mut:#9b938a; --fa-line:rgba(236,231,224,.13);
+    background:#0f0d0b url('assets/fa/herobg.jpg') center/cover fixed; color:var(--fa-ink); font-family:'IBM Plex Sans',system-ui,sans-serif; font-size:15px; line-height:1.55; }
+  ::selection{ background:var(--fa-lime); color:#141210; }
+  .fa-kick{ display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--fa-mut); }
+  .fa-mark{ width:.72em; height:.72em; color:var(--fa-lime); flex:0 0 auto; animation:fa-spin 14s linear infinite; }
+  @keyframes fa-spin{ to{ transform:rotate(360deg); } }
+  .fa-masthead{ padding:30px clamp(16px,3vw,40px) 10px; }
+  .fa-mast-title{ display:flex; align-items:center; justify-content:center; flex-wrap:nowrap; gap:.18em; font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(40px,12.5vw,170px); line-height:.86; letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; color:var(--fa-ink); text-decoration:none; }
+  .fa-topnav{ position:sticky; top:0; z-index:40; display:flex; justify-content:space-between; gap:12px; max-width:1180px; margin:0 auto; padding:16px clamp(16px,3vw,40px); border-top:1px solid var(--fa-line); border-bottom:1px solid var(--fa-line); background:rgba(20,18,16,.92); backdrop-filter:blur(8px); }
+  .fa-topnav a{ font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:2.5px; text-transform:uppercase; color:var(--fa-ink); text-decoration:none; transition:color .2s ease; }
+  .fa-topnav a:hover{ color:var(--fa-lime); }
+  .fa-topnav a.fa-on{ color:var(--fa-lime); position:relative; }
+  .fa-topnav a.fa-on::after{ content:''; position:absolute; left:0; right:0; bottom:-17px; height:2px; background:var(--fa-lime); }
+  @media(max-width:620px){ .fa-topnav{ gap:8px; overflow-x:auto; justify-content:flex-start; } .fa-topnav a{ font-size:11px; letter-spacing:1.5px; flex:0 0 auto; } }
+  /* --- Histoire --- */
+  .st-wrap{ max-width:1100px; margin:0 auto; padding:clamp(40px,6vw,80px) clamp(16px,4vw,40px) clamp(40px,6vw,80px); }
+  .st-photo{ width:100%; max-width:720px; aspect-ratio:16/10; object-fit:cover; border-radius:4px; display:block; margin:0 auto clamp(30px,4vw,48px); }
+  .st-sub{ text-align:center; font-style:italic; font-size:clamp(17px,2.2vw,24px); color:var(--fa-ink); line-height:1.5; max-width:620px; margin:0 auto clamp(24px,4vw,40px); }
+  .st-title{ text-align:center; font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(40px,9vw,120px); line-height:.92; letter-spacing:.5px; text-transform:uppercase; color:var(--fa-ink); margin-bottom:clamp(36px,5vw,64px); }
+  .st-title em{ font-style:normal; color:var(--fa-lime); }
+  .st-body{ max-width:620px; margin:0 auto; }
+  .st-body p{ font-family:'IBM Plex Mono',monospace; font-size:clamp(13px,1.5vw,15px); line-height:2; color:var(--fa-ink); margin-bottom:22px; }
+  .st-body p:last-child{ color:var(--fa-lime); }
+  .st-cta{ text-align:center; margin-top:clamp(36px,5vw,56px); }
+  .fa-btn-out{ display:inline-block; border:1.5px solid rgba(236,231,224,.4); color:var(--fa-ink); font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13px; letter-spacing:2px; text-transform:uppercase; padding:16px 36px; border-radius:2px; text-decoration:none; transition:background .2s ease,color .2s ease,border-color .2s ease; }
+  .fa-btn-out:hover{ background:var(--fa-lime); border-color:var(--fa-lime); color:#141210; }
+  /* --- Footer v2 --- */
+  .fa-foot2{ background:var(--fa-brown); border-top:1px solid var(--fa-line); padding:clamp(40px,6vw,72px) clamp(16px,4vw,52px) 26px; }
+  .fa-foot2-top{ max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; align-items:flex-start; gap:30px; flex-wrap:wrap; }
+  .fa-foot2-info{ display:flex; flex-direction:column; gap:6px; }
+  .fa-foot2-info a,.fa-foot2-info span{ color:var(--fa-ink); text-decoration:none; font-family:'IBM Plex Mono',monospace; font-size:13px; line-height:1.7; letter-spacing:.5px; }
+  .fa-foot2-info a:hover{ color:var(--fa-lime); }
+  .fa-foot2-social{ display:flex; gap:26px; }
+  .fa-foot2-social a{ color:var(--fa-ink); text-decoration:none; font-family:'IBM Plex Mono',monospace; font-size:13px; letter-spacing:2px; text-transform:uppercase; }
+  .fa-foot2-social a:hover{ color:var(--fa-lime); }
+  .fa-foot2-map{ width:100%; max-width:1200px; margin:clamp(26px,4vw,40px) auto 0; height:clamp(180px,26vw,300px); border:1px solid var(--fa-line); border-radius:4px; filter:grayscale(.35) contrast(1.05); display:block; }
+  .fa-foot2-big{ max-width:1300px; margin:clamp(26px,4vw,40px) auto 0; display:flex; align-items:center; justify-content:center; gap:.22em; font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(34px,9.2vw,128px); line-height:.9; letter-spacing:.5px; text-transform:uppercase; color:var(--fa-ink); white-space:nowrap; overflow:hidden; }
+  .fa-foot2-big .fa-mark{ width:.7em; height:.7em; color:var(--fa-lime); flex:0 0 auto; }
+  .fa-foot2-logo{ width:clamp(54px,9vw,110px); height:clamp(54px,9vw,110px); border-radius:50%; object-fit:cover; flex:0 0 auto; margin-right:.3em; border:2px solid var(--fa-lime); background:#fff; }
+  .fa-foot2-legal{ max-width:1200px; margin:clamp(22px,3vw,32px) auto 0; padding-top:20px; border-top:1px solid var(--fa-line); display:flex; align-items:center; gap:26px; flex-wrap:wrap; }
+  .fa-foot2-legal a{ color:var(--fa-mut); text-decoration:none; font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:1px; }
+  .fa-foot2-legal a:hover{ color:var(--fa-lime); }
+  .fa-foot2-credit{ margin-left:auto; color:var(--fa-mut); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.5px; }
+  @media(max-width:620px){ .fa-foot2-legal{ gap:16px; } .fa-foot2-credit{ margin-left:0; width:100%; } }
+</style>
+</head>
+<body>
+  <div class="fa-masthead" id="fa-top">
+    <a class="fa-mast-title" href="fa-preview.html">Les Délices <svg class="fa-mark" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg> de Fa</a>
+  </div>
+  <nav class="fa-topnav">
+    <a href="fa-preview.html">Accueil</a><a class="fa-on" href="histoire.html">Notre histoire</a><a href="menu.html">Menu</a><a href="fa-preview.html#fa-contact">Contact</a>
+  </nav>
+
+  <main class="st-wrap">
+    <img class="st-photo" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/gallery/463c5f18-d5dd-4b6a-955a-0bd33a9ba524/photo_1790213348769.jpg" alt="Les Délices de Fa">
+    <p class="st-sub">L'histoire d'une battante qui a choisi le combat plutôt que la facilité.</p>
+    <h2 class="st-title">Forgée dans <em>l'effort</em></h2>
+    <div class="st-body">
+      <p>Tout le monde voit les commandes qui s'empilent, les clients satisfaits, et se dit que c'est facile. Mais personne ne sait ce qu'il y a vraiment derrière Les Délices de Fa.</p>
+      <p>Les nuits blanches à enchaîner les pâtes, les réveils à 6 heures du matin pour ne jamais rater une commande de séminaire. Gérer un fast-food quand on est une nouvelle entrepreneuse, c'est un combat de tous les jours. Le corps finit par lâcher : à force de stress et de fatigue, les hospitalisations presque chaque mois sont devenues mon lot quotidien tant la charge mentale est lourde.</p>
+      <p>Heureusement, au milieu de toutes ces difficultés, je ne suis pas seule. Mention spéciale à mon père, qui est toujours là pour m'aider, me soutenir et veiller sur moi à chaque instant.</p>
+      <p>Malgré les coups durs, les épreuves et la fatigue, je continue d'avancer. Je ne lâcherai rien, parce que chaque client satisfait me rappelle pourquoi j'ai créé Les Délices de Fa. Merci du fond du cœur à tous ceux qui me soutiennent.❤️</p>
+    </div>
+    <div class="st-cta"><a class="fa-btn-out" href="menu.html">Voir le menu →</a></div>
+  </main>
+
+  <footer class="fa-foot2" id="fa-contact">
+    <div class="fa-foot2-top">
+      <div class="fa-foot2-info">
+        <a href="tel:772737998">77 273 79 98</a>
+        <span>Parcelles unité 13, en face la clinique Ya-cin</span>
+        <span>Mar – Ven · 10h – 00h · Sam – Dim jusqu'à 01h · Lun fermé</span>
+      </div>
+      <div class="fa-foot2-social">
+        <a href="#">Facebook</a><a href="#">Instagram</a>
+      </div>
+    </div>
+    <iframe class="fa-foot2-map" title="Emplacement Les Délices de Fa" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=-17.4442%2C14.7533%2C-17.4342%2C14.7593&layer=mapnik&marker=14.7563%2C-17.4392"></iframe>
+    <div class="fa-foot2-big"><img class="fa-foot2-logo" src="assets/fa/logo.png" alt="Logo Les Délices de Fa"><span>Les Délices</span><svg class="fa-mark" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg><span>de Fa</span></div>
+    <div class="fa-foot2-legal">
+      <a href="#">Conditions</a><a href="#">Confidentialité</a>
+      <span class="fa-foot2-credit">© 2026 Les Délices de Fa · Propulsé &amp; sécurisé par LASSİ</span>
+    </div>
+  </footer>
+</body>
+</html>

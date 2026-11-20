@@ -33,14 +33,14 @@
   .fa-hero::before{ content:''; position:absolute; inset:0; background:rgba(15,13,11,.3); }
   .fa-hero > *{ position:relative; z-index:1; }
   .fa-hero-img{ position:relative; display:flex; align-items:center; justify-content:center; padding:24px; background:transparent; }
-  .fa-hero-img img{ width:97%; max-width:487px; height:auto; aspect-ratio:3/4; object-fit:cover; border-radius:3px; display:block; transition:transform .9s cubic-bezier(.2,.7,.2,1); }
+  .fa-hero-img img{ width:100%; max-width:584px; height:auto; aspect-ratio:3/4; object-fit:cover; border-radius:3px; display:block; transition:transform .9s cubic-bezier(.2,.7,.2,1); }
   .fa-hero-img:hover img{ transform:scale(1.04); }
   .fa-hero-stamp{ position:absolute; left:14px; bottom:14px; color:var(--fa-lime); font-family:'Anton',Impact,sans-serif; font-size:13px; letter-spacing:1px; text-transform:lowercase; transform:rotate(-90deg); transform-origin:left bottom; }
   .fa-hero-mid{ display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:clamp(28px,4vw,54px) clamp(22px,3vw,42px); background:transparent; }
-  .fa-hero-mid .fa-kick{ font-size:15px; letter-spacing:4px; color:var(--fa-lime); }
-  .fa-hero-h{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(40px,5vw,66px); line-height:1; letter-spacing:.5px; text-transform:uppercase; margin-bottom:20px; }
-  .fa-hero-p{ font-size:clamp(17px,1.6vw,21px); line-height:1.75; color:var(--fa-ink); max-width:440px; margin-bottom:32px; }
-  .fa-hero-mid .fa-btn-out{ font-size:17px; letter-spacing:2px; padding:18px 40px; }
+  .fa-hero-mid .fa-kick{ font-size:17px; letter-spacing:4px; color:var(--fa-lime); }
+  .fa-hero-h{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(46px,5.8vw,78px); line-height:1; letter-spacing:.5px; text-transform:uppercase; margin-bottom:22px; }
+  .fa-hero-p{ font-size:clamp(19px,1.9vw,24px); line-height:1.7; color:var(--fa-ink); max-width:500px; margin-bottom:34px; }
+  .fa-hero-mid .fa-btn-out{ font-size:19px; letter-spacing:2px; padding:20px 46px; }
   @media(max-width:820px){ .fa-hero{ grid-template-columns:1fr; } .fa-hero-img{ min-height:260px; } .fa-hero-mid{ order:-1; padding:44px 24px; } }
   .fa-marquee{ overflow:hidden; background:var(--fa-lime); color:#141210; padding:12px 0; white-space:nowrap; }
   .fa-marquee-row{ display:inline-flex; align-items:center; gap:22px; animation:fa-scroll 26s linear infinite; }
@@ -50,15 +50,25 @@
   .fa-about-ov{ position:absolute; inset:0; background:rgba(15,13,11,.45); }
   .fa-statement-in{ position:relative; max-width:900px; margin:0 auto; padding:clamp(60px,9vw,130px) 28px; text-align:center; }
   .fa-sm{ position:absolute; width:clamp(26px,3vw,44px); color:var(--fa-lime); opacity:.9; }
-  .fa-sm svg{ width:100%; height:100%; animation:fa-spin 16s linear infinite; }
-  .fa-sm-l{ left:clamp(8px,6vw,80px); top:clamp(54px,8vw,120px); }
-  .fa-sm-r{ right:clamp(8px,6vw,80px); top:clamp(90px,11vw,170px); }
-  .fa-statement-h{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(34px,6.5vw,86px); line-height:.98; letter-spacing:.5px; text-transform:uppercase; }
-  .fa-statement-h span{ color:var(--fa-lime); }
-  .fa-statement-p{ font-size:clamp(14px,1.5vw,17px); line-height:1.8; color:var(--fa-mut); max-width:580px; margin:26px auto 0; }
+  .fa-sm svg{ width:100%; height:100%; transform:rotate(-12deg); }
+  .fa-sm-r svg{ transform:rotate(14deg); }
+  .fa-sm-l{ left:clamp(10px,9vw,150px); top:clamp(96px,13vw,205px); }
+  .fa-sm-r{ right:clamp(10px,9vw,150px); top:clamp(50px,7vw,110px); }
+  .fa-statement-h{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(34px,6.5vw,86px); line-height:.98; letter-spacing:.5px; text-transform:uppercase; color:var(--fa-ink); }
+  .fa-statement-p{ font-size:clamp(17px,2vw,23px); line-height:1.8; color:var(--fa-mut); max-width:660px; margin:52px auto 0; }
   .fa-stats{ display:flex; gap:38px; flex-wrap:wrap; justify-content:center; margin-top:40px; }
   .fa-stat b{ display:block; font-family:'Anton',Impact,sans-serif; font-size:34px; color:var(--fa-lime); line-height:1; }
   .fa-stat span{ font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--fa-mut); }
+  .fa-reveal{ position:relative; height:200vh; }
+  .fa-reveal-sticky{ position:sticky; top:0; height:100vh; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .fa-reveal-frame{ position:relative; width:60%; height:58%; overflow:hidden; border-radius:22px; box-shadow:0 40px 110px rgba(0,0,0,.6); will-change:width,height; }
+  .fa-reveal-frame img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .fa-reveal-cap{ position:absolute; left:0; right:0; bottom:clamp(24px,5vh,56px); text-align:center; color:#fff; text-shadow:0 2px 24px rgba(0,0,0,.7); }
+  .fa-reveal-cap .fa-kick{ color:var(--fa-lime); margin-bottom:8px; }
+  .fa-reveal-cap .fa-h2{ color:#fff; }
+  .fa-reveal-cta{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.55); transform-origin:center; display:inline-flex; align-items:center; gap:.4em; white-space:nowrap; background:var(--fa-lime); color:#141210; font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:clamp(15px,2vw,22px); letter-spacing:.5px; text-transform:uppercase; padding:18px 34px; border-radius:3px; text-decoration:none; box-shadow:0 20px 60px rgba(0,0,0,.5); will-change:transform; transition:filter .18s ease; }
+  .fa-reveal-cta:hover{ filter:brightness(1.08); }
+  @media(max-width:620px){ .fa-reveal{ height:160vh; } }
   .fa-menu{ max-width:1240px; margin:0 auto; padding:clamp(56px,8vw,100px) 28px 40px; }
   .fa-menu-head{ text-align:center; margin-bottom:46px; }
   .fa-menu-sub{ font-family:'IBM Plex Mono',monospace; font-size:13px; letter-spacing:1px; color:var(--fa-mut); margin-top:18px; max-width:560px; margin-left:auto; margin-right:auto; }
@@ -88,6 +98,44 @@
   @media(max-width:760px){ .fa-foot-in{ grid-template-columns:1fr; gap:24px; } }
   .cartbar{ position:fixed; left:0; right:0; bottom:0; padding:14px 20px; display:flex; justify-content:center; background:linear-gradient(0deg,var(--fa-bg),rgba(20,18,16,.6)); }
   .cartbtn{ display:flex; gap:14px; align-items:center; background:var(--fa-lime); color:#141210; border:none; border-radius:4px; padding:14px 28px; font-family:'IBM Plex Mono',monospace; font-weight:600; letter-spacing:1px; text-transform:uppercase; cursor:pointer; }
+  /* --- Nos signatures (grille décalée) --- */
+  .fa-sig{ max-width:1180px; margin:0 auto; padding:clamp(56px,8vw,110px) clamp(16px,3vw,40px) 30px; }
+  .fa-sig-head{ text-align:center; margin-bottom:clamp(36px,5vw,64px); }
+  .fa-sig-head .fa-kick{ color:var(--fa-lime); }
+  .fa-sig-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(14px,2vw,26px); align-items:start; }
+  .fa-sig-grid .fa-card:nth-child(2){ margin-top:clamp(40px,7vw,96px); }
+  .fa-card{ position:relative; border-radius:3px; overflow:hidden; background:var(--fa-brown); }
+  .fa-card-img{ width:100%; aspect-ratio:4/5; object-fit:cover; display:block; transition:transform .9s cubic-bezier(.2,.7,.2,1); }
+  .fa-card:hover .fa-card-img{ transform:scale(1.05); }
+  .fa-card-body{ padding:18px 18px 22px; }
+  .fa-card-top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .fa-card-name{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(20px,2.4vw,30px); text-transform:uppercase; line-height:1; }
+  .fa-card-price{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:14px; color:var(--fa-lime); white-space:nowrap; }
+  .fa-card-desc{ margin-top:10px; color:var(--fa-mut); font-size:13.5px; line-height:1.6; }
+  @media(max-width:760px){ .fa-sig-grid{ grid-template-columns:1fr; } .fa-sig-grid .fa-card:nth-child(2){ margin-top:0; } }
+  /* --- Notre maison --- */
+  .fa-house{ border-top:1px solid var(--fa-line); text-align:center; padding:clamp(56px,8vw,110px) 28px; }
+  .fa-house-h{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(34px,6vw,76px); text-transform:uppercase; line-height:1; margin-bottom:clamp(30px,4vw,52px); }
+  .fa-house-img{ width:100%; max-width:560px; aspect-ratio:3/2; object-fit:cover; border-radius:3px; margin:0 auto; display:block; }
+  .fa-house-p{ max-width:620px; margin:clamp(26px,4vw,40px) auto 0; color:var(--fa-mut); font-size:clamp(14px,1.6vw,17px); line-height:1.8; }
+  /* --- Footer v2 (contacts + carte + grand nom) --- */
+  .fa-foot2{ background:var(--fa-brown); border-top:1px solid var(--fa-line); padding:clamp(40px,6vw,72px) clamp(16px,4vw,52px) 26px; }
+  .fa-foot2-top{ max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; align-items:flex-start; gap:30px; flex-wrap:wrap; }
+  .fa-foot2-info{ display:flex; flex-direction:column; gap:6px; }
+  .fa-foot2-info a,.fa-foot2-info span{ color:var(--fa-ink); text-decoration:none; font-family:'IBM Plex Mono',monospace; font-size:13px; line-height:1.7; letter-spacing:.5px; }
+  .fa-foot2-info a:hover{ color:var(--fa-lime); }
+  .fa-foot2-social{ display:flex; gap:26px; }
+  .fa-foot2-social a{ color:var(--fa-ink); text-decoration:none; font-family:'IBM Plex Mono',monospace; font-size:13px; letter-spacing:2px; text-transform:uppercase; }
+  .fa-foot2-social a:hover{ color:var(--fa-lime); }
+  .fa-foot2-map{ width:100%; max-width:1200px; margin:clamp(26px,4vw,40px) auto 0; height:clamp(180px,26vw,300px); border:1px solid var(--fa-line); border-radius:4px; filter:grayscale(.35) contrast(1.05); display:block; }
+  .fa-foot2-big{ max-width:1300px; margin:clamp(26px,4vw,40px) auto 0; display:flex; align-items:center; justify-content:center; gap:.22em; font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(34px,9.2vw,128px); line-height:.9; letter-spacing:.5px; text-transform:uppercase; color:var(--fa-ink); white-space:nowrap; overflow:hidden; }
+  .fa-foot2-big .fa-mark{ width:.7em; height:.7em; color:var(--fa-lime); flex:0 0 auto; }
+  .fa-foot2-logo{ width:clamp(54px,9vw,110px); height:clamp(54px,9vw,110px); border-radius:50%; object-fit:cover; flex:0 0 auto; margin-right:.3em; border:2px solid var(--fa-lime); background:#fff; }
+  .fa-foot2-legal{ max-width:1200px; margin:clamp(22px,3vw,32px) auto 0; padding-top:20px; border-top:1px solid var(--fa-line); display:flex; align-items:center; gap:26px; flex-wrap:wrap; }
+  .fa-foot2-legal a{ color:var(--fa-mut); text-decoration:none; font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:1px; }
+  .fa-foot2-legal a:hover{ color:var(--fa-lime); }
+  .fa-foot2-credit{ margin-left:auto; color:var(--fa-mut); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.5px; }
+  @media(max-width:620px){ .fa-foot2-legal{ gap:16px; } .fa-foot2-credit{ margin-left:0; width:100%; } }
 </style>
 </head>
 <body data-template="cafefa">
@@ -95,7 +143,7 @@
     <h1 class="fa-mast-title">Les Délices <svg class="fa-mark" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg> de Fa</h1>
   </div>
   <nav class="fa-topnav">
-    <a class="fa-on" href="#fa-top">Accueil</a><a href="#fa-about">Notre histoire</a><a href="#fa-menu">Menu</a><a href="#fa-contact">Contact</a>
+    <a class="fa-on" href="#fa-top">Accueil</a><a href="histoire.html">Notre histoire</a><a href="menu.html">Menu</a><a href="#fa-contact">Contact</a>
   </nav>
 
   <section class="fa-hero">
@@ -106,60 +154,95 @@
     <div class="fa-hero-mid">
       <span class="fa-kick">FAST-FOOD · PARCELLES U13</span>
       <h2 class="fa-hero-h">Fait avec amour</h2>
-      <p class="fa-hero-p">Chaque plat préparé minute, avec des produits frais et beaucoup de cœur. Ici, on cuisine comme à la maison — en plus gourmand.</p>
-      <a class="fa-btn-out" href="#fa-menu">Voir le menu →</a>
+      <p class="fa-hero-p">On a gardé tout ce qu'on aime : le croustillant, le fondant, l'envie qui monte — et on y a mis tout notre cœur. Pas de plats déjà préparés ni de plats qui attendent : ici, chaque commande est faite comme pour un proche.</p>
+      <a class="fa-btn-out" href="menu.html">Voir le menu →</a>
     </div>
     <div class="fa-hero-img fa-hero-r">
       <img src="assets/fa/top2.jpg" alt="Les Délices de Fa">
     </div>
   </section>
 
-  <div class="fa-marquee" aria-hidden="true"><div class="fa-marquee-row"><span>FAIT MAISON ✦</span><span>FRAÎCHEUR DU JOUR ✦</span><span>JUS PRESSÉS ✦</span><span>DIBITERIE ✦</span><span>LIVRAISON EXPRESS ✦</span><span>SUR PLACE OU À EMPORTER ✦</span><span>FAIT MAISON ✦</span><span>FRAÎCHEUR DU JOUR ✦</span><span>JUS PRESSÉS ✦</span><span>DIBITERIE ✦</span><span>LIVRAISON EXPRESS ✦</span><span>SUR PLACE OU À EMPORTER ✦</span></div></div>
+  <div class="fa-marquee" aria-hidden="true"><div class="fa-marquee-row"><span>CRÊPES & TACOS ✦</span><span>BURGERS & PIZZAS ✦</span><span>PÂTES & PENNE ✦</span><span>BOXES À PARTAGER ✦</span><span>JUS LOCAUX PRESSÉS ✦</span><span>DIBITERIE ✦</span><span>CRÊPES & TACOS ✦</span><span>BURGERS & PIZZAS ✦</span><span>PÂTES & PENNE ✦</span><span>BOXES À PARTAGER ✦</span><span>JUS LOCAUX PRESSÉS ✦</span><span>DIBITERIE ✦</span></div></div>
 
   <section class="fa-statement" id="fa-about">
     <div class="fa-about-ov"></div>
     <div class="fa-statement-in">
-      <span class="fa-sm fa-sm-l"><svg viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg></span>
-      <span class="fa-sm fa-sm-r"><svg viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg></span>
-      <h2 class="fa-statement-h">Plus qu'un fast-food,<br><span>un art de se régaler</span></h2>
-      <p class="fa-statement-p">Nous croyons que les meilleures choses sont simples et sincères. Des produits choisis avec soin à la générosité de chaque assiette, Les Délices de Fa célèbre le vrai goût — un endroit pour se régaler, partager et savourer l'instant.</p>
-      <div class="fa-stats">
-        <div class="fa-stat"><b>100%</b><span>Fait maison</span></div>
-        <div class="fa-stat"><b>Frais</b><span>Produits du jour</span></div>
-        <div class="fa-stat"><b>Express</b><span>Commande en ligne</span></div>
-      </div>
+      <span class="fa-sm fa-sm-l"><svg viewBox="0 0 48 48" fill="currentColor"><path d="M24 7c-9 0-16 4.3-16 9.5h32C40 11.3 33 7 24 7z"/><rect x="7" y="20" width="34" height="5" rx="2.5"/><path d="M8 29h32c0 6.1-7.2 10.5-16 10.5S8 35.1 8 29z"/></svg></span>
+      <span class="fa-sm fa-sm-r"><svg viewBox="0 0 48 48" fill="currentColor"><path d="M14 15h20l-2.1 24.8A3.3 3.3 0 0 1 28.6 43H19.4a3.3 3.3 0 0 1-3.3-3.2L14 15z"/><rect x="12" y="10" width="24" height="5" rx="2.5"/><rect x="22.6" y="2" width="2.8" height="8" rx="1.4"/></svg></span>
+      <h2 class="fa-statement-h">Plus qu'un fast-food,<br>un art de se régaler</h2>
     </div>
   </section>
 
-  <section class="fa-menu" id="fa-menu">
-    <div class="fa-menu-head">
-      <span class="fa-kick">From the street</span>
-      <h2 class="fa-h2">La carte</h2>
-      <p class="fa-menu-sub">Commande en ligne · retrait sur place ou livraison · paiement Wave / Orange Money</p>
-    </div>
-    <div class="catnav"><button class="chip sel">Tout</button><button class="chip">Plats</button><button class="chip">Jus</button><button class="chip">Dibiterie</button></div>
-    <div class="cathead"><span class="cathead-title">Nos plats</span><span class="cathead-count">6</span></div>
-    <div class="grid">
-      <div class="prod"><div class="pimgzone">🍔</div><div class="pbody"><div class="pname">Burger Maison</div><div class="pdesc">Steak, cheddar, sauce Fa</div><div class="pprice">3 500 F</div><button class="add">Ajouter</button></div></div>
-      <div class="prod"><div class="pimgzone">🍗</div><div class="pbody"><div class="pname">Poulet Braisé</div><div class="pdesc">Épicé, frites maison</div><div class="pprice">4 000 F</div><button class="add">Ajouter</button></div></div>
-      <div class="prod"><div class="pimgzone">🥤</div><div class="pbody"><div class="pname">Jus Bissap</div><div class="pdesc">Pressé minute</div><div class="pprice">1 000 F</div><button class="add">Ajouter</button></div></div>
-      <div class="prod"><div class="pimgzone">🍖</div><div class="pbody"><div class="pname">Dibi Mouton</div><div class="pdesc">Braisé au feu de bois</div><div class="pprice">5 000 F</div><button class="add">Ajouter</button></div></div>
-      <div class="prod"><div class="pimgzone">🌯</div><div class="pbody"><div class="pname">Shawarma</div><div class="pdesc">Poulet mariné</div><div class="pprice">2 500 F</div><button class="add">Ajouter</button></div></div>
-      <div class="prod"><div class="pimgzone">🧃</div><div class="pbody"><div class="pname">Jus Gingembre</div><div class="pdesc">Frais & corsé</div><div class="pprice">1 000 F</div><button class="add">Ajouter</button></div></div>
+  <section class="fa-sig">
+    <div class="fa-sig-grid">
+      <article class="fa-card">
+        <img class="fa-card-img" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/463c5f18-d5dd-4b6a-955a-0bd33a9ba524/recovered_d3b00c02-989d-4176-a8c8-b08655935ddf.jpg" alt="Chicken burger">
+        <div class="fa-card-body">
+          <div class="fa-card-top"><h3 class="fa-card-name">Chicken burger</h3><span class="fa-card-price">5 000 F</span></div>
+          <p class="fa-card-desc">Poulet pané, pain, cheddar, sauce fromagère + portion de frites.</p>
+        </div>
+      </article>
+      <article class="fa-card">
+        <img class="fa-card-img" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/463c5f18-d5dd-4b6a-955a-0bd33a9ba524/recovered_a4dc45d3-5147-4125-8e10-bcc2ae4447d4.jpg" alt="Boxe kheweul LDF">
+        <div class="fa-card-body">
+          <div class="fa-card-top"><h3 class="fa-card-name">Boxe kheweul LDF</h3><span class="fa-card-price">5 500 F</span></div>
+          <p class="fa-card-desc">Tacos mixte L, burger, crêpe sucrée et jus — la box à partager.</p>
+        </div>
+      </article>
+      <article class="fa-card">
+        <img class="fa-card-img" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/463c5f18-d5dd-4b6a-955a-0bd33a9ba524/recovered_f4c2b9b3-dcf1-45f3-a628-08aaad4a3156.jpg" alt="Penne mixte">
+        <div class="fa-card-body">
+          <div class="fa-card-top"><h3 class="fa-card-name">Penne mixte</h3><span class="fa-card-price">4 500 F</span></div>
+          <p class="fa-card-desc">Pâtes, poulet, jambon, béchamel, fromage et sauce fromagère.</p>
+        </div>
+      </article>
     </div>
   </section>
 
-  <footer class="fa-foot" id="fa-contact">
-    <div class="fa-foot-in">
-      <div class="fa-foot-brand">
-        <h3 class="fa-foot-name">Les Délices de Fa</h3>
-        <p>Street food · jus pressés · dibiterie</p>
+  <section class="fa-house">
+    <h2 class="fa-house-h">Jusqu'au bout de la nuit</h2>
+    <img class="fa-house-img" src="assets/fa/house.png" alt="Les Délices de Fa">
+    <p class="fa-house-p">Du midi jusqu'au bout de la nuit, aux Parcelles. Un coin de quartier où chaque crêpe, chaque tacos et chaque box est préparé à la commande — pour se régaler, partager et savourer l'instant.</p>
+  </section>
+
+  <section class="fa-reveal" id="fa-menu">
+    <div class="fa-reveal-sticky">
+      <div class="fa-reveal-frame">
+        <img src="assets/fa/reveal.jpg" alt="Les Délices de Fa">
+        <a class="fa-reveal-cta" href="menu.html"><span>Commandez, on s'occupe du reste</span> →</a>
       </div>
-      <div class="fa-foot-col"><b>Adresse</b><span>Parcelles unité 13, en face la clinique Ya-cin</span><b>Téléphone</b><a href="tel:772737998">77 273 79 98</a></div>
-      <div class="fa-foot-col"><b>Horaires</b><span>Ouvert · 10h – 0h</span></div>
     </div>
-    <a class="fa-btn fa-foot-cta" href="#fa-menu">Commander maintenant →</a>
-    <div class="fa-copy">© 2026 Les Délices de Fa · Propulsé &amp; sécurisé par LASSİ</div>
+  </section>
+  <script>(function(){
+    var sec=document.querySelector('.fa-reveal'); if(!sec) return;
+    var frame=sec.querySelector('.fa-reveal-frame');
+    var cta=sec.querySelector('.fa-reveal-cta');
+    function upd(){
+      var r=sec.getBoundingClientRect(), vh=window.innerHeight, total=sec.offsetHeight-vh;
+      var p=Math.min(1,Math.max(0,(-r.top)/(total||1)));
+      frame.style.width=(60+40*p)+'%'; frame.style.height=(58+42*p)+'%'; frame.style.borderRadius=(22*(1-p))+'px';
+      if(cta) cta.style.transform='translate(-50%,-50%) scale('+(0.55+0.85*p)+')';
+    }
+    upd(); window.addEventListener('scroll',upd,{passive:true}); window.addEventListener('resize',upd);
+  })();</script>
+
+  <footer class="fa-foot2" id="fa-contact">
+    <div class="fa-foot2-top">
+      <div class="fa-foot2-info">
+        <a href="tel:772737998">77 273 79 98</a>
+        <span>Parcelles unité 13, en face la clinique Ya-cin</span>
+        <span>Mar – Ven · 10h – 00h · Sam – Dim jusqu'à 01h · Lun fermé</span>
+      </div>
+      <div class="fa-foot2-social">
+        <a href="#">Facebook</a><a href="#">Instagram</a>
+      </div>
+    </div>
+    <iframe class="fa-foot2-map" title="Emplacement Les Délices de Fa" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=-17.4442%2C14.7533%2C-17.4342%2C14.7593&layer=mapnik&marker=14.7563%2C-17.4392"></iframe>
+    <div class="fa-foot2-big"><img class="fa-foot2-logo" src="assets/fa/logo.png" alt="Logo Les Délices de Fa"><span>Les Délices</span><svg class="fa-mark" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg><span>de Fa</span></div>
+    <div class="fa-foot2-legal">
+      <a href="#">Conditions</a><a href="#">Confidentialité</a>
+      <span class="fa-foot2-credit">© 2026 Les Délices de Fa · Propulsé &amp; sécurisé par LASSİ</span>
+    </div>
   </footer>
 
   <div class="cartbar"><button class="cartbtn"><span>2 &nbsp;Commander</span><span>7 500 F</span></button></div>
