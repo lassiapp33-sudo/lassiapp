@@ -3112,24 +3112,40 @@ function page(o: {
   // Verrouillé au slug les-delices-de-fa (voir force theme.template plus haut).
   // Images : /assets/fa/{bg1,bg2}.avif (textures) + {top1,top2}.jpg (collage haut).
   const faKicker = (o.cat ? o.cat.split('·')[0].trim() : 'Fast-food & Jus').toUpperCase();
-  const faMarquee = ['FAIT AVEC AMOUR', 'CROUSTILLANT & FONDANT', 'PLATS & GOURMANDISE', 'BOX À PARTAGER', 'SERVI CHAUD', 'PRÊT EN QUELQUES MINUTES'];
+  const faMarquee = ['CRÊPES & TACOS', 'BURGERS & PIZZAS', 'PÂTES & PENNE', 'BOXES À PARTAGER', 'JUS LOCAUX PRESSÉS', 'DIBITERIE'];
   const faMark = '<svg class="fa-mark" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg>';
   const faWords = esc(o.name).trim().split(/\s+/);
   const faMid = Math.ceil(faWords.length / 2);
   const faTitleHtml = faWords.slice(0, faMid).join(' ') + ' ' + faMark + ' ' + faWords.slice(faMid).join(' ');
+  const faSigs = o.products.filter(p => p.photo_url && p.photo_url.trim()).sort((a, b) => (b.price || 0) - (a.price || 0)).slice(0, 3);
+  const faSigSection = faSigs.length >= 3 ? `
+    <section class="fa-sig">
+      <div class="fa-sig-grid">
+        ${faSigs.map(p => `<article class="fa-card lx-rv">
+          <img class="fa-card-img" loading="lazy" src="${escAttr(p.photo_url || '')}" alt="${escAttr(p.name || '')}">
+          <div class="fa-card-body"><div class="fa-card-top"><h3 class="fa-card-name">${esc(p.name || '')}</h3><span class="fa-card-price">${fmtPrice(p.price)}</span></div>${p.description ? `<p class="fa-card-desc">${esc(clip(p.description, 90))}</p>` : ''}</div>
+        </article>`).join('')}
+      </div>
+    </section>
+
+    <section class="fa-house">
+      <h2 class="fa-house-h lx-rv">Jusqu'au bout de la nuit</h2>
+      <img class="fa-house-img lx-rv" loading="lazy" src="/assets/fa/house.png" alt="${escAttr(o.name)}">
+      <p class="fa-house-p lx-rv">Du midi jusqu'au bout de la nuit, ${o.zone ? 'à ' + esc(o.zone) : 'au quartier'}. Un coin où chaque crêpe, chaque tacos et chaque box est préparé à la commande — pour se régaler, partager et savourer l'instant.</p>
+    </section>` : '';
   const faBody = `
     <div class="fa-masthead" id="fa-top">
       <h1 class="fa-mast-title lx-rv">${faTitleHtml}</h1>
     </div>
     <nav class="fa-topnav">
       <a class="fa-on" href="#fa-top" data-fanav="home">Accueil</a>
-      <a href="#fa-about" data-fanav="home">Notre histoire</a>
+      <a href="#fa-story" data-fanav="histoire">Notre histoire</a>
       <a href="#fa-menu" data-fanav="menu">Menu</a>
       <a href="#fa-contact" data-fanav="home">Contact</a>
     </nav>
 
     <div class="fa-page fa-page-home">
-    <section class="fa-hero">
+    <section class="fa-hero fa-hero-2col">
       <div class="fa-hero-img fa-hero-l lx-rv">
         <img src="/assets/fa/top1.jpg" alt="${escAttr(o.name)}">
         <span class="fa-hero-stamp">${esc(clip(o.name, 18))}</span>
@@ -3141,9 +3157,6 @@ function page(o: {
         <a class="fa-btn-out" href="#fa-menu" data-fanav="menu">Voir le menu →</a>
         ${hoursHtml ? `<div class="fa-hero-hours">${hoursHtml}</div>` : ''}
       </div>
-      <div class="fa-hero-img fa-hero-r lx-rv">
-        <img src="/assets/fa/top2.jpg" alt="${escAttr(o.name)}">
-      </div>
     </section>
 
     <div class="fa-marquee" aria-hidden="true"><div class="fa-marquee-row">${(faMarquee.concat(faMarquee)).map(t => `<span>${esc(t)}</span><span class="fa-dot">✦</span>`).join('')}</div></div>
@@ -3154,18 +3167,32 @@ function page(o: {
         <span class="fa-sm fa-sm-l"><svg viewBox="0 0 48 48" fill="currentColor"><path d="M24 7c-9 0-16 4.3-16 9.5h32C40 11.3 33 7 24 7z"/><rect x="7" y="20" width="34" height="5" rx="2.5"/><path d="M8 29h32c0 6.1-7.2 10.5-16 10.5S8 35.1 8 29z"/></svg></span>
         <span class="fa-sm fa-sm-r"><svg viewBox="0 0 48 48" fill="currentColor"><path d="M14 15h20l-2.1 24.8A3.3 3.3 0 0 1 28.6 43H19.4a3.3 3.3 0 0 1-3.3-3.2L14 15z"/><rect x="12" y="10" width="24" height="5" rx="2.5"/><rect x="22.6" y="2" width="2.8" height="8" rx="1.4"/></svg></span>
         <h2 class="fa-statement-h lx-rv">Plus qu'un fast-food,<br>un art de se régaler</h2>
-        <p class="fa-statement-p lx-rv">Nous croyons que les meilleures choses sont simples et sincères. Des produits choisis avec soin à la générosité de chaque assiette, ${esc(o.name)} célèbre le vrai goût — un endroit pour se régaler, partager et savourer l'instant.</p>
       </div>
     </section>
-
+${faSigSection}
     <section class="fa-reveal" id="fa-showcase">
       <div class="fa-reveal-sticky">
         <div class="fa-reveal-frame">
           <img src="/assets/fa/reveal.jpg" alt="${escAttr(o.name)}">
-          <div class="fa-reveal-cap"><span class="fa-kick">Pour nous</span><h2 class="fa-h2">${esc(o.name)}</h2></div>
+          <a class="fa-reveal-cta" href="#fa-menu" data-fanav="menu"><span>Commandez, on s'occupe du reste</span> →</a>
         </div>
       </div>
     </section>
+    </div>
+
+    <div class="fa-page fa-page-histoire" id="fa-story" hidden>
+      <div class="fa-story-wrap">
+        ${o.gallery && o.gallery[0] ? `<img class="fa-story-photo lx-rv" loading="lazy" src="${escAttr(o.gallery[0])}" alt="${escAttr(o.name)}">` : ''}
+        <p class="fa-story-sub lx-rv">L'histoire d'une battante qui a choisi le combat plutôt que la facilité.</p>
+        <h2 class="fa-story-title lx-rv">Forgée dans <em>l'effort</em></h2>
+        <div class="fa-story-body">
+          <p class="lx-rv">Tout le monde voit les commandes qui s'empilent, les clients satisfaits, et se dit que c'est facile. Mais personne ne sait ce qu'il y a vraiment derrière ${esc(o.name)}.</p>
+          <p class="lx-rv">Les nuits blanches à enchaîner les pâtes, les réveils à 6 heures du matin pour ne jamais rater une commande de séminaire. Gérer un fast-food quand on est une nouvelle entrepreneuse, c'est un combat de tous les jours. Le corps finit par lâcher : à force de stress et de fatigue, les hospitalisations presque chaque mois sont devenues mon lot quotidien tant la charge mentale est lourde.</p>
+          <p class="lx-rv">Heureusement, au milieu de toutes ces difficultés, je ne suis pas seule. Mention spéciale à mon père, qui est toujours là pour m'aider, me soutenir et veiller sur moi à chaque instant.</p>
+          <p class="lx-rv">Malgré les coups durs, les épreuves et la fatigue, je continue d'avancer. Je ne lâcherai rien, parce que chaque client satisfait me rappelle pourquoi j'ai créé ${esc(o.name)}. Merci du fond du cœur à tous ceux qui me soutiennent.❤️</p>
+        </div>
+        <div class="fa-story-cta lx-rv"><a class="fa-btn-out" href="#fa-menu" data-fanav="menu">Voir le menu →</a></div>
+      </div>
     </div>
 
     <div class="fa-page fa-page-menu" id="fa-menu" hidden>
@@ -3182,37 +3209,38 @@ function page(o: {
       </div>
     </div>
 
-    <footer class="fa-foot" id="fa-contact">
-      <div class="fa-foot-in">
-        <div class="fa-foot-brand">
-          <h3 class="fa-foot-name">${esc(o.name)}</h3>
-          <p>Street food · jus pressés · dibiterie</p>
-          ${socialHtml}
+    <footer class="fa-foot2" id="fa-contact">
+      <div class="fa-foot2-top">
+        <div class="fa-foot2-info">
+          ${o.phone ? `<a href="tel:${escAttr(o.phone.replace(/[^0-9+]/g, ''))}">${esc(o.phone)}</a>` : ''}
+          ${o.zone ? `<span>${esc(o.zone)}</span>` : ''}
+          ${hoursHtml ? `<div class="fa-foot2-hours">${hoursHtml}</div>` : ''}
         </div>
-        <div class="fa-foot-col">
-          ${o.zone ? `<b>Adresse</b><span>${esc(o.zone)}</span>` : ''}
-          ${o.phone ? `<b>Téléphone</b><a href="tel:${escAttr(o.phone.replace(/[^0-9+]/g, ''))}">${esc(o.phone)}</a>` : ''}
-        </div>
-        ${hoursHtml ? `<div class="fa-foot-col"><b>Horaires</b>${hoursHtml}</div>` : ''}
+        <div class="fa-foot2-social"><a href="https://www.tiktok.com/@lesdelicesdefa0" target="_blank" rel="noopener">TikTok</a></div>
       </div>
-      <a class="fa-btn fa-foot-cta" href="#fa-menu" data-fanav="menu">Commander maintenant →</a>
-      <div class="fa-copy">© 2026 ${esc(o.name)} · Propulsé &amp; sécurisé par LASSİ</div>
+      ${(o.lat != null && o.lng != null) ? `<a class="fa-foot2-maplink" href="https://www.google.com/maps/search/?api=1&query=${o.lat}%2C${o.lng}" target="_blank" rel="noopener"><img class="fa-foot2-map" loading="lazy" alt="Emplacement ${escAttr(o.name)}" src="/staticmap?lat=${o.lat}&amp;lng=${o.lng}"></a>` : ''}
+      <div class="fa-foot2-big lx-rv"><img class="fa-foot2-logo" src="/assets/fa/logo.png" alt="Logo ${escAttr(o.name)}">${faTitleHtml}</div>
+      <div class="fa-foot2-legal">
+        <a href="#fa-menu" data-fanav="menu">Commander</a>
+        <span class="fa-foot2-credit">© 2026 ${esc(o.name)} · Propulsé &amp; sécurisé par LASSİ</span>
+      </div>
     </footer>
 
     <script>(function(){
-      var pages={home:document.querySelector('.fa-page-home'),menu:document.querySelector('.fa-page-menu')};
+      var pages={home:document.querySelector('.fa-page-home'),menu:document.querySelector('.fa-page-menu'),histoire:document.querySelector('.fa-page-histoire')};
       if(!pages.home||!pages.menu) return;
+      var setPage=function(w){ for(var k in pages){ if(pages[k]) pages[k].hidden=(k!==w); } };
       var reveal=function(pg){ setTimeout(function(){ [].forEach.call(pg.querySelectorAll('.lx-rv:not(.lx-in)'),function(el){el.classList.add('lx-in');}); },300); };
-      // Effet image qui grandit au scroll (page Accueil).
-      var sec=document.querySelector('.fa-reveal'), frame=sec&&sec.querySelector('.fa-reveal-frame');
-      if(frame){ var upd=function(){ var r=sec.getBoundingClientRect(),vh=window.innerHeight,total=sec.offsetHeight-vh; var p=Math.min(1,Math.max(0,(-r.top)/(total||1))); frame.style.width=(60+40*p)+'%'; frame.style.height=(58+42*p)+'%'; frame.style.borderRadius=(22*(1-p))+'px'; };
+      // Effet image qui grandit au scroll + CTA qui zoome (page Accueil).
+      var sec=document.querySelector('.fa-reveal'), frame=sec&&sec.querySelector('.fa-reveal-frame'), rcta=sec&&sec.querySelector('.fa-reveal-cta');
+      if(frame){ var upd=function(){ var r=sec.getBoundingClientRect(),vh=window.innerHeight,total=sec.offsetHeight-vh; var p=Math.min(1,Math.max(0,(-r.top)/(total||1))); frame.style.width=(60+40*p)+'%'; frame.style.height=(58+42*p)+'%'; frame.style.borderRadius=(22*(1-p))+'px'; if(rcta) rcta.style.transform='translate(-50%,-50%) scale('+(0.55+0.85*p)+')'; };
         upd(); window.addEventListener('scroll',upd,{passive:true}); window.addEventListener('resize',upd); }
       if(document.body.classList.contains('lassi-ed')){ pages.menu.hidden=false; if(frame){frame.style.width='94%';frame.style.height='80%';frame.style.borderRadius='8px';} return; }
       document.querySelectorAll('[data-fanav]').forEach(function(a){
         a.addEventListener('click',function(e){
           e.preventDefault();
           var w=a.getAttribute('data-fanav'), h=a.getAttribute('href')||'';
-          pages.home.hidden=(w!=='home'); pages.menu.hidden=(w!=='menu');
+          setPage(w);
           document.querySelectorAll('.fa-topnav a').forEach(function(x){ x.classList.toggle('fa-on', x.getAttribute('data-fanav')===w && (w!=='home'||x.getAttribute('href')==='#fa-top')); });
           reveal(pages[w]);
           var an=(w==='home'&&h.indexOf('#')===0&&h!=='#fa-top')?h:null;
@@ -4501,7 +4529,57 @@ ${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?f
   .fa-reveal-cap{ position:absolute; left:0; right:0; bottom:clamp(24px,5vh,56px); text-align:center; color:#fff; text-shadow:0 2px 24px rgba(0,0,0,.7); }
   .fa-reveal-cap .fa-kick{ color:var(--fa-lime); margin-bottom:8px; }
   .fa-reveal-cap .fa-h2{ color:#fff; }
+  .fa-reveal-cta{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.55); transform-origin:center; display:inline-flex; align-items:center; gap:.4em; white-space:nowrap; background:var(--fa-lime); color:#13260a; font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:clamp(15px,2vw,22px); letter-spacing:.5px; text-transform:uppercase; padding:18px 34px; border-radius:3px; text-decoration:none; box-shadow:0 20px 60px rgba(0,0,0,.5); will-change:transform; }
   @media(max-width:620px){ .fa-reveal{ height:160vh; } }
+  .fa-hero-2col{ grid-template-columns:0.9fr 1.4fr !important; }
+  @media(max-width:820px){ .fa-hero-2col{ grid-template-columns:1fr !important; } }
+  /* SIGNATURES — grille décalée */
+  .fa-sig{ max-width:1180px; margin:0 auto; padding:clamp(56px,8vw,110px) clamp(16px,3vw,40px) 10px; }
+  .fa-sig-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(14px,2vw,26px); align-items:start; }
+  .fa-sig-grid .fa-card:nth-child(2){ margin-top:clamp(40px,7vw,96px); }
+  .fa-card{ position:relative; border-radius:4px; overflow:hidden; background:var(--fa-brown); border:1px solid var(--fa-line); }
+  .fa-card-img{ width:100%; aspect-ratio:4/5; object-fit:cover; display:block; transition:transform .9s cubic-bezier(.2,.7,.2,1); }
+  .fa-card:hover .fa-card-img{ transform:scale(1.05); }
+  .fa-card-body{ padding:16px 16px 20px; }
+  .fa-card-top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .fa-card-name{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(18px,2.4vw,28px); text-transform:uppercase; line-height:1; color:var(--fa-ink); }
+  .fa-card-price{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:14px; color:var(--fa-lime); white-space:nowrap; }
+  .fa-card-desc{ margin-top:10px; color:var(--fa-mut); font-size:13px; line-height:1.55; }
+  @media(max-width:760px){ .fa-sig-grid{ grid-template-columns:1fr; } .fa-sig-grid .fa-card:nth-child(2){ margin-top:0; } }
+  /* NOTRE MAISON */
+  .fa-house{ border-top:1px solid var(--fa-line); text-align:center; padding:clamp(56px,8vw,110px) 28px; }
+  .fa-house-h{ font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(34px,6vw,76px); text-transform:uppercase; line-height:1; margin-bottom:clamp(30px,4vw,52px); color:var(--fa-ink); }
+  .fa-house-img{ width:100%; max-width:560px; aspect-ratio:3/2; object-fit:cover; border-radius:4px; margin:0 auto; display:block; }
+  .fa-house-p{ max-width:620px; margin:clamp(26px,4vw,40px) auto 0; color:var(--fa-mut); font-size:clamp(14px,1.6vw,17px); line-height:1.8; }
+  /* NOTRE HISTOIRE (page) */
+  .fa-story-wrap{ max-width:1100px; margin:0 auto; padding:clamp(40px,6vw,80px) clamp(16px,4vw,40px); }
+  .fa-story-photo{ width:100%; max-width:720px; aspect-ratio:16/10; object-fit:cover; border-radius:4px; display:block; margin:0 auto clamp(30px,4vw,48px); }
+  .fa-story-sub{ text-align:center; font-style:italic; font-size:clamp(17px,2.2vw,24px); color:var(--fa-ink); line-height:1.5; max-width:620px; margin:0 auto clamp(24px,4vw,40px); }
+  .fa-story-title{ text-align:center; font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(40px,9vw,120px); line-height:.92; text-transform:uppercase; color:var(--fa-ink); margin-bottom:clamp(36px,5vw,64px); }
+  .fa-story-title em{ font-style:normal; color:var(--fa-lime); }
+  .fa-story-body{ max-width:620px; margin:0 auto; }
+  .fa-story-body p{ font-family:'IBM Plex Mono',monospace; font-size:clamp(13px,1.5vw,15px); line-height:2; color:var(--fa-ink); margin-bottom:22px; }
+  .fa-story-body p:last-child{ color:var(--fa-lime); }
+  .fa-story-cta{ text-align:center; margin-top:clamp(36px,5vw,56px); }
+  /* FOOTER v2 */
+  .fa-foot2{ background:var(--fa-brown); border-top:1px solid var(--fa-line); padding:clamp(40px,6vw,72px) clamp(16px,4vw,52px) 26px; }
+  .fa-foot2-top{ max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; align-items:flex-start; gap:30px; flex-wrap:wrap; }
+  .fa-foot2-info{ display:flex; flex-direction:column; gap:6px; }
+  .fa-foot2-info a,.fa-foot2-info span{ color:var(--fa-ink); text-decoration:none; font-family:'IBM Plex Mono',monospace; font-size:13px; line-height:1.7; letter-spacing:.5px; }
+  .fa-foot2-info a:hover{ color:var(--fa-lime); }
+  .fa-foot2-hours{ margin-top:4px; }
+  .fa-foot2-social a{ color:var(--fa-ink); text-decoration:none; font-family:'IBM Plex Mono',monospace; font-size:13px; letter-spacing:2px; text-transform:uppercase; }
+  .fa-foot2-social a:hover{ color:var(--fa-lime); }
+  .fa-foot2-maplink{ display:block; max-width:1200px; margin:clamp(26px,4vw,40px) auto 0; }
+  .fa-foot2-map{ width:100%; height:clamp(180px,26vw,300px); object-fit:cover; border:1px solid var(--fa-line); border-radius:4px; filter:grayscale(.35) contrast(1.05); display:block; }
+  .fa-foot2-big{ max-width:1300px; margin:clamp(26px,4vw,40px) auto 0; display:flex; align-items:center; justify-content:center; gap:.18em; font-family:'Anton',Impact,sans-serif; font-weight:400; font-size:clamp(30px,8.4vw,120px); line-height:.9; letter-spacing:.5px; text-transform:uppercase; color:var(--fa-ink); white-space:nowrap; overflow:hidden; }
+  .fa-foot2-big .fa-mark{ width:.62em; height:.62em; color:var(--fa-lime); flex:0 0 auto; }
+  .fa-foot2-logo{ width:clamp(52px,9vw,104px); height:clamp(52px,9vw,104px); border-radius:50%; object-fit:cover; flex:0 0 auto; margin-right:.3em; border:2px solid var(--fa-lime); background:#fff; }
+  .fa-foot2-legal{ max-width:1200px; margin:clamp(22px,3vw,32px) auto 0; padding-top:20px; border-top:1px solid var(--fa-line); display:flex; align-items:center; gap:26px; flex-wrap:wrap; }
+  .fa-foot2-legal a{ color:var(--fa-mut); text-decoration:none; font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:1px; }
+  .fa-foot2-legal a:hover{ color:var(--fa-lime); }
+  .fa-foot2-credit{ margin-left:auto; color:var(--fa-mut); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.5px; }
+  @media(max-width:620px){ .fa-foot2-legal{ gap:16px; } .fa-foot2-credit{ margin-left:0; width:100%; } }
   /* MENU (catalogue réutilisé, restylé sombre+lime) */
   .fa-menu{ max-width:1240px; margin:0 auto; padding:clamp(56px,8vw,100px) 28px 40px; }
   .fa-menu-head{ text-align:center; margin-bottom:46px; }

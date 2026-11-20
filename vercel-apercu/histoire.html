@@ -54,6 +54,12 @@
   .fa-foot2-legal a:hover{ color:var(--fa-lime); }
   .fa-foot2-credit{ margin-left:auto; color:var(--fa-mut); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.5px; }
   @media(max-width:620px){ .fa-foot2-legal{ gap:16px; } .fa-foot2-credit{ margin-left:0; width:100%; } }
+  /* --- Scroll reveal --- */
+  .reveal{ opacity:0; transform:translateY(42px); transition:opacity .9s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1); will-change:opacity,transform; }
+  .reveal.in{ opacity:1; transform:none; }
+  .reveal-stagger>*{ opacity:0; transform:translateY(34px) scale(.97); transition:opacity .75s cubic-bezier(.16,1,.3,1), transform .75s cubic-bezier(.16,1,.3,1); will-change:opacity,transform; }
+  .reveal-stagger.in>*{ opacity:1; transform:none; transition-delay:calc(var(--i,0)*95ms); }
+  @media(prefers-reduced-motion:reduce){ .reveal,.reveal-stagger>*{ opacity:1!important; transform:none!important; transition:none!important; } }
 </style>
 </head>
 <body>
@@ -65,16 +71,16 @@
   </nav>
 
   <main class="st-wrap">
-    <img class="st-photo" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/gallery/463c5f18-d5dd-4b6a-955a-0bd33a9ba524/photo_1790213348769.jpg" alt="Les Délices de Fa">
-    <p class="st-sub">L'histoire d'une battante qui a choisi le combat plutôt que la facilité.</p>
-    <h2 class="st-title">Forgée dans <em>l'effort</em></h2>
-    <div class="st-body">
+    <img class="st-photo reveal" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/gallery/463c5f18-d5dd-4b6a-955a-0bd33a9ba524/photo_1790213348769.jpg" alt="Les Délices de Fa">
+    <p class="st-sub reveal">L'histoire d'une battante qui a choisi le combat plutôt que la facilité.</p>
+    <h2 class="st-title reveal">Forgée dans <em>l'effort</em></h2>
+    <div class="st-body reveal-stagger">
       <p>Tout le monde voit les commandes qui s'empilent, les clients satisfaits, et se dit que c'est facile. Mais personne ne sait ce qu'il y a vraiment derrière Les Délices de Fa.</p>
       <p>Les nuits blanches à enchaîner les pâtes, les réveils à 6 heures du matin pour ne jamais rater une commande de séminaire. Gérer un fast-food quand on est une nouvelle entrepreneuse, c'est un combat de tous les jours. Le corps finit par lâcher : à force de stress et de fatigue, les hospitalisations presque chaque mois sont devenues mon lot quotidien tant la charge mentale est lourde.</p>
       <p>Heureusement, au milieu de toutes ces difficultés, je ne suis pas seule. Mention spéciale à mon père, qui est toujours là pour m'aider, me soutenir et veiller sur moi à chaque instant.</p>
       <p>Malgré les coups durs, les épreuves et la fatigue, je continue d'avancer. Je ne lâcherai rien, parce que chaque client satisfait me rappelle pourquoi j'ai créé Les Délices de Fa. Merci du fond du cœur à tous ceux qui me soutiennent.❤️</p>
     </div>
-    <div class="st-cta"><a class="fa-btn-out" href="menu.html">Voir le menu →</a></div>
+    <div class="st-cta reveal"><a class="fa-btn-out" href="menu.html">Voir le menu →</a></div>
   </main>
 
   <footer class="fa-foot2" id="fa-contact">
@@ -85,15 +91,28 @@
         <span>Mar – Ven · 10h – 00h · Sam – Dim jusqu'à 01h · Lun fermé</span>
       </div>
       <div class="fa-foot2-social">
-        <a href="#">Facebook</a><a href="#">Instagram</a>
+        <a href="https://www.tiktok.com/@lesdelicesdefa0" target="_blank" rel="noopener">TikTok</a>
       </div>
     </div>
     <iframe class="fa-foot2-map" title="Emplacement Les Délices de Fa" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=-17.4442%2C14.7533%2C-17.4342%2C14.7593&layer=mapnik&marker=14.7563%2C-17.4392"></iframe>
-    <div class="fa-foot2-big"><img class="fa-foot2-logo" src="assets/fa/logo.png" alt="Logo Les Délices de Fa"><span>Les Délices</span><svg class="fa-mark" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg><span>de Fa</span></div>
+    <div class="fa-foot2-big reveal"><img class="fa-foot2-logo" src="assets/fa/logo.png" alt="Logo Les Délices de Fa"><span>Les Délices</span><svg class="fa-mark" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg><span>de Fa</span></div>
     <div class="fa-foot2-legal">
       <a href="#">Conditions</a><a href="#">Confidentialité</a>
       <span class="fa-foot2-credit">© 2026 Les Délices de Fa · Propulsé &amp; sécurisé par LASSİ</span>
     </div>
   </footer>
+  <script>
+  (function(){
+    var els=document.querySelectorAll('.reveal:not(.in),.reveal-stagger:not(.in)');
+    if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('in');});return;}
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+    },{threshold:.15,rootMargin:'0px 0px -8% 0px'});
+    els.forEach(function(el){
+      if(el.classList.contains('reveal-stagger')){ Array.prototype.forEach.call(el.children,function(c,i){ c.style.setProperty('--i',i); }); }
+      io.observe(el);
+    });
+  })();
+  </script>
 </body>
 </html>

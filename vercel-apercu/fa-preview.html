@@ -136,6 +136,12 @@
   .fa-foot2-legal a:hover{ color:var(--fa-lime); }
   .fa-foot2-credit{ margin-left:auto; color:var(--fa-mut); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.5px; }
   @media(max-width:620px){ .fa-foot2-legal{ gap:16px; } .fa-foot2-credit{ margin-left:0; width:100%; } }
+  /* --- Scroll reveal --- */
+  .reveal{ opacity:0; transform:translateY(42px); transition:opacity .9s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1); will-change:opacity,transform; }
+  .reveal.in{ opacity:1; transform:none; }
+  .reveal-stagger>*{ opacity:0; transform:translateY(34px) scale(.97); transition:opacity .75s cubic-bezier(.16,1,.3,1), transform .75s cubic-bezier(.16,1,.3,1); will-change:opacity,transform; }
+  .reveal-stagger.in>*{ opacity:1; transform:none; transition-delay:calc(var(--i,0)*95ms); }
+  @media(prefers-reduced-motion:reduce){ .reveal,.reveal-stagger>*{ opacity:1!important; transform:none!important; transition:none!important; } }
 </style>
 </head>
 <body data-template="cafefa">
@@ -169,12 +175,12 @@
     <div class="fa-statement-in">
       <span class="fa-sm fa-sm-l"><svg viewBox="0 0 48 48" fill="currentColor"><path d="M24 7c-9 0-16 4.3-16 9.5h32C40 11.3 33 7 24 7z"/><rect x="7" y="20" width="34" height="5" rx="2.5"/><path d="M8 29h32c0 6.1-7.2 10.5-16 10.5S8 35.1 8 29z"/></svg></span>
       <span class="fa-sm fa-sm-r"><svg viewBox="0 0 48 48" fill="currentColor"><path d="M14 15h20l-2.1 24.8A3.3 3.3 0 0 1 28.6 43H19.4a3.3 3.3 0 0 1-3.3-3.2L14 15z"/><rect x="12" y="10" width="24" height="5" rx="2.5"/><rect x="22.6" y="2" width="2.8" height="8" rx="1.4"/></svg></span>
-      <h2 class="fa-statement-h">Plus qu'un fast-food,<br>un art de se régaler</h2>
+      <h2 class="fa-statement-h reveal">Plus qu'un fast-food,<br>un art de se régaler</h2>
     </div>
   </section>
 
   <section class="fa-sig">
-    <div class="fa-sig-grid">
+    <div class="fa-sig-grid reveal-stagger">
       <article class="fa-card">
         <img class="fa-card-img" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/463c5f18-d5dd-4b6a-955a-0bd33a9ba524/recovered_d3b00c02-989d-4176-a8c8-b08655935ddf.jpg" alt="Chicken burger">
         <div class="fa-card-body">
@@ -200,9 +206,9 @@
   </section>
 
   <section class="fa-house">
-    <h2 class="fa-house-h">Jusqu'au bout de la nuit</h2>
-    <img class="fa-house-img" src="assets/fa/house.png" alt="Les Délices de Fa">
-    <p class="fa-house-p">Du midi jusqu'au bout de la nuit, aux Parcelles. Un coin de quartier où chaque crêpe, chaque tacos et chaque box est préparé à la commande — pour se régaler, partager et savourer l'instant.</p>
+    <h2 class="fa-house-h reveal">Jusqu'au bout de la nuit</h2>
+    <img class="fa-house-img reveal" style="transition-delay:.12s" src="assets/fa/house.png" alt="Les Délices de Fa">
+    <p class="fa-house-p reveal" style="transition-delay:.22s">Du midi jusqu'au bout de la nuit, aux Parcelles. Un coin de quartier où chaque crêpe, chaque tacos et chaque box est préparé à la commande — pour se régaler, partager et savourer l'instant.</p>
   </section>
 
   <section class="fa-reveal" id="fa-menu">
@@ -234,11 +240,11 @@
         <span>Mar – Ven · 10h – 00h · Sam – Dim jusqu'à 01h · Lun fermé</span>
       </div>
       <div class="fa-foot2-social">
-        <a href="#">Facebook</a><a href="#">Instagram</a>
+        <a href="https://www.tiktok.com/@lesdelicesdefa0" target="_blank" rel="noopener">TikTok</a>
       </div>
     </div>
     <iframe class="fa-foot2-map" title="Emplacement Les Délices de Fa" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=-17.4442%2C14.7533%2C-17.4342%2C14.7593&layer=mapnik&marker=14.7563%2C-17.4392"></iframe>
-    <div class="fa-foot2-big"><img class="fa-foot2-logo" src="assets/fa/logo.png" alt="Logo Les Délices de Fa"><span>Les Délices</span><svg class="fa-mark" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg><span>de Fa</span></div>
+    <div class="fa-foot2-big reveal"><img class="fa-foot2-logo" src="assets/fa/logo.png" alt="Logo Les Délices de Fa"><span>Les Délices</span><svg class="fa-mark" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><path d="M24 2c2 6 2 9 0 14-2-5-2-8 0-14zm0 44c-2-6-2-9 0-14 2 5 2 8 0 14zM2 24c6-2 9-2 14 0-5 2-8 2-14 0zm44 0c-6 2-9 2-14 0 5-2 8-2 14 0zM8.5 8.5c5 2 7 4 9 9-5-2-7-4-9-9zm31 31c-5-2-7-4-9-9 5 2 7 4 9 9zm0-31c-2 5-4 7-9 9 2-5 4-7 9-9zm-31 31c2-5 4-7 9-9-2 5-4 7-9 9z"/><circle cx="24" cy="24" r="4"/></g></svg><span>de Fa</span></div>
     <div class="fa-foot2-legal">
       <a href="#">Conditions</a><a href="#">Confidentialité</a>
       <span class="fa-foot2-credit">© 2026 Les Délices de Fa · Propulsé &amp; sécurisé par LASSİ</span>
@@ -246,5 +252,21 @@
   </footer>
 
   <div class="cartbar"><button class="cartbtn"><span>2 &nbsp;Commander</span><span>7 500 F</span></button></div>
+  <script>
+  (function(){
+    function init(root){
+      var els=(root||document).querySelectorAll('.reveal:not(.in),.reveal-stagger:not(.in)');
+      if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('in');});return;}
+      var io=new IntersectionObserver(function(entries){
+        entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+      },{threshold:.15,rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){
+        if(el.classList.contains('reveal-stagger')){ Array.prototype.forEach.call(el.children,function(c,i){ c.style.setProperty('--i',i); }); }
+        io.observe(el);
+      });
+    }
+    window.faInitReveal=init; init();
+  })();
+  </script>
 </body>
 </html>
