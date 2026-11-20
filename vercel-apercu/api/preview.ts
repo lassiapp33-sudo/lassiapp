@@ -1666,6 +1666,7 @@ function page(o: {
   // Template EXCLUSIF verrouillé par slug (jamais sélectionnable ailleurs) :
   // Les Délices de Fa reçoit le template « cafefa » quoi qu'il y ait en base.
   if (o.slug === 'les-delices-de-fa') (theme as { template: string }).template = 'cafefa';
+  if (o.slug === 'udebi-atelier') (theme as { template: string }).template = 'udebi';
   // Logo : vrai logo uploadé du prestataire si présent, sinon logo LASSİ (jamais
   // d'emoji/initiale décorative). lassiLogo sert de repli partout dans les templates.
   const lassiLogo = `${o.base}/assets/lassi-logo.png`;
@@ -2548,10 +2549,10 @@ function page(o: {
     <script>(function(){
       var home=document.querySelector('.tr-page-home'), svc=document.querySelector('.tr-page-services');
       if(!home||!svc) return;
-      function show(which, anchor){
+      function show(which, anchor, active){
         var toSvc = which==='services';
         svc.hidden=!toSvc; home.hidden=toSvc;
-        document.querySelectorAll('.tr-nav a').forEach(function(a){ a.classList.toggle('tr-nav-active', a.getAttribute('data-trnav')===which); });
+        document.querySelectorAll('.tr-nav a').forEach(function(a){ a.classList.toggle('tr-nav-active', a===active); });
         if(anchor){ var t=document.querySelector(anchor); if(t){ setTimeout(function(){ t.scrollIntoView({behavior:'smooth'}); }, 60); return; } }
         window.scrollTo({top:0,behavior:'smooth'});
       }
@@ -2561,7 +2562,7 @@ function page(o: {
           if(document.body.classList.contains('lassi-ed')) return;
           e.preventDefault();
           var w=a.getAttribute('data-trnav'); var h=a.getAttribute('href')||'';
-          show(w, (w==='home' && h.indexOf('#tr-')===0 && h!=='#tr-top') ? h : null);
+          show(w, (w==='home' && h.indexOf('#tr-')===0 && h!=='#tr-top') ? h : null, a.closest('.tr-nav')?a:null);
         });
       });
     })();</script>
@@ -2947,6 +2948,7 @@ function page(o: {
     <header class="ba-nav" id="ba-top">
       <div class="ba-nav-in">
         <a class="ba-brand" href="#ba-top" data-grnav="home">${baMark}${esc(clip(o.name, 20))}</a>
+        <button type="button" class="ba-burger" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
         <nav class="ba-menu">
           <a href="#gr-about" data-grnav="home">La maison</a>
           <a href="#gr-menu" data-grnav="menu">La carte</a>
@@ -2955,6 +2957,14 @@ function page(o: {
         </nav>
       </div>
     </header>
+    <script>(function(){
+      var b=document.querySelector('.ba-burger'), m=document.querySelector('.ba-menu');
+      if(!b||!m) return;
+      if(document.body.classList.contains('lassi-ed')) return;
+      b.addEventListener('click',function(e){ e.stopPropagation(); var open=m.classList.toggle('ba-menu-open'); b.setAttribute('aria-expanded', open?'true':'false'); });
+      m.addEventListener('click',function(e){ if(e.target.closest('a')){ m.classList.remove('ba-menu-open'); b.setAttribute('aria-expanded','false'); } });
+      document.addEventListener('click',function(){ m.classList.remove('ba-menu-open'); b.setAttribute('aria-expanded','false'); });
+    })();</script>
     <div class="gr-page gr-page-home">
     <section class="ba-hero" ${bg(heroImg)}>
       <div class="ba-hero-bg"></div>
@@ -3249,7 +3259,118 @@ ${faSigSection}
       if(location.hash==='#fa-menu'){ pages.home.hidden=true; pages.menu.hidden=false; }
     })();</script>`;
 
-  const body = theme.template === 'cafefa' && hasCatalog ? faBody
+  // ── Template EXCLUSIF « UDEBI » (Ûdebi Atelier) — mode épuré, sacs en perles ──
+  // Réf Wix « Boutique de mode (Épuré) ». Images éditoriales : /assets/udebi/*.
+  // Verrouillé au slug udebi-atelier. Accueil éditorial + page Boutique (panier réel).
+  const U = `${o.base}/assets/udebi/`;
+  const udLogo = `<img src="${U}logo.png" alt="${escAttr(o.name)}">`;
+  const udBody = `
+    <nav class="ud-nav">
+      <a class="ud-brand" href="#ud-top" data-udnav="home">${udLogo}</a>
+      <div class="ud-links">
+        <a class="on" href="#ud-top" data-udnav="home">Accueil</a>
+        <a href="#ud-shop" data-udnav="boutique">Boutique</a>
+        <a href="#ud-contact" data-udnav="home">Contact</a>
+      </div>
+    </nav>
+
+    <div class="ud-page ud-page-home" id="ud-top">
+      <header class="ud-hero">
+        <img class="ud-hero-img" src="${U}hero-bg.jpg" alt="${escAttr(o.name)}">
+        <div class="ud-hero-in">
+          <h1 class="ud-hero-h ud-serif">L'élégance,<br>perle après perle</h1>
+          <p class="ud-hero-p">Sacs en perles 100 % faits main au Sénégal. Des pièces uniques, pensées pour sublimer chacune de vos tenues.</p>
+          <a class="ud-btn" href="#ud-shop" data-udnav="boutique">Découvrir la collection</a>
+        </div>
+        <div class="ud-hero-card">
+          <img src="${U}hero-card.jpg" alt="${escAttr(o.name)}">
+          <div><div class="t ud-serif">Fait main · Sénégal</div><div class="s">Édition perles</div><a href="#ud-shop" data-udnav="boutique">Voir la boutique</a></div>
+        </div>
+      </header>
+
+      <div class="ud-overlap">
+        <div class="ud-front">
+          <section class="ud-head rv"><h2 class="ud-serif">La Collection</h2><p>Chaque sac est façonné à la main, perle après perle — un accessoire rare, à votre image.</p></section>
+          <div class="ud-coll rv rv-stag">
+            ${['coll1.png', 'coll2.jpg', 'coll3.jpg'].map(img => `<article class="ud-cell"><img class="ud-cell-img" loading="lazy" src="${U}${img}" alt="${escAttr(o.name)}"><div class="ud-cell-cap"><a class="ud-cell-btn" href="#ud-shop" data-udnav="boutique">Commander</a></div></article>`).join('')}
+          </div>
+        </div>
+        <section class="ud-grow">
+          <img class="ud-grow-bg" src="${U}banner.jpg" alt="${escAttr(o.name)}">
+          <div class="ud-banner-card"><h3 class="ud-serif">La Collection Limitée</h3><p>Des pièces issues de nos collections, assemblées à la main et disponibles pour un temps limité seulement.</p><a href="#ud-shop" data-udnav="boutique">Réservez la vôtre →</a></div>
+        </section>
+        <div class="ud-grow-spacer"></div>
+      </div>
+
+      <section class="ud-coveted">
+        <div class="ud-coveted-head rv"><h2 class="ud-serif">Coups de cœur de l'atelier</h2></div>
+        <div class="ud-cov-grid rv rv-stag">
+          <article class="ud-cov-card"><video src="${U}video1.mp4" autoplay muted loop playsinline preload="metadata"></video><div class="ud-cov-cap"><div class="ud-cov-name ud-serif">Fait à la main</div><a class="ud-cov-link" href="#ud-shop" data-udnav="boutique">Découvrir</a></div></article>
+          <article class="ud-cov-card"><video src="${U}video2.mp4" autoplay muted loop playsinline preload="metadata"></video><div class="ud-cov-cap"><div class="ud-cov-name ud-serif">Édition perles</div><a class="ud-cov-link" href="#ud-shop" data-udnav="boutique">Découvrir</a></div></article>
+        </div>
+      </section>
+
+      <section class="ud-look">
+        <div class="ud-look-grid rv rv-stag">
+          <div class="ud-look-main"><img loading="lazy" src="${U}look-main.jpg" alt="${escAttr(o.name)}"><span class="ud-look-title ud-serif">Portez le look</span></div>
+          <div class="ud-look-right">
+            <article class="ud-look-card"><a class="ud-look-imgz" href="#ud-shop" data-udnav="boutique"><img loading="lazy" src="${U}look-1.jpg" alt="${escAttr(o.name)}"><img class="ud-look-hover" loading="lazy" src="${U}look-2.jpg" alt="${escAttr(o.name)}"></a><div class="ud-look-meta"><span class="ud-look-name ud-serif">Édition noire</span><a class="ud-look-link" href="#ud-shop" data-udnav="boutique">Commander</a></div></article>
+            <article class="ud-look-card"><a class="ud-look-imgz" href="#ud-shop" data-udnav="boutique"><img loading="lazy" src="${U}look-3.png" alt="${escAttr(o.name)}"><img class="ud-look-hover" loading="lazy" src="${U}look-4.jpg" alt="${escAttr(o.name)}"></a><div class="ud-look-meta"><span class="ud-look-name ud-serif">Perles marbrées</span><a class="ud-look-link" href="#ud-shop" data-udnav="boutique">Commander</a></div></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="ud-story">
+        <div class="ud-story-text rv"><span class="k">Notre histoire</span><h2 class="ud-serif">L'art de la perle,<br>signé Ûdebi</h2><p>Ûdebi Atelier, c'est le sac en perles pensé comme un bijou : chaque pièce est assemblée à la main au Sénégal, perle après perle. Un savoir-faire sénégalais, des matières choisies — perles, bois, acrylique — et une élégance qui se porte du quotidien aux grandes cérémonies.</p><a class="ud-btn" href="#ud-shop" data-udnav="boutique">Découvrir la boutique</a></div>
+        <div class="ud-story-img rv"><img loading="lazy" src="${U}story.jpg" alt="${escAttr(o.name)}"></div>
+      </section>
+    </div>
+
+    <div class="ud-page ud-page-boutique" id="ud-shop" hidden>
+      <section class="sh-head"><h1 class="ud-serif">La Boutique</h1><p>Tous nos sacs en perles, faits main au Sénégal. Des pièces uniques, en séries limitées — choisissez la vôtre, nous nous occupons du reste.</p></section>
+      ${closedNotice}
+      <div class="sh-wrap"><main class="sh-main"><div class="sh-main-top"><span class="sh-count">${o.products.length} pièce${o.products.length > 1 ? 's' : ''}</span><span class="sh-sort">Fait main · Sénégal</span></div>${grid}${svcSection}</main></div>
+    </div>
+
+    <footer class="ud-foot" id="ud-contact">
+      <div class="ud-foot-grid">
+        <div><h4 class="ud-serif">Rejoignez-nous</h4><p>Nouveautés, éditions limitées et coulisses de l'atelier — directement chez vous.</p>${o.phone ? `<p style="margin-top:14px">${esc(o.phone)}</p>` : ''}</div>
+        <div class="ud-foot-col"><h4 class="ud-serif">Boutique</h4><a href="#ud-shop" data-udnav="boutique">Tous les sacs</a><a href="#ud-shop" data-udnav="boutique">Éditions perles</a><a href="#ud-shop" data-udnav="boutique">Mini sacs</a></div>
+        <div class="ud-foot-col"><h4 class="ud-serif">Atelier</h4>${o.zone ? `<a href="#ud-top" data-udnav="home">${esc(o.zone)}</a>` : ''}${(o.lat != null && o.lng != null) ? `<a href="https://www.google.com/maps/search/?api=1&query=${o.lat}%2C${o.lng}" target="_blank" rel="noopener">Voir l'emplacement</a>` : ''}<a href="#ud-shop" data-udnav="boutique">Commander</a></div>
+        <div class="ud-foot-col"><h4 class="ud-serif">Légal</h4><a href="#">Conditions</a><a href="#">Confidentialité</a><a href="#">Livraison &amp; retours</a></div>
+      </div>
+      <div class="ud-foot-word">${udLogo}</div>
+      <div class="ud-foot-legal"><span>© 2026 ${esc(o.name)} — Sénégal</span><span>Propulsé &amp; sécurisé par LASSİ</span></div>
+    </footer>
+
+    <script>(function(){
+      var pages={home:document.querySelector('.ud-page-home'),boutique:document.querySelector('.ud-page-boutique')};
+      if(!pages.home||!pages.boutique) return;
+      var isEd=document.body.classList.contains('lassi-ed');
+      if(isEd){ pages.boutique.hidden=false; }
+      var reveal=function(p){ if(!p) return; setTimeout(function(){ [].forEach.call(p.querySelectorAll('.rv:not(.in)'),function(el){ if(el.classList.contains('rv-stag')){[].forEach.call(el.children,function(c,i){c.style.setProperty('--i',i);});} el.classList.add('in'); }); },240); };
+      reveal(pages.home);
+      // carte "Collection Limitée" animée quand la bannière fixe se dévoile
+      var spacer=pages.home.querySelector('.ud-grow-spacer'), card=pages.home.querySelector('.ud-grow .ud-banner-card');
+      if(spacer&&card&&'IntersectionObserver' in window){ new IntersectionObserver(function(es){es.forEach(function(e){card.classList.toggle('in',e.isIntersecting);});},{threshold:.12}).observe(spacer); } else if(card){ card.classList.add('in'); }
+      if(isEd) return;
+      document.querySelectorAll('[data-udnav]').forEach(function(a){
+        a.addEventListener('click',function(e){
+          e.preventDefault();
+          var w=a.getAttribute('data-udnav'), h=a.getAttribute('href')||'';
+          pages.home.hidden=(w!=='home'); pages.boutique.hidden=(w!=='boutique');
+          document.querySelectorAll('.ud-links a').forEach(function(x){ x.classList.toggle('on', x.getAttribute('data-udnav')===w && (w!=='home'||x.getAttribute('href')==='#ud-top')); });
+          reveal(pages[w]);
+          var an=(w==='home'&&h.indexOf('#')===0&&h!=='#ud-top')?h:null;
+          if(an){ var t=document.querySelector(an); if(t){ setTimeout(function(){ t.scrollIntoView({behavior:'smooth'}); },60); return; } }
+          window.scrollTo({top:0,behavior:'smooth'});
+        });
+      });
+      if(location.hash==='#ud-shop'){ pages.home.hidden=true; pages.boutique.hidden=false; }
+    })();</script>`;
+
+  const body = theme.template === 'udebi' && hasCatalog ? udBody
+    : theme.template === 'cafefa' && hasCatalog ? faBody
     : theme.template === 'furniture' && hasCatalog ? furnitureBody
     : theme.template === 'cosmetic' && hasCatalog ? cosmeticBody
     : theme.template === 'garderobe' && hasCatalog ? garderobeBody
@@ -3292,6 +3413,7 @@ ${theme.template === 'tresse' ? '<link href="https://fonts.googleapis.com/css2?f
 ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Cinzel:wght@500;600&display=swap" rel="stylesheet">' : ''}
 ${theme.template === 'bar' ? '<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">' : ''}
 ${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">' : ''}
+${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">' : ''}
 <style>
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
   [hidden] { display:none !important; }
@@ -4094,7 +4216,7 @@ ${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?f
   .fm-head-row{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%}
   .fm-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--fm-ink)}
   .fm-logo img{height:26px;width:auto;display:block} .fm-logo span{font-family:var(--fm-fs);font-size:13px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;line-height:1}
-  .fm-nav{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;width:100%;order:-1;padding-bottom:8px;border-bottom:1px solid rgba(44,58,44,.07)}
+  .fm-nav{display:flex;flex-direction:row;justify-content:space-between;align-items:center;gap:clamp(6px,2vw,20px);flex-wrap:nowrap;width:100%;order:-1;padding-bottom:6px;border-bottom:1px solid rgba(44,58,44,.07)}
   .fm-nav a{font-family:var(--fm-fs);color:var(--fm-ink);text-decoration:none;font-size:9px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap}
   .fm-nav a:hover,.fm-nav .fm-nav-active{color:var(--fm-green)}
   .fm-icons{display:flex;align-items:center;gap:14px} .fm-ic{color:var(--fm-ink);display:flex}
@@ -4400,7 +4522,14 @@ ${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?f
   .ba-menu{display:flex;gap:26px;margin-left:auto;flex-wrap:wrap}
   .ba-menu a{font-family:'Syne',sans-serif;font-size:14px;color:#fff;opacity:.85;text-decoration:none}
   .ba-menu a:hover{color:var(--gr-gold);opacity:1}
-  @media(max-width:760px){.ba-menu{display:none}}
+  .ba-burger{display:none;margin-left:auto;background:none;border:none;cursor:pointer;flex-direction:column;gap:5px;padding:8px}
+  .ba-burger span{display:block;width:24px;height:2px;background:#fff;border-radius:2px}
+  @media(max-width:760px){
+    .ba-burger{display:flex}
+    .ba-menu{display:none;position:absolute;top:80px;left:0;right:0;flex-direction:column;gap:0;background:rgba(13,12,17,.98);border-bottom:1px solid rgba(255,255,255,.1);padding:8px 0;z-index:41}
+    .ba-menu.ba-menu-open{display:flex}
+    .ba-menu a{padding:14px 28px;font-size:15px;opacity:1;border-top:1px solid rgba(255,255,255,.06)}
+  }
   /* Hero arche */
   .ba-hero{position:relative;min-height:92vh;background-size:cover;background-position:center;background-color:#1b1a18;display:flex;flex-direction:column;align-items:center;overflow:hidden}
   .ba-hero-bg{position:absolute;inset:0;background:rgba(13,12,17,.2)}
@@ -4623,6 +4752,128 @@ ${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?f
   .fa-foot-cta{ margin:40px 0 24px; }
   .fa-copy{ color:var(--fa-mut); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:1px; padding-top:22px; border-top:1px solid var(--fa-line); }
   @media(max-width:760px){ .fa-foot-in{ grid-template-columns:1fr; gap:24px; } }
+  /* ═══ TEMPLATE EXCLUSIF UDEBI — Ûdebi Atelier (mode épuré, sacs en perles) ═══ */
+  body[data-template="udebi"]{ --ud-bg:#f4f1ea; --ud-ink:#2a2420; --ud-wine:#5a1420; --ud-mut:#8c8276; --ud-line:rgba(42,36,32,.14); --ud-card:#ece7dc; background:var(--ud-bg); color:var(--ud-ink); font-family:'Jost',system-ui,sans-serif; font-weight:300; line-height:1.6; -webkit-font-smoothing:antialiased; }
+  body[data-template="udebi"] img{ max-width:100%; display:block; }
+  body[data-template="udebi"] ::selection{ background:var(--ud-wine); color:var(--ud-bg); }
+  .ud-serif{ font-family:'Playfair Display',Georgia,serif; }
+  .ud-nav{ position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; padding:20px clamp(18px,4vw,56px); background:rgba(246,243,236,.97); border-bottom:1px solid var(--ud-line); }
+  .ud-brand{ display:flex; align-items:center; text-decoration:none; }
+  .ud-brand img{ height:clamp(40px,4.6vw,56px); width:auto; display:block; }
+  .ud-links{ display:flex; gap:clamp(16px,2.6vw,40px); }
+  .ud-links a{ text-decoration:none; font-size:13px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ud-ink); transition:color .2s; }
+  .ud-links a:hover,.ud-links a.on{ color:var(--ud-wine); }
+  @media(max-width:640px){ .ud-links{ gap:14px; } .ud-links a{ font-size:11px; letter-spacing:1px; } }
+  .ud-hero{ position:relative; z-index:2; min-height:clamp(540px,88vh,860px); display:flex; align-items:center; overflow:hidden; background:var(--ud-bg); }
+  .ud-hero-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .ud-hero::after{ content:''; position:absolute; inset:0; background:linear-gradient(90deg,rgba(26,18,14,.6),rgba(26,18,14,.18) 42%,rgba(26,18,14,0) 62%); }
+  .ud-hero-in{ position:relative; z-index:2; padding:clamp(28px,5vw,80px); max-width:680px; align-self:center; margin-bottom:clamp(20px,6vh,70px); }
+  .ud-hero-h{ font-style:italic; font-weight:600; font-size:clamp(34px,4.6vw,60px); line-height:1.06; color:#fff; white-space:nowrap; text-shadow:0 2px 24px rgba(0,0,0,.35); }
+  .ud-hero-p{ margin-top:18px; font-size:clamp(15px,1.5vw,18px); color:#f1ece4; max-width:400px; text-shadow:0 1px 14px rgba(0,0,0,.35); }
+  .ud-btn{ display:inline-block; margin-top:28px; background:var(--ud-ink); color:var(--ud-bg); font-size:13px; letter-spacing:2px; text-transform:uppercase; padding:15px 34px; text-decoration:none; transition:background .25s; cursor:pointer; }
+  .ud-btn:hover{ background:var(--ud-wine); }
+  .ud-hero-card{ position:absolute; right:clamp(16px,3vw,54px); bottom:clamp(16px,3vw,54px); z-index:3; display:flex; align-items:center; gap:18px; background:rgba(246,243,236,.97); padding:16px; max-width:430px; border:1px solid var(--ud-line); }
+  .ud-hero-card img{ width:150px; height:180px; object-fit:cover; flex:0 0 auto; }
+  .ud-hero-card .t{ font-family:'Playfair Display',serif; font-style:italic; font-size:17px; color:var(--ud-wine); }
+  .ud-hero-card .s{ font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--ud-mut); margin-top:4px; }
+  .ud-hero-card a{ font-family:'Playfair Display',serif; font-style:italic; font-size:14px; color:var(--ud-wine); text-decoration:underline; text-underline-offset:3px; margin-top:6px; display:inline-block; }
+  @media(max-width:720px){ .ud-hero-card{ display:none; } .ud-hero-h{ font-size:clamp(30px,8vw,44px); } .ud-hero::after{ background:linear-gradient(0deg,rgba(26,18,14,.72),rgba(26,18,14,.2) 60%); } }
+  .ud-head{ text-align:center; max-width:560px; margin:0 auto; padding:clamp(60px,9vw,120px) 24px clamp(30px,4vw,48px); }
+  .ud-head h2{ font-style:italic; font-weight:500; font-size:clamp(30px,4vw,48px); color:var(--ud-wine); }
+  .ud-head p{ margin-top:14px; color:var(--ud-ink); font-size:clamp(15px,1.6vw,18px); }
+  .ud-coll{ max-width:1320px; margin:0 auto; padding:0 clamp(14px,2vw,28px) clamp(40px,6vw,80px); display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(10px,1.4vw,20px); }
+  .ud-cell{ position:relative; overflow:hidden; background:var(--ud-card); }
+  .ud-cell-img{ width:100%; aspect-ratio:3/4; object-fit:cover; transition:transform 1s cubic-bezier(.2,.7,.2,1); }
+  .ud-cell:hover .ud-cell-img{ transform:scale(1.05); }
+  .ud-cell-cap{ position:absolute; left:0; right:0; bottom:0; display:flex; justify-content:center; padding:26px 20px; background:linear-gradient(0deg,rgba(28,23,18,.6),rgba(28,23,18,0)); }
+  .ud-cell-btn{ background:rgba(244,241,234,.95); color:var(--ud-ink); font-size:12px; letter-spacing:2px; text-transform:uppercase; padding:13px 30px; text-decoration:none; transition:background .25s,color .25s; }
+  .ud-cell-btn:hover{ background:var(--ud-wine); color:var(--ud-bg); }
+  @media(max-width:860px){ .ud-coll{ grid-template-columns:repeat(2,1fr); } }
+  @media(max-width:520px){ .ud-coll{ grid-template-columns:1fr; } }
+  .ud-overlap{ position:relative; }
+  .ud-front{ position:relative; z-index:2; background:var(--ud-bg); }
+  .ud-grow{ position:fixed; inset:0; z-index:1; display:flex; align-items:center; overflow:hidden; background:var(--ud-bg); }
+  .ud-grow-spacer{ height:100vh; }
+  .ud-grow-bg{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .ud-grow::after{ content:''; position:absolute; inset:0; background:linear-gradient(0deg,rgba(28,23,18,.28),rgba(28,23,18,0) 50%); }
+  .ud-banner-card{ position:relative; z-index:2; margin:clamp(18px,4vw,56px); background:rgba(246,243,236,.97); padding:clamp(24px,3vw,44px); max-width:400px; border:1px solid var(--ud-line); opacity:0; transform:translateY(48px); transition:opacity 1s cubic-bezier(.16,1,.3,1), transform 1s cubic-bezier(.16,1,.3,1); }
+  .ud-banner-card.in{ opacity:1; transform:none; }
+  .ud-banner-card.in h3{ animation:udCardLine .9s cubic-bezier(.16,1,.3,1) .15s both; }
+  .ud-banner-card.in p{ animation:udCardLine .9s cubic-bezier(.16,1,.3,1) .3s both; }
+  .ud-banner-card.in a{ animation:udCardLine .9s cubic-bezier(.16,1,.3,1) .45s both; }
+  @keyframes udCardLine{ from{ opacity:0; transform:translateY(18px); } to{ opacity:1; transform:none; } }
+  .ud-banner-card h3{ font-family:'Playfair Display',serif; font-style:italic; font-size:clamp(24px,3vw,38px); color:var(--ud-wine); }
+  .ud-banner-card p{ margin-top:12px; color:var(--ud-ink); font-size:15px; }
+  .ud-banner-card a{ display:inline-block; margin-top:18px; font-family:'Playfair Display',serif; font-style:italic; font-size:16px; color:var(--ud-wine); text-decoration:underline; text-underline-offset:4px; }
+  .ud-coveted{ position:relative; z-index:2; background:var(--ud-bg); padding:clamp(56px,8vw,110px) clamp(14px,2vw,28px) clamp(40px,6vw,80px); }
+  .ud-coveted-head{ text-align:center; margin-bottom:clamp(32px,4vw,56px); }
+  .ud-coveted-head h2{ font-family:'Playfair Display',serif; font-style:italic; font-weight:500; font-size:clamp(28px,4vw,46px); color:var(--ud-wine); }
+  .ud-cov-grid{ max-width:1320px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:clamp(12px,1.6vw,22px); }
+  .ud-cov-card{ position:relative; overflow:hidden; aspect-ratio:4/5; background:var(--ud-card); }
+  .ud-cov-card video{ width:100%; height:100%; object-fit:cover; display:block; }
+  .ud-cov-cap{ position:absolute; left:0; right:0; bottom:0; padding:clamp(18px,2.4vw,30px); background:linear-gradient(0deg,rgba(28,23,18,.6),rgba(28,23,18,0)); color:#f4f1ea; }
+  .ud-cov-name{ font-family:'Playfair Display',serif; font-style:italic; font-size:clamp(18px,2.2vw,28px); }
+  .ud-cov-link{ display:inline-block; margin-top:8px; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; text-decoration:underline; text-underline-offset:3px; color:#f4f1ea; }
+  @media(max-width:620px){ .ud-cov-grid{ grid-template-columns:1fr; } }
+  .ud-look{ position:relative; z-index:2; background:var(--ud-bg); padding:clamp(20px,3vw,40px) clamp(14px,2vw,28px) clamp(50px,7vw,90px); }
+  .ud-look-grid{ max-width:1340px; margin:0 auto; display:grid; grid-template-columns:1.3fr 1fr; gap:clamp(12px,1.6vw,22px); align-items:stretch; }
+  .ud-look-main{ position:relative; overflow:hidden; background:var(--ud-card); min-height:clamp(420px,60vh,760px); }
+  .ud-look-main img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+  .ud-look-title{ position:absolute; top:clamp(18px,2vw,30px); left:clamp(18px,2vw,30px); z-index:2; font-family:'Playfair Display',serif; font-style:italic; font-weight:500; font-size:clamp(24px,2.6vw,38px); color:#fff; text-shadow:0 2px 20px rgba(0,0,0,.4); }
+  .ud-look-right{ display:flex; flex-direction:column; gap:clamp(12px,1.6vw,22px); }
+  .ud-look-card{ display:flex; flex-direction:column; }
+  .ud-look-imgz{ position:relative; overflow:hidden; aspect-ratio:1/1; background:var(--ud-card); }
+  .ud-look-imgz img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+  .ud-look-imgz .ud-look-hover{ opacity:0; transition:opacity .55s cubic-bezier(.2,.7,.2,1); }
+  .ud-look-imgz:hover .ud-look-hover{ opacity:1; }
+  .ud-look-meta{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-top:12px; }
+  .ud-look-name{ font-family:'Playfair Display',serif; font-style:italic; font-size:clamp(16px,1.8vw,21px); color:var(--ud-ink); }
+  .ud-look-link{ font-size:12px; letter-spacing:1.5px; text-transform:uppercase; text-decoration:underline; text-underline-offset:3px; color:var(--ud-wine); }
+  @media(max-width:760px){ .ud-look-grid{ grid-template-columns:1fr; } .ud-look-main{ min-height:0; aspect-ratio:4/5; } }
+  .ud-story{ position:relative; z-index:2; background:var(--ud-bg); display:grid; grid-template-columns:0.92fr 1.08fr; align-items:center; }
+  .ud-story-text{ padding:clamp(40px,6vw,96px) clamp(24px,4vw,64px); max-width:560px; margin-left:auto; }
+  .ud-story-text .k{ font-family:'Jost',monospace; font-size:12px; letter-spacing:3px; text-transform:uppercase; color:var(--ud-mut); }
+  .ud-story-text h2{ font-family:'Playfair Display',serif; font-style:italic; font-weight:500; font-size:clamp(30px,4vw,52px); color:var(--ud-wine); margin:14px 0 18px; line-height:1.05; }
+  .ud-story-text p{ color:var(--ud-ink); font-size:clamp(15px,1.5vw,17px); line-height:1.8; }
+  .ud-story-img{ height:100%; min-height:clamp(440px,74vh,820px); overflow:hidden; background:var(--ud-card); }
+  .ud-story-img img{ width:100%; height:100%; object-fit:cover; display:block; }
+  @media(max-width:760px){ .ud-story{ grid-template-columns:1fr; } .ud-story-text{ margin:0; max-width:none; order:2; } .ud-story-img{ order:1; min-height:0; aspect-ratio:4/3; } }
+  .ud-foot{ position:relative; z-index:2; background:var(--ud-bg); border-top:1px solid var(--ud-line); padding:clamp(48px,7vw,90px) clamp(18px,4vw,56px) 0; }
+  .ud-foot-grid{ max-width:1200px; margin:0 auto; display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:clamp(24px,3vw,48px); }
+  .ud-foot h4{ font-family:'Playfair Display',serif; font-style:italic; font-weight:500; font-size:22px; color:var(--ud-wine); margin-bottom:18px; }
+  .ud-foot p{ color:var(--ud-mut); font-size:14px; max-width:320px; }
+  .ud-foot-col a{ display:block; text-decoration:none; color:var(--ud-ink); font-size:14px; margin-bottom:12px; transition:color .2s; }
+  .ud-foot-col a:hover{ color:var(--ud-wine); }
+  .ud-foot-word{ text-align:center; margin-top:clamp(28px,4vw,48px); }
+  .ud-foot-word img{ height:clamp(90px,14vw,180px); width:auto; display:inline-block; }
+  .ud-foot-legal{ max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:22px 0 30px; border-top:1px solid var(--ud-line); font-size:12px; letter-spacing:.5px; color:var(--ud-mut); }
+  @media(max-width:760px){ .ud-foot-grid{ grid-template-columns:1fr 1fr; } }
+  @media(max-width:460px){ .ud-foot-grid{ grid-template-columns:1fr; } }
+  body[data-template="udebi"] .rv{ opacity:0; transform:translateY(38px); transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1); }
+  body[data-template="udebi"] .rv.in{ opacity:1; transform:none; }
+  body[data-template="udebi"] .rv-stag.in>*{ transition-delay:calc(var(--i,0)*90ms); }
+  @media(prefers-reduced-motion:reduce){ body[data-template="udebi"] .rv,body[data-template="udebi"] .rv-stag>*{ opacity:1!important; transform:none!important; } .ud-banner-card{ opacity:1; transform:none; } }
+  /* BOUTIQUE (page produits — panier réel restylé) */
+  .sh-head{ padding:clamp(34px,5vw,64px) clamp(18px,4vw,56px) clamp(22px,3vw,34px); border-bottom:1px solid var(--ud-line); }
+  .sh-head h1{ font-family:'Playfair Display',serif; font-style:italic; font-weight:500; font-size:clamp(34px,5vw,60px); color:var(--ud-wine); }
+  .sh-head p{ margin-top:12px; color:var(--ud-ink); max-width:620px; font-size:15px; }
+  .sh-wrap{ max-width:1320px; margin:0 auto; padding:clamp(26px,4vw,48px) clamp(18px,4vw,56px) clamp(60px,8vw,110px); }
+  .sh-main-top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:22px; }
+  .sh-count{ color:var(--ud-mut); font-size:13px; letter-spacing:1px; text-transform:uppercase; }
+  .sh-sort{ color:var(--ud-ink); font-size:13px; letter-spacing:.5px; }
+  body[data-template="udebi"] .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(14px,2vw,30px); }
+  @media(max-width:760px){ body[data-template="udebi"] .grid{ grid-template-columns:repeat(2,1fr); gap:12px; } }
+  body[data-template="udebi"] .cathead{ display:none; }
+  body[data-template="udebi"] .prod{ background:transparent; border:none; border-radius:0; box-shadow:none; }
+  body[data-template="udebi"] .pimgzone{ background:var(--ud-card); border-radius:0; aspect-ratio:3/4; overflow:hidden; }
+  body[data-template="udebi"] .pname{ font-family:'Playfair Display',serif; font-style:italic; font-weight:500; font-size:clamp(16px,1.8vw,20px); color:var(--ud-ink); margin-top:14px; }
+  body[data-template="udebi"] .pdesc{ color:var(--ud-mut); font-size:13px; }
+  body[data-template="udebi"] .pprice{ color:var(--ud-wine); letter-spacing:1px; }
+  body[data-template="udebi"] .add,body[data-template="udebi"] .qtybox{ background:var(--ud-ink); color:var(--ud-bg); border:none; border-radius:0; letter-spacing:1.5px; text-transform:uppercase; }
+  body[data-template="udebi"] .add:hover{ background:var(--ud-wine); }
+  body[data-template="udebi"] .cartbar{ background:linear-gradient(180deg,rgba(244,241,234,0),rgba(244,241,234,.96) 30%); }
+  body[data-template="udebi"] .cartbtn{ background:var(--ud-ink); color:var(--ud-bg); border-radius:0; }
+  body[data-template="udebi"] #cartTotal{ color:var(--ud-bg)!important; }
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">

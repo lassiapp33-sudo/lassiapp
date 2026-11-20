@@ -16,27 +16,37 @@
   .ud-serif{ font-family:'Playfair Display',Georgia,serif; }
   a{ color:inherit; }
   /* NAV */
-  .ud-nav{ position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; padding:20px clamp(18px,4vw,56px); background:rgba(244,241,234,.86); backdrop-filter:blur(10px); border-bottom:1px solid var(--ud-line); }
-  .ud-brand{ font-family:'Playfair Display',serif; font-style:italic; font-weight:600; font-size:clamp(22px,2.4vw,30px); letter-spacing:.5px; text-decoration:none; color:var(--ud-ink); }
+  .ud-nav{ position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; padding:20px clamp(18px,4vw,56px); background:rgba(246,243,236,.97); border-bottom:1px solid var(--ud-line); }
+  .ud-brand{ display:flex; align-items:center; font-family:'Playfair Display',serif; font-style:italic; font-weight:600; font-size:clamp(22px,2.4vw,30px); letter-spacing:.5px; text-decoration:none; color:var(--ud-ink); }
+  .ud-brand img{ height:clamp(40px,4.6vw,56px); width:auto; display:block; }
+  /* OUR STORY */
+  .ud-story{ position:relative; z-index:2; background:var(--ud-bg); display:grid; grid-template-columns:0.92fr 1.08fr; align-items:center; }
+  .ud-story-text{ padding:clamp(40px,6vw,96px) clamp(24px,4vw,64px); max-width:560px; margin-left:auto; }
+  .ud-story-text .k{ font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:3px; text-transform:uppercase; color:var(--ud-mut); }
+  .ud-story-text h2{ font-family:'Playfair Display',serif; font-style:italic; font-weight:500; font-size:clamp(30px,4vw,52px); color:var(--ud-wine); margin:14px 0 18px; line-height:1.05; }
+  .ud-story-text p{ color:var(--ud-ink); font-size:clamp(15px,1.5vw,17px); line-height:1.8; }
+  .ud-story-img{ height:100%; min-height:clamp(440px,74vh,820px); overflow:hidden; background:var(--ud-card); }
+  .ud-story-img img{ width:100%; height:100%; object-fit:cover; display:block; }
+  @media(max-width:760px){ .ud-story{ grid-template-columns:1fr; } .ud-story-text{ margin:0; max-width:none; order:2; } .ud-story-img{ order:1; min-height:0; aspect-ratio:4/3; } }
   .ud-links{ display:flex; gap:clamp(16px,2.6vw,40px); }
   .ud-links a{ text-decoration:none; font-size:13px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ud-ink); transition:color .2s; }
   .ud-links a:hover,.ud-links a.on{ color:var(--ud-wine); }
   @media(max-width:640px){ .ud-links{ gap:14px; } .ud-links a{ font-size:11px; letter-spacing:1px; } .ud-brand{ font-size:20px; } }
   /* HERO */
-  .ud-hero{ position:relative; min-height:clamp(540px,88vh,860px); display:flex; align-items:flex-end; overflow:hidden; }
+  .ud-hero{ position:relative; z-index:2; min-height:clamp(540px,88vh,860px); display:flex; align-items:center; overflow:hidden; background:var(--ud-bg); }
   .ud-hero-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-  .ud-hero::after{ content:''; position:absolute; inset:0; background:linear-gradient(90deg,rgba(244,241,234,.55),rgba(244,241,234,0) 45%); }
-  .ud-hero-in{ position:relative; z-index:2; padding:clamp(32px,6vw,86px); max-width:560px; }
-  .ud-hero-h{ font-style:italic; font-weight:500; font-size:clamp(40px,6vw,76px); line-height:1.02; color:#1c1712; }
-  .ud-hero-p{ margin-top:18px; font-size:clamp(15px,1.5vw,18px); color:#2a2420; max-width:380px; }
+  .ud-hero::after{ content:''; position:absolute; inset:0; background:linear-gradient(90deg,rgba(26,18,14,.6),rgba(26,18,14,.18) 42%,rgba(26,18,14,0) 62%); }
+  .ud-hero-in{ position:relative; z-index:2; padding:clamp(28px,5vw,80px); max-width:680px; align-self:center; margin-bottom:clamp(20px,6vh,70px); }
+  .ud-hero-h{ font-style:italic; font-weight:600; font-size:clamp(34px,4.6vw,60px); line-height:1.06; color:#fff; white-space:nowrap; text-shadow:0 2px 24px rgba(0,0,0,.35); }
+  .ud-hero-p{ margin-top:18px; font-size:clamp(15px,1.5vw,18px); color:#f1ece4; max-width:400px; text-shadow:0 1px 14px rgba(0,0,0,.35); }
   .ud-btn{ display:inline-block; margin-top:28px; background:var(--ud-ink); color:var(--ud-bg); font-size:13px; letter-spacing:2px; text-transform:uppercase; padding:15px 34px; text-decoration:none; transition:background .25s; }
   .ud-btn:hover{ background:var(--ud-wine); }
-  .ud-hero-card{ position:absolute; right:clamp(16px,3vw,54px); bottom:clamp(16px,3vw,54px); z-index:3; display:flex; align-items:center; gap:16px; background:rgba(244,241,234,.82); backdrop-filter:blur(8px); padding:14px; max-width:340px; border:1px solid var(--ud-line); }
-  .ud-hero-card img{ width:88px; height:104px; object-fit:cover; flex:0 0 auto; }
+  .ud-hero-card{ position:absolute; right:clamp(16px,3vw,54px); bottom:clamp(16px,3vw,54px); z-index:3; display:flex; align-items:center; gap:18px; background:rgba(246,243,236,.97); padding:16px; max-width:430px; border:1px solid var(--ud-line); }
+  .ud-hero-card img{ width:150px; height:180px; object-fit:cover; flex:0 0 auto; }
   .ud-hero-card .t{ font-family:'Playfair Display',serif; font-style:italic; font-size:17px; color:var(--ud-wine); }
   .ud-hero-card .s{ font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--ud-mut); margin-top:4px; }
   .ud-hero-card a{ font-family:'Playfair Display',serif; font-style:italic; font-size:14px; color:var(--ud-wine); text-decoration:underline; text-underline-offset:3px; margin-top:6px; display:inline-block; }
-  @media(max-width:720px){ .ud-hero-card{ display:none; } .ud-hero::after{ background:linear-gradient(0deg,rgba(244,241,234,.8),rgba(244,241,234,.1) 55%); } }
+  @media(max-width:720px){ .ud-hero-card{ display:none; } .ud-hero-h{ font-size:clamp(30px,8vw,44px); } .ud-hero::after{ background:linear-gradient(0deg,rgba(26,18,14,.72),rgba(26,18,14,.2) 60%); } }
   /* SECTION HEAD */
   .ud-head{ text-align:center; max-width:560px; margin:0 auto; padding:clamp(60px,9vw,120px) 24px clamp(30px,4vw,48px); }
   .ud-head h2{ font-style:italic; font-weight:500; font-size:clamp(30px,4vw,48px); color:var(--ud-wine); }
@@ -46,22 +56,57 @@
   .ud-cell{ position:relative; overflow:hidden; background:var(--ud-card); }
   .ud-cell-img{ width:100%; aspect-ratio:3/4; object-fit:cover; transition:transform 1s cubic-bezier(.2,.7,.2,1); }
   .ud-cell:hover .ud-cell-img{ transform:scale(1.05); }
-  .ud-cell-cap{ position:absolute; left:0; right:0; bottom:0; padding:22px 20px; background:linear-gradient(0deg,rgba(28,23,18,.72),rgba(28,23,18,0)); color:#f4f1ea; }
-  .ud-cell-name{ font-family:'Playfair Display',serif; font-style:italic; font-size:clamp(18px,2vw,24px); }
-  .ud-cell-row{ display:flex; justify-content:space-between; align-items:center; margin-top:6px; gap:10px; }
-  .ud-cell-price{ letter-spacing:1px; font-size:14px; }
-  .ud-cell-link{ font-size:12px; letter-spacing:1.5px; text-transform:uppercase; text-decoration:underline; text-underline-offset:3px; }
+  .ud-cell-cap{ position:absolute; left:0; right:0; bottom:0; display:flex; justify-content:center; padding:26px 20px; background:linear-gradient(0deg,rgba(28,23,18,.6),rgba(28,23,18,0)); }
+  .ud-cell-btn{ background:rgba(244,241,234,.95); color:var(--ud-ink); font-size:12px; letter-spacing:2px; text-transform:uppercase; padding:13px 30px; text-decoration:none; transition:background .25s,color .25s; }
+  .ud-cell-btn:hover{ background:var(--ud-wine); color:var(--ud-bg); }
   @media(max-width:860px){ .ud-coll{ grid-template-columns:repeat(2,1fr); } }
   @media(max-width:520px){ .ud-coll{ grid-template-columns:1fr; } }
-  /* BANNER */
-  .ud-banner{ position:relative; min-height:clamp(380px,60vh,620px); display:flex; align-items:center; overflow:hidden; }
-  .ud-banner-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-  .ud-banner-card{ position:relative; z-index:2; margin:0 clamp(18px,6vw,100px); background:rgba(244,241,234,.78); backdrop-filter:blur(6px); padding:clamp(28px,4vw,48px); max-width:420px; border:1px solid var(--ud-line); }
-  .ud-banner-card h3{ font-family:'Playfair Display',serif; font-style:italic; font-size:clamp(24px,3vw,36px); color:var(--ud-wine); }
+  /* BANNER — la 2e section recouvre la 1re au scroll (sticky overlap) */
+  .ud-overlap{ position:relative; }
+  .ud-front{ position:relative; z-index:2; background:var(--ud-bg); }
+  .ud-grow{ position:fixed; inset:0; z-index:1; display:flex; align-items:center; overflow:hidden; background:var(--ud-bg); }
+  .ud-grow-spacer{ height:100vh; }
+  .ud-grow-bg{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .ud-grow::after{ content:''; position:absolute; inset:0; background:linear-gradient(0deg,rgba(28,23,18,.28),rgba(28,23,18,0) 50%); }
+  .ud-banner-card{ position:relative; z-index:2; margin:clamp(18px,4vw,56px); background:rgba(246,243,236,.97); padding:clamp(24px,3vw,44px); max-width:400px; border:1px solid var(--ud-line); opacity:0; transform:translateY(48px); transition:opacity 1s cubic-bezier(.16,1,.3,1), transform 1s cubic-bezier(.16,1,.3,1); }
+  .ud-banner-card.in{ opacity:1; transform:none; }
+  .ud-banner-card.in h3{ animation:udCardLine .9s cubic-bezier(.16,1,.3,1) .15s both; }
+  .ud-banner-card.in p{ animation:udCardLine .9s cubic-bezier(.16,1,.3,1) .3s both; }
+  .ud-banner-card.in a{ animation:udCardLine .9s cubic-bezier(.16,1,.3,1) .45s both; }
+  @keyframes udCardLine{ from{ opacity:0; transform:translateY(18px); } to{ opacity:1; transform:none; } }
+  @media(prefers-reduced-motion:reduce){ .ud-banner-card{ opacity:1; transform:none; } .ud-banner-card.in h3,.ud-banner-card.in p,.ud-banner-card.in a{ animation:none; } }
+  .ud-banner-card h3{ font-family:'Playfair Display',serif; font-style:italic; font-size:clamp(24px,3vw,38px); color:var(--ud-wine); }
   .ud-banner-card p{ margin-top:12px; color:var(--ud-ink); font-size:15px; }
   .ud-banner-card a{ display:inline-block; margin-top:18px; font-family:'Playfair Display',serif; font-style:italic; font-size:16px; color:var(--ud-wine); text-decoration:underline; text-underline-offset:4px; }
+  /* MOST COVETED — 2 vidéos */
+  .ud-coveted{ position:relative; z-index:2; background:var(--ud-bg); padding:clamp(56px,8vw,110px) clamp(14px,2vw,28px) clamp(40px,6vw,80px); }
+  .ud-coveted-head{ text-align:center; margin-bottom:clamp(32px,4vw,56px); }
+  .ud-coveted-head h2{ font-family:'Playfair Display',serif; font-style:italic; font-weight:500; font-size:clamp(28px,4vw,46px); color:var(--ud-wine); }
+  .ud-cov-grid{ max-width:1320px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:clamp(12px,1.6vw,22px); }
+  .ud-cov-card{ position:relative; overflow:hidden; aspect-ratio:4/5; background:var(--ud-card); }
+  .ud-cov-card video{ width:100%; height:100%; object-fit:cover; display:block; }
+  .ud-cov-cap{ position:absolute; left:0; right:0; bottom:0; padding:clamp(18px,2.4vw,30px); background:linear-gradient(0deg,rgba(28,23,18,.6),rgba(28,23,18,0)); color:#f4f1ea; }
+  .ud-cov-name{ font-family:'Playfair Display',serif; font-style:italic; font-size:clamp(18px,2.2vw,28px); }
+  .ud-cov-link{ display:inline-block; margin-top:8px; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; text-decoration:underline; text-underline-offset:3px; color:#f4f1ea; }
+  @media(max-width:620px){ .ud-cov-grid{ grid-template-columns:1fr; } }
+  /* SHOP THE LOOK — survol = 2e image */
+  .ud-look{ position:relative; z-index:2; background:var(--ud-bg); padding:clamp(20px,3vw,40px) clamp(14px,2vw,28px) clamp(50px,7vw,90px); }
+  .ud-look-grid{ max-width:1340px; margin:0 auto; display:grid; grid-template-columns:1.3fr 1fr; gap:clamp(12px,1.6vw,22px); align-items:stretch; }
+  .ud-look-main{ position:relative; overflow:hidden; background:var(--ud-card); min-height:clamp(420px,60vh,760px); }
+  .ud-look-main img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+  .ud-look-title{ position:absolute; top:clamp(18px,2vw,30px); left:clamp(18px,2vw,30px); z-index:2; font-family:'Playfair Display',serif; font-style:italic; font-weight:500; font-size:clamp(24px,2.6vw,38px); color:#fff; text-shadow:0 2px 20px rgba(0,0,0,.4); }
+  .ud-look-right{ display:flex; flex-direction:column; gap:clamp(12px,1.6vw,22px); }
+  .ud-look-card{ display:flex; flex-direction:column; }
+  .ud-look-imgz{ position:relative; overflow:hidden; aspect-ratio:1/1; background:var(--ud-card); }
+  .ud-look-imgz img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+  .ud-look-imgz .ud-look-hover{ opacity:0; transition:opacity .55s cubic-bezier(.2,.7,.2,1); }
+  .ud-look-imgz:hover .ud-look-hover{ opacity:1; }
+  .ud-look-meta{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-top:12px; }
+  .ud-look-name{ font-family:'Playfair Display',serif; font-style:italic; font-size:clamp(16px,1.8vw,21px); color:var(--ud-ink); }
+  .ud-look-link{ font-size:12px; letter-spacing:1.5px; text-transform:uppercase; text-decoration:underline; text-underline-offset:3px; color:var(--ud-wine); }
+  @media(max-width:760px){ .ud-look-grid{ grid-template-columns:1fr; } .ud-look-main{ min-height:0; aspect-ratio:4/5; } }
   /* FOOTER */
-  .ud-foot{ border-top:1px solid var(--ud-line); padding:clamp(48px,7vw,90px) clamp(18px,4vw,56px) 0; }
+  .ud-foot{ position:relative; z-index:2; background:var(--ud-bg); border-top:1px solid var(--ud-line); padding:clamp(48px,7vw,90px) clamp(18px,4vw,56px) 0; }
   .ud-foot-grid{ max-width:1200px; margin:0 auto; display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:clamp(24px,3vw,48px); }
   .ud-foot h4{ font-family:'Playfair Display',serif; font-style:italic; font-weight:500; font-size:22px; color:var(--ud-wine); margin-bottom:18px; }
   .ud-foot p{ color:var(--ud-mut); font-size:14px; max-width:320px; }
@@ -70,7 +115,8 @@
   .ud-foot-news button{ background:none; border:none; cursor:pointer; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ud-wine); }
   .ud-foot-col a{ display:block; text-decoration:none; color:var(--ud-ink); font-size:14px; margin-bottom:12px; transition:color .2s; }
   .ud-foot-col a:hover{ color:var(--ud-wine); }
-  .ud-foot-word{ text-align:center; font-family:'Playfair Display',serif; font-style:italic; font-weight:600; font-size:clamp(70px,22vw,320px); line-height:.82; color:var(--ud-wine); opacity:.14; margin-top:clamp(20px,3vw,30px); overflow:hidden; white-space:nowrap; }
+  .ud-foot-word{ text-align:center; margin-top:clamp(28px,4vw,48px); }
+  .ud-foot-word img{ height:clamp(90px,14vw,180px); width:auto; display:inline-block; }
   .ud-foot-legal{ max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:22px 0 30px; border-top:1px solid var(--ud-line); font-size:12px; letter-spacing:.5px; color:var(--ud-mut); }
   @media(max-width:760px){ .ud-foot-grid{ grid-template-columns:1fr 1fr; } }
   @media(max-width:460px){ .ud-foot-grid{ grid-template-columns:1fr; } }
@@ -83,32 +129,33 @@
 </head>
 <body>
   <nav class="ud-nav">
-    <a class="ud-brand" href="#top">Ûdebi <span style="font-style:normal;font-weight:400;font-size:.6em;letter-spacing:3px;text-transform:uppercase">Atelier</span></a>
+    <a class="ud-brand" href="#top"><img src="assets/udebi/logo.png" alt="Ûdebi Atelier"></a>
     <div class="ud-links">
       <a class="on" href="#top">Accueil</a>
-      <a href="#collection">Boutique</a>
-      <a href="#histoire">Histoire</a>
+      <a href="boutique.html">Boutique</a>
       <a href="#contact">Contact</a>
     </div>
   </nav>
 
   <header class="ud-hero" id="top">
-    <img class="ud-hero-img" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/new_1794919625703_1794919625703.jpg" alt="Ûdebi Atelier">
+    <img class="ud-hero-img" src="assets/udebi/hero-bg.jpg" alt="Ûdebi Atelier">
     <div class="ud-hero-in">
       <h1 class="ud-hero-h ud-serif">L'élégance,<br>perle après perle</h1>
-      <p class="ud-hero-p">Sacs en perles 100 % faits main à Mbao. Des pièces uniques, pensées pour sublimer chacune de vos tenues.</p>
-      <a class="ud-btn" href="#collection">Découvrir la collection</a>
+      <p class="ud-hero-p">Sacs en perles 100 % faits main au Sénégal. Des pièces uniques, pensées pour sublimer chacune de vos tenues.</p>
+      <a class="ud-btn" href="boutique.html">Découvrir la collection</a>
     </div>
     <div class="ud-hero-card">
-      <img src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/new_1794917840443_1794917840443.jpg" alt="Latew by Ûdebi">
+      <img src="assets/udebi/hero-card.jpg" alt="Sac Ûdebi">
       <div>
         <div class="t ud-serif">« Latew » by Ûdebi</div>
         <div class="s">Édition perles · 24 000 F</div>
-        <a href="#collection">Voir la pièce</a>
+        <a href="boutique.html">Voir la pièce</a>
       </div>
     </div>
   </header>
 
+  <div class="ud-overlap">
+  <div class="ud-front">
   <section class="ud-head rv" id="collection">
     <h2 class="ud-serif">La Collection</h2>
     <p>Chaque sac est façonné à la main, perle après perle — un accessoire rare, à votre image.</p>
@@ -116,34 +163,78 @@
 
   <div class="ud-coll rv-stag rv">
     <article class="ud-cell">
-      <img class="ud-cell-img" loading="lazy" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/new_1794919625703_1794919625703.jpg" alt="Bloom">
-      <div class="ud-cell-cap"><div class="ud-cell-name ud-serif">« Bloom »</div><div class="ud-cell-row"><span class="ud-cell-price">25 000 F</span><a class="ud-cell-link" href="#">Commander</a></div></div>
+      <img class="ud-cell-img" loading="lazy" src="assets/udebi/coll1.png" alt="Collection Ûdebi">
+      <div class="ud-cell-cap"><a class="ud-cell-btn" href="boutique.html">Commander</a></div>
     </article>
     <article class="ud-cell">
-      <img class="ud-cell-img" loading="lazy" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/new_1794917840443_1794917840443.jpg" alt="Latew">
-      <div class="ud-cell-cap"><div class="ud-cell-name ud-serif">« Latew » by Ûdebi</div><div class="ud-cell-row"><span class="ud-cell-price">24 000 F</span><a class="ud-cell-link" href="#">Commander</a></div></div>
+      <img class="ud-cell-img" loading="lazy" src="assets/udebi/coll2.jpg" alt="Collection Ûdebi">
+      <div class="ud-cell-cap"><a class="ud-cell-btn" href="boutique.html">Commander</a></div>
     </article>
     <article class="ud-cell">
-      <img class="ud-cell-img" loading="lazy" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/new_1794950689329_1794950689329.jpg" alt="Liguère bag">
-      <div class="ud-cell-cap"><div class="ud-cell-name ud-serif">« Liguère bag »</div><div class="ud-cell-row"><span class="ud-cell-price">20 000 F</span><a class="ud-cell-link" href="#">Commander</a></div></div>
-    </article>
-    <article class="ud-cell">
-      <img class="ud-cell-img" loading="lazy" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/new_1794920112868_1794920112868.jpg" alt="Mbecté bag">
-      <div class="ud-cell-cap"><div class="ud-cell-name ud-serif">« Mbecté bag »</div><div class="ud-cell-row"><span class="ud-cell-price">15 000 F</span><a class="ud-cell-link" href="#">Commander</a></div></div>
-    </article>
-    <article class="ud-cell">
-      <img class="ud-cell-img" loading="lazy" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/97c0dba1-6fc5-44bd-a1b5-f0a83a824738_1795013795384.jpg" alt="CoCo mini">
-      <div class="ud-cell-cap"><div class="ud-cell-name ud-serif">CoCo mini</div><div class="ud-cell-row"><span class="ud-cell-price">13 000 F</span><a class="ud-cell-link" href="#">Commander</a></div></div>
+      <img class="ud-cell-img" loading="lazy" src="assets/udebi/coll3.jpg" alt="Collection Ûdebi">
+      <div class="ud-cell-cap"><a class="ud-cell-btn" href="boutique.html">Commander</a></div>
     </article>
   </div>
 
-  <section class="ud-banner" id="histoire">
-    <img class="ud-banner-img" src="https://tsdemraszwtbzgtyjzum.supabase.co/storage/v1/object/public/products/2a92895a-bcba-42ac-ae94-2e47e6c03fc6/new_1794950689329_1794950689329.jpg" alt="Ûdebi Atelier">
-    <div class="ud-banner-card rv">
-      <h3 class="ud-serif">100 % fait main</h3>
-      <p>Perles, bois, acrylique, cuir — assemblés patiemment à Mbao. Derrière chaque sac, un savoir-faire et une histoire. Ûdebi, c'est l'artisanat sénégalais qui s'habille d'élégance.</p>
-      <a href="#collection">Explorer l'atelier →</a>
+  </div><!-- /ud-front -->
+  <section class="ud-grow" id="histoire">
+    <img class="ud-grow-bg" src="assets/udebi/banner.jpg" alt="Ûdebi Atelier — Collection limitée">
+    <div class="ud-banner-card">
+      <h3 class="ud-serif">La Collection Limitée</h3>
+      <p>Des pièces issues de nos collections, assemblées à la main et disponibles pour un temps limité seulement.</p>
+      <a href="boutique.html">Réservez la vôtre →</a>
     </div>
+  </section>
+  <div class="ud-grow-spacer"></div>
+  </div><!-- /ud-overlap -->
+
+  <section class="ud-coveted">
+    <div class="ud-coveted-head rv"><h2>Coups de cœur de l'atelier</h2></div>
+    <div class="ud-cov-grid rv rv-stag">
+      <article class="ud-cov-card">
+        <video src="assets/udebi/video1.mp4" autoplay muted loop playsinline preload="metadata"></video>
+        <div class="ud-cov-cap"><div class="ud-cov-name">Fait à la main</div><a class="ud-cov-link" href="boutique.html">Découvrir</a></div>
+      </article>
+      <article class="ud-cov-card">
+        <video src="assets/udebi/video2.mp4" autoplay muted loop playsinline preload="metadata"></video>
+        <div class="ud-cov-cap"><div class="ud-cov-name">Édition perles</div><a class="ud-cov-link" href="boutique.html">Découvrir</a></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="ud-look">
+    <div class="ud-look-grid rv rv-stag">
+      <div class="ud-look-main">
+        <img loading="lazy" src="assets/udebi/look-main.jpg" alt="Ûdebi — Portez le look">
+        <span class="ud-look-title">Portez le look</span>
+      </div>
+      <div class="ud-look-right">
+        <article class="ud-look-card">
+          <a class="ud-look-imgz" href="boutique.html">
+            <img loading="lazy" src="assets/udebi/look-1.jpg" alt="Sac noir Ûdebi">
+            <img class="ud-look-hover" loading="lazy" src="assets/udebi/look-2.jpg" alt="Sac noir Ûdebi — détail">
+          </a>
+          <div class="ud-look-meta"><span class="ud-look-name">Édition noire</span><a class="ud-look-link" href="boutique.html">Commander</a></div>
+        </article>
+        <article class="ud-look-card">
+          <a class="ud-look-imgz" href="boutique.html">
+            <img loading="lazy" src="assets/udebi/look-3.png" alt="Sac perles marbrées Ûdebi">
+            <img class="ud-look-hover" loading="lazy" src="assets/udebi/look-4.jpg" alt="Sac perles marbrées Ûdebi — détail">
+          </a>
+          <div class="ud-look-meta"><span class="ud-look-name">Perles marbrées</span><a class="ud-look-link" href="boutique.html">Commander</a></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="ud-story" id="histoire-story">
+    <div class="ud-story-text rv">
+      <span class="k">Notre histoire</span>
+      <h2>L'art de la perle,<br>signé Ûdebi</h2>
+      <p>Ûdebi Atelier, c'est le sac en perles pensé comme un bijou : chaque pièce est assemblée à la main au Sénégal, perle après perle. Un savoir-faire sénégalais, des matières choisies — perles, bois, acrylique — et une élégance qui se porte du quotidien aux grandes cérémonies.</p>
+      <a class="ud-btn" href="boutique.html">Découvrir la boutique</a>
+    </div>
+    <div class="ud-story-img rv"><img loading="lazy" src="assets/udebi/story.jpg" alt="Ûdebi Atelier"></div>
   </section>
 
   <footer class="ud-foot" id="contact">
@@ -155,15 +246,15 @@
       </div>
       <div class="ud-foot-col">
         <h4 class="ud-serif">Boutique</h4>
-        <a href="#collection">Tous les sacs</a>
-        <a href="#collection">Éditions perles</a>
-        <a href="#collection">Mini sacs</a>
+        <a href="boutique.html">Tous les sacs</a>
+        <a href="boutique.html">Éditions perles</a>
+        <a href="boutique.html">Mini sacs</a>
       </div>
       <div class="ud-foot-col">
         <h4 class="ud-serif">Atelier</h4>
         <a href="#histoire">Notre histoire</a>
         <a href="#contact">Nous contacter</a>
-        <a href="https://www.google.com/maps/search/?api=1&query=14.7315854476224%2C-17.3284112238114" target="_blank" rel="noopener">Commune de Mbao</a>
+        <a href="https://www.google.com/maps/search/?api=1&query=14.7315854476224%2C-17.3284112238114" target="_blank" rel="noopener">Commune de Sénégal</a>
       </div>
       <div class="ud-foot-col">
         <h4 class="ud-serif">Légal</h4>
@@ -172,14 +263,25 @@
         <a href="#">Livraison & retours</a>
       </div>
     </div>
-    <div class="ud-foot-word ud-serif">Ûdebi</div>
+    <div class="ud-foot-word"><img src="assets/udebi/logo.png" alt="Ûdebi Atelier"></div>
     <div class="ud-foot-legal">
-      <span>© 2026 Ûdebi Atelier — Commune de Mbao</span>
+      <span>© 2026 Ûdebi Atelier — Commune de Sénégal</span>
       <span>Propulsé &amp; sécurisé par LASSİ</span>
     </div>
   </footer>
 
   <script>
+  (function(){
+    // Anime la carte "Collection Limitée" quand la bannière fixe se dévoile
+    var spacer=document.querySelector('.ud-grow-spacer');
+    var card=document.querySelector('.ud-grow .ud-banner-card');
+    if(spacer&&card&&'IntersectionObserver' in window){
+      var io2=new IntersectionObserver(function(es){
+        es.forEach(function(e){ card.classList.toggle('in', e.isIntersecting); });
+      },{threshold:.12});
+      io2.observe(spacer);
+    } else if(card){ card.classList.add('in'); }
+  })();
   (function(){
     var els=document.querySelectorAll('.rv:not(.in)');
     if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('in');});return;}
