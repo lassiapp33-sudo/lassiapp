@@ -3390,6 +3390,7 @@ ${faSigSection}
       if(isEd){ pages.boutique.hidden=false; }
       var reveal=function(p){ if(!p) return; setTimeout(function(){ [].forEach.call(p.querySelectorAll('.rv:not(.in)'),function(el){ if(el.classList.contains('rv-stag')){[].forEach.call(el.children,function(c,i){c.style.setProperty('--i',i);});} el.classList.add('in'); }); },240); };
       reveal(pages.home);
+      [].forEach.call(document.querySelectorAll('.ud-look-imgz'),function(z){ z.addEventListener('click',function(e){ e.preventDefault(); z.classList.toggle('show2'); }); });
       // carte "Collection Limitée" animée quand la bannière fixe se dévoile
       var spacer=pages.home.querySelector('.ud-grow-spacer'), card=pages.home.querySelector('.ud-grow .ud-banner-card');
       if(spacer&&card&&'IntersectionObserver' in window){ new IntersectionObserver(function(es){es.forEach(function(e){card.classList.toggle('in',e.isIntersecting);});},{threshold:.12}).observe(spacer); } else if(card){ card.classList.add('in'); }
@@ -4905,6 +4906,7 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .ud-look-imgz img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
   .ud-look-imgz .ud-look-hover{ opacity:0; transition:opacity .55s cubic-bezier(.2,.7,.2,1); }
   .ud-look-imgz:hover .ud-look-hover{ opacity:1; }
+  .ud-look-imgz.show2 .ud-look-hover{ opacity:1; }
   .ud-look-meta{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-top:12px; }
   .ud-look-name{ font-family:'Playfair Display',serif; font-style:italic; font-size:clamp(16px,1.8vw,21px); color:var(--ud-ink); }
   .ud-look-link{ font-size:12px; letter-spacing:1.5px; text-transform:uppercase; text-decoration:underline; text-underline-offset:3px; color:var(--ud-wine); }
@@ -4916,7 +4918,7 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .ud-story-text p{ color:var(--ud-ink); font-size:clamp(15px,1.5vw,17px); line-height:1.8; }
   .ud-story-img{ height:100%; min-height:clamp(440px,74vh,820px); overflow:hidden; background:var(--ud-card); }
   .ud-story-img img{ width:100%; height:100%; object-fit:cover; display:block; }
-  @media(max-width:760px){ .ud-story{ grid-template-columns:1fr; } .ud-story-text{ margin:0; max-width:none; order:2; } .ud-story-img{ order:1; min-height:0; aspect-ratio:4/3; } }
+  @media(max-width:760px){ .ud-story{ grid-template-columns:0.88fr 1.12fr; } .ud-story-text{ margin:0; max-width:none; padding:14px 12px; } .ud-story-img{ min-height:0; aspect-ratio:3/4; } .ud-story-text .k{ font-size:9px; letter-spacing:2px; } .ud-story-text h2{ font-size:19px; margin:8px 0 10px; } .ud-story-text p{ font-size:12px; line-height:1.55; } .ud-story-text .ud-btn{ margin-top:14px; font-size:10px; padding:10px 16px; } }
   .ud-foot{ position:relative; z-index:2; background:var(--ud-bg); border-top:1px solid var(--ud-line); padding:clamp(48px,7vw,90px) clamp(18px,4vw,56px) 0; }
   .ud-foot-grid{ max-width:1200px; margin:0 auto; display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:clamp(24px,3vw,48px); }
   .ud-foot h4{ font-family:'Playfair Display',serif; font-style:italic; font-weight:500; font-size:22px; color:var(--ud-wine); margin-bottom:18px; }
