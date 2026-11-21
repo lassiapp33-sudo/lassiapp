@@ -144,6 +144,15 @@ export default function AdvancedSiteEditor({ slug, shopId, cfg, saving, onSave, 
     setSelCont({ ...selCont, index: to, order });
   }, [selCont, ov, setOv]);
 
+  // Supprimer / rétablir un conteneur sélectionné (clé cN).
+  const toggleContHidden = useCallback(() => {
+    if (!selCont) return;
+    const set = new Set(ov.contHidden ?? []);
+    if (set.has(selCont.key)) set.delete(selCont.key); else set.add(selCont.key);
+    const arr = Array.from(set).sort();
+    setOv({ ...ov, contHidden: arr.length ? arr : undefined });
+  }, [selCont, ov, setOv]);
+
   const setContShape = useCallback((shape: 'sq' | 'rd') => {
     if (!selCont) return;
     const cont = { ...(ov.cont ?? {}) };
@@ -395,6 +404,15 @@ export default function AdvancedSiteEditor({ slug, shopId, cfg, saving, onSave, 
                       return <TouchableOpacity key={a.id || 'none'} onPress={() => setContAnim(a.id)} style={[styles.chip, on && styles.chipOn]}><Text style={[styles.chipTxt, on && styles.chipTxtOn]}>{a.label}</Text></TouchableOpacity>;
                     })}
                   </View>
+                  {(() => {
+                    const hidden = (ov.contHidden ?? []).includes(selCont.key);
+                    return (<>
+                      <Text style={styles.lbl}>Suppression</Text>
+                      <TouchableOpacity onPress={toggleContHidden} style={[styles.pill, !hidden && styles.pillOff, { alignSelf: 'flex-start' }]}>
+                        <Text style={[styles.pillTxt, !hidden && { color: colors.white }]}>{hidden ? 'Rétablir le conteneur' : 'Supprimer le conteneur'}</Text>
+                      </TouchableOpacity>
+                    </>);
+                  })()}
                   <View style={styles.contSep} />
                 </View>
               )}

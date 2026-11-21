@@ -613,6 +613,12 @@ const LED_CORE = `<style id="led-core-style">
         else if(c.shape==='rd') el.style.borderRadius='22px';
         if(c.anim&&ANIM[c.anim]) el.classList.add(ANIM[c.anim]);
       });
+      // Conteneurs supprimés (masqués) : clés cN listées dans contHidden.
+      var cx=ov.contHidden||[];
+      conts.forEach(function(el){
+        if(cx.indexOf(el.getAttribute('data-c'))>=0) el.style.display='none';
+        else if(el.style.display==='none') el.style.display='';
+      });
       var order=ov.contOrder;
       if(order&&order.length){
         var map={}; conts.forEach(function(el){ map[el.getAttribute('data-c')]=el; });
@@ -4777,7 +4783,7 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .ud-hero-card .t{ font-family:'Playfair Display',serif; font-style:italic; font-size:17px; color:var(--ud-wine); }
   .ud-hero-card .s{ font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--ud-mut); margin-top:4px; }
   .ud-hero-card a{ font-family:'Playfair Display',serif; font-style:italic; font-size:14px; color:var(--ud-wine); text-decoration:underline; text-underline-offset:3px; margin-top:6px; display:inline-block; }
-  @media(max-width:720px){ .ud-hero-card{ display:none; } .ud-hero-h{ font-size:clamp(30px,8vw,44px); } .ud-hero::after{ background:linear-gradient(0deg,rgba(26,18,14,.72),rgba(26,18,14,.2) 60%); } }
+  @media(max-width:720px){ .ud-hero-card{ display:none; } .ud-hero-h{ font-size:clamp(30px,8vw,44px); } .ud-hero-img{ object-position:22% center; } .ud-hero::after{ background:linear-gradient(0deg,rgba(20,13,10,.9),rgba(20,13,10,.5) 45%,rgba(20,13,10,.2) 72%); } .ud-hero-in{ align-self:flex-end; margin-bottom:clamp(40px,12vh,110px); } .ud-hero-p{ color:#fff; text-shadow:0 2px 16px rgba(0,0,0,.75); } }
   .ud-head{ text-align:center; max-width:560px; margin:0 auto; padding:clamp(60px,9vw,120px) 24px clamp(30px,4vw,48px); }
   .ud-head h2{ font-style:italic; font-weight:500; font-size:clamp(30px,4vw,48px); color:var(--ud-wine); }
   .ud-head p{ margin-top:14px; color:var(--ud-ink); font-size:clamp(15px,1.6vw,18px); }
