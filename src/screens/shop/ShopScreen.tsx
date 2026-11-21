@@ -44,6 +44,7 @@ import { formatPrice } from '../../utils/format';
 import { calculerPrixClient, calculerPrixClientVip } from '../../config/payment';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ImageZoomModal from '../../components/common/ImageZoomModal';
+import ProductDetailModal from '../../components/shop/ProductDetailModal';
 import * as fitnessService from '../../services/fitnessAbonnements';
 import { FitnessOffre } from '../../services/fitnessAbonnements';
 import { FITNESS_SUBSCRIPTION_CATS } from '../../config/fitnessConfig';
@@ -168,6 +169,7 @@ interface SectionOpts {
   getQty: (p: StoreProduct) => number;
   onAdd: (p: StoreProduct) => void;
   onRemove: (p: StoreProduct) => void;
+  onPress?: (p: StoreProduct) => void;
   promoMap: Record<string, any>;
   isVip: boolean;
   isPreview: boolean;
@@ -206,6 +208,7 @@ function ProductSectionList({ items, opts }: { items: StoreProduct[]; opts: Sect
                 qty={opts.getQty(p)}
                 onAdd={() => opts.onAdd(p)}
                 onRemove={() => opts.onRemove(p)}
+                onPress={opts.onPress ? () => opts.onPress!(p) : undefined}
                 promoInfo={opts.promoMap[p.id]}
                 isVip={opts.isVip}
                 isPreview={opts.isPreview}
@@ -298,6 +301,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
   const [terrainBookingReady, setTerrainBookingReady] = useState<import('../../components/terrain/ShopTerrainSlotPicker').SlotBookParams | null>(null);
   // Image affichée en plein écran (appui long 3 s sur produit / photo / logo)
   const [zoomUrl, setZoomUrl] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<StoreProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [activeTab, setActiveTab] = useState<MenuTabId>('all');
@@ -710,6 +714,7 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
     getQty: (p: StoreProduct) => p.stock === 'out' ? 0 : (cartItems.find(ci => ci.id === p.id)?.qty ?? 0),
     onAdd: addToCart,
     onRemove: removeFromCart,
+    onPress: (p: StoreProduct) => setSelectedProduct(p),
     promoMap: productPromoMap,
     isVip,
     isPreview,
@@ -1297,6 +1302,18 @@ export default function ShopScreen({ shopId = '', shopName, targetProductId, onB
 
       {/* Aperçu plein écran (logo + photos galerie) — appui long 3 s */}
       <ImageZoomModal uri={zoomUrl} onClose={() => setZoomUrl(null)} />
+
+      {/* Fiche produit agrandie (tap carte) — description scrollable + carrousel */}
+      <ProductDetailModal
+        product={selectedProduct ? storeProductToProduct(selectedProduct) : null}
+        qty={selectedProduct ? mixedOpts.getQty(selectedProduct) : 0}
+        onAdd={() => selectedProduct && addToCart(selectedProduct)}
+        onRemove={() => selectedProduct && removeFromCart(selectedProduct)}
+        onClose={() => setSelectedProduct(null)}
+        promoInfo={selectedProduct ? productPromoMap[selectedProduct.id] : undefined}
+        isVip={isVip}
+        isPreview={isPreview}
+      />
 
       {/* Picker taille/couleur habillement */}
       <HabillementPickerSheet

@@ -278,7 +278,9 @@ export default function AddProductSheet({
 
   const [emoji, setEmoji] = useState('');
   const [photoUrl, setPhotoUrl] = useState<string | undefined>();
+  const [extraPhotos, setExtraPhotos] = useState<string[]>([]); // images 2 et 3 (max 2)
   const [uploading, setUploading] = useState(false);
+  const [uploadingSlot, setUploadingSlot] = useState<number | null>(null); // index extra en cours
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [price, setPrice] = useState('');
@@ -341,7 +343,8 @@ export default function AddProductSheet({
   useEffect(() => {
     if (product) {
       setEmoji(product.emoji);
-      setPhotoUrl(product.photoUrl);
+      setPhotoUrl(product.images?.[0] ?? product.photoUrl);
+      setExtraPhotos((product.images ?? []).slice(1, 3));
       setName(product.name);
       setDesc(product.desc);
       setPrice(product.price.toString());
@@ -354,6 +357,7 @@ export default function AddProductSheet({
     } else {
       setEmoji('');
       setPhotoUrl(undefined);
+      setExtraPhotos([]);
       setName(prefill?.name ?? '');
       setDesc(prefill?.desc ?? '');
       setPrice(prefill?.price != null ? String(prefill.price) : '');
@@ -369,7 +373,8 @@ export default function AddProductSheet({
   }, [visible, product, defaultCatId, prefill]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sélection et upload de photo ────────────────────────────────────────────
-  const handlePickPhoto = async (source: 'gallery' | 'camera') => {
+  // slot = 'main' (photo principale) ou index 0/1 d'une image secondaire (max 3 au total)
+  const handlePickPhoto = async (source: 'gallery' | 'camera', slot: 'main' | number = 'main') => {
     try {
       const uri =
         source === 'gallery'
@@ -382,16 +387,27 @@ export default function AddProductSheet({
         return;
       }
 
-      setUploading(true);
-      const path = storageService.productImagePath(shopId, product?.id ?? `new_${Date.now()}`);
+      if (slot === 'main') setUploading(true); else setUploadingSlot(slot);
+      // Chemin unique par slot pour ne pas écraser les autres images du produit
+      const suffix = slot === 'main' ? '' : `_${slot + 2}_${Date.now()}`;
+      const path = storageService.productImagePath(shopId, (product?.id ?? `new_${Date.now()}`) + suffix);
       const url = await storageService.uploadImage('products', uri, path);
-      setPhotoUrl(url);
+      if (slot === 'main') {
+        setPhotoUrl(url);
+      } else {
+        setExtraPhotos(prev => {
+          const next = [...prev];
+          next[slot] = url;
+          return next.filter(Boolean).slice(0, 2);
+        });
+      }
     } catch (e) {
       logger.error('[upload photo produit]', e);
       const msg = e instanceof Error ? e.message : String(e);
       Alert.alert('Erreur', msg || "Impossible d'uploader la photo. Réessaie.");
     } finally {
       setUploading(false);
+      setUploadingSlot(null);
     }
   };
 
@@ -399,8 +415,8 @@ export default function AddProductSheet({
   // Le picker natif ne peut PAS être présenté tant que l'ActionSheet/Alert n'est
   // pas totalement fermé (par-dessus le <Modal> de la fiche) : iOS refuse en
   // silence → « la galerie ne répond pas ». On diffère donc son lancement.
-  const deferPick = (source: 'gallery' | 'camera') =>
-    setTimeout(() => handlePickPhoto(source), 350);
+  const deferPick = (source: 'gallery' | 'camera', slot: 'main' | number = 'main') =>
+    setTimeout(() => handlePickPhoto(source, slot), 350);
 
   const openPhotoPicker = () => {
     if (Platform.OS === 'ios') {
@@ -411,6 +427,7 @@ export default function AddProductSheet({
           if (idx === 2) deferPick('camera');
           if (idx === 3) {
             setPhotoUrl(undefined);
+            setExtraPhotos([]);
             setShowEmojiPicker(true);
           }
         },
@@ -423,9 +440,29 @@ export default function AddProductSheet({
           text: 'Emoji à la place',
           onPress: () => {
             setPhotoUrl(undefined);
+            setExtraPhotos([]);
             setShowEmojiPicker(true);
           },
         },
+        { text: 'Annuler', style: 'cancel' },
+      ]);
+    }
+  };
+
+  // Image secondaire (slot 0 ou 1). Nécessite une photo principale.
+  const openExtraPhotoPicker = (slot: number) => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: ['Annuler', 'Galerie', 'Caméra'], cancelButtonIndex: 0 },
+        idx => {
+          if (idx === 1) deferPick('gallery', slot);
+          if (idx === 2) deferPick('camera', slot);
+        },
+      );
+    } else {
+      Alert.alert('Ajouter une image', '', [
+        { text: 'Galerie', onPress: () => deferPick('gallery', slot) },
+        { text: 'Caméra', onPress: () => deferPick('camera', slot) },
         { text: 'Annuler', style: 'cancel' },
       ]);
     }
@@ -450,6 +487,7 @@ export default function AddProductSheet({
       id: product?.id ?? `p_${Date.now()}`,
       emoji,
       photoUrl,
+      images: [photoUrl, ...extraPhotos].filter((u): u is string => typeof u === 'string' && u.startsWith('http')),
       name: name.trim(),
       desc: desc.trim(),
       price: parseInt(price, 10) || 0,
@@ -568,6 +606,42 @@ export default function AddProductSheet({
                 </>
               )}
             </TouchableOpacity>
+
+            {/* Images secondaires (jusqu'à 3 au total) — visibles une fois la photo principale posée */}
+            {!showEmojiPicker && photoUrl ? (
+              <View style={styles.extraRow}>
+                {[0, 1].map(slot => {
+                  const uri = extraPhotos[slot];
+                  const busy = uploadingSlot === slot;
+                  return (
+                    <TouchableOpacity
+                      key={slot}
+                      style={styles.extraSlot}
+                      activeOpacity={0.85}
+                      onPress={() => openExtraPhotoPicker(slot)}
+                      disabled={busy}
+                    >
+                      {busy ? (
+                        <ActivityIndicator color={colors.accent} />
+                      ) : uri ? (
+                        <>
+                          <Image source={{ uri }} style={styles.extraImg} contentFit="cover" cachePolicy="disk" />
+                          <TouchableOpacity
+                            style={styles.extraDel}
+                            onPress={() => setExtraPhotos(prev => prev.filter((_, i) => i !== slot))}
+                          >
+                            <Text style={styles.extraDelTxt}>✕</Text>
+                          </TouchableOpacity>
+                        </>
+                      ) : (
+                        <Text style={styles.extraPlus}>＋</Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+                <Text style={styles.extraHint}>Jusqu'à 3 images</Text>
+              </View>
+            ) : null}
 
             {/* Nom ────────────────────────────────────────────────────────── */}
             <View onLayout={e => setNameY(e.nativeEvent.layout.y)}>
@@ -910,6 +984,40 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
+  extraRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  extraSlot: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  extraImg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  extraPlus: { color: colors.muted, fontSize: 26, lineHeight: 28 },
+  extraDel: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(20,21,42,0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  extraDelTxt: { color: '#fff', fontSize: 11 },
+  extraHint: { color: colors.muted, fontSize: 11, fontFamily: fonts.body, flex: 1 },
   emojiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

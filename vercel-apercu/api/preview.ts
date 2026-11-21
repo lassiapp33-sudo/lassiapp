@@ -241,6 +241,7 @@ interface Product {
   id: string; name: string | null; description: string | null;
   emoji: string | null; photo_url: string | null; price: number | null;
   category: string | null;
+  images?: string[] | null;
   sizes?: string[] | null;
   colors?: string[] | null;
   stock_quantity?: number | null;
@@ -1093,7 +1094,7 @@ async function fetchProducts(shopId: string): Promise<Product[]> {
   try {
     const q =
       `${SUPABASE_URL}/rest/v1/products?shop_id=eq.${encodeURIComponent(shopId)}` +
-      `&stock=eq.in&order=created_at.asc&limit=48&select=id,name,description,emoji,photo_url,price,category,sizes,colors,stock_quantity`;
+      `&stock=eq.in&order=created_at.asc&limit=48&select=id,name,description,emoji,photo_url,price,category,images,sizes,colors,stock_quantity`;
     const res = await fetch(q, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
     if (!res.ok) return [];
     const rows = (await res.json()) as Product[];
@@ -1572,8 +1573,17 @@ promos: any[] = []): string {
   });
 }
 
+// URLs réelles d'un produit (images[] si non vide, sinon [photo_url]). Max 3.
+function productImages(p: Product): string[] {
+  const list = Array.isArray(p.images)
+    ? p.images.filter((u): u is string => typeof u === 'string' && u.startsWith('http'))
+    : [];
+  if (list.length > 0) return list.slice(0, 3);
+  return typeof p.photo_url === 'string' && p.photo_url.startsWith('http') ? [p.photo_url] : [];
+}
+
 function productVisual(p: Product): string {
-  const url = typeof p.photo_url === 'string' && p.photo_url.startsWith('http') ? p.photo_url : '';
+  const url = productImages(p)[0] || '';
   if (url) return `<img class="pimg" src="${escAttr(url)}" alt="${escAttr(p.name ?? '')}" loading="lazy">`;
   const emoji = (p.emoji && p.emoji.trim()) || (p.photo_url && !p.photo_url.startsWith('http') ? p.photo_url : '') || '🛍️';
   return `<div class="pemoji">${esc(emoji)}</div>`;
@@ -1589,7 +1599,8 @@ function productCard(p: Product): string {
   const colorsJson = p.colors && p.colors.length > 0 ? JSON.stringify(p.colors) : '';
   const stockAttr = p.stock_quantity != null ? String(p.stock_quantity) : '';
   const hasVariants = sizesJson !== '' || colorsJson !== '';
-  return `<div class="prod" data-id="${escAttr(p.id)}" data-name="${escAttr(p.name ?? '')}" data-base="${base}" data-sizes="${escAttr(sizesJson)}" data-colors="${escAttr(colorsJson)}" data-stock="${escAttr(stockAttr)}">
+  const imgsJson = JSON.stringify(productImages(p));
+  return `<div class="prod" data-id="${escAttr(p.id)}" data-name="${escAttr(p.name ?? '')}" data-base="${base}" data-sizes="${escAttr(sizesJson)}" data-colors="${escAttr(colorsJson)}" data-stock="${escAttr(stockAttr)}" data-images="${escAttr(imgsJson)}" data-desc="${escAttr(desc)}">
     <div class="pimgzone">${productVisual(p)}</div>
     <div class="pbody">
       <div class="pname">${esc(clip(p.name ?? '', 48))}</div>
@@ -3478,7 +3489,35 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .pimgzone { width:100%; aspect-ratio:4/5; background:var(--g); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
   .svc-imgzone { aspect-ratio:4/3; }
   .pimg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .prod { cursor:pointer; }
   .pemoji { font-size:46px; }
+  /* Fiche produit agrandie */
+  .pd-ov { position:fixed; inset:0; z-index:60; background:rgba(10,11,22,.6); display:flex; align-items:flex-end; justify-content:center; }
+  .pd-card { position:relative; width:100%; max-width:480px; max-height:92vh; background:var(--w); border-radius:22px 22px 0 0; overflow:hidden; display:flex; flex-direction:column; animation:pdUp .22s ease; }
+  @media(min-width:520px){ .pd-ov{align-items:center;} .pd-card{border-radius:22px;} }
+  @keyframes pdUp { from{transform:translateY(40px);opacity:.4;} to{transform:translateY(0);opacity:1;} }
+  .pd-x { position:absolute; top:12px; left:12px; z-index:3; width:38px; height:38px; border-radius:50%; border:none; background:rgba(20,21,42,.6); color:#fff; font-size:22px; line-height:1; cursor:pointer; }
+  .pd-gallery { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; aspect-ratio:1/1; background:var(--g); -webkit-overflow-scrolling:touch; }
+  .pd-gallery img { flex:0 0 100%; width:100%; height:100%; object-fit:cover; scroll-snap-align:center; cursor:zoom-in; }
+  .pd-gallery .pd-emoji { flex:0 0 100%; display:flex; align-items:center; justify-content:center; font-size:72px; }
+  .pd-dots { display:flex; gap:6px; justify-content:center; padding:10px 0 0; }
+  .pd-dots i { width:7px; height:7px; border-radius:50%; background:var(--b); transition:.2s; }
+  .pd-dots i.on { background:var(--y); width:18px; border-radius:4px; }
+  .pd-body { padding:14px 20px 4px; overflow:hidden; display:flex; flex-direction:column; }
+  .pd-name { font-family:var(--fh); font-size:20px; line-height:1.25; }
+  .pd-price { color:var(--y); font-weight:700; font-size:20px; margin-top:6px; }
+  .pd-price .old { color:#9aa; font-weight:400; font-size:15px; text-decoration:line-through; margin-right:8px; }
+  .pd-stock { font-size:12px; color:#8a8f9c; margin-top:4px; }
+  .pd-desc { margin-top:12px; max-height:34vh; overflow-y:auto; font-size:14px; line-height:1.55; color:#555; white-space:pre-wrap; -webkit-overflow-scrolling:touch; }
+  .pd-action { padding:14px 20px 24px; }
+  .pd-add { display:block; width:100%; background:var(--y); color:var(--d); border:none; border-radius:12px; padding:15px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .pd-qty { display:flex; align-items:center; justify-content:center; gap:4px; background:var(--y); border-radius:12px; height:52px; }
+  .pd-qty button { width:60px; height:52px; border:none; background:transparent; color:var(--d); font-size:24px; font-weight:700; cursor:pointer; }
+  .pd-qty b { min-width:40px; text-align:center; font-size:18px; color:var(--d); }
+  /* Image plein écran */
+  .pf-ov { position:fixed; inset:0; z-index:70; background:rgba(6,7,18,.95); display:flex; align-items:center; justify-content:center; }
+  .pf-img { max-width:100%; max-height:100%; object-fit:contain; }
+  .pf-x { position:absolute; top:20px; right:20px; width:44px; height:44px; border-radius:50%; border:none; background:rgba(20,21,42,.8); color:#fff; font-size:24px; cursor:pointer; z-index:2; }
   .pbody { padding:14px 16px 16px; display:flex; flex-direction:column; gap:4px; flex:1; }
   .pname { font-family:var(--fh); font-size:16px; font-weight:400; line-height:1.2; }
   .pdesc { font-size:12px; color:var(--m); line-height:1.4; font-weight:300; }
@@ -4789,7 +4828,7 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .ud-hero-card .t{ font-family:'Playfair Display',serif; font-style:italic; font-size:17px; color:var(--ud-wine); }
   .ud-hero-card .s{ font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--ud-mut); margin-top:4px; }
   .ud-hero-card a{ font-family:'Playfair Display',serif; font-style:italic; font-size:14px; color:var(--ud-wine); text-decoration:underline; text-underline-offset:3px; margin-top:6px; display:inline-block; }
-  @media(max-width:720px){ .ud-hero-h{ font-size:clamp(26px,6.6vw,36px); } .ud-hero-img{ object-position:36% center; } .ud-hero::after{ background:linear-gradient(0deg,rgba(20,13,10,.55),rgba(20,13,10,.25) 45%,rgba(20,13,10,.6) 100%); } .ud-hero-in{ align-self:flex-start; margin-bottom:0; margin-top:clamp(8px,3vh,36px); } .ud-hero-p{ color:#fff; text-shadow:0 2px 16px rgba(0,0,0,.75); } .ud-btn{ margin-top:20px; font-size:11px; letter-spacing:1.5px; padding:12px 24px; }
+  @media(max-width:720px){ .ud-hero-h{ font-size:clamp(26px,6.6vw,36px); } .ud-hero-img{ object-position:36% center; } .ud-hero::after{ background:linear-gradient(0deg,rgba(20,13,10,.55),rgba(20,13,10,.25) 45%,rgba(20,13,10,.6) 100%); } .ud-hero-in{ align-self:flex-start; margin-bottom:0; margin-top:clamp(8px,3vh,36px); max-width:62%; } .ud-hero-p{ color:#fff; text-shadow:0 2px 16px rgba(0,0,0,.75); font-size:13px; max-width:100%; } .ud-btn{ margin-top:16px; font-size:10px; letter-spacing:1.2px; padding:10px 18px; }
   .ud-hero-card{ display:flex; right:14px; bottom:16px; max-width:230px; padding:10px; gap:10px; }
   .ud-hero-card img{ width:66px; height:84px; }
   .ud-hero-card .t{ font-size:13px; }
@@ -4987,6 +5026,26 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
       </div>
       <button class="payer" id="habConfirm" type="button" disabled style="margin-top:8px">Ajouter au panier</button>
     </div>
+  </div>
+  <!-- Fiche produit agrandie (tap carte) : carrousel + description scrollable -->
+  <div class="pd-ov" id="pdOv" hidden>
+    <div class="pd-card" role="dialog" aria-modal="true">
+      <button class="pd-x" id="pdX" type="button" aria-label="Fermer">×</button>
+      <div class="pd-gallery" id="pdGallery"></div>
+      <div class="pd-dots" id="pdDots"></div>
+      <div class="pd-body">
+        <div class="pd-name" id="pdName"></div>
+        <div class="pd-price" id="pdPrice"></div>
+        <div class="pd-stock" id="pdStock"></div>
+        <div class="pd-desc" id="pdDesc"></div>
+      </div>
+      <div class="pd-action" id="pdAction"></div>
+    </div>
+  </div>
+  <!-- Image produit plein écran -->
+  <div class="pf-ov" id="pfOv" hidden>
+    <button class="pf-x" id="pfX" type="button" aria-label="Fermer">×</button>
+    <img class="pf-img" id="pfImg" alt="">
   </div>
   ` : ''}
   ${hasFitness ? `
@@ -5319,15 +5378,81 @@ const CART_JS = `
     var id=card.getAttribute('data-id'), name=card.getAttribute('data-name'), base=parseInt(card.getAttribute('data-base'),10)||0;
     var szJson=card.getAttribute('data-sizes')||'', clJson=card.getAttribute('data-colors')||'', stockStr=card.getAttribute('data-stock')||'';
     var hasVars=szJson!==''||clJson!=='';
-    card.querySelector('.add').addEventListener('click', function(){
+    card.querySelector('.add').addEventListener('click', function(e){
+      e.stopPropagation();
       if(hasVars){ openHabPicker(id,name,base,szJson,clJson,stockStr); }
       else{ change(id,name,base,1); }
     });
     if(!hasVars){
-      card.querySelector('.plus').addEventListener('click', function(){ change(id,name,base,1); });
-      card.querySelector('.minus').addEventListener('click', function(){ change(id,name,base,-1); });
+      card.querySelector('.plus').addEventListener('click', function(e){ e.stopPropagation(); change(id,name,base,1); });
+      card.querySelector('.minus').addEventListener('click', function(e){ e.stopPropagation(); change(id,name,base,-1); });
     }
+    // Tap sur la carte (hors boutons) → fiche produit agrandie
+    card.addEventListener('click', function(){ openProductDetail(card); });
   });
+
+  // ── Fiche produit agrandie + image plein écran ────────────────────────────
+  var pdOv=document.getElementById('pdOv'), pfOv=document.getElementById('pfOv');
+  var pdCur=null; // {id,name,base,hasVars,szJson,clJson,stockStr,imgs}
+  function pdImages(card){
+    var imgs=[]; try{ imgs=JSON.parse(card.getAttribute('data-images')||'[]'); }catch(e){}
+    return (imgs||[]).filter(function(u){ return typeof u==='string' && u.indexOf('http')===0; });
+  }
+  function renderPdAction(){
+    if(!pdCur) return;
+    var el=document.getElementById('pdAction');
+    var q=cart[pdCur.id]?cart[pdCur.id].qty:0;
+    if(pdCur.hasVars || q===0){
+      el.innerHTML='<button class="pd-add" type="button">Ajouter au panier</button>';
+      el.querySelector('.pd-add').addEventListener('click',function(){
+        if(pdCur.hasVars){ closeProductDetail(); openHabPicker(pdCur.id,pdCur.name,pdCur.base,pdCur.szJson,pdCur.clJson,pdCur.stockStr); }
+        else{ change(pdCur.id,pdCur.name,pdCur.base,1); renderPdAction(); }
+      });
+    } else {
+      el.innerHTML='<div class="pd-qty"><button type="button" class="m">−</button><b>'+q+'</b><button type="button" class="p">+</button></div>';
+      el.querySelector('.m').addEventListener('click',function(){ change(pdCur.id,pdCur.name,pdCur.base,-1); renderPdAction(); });
+      el.querySelector('.p').addEventListener('click',function(){ change(pdCur.id,pdCur.name,pdCur.base,1); renderPdAction(); });
+    }
+  }
+  function openProductDetail(card){
+    if(!pdOv) return;
+    var imgs=pdImages(card);
+    pdCur={ id:card.getAttribute('data-id'), name:card.getAttribute('data-name'), base:parseInt(card.getAttribute('data-base'),10)||0,
+      hasVars:(card.getAttribute('data-sizes')||'')!==''||(card.getAttribute('data-colors')||'')!=='',
+      szJson:card.getAttribute('data-sizes')||'', clJson:card.getAttribute('data-colors')||'', stockStr:card.getAttribute('data-stock')||'', imgs:imgs };
+    document.getElementById('pdName').textContent=pdCur.name;
+    var priceEl=card.querySelector('.pprice'); document.getElementById('pdPrice').innerHTML=priceEl?priceEl.innerHTML:'';
+    var stEl=document.getElementById('pdStock');
+    if(pdCur.stockStr!==''){var n=parseInt(pdCur.stockStr,10); stEl.textContent=n+' restant'+(n>1?'s':''); stEl.style.display='';} else {stEl.style.display='none';}
+    var desc=card.getAttribute('data-desc')||''; var dEl=document.getElementById('pdDesc'); dEl.textContent=desc; dEl.style.display=desc?'':'none';
+    var gal=document.getElementById('pdGallery'), dots=document.getElementById('pdDots');
+    gal.innerHTML=''; dots.innerHTML='';
+    if(imgs.length){
+      imgs.forEach(function(u,i){
+        var im=document.createElement('img'); im.src=u; im.alt=pdCur.name; im.loading='lazy';
+        im.addEventListener('click',function(e){ e.stopPropagation(); openFull(u); });
+        gal.appendChild(im);
+        var d=document.createElement('i'); if(i===0)d.className='on'; dots.appendChild(d);
+      });
+      dots.style.display=imgs.length>1?'':'none';
+      gal.onscroll=function(){ var i=Math.round(gal.scrollLeft/gal.clientWidth); [].forEach.call(dots.children,function(x,j){ x.className=j===i?'on':''; }); };
+    } else {
+      var em=card.querySelector('.pemoji'); gal.innerHTML='<div class="pd-emoji">'+(em?em.textContent:'🛍')+'</div>'; dots.style.display='none';
+    }
+    renderPdAction();
+    pdOv.hidden=false; document.body.style.overflow='hidden';
+  }
+  function closeProductDetail(){ if(pdOv){pdOv.hidden=true;} document.body.style.overflow=''; }
+  function openFull(u){ if(!pfOv)return; document.getElementById('pfImg').src=u; pfOv.hidden=false; }
+  function closeFull(){ if(pfOv)pfOv.hidden=true; }
+  if(pdOv){
+    document.getElementById('pdX').addEventListener('click',closeProductDetail);
+    pdOv.addEventListener('click',function(e){ if(e.target===pdOv)closeProductDetail(); });
+  }
+  if(pfOv){
+    document.getElementById('pfX').addEventListener('click',closeFull);
+    pfOv.addEventListener('click',function(e){ if(e.target===pfOv)closeFull(); });
+  }
 
   // ── Onglets catégories (chips) : filtre les sections ──
   var chips=document.querySelectorAll('.chip');
