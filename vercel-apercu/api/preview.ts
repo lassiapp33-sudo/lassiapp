@@ -4893,7 +4893,7 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .ud-cov-cap{ position:absolute; left:0; right:0; bottom:0; padding:clamp(18px,2.4vw,30px); background:linear-gradient(0deg,rgba(28,23,18,.6),rgba(28,23,18,0)); color:#f4f1ea; }
   .ud-cov-name{ font-family:'Playfair Display',serif; font-style:italic; font-size:clamp(18px,2.2vw,28px); }
   .ud-cov-link{ display:inline-block; margin-top:8px; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; text-decoration:underline; text-underline-offset:3px; color:#f4f1ea; }
-  @media(max-width:620px){ .ud-cov-grid{ grid-template-columns:1fr; } }
+  @media(max-width:620px){ .ud-cov-grid{ gap:8px; } .ud-cov-cap{ padding:12px; } .ud-cov-name{ font-size:15px; } .ud-cov-link{ font-size:10px; margin-top:5px; } }
   .ud-look{ position:relative; z-index:2; background:var(--ud-bg); padding:clamp(20px,3vw,40px) clamp(14px,2vw,28px) clamp(50px,7vw,90px); }
   .ud-look-grid{ max-width:1340px; margin:0 auto; display:grid; grid-template-columns:1.3fr 1fr; gap:clamp(12px,1.6vw,22px); align-items:stretch; }
   .ud-look-main{ position:relative; overflow:hidden; background:var(--ud-card); min-height:clamp(420px,60vh,760px); }
@@ -4908,7 +4908,7 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .ud-look-meta{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-top:12px; }
   .ud-look-name{ font-family:'Playfair Display',serif; font-style:italic; font-size:clamp(16px,1.8vw,21px); color:var(--ud-ink); }
   .ud-look-link{ font-size:12px; letter-spacing:1.5px; text-transform:uppercase; text-decoration:underline; text-underline-offset:3px; color:var(--ud-wine); }
-  @media(max-width:760px){ .ud-look-grid{ grid-template-columns:1fr; } .ud-look-main{ min-height:0; aspect-ratio:4/5; } }
+  @media(max-width:760px){ .ud-look-grid{ gap:8px; } .ud-look-main{ min-height:0; } .ud-look-right{ gap:8px; } .ud-look-title{ font-size:17px; top:12px; left:12px; } .ud-look-meta{ margin-top:8px; } .ud-look-name{ font-size:13px; } .ud-look-link{ font-size:10px; } }
   .ud-story{ position:relative; z-index:2; background:var(--ud-bg); display:grid; grid-template-columns:0.92fr 1.08fr; align-items:center; }
   .ud-story-text{ padding:clamp(40px,6vw,96px) clamp(24px,4vw,64px); max-width:560px; margin-left:auto; }
   .ud-story-text .k{ font-family:'Jost',monospace; font-size:12px; letter-spacing:3px; text-transform:uppercase; color:var(--ud-mut); }
@@ -5417,6 +5417,7 @@ const CART_JS = `
   // ── Fiche produit agrandie + image plein écran ────────────────────────────
   var pdOv=document.getElementById('pdOv'), pfOv=document.getElementById('pfOv');
   var pdCur=null; // {id,name,base,hasVars,szJson,clJson,stockStr,imgs}
+  var pdOpenedAt=0; // anti ghost-click : le tap qui ouvre la fiche ne doit pas ouvrir le plein écran
   function pdImages(card){
     var imgs=[]; try{ imgs=JSON.parse(card.getAttribute('data-images')||'[]'); }catch(e){}
     return (imgs||[]).filter(function(u){ return typeof u==='string' && u.indexOf('http')===0; });
@@ -5453,7 +5454,7 @@ const CART_JS = `
     if(imgs.length){
       imgs.forEach(function(u,i){
         var im=document.createElement('img'); im.src=u; im.alt=pdCur.name; im.loading='lazy';
-        im.addEventListener('click',function(e){ e.stopPropagation(); openFull(u); });
+        im.addEventListener('click',function(e){ e.stopPropagation(); if(Date.now()-pdOpenedAt<500) return; openFull(u); });
         gal.appendChild(im);
         var d=document.createElement('i'); if(i===0)d.className='on'; dots.appendChild(d);
       });
@@ -5463,6 +5464,7 @@ const CART_JS = `
       var em=card.querySelector('.pemoji'); gal.innerHTML='<div class="pd-emoji">'+(em?em.textContent:'🛍')+'</div>'; dots.style.display='none';
     }
     renderPdAction();
+    pdOpenedAt=Date.now();
     pdOv.hidden=false; document.body.style.overflow='hidden';
   }
   function closeProductDetail(){ if(pdOv){pdOv.hidden=true;} document.body.style.overflow=''; }
@@ -5470,7 +5472,7 @@ const CART_JS = `
   function closeFull(){ if(pfOv)pfOv.hidden=true; }
   if(pdOv){
     document.getElementById('pdX').addEventListener('click',closeProductDetail);
-    pdOv.addEventListener('click',function(e){ if(e.target===pdOv)closeProductDetail(); });
+    pdOv.addEventListener('click',function(e){ if(e.target===pdOv){ if(Date.now()-pdOpenedAt<500) return; closeProductDetail(); } });
   }
   if(pfOv){
     document.getElementById('pfX').addEventListener('click',closeFull);
