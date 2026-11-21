@@ -66,3 +66,9 @@ KEY/
 tmp_*.png
 tmp_*.jpeg
 tmp_*.jpg
+
+# Build/OTA exports (jamais committer)
+dist
+dist[0-9]*
+dist_ota_*
+video-analysis/
