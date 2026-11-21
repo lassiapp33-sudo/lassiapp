@@ -12,10 +12,17 @@ function rowToProduct(row: Record<string, any>): StoreProduct {
       : !isRealUrl && row.photo_url && !row.photo_url.startsWith('http')
         ? row.photo_url
         : '';
+  // images[] (max 3) : sources réelles uniquement ; fallback sur photo_url si vide
+  const imagesVal = Array.isArray(row.images)
+    ? (row.images as unknown[]).filter((u): u is string => typeof u === 'string' && u.startsWith('http'))
+    : [];
+  const photoUrl = isRealUrl ? row.photo_url : (imagesVal[0] || undefined);
+  const images = imagesVal.length > 0 ? imagesVal : (photoUrl ? [photoUrl] : undefined);
   return {
     id: row.id,
     emoji: emojiVal,
-    photoUrl: isRealUrl ? row.photo_url : undefined,
+    photoUrl,
+    images,
     name: row.name,
     desc: row.description ?? '',
     price: row.price,
@@ -50,8 +57,10 @@ export async function addProduct(
   shopId: string,
   product: Omit<StoreProduct, 'id'>,
 ): Promise<StoreProduct> {
-  // photo_url is NOT NULL in the schema — use emoji or empty string when no real photo
-  const photoUrlValue = product.photoUrl ?? product.emoji ?? '';
+  // images[] = URLs réelles uniquement (max 3) ; photo_url = images[0] pour compat
+  const imagesValue = (product.images ?? []).filter(u => typeof u === 'string' && u.startsWith('http')).slice(0, 3);
+  // photo_url is NOT NULL in the schema — use first image, emoji or empty string
+  const photoUrlValue = product.photoUrl ?? imagesValue[0] ?? product.emoji ?? '';
 
   const { data, error } = await supabase
     .from('products')
@@ -61,6 +70,7 @@ export async function addProduct(
       description: product.desc,
       emoji: product.emoji ?? '',
       photo_url: photoUrlValue,
+      images: imagesValue.length > 0 ? imagesValue : null,
       price: product.price,
       category: product.category,
       stock: product.stock,
@@ -95,9 +105,16 @@ export async function updateProduct(
   if (product.colors !== undefined) updates.colors = product.colors;
   if (product.stockQuantity !== undefined) updates.stock_quantity = product.stockQuantity;
 
+  // images[] + photo_url synchronisés (photo_url = images[0] pour compat, NOT NULL)
+  let imagesValue: string[] | undefined;
+  if (product.images !== undefined) {
+    imagesValue = (product.images ?? []).filter(u => typeof u === 'string' && u.startsWith('http')).slice(0, 3);
+    updates.images = imagesValue.length > 0 ? imagesValue : null;
+  }
+
   // Keep photo_url in sync: real URL if provided, emoji or empty string otherwise (NOT NULL)
-  if (product.photoUrl !== undefined || product.emoji !== undefined) {
-    updates.photo_url = product.photoUrl ?? product.emoji ?? '';
+  if (product.photoUrl !== undefined || product.emoji !== undefined || imagesValue !== undefined) {
+    updates.photo_url = product.photoUrl ?? imagesValue?.[0] ?? product.emoji ?? '';
   }
 
   const { error } = await supabase.from('products').update(updates).eq('id', productId);

@@ -1005,6 +1005,12 @@ const EDIT_OVERLAY = `<style id="lassi-edit-style">
   conts.forEach(function(el,i){
     if(!el.hasAttribute('data-c')) el.setAttribute('data-c','c'+i);
     el.setAttribute('contenteditable','false');
+    el.style.cursor='pointer';
+    // Le conteneur est UNE unité tappable : on neutralise l'édition de texte des
+    // enfants (sinon le tap place le curseur dans le texte → onglet Texte au lieu
+    // de Conteneur). contenteditable OFF partout dedans → le clic remonte au
+    // conteneur et ouvre l'onglet Conteneur de façon fiable (ne bloque pas le scroll).
+    [].slice.call(el.querySelectorAll('[contenteditable]')).forEach(function(c){ c.setAttribute('contenteditable','false'); c.style.cursor='pointer'; });
     el.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); selectCont(el); },true);
   });
   function selectCont(el){
@@ -4783,7 +4789,12 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .ud-hero-card .t{ font-family:'Playfair Display',serif; font-style:italic; font-size:17px; color:var(--ud-wine); }
   .ud-hero-card .s{ font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--ud-mut); margin-top:4px; }
   .ud-hero-card a{ font-family:'Playfair Display',serif; font-style:italic; font-size:14px; color:var(--ud-wine); text-decoration:underline; text-underline-offset:3px; margin-top:6px; display:inline-block; }
-  @media(max-width:720px){ .ud-hero-card{ display:none; } .ud-hero-h{ font-size:clamp(30px,8vw,44px); } .ud-hero-img{ object-position:12% center; } .ud-hero::after{ background:linear-gradient(0deg,rgba(20,13,10,.9),rgba(20,13,10,.5) 45%,rgba(20,13,10,.2) 72%); } .ud-hero-in{ align-self:flex-end; margin-bottom:clamp(40px,12vh,110px); } .ud-hero-p{ color:#fff; text-shadow:0 2px 16px rgba(0,0,0,.75); } }
+  @media(max-width:720px){ .ud-hero-h{ font-size:clamp(26px,6.6vw,36px); } .ud-hero-img{ object-position:36% center; } .ud-hero::after{ background:linear-gradient(0deg,rgba(20,13,10,.55),rgba(20,13,10,.25) 45%,rgba(20,13,10,.6) 100%); } .ud-hero-in{ align-self:flex-start; margin-bottom:0; margin-top:clamp(8px,3vh,36px); } .ud-hero-p{ color:#fff; text-shadow:0 2px 16px rgba(0,0,0,.75); } .ud-btn{ margin-top:20px; font-size:11px; letter-spacing:1.5px; padding:12px 24px; }
+  .ud-hero-card{ display:flex; right:14px; bottom:16px; max-width:230px; padding:10px; gap:10px; }
+  .ud-hero-card img{ width:66px; height:84px; }
+  .ud-hero-card .t{ font-size:13px; }
+  .ud-hero-card .s{ font-size:10px; }
+  .ud-hero-card a{ font-size:12px; } }
   .ud-head{ text-align:center; max-width:560px; margin:0 auto; padding:clamp(60px,9vw,120px) 24px clamp(30px,4vw,48px); }
   .ud-head h2{ font-style:italic; font-weight:500; font-size:clamp(30px,4vw,48px); color:var(--ud-wine); }
   .ud-head p{ margin-top:14px; color:var(--ud-ink); font-size:clamp(15px,1.6vw,18px); }

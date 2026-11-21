@@ -152,6 +152,7 @@ function storeProductToProduct(p: StoreProduct): Product {
     id: p.id,
     emoji: p.emoji,
     photoUrl: p.photoUrl,
+    images: p.images,
     name: p.name,
     desc: p.desc,
     price: p.price,

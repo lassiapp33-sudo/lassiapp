@@ -1,5 +1,5 @@
-import React from 'react';
-import { Modal, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
+import { Modal, Pressable, StyleSheet, TouchableOpacity, View, FlatList, useWindowDimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme';
@@ -11,33 +11,68 @@ const IcoClose = () => (
 );
 
 interface Props {
-  /** URL de l'image à afficher plein écran. null/undefined = modal fermée. */
-  uri: string | null | undefined;
+  /** URL simple (legacy) OU tableau d'URLs (carrousel). null/undefined = fermée. */
+  uri?: string | null;
+  uris?: string[] | null;
+  /** Index de départ dans uris. */
+  startIndex?: number;
   onClose: () => void;
 }
 
 /**
- * Affiche une image en plein écran (contentFit contain → vue complète, sans rognage).
- * Ouvert via appui long court (250 ms) sur produit / photo galerie / logo.
+ * Affiche une ou plusieurs images en plein écran (contentFit contain, swipe horizontal).
  */
-export default function ImageZoomModal({ uri, onClose }: Props) {
+export default function ImageZoomModal({ uri, uris, startIndex = 0, onClose }: Props) {
+  const { width } = useWindowDimensions();
+  const list = (uris && uris.length > 0 ? uris : uri ? [uri] : []).filter(Boolean) as string[];
+  const open = list.length > 0;
+  const [idx, setIdx] = useState(startIndex);
+  const ref = useRef<FlatList<string>>(null);
+
+  useEffect(() => {
+    if (open) setIdx(Math.min(startIndex, list.length - 1));
+  }, [open, startIndex, list.length]);
+
   return (
     <Modal
-      visible={!!uri}
+      visible={open}
       transparent
       presentationStyle="overFullScreen"
       animationType="fade"
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <View style={styles.backdrop}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.8}>
           <IcoClose />
         </TouchableOpacity>
-        {uri ? (
-          <ExpoImage source={{ uri }} style={styles.img} contentFit="contain" transition={120} />
+        {open ? (
+          <FlatList
+            ref={ref}
+            data={list}
+            keyExtractor={(u, i) => `${i}-${u}`}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            initialScrollIndex={Math.min(startIndex, list.length - 1)}
+            getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
+            onMomentumScrollEnd={e => setIdx(Math.round(e.nativeEvent.contentOffset.x / width))}
+            renderItem={({ item }) => (
+              <Pressable style={[styles.page, { width }]} onPress={onClose}>
+                <ExpoImage source={{ uri: item }} style={styles.img} contentFit="contain" transition={120} />
+              </Pressable>
+            )}
+          />
         ) : null}
-      </Pressable>
+        {list.length > 1 && (
+          <View style={styles.dots}>
+            {list.map((_, i) => (
+              <View key={i} style={[styles.dot, i === idx && styles.dotOn]} />
+            ))}
+          </View>
+        )}
+      </View>
     </Modal>
   );
 }
@@ -49,10 +84,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  img: {
-    width: '100%',
-    height: '100%',
-  },
+  page: { height: '100%', alignItems: 'center', justifyContent: 'center' },
+  img: { width: '100%', height: '100%' },
   closeBtn: {
     position: 'absolute',
     top: 48,
@@ -67,4 +100,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 2,
   },
+  dots: {
+    position: 'absolute',
+    bottom: 48,
+    flexDirection: 'row',
+    gap: 6,
+    alignSelf: 'center',
+  },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.35)' },
+  dotOn: { backgroundColor: '#fff', width: 18 },
 });

@@ -22,7 +22,8 @@ export interface StoreCategory {
 export interface StoreProduct {
   id: string;
   emoji: string; // emoji de fallback si pas de photo
-  photoUrl?: string; // URL Supabase Storage
+  photoUrl?: string; // URL Supabase Storage (= images[0] pour compat)
+  images?: string[]; // jusqu'à 3 images réelles (carrousel) ; fallback [photoUrl]
   name: string;
   desc: string;
   price: number;

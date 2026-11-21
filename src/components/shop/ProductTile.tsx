@@ -14,6 +14,7 @@ export interface Product {
   id: string;
   emoji: string;
   photoUrl?: string;
+  images?: string[];
   name: string;
   desc: string;
   price: number;
