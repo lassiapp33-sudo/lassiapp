@@ -1091,11 +1091,16 @@ async function fetchShop(slug: string): Promise<Shop | null> {
 }
 
 async function fetchProducts(shopId: string): Promise<Product[]> {
+  const H = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
+  const base = `${SUPABASE_URL}/rest/v1/products?shop_id=eq.${encodeURIComponent(shopId)}&stock=eq.in&order=created_at.asc&limit=48`;
+  // `images` est une colonne récente : si la migration n'est pas encore appliquée en prod,
+  // PostgREST renvoie 400 (42703). On retombe alors sur le select sans `images` pour ne
+  // JAMAIS vider la vitrine (fallback [photo_url] géré par productImages()).
+  const SELECT_FULL = '&select=id,name,description,emoji,photo_url,price,category,images,sizes,colors,stock_quantity';
+  const SELECT_LEGACY = '&select=id,name,description,emoji,photo_url,price,category,sizes,colors,stock_quantity';
   try {
-    const q =
-      `${SUPABASE_URL}/rest/v1/products?shop_id=eq.${encodeURIComponent(shopId)}` +
-      `&stock=eq.in&order=created_at.asc&limit=48&select=id,name,description,emoji,photo_url,price,category,images,sizes,colors,stock_quantity`;
-    const res = await fetch(q, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+    let res = await fetch(base + SELECT_FULL, { headers: H });
+    if (!res.ok) res = await fetch(base + SELECT_LEGACY, { headers: H });
     if (!res.ok) return [];
     const rows = (await res.json()) as Product[];
     return (rows ?? []).filter(p => (p.name ?? '').trim().length > 0 && Number(p.price) > 0);
