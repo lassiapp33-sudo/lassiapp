@@ -69,6 +69,10 @@ export const SITE_ANIMATIONS: { id: string; label: string }[] = [
   { id: 'pulse',    label: 'Pulsation' },
   { id: 'swing',    label: 'Balancement' },
   { id: 'reveal',   label: 'Dévoilé' },
+  { id: 'flip-y',   label: 'Flip ↔' },
+  { id: 'zoom-out', label: 'Zoom arr.' },
+  { id: 'wobble',   label: 'Secousse' },
+  { id: 'glow',     label: 'Lueur' },
 ];
 
 // Tailles de texte proposées (px) dans l'éditeur.

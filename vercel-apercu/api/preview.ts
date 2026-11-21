@@ -531,6 +531,10 @@ const LED_CORE = `<style id="led-core-style">
 @keyframes ledPulse{0%{opacity:0;transform:scale(.9)}50%{opacity:1;transform:scale(1.06)}100%{transform:scale(1)}}
 @keyframes ledSwing{0%{opacity:0;transform:rotate(10deg)}40%{opacity:1;transform:rotate(-7deg)}70%{transform:rotate(4deg)}100%{transform:rotate(0)}}
 @keyframes ledReveal{from{opacity:0;clip-path:inset(0 100% 0 0)}to{opacity:1;clip-path:inset(0 0 0 0)}}
+@keyframes ledFlipY{from{opacity:0;transform:perspective(600px) rotateY(90deg)}to{opacity:1;transform:none}}
+@keyframes ledZoomOut{from{opacity:0;transform:scale(1.2)}to{opacity:1;transform:none}}
+@keyframes ledWobble{0%{opacity:0;transform:translateX(-18px) rotate(-4deg)}50%{opacity:1;transform:translateX(10px) rotate(3deg)}70%{transform:translateX(-6px) rotate(-2deg)}100%{transform:none}}
+@keyframes ledGlow{from{opacity:0;filter:brightness(2.4) saturate(1.6)}to{opacity:1;filter:none}}
 .led-a-fade{animation:ledFade .6s ease both}
 .led-a-fade-up{animation:ledUp .6s ease both}
 .led-a-fade-left{animation:ledLeft .6s ease both}
@@ -545,10 +549,14 @@ const LED_CORE = `<style id="led-core-style">
 .led-a-pulse{animation:ledPulse .7s ease both}
 .led-a-swing{animation:ledSwing .8s ease both}
 .led-a-reveal{animation:ledReveal .7s ease both}
+.led-a-flip-y{animation:ledFlipY .7s ease both}
+.led-a-zoom-out{animation:ledZoomOut .6s ease both}
+.led-a-wobble{animation:ledWobble .9s ease both}
+.led-a-glow{animation:ledGlow .8s ease both}
 </style>
 <script>(function(){
   var FONTS={cormorant:"'Cormorant Garamond',serif",playfair:"'Playfair Display',serif",lora:"Lora,serif",dmsans:"'DM Sans',sans-serif",inter:"Inter,sans-serif",poppins:"Poppins,sans-serif",montserrat:"Montserrat,sans-serif",spacegrotesk:"'Space Grotesk',sans-serif",rubik:"Rubik,sans-serif",unbounded:"Unbounded,cursive",plusjakarta:"'Plus Jakarta Sans',sans-serif",jost:"Jost,sans-serif",manrope:"Manrope,sans-serif",fraunces:"Fraunces,serif",bebas:"'Bebas Neue',sans-serif",outfit:"Outfit,sans-serif"};
-  var ANIM={fade:'led-a-fade','fade-up':'led-a-fade-up','fade-left':'led-a-fade-left',zoom:'led-a-zoom','fade-right':'led-a-fade-right',pop:'led-a-pop',rotate:'led-a-rotate',blur:'led-a-blur',flip:'led-a-flip','fade-down':'led-a-fade-down',bounce:'led-a-bounce',pulse:'led-a-pulse',swing:'led-a-swing',reveal:'led-a-reveal'};
+  var ANIM={fade:'led-a-fade','fade-up':'led-a-fade-up','fade-left':'led-a-fade-left',zoom:'led-a-zoom','fade-right':'led-a-fade-right',pop:'led-a-pop',rotate:'led-a-rotate',blur:'led-a-blur',flip:'led-a-flip','fade-down':'led-a-fade-down',bounce:'led-a-bounce',pulse:'led-a-pulse',swing:'led-a-swing',reveal:'led-a-reveal','flip-y':'led-a-flip-y','zoom-out':'led-a-zoom-out',wobble:'led-a-wobble',glow:'led-a-glow'};
   function lum(hex){var m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return '#fff';var n=parseInt(m[1],16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (r*299+g*587+b*114)/1000>150?'#14152A':'#fff';}
   function leaves(){
     var out=[], w=document.createTreeWalker(document.body,NodeFilter.SHOW_ELEMENT,null);
@@ -587,6 +595,9 @@ const LED_CORE = `<style id="led-core-style">
             else el.style.color=s.color;
           }
         }
+        // Retire TOUTE anim précédemment posée avant d'appliquer la courante
+        // (sinon changer d'animation empile les classes → c'est l'ancienne qui gagne).
+        for(var ak in ANIM) el.classList.remove(ANIM[ak]);
         if(an[k]&&ANIM[an[k]]){ el.classList.add(ANIM[an[k]]); }
       });
       // Menu
@@ -609,6 +620,7 @@ const LED_CORE = `<style id="led-core-style">
       conts.forEach(function(el,i){ if(!el.hasAttribute('data-c')) el.setAttribute('data-c','c'+i); });
       var co=ov.cont||{};
       conts.forEach(function(el){
+        for(var ak in ANIM) el.classList.remove(ANIM[ak]); // retire l'anim précédente
         var c=co[el.getAttribute('data-c')]; if(!c) return;
         if(c.shape==='sq') el.style.borderRadius='0';
         else if(c.shape==='rd') el.style.borderRadius='22px';
@@ -4840,10 +4852,10 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .ud-hero-card .s{ font-size:10px; }
   .ud-hero-card a{ font-size:12px; }
   .ud-grow{ align-items:flex-end; }
-  .ud-banner-card{ margin:0 16px clamp(28px,8vh,70px); padding:18px 20px; max-width:none; }
-  .ud-banner-card h3{ font-size:22px; }
-  .ud-banner-card p{ font-size:13px; margin-top:8px; }
-  .ud-banner-card a{ font-size:14px; margin-top:12px; } }
+  .ud-banner-card{ margin:0 14px 16px; padding:14px 16px; max-width:none; }
+  .ud-banner-card h3{ font-size:19px; }
+  .ud-banner-card p{ font-size:12px; margin-top:6px; }
+  .ud-banner-card a{ font-size:13px; margin-top:10px; } }
   .ud-head{ text-align:center; max-width:560px; margin:0 auto; padding:clamp(60px,9vw,120px) 24px clamp(30px,4vw,48px); }
   .ud-head h2{ font-style:italic; font-weight:500; font-size:clamp(30px,4vw,48px); color:var(--ud-wine); }
   .ud-head p{ margin-top:14px; color:var(--ud-ink); font-size:clamp(15px,1.6vw,18px); }
@@ -4871,6 +4883,12 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .ud-banner-card h3{ font-family:'Playfair Display',serif; font-style:italic; font-size:clamp(24px,3vw,38px); color:var(--ud-wine); }
   .ud-banner-card p{ margin-top:12px; color:var(--ud-ink); font-size:15px; }
   .ud-banner-card a{ display:inline-block; margin-top:18px; font-family:'Playfair Display',serif; font-style:italic; font-size:16px; color:var(--ud-wine); text-decoration:underline; text-underline-offset:4px; }
+  @media(max-width:720px){
+  .ud-grow{ align-items:flex-end; }
+  .ud-banner-card{ margin:0 14px 16px; padding:14px 16px; max-width:none; }
+  .ud-banner-card h3{ font-size:19px; }
+  .ud-banner-card p{ font-size:12px; margin-top:6px; }
+  .ud-banner-card a{ font-size:13px; margin-top:10px; } }
   .ud-coveted{ position:relative; z-index:2; background:var(--ud-bg); padding:clamp(56px,8vw,110px) clamp(14px,2vw,28px) clamp(40px,6vw,80px); }
   .ud-coveted-head{ text-align:center; margin-bottom:clamp(32px,4vw,56px); }
   .ud-coveted-head h2{ font-family:'Playfair Display',serif; font-style:italic; font-weight:500; font-size:clamp(28px,4vw,46px); color:var(--ud-wine); }
