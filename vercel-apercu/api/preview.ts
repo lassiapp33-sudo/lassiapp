@@ -4828,7 +4828,8 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .fa-copy{ color:var(--fa-mut); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:1px; padding-top:22px; border-top:1px solid var(--fa-line); }
   @media(max-width:760px){ .fa-foot-in{ grid-template-columns:1fr; gap:24px; } }
   /* ═══ TEMPLATE EXCLUSIF UDEBI — Ûdebi Atelier (mode épuré, sacs en perles) ═══ */
-  body[data-template="udebi"]{ --ud-bg:#f4f1ea; --ud-ink:#2a2420; --ud-wine:#5a1420; --ud-mut:#8c8276; --ud-line:rgba(42,36,32,.14); --ud-card:#ece7dc; background:var(--ud-bg); color:var(--ud-ink); font-family:'Jost',system-ui,sans-serif; font-weight:300; line-height:1.6; -webkit-font-smoothing:antialiased; }
+  body[data-template="udebi"]{ --ud-bg:#f4f1ea; --ud-ink:#2a2420; --ud-wine:#5a1420; --ud-mut:#8c8276; --ud-line:rgba(42,36,32,.14); --ud-card:#ece7dc; background:var(--ud-bg); color:var(--ud-ink); font-family:'Jost',system-ui,sans-serif; font-weight:300; line-height:1.6; -webkit-font-smoothing:antialiased; overflow-x:clip; max-width:100vw; }
+  html:has(body[data-template="udebi"]){ overflow-x:clip; }
   body[data-template="udebi"] img{ max-width:100%; display:block; }
   body[data-template="udebi"] ::selection{ background:var(--ud-wine); color:var(--ud-bg); }
   .ud-serif{ font-family:'Playfair Display',Georgia,serif; }
@@ -4886,9 +4887,10 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .ud-banner-card p{ margin-top:12px; color:var(--ud-ink); font-size:15px; }
   .ud-banner-card a{ display:inline-block; margin-top:18px; font-family:'Playfair Display',serif; font-style:italic; font-size:16px; color:var(--ud-wine); text-decoration:underline; text-underline-offset:4px; }
   @media(max-width:720px){
-  .ud-grow{ position:relative; inset:auto; height:auto; min-height:clamp(420px,62vh,620px); align-items:flex-end; }
-  .ud-grow-spacer{ display:none; }
-  .ud-banner-card{ opacity:1; transform:none; margin:0 14px clamp(28px,6vh,70px); padding:14px 16px; max-width:none; }
+  .ud-overlap{ isolation:isolate; }
+  .ud-grow{ position:sticky; inset:auto; top:0; height:100svh; margin-top:-100svh; align-items:flex-end; }
+  .ud-grow-spacer{ height:100svh; }
+  .ud-banner-card{ margin:0 14px clamp(28px,6vh,70px); padding:14px 16px; max-width:none; }
   .ud-banner-card h3{ font-size:19px; }
   .ud-banner-card p{ font-size:12px; margin-top:6px; }
   .ud-banner-card a{ font-size:13px; margin-top:10px; } }
