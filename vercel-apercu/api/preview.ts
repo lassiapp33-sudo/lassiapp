@@ -3390,7 +3390,13 @@ ${faSigSection}
       if(isEd){ pages.boutique.hidden=false; }
       var reveal=function(p){ if(!p) return; setTimeout(function(){ [].forEach.call(p.querySelectorAll('.rv:not(.in)'),function(el){ if(el.classList.contains('rv-stag')){[].forEach.call(el.children,function(c,i){c.style.setProperty('--i',i);});} el.classList.add('in'); }); },240); };
       reveal(pages.home);
-      [].forEach.call(document.querySelectorAll('.ud-look-imgz'),function(z){ z.addEventListener('click',function(e){ e.preventDefault(); z.classList.toggle('show2'); }); });
+      [].forEach.call(document.querySelectorAll('.ud-look-imgz'),function(z){
+        var show=function(e){ e.preventDefault(); z.classList.add('show2'); };
+        var hide=function(){ z.classList.remove('show2'); };
+        z.addEventListener('touchstart',show,{passive:false});
+        z.addEventListener('touchend',hide); z.addEventListener('touchcancel',hide);
+        z.addEventListener('click',function(e){ e.preventDefault(); });
+      });
       // carte "Collection Limitée" animée quand la bannière fixe se dévoile
       var spacer=pages.home.querySelector('.ud-grow-spacer'), card=pages.home.querySelector('.ud-grow .ud-banner-card');
       if(spacer&&card&&'IntersectionObserver' in window){ new IntersectionObserver(function(es){es.forEach(function(e){card.classList.toggle('in',e.isIntersecting);});},{threshold:.12}).observe(spacer); } else if(card){ card.classList.add('in'); }
