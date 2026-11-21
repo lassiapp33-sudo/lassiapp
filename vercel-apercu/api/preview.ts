@@ -3514,7 +3514,7 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   @media(min-width:520px){ .pd-ov{align-items:center;} .pd-card{border-radius:22px;} }
   @keyframes pdUp { from{transform:translateY(40px);opacity:.4;} to{transform:translateY(0);opacity:1;} }
   .pd-x { position:absolute; top:12px; left:12px; z-index:3; width:38px; height:38px; border-radius:50%; border:none; background:rgba(20,21,42,.6); color:#fff; font-size:22px; line-height:1; cursor:pointer; }
-  .pd-gallery { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; aspect-ratio:1/1; background:var(--g); -webkit-overflow-scrolling:touch; }
+  .pd-gallery { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; height:42vh; max-height:360px; background:var(--g); -webkit-overflow-scrolling:touch; }
   .pd-gallery img { flex:0 0 100%; width:100%; height:100%; object-fit:cover; scroll-snap-align:center; cursor:zoom-in; }
   .pd-gallery .pd-emoji { flex:0 0 100%; display:flex; align-items:center; justify-content:center; font-size:72px; }
   .pd-dots { display:flex; gap:6px; justify-content:center; padding:10px 0 0; }
@@ -4850,12 +4850,7 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .ud-hero-card img{ width:66px; height:84px; }
   .ud-hero-card .t{ font-size:13px; }
   .ud-hero-card .s{ font-size:10px; }
-  .ud-hero-card a{ font-size:12px; }
-  .ud-grow{ align-items:flex-end; }
-  .ud-banner-card{ margin:0 14px 16px; padding:14px 16px; max-width:none; }
-  .ud-banner-card h3{ font-size:19px; }
-  .ud-banner-card p{ font-size:12px; margin-top:6px; }
-  .ud-banner-card a{ font-size:13px; margin-top:10px; } }
+  .ud-hero-card a{ font-size:12px; } }
   .ud-head{ text-align:center; max-width:560px; margin:0 auto; padding:clamp(60px,9vw,120px) 24px clamp(30px,4vw,48px); }
   .ud-head h2{ font-style:italic; font-weight:500; font-size:clamp(30px,4vw,48px); color:var(--ud-wine); }
   .ud-head p{ margin-top:14px; color:var(--ud-ink); font-size:clamp(15px,1.6vw,18px); }
@@ -4885,7 +4880,7 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .ud-banner-card a{ display:inline-block; margin-top:18px; font-family:'Playfair Display',serif; font-style:italic; font-size:16px; color:var(--ud-wine); text-decoration:underline; text-underline-offset:4px; }
   @media(max-width:720px){
   .ud-grow{ align-items:flex-end; }
-  .ud-banner-card{ margin:0 14px 16px; padding:14px 16px; max-width:none; }
+  .ud-banner-card{ margin:0 14px clamp(60px,12vh,120px); padding:14px 16px; max-width:none; }
   .ud-banner-card h3{ font-size:19px; }
   .ud-banner-card p{ font-size:12px; margin-top:6px; }
   .ud-banner-card a{ font-size:13px; margin-top:10px; } }
