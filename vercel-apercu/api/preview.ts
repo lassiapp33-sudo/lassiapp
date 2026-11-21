@@ -4838,7 +4838,12 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .ud-hero-card img{ width:66px; height:84px; }
   .ud-hero-card .t{ font-size:13px; }
   .ud-hero-card .s{ font-size:10px; }
-  .ud-hero-card a{ font-size:12px; } }
+  .ud-hero-card a{ font-size:12px; }
+  .ud-grow{ align-items:flex-end; }
+  .ud-banner-card{ margin:0 16px clamp(28px,8vh,70px); padding:18px 20px; max-width:none; }
+  .ud-banner-card h3{ font-size:22px; }
+  .ud-banner-card p{ font-size:13px; margin-top:8px; }
+  .ud-banner-card a{ font-size:14px; margin-top:12px; } }
   .ud-head{ text-align:center; max-width:560px; margin:0 auto; padding:clamp(60px,9vw,120px) 24px clamp(30px,4vw,48px); }
   .ud-head h2{ font-style:italic; font-weight:500; font-size:clamp(30px,4vw,48px); color:var(--ud-wine); }
   .ud-head p{ margin-top:14px; color:var(--ud-ink); font-size:clamp(15px,1.6vw,18px); }
