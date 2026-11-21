@@ -72,3 +72,4 @@ dist
 dist[0-9]*
 dist_ota_*
 video-analysis/
+contenu-reseaux-sociaux/public/mockup/*.mov
