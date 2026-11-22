@@ -56,7 +56,7 @@ class KeyboardControlActivity : Activity() {
       Notification.Builder(this, CHANNEL_ID) else @Suppress("DEPRECATION") Notification.Builder(this)
 
     val notif = builder
-      .setContentTitle("Clavier LASSI prêt 🟡")
+      .setContentTitle("Clavier LASSI prêt")
       .setContentText("Appuie pour partager ta vitrine — bascule sur le clavier LASSI")
       .setSmallIcon(applicationInfo.icon)
       .setOngoing(true)
