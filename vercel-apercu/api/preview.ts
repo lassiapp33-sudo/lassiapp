@@ -1546,6 +1546,10 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
       P('m7', 'Dakar Chronographe Onyx', 375000, 'Chronographe noir onyx, accents dorés et lunette tachymétrique. Robustesse et élégance au poignet.', 'nouveautes', 'p7.jpg'),
       P('m8', 'Ngor Plongée Atlantique', 285000, 'Cadran bleu Atlantique, lunette plongée 60 minutes, bracelet titane. Étanche 200m.', 'nouveautes', 'p8.jpg'),
     ];
+    // Variantes démo (le prestataire peut en définir jusqu'à 3 par axe) : cadran + bracelet.
+    products[0].sizes = ['Cadran noir', 'Cadran or']; products[0].colors = ['Bracelet acier', 'Bracelet cuir'];
+    products[1].sizes = ['Cadran vert', 'Cadran ivoire']; products[1].colors = ['Bracelet acier', 'Bracelet maille'];
+    products[2].colors = ['Bracelet titane', 'Bracelet caoutchouc'];
     return { shop, products };
   }
 
@@ -5251,6 +5255,16 @@ ${theme.template === 'montre' ? '<link href="https://fonts.googleapis.com/css2?f
   body[data-template="montre"] .pd-qty{ border-radius:0; background:var(--mw-ink); }
   body[data-template="montre"] .pd-qty b,body[data-template="montre"] .pd-qty button{ color:#fff; }
   body[data-template="montre"] .pd-x{ background:rgba(20,21,26,.55); }
+  body[data-template="montre"] .pd-variants{ margin-top:16px; }
+  body[data-template="montre"] .pd-vgrp{ margin-bottom:14px; }
+  body[data-template="montre"] .pd-vlab{ font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--mw-mut); margin-bottom:8px; }
+  body[data-template="montre"] .pd-vchips{ display:flex; flex-wrap:wrap; gap:8px; }
+  body[data-template="montre"] .pd-vchip{ border:1px solid var(--mw-line); background:#fff; color:var(--mw-ink); padding:9px 16px; font-size:12px; letter-spacing:.06em; cursor:pointer; font-family:inherit; transition:.2s; }
+  body[data-template="montre"] .pd-vchip.on{ background:var(--mw-ink); color:#fff; border-color:var(--mw-ink); }
+  body[data-template="montre"] .pd-action{ display:flex; flex-direction:column; gap:10px; }
+  body[data-template="montre"] .pd-buy{ display:block; width:100%; background:transparent; color:var(--mw-ink); border:1px solid var(--mw-ink); border-radius:0; padding:15px; font-size:13px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; font-family:inherit; transition:.25s; }
+  body[data-template="montre"] .pd-buy:hover{ background:var(--mw-ink); color:#fff; }
+  body[data-template="montre"] .pd-add[disabled],body[data-template="montre"] .pd-buy[disabled]{ opacity:.38; cursor:not-allowed; }
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">
@@ -5359,6 +5373,7 @@ ${theme.template === 'montre' ? '<link href="https://fonts.googleapis.com/css2?f
         <div class="pd-price" id="pdPrice"></div>
         <div class="pd-stock" id="pdStock"></div>
         <div class="pd-desc" id="pdDesc"></div>
+        <div class="pd-variants" id="pdVariants" style="display:none"></div>
       </div>
       <div class="pd-action" id="pdAction"></div>
     </div>
@@ -5716,6 +5731,42 @@ const CART_JS = `
   var pdOv=document.getElementById('pdOv'), pfOv=document.getElementById('pfOv');
   var pdCur=null; // {id,name,base,hasVars,szJson,clJson,stockStr,imgs}
   var pdOpenedAt=0; // anti ghost-click : le tap qui ouvre la fiche ne doit pas ouvrir le plein écran
+  var IS_MW=document.body.getAttribute('data-template')==='montre'; // fiche enrichie montre
+  var pdSelSz=null, pdSelCl=null; // variantes sélectionnées dans la fiche montre
+  // Variantes en chips directement dans la fiche (montre) : Variante (cadran) + Bracelet.
+  function renderPdVariants(){
+    var el=document.getElementById('pdVariants'); if(!el) return;
+    pdSelSz=null; pdSelCl=null; el.innerHTML='';
+    if(!IS_MW || !pdCur || !pdCur.hasVars){ el.style.display='none'; return; }
+    var sizes=[],colors=[];
+    try{sizes=JSON.parse(pdCur.szJson||'[]');}catch(e){}
+    try{colors=JSON.parse(pdCur.clJson||'[]');}catch(e){}
+    function grp(label,arr,kind){
+      if(!arr.length) return;
+      var w=document.createElement('div'); w.className='pd-vgrp';
+      var h=document.createElement('div'); h.className='pd-vlab'; h.textContent=label; w.appendChild(h);
+      var row=document.createElement('div'); row.className='pd-vchips';
+      arr.forEach(function(v){
+        var b=document.createElement('button'); b.type='button'; b.className='pd-vchip'; b.textContent=v;
+        b.addEventListener('click',function(){
+          [].forEach.call(row.querySelectorAll('.pd-vchip'),function(x){x.classList.remove('on');});
+          b.classList.add('on'); if(kind==='sz') pdSelSz=v; else pdSelCl=v; renderPdAction();
+        });
+        row.appendChild(b);
+      });
+      w.appendChild(row); el.appendChild(w);
+    }
+    grp('Variante',sizes,'sz'); grp('Bracelet',colors,'cl');
+    el.style.display='';
+  }
+  function pdVarLen(json){ try{ return (JSON.parse(json||'[]')||[]).length; }catch(e){ return 0; } }
+  function mwAddToCart(){
+    var parts=[pdSelSz,pdSelCl].filter(Boolean);
+    var suffix=parts.length?' ('+parts.join(', ')+')':'';
+    var cartId=pdCur.id+'|'+(pdSelSz||'')+'|'+(pdSelCl||'');
+    cartVariants[cartId]={productId:pdCur.id,selectedSize:pdSelSz||null,selectedColor:pdSelCl||null};
+    change(cartId,pdCur.name+suffix,pdCur.base,1);
+  }
   function pdImages(card){
     var imgs=[]; try{ imgs=JSON.parse(card.getAttribute('data-images')||'[]'); }catch(e){}
     return (imgs||[]).filter(function(u){ return typeof u==='string' && u.indexOf('http')===0; });
@@ -5723,6 +5774,17 @@ const CART_JS = `
   function renderPdAction(){
     if(!pdCur) return;
     var el=document.getElementById('pdAction');
+    if(IS_MW){
+      var needSz=pdCur.hasVars && pdVarLen(pdCur.szJson)>0;
+      var needCl=pdCur.hasVars && pdVarLen(pdCur.clJson)>0;
+      var ready=(!needSz||pdSelSz)&&(!needCl||pdSelCl);
+      el.innerHTML='<button class="pd-add" type="button"'+(ready?'':' disabled')+'>Ajouter au panier</button>'+
+                   '<button class="pd-buy" type="button"'+(ready?'':' disabled')+'>Acheter maintenant</button>';
+      var ab=el.querySelector('.pd-add'), bb=el.querySelector('.pd-buy');
+      if(ab) ab.addEventListener('click',function(){ if(ab.disabled)return; mwAddToCart(); closeProductDetail(); });
+      if(bb) bb.addEventListener('click',function(){ if(bb.disabled)return; mwAddToCart(); closeProductDetail(); openSheet(); });
+      return;
+    }
     var q=cart[pdCur.id]?cart[pdCur.id].qty:0;
     if(pdCur.hasVars || q===0){
       el.innerHTML='<button class="pd-add" type="button">Ajouter au panier</button>';
@@ -5761,6 +5823,7 @@ const CART_JS = `
     } else {
       var em=card.querySelector('.pemoji'); gal.innerHTML='<div class="pd-emoji">'+(em?em.textContent:'🛍')+'</div>'; dots.style.display='none';
     }
+    renderPdVariants();
     renderPdAction();
     pdOpenedAt=Date.now();
     pdOv.hidden=false; document.body.style.overflow='hidden';
