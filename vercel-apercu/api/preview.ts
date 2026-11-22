@@ -847,7 +847,7 @@ const GR_RESA_JS = `(function(){
 // Respecte prefers-reduced-motion et le mode édition.
 const SCROLLFX = `<style id="lx-fx-style">
 .lx-fx-piece{opacity:0;transform:translate3d(var(--tx,0),var(--ty,0),0) rotate(var(--rot,0)) scale(.92);transition:transform .95s cubic-bezier(.16,1,.3,1),opacity .75s ease;transition-delay:calc(var(--bd,0)*80ms);will-change:transform,opacity}
-.lx-fx-bento.lx-in .lx-fx-piece{opacity:1;transform:none}
+.lx-fx-bento.lx-in .lx-fx-piece,.lx-fx-stagger.lx-in .lx-fx-piece{opacity:1;transform:none}
 .lx-fx-beam{position:relative}
 .lx-fx-beam>.lx-fx-beam-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;overflow:visible}
 .lx-fx-beam-rect{fill:none;stroke-width:3;stroke-linecap:round;width:calc(100% - 3px);height:calc(100% - 3px);will-change:stroke-dashoffset}
@@ -5135,7 +5135,8 @@ ${theme.template === 'montre' ? '<link href="https://fonts.googleapis.com/css2?f
   .mw-hc-r small{ display:block; color:var(--mw-mut); margin-top:2px; }
   .mw-hc-add{ width:34px; height:34px; background:var(--mw-ink); color:#fff; display:grid; place-items:center; font-size:18px; transition:.35s cubic-bezier(.16,1,.3,1); }
   .mw-hero-card:hover .mw-hc-add{ background:var(--mw-gold); transform:rotate(90deg); }
-  @media(max-width:720px){ .mw-hero-card{ display:none; } .mw-hero-ov{ background:linear-gradient(0deg,rgba(10,10,12,.78),rgba(10,10,12,.25) 55%,rgba(10,10,12,.5)); } }
+  @media(max-width:860px){ .mw-hero-card{ width:min(180px,44vw); right:12px; bottom:16px; padding:11px; } .mw-hero-card img{ height:110px; margin-bottom:8px; } .mw-hc-r{ font-size:12px; } .mw-hc-add{ width:28px; height:28px; font-size:16px; } }
+  @media(max-width:560px){ .mw-hero-card{ display:none; } .mw-hero-ov{ background:linear-gradient(0deg,rgba(10,10,12,.78),rgba(10,10,12,.25) 55%,rgba(10,10,12,.5)); } }
   /* section shells */
   .mw-cats,.mw-shop,.mw-specs-sec,.mw-split{ padding:clamp(60px,9vw,96px) clamp(20px,5vw,60px); max-width:1320px; margin:0 auto; }
   .mw-shead{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:44px; }
