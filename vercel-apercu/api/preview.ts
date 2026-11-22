@@ -3485,6 +3485,19 @@ ${faSigSection}
   const mwStrip = o.gallery.length >= 4
     ? `<div class="mw-strip lx-fx-stagger">${o.gallery.slice(0, 4).map(u => `<div class="mw-strip-t lx-fx-piece" ${bg(u)}></div>`).join('')}</div>`
     : '';
+  // Accueil montre : vitrine réduite = 4 produits (2×2) + bouton « Voir tous les
+  // produits » qui ouvre le MENU BOUTIQUE (overlay plein écran = catalogue complet).
+  const mwHome4 = o.products.slice(0, 4);
+  const mwHomeGrid = hasProducts
+    ? `<div class="grid mw-grid4">${mwHome4.map(productCard).join('')}</div>` +
+      `<div class="mw-seeall-wrap"><button class="mw-btn mw-seeall" type="button" id="mwSeeAll">Voir tous les produits &#8594;</button></div>`
+    : `<div class="lx-fx-stagger">${catnav}${dsSection}${svcSection}${terrainSection}</div>`;
+  const mwMenu = hasProducts
+    ? `<div class="mw-menu" id="mwMenu" hidden>
+        <div class="mw-menu-top"><span class="mw-ey">Menu boutique &mdash; ${esc(clip(o.name, 30))}</span><button type="button" class="mw-menu-x" id="mwMenuClose" aria-label="Fermer">&#10005;</button></div>
+        <div class="mw-menu-scroll"><div>${catnav}${dsSection}${grid}${svcSection}${terrainSection}</div></div>
+      </div>`
+    : '';
   const mwBody = `
     <header class="mw-head" id="mw-top">
       <a class="mw-logo" href="#mw-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<b>${esc(o.name)}</b>`}</a>
@@ -3511,8 +3524,9 @@ ${faSigSection}
     ${closedNotice}
     <section id="mw-shop" class="mw-shop${catalogCls}">
       <div class="mw-shead lx-rv"><div><span class="mw-ey">${o.cat ? esc(clip(o.cat, 40)) : 'La collection'}</span><h2 class="mw-h2">${hasProducts ? 'Modèles éprouvés sur le terrain' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2></div></div>
-      <div class="lx-fx-stagger">${catnav}${dsSection}${grid}${svcSection}${terrainSection}</div>
+      ${mwHomeGrid}
     </section>
+    ${mwMenu}
     <section class="mw-band lx-fx-curtain" ${bg(pick(5))}>
       <div class="mw-band-ov"></div>
       <div class="mw-band-in">
@@ -5209,6 +5223,19 @@ ${theme.template === 'montre' ? '<link href="https://fonts.googleapis.com/css2?f
   body[data-template="montre"] .add,body[data-template="montre"] .qtybox{ border-radius:0; background:var(--mw-ink); color:#fff; border:none; letter-spacing:.14em; text-transform:uppercase; transition:.35s cubic-bezier(.16,1,.3,1); }
   body[data-template="montre"] .add:hover{ background:var(--mw-gold); }
   body[data-template="montre"] .cartbtn{ border-radius:0; background:var(--mw-ink); color:#fff; letter-spacing:.14em; text-transform:uppercase; }
+  /* Accueil : grille réduite 4 produits (2×2) + bouton Voir tous */
+  body[data-template="montre"] .mw-grid4{ display:grid; grid-template-columns:repeat(2,1fr); gap:16px; max-width:680px; margin:0 auto; }
+  body[data-template="montre"] .mw-grid4 .pimgzone{ aspect-ratio:1/1; }
+  body[data-template="montre"] .mw-grid4 .pname{ font-size:16px; }
+  body[data-template="montre"] .mw-seeall-wrap{ text-align:center; margin-top:34px; }
+  @media(max-width:560px){ body[data-template="montre"] .mw-grid4{ gap:10px; } body[data-template="montre"] .mw-grid4 .pname{ font-size:14px; } }
+  /* Menu boutique : overlay plein écran avec le catalogue complet */
+  body[data-template="montre"] .mw-menu{ position:fixed; inset:0; z-index:200; background:var(--mw-paper); overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  body[data-template="montre"] .mw-menu[hidden]{ display:none; }
+  body[data-template="montre"] .mw-menu-top{ position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; padding:16px clamp(16px,5vw,40px); background:var(--mw-ink); color:#fff; }
+  body[data-template="montre"] .mw-menu-top .mw-ey{ color:#fff; }
+  body[data-template="montre"] .mw-menu-x{ width:38px; height:38px; flex:0 0 auto; border:none; background:rgba(255,255,255,.14); color:#fff; font-size:17px; line-height:1; cursor:pointer; border-radius:50%; }
+  body[data-template="montre"] .mw-menu-scroll{ padding:clamp(24px,5vw,56px) clamp(16px,5vw,40px) 90px; max-width:1320px; margin:0 auto; }
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">
@@ -5748,6 +5775,14 @@ const CART_JS = `
         if(nav){ var y=nav.getBoundingClientRect().top; if(y<0) window.scrollBy(0, y-4); }
       });
     });
+  }
+
+  // ── Menu boutique (template montre) : overlay plein écran catalogue complet ──
+  var mwMenuEl=document.getElementById('mwMenu');
+  if(mwMenuEl){
+    var mwSeeAll=document.getElementById('mwSeeAll'), mwMenuClose=document.getElementById('mwMenuClose');
+    if(mwSeeAll) mwSeeAll.addEventListener('click', function(){ mwMenuEl.hidden=false; mwMenuEl.scrollTop=0; });
+    if(mwMenuClose) mwMenuClose.addEventListener('click', function(){ mwMenuEl.hidden=true; });
   }
 
   var sheet=document.getElementById('sheet');
