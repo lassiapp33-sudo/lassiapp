@@ -1,8 +1,5 @@
 {
-  "platforms": ["android", "ios"],
-  "android": {
-    "modules": ["tech.lassi.keyboard.LassiKeyboardModule"]
-  },
+  "platforms": ["ios"],
   "ios": {
     "modules": ["LassiKeyboardModule"]
   }

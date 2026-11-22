@@ -159,6 +159,7 @@ module.exports = withSecurityPlugins({
     },
     plugins: [
       "@bacons/apple-targets",
+      "./plugins/withLassiKeyboardAndroid",
       "@react-native-firebase/app",
       "@react-native-firebase/crashlytics",
       "@react-native-firebase/messaging",

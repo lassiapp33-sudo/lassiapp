@@ -13,13 +13,9 @@ import * as Clipboard from 'expo-clipboard';
 import { colors, fonts, radius } from '../../theme';
 import useShopStore from '../../store/shopStore';
 import {
-  isKeyboardEnabled,
-  openKeyboardSettings,
-  showKeyboardPicker,
-} from '../../../modules/lassi-keyboard';
-import {
   loadKeyboardPrefs,
   saveKeyboardPrefs,
+  openKeyboardSettings,
   type KeyboardPrefs,
 } from '../../services/keyboardSync';
 
@@ -37,19 +33,13 @@ export default function KeyboardBoosterScreen({ onBack }: Props) {
   const slug = useShopStore(s => s.profile?.slug ?? null);
   const vitrineUrl = slug ? `https://s.lassi.tech/${slug}` : null;
 
-  const [enabled, setEnabled] = useState<boolean | null>(null);
   const [prefs, setPrefs] = useState<KeyboardPrefs | null>(null);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const refreshStatus = useCallback(async () => {
-    try { setEnabled(await isKeyboardEnabled()); } catch { setEnabled(null); }
-  }, []);
-
   useEffect(() => {
-    refreshStatus();
     if (shopId) loadKeyboardPrefs(shopId, shopName).then(setPrefs);
-  }, [shopId, shopName, refreshStatus]);
+  }, [shopId, shopName]);
 
   const copyLink = useCallback(async () => {
     if (!vitrineUrl) return;
@@ -72,15 +62,6 @@ export default function KeyboardBoosterScreen({ onBack }: Props) {
     try { await saveKeyboardPrefs(shopId, shopName, slug, prefs); } finally { setSaving(false); }
   }, [shopId, shopName, slug, prefs]);
 
-  const StatusPill = () => {
-    if (enabled === null) {
-      return <View style={[s.pill, { backgroundColor: colors.border }]}><Text style={s.pillTxt}>Statut inconnu</Text></View>;
-    }
-    return enabled
-      ? <View style={[s.pill, { backgroundColor: 'rgba(95,211,138,.18)' }]}><Text style={[s.pillTxt, { color: colors.success }]}>✓ Clavier activé</Text></View>
-      : <View style={[s.pill, { backgroundColor: 'rgba(224,122,122,.18)' }]}><Text style={[s.pillTxt, { color: colors.danger }]}>Clavier pas encore activé</Text></View>;
-  };
-
   return (
     <View style={s.root}>
       <View style={s.header}>
@@ -97,28 +78,20 @@ export default function KeyboardBoosterScreen({ onBack }: Props) {
           dans WhatsApp et partout ailleurs. 🚀
         </Text>
 
-        {/* Statut + activation */}
+        {/* Activation */}
         <View style={s.card}>
-          <StatusPill />
           <Text style={s.step}>1. Active le clavier LASSI</Text>
-          <Text style={s.hint}>Ouvre les réglages → active « Clavier LASSI » dans la liste.</Text>
+          <Text style={s.hint}>Ouvre les réglages → active « Clavier LASSI » dans la liste des claviers.</Text>
           <TouchableOpacity style={s.primaryBtn} onPress={async () => { await openKeyboardSettings(); }} activeOpacity={0.9}>
             <Text style={s.primaryTxt}>Activer mon clavier</Text>
           </TouchableOpacity>
 
-          {Platform.OS === 'android' && (
-            <>
-              <Text style={[s.step, { marginTop: 16 }]}>2. Passe sur le clavier LASSI</Text>
-              <Text style={s.hint}>Dans WhatsApp, touche 🌐 ou utilise ce bouton pour basculer.</Text>
-              <TouchableOpacity style={s.ghostBtn} onPress={async () => { await showKeyboardPicker(); }} activeOpacity={0.85}>
-                <Text style={s.ghostTxt}>Choisir mon clavier</Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          <TouchableOpacity style={s.refresh} onPress={refreshStatus}>
-            <Text style={s.refreshTxt}>Vérifier le statut</Text>
-          </TouchableOpacity>
+          <Text style={[s.step, { marginTop: 16 }]}>2. Passe sur le clavier LASSI</Text>
+          <Text style={s.hint}>
+            {Platform.OS === 'android'
+              ? 'Dans WhatsApp, touche 🌐 (globe) en bas du clavier pour basculer sur LASSI.'
+              : 'Dans WhatsApp, appui long sur 🌐 (globe) pour choisir le clavier LASSI.'}
+          </Text>
         </View>
 
         {/* Lien vitrine */}

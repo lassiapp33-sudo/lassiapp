@@ -1,15 +1,19 @@
 // ── Synchro des données marchand vers le clavier vendeur LASSI ────────────────
 // Construit le payload (lien vitrine, puces, réponses rapides, fond) et l'écrit
-// dans le stockage partagé natif lu par l'extension clavier.
+// dans le stockage lu par le clavier :
+//   - iOS     : App Group (via le module natif lassi-keyboard)
+//   - Android : fichier filesDir/lassi_keyboard.json (via expo-file-system),
+//               lu par l'InputMethodService injecté par withLassiKeyboardAndroid.
 //
 // Appelé à la connexion marchand et à chaque mise à jour du profil/vitrine.
-// Les réponses rapides et le fond éditables par le marchand sont persistés en
-// AsyncStorage (clé par boutique) et réinjectés à chaque synchro.
 
+import { Platform, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
 import {
-  setMerchantData,
-  clearMerchantData,
+  setMerchantData as iosSetMerchantData,
+  clearMerchantData as iosClearMerchantData,
+  openKeyboardSettings as iosOpenKeyboardSettings,
   type MerchantKeyboardData,
   type QuickReply,
   type KeyboardChip,
@@ -17,6 +21,7 @@ import {
 
 const VITRINE_BASE = 'https://s.lassi.tech';
 const PREFS_KEY = (shopId: string) => `lassi_keyboard_prefs_${shopId}`;
+const ANDROID_FILE = `${FileSystem.documentDirectory ?? ''}lassi_keyboard.json`;
 
 export interface KeyboardPrefs {
   quickReplies: QuickReply[];
@@ -75,14 +80,10 @@ interface SyncArgs {
   shopId: string;
   shopName: string;
   slug: string | null;
-  /** Si absent, chargé depuis AsyncStorage. */
   prefs?: KeyboardPrefs;
 }
 
-/**
- * Écrit les données marchand dans le stockage partagé du clavier.
- * Silencieux si le module natif n'est pas présent (ex: build sans le clavier).
- */
+/** Écrit les données marchand dans le stockage lu par le clavier (par OS). */
 export async function syncKeyboard({ shopId, shopName, slug, prefs }: SyncArgs): Promise<void> {
   if (!slug) return; // pas de vitrine publique → rien à proposer
   const vitrineUrl = `${VITRINE_BASE}/${slug}`;
@@ -97,13 +98,32 @@ export async function syncKeyboard({ shopId, shopName, slug, prefs }: SyncArgs):
   };
 
   try {
-    await setMerchantData(data);
-  } catch { /* module natif absent ou indisponible — ignoré */ }
+    if (Platform.OS === 'ios') {
+      await iosSetMerchantData(data);
+    } else {
+      await FileSystem.writeAsStringAsync(ANDROID_FILE, JSON.stringify(data));
+    }
+  } catch { /* module/fichier indisponible — ignoré */ }
 }
 
 /** Efface les données à la déconnexion. */
 export async function clearKeyboard(): Promise<void> {
   try {
-    await clearMerchantData();
+    if (Platform.OS === 'ios') {
+      await iosClearMerchantData();
+    } else {
+      await FileSystem.deleteAsync(ANDROID_FILE, { idempotent: true });
+    }
+  } catch { /* ignoré */ }
+}
+
+/** Ouvre les réglages clavier de l'OS (activation du clavier LASSI). */
+export async function openKeyboardSettings(): Promise<void> {
+  try {
+    if (Platform.OS === 'android') {
+      await Linking.sendIntent('android.settings.INPUT_METHOD_SETTINGS');
+    } else {
+      await iosOpenKeyboardSettings();
+    }
   } catch { /* ignoré */ }
 }
