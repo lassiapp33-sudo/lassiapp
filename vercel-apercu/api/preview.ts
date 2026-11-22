@@ -3482,8 +3482,10 @@ ${faSigSection}
         <div class="mw-spec lx-fx-piece"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="1"/><path d="M9 9h6M9 13h6"/></svg><h4>Garantie 5 ans</h4><p>Chaque calibre est garanti contre toute défaillance structurelle pendant cinq ans.</p></div>
       </div>
     </section>`;
-  const mwStrip = o.gallery.length >= 4
-    ? `<div class="mw-strip lx-fx-stagger">${o.gallery.slice(0, 4).map(u => `<div class="mw-strip-t lx-fx-piece" ${bg(u)}></div>`).join('')}</div>`
+  // Bandeau images : carrousel auto-défilant (2 visibles, de gauche à droite).
+  const mwStripImgs = o.gallery.slice(0, 6);
+  const mwStrip = mwStripImgs.length >= 2
+    ? `<div class="mw-strip"><div class="mw-strip-track">${[...mwStripImgs, ...mwStripImgs].map(u => `<div class="mw-strip-t" ${bg(u)}></div>`).join('')}</div></div>`
     : '';
   // Accueil montre : vitrine réduite = 4 produits (2×2) + bouton « Voir tous les
   // produits » qui ouvre le MENU BOUTIQUE (overlay plein écran = catalogue complet).
@@ -5165,7 +5167,7 @@ ${theme.template === 'montre' ? '<link href="https://fonts.googleapis.com/css2?f
   .mw-ser{ position:absolute; top:16px; right:16px; z-index:2; font-size:10px; letter-spacing:.28em; text-transform:uppercase; color:#fff; background:rgba(0,0,0,.3); backdrop-filter:blur(4px); padding:6px 12px; }
   .mw-cat-lab{ display:flex; justify-content:space-between; align-items:center; margin-top:15px; font-size:12px; letter-spacing:.24em; text-transform:uppercase; }
   .mw-cat-lab small{ color:var(--mw-mut); }
-  @media(max-width:820px){ .mw-cats-grid{ grid-template-columns:1fr; } .mw-cat-big .mw-cat-im,.mw-cat:not(.mw-cat-big) .mw-cat-im{ aspect-ratio:16/10; } }
+  @media(max-width:820px){ .mw-cats-grid{ gap:8px; } .mw-cat-lab{ margin-top:8px; font-size:8.5px; letter-spacing:.12em; } .mw-ser{ font-size:7.5px; letter-spacing:.14em; padding:4px 7px; top:8px; right:8px; } }
   /* shop */
   .mw-shop{ background:var(--mw-paper2); max-width:none; }
   .mw-shop>.lx-fx-stagger,.mw-shop>.mw-shead{ max-width:1320px; margin-left:auto; margin-right:auto; }
@@ -5192,9 +5194,11 @@ ${theme.template === 'montre' ? '<link href="https://fonts.googleapis.com/css2?f
   .mw-split-tx p{ color:var(--mw-mut); max-width:430px; margin:18px 0 26px; }
   @media(max-width:860px){ .mw-split{ grid-template-columns:1fr; } .mw-split-img{ min-height:320px; } }
   /* strip */
-  .mw-strip{ display:grid; grid-template-columns:repeat(4,1fr); gap:2px; background:var(--mw-line); }
-  .mw-strip-t{ aspect-ratio:1; background-size:cover; background-position:center; }
-  @media(max-width:700px){ .mw-strip{ grid-template-columns:1fr 1fr; } }
+  .mw-strip{ overflow:hidden; background:var(--mw-line); }
+  .mw-strip-track{ display:flex; width:max-content; animation:mwStripScroll 32s linear infinite; }
+  .mw-strip-t{ flex:0 0 min(50vw,340px); aspect-ratio:1; background-size:cover; background-position:center; border-right:2px solid var(--mw-line); }
+  @keyframes mwStripScroll{ from{transform:translateX(-50%)} to{transform:translateX(0)} }
+  @media(prefers-reduced-motion:reduce){ .mw-strip-track{ animation:none; } }
   /* footer */
   .mw-foot{ background:var(--mw-ink); color:#c9cabf; padding:70px clamp(20px,5vw,60px) 34px; }
   .mw-foot-top{ display:flex; justify-content:space-between; gap:40px; flex-wrap:wrap; border-bottom:1px solid rgba(255,255,255,.12); padding-bottom:40px; margin-bottom:34px; max-width:1320px; margin-left:auto; margin-right:auto; }
@@ -5236,6 +5240,17 @@ ${theme.template === 'montre' ? '<link href="https://fonts.googleapis.com/css2?f
   body[data-template="montre"] .mw-menu-top .mw-ey{ color:#fff; }
   body[data-template="montre"] .mw-menu-x{ width:38px; height:38px; flex:0 0 auto; border:none; background:rgba(255,255,255,.14); color:#fff; font-size:17px; line-height:1; cursor:pointer; border-radius:50%; }
   body[data-template="montre"] .mw-menu-scroll{ padding:clamp(24px,5vw,56px) clamp(16px,5vw,40px) 90px; max-width:1320px; margin:0 auto; }
+  /* Fiche produit montre : carte centrée compacte (même rendu que le PC), aussi sur mobile */
+  body[data-template="montre"] .pd-ov{ align-items:center; }
+  body[data-template="montre"] .pd-card{ max-width:420px; border-radius:4px; max-height:88vh; margin:0 16px; }
+  body[data-template="montre"] .pd-gallery{ height:auto; aspect-ratio:1; max-height:46vh; background:#fafbf8; }
+  body[data-template="montre"] .pd-gallery img{ object-fit:contain; }
+  body[data-template="montre"] .pd-name{ font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:500; }
+  body[data-template="montre"] .pd-price{ color:var(--mw-mut); font-weight:500; }
+  body[data-template="montre"] .pd-add{ border-radius:0; background:var(--mw-ink); color:#fff; letter-spacing:.14em; text-transform:uppercase; }
+  body[data-template="montre"] .pd-qty{ border-radius:0; background:var(--mw-ink); }
+  body[data-template="montre"] .pd-qty b,body[data-template="montre"] .pd-qty button{ color:#fff; }
+  body[data-template="montre"] .pd-x{ background:rgba(20,21,26,.55); }
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">
