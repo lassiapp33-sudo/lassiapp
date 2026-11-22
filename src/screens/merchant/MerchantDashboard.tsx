@@ -62,7 +62,8 @@ type NavDest =
   | 'offre_quartier'
   | 'a_la_une'
   | 'ca_bouge'
-  | 'livraison';
+  | 'livraison'
+  | 'keyboard_booster';
 
 // ─── Écran ────────────────────────────────────────────────────────────────────
 

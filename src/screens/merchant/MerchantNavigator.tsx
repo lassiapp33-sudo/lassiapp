@@ -30,6 +30,8 @@ import BlocAlaUneScreen from '../home/BlocAlaUneScreen';
 import MerchantLivraisonScreen from './MerchantLivraisonScreen';
 import MaCampagneScreen from './MaCampagneScreen';
 import StoryComposerScreen from './StoryComposerScreen';
+import KeyboardBoosterScreen from './KeyboardBoosterScreen';
+import { useKeyboardSync } from '../../hooks/useKeyboardSync';
 import BeautyServiceCatalogScreen from './BeautyServiceCatalogScreen';
 import BeautyReservationsScreen from './BeautyReservationsScreen';
 import MerchantRestaurantReservationsScreen from '../restaurant/MerchantRestaurantReservationsScreen';
@@ -116,6 +118,7 @@ type MerchantScreen =
   | 'livraison'
   | 'ma_campagne'
   | 'ca_bouge'
+  | 'keyboard_booster'
   | { id: 'orders'; initialTab: 'new' | 'preparing' }
 ;
 
@@ -127,6 +130,9 @@ export default function MerchantNavigator({ onLogout }: Props) {
   const [screen, setScreen] = useState<MerchantScreen>('dashboard');
   const shopId           = useShopStore(s => s.shopId);
   const shopSlug         = useShopStore(s => s.profile?.slug ?? null);
+
+  // Synchro auto des données marchand vers le clavier vendeur LASSI.
+  useKeyboardSync();
 
   // Annonce vocale globale — actif quelle que soit l'écran affiché
   const addOrder = useOrdersStore(s => s.addOrder);
@@ -601,6 +607,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
   if (screen === 'ca_bouge') return <StoryComposerScreen onBack={() => setScreen('dashboard')} />;
 
   if (screen === 'promotions') return <PromotionsScreen onBack={() => setScreen('store')} />;
+  if (screen === 'keyboard_booster') return <KeyboardBoosterScreen onBack={() => setScreen('dashboard')} />;
   if (screen === 'fitness_abonnements')
     return <MerchantAbonnementsScreen onBack={() => setScreen('store')} />;
   if (screen === 'a_la_une') return <AlaUneScreen onBack={() => setScreen('dashboard')} />;
@@ -698,6 +705,7 @@ export default function MerchantNavigator({ onLogout }: Props) {
           if (dest === 'a_la_une') setScreen('a_la_une');
           if (dest === 'ca_bouge') setScreen('ca_bouge');
           if (dest === 'livraison') setScreen('livraison');
+          if (dest === 'keyboard_booster') setScreen('keyboard_booster');
         }}
         onOrderPress={(_, tab) => setScreen({ id: 'orders', initialTab: tab })}
         onNotifPress={() => setScreen('notifications')}

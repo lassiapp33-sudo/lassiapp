@@ -1,0 +1,7 @@
+{
+  "name": "lassi-keyboard",
+  "version": "0.1.0",
+  "description": "Bridge natif LASSI : synchro des données marchand vers l'extension clavier vendeur.",
+  "main": "index.ts",
+  "private": true
+}

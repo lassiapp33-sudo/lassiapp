@@ -1,0 +1,9 @@
+{
+  "platforms": ["android", "ios"],
+  "android": {
+    "modules": ["tech.lassi.keyboard.LassiKeyboardModule"]
+  },
+  "ios": {
+    "modules": ["LassiKeyboardModule"]
+  }
+}

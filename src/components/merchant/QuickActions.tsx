@@ -150,6 +150,21 @@ const IcoTrophy = ({ stroke }: { stroke: string }) => (
   </Svg>
 );
 
+const IcoKeyboard = ({ stroke }: { stroke: string }) => (
+  <Svg
+    width={21}
+    height={21}
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <Rect x={2} y={5} width={20} height={14} rx={2} stroke={stroke} />
+    <Path d="M6 9h0M10 9h0M14 9h0M18 9h0M6 13h0M10 13h0M14 13h0M18 13h0M8 17h8" stroke={stroke} />
+  </Svg>
+);
+
 // ─── Carte d'action individuelle ──────────────────────────────────────────────
 
 interface ActionCardProps {
@@ -239,6 +254,16 @@ export default function QuickActions({
             onPress={() => onPress?.('store')}
           />
         )}
+      </View>
+      <View style={styles.row}>
+        <ActionCard
+          Icon={IcoKeyboard}
+          iconBg="rgba(37,211,102,.13)"
+          iconStroke="#25D366"
+          title="Clavier Vendeur"
+          desc="Ton lien & réponses prêts sur WhatsApp"
+          onPress={() => onPress?.('keyboard_booster')}
+        />
       </View>
       {/* Livraison masquée temporairement */}
     </View>
