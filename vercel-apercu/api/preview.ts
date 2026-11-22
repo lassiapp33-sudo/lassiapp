@@ -106,7 +106,7 @@ const SITE_PALETTES: Record<string, SitePalette> = {
 };
 const DEFAULT_PALETTE = 'classic';
 const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
-const SITE_TEMPLATES = ['classic', 'cosmetic', 'furniture', 'garderobe', 'sac', 'tresse', 'ferme', 'grill', 'bar']; // Phase 3 — #1 cosmetic (beauté), #2 furniture (maison & mobilier), #3 garderobe (mode / prêt-à-porter), #4 sac (maroquinerie / bagagerie) ; bar = restaurant/lounge (BRAISE)
+const SITE_TEMPLATES = ['classic', 'cosmetic', 'furniture', 'garderobe', 'sac', 'tresse', 'ferme', 'grill', 'bar', 'montre']; // Phase 3 — #1 cosmetic (beauté), #2 furniture (maison & mobilier), #3 garderobe (mode / prêt-à-porter), #4 sac (maroquinerie / bagagerie) ; bar = restaurant/lounge (BRAISE) ; montre = horlogerie / montres (TÉRANGA CALIBRE)
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
 // ── Layout (Phase 2) — agencement des conteneurs, présentation seule ─────────
@@ -1514,6 +1514,37 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
       P('ba7', 'Pavé de capitaine grillé', 10500, 'Émulsion de yassa, riz vapeur.', 'poissons', 'g6.jpg'),
       P('ba8', 'Fondant chocolat & braise', 4000, 'Glace vanille, éclats de cacao torréfié.', 'desserts', 'g7.jpg'),
       P('ba9', 'Cocktail signature « Braise »', 5000, 'Rhum ambré, fruits rouges, épices, fumée.', 'boissons', 'g2.jpg'),
+    ];
+    return { shop, products };
+  }
+
+  if (t === 'montre') {
+    const site_config = {
+      template: 'montre',
+      tokens: { palette: 'onyx', accent: '#b9a16b', fontHeading: 'cormorant', fontBody: 'jost' },
+      layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'flat', hero: 'split' },
+      social: { facebook: 'https://facebook.com', tiktok: 'https://tiktok.com', instagram: 'https://instagram.com' },
+    };
+    const shop: Shop = {
+      id: 'demo-montre', name: 'Téranga Calibre', logo_url: null,
+      description: "Horlogerie sénégalaise assemblée à Dakar. Montres automatiques pensées pour l'océan Atlantique et les pistes du Sahel — boîtiers titane scellés, verre saphir, éprouvés sur le terrain.",
+      zone: 'Dakar · Sénégal', category: 'stores', shop_type: 'products',
+      subcategories: ['chronographes', 'plongee', 'automatiques', 'nouveautes'],
+      slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
+      site_config, gallery_urls: [img('hero.jpg'), img('g1.jpg'), img('g2.jpg'), img('g3.jpg'), img('g4.jpg'), img('about.jpg'), img('band.jpg')],
+      cover_url: null, phone: '76 189 00 03',
+    };
+    const P = (id: string, name: string, price: number, description: string, category: string, photo: string): Product =>
+      ({ id, name, description, emoji: null, photo_url: img(photo), price, category });
+    const products: Product[] = [
+      P('m1', 'Dakar Chronographe', 360000, 'Chronographe tactique à index dorés, trois compteurs et boîtier titane grade 5. Inspiré des pistes du Rallye Dakar.', 'chronographes', 'p1.jpg'),
+      P('m2', 'Gorée Chronographe Or', 420000, 'Édition Signature — cadran vert racing serti dans un boîtier ton or. Un chronographe de précision calibré pour le chronométrage.', 'chronographes', 'p4.jpg'),
+      P('m3', 'Ngor Plongée', 280000, 'Plongée scellée contre 200m de pression, lunette tournante et index luminescents. Pensée pour les plongées des Almadies.', 'plongee', 'p5.jpg'),
+      P('m4', 'Ngor Plongée Nuit', 310000, 'Diver blackout entièrement revêtu, verre saphir et garantie structurelle 5 ans.', 'plongee', 'p2.jpg'),
+      P('m5', 'Sahel Automatique', 250000, 'Automatique de terrain à cadran lisible, petite seconde et boîtier titane scellé. Conçue pour le port quotidien par toutes conditions.', 'automatiques', 'p3.jpg'),
+      P('m6', 'Sahel Automatique Ivoire', 250000, 'La version cadran ivoire — propre, lumineuse et précise, dans un boîtier titane grade 5 à verre saphir.', 'automatiques', 'p6.jpg'),
+      P('m7', 'Dakar Chronographe Onyx', 375000, 'Chronographe noir onyx, accents dorés et lunette tachymétrique. Robustesse et élégance au poignet.', 'nouveautes', 'p7.jpg'),
+      P('m8', 'Ngor Plongée Atlantique', 285000, 'Cadran bleu Atlantique, lunette plongée 60 minutes, bracelet titane. Étanche 200m.', 'nouveautes', 'p8.jpg'),
     ];
     return { shop, products };
   }
@@ -3316,7 +3347,7 @@ ${faSigSection}
 
     <div class="ud-page ud-page-home" id="ud-top">
       <header class="ud-hero">
-        <img class="ud-hero-img" src="${U}hero-bg.jpg" alt="${escAttr(o.name)}">
+        <picture><source media="(max-width:720px)" srcset="${U}hero-bg-mobile.jpg"><img class="ud-hero-img" src="${U}hero-bg.jpg" alt="${escAttr(o.name)}"></picture>
         <div class="ud-hero-in">
           <h1 class="ud-hero-h ud-serif">L'élégance,<br>perle après perle</h1>
           <p class="ud-hero-p">Sacs en perles 100 % faits main au Sénégal. Des pièces uniques, pensées pour sublimer chacune de vos tenues.</p>
@@ -3416,7 +3447,111 @@ ${faSigSection}
       if(location.hash==='#ud-shop'){ pages.home.hidden=true; pages.boutique.hidden=false; }
     })();</script>`;
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TEMPLATE PLEIN « MONTRE » — Horlogerie (TÉRANGA CALIBRE) : hero éditorial
+  // plein cadre, section « complications » asymétrique, grille produits réutilisée
+  // pour le commerce, bandeau signature, benchmark specs, section terrain + strip.
+  // Thème clair/luxe (papier + encre + accent or). Classes préfixées .mw-*.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const mwP0 = o.products[0];
+  const mwHeroCard = mwP0 ? `
+      <a class="mw-hero-card lx-fx-zin" href="#mw-shop">
+        <img src="${escAttr(mwP0.photo_url || pick(0))}" alt="${escAttr(mwP0.name || '')}">
+        <div class="mw-hc-r"><div>${esc(clip(mwP0.name || '', 26))}<small>${mwP0.price ? fmtPrice(mwP0.price) : ''}</small></div><span class="mw-hc-add">+</span></div>
+      </a>` : '';
+  const mwComplications = `
+    <section class="mw-cats" id="mw-cats">
+      <div class="mw-shead lx-rv">
+        <div><span class="mw-ey">Choisir par complication</span><h2 class="mw-h2 lx-fx-mask"><span class="lx-fx-mask-l"><span>Segmentez la collection par</span></span><span class="lx-fx-mask-l"><span>complication et profondeur.</span></span></h2></div>
+        <a class="mw-btn" href="#mw-shop">Tout voir</a>
+      </div>
+      <div class="mw-cats-grid lx-fx-stagger">
+        <a class="mw-cat mw-cat-big lx-fx-piece" href="#mw-shop"><div class="mw-cat-im" ${bg(pick(1))}><span class="mw-ser">Série 01</span></div><div class="mw-cat-lab"><span>Automatiques Sahel</span><small>&#8594;</small></div></a>
+        <a class="mw-cat lx-fx-piece" href="#mw-shop"><div class="mw-cat-im" ${bg(pick(2))}><span class="mw-ser">Série 02</span></div><div class="mw-cat-lab"><span>Chronographes Dakar</span><small>&#8594;</small></div></a>
+        <a class="mw-cat lx-fx-piece" href="#mw-shop"><div class="mw-cat-im" ${bg(pick(0))}><span class="mw-ser">Série 03</span></div><div class="mw-cat-lab"><span>Plongée Atlantique</span><small>&#8594;</small></div></a>
+      </div>
+    </section>`;
+  const mwSpecs = `
+    <section class="mw-specs-sec">
+      <span class="mw-ey lx-rv">Le standard Téranga</span>
+      <h2 class="mw-h2 lx-fx-mask"><span class="lx-fx-mask-l"><span>Conçue pour survivre à l'expédition.</span></span></h2>
+      <div class="mw-specs lx-fx-stagger">
+        <div class="mw-spec lx-fx-piece"><svg viewBox="0 0 24 24"><path d="M3 14c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/><path d="M3 18c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/></svg><h4>Étanchéité 200m</h4><p>Scellée contre la pression sévère pour une immersion profonde et prolongée.</p></div>
+        <div class="mw-spec lx-fx-piece"><svg viewBox="0 0 24 24"><path d="M12 3l7 4v6c0 4-3 6-7 8-4-2-7-4-7-8V7z"/><path d="M9 12l2 2 4-4"/></svg><h4>Cœur titane grade 5</h4><p>Boîtier en alliage aérospatial conçu pour résister aux chocs et à la corrosion.</p></div>
+        <div class="mw-spec lx-fx-piece"><svg viewBox="0 0 24 24"><path d="M12 4l8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 16l8 4 8-4"/></svg><h4>Verre saphir</h4><p>Un bouclier durable en verre saphir qui protège des rayures et des impacts.</p></div>
+        <div class="mw-spec lx-fx-piece"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="1"/><path d="M9 9h6M9 13h6"/></svg><h4>Garantie 5 ans</h4><p>Chaque calibre est garanti contre toute défaillance structurelle pendant cinq ans.</p></div>
+      </div>
+    </section>`;
+  const mwStrip = o.gallery.length >= 4
+    ? `<div class="mw-strip lx-fx-stagger">${o.gallery.slice(0, 4).map(u => `<div class="mw-strip-t lx-fx-piece" ${bg(u)}></div>`).join('')}</div>`
+    : '';
+  const mwBody = `
+    <header class="mw-head" id="mw-top">
+      <a class="mw-logo" href="#mw-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<b>${esc(o.name)}</b>`}</a>
+      <nav class="mw-nav">
+        <a href="#mw-cats">Collection</a>
+        <a href="#mw-shop">Modèles</a>
+        <a href="#mw-tech">Technologie</a>
+        <a href="#mw-field">Terrain</a>
+      </nav>
+      <a class="mw-cart" href="#mw-shop" title="Panier"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg><span>Panier</span></a>
+    </header>
+    <section class="mw-hero" ${bg(pick(0))}>
+      <div class="mw-hero-ov"></div>
+      <div class="mw-hero-in">
+        <span class="mw-ey light">${o.cat ? esc(o.cat) : 'Horlogerie sénégalaise — Assemblée à Dakar'}</span>
+        <h1 class="mw-hero-h lx-fx-mask"><span class="lx-fx-mask-l"><span>${esc(o.name)}</span></span></h1>
+        <p class="mw-hero-p">${esc(clip(o.desc || "Montres automatiques assemblées à Dakar — pensées pour l'océan Atlantique et les pistes du Sahel.", 150))}</p>
+        <a class="mw-btn light" href="#mw-shop">${cxHeadCta === 'Commander' ? 'Explorer la série' : cxHeadCta} &#8594;</a>
+        ${hoursHtml ? `<div class="mw-hero-hours">${hoursHtml}</div>` : ''}
+      </div>
+      ${mwHeroCard}
+    </section>
+    ${mwComplications}
+    ${closedNotice}
+    <section id="mw-shop" class="mw-shop${catalogCls}">
+      <div class="mw-shead lx-rv"><div><span class="mw-ey">${o.cat ? esc(clip(o.cat, 40)) : 'La collection'}</span><h2 class="mw-h2">${hasProducts ? 'Modèles éprouvés sur le terrain' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2></div></div>
+      <div class="lx-fx-stagger">${catnav}${dsSection}${grid}${svcSection}${terrainSection}</div>
+    </section>
+    <section class="mw-band lx-fx-curtain" ${bg(pick(5))}>
+      <div class="mw-band-ov"></div>
+      <div class="mw-band-in">
+        <span class="mw-ey light">Série Signature</span>
+        <h3>Coffret scellé et bracelet terrain inclus avec chaque pièce Signature.</h3>
+        <p>Commande en ligne, paiement sécurisé Wave &amp; Orange Money, retrait ou livraison à ${esc(o.zone || 'Dakar')}.</p>
+        <a class="mw-btn light" href="#mw-shop">Découvrir &#8594;</a>
+      </div>
+    </section>
+    <section id="mw-tech">${mwSpecs}</section>
+    <section id="mw-field" class="mw-split lx-fx-expand">
+      <div class="mw-split-img" ${bg(pick(4))}></div>
+      <div class="mw-split-tx">
+        <span class="mw-ey">Éprouvée sur le terrain</span>
+        <h2 class="mw-h2">Prouvée là où ça compte.</h2>
+        <p>${esc(clip(o.desc || `${o.name} gagne son standard au poignet — pas sur l'établi. Chaque calibre est assemblé et scellé à Dakar.`, 180))}</p>
+        <a class="mw-btn" href="#mw-shop">${cxHeadCta === 'Commander' ? 'Voir la collection' : cxHeadCta}</a>
+      </div>
+    </section>
+    ${mwStrip}
+    <footer class="mw-foot" id="mw-contact">
+      <div class="mw-foot-top">
+        <div><div class="mw-logo mw-logo-f">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<b>${esc(o.name)}</b>`}</div><p>${esc(clip(o.desc || 'Montres automatiques sénégalaises, assemblées à Dakar. Boîtiers scellés, éprouvés sur le terrain.', 140))}</p>${socialHtml}</div>
+        <div class="mw-foot-c">
+          <h5>Contact</h5>
+          ${o.phone ? `<a href="tel:${escAttr(o.phone.replace(/\s+/g, ''))}">&#9742; ${esc(o.phone)}</a>` : ''}
+          ${o.zone ? `<span>&#128205; ${esc(o.zone)}</span>` : ''}
+          ${hoursHtml ? `<div class="mw-foot-hours">${hoursHtml}</div>` : ''}
+        </div>
+      </div>
+      <div class="mw-appnote">Découvrez tous les commerçants autour de vous sur l'application LASSİ</div>
+      ${storeButtons}
+      ${foot}
+      <div class="mw-copy"><span>&copy; 2026 ${esc(o.name)} — ${esc(o.zone || 'Dakar, Sénégal')}.</span><span>Livraison sécurisée et signée sur toutes les pièces.</span></div>
+    </footer>
+  `;
+
   const body = theme.template === 'udebi' && hasCatalog ? udBody
+    : theme.template === 'montre' && hasCatalog ? mwBody
     : theme.template === 'cafefa' && hasCatalog ? faBody
     : theme.template === 'furniture' && hasCatalog ? furnitureBody
     : theme.template === 'cosmetic' && hasCatalog ? cosmeticBody
@@ -3461,6 +3596,7 @@ ${theme.template === 'grill' ? '<link href="https://fonts.googleapis.com/css2?fa
 ${theme.template === 'bar' ? '<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">' : ''}
 ${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">' : ''}
 ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">' : ''}
+${theme.template === 'montre' ? '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">' : ''}
 <style>
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
   [hidden] { display:none !important; }
@@ -4853,7 +4989,7 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   .ud-hero-card .t{ font-family:'Playfair Display',serif; font-style:italic; font-size:17px; color:var(--ud-wine); }
   .ud-hero-card .s{ font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--ud-mut); margin-top:4px; }
   .ud-hero-card a{ font-family:'Playfair Display',serif; font-style:italic; font-size:14px; color:var(--ud-wine); text-decoration:underline; text-underline-offset:3px; margin-top:6px; display:inline-block; }
-  @media(max-width:720px){ .ud-hero-h{ font-size:clamp(26px,6.6vw,36px); } .ud-hero-img{ object-position:36% center; } .ud-hero::after{ background:linear-gradient(0deg,rgba(20,13,10,.55),rgba(20,13,10,.25) 45%,rgba(20,13,10,.6) 100%); } .ud-hero-in{ align-self:flex-start; margin-bottom:0; margin-top:clamp(8px,3vh,36px); max-width:62%; } .ud-hero-p{ color:#fff; text-shadow:0 2px 16px rgba(0,0,0,.75); font-size:13px; max-width:100%; } .ud-btn{ margin-top:16px; font-size:10px; letter-spacing:1.2px; padding:10px 18px; }
+  @media(max-width:720px){ .ud-hero-h{ font-size:clamp(26px,6.6vw,36px); } .ud-hero-img{ object-position:center; } .ud-hero::after{ background:linear-gradient(0deg,rgba(20,13,10,.55),rgba(20,13,10,.25) 45%,rgba(20,13,10,.6) 100%); } .ud-hero-in{ align-self:flex-start; margin-bottom:0; margin-top:clamp(8px,3vh,36px); max-width:62%; } .ud-hero-p{ color:#fff; text-shadow:0 2px 16px rgba(0,0,0,.75); font-size:13px; max-width:100%; } .ud-btn{ margin-top:16px; font-size:10px; letter-spacing:1.2px; padding:10px 18px; }
   .ud-hero-card{ display:flex; right:14px; bottom:16px; max-width:230px; padding:10px; gap:10px; }
   .ud-hero-card img{ width:66px; height:84px; }
   .ud-hero-card .t{ font-size:13px; }
@@ -4964,6 +5100,114 @@ ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?fa
   body[data-template="udebi"] .cartbar{ background:linear-gradient(180deg,rgba(244,241,234,0),rgba(244,241,234,.96) 30%); }
   body[data-template="udebi"] .cartbtn{ background:var(--ud-ink); color:var(--ud-bg); border-radius:0; }
   body[data-template="udebi"] #cartTotal{ color:var(--ud-bg)!important; }
+
+  /* ═══ TEMPLATE MONTRE — Horlogerie (TÉRANGA CALIBRE) : papier + encre + accent or ═══ */
+  body[data-template="montre"]{ --mw-ink:#14151a; --mw-paper:#f4f5f1; --mw-paper2:#eceee7; --mw-line:#d8d9d2; --mw-mut:#6c6e68; --mw-gold:#b9a16b;
+    background:var(--mw-paper); color:var(--mw-ink); font-family:'Jost',-apple-system,system-ui,sans-serif; }
+  body[data-template="montre"] .appwrap,body[data-template="montre"] .wrap{ max-width:100%; }
+  .mw-ey{ font-size:11px; letter-spacing:.32em; text-transform:uppercase; color:var(--mw-mut); display:block; }
+  .mw-ey.light{ color:rgba(255,255,255,.82); }
+  .mw-h2{ font-family:'Cormorant Garamond',Georgia,serif; font-weight:400; font-size:clamp(26px,3.6vw,46px); letter-spacing:.01em; line-height:1.06; margin:12px 0 0; }
+  .mw-btn{ display:inline-flex; align-items:center; gap:9px; font-size:11px; letter-spacing:.28em; text-transform:uppercase; padding:14px 28px; border:1px solid var(--mw-ink); color:var(--mw-ink); background:transparent; cursor:pointer; transition:.3s cubic-bezier(.16,1,.3,1); text-decoration:none; }
+  .mw-btn:hover{ background:var(--mw-ink); color:var(--mw-paper); }
+  .mw-btn.light{ border-color:rgba(255,255,255,.6); color:#fff; }
+  .mw-btn.light:hover{ background:#fff; color:var(--mw-ink); }
+  /* header */
+  .mw-head{ position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; gap:18px; padding:16px clamp(20px,5vw,60px); background:rgba(244,245,241,.9); backdrop-filter:blur(12px); border-bottom:1px solid var(--mw-line); }
+  .mw-logo{ font-family:'Cormorant Garamond',serif; font-size:22px; letter-spacing:.14em; text-transform:uppercase; color:var(--mw-ink); text-decoration:none; }
+  .mw-logo img{ height:34px; width:auto; display:block; }
+  .mw-nav{ display:flex; gap:30px; }
+  .mw-nav a{ font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--mw-mut); text-decoration:none; transition:.25s; }
+  .mw-nav a:hover{ color:var(--mw-ink); }
+  .mw-cart{ display:inline-flex; align-items:center; gap:8px; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--mw-ink); text-decoration:none; }
+  @media(max-width:860px){ .mw-nav{ display:none; } }
+  /* hero */
+  .mw-hero{ position:relative; min-height:86vh; display:flex; align-items:center; background-size:cover; background-position:center; color:#fff; padding:0 clamp(20px,5vw,60px); }
+  .mw-hero-ov{ position:absolute; inset:0; background:linear-gradient(90deg,rgba(10,10,12,.72) 0%,rgba(10,10,12,.35) 45%,rgba(10,10,12,0) 78%); }
+  .mw-hero-in{ position:relative; z-index:2; max-width:560px; }
+  .mw-hero-h{ font-family:'Cormorant Garamond',serif; font-weight:500; font-size:clamp(42px,7vw,92px); line-height:1.02; margin:16px 0 18px; }
+  .mw-hero-p{ max-width:460px; color:#e4e3dc; font-size:16px; margin-bottom:30px; }
+  .mw-hero-hours{ margin-top:16px; }
+  .mw-hero-card{ position:absolute; right:clamp(16px,4vw,48px); bottom:44px; z-index:3; width:264px; background:#fff; color:var(--mw-ink); padding:16px; box-shadow:0 30px 60px rgba(0,0,0,.35); text-decoration:none; transition:transform .5s cubic-bezier(.16,1,.3,1); }
+  .mw-hero-card:hover{ transform:translateY(-4px); }
+  .mw-hero-card img{ width:100%; height:180px; object-fit:contain; margin-bottom:12px; }
+  .mw-hc-r{ display:flex; justify-content:space-between; align-items:center; font-size:13px; letter-spacing:.04em; }
+  .mw-hc-r small{ display:block; color:var(--mw-mut); margin-top:2px; }
+  .mw-hc-add{ width:34px; height:34px; background:var(--mw-ink); color:#fff; display:grid; place-items:center; font-size:18px; transition:.35s cubic-bezier(.16,1,.3,1); }
+  .mw-hero-card:hover .mw-hc-add{ background:var(--mw-gold); transform:rotate(90deg); }
+  @media(max-width:720px){ .mw-hero-card{ display:none; } .mw-hero-ov{ background:linear-gradient(0deg,rgba(10,10,12,.78),rgba(10,10,12,.25) 55%,rgba(10,10,12,.5)); } }
+  /* section shells */
+  .mw-cats,.mw-shop,.mw-specs-sec,.mw-split{ padding:clamp(60px,9vw,96px) clamp(20px,5vw,60px); max-width:1320px; margin:0 auto; }
+  .mw-shead{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:44px; }
+  /* complications grid */
+  .mw-cats-grid{ display:grid; grid-template-columns:1.32fr 1fr 1fr; gap:26px; align-items:start; }
+  .mw-cat{ text-decoration:none; color:var(--mw-ink); display:block; }
+  .mw-cat-im{ position:relative; overflow:hidden; background-size:cover; background-position:center; }
+  .mw-cat-big .mw-cat-im{ aspect-ratio:3/4.35; }
+  .mw-cat:not(.mw-cat-big) .mw-cat-im{ aspect-ratio:3/3.1; }
+  .mw-cat-im::after{ content:""; position:absolute; inset:0; background:linear-gradient(0deg,rgba(0,0,0,.25),transparent 55%); transition:.5s; }
+  .mw-cat:hover .mw-cat-im::after{ background:linear-gradient(0deg,rgba(0,0,0,.42),transparent 60%); }
+  .mw-ser{ position:absolute; top:16px; right:16px; z-index:2; font-size:10px; letter-spacing:.28em; text-transform:uppercase; color:#fff; background:rgba(0,0,0,.3); backdrop-filter:blur(4px); padding:6px 12px; }
+  .mw-cat-lab{ display:flex; justify-content:space-between; align-items:center; margin-top:15px; font-size:12px; letter-spacing:.24em; text-transform:uppercase; }
+  .mw-cat-lab small{ color:var(--mw-mut); }
+  @media(max-width:820px){ .mw-cats-grid{ grid-template-columns:1fr; } .mw-cat-big .mw-cat-im,.mw-cat:not(.mw-cat-big) .mw-cat-im{ aspect-ratio:16/10; } }
+  /* shop */
+  .mw-shop{ background:var(--mw-paper2); max-width:none; }
+  .mw-shop>.lx-fx-stagger,.mw-shop>.mw-shead{ max-width:1320px; margin-left:auto; margin-right:auto; }
+  /* band */
+  .mw-band{ position:relative; color:#fff; min-height:420px; display:flex; align-items:center; justify-content:flex-end; background-size:cover; background-position:center; padding:0 clamp(20px,5vw,60px); }
+  .mw-band-ov{ position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(12,12,14,.78)); }
+  .mw-band-in{ position:relative; z-index:2; max-width:440px; text-align:right; }
+  .mw-band-in h3{ font-family:'Cormorant Garamond',serif; font-weight:400; font-size:clamp(24px,3vw,34px); margin:14px 0; line-height:1.15; }
+  .mw-band-in p{ color:#d8d7cf; margin-bottom:24px; }
+  /* specs */
+  .mw-specs-sec{ max-width:1320px; margin:0 auto; padding:clamp(60px,9vw,96px) clamp(20px,5vw,60px); }
+  .mw-specs{ display:grid; grid-template-columns:repeat(4,1fr); gap:40px; margin-top:48px; }
+  .mw-spec svg{ width:34px; height:34px; stroke:var(--mw-ink); fill:none; stroke-width:1.4; margin-bottom:18px; }
+  .mw-spec{ transition:transform .5s cubic-bezier(.16,1,.3,1); }
+  .mw-spec:hover{ transform:translateY(-6px); }
+  .mw-spec h4{ font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:9px; }
+  .mw-spec p{ font-size:14px; color:var(--mw-mut); }
+  @media(max-width:900px){ .mw-specs{ grid-template-columns:1fr 1fr; } }
+  @media(max-width:520px){ .mw-specs{ grid-template-columns:1fr; } }
+  /* split */
+  .mw-split{ display:grid; grid-template-columns:1.05fr 1fr; align-items:center; gap:0; max-width:none; padding:0; }
+  .mw-split-img{ min-height:520px; background-size:cover; background-position:center; }
+  .mw-split-tx{ padding:clamp(40px,6vw,70px); }
+  .mw-split-tx p{ color:var(--mw-mut); max-width:430px; margin:18px 0 26px; }
+  @media(max-width:860px){ .mw-split{ grid-template-columns:1fr; } .mw-split-img{ min-height:320px; } }
+  /* strip */
+  .mw-strip{ display:grid; grid-template-columns:repeat(4,1fr); gap:2px; background:var(--mw-line); }
+  .mw-strip-t{ aspect-ratio:1; background-size:cover; background-position:center; }
+  @media(max-width:700px){ .mw-strip{ grid-template-columns:1fr 1fr; } }
+  /* footer */
+  .mw-foot{ background:var(--mw-ink); color:#c9cabf; padding:70px clamp(20px,5vw,60px) 34px; }
+  .mw-foot-top{ display:flex; justify-content:space-between; gap:40px; flex-wrap:wrap; border-bottom:1px solid rgba(255,255,255,.12); padding-bottom:40px; margin-bottom:34px; max-width:1320px; margin-left:auto; margin-right:auto; }
+  .mw-foot-top p{ color:#9a9b91; max-width:320px; margin:12px 0; font-size:13px; }
+  .mw-logo-f{ color:#fff; }
+  .mw-logo-f img{ height:30px; filter:brightness(0) invert(1); }
+  .mw-foot-c h5{ color:#fff; font-size:11px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:14px; }
+  .mw-foot-c a,.mw-foot-c span{ display:block; color:#9a9b91; margin-bottom:8px; font-size:13px; text-decoration:none; }
+  .mw-foot-c a:hover{ color:#fff; }
+  .mw-foot .soc-row{ margin-top:14px; }
+  .mw-appnote,.mw-foot .appnote{ text-align:center; color:#8d8e84; font-size:13px; max-width:1320px; margin:0 auto 18px; }
+  .mw-foot .cta{ max-width:1320px; margin:0 auto; }
+  .mw-foot .foot{ max-width:1320px; margin:18px auto 0; color:#8d8e84; }
+  .mw-copy{ max-width:1320px; margin:34px auto 0; padding-top:20px; border-top:1px solid rgba(255,255,255,.12); display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; color:#7d7e74; font-size:11px; letter-spacing:.06em; }
+  /* product cards — luxe scope */
+  body[data-template="montre"] .mw-shead .mw-h2{ margin-top:6px; }
+  body[data-template="montre"] .catnav{ justify-content:flex-start; }
+  body[data-template="montre"] .chip{ border-radius:0; letter-spacing:.14em; text-transform:uppercase; font-size:11px; }
+  body[data-template="montre"] .chip.sel{ background:var(--mw-ink); color:#fff; border-color:var(--mw-ink); }
+  body[data-template="montre"] .cathead-title{ font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:500; }
+  body[data-template="montre"] .prod{ background:#fff; border:1px solid transparent; border-radius:0; transition:transform .5s cubic-bezier(.16,1,.3,1),border-color .4s; }
+  body[data-template="montre"] .prod:hover{ transform:translateY(-4px); border-color:var(--mw-line); }
+  body[data-template="montre"] .prod .pimg,body[data-template="montre"] .prod img{ background:#fafbf8; }
+  body[data-template="montre"] .pname{ font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:500; letter-spacing:.01em; }
+  body[data-template="montre"] .pprice{ letter-spacing:.06em; color:var(--mw-mut); }
+  body[data-template="montre"] .add,body[data-template="montre"] .qtybox{ border-radius:0; background:var(--mw-ink); color:#fff; border:none; letter-spacing:.14em; text-transform:uppercase; transition:.35s cubic-bezier(.16,1,.3,1); }
+  body[data-template="montre"] .add:hover{ background:var(--mw-gold); }
+  body[data-template="montre"] .cartbtn{ border-radius:0; background:var(--mw-ink); color:#fff; letter-spacing:.14em; text-transform:uppercase; }
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">
