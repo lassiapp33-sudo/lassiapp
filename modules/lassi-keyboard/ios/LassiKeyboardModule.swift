@@ -3,7 +3,7 @@ import UIKit
 
 // App Group partagé entre l'app et l'extension clavier.
 // Doit correspondre à l'entitlement déclaré par le config-plugin iOS.
-let APP_GROUP = "group.tech.lassi.app"
+let APP_GROUP = "group.com.lassiapp.lassiapp"
 let KEY_MERCHANT = "merchant_data"
 
 public class LassiKeyboardModule: Module {

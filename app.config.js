@@ -97,6 +97,8 @@ module.exports = withSecurityPlugins({
       entitlements: {
         "aps-environment": "production",
         "com.apple.developer.associated-domains": ["applinks:lassi.tech"],
+        // Partage de données avec l'extension clavier LASSI (lien vitrine, réponses).
+        "com.apple.security.application-groups": ["group.com.lassiapp.lassiapp"],
       },
       infoPlist: {
         UIBackgroundModes: ["remote-notification"],
@@ -156,6 +158,7 @@ module.exports = withSecurityPlugins({
       favicon: "./assets/favicon.png",
     },
     plugins: [
+      "@bacons/apple-targets",
       "@react-native-firebase/app",
       "@react-native-firebase/crashlytics",
       "@react-native-firebase/messaging",
