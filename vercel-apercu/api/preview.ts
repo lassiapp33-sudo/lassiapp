@@ -5190,7 +5190,7 @@ ${theme.template === 'montre' ? '<link href="https://fonts.googleapis.com/css2?f
   .mw-spec h4{ font-size:12px; letter-spacing:.2em; text-transform:uppercase; margin-bottom:9px; }
   .mw-spec p{ font-size:14px; color:var(--mw-mut); }
   @media(max-width:900px){ .mw-specs{ grid-template-columns:1fr 1fr; } }
-  @media(max-width:520px){ .mw-specs{ grid-template-columns:1fr; } }
+  @media(max-width:520px){ .mw-specs{ grid-template-columns:1fr 1fr; gap:22px 16px; } .mw-spec svg{ width:26px; height:26px; margin-bottom:12px; } .mw-spec h4{ font-size:10.5px; letter-spacing:.14em; margin-bottom:6px; } .mw-spec p{ font-size:12px; line-height:1.45; } }
   /* split */
   .mw-split{ display:grid; grid-template-columns:1.05fr 1fr; align-items:center; gap:0; max-width:none; padding:0; }
   .mw-split-img{ min-height:520px; background-size:cover; background-position:center; }
@@ -5246,11 +5246,13 @@ ${theme.template === 'montre' ? '<link href="https://fonts.googleapis.com/css2?f
   body[data-template="montre"] .mw-menu-scroll{ padding:clamp(24px,5vw,56px) clamp(16px,5vw,40px) 90px; max-width:1320px; margin:0 auto; }
   /* Fiche produit montre : carte centrée compacte (même rendu que le PC), aussi sur mobile */
   body[data-template="montre"] .pd-ov{ align-items:center; }
-  body[data-template="montre"] .pd-card{ max-width:420px; border-radius:4px; max-height:88vh; margin:0 16px; }
-  body[data-template="montre"] .pd-gallery{ height:auto; aspect-ratio:1; max-height:46vh; background:#fafbf8; }
+  body[data-template="montre"] .pd-card{ max-width:420px; border-radius:4px; max-height:90vh; margin:0 16px; background:var(--mw-paper); }
+  body[data-template="montre"] .pd-gallery{ height:auto; aspect-ratio:4/3; max-height:34vh; background:#fafbf8; flex:0 0 auto; }
   body[data-template="montre"] .pd-gallery img{ object-fit:contain; }
-  body[data-template="montre"] .pd-name{ font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:500; }
-  body[data-template="montre"] .pd-price{ color:var(--mw-mut); font-weight:500; }
+  body[data-template="montre"] .pd-body{ overflow-y:auto; }
+  body[data-template="montre"] .pd-name{ font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:500; color:var(--mw-ink); }
+  body[data-template="montre"] .pd-desc{ color:var(--mw-mut); }
+  body[data-template="montre"] .pd-price{ color:var(--mw-ink); font-weight:600; }
   body[data-template="montre"] .pd-add{ border-radius:0; background:var(--mw-ink); color:#fff; letter-spacing:.14em; text-transform:uppercase; }
   body[data-template="montre"] .pd-qty{ border-radius:0; background:var(--mw-ink); }
   body[data-template="montre"] .pd-qty b,body[data-template="montre"] .pd-qty button{ color:#fff; }
@@ -5261,6 +5263,8 @@ ${theme.template === 'montre' ? '<link href="https://fonts.googleapis.com/css2?f
   body[data-template="montre"] .pd-vchips{ display:flex; flex-wrap:wrap; gap:8px; }
   body[data-template="montre"] .pd-vchip{ border:1px solid var(--mw-line); background:#fff; color:var(--mw-ink); padding:9px 16px; font-size:12px; letter-spacing:.06em; cursor:pointer; font-family:inherit; transition:.2s; }
   body[data-template="montre"] .pd-vchip.on{ background:var(--mw-ink); color:#fff; border-color:var(--mw-ink); }
+  body[data-template="montre"] .pd-vchip-img{ display:flex; align-items:center; gap:9px; padding:5px 14px 5px 5px; }
+  body[data-template="montre"] .pd-vchip-img img{ width:36px; height:36px; object-fit:cover; background:#fafbf8; }
   body[data-template="montre"] .pd-action{ display:flex; flex-direction:column; gap:10px; }
   body[data-template="montre"] .pd-buy{ display:block; width:100%; background:transparent; color:var(--mw-ink); border:1px solid var(--mw-ink); border-radius:0; padding:15px; font-size:13px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; font-family:inherit; transition:.25s; }
   body[data-template="montre"] .pd-buy:hover{ background:var(--mw-ink); color:#fff; }
@@ -5746,8 +5750,11 @@ const CART_JS = `
       var w=document.createElement('div'); w.className='pd-vgrp';
       var h=document.createElement('div'); h.className='pd-vlab'; h.textContent=label; w.appendChild(h);
       var row=document.createElement('div'); row.className='pd-vchips';
-      arr.forEach(function(v){
-        var b=document.createElement('button'); b.type='button'; b.className='pd-vchip'; b.textContent=v;
+      arr.forEach(function(v,i){
+        var b=document.createElement('button'); b.type='button'; b.className='pd-vchip';
+        var thumb=(kind==='sz' && pdCur.imgs && pdCur.imgs[i]) ? pdCur.imgs[i] : null;
+        if(thumb){ b.className='pd-vchip pd-vchip-img'; var im=document.createElement('img'); im.src=thumb; im.alt=''; var sp=document.createElement('span'); sp.textContent=v; b.appendChild(im); b.appendChild(sp); }
+        else { b.textContent=v; }
         b.addEventListener('click',function(){
           [].forEach.call(row.querySelectorAll('.pd-vchip'),function(x){x.classList.remove('on');});
           b.classList.add('on'); if(kind==='sz') pdSelSz=v; else pdSelCl=v; renderPdAction();
