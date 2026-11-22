@@ -12,6 +12,12 @@ android {
     versionCode 1
     versionName '0.1.0'
   }
+  // Garantit que le Kotlin est vu quel que soit le dossier conventionnel.
+  sourceSets {
+    main {
+      java.srcDirs += ['src/main/kotlin']
+    }
+  }
   lintOptions {
     abortOnError false
   }
