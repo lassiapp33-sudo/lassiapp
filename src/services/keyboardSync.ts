@@ -127,3 +127,33 @@ export async function openKeyboardSettings(): Promise<void> {
     }
   } catch { /* ignoré */ }
 }
+
+// ── Notification persistante de bascule (Android uniquement) ──────────────────
+const NOTIF_TOGGLE_KEY = 'lassi_keyboard_switch_notif';
+
+/** Active/désactive la notification persistante « Basculer sur LASSI ». */
+export async function setSwitchNotification(enabled: boolean): Promise<void> {
+  try {
+    await AsyncStorage.setItem(NOTIF_TOGGLE_KEY, enabled ? '1' : '0');
+    if (Platform.OS === 'android') {
+      await Linking.openURL(enabled ? 'lassikb://notif-on' : 'lassikb://notif-off');
+    }
+  } catch { /* ignoré */ }
+}
+
+/** État persistant du toggle notification. */
+export async function isSwitchNotificationOn(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(NOTIF_TOGGLE_KEY)) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** Re-poste la notification si l'utilisateur l'avait activée (au démarrage). */
+export async function refreshSwitchNotification(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  if (await isSwitchNotificationOn()) {
+    try { await Linking.openURL('lassikb://notif-on'); } catch { /* ignoré */ }
+  }
+}

@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  Switch,
   ActivityIndicator,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -16,6 +17,8 @@ import {
   loadKeyboardPrefs,
   saveKeyboardPrefs,
   openKeyboardSettings,
+  setSwitchNotification,
+  isSwitchNotificationOn,
   type KeyboardPrefs,
 } from '../../services/keyboardSync';
 
@@ -36,10 +39,17 @@ export default function KeyboardBoosterScreen({ onBack }: Props) {
   const [prefs, setPrefs] = useState<KeyboardPrefs | null>(null);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [notifOn, setNotifOn] = useState(false);
 
   useEffect(() => {
     if (shopId) loadKeyboardPrefs(shopId, shopName).then(setPrefs);
+    isSwitchNotificationOn().then(setNotifOn);
   }, [shopId, shopName]);
+
+  const toggleNotif = useCallback(async (value: boolean) => {
+    setNotifOn(value);
+    await setSwitchNotification(value);
+  }, []);
 
   const copyLink = useCallback(async () => {
     if (!vitrineUrl) return;
@@ -93,6 +103,27 @@ export default function KeyboardBoosterScreen({ onBack }: Props) {
               : 'Dans WhatsApp, appui long sur 🌐 (globe) pour choisir le clavier LASSI.'}
           </Text>
         </View>
+
+        {/* Notification de bascule rapide (Android) */}
+        {Platform.OS === 'android' && (
+          <View style={s.card}>
+            <View style={s.notifRow}>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <Text style={s.step}>Bascule rapide (1 tap)</Text>
+                <Text style={s.hint}>
+                  Affiche une notification discrète. Pendant que tu postes ton statut, baisse le volet
+                  et touche « Basculer sur LASSI ».
+                </Text>
+              </View>
+              <Switch
+                value={notifOn}
+                onValueChange={toggleNotif}
+                trackColor={{ false: colors.border, true: colors.accent }}
+                thumbColor={colors.white}
+              />
+            </View>
+          </View>
+        )}
 
         {/* Lien vitrine */}
         <View style={s.card}>
@@ -170,6 +201,7 @@ const s = StyleSheet.create({
   ghostTxt: { color: colors.accent, fontFamily: fonts.titleXL, fontSize: 14 },
   refresh: { alignSelf: 'center', marginTop: 12, paddingVertical: 4 },
   refreshTxt: { color: colors.muted, fontFamily: fonts.ui, fontSize: 12, textDecorationLine: 'underline' },
+  notifRow: { flexDirection: 'row', alignItems: 'center' },
   linkBox: { backgroundColor: colors.bg, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 11, marginTop: 8 },
   linkTxt: { color: colors.accent, fontFamily: fonts.title, fontSize: 13, textAlign: 'center' },
   replyRow: { marginTop: 12 },

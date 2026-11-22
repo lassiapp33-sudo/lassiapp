@@ -4,7 +4,7 @@
 
 import { useEffect } from 'react';
 import useShopStore from '../store/shopStore';
-import { syncKeyboard } from '../services/keyboardSync';
+import { syncKeyboard, refreshSwitchNotification } from '../services/keyboardSync';
 
 export function useKeyboardSync(): void {
   const shopId = useShopStore(s => s.shopId);
@@ -14,5 +14,7 @@ export function useKeyboardSync(): void {
   useEffect(() => {
     if (!shopId || !slug || !shopName) return;
     syncKeyboard({ shopId, shopName, slug });
+    // Re-poste la notification de bascule si le marchand l'avait activée.
+    refreshSwitchNotification();
   }, [shopId, shopName, slug]);
 }
