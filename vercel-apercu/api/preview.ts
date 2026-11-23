@@ -1568,7 +1568,7 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
       zone: 'Dakar · Sénégal', category: 'stores', shop_type: 'products',
       subcategories: ['manteaux', 'robes', 'ensembles', 'nouveautes'],
       slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
-      site_config, gallery_urls: [img('hero.jpg'), img('legacymain.jpg'), img('founder.jpg'), img('floral.jpg'), img('landscape.jpg'), img('band.jpg'), img('p4.jpg')],
+      site_config, gallery_urls: [img('hero.jpg'), img('legacymain.jpg'), img('founder.jpg'), img('floral.jpg'), img('landscape.jpg'), img('band.jpg'), img('tileL.jpg'), img('tiledetail.jpg')],
       cover_url: null, phone: '76 189 00 03',
     };
     const P = (id: string, name: string, price: number, description: string, category: string, photo: string): Product =>
@@ -3665,17 +3665,21 @@ ${faSigSection}
       ${hasProducts ? `<div class="cs-allcta"><a class="cs-allbtn" href="${escAttr(o.collectionUrl || '?view=collection')}">Voir toute la collection &#8594;</a></div>` : ''}
     </section>
     <section class="cs-founder" id="cs-founder">
-      <div class="cs-founder-l lx-rv">
+      <div class="cs-founder-name-col lx-rv">
         <span class="cs-ey light">Créatrice &amp; Directrice Artistique</span>
         <h2 class="cs-founder-name">${esc(clip(o.name, 22))}</h2>
+      </div>
+      <div class="cs-founder-fr lx-fx-zin"><img src="${escAttr(pick(2))}" alt="${escAttr(o.name)}"></div>
+      <div class="cs-founder-bio lx-rv">
         <p>${esc(clip(o.desc || "Forte d'une passion pour le tailleur classique et l'histoire de l'art, la maison ravive les principes de l'élégance durable — un sanctuaire de mode raffinée pour la femme d'aujourd'hui.", 230))}</p>
         <a class="cs-link light" href="#cs-shop">En savoir plus &#8594;</a>
       </div>
-      <div class="cs-founder-fr lx-fx-zin"><img src="${escAttr(pick(2))}" alt="${escAttr(o.name)}"></div>
     </section>
     <section class="cs-tiles">
-      <div class="cs-tile lx-fx-zoom" ${bg(pick(5))}></div>
-      <div class="cs-tile lx-fx-zoom" ${bg(pick(4))}></div>
+      <div class="cs-tile lx-fx-zoom" ${bg(pick(6))}></div>
+      <div class="cs-tile cs-tile-art lx-fx-zoom" ${bg(pick(4))}>
+        <div class="cs-tile-detail lx-fx-zin" ${bg(pick(7))}></div>
+      </div>
     </section>
     <section class="cs-quote">
       <span class="cs-ey light">En Leurs Mots</span>
@@ -5508,16 +5512,18 @@ ${theme.template === 'couture' ? '<link href="https://fonts.googleapis.com/css2?
   body[data-template="couture"] .cs-back:hover{ color:var(--cs-ink); }
   body[data-template="couture"] .cs-coll-h{ font-family:'Cormorant Garamond',serif; font-weight:400; font-size:clamp(38px,6vw,76px); line-height:1.04; margin:12px 0 18px; }
   body[data-template="couture"] .cs-collhead p{ color:var(--cs-mut); font-size:15px; max-width:560px; margin:0 auto; }
-  /* founder (navy) */
-  body[data-template="couture"] .cs-founder{ display:grid; grid-template-columns:1fr 1fr; align-items:center; gap:clamp(24px,5vw,60px); background:var(--cs-navy); color:#fff; padding:clamp(40px,7vw,90px) clamp(18px,5vw,54px); }
-  body[data-template="couture"] .cs-founder-name{ font-family:'Cormorant Garamond',serif; font-weight:500; font-size:clamp(40px,6vw,76px); line-height:1.03; margin:12px 0 18px; }
-  body[data-template="couture"] .cs-founder-l p{ color:rgba(255,255,255,.78); max-width:440px; margin-bottom:24px; }
-  body[data-template="couture"] .cs-founder-fr{ justify-self:center; width:clamp(240px,34vw,420px); border:6px solid var(--cs-pink); }
+  /* founder (navy) — nom à gauche, photo encadrée rose au centre, bio à droite */
+  body[data-template="couture"] .cs-founder{ display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:clamp(24px,4vw,56px); background:var(--cs-navy); color:#fff; padding:clamp(40px,7vw,90px) clamp(18px,5vw,54px); }
+  body[data-template="couture"] .cs-founder-name{ font-family:'Cormorant Garamond',serif; font-weight:500; font-size:clamp(40px,5.4vw,76px); line-height:1.03; margin-top:12px; }
+  body[data-template="couture"] .cs-founder-bio p{ color:rgba(255,255,255,.78); max-width:340px; margin-bottom:22px; }
+  body[data-template="couture"] .cs-founder-fr{ justify-self:center; width:clamp(230px,28vw,380px); border:7px solid var(--cs-pink); }
   body[data-template="couture"] .cs-founder-fr img{ width:100%; aspect-ratio:4/5; object-fit:cover; display:block; }
-  @media(max-width:860px){ body[data-template="couture"] .cs-founder{ grid-template-columns:1fr; text-align:center; } body[data-template="couture"] .cs-founder-l p{ margin-left:auto; margin-right:auto; } }
-  /* tiles */
+  @media(max-width:860px){ body[data-template="couture"] .cs-founder{ grid-template-columns:1fr; text-align:center; } body[data-template="couture"] .cs-founder-bio p{ margin-left:auto; margin-right:auto; } }
+  /* tiles — gauche: photo ; droite: tableau paysage + détail encadré orange */
   body[data-template="couture"] .cs-tiles{ display:grid; grid-template-columns:1fr 1fr; gap:3px; background:var(--cs-navy); }
-  body[data-template="couture"] .cs-tile{ aspect-ratio:16/10; background-size:cover; background-position:center; }
+  body[data-template="couture"] .cs-tile{ aspect-ratio:16/11; background-size:cover; background-position:center; }
+  body[data-template="couture"] .cs-tile-art{ position:relative; display:flex; align-items:center; justify-content:center; }
+  body[data-template="couture"] .cs-tile-detail{ width:clamp(130px,30%,230px); aspect-ratio:3/4; background-size:cover; background-position:center; border:6px solid var(--cs-orange); }
   @media(max-width:620px){ body[data-template="couture"] .cs-tiles{ grid-template-columns:1fr; } }
   /* quote */
   body[data-template="couture"] .cs-quote{ background:var(--cs-navy); color:#fff; text-align:center; padding:clamp(50px,8vw,100px) clamp(18px,5vw,54px); }
