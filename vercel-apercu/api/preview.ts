@@ -106,7 +106,7 @@ const SITE_PALETTES: Record<string, SitePalette> = {
 };
 const DEFAULT_PALETTE = 'classic';
 const DEFAULT_ACCENT = BRAND_GOLD; // #FDCF34
-const SITE_TEMPLATES = ['classic', 'cosmetic', 'furniture', 'garderobe', 'sac', 'tresse', 'ferme', 'grill', 'bar', 'montre']; // Phase 3 — #1 cosmetic (beauté), #2 furniture (maison & mobilier), #3 garderobe (mode / prêt-à-porter), #4 sac (maroquinerie / bagagerie) ; bar = restaurant/lounge (BRAISE) ; montre = horlogerie / montres (TÉRANGA CALIBRE)
+const SITE_TEMPLATES = ['classic', 'cosmetic', 'furniture', 'garderobe', 'sac', 'tresse', 'ferme', 'grill', 'bar', 'montre', 'couture']; // couture = mode élégante femme (LINGUÈRE) ; // Phase 3 — #1 cosmetic (beauté), #2 furniture (maison & mobilier), #3 garderobe (mode / prêt-à-porter), #4 sac (maroquinerie / bagagerie) ; bar = restaurant/lounge (BRAISE) ; montre = horlogerie / montres (TÉRANGA CALIBRE)
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
 // ── Layout (Phase 2) — agencement des conteneurs, présentation seule ─────────
@@ -1550,6 +1550,40 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
     products[0].sizes = ['Cadran noir', 'Cadran or']; products[0].colors = ['Bracelet acier', 'Bracelet cuir'];
     products[1].sizes = ['Cadran vert', 'Cadran ivoire']; products[1].colors = ['Bracelet acier', 'Bracelet maille'];
     products[2].colors = ['Bracelet titane', 'Bracelet caoutchouc'];
+    return { shop, products };
+  }
+
+  if (t === 'couture') {
+    const site_config = {
+      template: 'couture',
+      tokens: { palette: 'creme', accent: '#16233a', fontHeading: 'cormorant', fontBody: 'jost' },
+      layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'flat', hero: 'split' },
+      social: { facebook: 'https://facebook.com', tiktok: 'https://tiktok.com', instagram: 'https://instagram.com' },
+    };
+    const shop: Shop = {
+      id: 'demo-couture', name: 'Linguère', logo_url: null,
+      description: "Maison de mode féminine à Dakar — élégance intemporelle, tailleur raffiné et pièces de soirée. Chaque création est pensée pour habiller la femme avec grâce et assurance.",
+      zone: 'Dakar · Sénégal', category: 'stores', shop_type: 'products',
+      subcategories: ['manteaux', 'robes', 'ensembles', 'nouveautes'],
+      slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
+      site_config, gallery_urls: [img('hero.jpg'), img('band.jpg'), img('founder.jpg'), img('floral.jpg'), img('landscape.jpg'), img('p3.jpg'), img('p4.jpg')],
+      cover_url: null, phone: '76 189 00 03',
+    };
+    const P = (id: string, name: string, price: number, description: string, category: string, photo: string): Product =>
+      ({ id, name, description, emoji: null, photo_url: img(photo), price, category, sizes: null, colors: null, stock_quantity: null });
+    const products: Product[] = [
+      P('c1', 'Manteau Hiver en Fleur', 85000, 'Manteau long en laine prune, coupe oversize structurée. Doublure satin, boutonnage discret. Une pièce signature pour la saison fraîche.', 'manteaux', 'p1.jpg'),
+      P('c2', 'Robe Tableaux Côtier', 65000, 'Robe midi en coton crème, taille marquée et jupe ample plissée. Minimalisme lumineux pour le jour comme le soir.', 'robes', 'p2.jpg'),
+      P('c3', 'Robe Soirée Jardin de Minuit', 95000, 'Robe longue en satin bleu nuit, bustier drapé et fente élégante. Pensée pour les cérémonies et les grandes soirées.', 'robes', 'p3.jpg'),
+      P('c4', 'Ensemble Golden Hour', 72000, 'Bustier plissé + jupe midi en satin doré. Un ensemble deux pièces lumineux, taille ajustée, finitions couture.', 'ensembles', 'p4.jpg'),
+      P('c5', 'Robe Satin Nuit', 98000, 'Robe fourreau satin bleu nuit à bustier corseté et fente. Tombé fluide, allure sculpturale.', 'nouveautes', 'p5.jpg'),
+      P('c6', 'Manteau Prune Oversize', 88000, 'Manteau prune à large col, porté sur blouse ivoire à col montant. Chaleur et caractère.', 'manteaux', 'p6.jpg'),
+      P('c7', 'Blazer Émeraude & Jupe Plissée', 90000, 'Blazer croisé vert émeraude en laine + jupe plissée ivoire. Le tailleur féminin dans sa plus belle expression.', 'ensembles', 'p7.jpg'),
+      P('c8', 'Veste Émeraude Signature', 92000, 'Veste structurée vert émeraude, boutons ton sur ton, finitions soignées. Pièce maîtresse du vestiaire.', 'nouveautes', 'p8.jpg'),
+    ];
+    products[2].sizes = ['Bleu nuit', 'Émeraude']; products[2].colors = ['34', '36', '38', '40'];
+    products[3].colors = ['34', '36', '38', '40'];
+    products[6].colors = ['34', '36', '38', '40'];
     return { shop, products };
   }
 
@@ -3570,8 +3604,97 @@ ${faSigSection}
     </footer>
   `;
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TEMPLATE PLEIN « COUTURE » — Mode élégante femme (LINGUÈRE). Hero éditorial
+  // (fond botanique sombre + photo encadrée lime), héritage, collection (grille
+  // LASSI réutilisée), créatrice sur fond navy, tuiles, citation, footer gradient.
+  // Thème clair/luxe (papier crème + encre + navy). Classes préfixées .cs-*.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const csLogo = (cls: string) => o.logo
+    ? `<div class="cs-logo ${cls}"><img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}"></div>`
+    : `<div class="cs-logo ${cls}"><b>${esc(o.name)}</b></div>`;
+  const csBody = `
+    <header class="cs-head" id="cs-top">
+      <a class="cs-logo" href="#cs-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<b>${esc(o.name)}</b>`}</a>
+      <nav class="cs-nav">
+        <a href="#cs-shop">Collection</a>
+        <a href="#cs-legacy">La Maison</a>
+        <a href="#cs-founder">Créatrice</a>
+        <a href="#cs-contact">Contact</a>
+      </nav>
+      <a class="cs-cart" href="#cs-shop" title="Panier">Panier</a>
+    </header>
+    <section class="cs-hero" ${bg(pick(3))}>
+      <div class="cs-hero-ov"></div>
+      <div class="cs-hero-in">
+        <div class="cs-hero-l">
+          <span class="cs-ey light">${o.cat ? esc(clip(o.cat, 42)) : 'Maison de mode — Dakar'}</span>
+          <h1 class="cs-hero-h lx-fx-mask"><span class="lx-fx-mask-l"><span>L'Essence du</span></span><span class="lx-fx-mask-l"><span>Style Intemporel</span></span></h1>
+        </div>
+        <div class="cs-hero-fr lx-fx-zin"><img src="${escAttr(pick(0))}" alt="${escAttr(o.name)}"></div>
+        <div class="cs-hero-r">
+          <p>${esc(clip(o.desc || "Des collections où le design intemporel et le savoir-faire couture se rencontrent.", 130))}</p>
+          <a class="cs-link light" href="#cs-shop">Explorer les collections &#8594;</a>
+        </div>
+      </div>
+    </section>
+    <div class="cs-strip"><span>Élégance</span><b>·</b><span>Tailleur</span><b>·</b><span>Soirée</span><b>·</b><span>Sur-mesure</span><b>·</b><span>Dakar</span></div>
+    ${closedNotice}
+    <section class="cs-legacy" id="cs-legacy">
+      <div class="cs-legacy-img lx-fx-zoom" ${bg(pick(1))}></div>
+      <div class="cs-legacy-tx lx-rv">
+        <span class="cs-ey">Un Héritage de Grâce</span>
+        <h2 class="cs-h2">${esc(o.name)} habille la femme moderne avec élégance et caractère.</h2>
+        <p>${esc(clip(o.desc || "Notre philosophie : vêtir la femme de confiance et de grâce, à travers des créations méticuleusement façonnées, contemporaines et intemporelles.", 230))}</p>
+        <a class="cs-link dark" href="#cs-shop">Découvrir la collection &#8594;</a>
+      </div>
+    </section>
+    <section class="cs-shop" id="cs-shop">
+      <div class="cs-shead lx-rv">
+        <div><span class="cs-ey">Compositions Curées</span><h2 class="cs-h2">${hasProducts ? 'La Collection' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2></div>
+        <a class="cs-link dark" href="#cs-shop">${cxHeadCta === 'Commander' ? 'Voir toute la collection' : cxHeadCta} &#8594;</a>
+      </div>
+      <div class="lx-fx-stagger">${catnav}${dsSection}${grid}${svcSection}${terrainSection}</div>
+    </section>
+    <section class="cs-founder" id="cs-founder">
+      <div class="cs-founder-l lx-rv">
+        <span class="cs-ey light">Créatrice &amp; Directrice Artistique</span>
+        <h2 class="cs-founder-name">${esc(clip(o.name, 22))}</h2>
+        <p>${esc(clip(o.desc || "Forte d'une passion pour le tailleur classique et l'histoire de l'art, la maison ravive les principes de l'élégance durable — un sanctuaire de mode raffinée pour la femme d'aujourd'hui.", 230))}</p>
+        <a class="cs-link light" href="#cs-shop">En savoir plus &#8594;</a>
+      </div>
+      <div class="cs-founder-fr lx-fx-zin"><img src="${escAttr(pick(2))}" alt="${escAttr(o.name)}"></div>
+    </section>
+    <section class="cs-tiles">
+      <div class="cs-tile lx-fx-zoom" ${bg(pick(5))}></div>
+      <div class="cs-tile lx-fx-zoom" ${bg(pick(4))}></div>
+    </section>
+    <section class="cs-quote">
+      <span class="cs-ey light">En Leurs Mots</span>
+      <blockquote class="lx-rv">« L'attention au détail est inégalée. Chaque pièce ${esc(clip(o.name, 18))} que je porte ressemble à un trésor personnel. »</blockquote>
+      <cite>&mdash; Élise R., Dakar</cite>
+    </section>
+    <footer class="cs-foot" id="cs-contact">
+      <div class="cs-foot-stripe"></div>
+      <div class="cs-foot-top">
+        <div>${csLogo('cs-logo-f')}<p>${esc(clip(o.desc || 'Maison de mode féminine — Dakar. Élégance intemporelle et pièces couture.', 140))}</p>${socialHtml}</div>
+        <div class="cs-foot-c">
+          <h5>Contact</h5>
+          ${o.phone ? `<a href="tel:${escAttr(o.phone.replace(/\s+/g, ''))}">&#9742; ${esc(o.phone)}</a>` : ''}
+          ${o.zone ? `<span>&#128205; ${esc(o.zone)}</span>` : ''}
+          ${hoursHtml ? `<div class="cs-foot-hours">${hoursHtml}</div>` : ''}
+        </div>
+      </div>
+      <div class="cs-appnote">Découvrez tous les commerçants autour de vous sur l'application LASSİ</div>
+      ${storeButtons}
+      ${foot}
+      <div class="cs-copy"><span>&copy; 2026 ${esc(o.name)} — ${esc(o.zone || 'Dakar, Sénégal')}.</span><span>Livraison soignée sur toutes les créations.</span></div>
+    </footer>
+  `;
+
   const body = theme.template === 'udebi' && hasCatalog ? udBody
     : theme.template === 'montre' && hasCatalog ? mwBody
+    : theme.template === 'couture' && hasCatalog ? csBody
     : theme.template === 'cafefa' && hasCatalog ? faBody
     : theme.template === 'furniture' && hasCatalog ? furnitureBody
     : theme.template === 'cosmetic' && hasCatalog ? cosmeticBody
@@ -3617,6 +3740,7 @@ ${theme.template === 'bar' ? '<link href="https://fonts.googleapis.com/css2?fami
 ${theme.template === 'cafefa' ? '<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">' : ''}
 ${theme.template === 'udebi' ? '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">' : ''}
 ${theme.template === 'montre' ? '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">' : ''}
+${theme.template === 'couture' ? '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">' : ''}
 <style>
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
   [hidden] { display:none !important; }
@@ -5269,6 +5393,85 @@ ${theme.template === 'montre' ? '<link href="https://fonts.googleapis.com/css2?f
   body[data-template="montre"] .pd-buy{ display:block; width:100%; background:transparent; color:var(--mw-ink); border:1px solid var(--mw-ink); border-radius:0; padding:15px; font-size:13px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; font-family:inherit; transition:.25s; }
   body[data-template="montre"] .pd-buy:hover{ background:var(--mw-ink); color:#fff; }
   body[data-template="montre"] .pd-add[disabled],body[data-template="montre"] .pd-buy[disabled]{ opacity:.38; cursor:not-allowed; }
+
+  /* ═══ TEMPLATE COUTURE (LINGUÈRE) — mode élégante femme ═══ */
+  body[data-template="couture"]{ --cs-paper:#F6F1E7; --cs-paper2:#efe8da; --cs-ink:#1c2230; --cs-navy:#112033; --cs-mut:#6f6a60; --cs-line:#e2dccd; --cs-lime:#d6e23a; --cs-orange:#df6230; --cs-pink:#eba6c2; background:var(--cs-paper); }
+  body[data-template="couture"] .appwrap,body[data-template="couture"] .wrap{ max-width:100%; }
+  body[data-template="couture"] .cs-ey{ font-size:11px; letter-spacing:.3em; text-transform:uppercase; color:var(--cs-mut); display:inline-block; }
+  body[data-template="couture"] .cs-ey.light{ color:rgba(255,255,255,.72); }
+  body[data-template="couture"] .cs-h2{ font-family:'Cormorant Garamond',serif; font-weight:500; font-size:clamp(28px,4vw,46px); line-height:1.1; margin-top:10px; }
+  body[data-template="couture"] .cs-link{ display:inline-block; font-family:'Cormorant Garamond',serif; font-style:italic; font-size:17px; color:var(--cs-ink); border-bottom:1px solid currentColor; padding-bottom:2px; transition:.25s; }
+  body[data-template="couture"] .cs-link:hover{ color:var(--cs-orange); }
+  body[data-template="couture"] .cs-link.light{ color:#fff; }
+  body[data-template="couture"] .cs-link.dark{ color:var(--cs-ink); }
+  /* header */
+  body[data-template="couture"] .cs-head{ position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; padding:0 clamp(18px,5vw,54px); height:70px; background:rgba(246,241,231,.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--cs-line); }
+  body[data-template="couture"] .cs-logo{ font-family:'Cormorant Garamond',serif; font-size:24px; letter-spacing:.14em; text-transform:uppercase; color:var(--cs-ink); }
+  body[data-template="couture"] .cs-logo img{ height:34px; width:auto; }
+  body[data-template="couture"] .cs-nav{ display:flex; gap:30px; font-size:12px; letter-spacing:.16em; text-transform:uppercase; }
+  body[data-template="couture"] .cs-nav a{ color:var(--cs-mut); }
+  body[data-template="couture"] .cs-nav a:hover{ color:var(--cs-ink); }
+  body[data-template="couture"] .cs-cart{ font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--cs-ink); border:1px solid var(--cs-ink); padding:9px 18px; }
+  body[data-template="couture"] .cs-cart:hover{ background:var(--cs-ink); color:#fff; }
+  @media(max-width:820px){ body[data-template="couture"] .cs-nav{ display:none; } }
+  /* hero */
+  body[data-template="couture"] .cs-hero{ position:relative; background-size:cover; background-position:center; padding:clamp(40px,7vw,90px) clamp(18px,5vw,54px); color:#fff; }
+  body[data-template="couture"] .cs-hero-ov{ position:absolute; inset:0; background:linear-gradient(180deg,rgba(14,16,20,.55),rgba(14,16,20,.68)); }
+  body[data-template="couture"] .cs-hero-in{ position:relative; z-index:2; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:clamp(20px,4vw,48px); max-width:1320px; margin:0 auto; }
+  body[data-template="couture"] .cs-hero-h{ font-family:'Cormorant Garamond',serif; font-weight:500; font-size:clamp(40px,6vw,86px); line-height:1.02; margin-top:14px; }
+  body[data-template="couture"] .cs-hero-fr{ width:clamp(230px,30vw,380px); border:6px solid var(--cs-lime); }
+  body[data-template="couture"] .cs-hero-fr img{ width:100%; aspect-ratio:3/4; object-fit:cover; display:block; }
+  body[data-template="couture"] .cs-hero-r{ max-width:300px; }
+  body[data-template="couture"] .cs-hero-r p{ color:#e8e6df; font-size:15px; margin-bottom:20px; }
+  @media(max-width:860px){ body[data-template="couture"] .cs-hero-in{ grid-template-columns:1fr; justify-items:center; text-align:center; gap:26px; } body[data-template="couture"] .cs-hero-r{ max-width:460px; } }
+  /* strip */
+  body[data-template="couture"] .cs-strip{ display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:14px; padding:20px; background:var(--cs-navy); color:#fff; font-family:'Cormorant Garamond',serif; font-size:clamp(16px,2.4vw,24px); letter-spacing:.06em; }
+  body[data-template="couture"] .cs-strip b{ color:var(--cs-lime); }
+  /* legacy */
+  body[data-template="couture"] .cs-legacy{ display:grid; grid-template-columns:1fr 1fr; align-items:center; }
+  body[data-template="couture"] .cs-legacy-img{ min-height:clamp(340px,52vw,620px); background-size:cover; background-position:center; }
+  body[data-template="couture"] .cs-legacy-tx{ padding:clamp(34px,6vw,80px); max-width:620px; }
+  body[data-template="couture"] .cs-legacy-tx p{ color:var(--cs-mut); margin:18px 0 26px; }
+  @media(max-width:860px){ body[data-template="couture"] .cs-legacy{ grid-template-columns:1fr; } }
+  /* shop */
+  body[data-template="couture"] .cs-shop{ padding:clamp(50px,8vw,96px) clamp(18px,5vw,54px); max-width:1320px; margin:0 auto; }
+  body[data-template="couture"] .cs-shead{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:40px; }
+  body[data-template="couture"] .chip{ border-radius:0; border:1px solid var(--cs-line); letter-spacing:.14em; text-transform:uppercase; font-size:11px; color:var(--cs-ink); }
+  body[data-template="couture"] .chip.sel{ background:var(--cs-navy); color:#fff; border-color:var(--cs-navy); }
+  body[data-template="couture"] .cathead-title{ font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:500; }
+  body[data-template="couture"] .prod{ background:transparent; border:none; border-radius:0; transition:transform .5s cubic-bezier(.16,1,.3,1); }
+  body[data-template="couture"] .prod:hover{ transform:translateY(-4px); }
+  body[data-template="couture"] .pimgzone{ aspect-ratio:3/4; background:var(--cs-paper2); }
+  body[data-template="couture"] .pname{ font-family:'Cormorant Garamond',serif; font-size:21px; font-weight:500; }
+  body[data-template="couture"] .pprice{ letter-spacing:.04em; color:var(--cs-mut); }
+  body[data-template="couture"] .add,body[data-template="couture"] .qtybox{ border-radius:0; background:var(--cs-navy); color:#fff; border:none; letter-spacing:.14em; text-transform:uppercase; }
+  body[data-template="couture"] .add:hover{ background:var(--cs-orange); }
+  body[data-template="couture"] .cartbtn{ border-radius:0; background:var(--cs-navy); color:#fff; letter-spacing:.14em; text-transform:uppercase; }
+  /* founder (navy) */
+  body[data-template="couture"] .cs-founder{ display:grid; grid-template-columns:1fr 1fr; align-items:center; gap:clamp(24px,5vw,60px); background:var(--cs-navy); color:#fff; padding:clamp(40px,7vw,90px) clamp(18px,5vw,54px); }
+  body[data-template="couture"] .cs-founder-name{ font-family:'Cormorant Garamond',serif; font-weight:500; font-size:clamp(40px,6vw,76px); line-height:1.03; margin:12px 0 18px; }
+  body[data-template="couture"] .cs-founder-l p{ color:rgba(255,255,255,.78); max-width:440px; margin-bottom:24px; }
+  body[data-template="couture"] .cs-founder-fr{ justify-self:center; width:clamp(240px,34vw,420px); border:6px solid var(--cs-pink); }
+  body[data-template="couture"] .cs-founder-fr img{ width:100%; aspect-ratio:4/5; object-fit:cover; display:block; }
+  @media(max-width:860px){ body[data-template="couture"] .cs-founder{ grid-template-columns:1fr; text-align:center; } body[data-template="couture"] .cs-founder-l p{ margin-left:auto; margin-right:auto; } }
+  /* tiles */
+  body[data-template="couture"] .cs-tiles{ display:grid; grid-template-columns:1fr 1fr; gap:3px; background:var(--cs-navy); }
+  body[data-template="couture"] .cs-tile{ aspect-ratio:16/10; background-size:cover; background-position:center; }
+  @media(max-width:620px){ body[data-template="couture"] .cs-tiles{ grid-template-columns:1fr; } }
+  /* quote */
+  body[data-template="couture"] .cs-quote{ background:var(--cs-navy); color:#fff; text-align:center; padding:clamp(50px,8vw,100px) clamp(18px,5vw,54px); }
+  body[data-template="couture"] .cs-quote blockquote{ font-family:'Cormorant Garamond',serif; font-size:clamp(22px,3.4vw,38px); line-height:1.3; max-width:760px; margin:18px auto 16px; }
+  body[data-template="couture"] .cs-quote cite{ font-style:normal; font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:rgba(255,255,255,.6); }
+  /* footer */
+  body[data-template="couture"] .cs-foot{ background:var(--cs-paper); color:var(--cs-ink); padding:0 clamp(18px,5vw,54px) 34px; position:relative; }
+  body[data-template="couture"] .cs-foot-stripe{ height:6px; margin:0 calc(-1*clamp(18px,5vw,54px)); background:linear-gradient(90deg,var(--cs-pink),var(--cs-orange),var(--cs-lime)); }
+  body[data-template="couture"] .cs-foot-top{ display:flex; justify-content:space-between; gap:40px; flex-wrap:wrap; border-bottom:1px solid var(--cs-line); padding:50px 0 36px; margin-bottom:28px; max-width:1320px; margin-left:auto; margin-right:auto; }
+  body[data-template="couture"] .cs-foot-top p{ color:var(--cs-mut); max-width:320px; margin:12px 0; font-size:13px; }
+  body[data-template="couture"] .cs-logo-f{ font-size:26px; }
+  body[data-template="couture"] .cs-foot-c h5{ font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--cs-mut); margin-bottom:12px; }
+  body[data-template="couture"] .cs-foot-c a,body[data-template="couture"] .cs-foot-c span{ display:block; color:var(--cs-ink); margin-bottom:6px; font-size:14px; }
+  body[data-template="couture"] .cs-appnote{ text-align:center; color:var(--cs-mut); font-size:13px; margin:8px 0 18px; }
+  body[data-template="couture"] .cs-copy{ display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; border-top:1px solid var(--cs-line); padding-top:20px; font-size:12px; color:var(--cs-mut); max-width:1320px; margin:0 auto; }
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">

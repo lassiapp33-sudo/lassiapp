@@ -197,6 +197,7 @@ export const SITE_TEMPLATES: { id: string; label: string }[] = [
   { id: 'grill', label: 'Grill / Steakhouse' },
   { id: 'bar', label: 'Restaurant / Lounge' },
   { id: 'montre', label: 'Horlogerie / Montres' },
+  { id: 'couture', label: 'Mode élégante / Couture femme' },
 ];
 
 // Preset appliqué quand on choisit un template : fixe palette/accent/polices/layout
@@ -240,6 +241,10 @@ export const TEMPLATE_PRESETS: Record<string, { tokens: SiteConfig['tokens']; la
   },
   montre: {
     tokens: { palette: 'onyx', accent: '#b9a16b', fontHeading: 'cormorant', fontBody: 'jost' },
+    layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'flat', hero: 'split' },
+  },
+  couture: {
+    tokens: { palette: 'creme', accent: '#16233a', fontHeading: 'cormorant', fontBody: 'jost' },
     layout: { order: ['products', 'services', 'terrains'], cols: 3, card: 'flat', hero: 'split' },
   },
 };
