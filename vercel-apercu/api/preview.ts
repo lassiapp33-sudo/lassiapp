@@ -5468,8 +5468,11 @@ ${theme.template === 'couture' ? '<link href="https://fonts.googleapis.com/css2?
   /* hero */
   body[data-template="couture"] .cs-hero{ position:relative; background-size:cover; background-position:center; padding:clamp(40px,7vw,90px) clamp(18px,5vw,54px); color:var(--cs-ink); }
   body[data-template="couture"] .cs-hero-ov{ position:absolute; inset:0; background:transparent; }
-  body[data-template="couture"] .cs-hero-h,body[data-template="couture"] .cs-hero-l .cs-ey{ text-shadow:0 1px 18px rgba(246,241,231,.85),0 1px 3px rgba(246,241,231,.9); }
-  body[data-template="couture"] .cs-hero-r p,body[data-template="couture"] .cs-hero-r .cs-link{ text-shadow:0 1px 14px rgba(246,241,231,.9); }
+  body[data-template="couture"] .cs-hero{ color:#fff; }
+  body[data-template="couture"] .cs-hero .cs-ey{ color:rgba(255,255,255,.88); }
+  body[data-template="couture"] .cs-hero-r p{ color:#fff; }
+  body[data-template="couture"] .cs-hero .cs-link.dark{ color:#fff; }
+  body[data-template="couture"] .cs-hero-h,body[data-template="couture"] .cs-hero .cs-ey,body[data-template="couture"] .cs-hero-r p,body[data-template="couture"] .cs-hero .cs-link{ text-shadow:0 2px 18px rgba(0,0,0,.6),0 1px 4px rgba(0,0,0,.55); }
   body[data-template="couture"] .cs-hero-in{ position:relative; z-index:2; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:clamp(20px,4vw,48px); max-width:1320px; margin:0 auto; }
   body[data-template="couture"] .cs-hero-h{ font-family:'Cormorant Garamond',serif; font-weight:400; font-size:clamp(40px,6vw,86px); line-height:1.03; margin-top:14px; }
   body[data-template="couture"] .cs-hero-fr{ width:clamp(230px,30vw,380px); border:7px solid var(--cs-yellow); box-shadow:0 30px 60px rgba(0,0,0,.4); transform:scale(.8); opacity:0; transition:transform 1s cubic-bezier(.16,1,.3,1),opacity .5s ease; overflow:hidden; }
