@@ -435,8 +435,9 @@ export default async function handler(
     const t = (url.searchParams.get('t') ?? 'cosmetic').trim();
     const base = `${url.protocol}//${url.host}`;
     const demo = buildDemo(t, base);
+    const dView = (url.searchParams.get('view') ?? '').trim();
     return new Response(
-      renderHtml(demo.shop, demo.products, demo.services ?? [], [], demo.shop.slug, base, [], []),
+      renderHtml(demo.shop, demo.products, demo.services ?? [], [], demo.shop.slug, base, [], [], dView, `?t=${encodeURIComponent(t)}&view=collection`),
       { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } },
     );
   }
@@ -480,7 +481,8 @@ export default async function handler(
   }
 
   const base = `${url.protocol}//${url.host}`;
-  let html = renderHtml(shop, products, services, terrains as Terrain[], slug, base, dailySpecial as { id: string; name: string; price: number; photo_url?: string | null }[], promos);
+  const rView = (url.searchParams.get('view') ?? '').trim();
+  let html = renderHtml(shop, products, services, terrains as Terrain[], slug, base, dailySpecial as { id: string; name: string; price: number; photo_url?: string | null }[], promos, rView, '?view=collection');
 
   // Overrides éditeur avancé (texte/style/menu/animations) — appliqués côté client
   // par un script runtime, template-agnostique. Présents = vitrine publique aussi.
@@ -1632,7 +1634,7 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
 }
 
 function renderHtml(shop: Shop | null, products: Product[], services: ServiceItem[], terrains: Terrain[], slug: string, base: string, dailySpecial: { id: string; name: string; price: number; photo_url?: string | null }[] = [], // eslint-disable-next-line @typescript-eslint/no-explicit-any
-promos: any[] = []): string {
+promos: any[] = [], view: string = '', collectionUrl: string = '?view=collection'): string {
   const canonical = `${base}/${encodeURIComponent(slug)}`;
   if (!shop) {
     return page({
@@ -1656,6 +1658,7 @@ promos: any[] = []): string {
     title: `${name} — sur LASSİ`, desc: clip(descRaw.replace(/\s+/g, ' '), 180),
     ogImage: logo || initialAvatar(name), canonical, base, name, zone, cat, logo, slug, products, services, terrains, shopStatus, dailySpecial, promos, siteConfig: shop.site_config, gallery: buildImagePool(shop, products), phone: (shop.phone ?? '').trim(),
     lat: typeof shop.latitude === 'number' ? shop.latitude : null, lng: typeof shop.longitude === 'number' ? shop.longitude : null, shopId: shop.id,
+    view, collectionUrl,
   });
 }
 
@@ -1769,6 +1772,7 @@ function page(o: {
   gallery: string[];
   phone: string;
   lat?: number | null; lng?: number | null; shopId?: string;
+  view?: string; collectionUrl?: string;
 }): string {
   const deep = `https://lassi.tech/p/${encodeURIComponent(o.slug)}`;
   const theme = resolveTheme(o.siteConfig);
@@ -3655,9 +3659,10 @@ ${faSigSection}
     <section class="cs-shop" id="cs-shop">
       <div class="cs-shead lx-rv">
         <div><span class="cs-ey">Compositions Curées</span><h2 class="cs-h2">${hasProducts ? 'La Collection' : hasServices ? 'Nos prestations' : 'Nos terrains'}</h2></div>
-        <a class="cs-link dark" href="#cs-shop">${cxHeadCta === 'Commander' ? 'Voir toute la collection' : cxHeadCta} &#8594;</a>
+        ${hasProducts ? `<a class="cs-link dark" href="${escAttr(o.collectionUrl || '?view=collection')}">Voir toute la collection &#8594;</a>` : ''}
       </div>
-      <div class="lx-fx-stagger">${catnav}${dsSection}${grid}${svcSection}${terrainSection}</div>
+      <div class="lx-fx-stagger">${hasProducts ? `<div class="grid">${o.products.slice(-3).reverse().map(productCard).join('')}</div>` : (dsSection + svcSection + terrainSection)}</div>
+      ${hasProducts ? `<div class="cs-allcta"><a class="cs-allbtn" href="${escAttr(o.collectionUrl || '?view=collection')}">Voir toute la collection &#8594;</a></div>` : ''}
     </section>
     <section class="cs-founder" id="cs-founder">
       <div class="cs-founder-l lx-rv">
@@ -3695,9 +3700,48 @@ ${faSigSection}
     </footer>
   `;
 
+  // Page « Toute la collection » (couture) — accessible via ?view=collection.
+  // Catalogue complet groupé par catégorie (réutilise catnav + grid filtrables).
+  const _cu = o.collectionUrl || '?view=collection';
+  const csHomeUrl = _cu.includes('&view=')
+    ? _cu.split('&view=')[0]
+    : (o.slug && o.slug !== '__demo' ? `${o.base}/${encodeURIComponent(o.slug)}` : './');
+  const csCollectionBody = `
+    <header class="cs-head" id="cs-top">
+      <a class="cs-logo" href="${escAttr(csHomeUrl)}">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<b>${esc(o.name)}</b>`}</a>
+      <nav class="cs-nav">
+        <a href="${escAttr(csHomeUrl)}">Accueil</a>
+        <a href="#cs-shop">Collection</a>
+        <a href="${escAttr(csHomeUrl)}#cs-founder">Créatrice</a>
+        <a href="${escAttr(csHomeUrl)}#cs-contact">Contact</a>
+      </nav>
+      <a class="cs-cart" href="#cs-shop" title="Panier">Panier</a>
+    </header>
+    <section class="cs-collhead">
+      <a class="cs-back" href="${escAttr(csHomeUrl)}">&#8592; Retour à l'accueil</a>
+      <span class="cs-ey">Maison ${esc(clip(o.name, 28))} — Dakar</span>
+      <h1 class="cs-coll-h">Toute la Collection</h1>
+      <p>${esc(clip(o.desc || "L'intégralité de nos créations, classées par catégorie. Élégance intemporelle et savoir-faire couture.", 180))}</p>
+    </section>
+    <div class="cs-strip"><span>Élégance</span><b>·</b><span>Tailleur</span><b>·</b><span>Soirée</span><b>·</b><span>Sur-mesure</span><b>·</b><span>Dakar</span></div>
+    <section class="cs-shop" id="cs-shop">
+      <div class="lx-fx-stagger">${catnav}${dsSection}${grid}${svcSection}${terrainSection}</div>
+    </section>
+    <footer class="cs-foot" id="cs-contact">
+      <div class="cs-foot-stripe"></div>
+      <div class="cs-foot-top">
+        <div>${csLogo('cs-logo-f')}<p>${esc(clip(o.desc || 'Maison de mode féminine — Dakar.', 140))}</p>${socialHtml}</div>
+        <div class="cs-foot-c"><h5>Contact</h5>${o.phone ? `<a href="tel:${escAttr(o.phone.replace(/\s+/g, ''))}">&#9742; ${esc(o.phone)}</a>` : ''}${o.zone ? `<span>&#128205; ${esc(o.zone)}</span>` : ''}</div>
+      </div>
+      ${storeButtons}
+      <div class="cs-copy"><span>&copy; 2026 ${esc(o.name)} — ${esc(o.zone || 'Dakar, Sénégal')}.</span><span>Livraison soignée sur toutes les créations.</span></div>
+    </footer>
+  `;
+  const csFinal = (o.view === 'collection' && theme.template === 'couture' && hasProducts) ? csCollectionBody : csBody;
+
   const body = theme.template === 'udebi' && hasCatalog ? udBody
     : theme.template === 'montre' && hasCatalog ? mwBody
-    : theme.template === 'couture' && hasCatalog ? csBody
+    : theme.template === 'couture' && hasCatalog ? csFinal
     : theme.template === 'cafefa' && hasCatalog ? faBody
     : theme.template === 'furniture' && hasCatalog ? furnitureBody
     : theme.template === 'cosmetic' && hasCatalog ? cosmeticBody
@@ -5398,7 +5442,7 @@ ${theme.template === 'couture' ? '<link href="https://fonts.googleapis.com/css2?
   body[data-template="montre"] .pd-add[disabled],body[data-template="montre"] .pd-buy[disabled]{ opacity:.38; cursor:not-allowed; }
 
   /* ═══ TEMPLATE COUTURE (LINGUÈRE) — mode élégante femme ═══ */
-  body[data-template="couture"]{ --cs-paper:#F6F1E7; --cs-paper2:#efe8da; --cs-ink:#1c2230; --cs-navy:#112033; --cs-mut:#6f6a60; --cs-line:#e2dccd; --cs-lime:#d6e23a; --cs-yellow:#ece400; --cs-orange:#df6230; --cs-pink:#eba6c2; background:var(--cs-paper); }
+  body[data-template="couture"]{ --cs-paper:#E2DDCF; --cs-paper2:#D7D1C1; --cs-ink:#1b2128; --cs-navy:#071F2F; --cs-mut:#6d6960; --cs-line:#cdc7b8; --cs-lime:#d6e23a; --cs-yellow:#ece400; --cs-orange:#df6230; --cs-pink:#eba6c2; background:var(--cs-paper); color:var(--cs-ink); }
   body[data-template="couture"] .appwrap,body[data-template="couture"] .wrap{ max-width:100%; }
   body[data-template="couture"] .cs-ey{ font-size:11px; letter-spacing:.3em; text-transform:uppercase; color:var(--cs-mut); display:inline-block; }
   body[data-template="couture"] .cs-ey.light{ color:rgba(255,255,255,.72); }
@@ -5408,22 +5452,24 @@ ${theme.template === 'couture' ? '<link href="https://fonts.googleapis.com/css2?
   body[data-template="couture"] .cs-link.light{ color:#fff; }
   body[data-template="couture"] .cs-link.dark{ color:var(--cs-ink); }
   /* header */
-  body[data-template="couture"] .cs-head{ position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; padding:0 clamp(18px,5vw,54px); height:70px; background:rgba(246,241,231,.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--cs-line); }
+  body[data-template="couture"] .cs-head{ position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; padding:0 clamp(18px,5vw,54px); height:70px; background:rgba(226,221,207,.9); backdrop-filter:blur(10px); border-bottom:1px solid var(--cs-line); }
   body[data-template="couture"] .cs-logo{ font-family:'Cormorant Garamond',serif; font-size:24px; letter-spacing:.14em; text-transform:uppercase; color:var(--cs-ink); }
   body[data-template="couture"] .cs-logo img{ height:34px; width:auto; }
   body[data-template="couture"] .cs-nav{ display:flex; gap:30px; font-size:12px; letter-spacing:.16em; text-transform:uppercase; }
   body[data-template="couture"] .cs-nav a{ color:var(--cs-mut); }
   body[data-template="couture"] .cs-nav a:hover{ color:var(--cs-ink); }
   body[data-template="couture"] .cs-cart{ font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--cs-ink); border:1px solid var(--cs-ink); padding:9px 18px; }
-  body[data-template="couture"] .cs-cart:hover{ background:var(--cs-ink); color:#fff; }
+  body[data-template="couture"] .cs-cart:hover{ background:var(--cs-lime); color:#14191a; border-color:var(--cs-lime); }
   @media(max-width:820px){ body[data-template="couture"] .cs-nav{ display:none; } }
   /* hero */
   body[data-template="couture"] .cs-hero{ position:relative; background-size:cover; background-position:center; padding:clamp(40px,7vw,90px) clamp(18px,5vw,54px); color:var(--cs-ink); }
-  body[data-template="couture"] .cs-hero-ov{ position:absolute; inset:0; background:rgba(243,238,228,.42); }
+  body[data-template="couture"] .cs-hero-ov{ position:absolute; inset:0; background:rgba(236,232,221,.4); }
   body[data-template="couture"] .cs-hero-in{ position:relative; z-index:2; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:clamp(20px,4vw,48px); max-width:1320px; margin:0 auto; }
   body[data-template="couture"] .cs-hero-h{ font-family:'Cormorant Garamond',serif; font-weight:400; font-size:clamp(40px,6vw,86px); line-height:1.03; margin-top:14px; }
-  body[data-template="couture"] .cs-hero-fr{ width:clamp(230px,30vw,380px); border:7px solid var(--cs-yellow); box-shadow:0 30px 60px rgba(0,0,0,.18); }
-  body[data-template="couture"] .cs-hero-fr img{ width:100%; aspect-ratio:3/4; object-fit:cover; display:block; }
+  body[data-template="couture"] .cs-hero-fr{ width:clamp(230px,30vw,380px); border:7px solid var(--cs-yellow); box-shadow:0 30px 60px rgba(0,0,0,.4); transform:scale(.8); opacity:0; transition:transform 1s cubic-bezier(.16,1,.3,1),opacity .5s ease; overflow:hidden; }
+  body[data-template="couture"] .cs-hero-fr.lx-in{ transform:none; opacity:1; }
+  body[data-template="couture"] .cs-hero-fr img{ width:100%; aspect-ratio:3/4; object-fit:cover; display:block; clip-path:inset(0 0 100% 0); transform:scale(1.14); transition:clip-path 1.05s cubic-bezier(.16,1,.3,1) .18s,transform 1.35s cubic-bezier(.16,1,.3,1) .18s; }
+  body[data-template="couture"] .cs-hero-fr.lx-in img{ clip-path:inset(0 0 0 0); transform:none; }
   body[data-template="couture"] .cs-hero-r{ max-width:300px; }
   body[data-template="couture"] .cs-hero-r p{ color:var(--cs-mut); font-size:15px; margin-bottom:20px; }
   @media(max-width:860px){ body[data-template="couture"] .cs-hero-in{ grid-template-columns:1fr; justify-items:center; text-align:center; gap:26px; } body[data-template="couture"] .cs-hero-r{ max-width:460px; } }
@@ -5452,6 +5498,16 @@ ${theme.template === 'couture' ? '<link href="https://fonts.googleapis.com/css2?
   body[data-template="couture"] .add,body[data-template="couture"] .qtybox{ border-radius:0; background:var(--cs-navy); color:#fff; border:none; letter-spacing:.14em; text-transform:uppercase; }
   body[data-template="couture"] .add:hover{ background:var(--cs-orange); }
   body[data-template="couture"] .cartbtn{ border-radius:0; background:var(--cs-navy); color:#fff; letter-spacing:.14em; text-transform:uppercase; }
+  /* bouton "voir toute la collection" */
+  body[data-template="couture"] .cs-allcta{ text-align:center; margin-top:46px; }
+  body[data-template="couture"] .cs-allbtn{ display:inline-block; font-family:'Cormorant Garamond',serif; font-size:16px; letter-spacing:.16em; text-transform:uppercase; color:var(--cs-ink); border:1px solid var(--cs-ink); padding:14px 34px; transition:.25s; }
+  body[data-template="couture"] .cs-allbtn:hover{ background:var(--cs-yellow); color:#14191a; border-color:var(--cs-yellow); }
+  /* page collection complète */
+  body[data-template="couture"] .cs-collhead{ text-align:center; padding:clamp(48px,8vw,100px) clamp(18px,5vw,54px) clamp(30px,5vw,54px); max-width:820px; margin:0 auto; position:relative; }
+  body[data-template="couture"] .cs-back{ display:inline-block; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--cs-mut); margin-bottom:22px; }
+  body[data-template="couture"] .cs-back:hover{ color:var(--cs-ink); }
+  body[data-template="couture"] .cs-coll-h{ font-family:'Cormorant Garamond',serif; font-weight:400; font-size:clamp(38px,6vw,76px); line-height:1.04; margin:12px 0 18px; }
+  body[data-template="couture"] .cs-collhead p{ color:var(--cs-mut); font-size:15px; max-width:560px; margin:0 auto; }
   /* founder (navy) */
   body[data-template="couture"] .cs-founder{ display:grid; grid-template-columns:1fr 1fr; align-items:center; gap:clamp(24px,5vw,60px); background:var(--cs-navy); color:#fff; padding:clamp(40px,7vw,90px) clamp(18px,5vw,54px); }
   body[data-template="couture"] .cs-founder-name{ font-family:'Cormorant Garamond',serif; font-weight:500; font-size:clamp(40px,6vw,76px); line-height:1.03; margin:12px 0 18px; }
