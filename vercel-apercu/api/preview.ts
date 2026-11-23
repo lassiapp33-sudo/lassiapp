@@ -1577,15 +1577,15 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
       P('c1', 'Manteau Hiver en Fleur', 85000, 'Manteau long en laine prune, coupe oversize structurée. Doublure satin, boutonnage discret. Une pièce signature pour la saison fraîche.', 'manteaux', 'p1.jpg'),
       P('c2', 'Robe Tableaux Côtier', 65000, 'Robe midi en coton crème, taille marquée et jupe ample plissée. Minimalisme lumineux pour le jour comme le soir.', 'robes', 'p2.jpg'),
       P('c3', 'Robe Soirée Jardin de Minuit', 95000, 'Robe longue en satin bleu nuit, bustier drapé et fente élégante. Pensée pour les cérémonies et les grandes soirées.', 'robes', 'p3.jpg'),
-      P('c4', 'Ensemble Golden Hour', 72000, 'Bustier plissé + jupe midi en satin doré. Un ensemble deux pièces lumineux, taille ajustée, finitions couture.', 'ensembles', 'p4.jpg'),
-      P('c5', 'Robe Satin Nuit', 98000, 'Robe fourreau satin bleu nuit à bustier corseté et fente. Tombé fluide, allure sculpturale.', 'nouveautes', 'p5.jpg'),
-      P('c6', 'Manteau Prune Oversize', 88000, 'Manteau prune à large col, porté sur blouse ivoire à col montant. Chaleur et caractère.', 'manteaux', 'p6.jpg'),
       P('c7', 'Blazer Émeraude & Jupe Plissée', 90000, 'Blazer croisé vert émeraude en laine + jupe plissée ivoire. Le tailleur féminin dans sa plus belle expression.', 'ensembles', 'p7.jpg'),
       P('c8', 'Veste Émeraude Signature', 92000, 'Veste structurée vert émeraude, boutons ton sur ton, finitions soignées. Pièce maîtresse du vestiaire.', 'nouveautes', 'p8.jpg'),
+      P('c6', 'Manteau Prune Oversize', 88000, 'Manteau prune à large col, porté sur blouse ivoire à col montant. Chaleur et caractère.', 'manteaux', 'p6.jpg'),
+      P('c5', 'Robe Satin Nuit', 98000, 'Robe fourreau satin bleu nuit à bustier corseté et fente. Tombé fluide, allure sculpturale.', 'nouveautes', 'p5.jpg'),
+      P('c4', 'Ensemble Golden Hour', 72000, 'Bustier plissé + jupe midi en satin doré. Un ensemble deux pièces lumineux, taille ajustée, finitions couture.', 'ensembles', 'p4.jpg'),
     ];
     products[2].sizes = ['Bleu nuit', 'Émeraude']; products[2].colors = ['34', '36', '38', '40'];
     products[3].colors = ['34', '36', '38', '40'];
-    products[6].colors = ['34', '36', '38', '40'];
+    products[7].colors = ['34', '36', '38', '40'];
     return { shop, products };
   }
 
@@ -5467,7 +5467,9 @@ ${theme.template === 'couture' ? '<link href="https://fonts.googleapis.com/css2?
   @media(max-width:820px){ body[data-template="couture"] .cs-nav{ display:none; } }
   /* hero */
   body[data-template="couture"] .cs-hero{ position:relative; background-size:cover; background-position:center; padding:clamp(40px,7vw,90px) clamp(18px,5vw,54px); color:var(--cs-ink); }
-  body[data-template="couture"] .cs-hero-ov{ position:absolute; inset:0; background:rgba(236,232,221,.4); }
+  body[data-template="couture"] .cs-hero-ov{ position:absolute; inset:0; background:transparent; }
+  body[data-template="couture"] .cs-hero-h,body[data-template="couture"] .cs-hero-l .cs-ey{ text-shadow:0 1px 18px rgba(246,241,231,.85),0 1px 3px rgba(246,241,231,.9); }
+  body[data-template="couture"] .cs-hero-r p,body[data-template="couture"] .cs-hero-r .cs-link{ text-shadow:0 1px 14px rgba(246,241,231,.9); }
   body[data-template="couture"] .cs-hero-in{ position:relative; z-index:2; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:clamp(20px,4vw,48px); max-width:1320px; margin:0 auto; }
   body[data-template="couture"] .cs-hero-h{ font-family:'Cormorant Garamond',serif; font-weight:400; font-size:clamp(40px,6vw,86px); line-height:1.03; margin-top:14px; }
   body[data-template="couture"] .cs-hero-fr{ width:clamp(230px,30vw,380px); border:7px solid var(--cs-yellow); box-shadow:0 30px 60px rgba(0,0,0,.4); transform:scale(.8); opacity:0; transition:transform 1s cubic-bezier(.16,1,.3,1),opacity .5s ease; overflow:hidden; }
@@ -5539,6 +5541,10 @@ ${theme.template === 'couture' ? '<link href="https://fonts.googleapis.com/css2?
   body[data-template="couture"] .cs-foot-c a,body[data-template="couture"] .cs-foot-c span{ display:block; color:var(--cs-ink); margin-bottom:6px; font-size:14px; }
   body[data-template="couture"] .cs-appnote{ text-align:center; color:var(--cs-mut); font-size:13px; margin:8px 0 18px; }
   body[data-template="couture"] .cs-copy{ display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; border-top:1px solid var(--cs-line); padding-top:20px; font-size:12px; color:var(--cs-mut); max-width:1320px; margin:0 auto; }
+  /* bouton App Store : fond navy + texte blanc (sinon texte foncé invisible) */
+  body[data-template="couture"] .store.primary{ background:var(--cs-navy); color:#fff; }
+  body[data-template="couture"] .store.primary svg{ fill:#fff; }
+  body[data-template="couture"] .store.primary .txt small{ color:rgba(255,255,255,.72); }
 </style>
 </head>
 <body data-template="${theme.template}" data-cols="${theme.layout.cols}" data-card="${theme.layout.card}" data-hero="${theme.layout.hero}">
