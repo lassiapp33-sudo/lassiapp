@@ -3621,9 +3621,8 @@ ${faSigSection}
     <header class="cs-head" id="cs-top">
       <a class="cs-logo" href="#cs-top">${o.logo ? `<img src="${escAttr(o.logo)}" alt="${escAttr(o.name)}">` : `<b>${esc(o.name)}</b>`}</a>
       <nav class="cs-nav">
-        <a href="#cs-shop">Collection</a>
+        <a href="${escAttr(o.collectionUrl || '?view=collection')}">Collection</a>
         <a href="#cs-legacy">La Maison</a>
-        <a href="#cs-founder">Créatrice</a>
         <a href="#cs-contact">Contact</a>
       </nav>
       <a class="cs-cart" href="#cs-shop" title="Panier">Panier</a>
