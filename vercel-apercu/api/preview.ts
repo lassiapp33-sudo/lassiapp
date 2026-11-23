@@ -1566,7 +1566,7 @@ function buildDemo(templateId: string, base: string): { shop: Shop; products: Pr
       zone: 'Dakar · Sénégal', category: 'stores', shop_type: 'products',
       subcategories: ['manteaux', 'robes', 'ensembles', 'nouveautes'],
       slug: '__demo', merchant_id: 'demo', opening_hours: null, is_manually_closed: false,
-      site_config, gallery_urls: [img('hero.jpg'), img('band.jpg'), img('founder.jpg'), img('floral.jpg'), img('landscape.jpg'), img('p3.jpg'), img('p4.jpg')],
+      site_config, gallery_urls: [img('hero.jpg'), img('legacymain.jpg'), img('founder.jpg'), img('floral.jpg'), img('landscape.jpg'), img('band.jpg'), img('p4.jpg')],
       cover_url: null, phone: '76 189 00 03',
     };
     const P = (id: string, name: string, price: number, description: string, category: string, photo: string): Product =>
@@ -3628,25 +3628,28 @@ ${faSigSection}
       <div class="cs-hero-ov"></div>
       <div class="cs-hero-in">
         <div class="cs-hero-l">
-          <span class="cs-ey light">${o.cat ? esc(clip(o.cat, 42)) : 'Maison de mode — Dakar'}</span>
+          <span class="cs-ey">${o.cat ? esc(clip(o.cat, 42)) : 'Maison de mode — Dakar'}</span>
           <h1 class="cs-hero-h lx-fx-mask"><span class="lx-fx-mask-l"><span>L'Essence du</span></span><span class="lx-fx-mask-l"><span>Style Intemporel</span></span></h1>
         </div>
         <div class="cs-hero-fr lx-fx-zin"><img src="${escAttr(pick(0))}" alt="${escAttr(o.name)}"></div>
         <div class="cs-hero-r">
           <p>${esc(clip(o.desc || "Des collections où le design intemporel et le savoir-faire couture se rencontrent.", 130))}</p>
-          <a class="cs-link light" href="#cs-shop">Explorer les collections &#8594;</a>
+          <a class="cs-link dark" href="#cs-shop">Explorer les collections &#8594;</a>
         </div>
       </div>
     </section>
     <div class="cs-strip"><span>Élégance</span><b>·</b><span>Tailleur</span><b>·</b><span>Soirée</span><b>·</b><span>Sur-mesure</span><b>·</b><span>Dakar</span></div>
     ${closedNotice}
     <section class="cs-legacy" id="cs-legacy">
-      <div class="cs-legacy-img lx-fx-zoom" ${bg(pick(1))}></div>
-      <div class="cs-legacy-tx lx-rv">
-        <span class="cs-ey">Un Héritage de Grâce</span>
-        <h2 class="cs-h2">${esc(o.name)} habille la femme moderne avec élégance et caractère.</h2>
-        <p>${esc(clip(o.desc || "Notre philosophie : vêtir la femme de confiance et de grâce, à travers des créations méticuleusement façonnées, contemporaines et intemporelles.", 230))}</p>
-        <a class="cs-link dark" href="#cs-shop">Découvrir la collection &#8594;</a>
+      <div class="cs-legacy-main lx-fx-zoom" ${bg(pick(1))}></div>
+      <div class="cs-legacy-side">
+        <div class="cs-legacy-detail lx-fx-zin" ${bg(pick(5))}></div>
+        <div class="cs-legacy-tx lx-rv">
+          <span class="cs-ey">Un Héritage de Grâce</span>
+          <h2 class="cs-h2">${esc(o.name)} habille la femme moderne avec élégance et caractère.</h2>
+          <p>${esc(clip(o.desc || "Notre philosophie : vêtir la femme de confiance et de grâce, à travers des créations méticuleusement façonnées, contemporaines et intemporelles.", 230))}</p>
+          <a class="cs-link dark" href="#cs-shop">Découvrir la collection &#8594;</a>
+        </div>
       </div>
     </section>
     <section class="cs-shop" id="cs-shop">
@@ -5395,7 +5398,7 @@ ${theme.template === 'couture' ? '<link href="https://fonts.googleapis.com/css2?
   body[data-template="montre"] .pd-add[disabled],body[data-template="montre"] .pd-buy[disabled]{ opacity:.38; cursor:not-allowed; }
 
   /* ═══ TEMPLATE COUTURE (LINGUÈRE) — mode élégante femme ═══ */
-  body[data-template="couture"]{ --cs-paper:#F6F1E7; --cs-paper2:#efe8da; --cs-ink:#1c2230; --cs-navy:#112033; --cs-mut:#6f6a60; --cs-line:#e2dccd; --cs-lime:#d6e23a; --cs-orange:#df6230; --cs-pink:#eba6c2; background:var(--cs-paper); }
+  body[data-template="couture"]{ --cs-paper:#F6F1E7; --cs-paper2:#efe8da; --cs-ink:#1c2230; --cs-navy:#112033; --cs-mut:#6f6a60; --cs-line:#e2dccd; --cs-lime:#d6e23a; --cs-yellow:#ece400; --cs-orange:#df6230; --cs-pink:#eba6c2; background:var(--cs-paper); }
   body[data-template="couture"] .appwrap,body[data-template="couture"] .wrap{ max-width:100%; }
   body[data-template="couture"] .cs-ey{ font-size:11px; letter-spacing:.3em; text-transform:uppercase; color:var(--cs-mut); display:inline-block; }
   body[data-template="couture"] .cs-ey.light{ color:rgba(255,255,255,.72); }
@@ -5415,24 +5418,26 @@ ${theme.template === 'couture' ? '<link href="https://fonts.googleapis.com/css2?
   body[data-template="couture"] .cs-cart:hover{ background:var(--cs-ink); color:#fff; }
   @media(max-width:820px){ body[data-template="couture"] .cs-nav{ display:none; } }
   /* hero */
-  body[data-template="couture"] .cs-hero{ position:relative; background-size:cover; background-position:center; padding:clamp(40px,7vw,90px) clamp(18px,5vw,54px); color:#fff; }
-  body[data-template="couture"] .cs-hero-ov{ position:absolute; inset:0; background:linear-gradient(180deg,rgba(14,16,20,.55),rgba(14,16,20,.68)); }
+  body[data-template="couture"] .cs-hero{ position:relative; background-size:cover; background-position:center; padding:clamp(40px,7vw,90px) clamp(18px,5vw,54px); color:var(--cs-ink); }
+  body[data-template="couture"] .cs-hero-ov{ position:absolute; inset:0; background:rgba(243,238,228,.42); }
   body[data-template="couture"] .cs-hero-in{ position:relative; z-index:2; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:clamp(20px,4vw,48px); max-width:1320px; margin:0 auto; }
-  body[data-template="couture"] .cs-hero-h{ font-family:'Cormorant Garamond',serif; font-weight:500; font-size:clamp(40px,6vw,86px); line-height:1.02; margin-top:14px; }
-  body[data-template="couture"] .cs-hero-fr{ width:clamp(230px,30vw,380px); border:6px solid var(--cs-lime); }
+  body[data-template="couture"] .cs-hero-h{ font-family:'Cormorant Garamond',serif; font-weight:400; font-size:clamp(40px,6vw,86px); line-height:1.03; margin-top:14px; }
+  body[data-template="couture"] .cs-hero-fr{ width:clamp(230px,30vw,380px); border:7px solid var(--cs-yellow); box-shadow:0 30px 60px rgba(0,0,0,.18); }
   body[data-template="couture"] .cs-hero-fr img{ width:100%; aspect-ratio:3/4; object-fit:cover; display:block; }
   body[data-template="couture"] .cs-hero-r{ max-width:300px; }
-  body[data-template="couture"] .cs-hero-r p{ color:#e8e6df; font-size:15px; margin-bottom:20px; }
+  body[data-template="couture"] .cs-hero-r p{ color:var(--cs-mut); font-size:15px; margin-bottom:20px; }
   @media(max-width:860px){ body[data-template="couture"] .cs-hero-in{ grid-template-columns:1fr; justify-items:center; text-align:center; gap:26px; } body[data-template="couture"] .cs-hero-r{ max-width:460px; } }
   /* strip */
   body[data-template="couture"] .cs-strip{ display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:14px; padding:20px; background:var(--cs-navy); color:#fff; font-family:'Cormorant Garamond',serif; font-size:clamp(16px,2.4vw,24px); letter-spacing:.06em; }
   body[data-template="couture"] .cs-strip b{ color:var(--cs-lime); }
   /* legacy */
-  body[data-template="couture"] .cs-legacy{ display:grid; grid-template-columns:1fr 1fr; align-items:center; }
-  body[data-template="couture"] .cs-legacy-img{ min-height:clamp(340px,52vw,620px); background-size:cover; background-position:center; }
-  body[data-template="couture"] .cs-legacy-tx{ padding:clamp(34px,6vw,80px); max-width:620px; }
-  body[data-template="couture"] .cs-legacy-tx p{ color:var(--cs-mut); margin:18px 0 26px; }
-  @media(max-width:860px){ body[data-template="couture"] .cs-legacy{ grid-template-columns:1fr; } }
+  body[data-template="couture"] .cs-legacy{ display:grid; grid-template-columns:42% 58%; background:var(--cs-paper); }
+  body[data-template="couture"] .cs-legacy-main{ min-height:clamp(380px,56vw,660px); background-size:cover; background-position:center; }
+  body[data-template="couture"] .cs-legacy-side{ position:relative; display:flex; align-items:center; padding:clamp(34px,6vw,80px); }
+  body[data-template="couture"] .cs-legacy-detail{ position:absolute; top:clamp(24px,5vw,56px); right:clamp(24px,5vw,56px); width:clamp(150px,22vw,280px); aspect-ratio:3/4; background-size:cover; background-position:center; border:6px solid var(--cs-orange); }
+  body[data-template="couture"] .cs-legacy-tx{ max-width:420px; }
+  body[data-template="couture"] .cs-legacy-tx p{ color:var(--cs-mut); margin:16px 0 24px; }
+  @media(max-width:860px){ body[data-template="couture"] .cs-legacy{ grid-template-columns:1fr; } body[data-template="couture"] .cs-legacy-side{ display:block; } body[data-template="couture"] .cs-legacy-detail{ position:static; width:58%; margin:0 0 22px auto; } }
   /* shop */
   body[data-template="couture"] .cs-shop{ padding:clamp(50px,8vw,96px) clamp(18px,5vw,54px); max-width:1320px; margin:0 auto; }
   body[data-template="couture"] .cs-shead{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:40px; }
